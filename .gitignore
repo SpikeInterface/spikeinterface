@@ -105,3 +105,4 @@ venv.bak/
 
 doc/auto_examples/*
 doc/_build/*
+examples/tmp_*
