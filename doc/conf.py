@@ -53,8 +53,15 @@ html_theme = 'alabaster'
 html_static_path = ['_static']
 
 
+from sphinx_gallery.sorting import ExplicitOrder
+
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-     'examples_dirs': '../examples',   # path to your example scripts
-     'gallery_dirs': 'auto_examples',  # path where to save gallery generated examples
+    'examples_dirs': '../examples',   # path to your example scripts
+    'gallery_dirs': 'auto_examples',  # path where to save gallery generated examples
+    'subsection_order': ExplicitOrder(['../examples/sorters/',
+                                                            '../examples/comparison/',
+                                                            ]),
+    
 }
+

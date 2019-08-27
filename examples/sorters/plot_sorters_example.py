@@ -21,7 +21,7 @@ import time
 ##############################################################################
 # First, let's create a toy example:
 
-recording, sorting_true = se.example_datasets.toy_example(duration=60)
+recording, sorting_true = se.example_datasets.toy_example(duration=60, seed=0)
 
 
 
