@@ -1,4 +1,4 @@
-Welcome to spikeinterface's documentation!
+Welcome to SpikeInterface's documentation!
 ==========================================
 
 Spikeinterface is a collection of modules designed to simplify the analysis of extracellular neural recordings, in particular spike sorting.
@@ -9,15 +9,17 @@ With `spikeinterface` one can:
 - run several popular spike sorters
 - postprocess spike sorting outputs
 - compare spike sorting outputs
-- validate and curate the spike sorting ouput
-- plot traces, spike waveforms, probe layout, ...
+- validate and curate the spike sorting output
+- visualize recordings and spike sorting output
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
    
    overview
-   auto_examples/index
+   getting_started/index.rst
+   modules/index.rst
+   usage/index.rst
    api
    
 
