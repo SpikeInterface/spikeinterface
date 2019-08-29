@@ -11,7 +11,7 @@ SpikeInterface is a unified framework for spike sorting of extracellular neural 
 - [spikewidgets](https://github.com/SpikeInterface/spikewidgets): visualization widgets
 
 
-**BETA version. The release of an aplha version is scheduled for August 31st 2019**
+**ALPHA version. The release of an beta version is scheduled for August 31st 2019**
 
 
 ## Installation
