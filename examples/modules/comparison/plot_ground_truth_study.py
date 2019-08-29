@@ -34,8 +34,9 @@ import seaborn as sns
 
 # TODO fix import
 import spikeextractors as se
-import spikeinterface.sorters as sorters
-import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
+from spikeinterface.comparison import GroundTruthStudy
+
 
 ##############################################################################
 # 1) Setup study folder and run all sorters
@@ -44,7 +45,6 @@ import spikeinterface.comparison as sc
 # We first generate the folder.
 # this can take some time because recordings are copied inside the folder.
 
-from spiketoolkit.study import GroundTruthStudy
 
 rec0, gt_sorting0 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=10)
 rec1, gt_sorting1 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=20)
@@ -53,7 +53,7 @@ gt_dict = {
     'rec1': (rec1, gt_sorting1),
 }
 study_folder = 'a_study_folder'
-study = GroundTruthStudy.setup(study_folder, gt_dict)
+study = GroundTruthStudy.create(study_folder, gt_dict)
 
 ##############################################################################
 # Then just run all sorters on all recordings in one functions.
@@ -88,7 +88,6 @@ study.copy_sortings()
 
 study.run_comparisons(exhaustive_gt=True)
 
-comparisons = aggregate_sorting_comparison(study_folder, exhaustive_gt=True)
 
 for (rec_name, sorter_name), comp in study.comparisons.items():
     print('*'*10)
@@ -98,7 +97,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
     perf = comp.get_performance(method='by_unit')
     perf = comp.get_performance(method='pooled_with_average')
     m = comp.get_confusion_matrix()
-    comp.plot_confusion_matrix()
+    sw.plot_confusion_matrix(comp)
 
 
 ##############################################################################
@@ -109,7 +108,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
 # The ``aggregate_performances_table`` function, gathers all the outputs in
 # the study folder and merges them in a single dataframe.
 
-dataframes = study.aggregate_dataframes
+dataframes = study.aggregate_dataframes()
 
 ##############################################################################
 # Pandas dataframes can be nicely displayed as tables in the notebook.
@@ -118,7 +117,7 @@ print(dataframes.keys())
 
 ##############################################################################
 
-display(dataframes['perf_pooled_with_average'])
+print(dataframes['perf_pooled_with_average'])
 
 ##############################################################################
 
@@ -134,14 +133,14 @@ dataframes['run_times']
 
 run_times = dataframes['run_times']
 fig, ax = plt.subplots()
-sn.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax)
+sns.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax)
 ax.set_title('Run times')
 
 ##############################################################################
 
 perfs = dataframes['perf_pooled_with_average']
 fig, ax = plt.subplots()
-sn.barplot(data=perfs, x='rec_name', y='recall', hue='sorter_name', ax=ax)
+sns.barplot(data=perfs, x='rec_name', y='recall', hue='sorter_name', ax=ax)
 ax.set_title('Recall')
 ax.set_ylim(0, 1)
 
