@@ -17,7 +17,9 @@ With `spikeinterface` one can:
    :caption: Contents:
    
    overview
-   getting_started/plot_getting_started.rst
+   getting_started/index.rst
+   modules/index.rst
+   usage/index.rst
    api
    
 
