@@ -28,6 +28,7 @@ author = 'Cole Hurwitz, Jeremy Magland, Alessio Paolo Buccino, Matthias Hennig, 
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.autodoc',
     'sphinx_gallery.gen_gallery',
 ]
 
@@ -45,7 +46,14 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+try:
+    import sphinx_rtd_theme
+
+    html_theme = "sphinx_rtd_theme"
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+except ImportError:
+    print("RTD theme not installed, using default")
+    html_theme = 'alabaster'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -57,11 +65,12 @@ from sphinx_gallery.sorting import ExplicitOrder
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-    'examples_dirs': '../examples',   # path to your example scripts
-    'gallery_dirs': 'auto_examples',  # path where to save gallery generated examples
-    'subsection_order': ExplicitOrder(['../examples/sorters/',
-                                                            '../examples/comparison/',
-                                                            ]),
+    'examples_dirs': ['../examples/getting_started', '../examples/modules', '../examples/usage'],   # path to your example scripts
+    'gallery_dirs': ['getting_started', 'modules', 'usage']  # path where to save gallery generated examples
+    # 'subsection_order': ExplicitOrder(['../examples/getting_started/',
+    #                                    '../examples/sorters/',
+    #                                    '../examples/comparison/',
+    #                                    ]),
     
 }
 
