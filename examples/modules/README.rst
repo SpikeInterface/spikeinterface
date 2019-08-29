@@ -1,7 +1,6 @@
-Spikeinterface examples
+Spikeinterface modules
 =======================
 
 Spike interface is split in 5 submodules.
-
 Here some example for each one.
 
