@@ -13,6 +13,10 @@ sphinx-gallery
 ml_ms4alg==0.3.1
 
 # klusta
-
+Cython
+h5py
+tqdm
+klusta
+klustakwik2
 
 
