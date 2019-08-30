@@ -1,3 +1,6 @@
+# sphinx-gallery
+sphinx-gallery
+
 # install spikeinterface locally to use autodoc
 -e git+https://github.com/SpikeInterface/spikeextractors.git@master#egg=spikeextractors --src modules
 -e git+https://github.com/SpikeInterface/spiketoolkit.git@master#egg=spiketoolkit --src modules
