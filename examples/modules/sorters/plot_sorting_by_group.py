@@ -1,6 +1,6 @@
 """
-Run spike sorting algorithms
-============================
+Run spike sorting by property
+=============================
 
 
 """
