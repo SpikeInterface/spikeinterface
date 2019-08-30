@@ -26,7 +26,7 @@ w_wf = sw.plot_unit_waveforms(recording, sorting, max_num_waveforms=100)
 w_ampd = sw.plot_amplitudes_distribution(recording, sorting, max_num_waveforms=300)
 
 ##############################################################################
-# plot_autocorrelograms()
+# plot_amplitudes_timeseres()
 # ~~~~~~~~~~~~~~~~~
 
 w_ampt = sw.plot_amplitudes_timeseres(recording, sorting, max_num_waveforms=300)

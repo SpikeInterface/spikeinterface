@@ -1,0 +1,5 @@
+"""
+Create a RecordingExtractor
+===========================
+
+"""

@@ -8,6 +8,8 @@ algorithms, inspect and validate the results, export to Phy, and compare spike s
 
 """
 
+import warnings
+warnings.filterwarnings("ignore")
 
 ##############################################################################
 # Let's first import the `spikeinterface` package.
@@ -136,6 +138,68 @@ st.postprocessing.export_to_phy(recording, sorting_KL, output_folder='phy')
 # Then you can run the template-gui with: `phy template-gui phy/params.py` and manually curate the results.
 #
 # Validation of spike sorting output is very important. The `toolkit.validation` module implements several quality
-# metrics to assess the goodness of sorted units. Among those
+# metrics to assess the goodness of sorted units. Among those, for example, are signal-to-noise ratio, ISI violation
+# ratio, isolation distance, and many more.
+
+snrs = st.validation.compute_snrs(sorting_KL, recording_cmr)
+isi_violations = st.validation.compute_isi_violations(sorting_KL)
+isolations = st.validation.compute_isolation_distances(sorting_KL, recording)
+
+print('SNR', snrs)
+print('ISI violation ratios', isi_violations)
+print('Isolation distances', isolations)
+
+##############################################################################
+# Quality metrics can be also used to automatically curate the spike sorting output. For example, you can select
+# sorted units with a SNR above a certain threshold:
+
+sorting_curated_snr = st.curation.threshold_snr(sorting_KL, recording, threshold=5)
+snrs_above = st.validation.compute_snrs(sorting_curated_snr, recording_cmr)
+
+print('Curated SNR', snrs_above)
+
+##############################################################################
+# The final part of this tutorial deals with comparing spike sorting outputs.
+# We can either (1) compare the spike sorting results with the ground-truth sorting :code:`sorting_true`, (2) compare
+# the output of two (Klusta and Mountainsor4), or (3) compare the output of multiple sorters:
+
+comp_gt_KL = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_KL)
+comp_KL_MS4 = sc.compare_two_sorters(sorting1=sorting_KL, sorting2=sorting_MS4)
+comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_MS4, sorting_KL],
+                                         name_list=['klusta', 'ms4'])
+
+
+##############################################################################
+# When comparing with a ground-truth sorting extractor (1), you can get the sorting performance and plot a confusion
+# matrix
+
+comp_gt_KL.get_performance()
+w_conf = sw.plot_confusion_matrix(comp_gt_KL)
+
+##############################################################################
+# When comparing two sorters (2), we can see the matching of units between sorters. For example, this is how to extract
+# the unit ids of Mountainsort4 (sorting2) mapped to the units of Klusta (sorting1). Units which are not mapped has -1
+# as unit id.
+
+mapped_units = comp_KL_MS4.get_mapped_sorting1().get_unit_ids()
+
+print('Klusta units:', sorting_KL.get_unit_ids())
+print('Mapped Mountainsort4 units:', mapped_units)
+
+##############################################################################
+# When comparing multiple sorters (3), you can extract a :code:`SortingExtractor` object with units in agreement
+# between sorters. You can also plot a graph showing how the units are matched between the sorters.
+
+sorting_agreement = comp_multi.get_agreement_sorting(minimum_matching=2)
+
+print('Units in agreement between Klusta and Mountainsort4:', sorting_agreement.get_unit_ids())
+
+w_multi = sw.plot_multicomp_graph(comp_multi)
+
+
+
+
+
+
 
 
