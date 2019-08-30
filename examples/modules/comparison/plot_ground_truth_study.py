@@ -44,7 +44,7 @@ import spikeinterface.comparison as sc
 # We first generate the folder.
 # this can take some time because recordings are copied inside the folder.
 
-from spiketoolkit.study import GroundTruthStudy
+from spikeinterface.comparison import GroundTruthStudy
 
 rec0, gt_sorting0 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=10)
 rec1, gt_sorting1 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=20)
@@ -53,7 +53,7 @@ gt_dict = {
     'rec1': (rec1, gt_sorting1),
 }
 study_folder = 'a_study_folder'
-study = GroundTruthStudy.setup(study_folder, gt_dict)
+study = GroundTruthStudy.create(study_folder, gt_dict)
 
 ##############################################################################
 # Then just run all sorters on all recordings in one functions.
@@ -88,7 +88,7 @@ study.copy_sortings()
 
 study.run_comparisons(exhaustive_gt=True)
 
-comparisons = aggregate_sorting_comparison(study_folder, exhaustive_gt=True)
+comparisons = study.aggregate_sorting_comparison(study_folder, exhaustive_gt=True)
 
 for (rec_name, sorter_name), comp in study.comparisons.items():
     print('*'*10)
@@ -118,7 +118,7 @@ print(dataframes.keys())
 
 ##############################################################################
 
-display(dataframes['perf_pooled_with_average'])
+# display(dataframes['perf_pooled_with_average'])
 
 ##############################################################################
 
@@ -134,14 +134,14 @@ dataframes['run_times']
 
 run_times = dataframes['run_times']
 fig, ax = plt.subplots()
-sn.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax)
+sns.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax)
 ax.set_title('Run times')
 
 ##############################################################################
 
 perfs = dataframes['perf_pooled_with_average']
 fig, ax = plt.subplots()
-sn.barplot(data=perfs, x='rec_name', y='recall', hue='sorter_name', ax=ax)
+sns.barplot(data=perfs, x='rec_name', y='recall', hue='sorter_name', ax=ax)
 ax.set_title('Recall')
 ax.set_ylim(0, 1)
 
