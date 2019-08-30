@@ -21,13 +21,11 @@ With `spikeinterface` one can:
    :caption: Contents:
    
    overview
+   installation
    getting_started/plot_getting_started.rst
    modules/index.rst
-   usage/index.rst
-   contribute/index.rst
+   contribute
    api
-   
-
 
 
 Indices and tables

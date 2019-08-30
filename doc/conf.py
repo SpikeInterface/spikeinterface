@@ -10,10 +10,14 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
+import os
+import sys
 # sys.path.insert(0, os.path.abspath('.'))
-
+sys.path.insert(0, os.path.abspath('modules/spikeextractors/'))
+sys.path.insert(0, os.path.abspath('modules/spiketoolkit/'))
+sys.path.insert(0, os.path.abspath('modules/spikesorters/'))
+sys.path.insert(0, os.path.abspath('modules/spikecomparison/'))
+sys.path.insert(0, os.path.abspath('modules/spikewidgets/'))
 
 # -- Project information -----------------------------------------------------
 
@@ -65,13 +69,14 @@ from sphinx_gallery.sorting import ExplicitOrder
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-    'examples_dirs': ['../examples/getting_started', '../examples/modules', '../examples/usage',
-                      '../examples/contribute'],   # path to your example scripts
-    'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute']  # path where to save gallery generated examples
-    # 'subsection_order': ExplicitOrder(['../examples/getting_started/',
-    #                                    '../examples/sorters/',
-    #                                    '../examples/comparison/',
-    #                                    ]),
+    'examples_dirs': ['../examples/getting_started', '../examples/modules'],   # path to your example scripts
+    'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute'],  # path where to save gallery generated examples
+    'subsection_order': ExplicitOrder(['../examples/modules/extractors',
+                                       '../examples/modules/toolkit',
+                                       '../examples/modules/sorters',
+                                       '../examples/modules/comparison',
+                                       '../examples/modules/widgets',
+                                       ]),
     
 }
 

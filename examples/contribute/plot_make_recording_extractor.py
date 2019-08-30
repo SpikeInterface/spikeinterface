@@ -1,5 +1,0 @@
-"""
-Create a RecordingExtractor
-===========================
-
-"""

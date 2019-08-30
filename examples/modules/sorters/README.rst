@@ -1,9 +1,9 @@
 Sorters module
 -------------------------------
 
-The :code:`sorters` module imports the :code:`spikesorters` package.
-It wraps several spike sorting algorithms with the same API.
+The :code:`sorters` module imports the `spikesorters <https://github.com/SpikeInterface/spikesorters/>`_ package.
+It wraps several spike sorting algorithms with the same simple Python API.
 
 - run sorters with different parameters
-- spikesort by group
-- using the launcher
+- spike sort by property
+- use the sorter launcher

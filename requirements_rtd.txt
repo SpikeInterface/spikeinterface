@@ -1,0 +1,21 @@
+# install spikeinterface locally to use autodoc
+-e git+https://github.com/SpikeInterface/spikeextractors.git@master#egg=spikeextractors --src modules
+-e git+https://github.com/SpikeInterface/spiketoolkit.git@master#egg=spiketoolkit --src modules
+-e git+https://github.com/SpikeInterface/spikesorters.git@master#egg=spikesorters --src modules
+-e git+https://github.com/SpikeInterface/spikecomparison.git@master#egg=spikecomparison --src modules
+-e git+https://github.com/SpikeInterface/spikewidgets.git@master#egg=spikewidgets --src modules
+
+# install sorters
+# klusta
+numpy==1.16.2
+scipy==1.2
+h5py
+six
+cython
+tqdm
+click
+klusta
+klustakwik2==0.2.6
+
+# ms4
+ml_ms4alg==0.3.1
