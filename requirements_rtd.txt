@@ -16,6 +16,7 @@ ml_ms4alg==0.3.1
 Cython
 h5py
 tqdm
+click
 klusta
 klustakwik2
 
