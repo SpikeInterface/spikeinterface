@@ -22,7 +22,7 @@ recording, sorting_true = se.example_datasets.toy_example(duration=60, seed=0)
 
 recording_list = [recording]
 sorter_list = ['klusta', 'mountainsort4', 'tridesclous']
-sorting_output = ss.run_sorters(sorter_list, recording_list, working_folder='tmp_some_sorters')
+sorting_output = ss.run_sorters(sorter_list, recording_list, working_folder='tmp_some_sorters', mode='overwrite')
 
 ##############################################################################
 # retrieve results for all (recording, sorter) pairs

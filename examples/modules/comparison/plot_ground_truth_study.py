@@ -88,7 +88,7 @@ study.copy_sortings()
 
 study.run_comparisons(exhaustive_gt=True)
 
-comparisons = study.aggregate_sorting_comparison(study_folder, exhaustive_gt=True)
+# comparisons = study.aggregate_sorting_comparison(study_folder, exhaustive_gt=True)
 
 for (rec_name, sorter_name), comp in study.comparisons.items():
     print('*'*10)
