@@ -9,16 +9,18 @@ sphinx-gallery
 -e git+https://github.com/SpikeInterface/spikewidgets.git@master#egg=spikewidgets --install-option='--src modules'
 
 # install sorters
+# ms4
+ml_ms4alg==0.3.1
+
 # klusta
+Cython
 numpy
 scipy
 h5py
 six
-cython
 tqdm
 click
 klusta
 klustakwik2==0.2.6
 
-# ms4
-ml_ms4alg==0.3.1
+
