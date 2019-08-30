@@ -10,8 +10,8 @@ sphinx-gallery
 
 # install sorters
 # klusta
-numpy==1.16.2
-scipy==1.2
+numpy
+scipy
 h5py
 six
 cython
