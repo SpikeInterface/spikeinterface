@@ -65,8 +65,9 @@ from sphinx_gallery.sorting import ExplicitOrder
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-    'examples_dirs': ['../examples/getting_started', '../examples/modules', '../examples/usage'],   # path to your example scripts
-    'gallery_dirs': ['getting_started', 'modules', 'usage']  # path where to save gallery generated examples
+    'examples_dirs': ['../examples/getting_started', '../examples/modules', '../examples/usage',
+                      '../examples/contribute'],   # path to your example scripts
+    'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute']  # path where to save gallery generated examples
     # 'subsection_order': ExplicitOrder(['../examples/getting_started/',
     #                                    '../examples/sorters/',
     #                                    '../examples/comparison/',
