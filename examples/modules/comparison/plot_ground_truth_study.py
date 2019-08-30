@@ -33,9 +33,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # TODO fix import
-import spikeextractors as se
-import spikeinterface.sorters as sorters
+import spikeinterface.extractors as se
 import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
 
 ##############################################################################
 # 1) Setup study folder and run all sorters
@@ -98,7 +98,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
     perf = comp.get_performance(method='by_unit')
     perf = comp.get_performance(method='pooled_with_average')
     m = comp.get_confusion_matrix()
-    comp.plot_confusion_matrix()
+    sw.plot_confusion_matrix(comp)
 
 
 ##############################################################################
@@ -109,7 +109,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
 # The ``aggregate_performances_table`` function, gathers all the outputs in
 # the study folder and merges them in a single dataframe.
 
-dataframes = study.aggregate_dataframes
+dataframes = study.aggregate_dataframes()
 
 ##############################################################################
 # Pandas dataframes can be nicely displayed as tables in the notebook.
