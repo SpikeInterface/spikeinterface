@@ -13,14 +13,6 @@ sphinx-gallery
 ml_ms4alg==0.3.1
 
 # klusta
-Cython
-numpy
-scipy
-h5py
-six
-tqdm
-click
-klusta
-klustakwik2==0.2.6
+
 
 
