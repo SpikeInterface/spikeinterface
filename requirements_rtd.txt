@@ -2,11 +2,11 @@
 sphinx-gallery
 
 # install spikeinterface locally to use autodoc
--e git+https://github.com/SpikeInterface/spikeextractors.git@master#egg=spikeextractors --src modules
--e git+https://github.com/SpikeInterface/spiketoolkit.git@master#egg=spiketoolkit --src modules
--e git+https://github.com/SpikeInterface/spikesorters.git@master#egg=spikesorters --src modules
--e git+https://github.com/SpikeInterface/spikecomparison.git@master#egg=spikecomparison --src modules
--e git+https://github.com/SpikeInterface/spikewidgets.git@master#egg=spikewidgets --src modules
+-e git+https://github.com/SpikeInterface/spikeextractors.git@master#egg=spikeextractors --install-option='--src modules'
+-e git+https://github.com/SpikeInterface/spiketoolkit.git@master#egg=spiketoolkit --install-option='--src modules'
+-e git+https://github.com/SpikeInterface/spikesorters.git@master#egg=spikesorters --install-option='--src modules'
+-e git+https://github.com/SpikeInterface/spikecomparison.git@master#egg=spikecomparison --install-option='--src modules'
+-e git+https://github.com/SpikeInterface/spikewidgets.git@master#egg=spikewidgets --install-option='--src modules'
 
 # install sorters
 # klusta
