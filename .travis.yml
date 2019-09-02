@@ -6,9 +6,12 @@ python:
   - '3.6'
 install:
   - pip install -r requirements.txt
+  - pip install sphinx sphinx-gallery
 script:
   # ignore sources where read the docs source code is cloned to generate the repo
   python -m pytest --ignore=doc/
+  cd doc
+  make html
 deploy:
   provider: pypi
   user: alejoe91
