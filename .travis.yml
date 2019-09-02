@@ -7,8 +7,8 @@ python:
 install:
   - pip install -r requirements.txt
 script:
-  # py.test -s
-  python -m pytest
+  # ignore sources where read the docs source code is cloned to generate the repo
+  python -m pytest --ignore=doc/
 deploy:
   provider: pypi
   user: alejoe91
