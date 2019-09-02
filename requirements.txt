@@ -3,5 +3,9 @@ spiketoolkit>=0.4.0
 spikesorters>=0.1.4
 spikewidgets>=0.2.3
 spikecomparison>=0.1.0
+
 # temporary until spikesorters MdaExtractor is removed...
 requests
+
+# should be remove when toolkit will be released
+spikemetrics>=0.1.1
