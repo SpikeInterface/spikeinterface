@@ -5,7 +5,7 @@ Run spike sorting algorithms
 This example shows the basic usage of the :code:`sorters` module of :code:`spikeinterface`
 """
 
-import spikeextractors as se
+import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 
 ##############################################################################
@@ -27,7 +27,7 @@ print(ss.available_sorters())
 print(ss.installed_sorter_list)
 
 ##############################################################################
-# 2) Check and set sorters parameters
+# Change sorter parameters
 # -----------------------------------
 # 
 
@@ -57,8 +57,10 @@ print('Units found with threshold = 4:', sorting_MS4.get_unit_ids())
 print('Units found with threshold = 10:', sorting_MS4_10.get_unit_ids())
 
 ##############################################################################
-# 3) Run sorters
+# Run sorters
 # --------------
+
+# TODO add section about MATLAB sorters (set path, env variables etc)
 
 # SpyKING Circus spike sorting
 # sorting_SC = ss.run_spykingcircus(recording, output_folder='tmp_SC')

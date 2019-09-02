@@ -55,7 +55,7 @@ w_perf = sw.plot_sorting_performance(comp_MS4, property_name='snr', metric='accu
 
 ##############################################################################
 # Widgets using MultiSortingComparison
-# ---------------------------------
+# -------------------------------------
 #
 # We can also compare all three SortingExtractor objects, obtaining a :code:`MultiSortingComparison` object.
 

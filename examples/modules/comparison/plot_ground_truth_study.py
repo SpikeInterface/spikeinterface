@@ -12,11 +12,12 @@ and then collect and aggregate results in an easy way.
 
 The all mechanism is based on an intrinsinct organisation
 into a "study_folder" with several subfolder:
-  * raw_files : contain a copy in binary format of recordings
-  * sorter_folders : contains output of sorters
-  * ground_truth : contains a copy of sorting ground  in npz format
-  * sortings: contains light copy of all sorting in npz format
-  * tables: some table in cvs format
+
+* raw_files : contain a copy in binary format of recordings
+* sorter_folders : contains output of sorters
+* ground_truth : contains a copy of sorting ground  in npz format
+* sortings: contains light copy of all sorting in npz format
+* tables: some table in cvs format
 
 In order to run and re run the computation all gt_sorting anf
 recordings are copied to a fast and universal format : 
@@ -32,13 +33,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# TODO fix import
 import spikeinterface.extractors as se
-import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
 ##############################################################################
-# 1) Setup study folder and run all sorters
+# Setup study folder and run all sorters
 # ------------------------------------------------------
 # 
 # We first generate the folder.
@@ -76,7 +75,7 @@ study.copy_sortings()
 
 
 ##############################################################################
-# 2) Collect comparisons
+# Collect comparisons
 # --------------------------------
 # 
 # You can collect in one shot all results and run the
@@ -95,18 +94,17 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
     print(rec_name, sorter_name)
     print(comp.count) # raw counting of tp/fp/...
     comp.print_summary()
-    perf = comp.get_performance(method='by_unit')
-    perf = comp.get_performance(method='pooled_with_average')
+    perf_unit = comp.get_performance(method='by_unit')
+    perf_avg = comp.get_performance(method='pooled_with_average')
     m = comp.get_confusion_matrix()
     sw.plot_confusion_matrix(comp)
 
-
 ##############################################################################
-# 3) Collect synthetic dataframes and display
+# Collect synthetic dataframes and display
 # -------------------------------------------------------------
 # 
 # As shown previously, the performance is returned as a pandas dataframe.
-# The ``aggregate_performances_table`` function, gathers all the outputs in
+# The :code:`aggregate_performances_table` function, gathers all the outputs in
 # the study folder and merges them in a single dataframe.
 
 dataframes = study.aggregate_dataframes()
@@ -126,8 +124,8 @@ dataframes['run_times']
 
 
 ##############################################################################
-# 4) Easy plot with seaborn
-# ------------------
+# Easy plot with seaborn
+# ------------------------
 # 
 # Seaborn allows to easily plot pandas dataframes. Let’s see some
 # examples.

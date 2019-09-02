@@ -71,7 +71,40 @@ print('Unit ids:', unit_ids)
 print('Spike train of first unit:', spike_train)
 
 ##################################################################
-# add a probe file?
+# Optionally, you can load probe information using a '.prb' file. For example, this is the content of
+# :code:`custom_probe.prb`:
+#
+# .. parsed-literal::
+#     channel_groups = {
+#         0: {
+#             'channels': [1, 0],
+#             'geometry': [[0, 0], [0, 1]],
+#             'label': ['first_channel', 'second_channel'],
+#         },
+#         1: {
+#             'channels': [2, 3],
+#             'geometry': [[3,0], [3,1]],
+#             'label': ['third_channel', 'fourth_channel'],
+#         }
+#     }
+#
+# The '.prb' file uses python-dictionary syntax. With probe files you can change the order of the channels, load 'group'
+# properties, 'location' properties (using the  'geometry' or 'location' keys, and any other arbitrary information
+# (e.g. 'labels'). All information can be specified as lists (same number of elements of corresponding 'channels' in
+# 'channel_group', or dictionaries with the channel id as key and the property as value (e.g. 'labels':
+# {1: 'first_channel', 0: 'second_channel'})
+#
+# You can load the probe file using the :code:`se.load_probe_file()` function. This function returns another
+# :code:`RecordingExtractor` object:
+
+recording_prb = se.load_probe_file(recording, 'custom_probe.prb')
+print('Channel ids:', recording_prb.get_channel_ids())
+print('Loaded properties', recording_prb.get_shared_channel_property_names())
+print('Label of channel 0:', recording_prb.get_channel_property(channel_id=0, property_name='label'))
+
+# 'group' and 'location' can be returned as lists:
+print(recording_prb.get_channel_groups())
+print(recording_prb.get_channel_locations())
 
 
 ##############################################################################
@@ -117,7 +150,6 @@ sorting_MS4_2 = ss.run_mountainsort4(recording=recording, **ms4_params)
 # Let's run Klusta as well, with default parameters:
 
 sorting_KL = ss.run_klusta(recording=recording_cmr)
-
 
 ##############################################################################
 # The `sorting_MS4` and `sorting_MS4` are `SortingExtractor` objects. We can print the units found using:
