@@ -7,6 +7,7 @@ python:
 install:
   - pip install -r requirements.txt
   - pip install sphinx sphinx-gallery
+  - pip install .
 script:
   # ignore sources where read the docs source code is cloned to generate the repo
   - python -m pytest --ignore=doc/
