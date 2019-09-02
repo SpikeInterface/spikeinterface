@@ -8,6 +8,16 @@ install:
   - pip install -r requirements.txt
   - pip install sphinx sphinx-gallery
   - pip install .
+  
+  #all this is for sorters to build examples
+  - pip install h5py six cython tqdm click
+  - pip install klusta
+  - pip install klustakwik2==0.2.6
+  - pip install tridesclous==1.2.1
+  - pip install herdingspikes==0.3.2
+  - pip install spyking-circus==0.8.3 --no-binary=mpi4py
+  - pip install ml_ms4alg==0.3.1
+  
 script:
   # ignore sources where read the docs source code is cloned to generate the repo
   - python -m pytest --ignore=doc/
