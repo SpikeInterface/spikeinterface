@@ -1,6 +1,6 @@
 """
 Compare multiple sorters and consensus based method
-==================================
+====================================================
 
 With 3 or more spike sorters, the comparison is implemented with a
 graph-based method. The multiple sorter comparison also allows to clean
@@ -16,8 +16,7 @@ trains and spikes in agreement with multiple sorters.
 import numpy as np
 import matplotlib.pyplot as plt
 
-# TODO fix import
-import spikeextractors as se
+import spikeinterface.extractors as se
 import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
 
@@ -35,8 +34,8 @@ sorting_MS4 = sorters.run_mountainsort4(recording)
 sorting_TDC = sorters.run_tridesclous(recording)
 
 #############################################################################
-# 1) Compare multiple spike sorter outputs
-# ----------------------------------------
+# Compare multiple spike sorter outputs
+# -------------------------------------------
 
 mcmp = sc.compare_multiple_sorters(sorting_list=[sorting_KL, sorting_MS4, sorting_TDC], 
                                               name_list=['KL', 'MS4', 'TDC'], verbose=True)
@@ -59,8 +58,8 @@ mcmp.sorting_comparisons['MS4']['TDC'].get_mapped_sorting1().get_mapped_unit_ids
 
 
 #############################################################################
-# 3) Consensus-based method
-# -------------------------
+# Consensus-based method
+# ---------------------------
 # 
 # We can pull the units in agreement with different sorters using the
 # ``get_agreement_sorting`` method. This allows to make spike sorting more
