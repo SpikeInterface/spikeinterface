@@ -35,6 +35,8 @@ import seaborn as sns
 
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
+from spikeinterface.comparison import GroundTruthStudy
+
 
 ##############################################################################
 # Setup study folder and run all sorters
@@ -43,7 +45,6 @@ import spikeinterface.widgets as sw
 # We first generate the folder.
 # this can take some time because recordings are copied inside the folder.
 
-from spikeinterface.comparison import GroundTruthStudy
 
 rec0, gt_sorting0 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=10)
 rec1, gt_sorting1 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=20)
@@ -87,7 +88,6 @@ study.copy_sortings()
 
 study.run_comparisons(exhaustive_gt=True)
 
-# comparisons = study.aggregate_sorting_comparison(study_folder, exhaustive_gt=True)
 
 for (rec_name, sorter_name), comp in study.comparisons.items():
     print('*'*10)
@@ -98,6 +98,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
     perf_avg = comp.get_performance(method='pooled_with_average')
     m = comp.get_confusion_matrix()
     sw.plot_confusion_matrix(comp)
+
 
 ##############################################################################
 # Collect synthetic dataframes and display
@@ -116,7 +117,7 @@ print(dataframes.keys())
 
 ##############################################################################
 
-# display(dataframes['perf_pooled_with_average'])
+print(dataframes['perf_pooled_with_average'])
 
 ##############################################################################
 
