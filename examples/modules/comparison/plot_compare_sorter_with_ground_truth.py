@@ -1,6 +1,6 @@
 """
 Compare spike sprting output with ground-truth recordings
-==================================
+=========================================================
 
 Simulated recordings or paired pipette and extracellular recordings can
 be used to validate spike sorting algorithms.
@@ -21,8 +21,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# TODO fix import
-import spikeextractors as se
+import spikeinterface.extractors as se
 import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
 

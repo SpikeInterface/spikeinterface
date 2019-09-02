@@ -1,6 +1,6 @@
 """
 Compare two sorters
-=============
+====================
 
 This example show how to compare the result of two sorters.
 
@@ -13,8 +13,7 @@ This example show how to compare the result of two sorters.
 import numpy as np
 import matplotlib.pyplot as plt
 
-# TODO fix import
-import spikeextractors as se
+import spikeinterface.extractors as se
 import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
 
