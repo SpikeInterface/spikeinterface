@@ -16,14 +16,13 @@ def test_import1():
 
 def test_import2():
     import spikeinterface as si
-    import spikeinterface.widgets as sw
 
     print(si.extractors.example_datasets.toy_example)
     print(si.toolkit.preprocessing.bandpass_filter)
     print(si.sorters.available_sorters)
     print(si.comparison.compare_two_sorters)
     print(si.widgets.plot_timeseries)
-
+    
 
 if __name__ == '__main__':
     test_import1()
