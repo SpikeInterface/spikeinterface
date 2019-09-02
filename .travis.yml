@@ -9,9 +9,9 @@ install:
   - pip install sphinx sphinx-gallery
 script:
   # ignore sources where read the docs source code is cloned to generate the repo
-  python -m pytest --ignore=doc/
-  cd doc
-  make html
+  - python -m pytest --ignore=doc/
+  - cd doc
+  - make html
 deploy:
   provider: pypi
   user: alejoe91
