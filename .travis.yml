@@ -4,6 +4,17 @@ os:
   - linux
 python:
   - '3.6'
+sudo: enabled
+addons:
+  apt:
+    packages:
+    - mpich
+    - libmpich-dev
+    - libglib2.0-0
+    - libgl1-mesa-glx
+    - qt5-default
+    - packagekit-gtk3-module
+    - libcanberra-gtk-module
 install:
   - pip install -r requirements.txt
   - pip install sphinx sphinx-gallery
