@@ -103,6 +103,14 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-doc/auto_examples/*
 doc/_build/*
-examples/tmp_*
+doc/getting_started/*
+doc/modules/*
+
+examples/getting_started/tmp_*
+examples/getting_started/phy
+examples/modules/widgets/tmp_*
+examples/modules/sorters/tmp_*
+examples/modules/comparison/tmp_*
+examples/modules/comparison/a_study_folder/*
+
