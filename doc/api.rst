@@ -16,7 +16,10 @@ Module :mod:`spikeinterface.extractors`
     .. autoclass:: SubSortingExtractor
         :members:
 
-    .. autoclass:: MultiRecordingExtractor
+    .. autoclass:: MultiRecordingChannelExtractor
+        :members:
+
+    .. autoclass:: MultiRecordingTimeExtractor
         :members:
 
     .. autoclass:: MultiSortingExtractor

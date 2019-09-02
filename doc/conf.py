@@ -12,12 +12,33 @@
 #
 import os
 import sys
+import shutil
 # sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('modules/spikeextractors/'))
-sys.path.insert(0, os.path.abspath('modules/spiketoolkit/'))
-sys.path.insert(0, os.path.abspath('modules/spikesorters/'))
-sys.path.insert(0, os.path.abspath('modules/spikecomparison/'))
-sys.path.insert(0, os.path.abspath('modules/spikewidgets/'))
+if not os.path.isdir('sources'):
+    os.mkdir('sources')
+
+# clone git repos
+cwd = os.getcwd()
+os.chdir('sources')
+os.system('git clone https://github.com/SpikeInterface/spikeextractors.git')
+os.system('git clone https://github.com/SpikeInterface/spiketoolkit.git')
+os.system('git clone https://github.com/SpikeInterface/spikesorters.git')
+os.system('git clone https://github.com/SpikeInterface/spikecomparison.git')
+os.system('git clone https://github.com/SpikeInterface/spikewidgets.git')
+
+os.chdir(cwd)
+
+# clean study
+study_folder = '../examples/modules/comparison/a_study_folder'
+if os.path.isdir(study_folder):
+    print('Removing study folder')
+    shutil.rmtree(study_folder)
+
+sys.path.insert(0, os.path.abspath('sources/spikeextractors/'))
+sys.path.insert(0, os.path.abspath('sources/spiketoolkit/'))
+sys.path.insert(0, os.path.abspath('sources/spikesorters/'))
+sys.path.insert(0, os.path.abspath('sources/spikecomparison/'))
+sys.path.insert(0, os.path.abspath('sources/spikewidgets/'))
 
 # -- Project information -----------------------------------------------------
 
@@ -38,6 +59,10 @@ extensions = [
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+
+master_doc = 'index'
+
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -62,7 +87,7 @@ except ImportError:
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']
 
 
 from sphinx_gallery.sorting import ExplicitOrder
@@ -71,7 +96,7 @@ from sphinx_gallery.sorting import ExplicitOrder
 sphinx_gallery_conf = {
     'examples_dirs': ['../examples/getting_started', '../examples/modules'],   # path to your example scripts
     'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute'],  # path where to save gallery generated examples
-    'subsection_order': ExplicitOrder(['../examples/modules/extractors',
+    'subsection_order': ExplicitOrder(['../examples/modules/extractors/',
                                        '../examples/modules/toolkit',
                                        '../examples/modules/sorters',
                                        '../examples/modules/comparison',
