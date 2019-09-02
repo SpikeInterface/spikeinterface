@@ -1,6 +1,10 @@
 Welcome to SpikeInterface's documentation!
 ==========================================
 
+.. image:: images/logo.png
+  :scale: 120 %
+  :align: right
+
 Spikeinterface is a collection of modules designed to simplify the analysis of extracellular neural recordings, in particular spike sorting.
 With `spikeinterface` one can:
 
@@ -17,12 +21,11 @@ With `spikeinterface` one can:
    :caption: Contents:
    
    overview
+   installation
    getting_started/plot_getting_started.rst
    modules/index.rst
-   usage/index.rst
+   contribute
    api
-   
-
 
 
 Indices and tables
