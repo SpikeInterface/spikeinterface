@@ -8,9 +8,6 @@ algorithms, inspect and validate the results, export to Phy, and compare spike s
 
 """
 
-import warnings
-warnings.filterwarnings("ignore")
-
 ##############################################################################
 # Let's first import the `spikeinterface` package.
 # We can either import the whole package:
@@ -37,7 +34,7 @@ import spikeinterface.widgets as sw
 ##############################################################################
 # First, let's create a toy example with the `extractors` module:
 
-recording, sorting_true = se.example_datasets.toy_example(duration=60, num_channels=4, seed=0)
+recording, sorting_true = se.example_datasets.toy_example(duration=10, num_channels=4, seed=0)
 
 ##############################################################################
 # `recording` is a `RecordingExtractor` object, which extracts information #  about channel ids, channel locations

@@ -11,7 +11,7 @@ import spikeinterface.widgets as sw
 ##############################################################################
 # First, let's create a toy example with the `extractors` module:
 
-recording, sorting_true = se.example_datasets.toy_example(duration=30, num_channels=4, seed=0)
+recording, sorting_true = se.example_datasets.toy_example(duration=10, num_channels=4, seed=0)
 
 ##############################################################################
 # Let's run some spike sorting:

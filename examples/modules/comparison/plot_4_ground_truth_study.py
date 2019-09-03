@@ -26,10 +26,8 @@ binary (for recordings) and npz (for sortings).
 
 
 ##############################################################################
-# Import
+# Imports
 
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -46,8 +44,8 @@ from spikeinterface.comparison import GroundTruthStudy
 # this can take some time because recordings are copied inside the folder.
 
 
-rec0, gt_sorting0 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=10)
-rec1, gt_sorting1 = se.example_datasets.toy_example(num_channels=4, duration=30, seed=20)
+rec0, gt_sorting0 = se.example_datasets.toy_example(num_channels=4, duration=10, seed=10)
+rec1, gt_sorting1 = se.example_datasets.toy_example(num_channels=4, duration=10, seed=20)
 gt_dict = {
     'rec0': (rec0, gt_sorting0),
     'rec1': (rec1, gt_sorting1),

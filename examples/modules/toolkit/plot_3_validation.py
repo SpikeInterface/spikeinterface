@@ -13,7 +13,7 @@ import spikeinterface.toolkit as st
 ##############################################################################
 # First, let's create a toy example:
 
-recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=30, seed=0)
+recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=10, seed=0)
 
 ##############################################################################
 # The :code:`toolkit.validation` submodule has a :code:`MetricCalculator` class that enables to compute metrics in a
