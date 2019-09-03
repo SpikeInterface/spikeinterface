@@ -1,12 +1,17 @@
 # sphinx-gallery
 sphinx-gallery
 
-# install spikeinterface locally to use autodoc
--e git+https://github.com/SpikeInterface/spikeextractors.git@master#egg=spikeextractors --install-option='--src modules'
--e git+https://github.com/SpikeInterface/spiketoolkit.git@master#egg=spiketoolkit --install-option='--src modules'
--e git+https://github.com/SpikeInterface/spikesorters.git@master#egg=spikesorters --install-option='--src modules'
--e git+https://github.com/SpikeInterface/spikecomparison.git@master#egg=spikecomparison --install-option='--src modules'
--e git+https://github.com/SpikeInterface/spikewidgets.git@master#egg=spikewidgets --install-option='--src modules'
+spikeextractors>=0.5.6
+spiketoolkit>=0.4.2
+spikesorters>=0.1.4
+spikewidgets>=0.2.3
+spikecomparison>=0.1.0
+
+# temporary until spikesorters MdaExtractor is removed...
+requests
+
+# should be remove when toolkit will be released
+spikemetrics>=0.1.2
 
 # install sorters
 # ms4
@@ -18,9 +23,9 @@ h5py
 tqdm
 click
 klusta
-klustakwik2
+klustakwik2==0.2.6
 
 # tridesclous
-tridesclous==1.2.1
+tridesclous==1.2.2
 
 
