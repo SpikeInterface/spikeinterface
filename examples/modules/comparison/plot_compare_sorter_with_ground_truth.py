@@ -6,9 +6,9 @@ Simulated recordings or paired pipette and extracellular recordings can
 be used to validate spike sorting algorithms.
 
 For comparing to ground-truth data, the
-``compare_sorter_to_ground_truth(gt_sorting, tested_sorting)`` function
+:code:`compare_sorter_to_ground_truth(gt_sorting, tested_sorting)` function
 can be used. In this recording, we have ground-truth information for all
-units, so we can set ``exhaustive_gt`` to ``True``.
+units, so we can set :code:`exhaustive_gt` to :code:`True`.
 
 """
 
@@ -40,12 +40,12 @@ cmp_gt_MS4 = sc.compare_sorter_to_ground_truth(sorting_true, sorting_MS4, exhaus
 # then it computes several performance metrics.
 # 
 # Once the spike trains are matched, each spike is labelled as: - true
-# positive (tp): spike found both in ``gt_sorting`` and ``tested_sorting``
-# - false negative (fn): spike found in ``gt_sorting``, but not in
-# ``tested_sorting`` - false positive (fp): spike found in
-# ``tested_sorting``, but not in ``gt_sorting`` - misclassification errors
-# (cl): spike found in ``gt_sorting``, not in ``tested_sorting``, found in
-# another matched spike train of ``tested_sorting``, and not labelled as
+# positive (tp): spike found both in :code:`gt_sorting` and :code:`tested_sorting`
+# - false negative (fn): spike found in :code:`gt_sorting`, but not in
+# :code:`tested_sorting` - false positive (fp): spike found in
+# :code:`tested_sorting`, but not in :code:`gt_sorting` - misclassification errors
+# (cl): spike found in :code:`gt_sorting`, not in :code:`tested_sorting`, found in
+# another matched spike train of :code:`tested_sorting`, and not labelled as
 # true positives
 # 
 # From the counts of these labels the following performance measures are
@@ -57,9 +57,9 @@ cmp_gt_MS4 = sc.compare_sorter_to_ground_truth(sorting_true, sorting_MS4, exhaus
 # -  miss rate: #fn / (#tp + #fn1)
 # -  false discovery rate: #fp / (#tp + #fp)
 # 
-# The ``get_performance`` method a pandas dataframe (or a dictionary if
-# ``output='dict'``) with the comparison metrics. By default, these are
-# calculated for each spike train of ``sorting1``, the results can be
+# The :code:`get_performance` method a pandas dataframe (or a dictionary if
+# :code:`output='dict'`) with the comparison metrics. By default, these are
+# calculated for each spike train of :code:`sorting1:code:`, the results can be
 # pooles by average (average of the metrics) and by sum (all counts are
 # summed and the metrics are computed then).
 
