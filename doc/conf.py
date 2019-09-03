@@ -91,6 +91,7 @@ except ImportError:
 
 
 from sphinx_gallery.sorting import ExplicitOrder
+from sphinx_gallery.sorting import FileNameSortKey
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
@@ -102,6 +103,6 @@ sphinx_gallery_conf = {
                                        '../examples/modules/comparison',
                                        '../examples/modules/widgets',
                                        ]),
-    
+    'within_subsection_order': FileNameSortKey,
 }
 
