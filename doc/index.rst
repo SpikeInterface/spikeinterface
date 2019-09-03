@@ -27,6 +27,7 @@ With `spikeinterface` one can:
    modules/index.rst
    contribute
    api
+   authors
 
 
 Indices and tables

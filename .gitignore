@@ -116,3 +116,4 @@ examples/modules/extractors/sample_mountainsort_dataset/*
 examples/modules/comparison/tmp_*
 examples/modules/comparison/a_study_folder/*
 examples/modules/toolkit/phy/*
+examples/modules/toolkit/tmp_*
