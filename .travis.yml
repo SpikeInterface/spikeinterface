@@ -6,9 +6,21 @@ python:
   - '3.6'
 install:
   - pip install -r requirements.txt
+  - pip install sphinx sphinx-gallery
+  - pip install .
+
+  #all this is for sorters to build examples
+  - pip install h5py six cython tqdm click
+  - pip install klusta
+  - pip install klustakwik2==0.2.6
+  - pip install tridesclous==1.2.1
+  - pip install ml_ms4alg==0.3.1
+  
 script:
   # ignore sources where read the docs source code is cloned to generate the repo
-  python -m pytest --ignore=doc/
+  - python -m pytest --ignore=doc/
+  - cd doc
+  - make html
 deploy:
   provider: pypi
   user: alejoe91
