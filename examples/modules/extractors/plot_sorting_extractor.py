@@ -46,12 +46,12 @@ print('Num. events for first second of unit 1 = {}'.format(len(st1)))
 # Some extractors also implement a :code:`write` function. We can for example save our newly created sorting into
 # MDA format (Mountainsort4 format):
 
-se.MdaSortingExtractor.write_sorting(sorting=sorting, save_path='sample_mountainsort_dataset/firings_true.mda')
+se.MdaSortingExtractor.write_sorting(sorting=sorting, save_path='firings_true.mda')
 
 ##############################################################################
 # and read it back with the proper extractor:
 
-sorting2 = se.MdaSortingExtractor(firings_file='sample_mountainsort_dataset/firings_true.mda',
+sorting2 = se.MdaSortingExtractor(firings_file='firings_true.mda',
                                   sampling_frequency=samplerate)
 print('Unit ids = {}'.format(sorting2.get_unit_ids()))
 st = sorting2.get_unit_spike_train(unit_id=1)
