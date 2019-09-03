@@ -3,18 +3,9 @@
 Postprocessing Tutorial
 =======================
 
-This notebook shows how to use the spiketoolkit.postprocessing module
-to:
-
-1. compute spike waveforms
-2. compute unit templates
-3. compute unit maximum channel
-4. compute pca scores
-5. automatically curate spike sorting output
-6. export sorted data to phy to curate the results
-7. save curated sorting output
-
-
+Spike sorters generally output a set of units with corresponding spike trains. The :code:`toolkit.postprocessing`
+submodule allows to combine the :code:`RecordingExtractor` and the sorted :code:`SortingExtractor` objects to perform
+further postprocessing.
 """
 
 import time
@@ -40,7 +31,7 @@ recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=30
 
 
 ##############################################################################
-# 1) Compute spike waveforms
+# Compute spike waveforms
 # --------------------------
 # 
 # Waveforms are extracted with the ``get_unit_waveforms`` function by
@@ -59,8 +50,6 @@ wf = st.postprocessing.get_unit_waveforms(recording, sorting, ms_before=1, ms_af
 
 sorting.get_unit_spike_feature_names()
 print(wf[0].shape)
-
-
 
 
 ##############################################################################
@@ -102,7 +91,7 @@ print(wf_by_group[0].shape)
 
 
 ##############################################################################
-# 2) Compute unit templates (EAP)
+# Compute unit templates (EAP)
 # -------------------------------
 # 
 # Similarly to waveforms, templates - average waveforms - can be easily
@@ -121,7 +110,7 @@ templates = st.postprocessing.get_unit_templates(recording, sorting, max_num_wav
 print(sorting.get_unit_property_names())
 
 ##############################################################################
-# plotting templates of units 0,1,2 on all four channels
+# Plotting templates of units 0,1,2 on all four channels
 
 fig, ax = plt.subplots()
 ax.plot(templates[0].T, color='k')
@@ -131,7 +120,7 @@ ax.plot(templates[2].T, color='b')
 
 
 ##############################################################################
-# 3) Compute unit maximum channel
+# Compute unit maximum channel
 # -------------------------------
 # 
 # In the same way, one can get the ecording channel with the maximum
@@ -149,7 +138,7 @@ print(sorting.get_unit_property_names())
 
 
 ##############################################################################
-# 4) Compute pca scores
+# Compute pca scores
 # ---------------------
 # 
 # For some applications, for example validating the spike sorting output,
@@ -160,9 +149,6 @@ pca_scores = st.postprocessing.compute_unit_pca_scores(recording, sorting, n_com
 for pc in pca_scores:
     print(pc.shape)
 
-
-##############################################################################
-
 fig, ax = plt.subplots()
 ax.plot(pca_scores[0][:,0], pca_scores[0][:,1], 'r*')
 ax.plot(pca_scores[2][:,0], pca_scores[2][:,1], 'b*')
@@ -171,8 +157,6 @@ ax.plot(pca_scores[2][:,0], pca_scores[2][:,1], 'b*')
 # PCA scores can be also computed electrode-wise. In the previous example,
 # PCA was applied to the concatenation of the waveforms over channels.
 
-
-##############################################################################
 
 pca_scores_by_electrode = st.postprocessing.compute_unit_pca_scores(recording, sorting, n_comp=3, by_electrode=True)
 
@@ -189,51 +173,8 @@ ax.plot(pca_scores_by_electrode[0][:, 0, 0], pca_scores_by_electrode[0][:, 1, 0]
 ax.plot(pca_scores_by_electrode[2][:, 0, 0], pca_scores_by_electrode[2][:, 1, 1], 'b*')
 
 
-
 ##############################################################################
-# 5) Automatically curate the sorted result
-# -----------------------------------------
-# 
-# Before manually curating your dataset (which can be time intensive on
-# large-scale recordings) it may be a good idea to perform some automated
-# curation of the sorted result.
-# 
-# Below is an example of two simple, automatic curation methods you can
-# run:
-
-# TODO FIXME
-# snr_list = st.validation.quality_metrics.compute_snrs(recording, sorting)
-#~ print(snr_list)
-
-
-##############################################################################
-
-# TODO FIXME
-#~ curated_sorting1 = st.curation.threshold_num_spikes(sorting=sorting, threshold=70)
-#~ print("Unit spike train lengths uncurated: " + str([len(spike_train) for spike_train in [sorting.get_unit_spike_train(unit_id) for unit_id in sorting.get_unit_ids()]]))
-#~ print("Unit spike train lengths curated: " + str([len(spike_train) for spike_train in [curated_sorting1.get_unit_spike_train(unit_id) for unit_id in curated_sorting1.get_unit_ids()]]))
-
-
-##############################################################################
-# threshold\_min\_num\_spikes automatically rejects any units with number
-# of spikes lower than the given threshold. It returns a sorting extractor
-# without those units
-
-# TODO FIXME
-#~ curated_sorting2 = st.curation.threshold_min_SNR(recording=recording, sorting=curated_sorting1, 
-                                                       #~ min_SNR_threshold=6.0)
-#~ print("Unit SNRs uncurated: " + str(st.validation.qualitymetrics.compute_unit_SNR(recording, curated_sorting1)))
-#~ print("Unit SNRs curated: " + str(st.validation.qualitymetrics.compute_unit_SNR(recording, curated_sorting2)))
-
-
-##############################################################################
-# threshold\_min\_SNR automatically rejects any units with SNR lower than
-# the given threshold. It returns a sorting extractor without those units
-
-
-
-##############################################################################
-# 6) Export sorted data to phy to manually curate the results
+# Export sorted data to phy to manually curate the results
 # -----------------------------------------------------------
 # 
 # Finally, it is common to visualize and manually curate the data after
@@ -257,7 +198,7 @@ st.postprocessing.export_to_phy(recording, sorting, output_folder='phy', verbose
 
 
 ##############################################################################
-# 7) Save curated sorting output
+# Save curated sorting output
 # ------------------------------
 # 
 # The curated recordings can be either saved in any other format, or the

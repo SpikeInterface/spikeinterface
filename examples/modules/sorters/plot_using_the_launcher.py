@@ -5,7 +5,6 @@ Use the spike sorting launcher
 This example shows how to use the spike sorting launcher. The launcher allows to parameterize the sorter name and
 to run several sorters on one or multiple recordings.
 
-Here is how it works
 """
 
 import spikeinterface.extractors as se
