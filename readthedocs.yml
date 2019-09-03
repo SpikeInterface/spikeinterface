@@ -4,5 +4,5 @@ build:
 python:
   version: 3.6
   install:
-    - requirements: docs/requirements.txt
-    - requirements: docs/requirements_rtd.txt
+    - requirements: requirements.txt
+    - requirements: requirements_rtd.txt
