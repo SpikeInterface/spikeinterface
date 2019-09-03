@@ -2,7 +2,7 @@
 sphinx-gallery
 
 spikeextractors>=0.5.6
-spiketoolkit>=0.4.2
+spiketoolkit>=0.4.3
 spikesorters>=0.1.4
 spikewidgets>=0.2.3
 spikecomparison>=0.1.0

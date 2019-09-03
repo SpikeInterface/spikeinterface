@@ -11,7 +11,7 @@ import spikeinterface.widgets as sw
 ##############################################################################
 # First, let's create a toy example with the `extractors` module:
 
-recording, sorting = se.example_datasets.toy_example(duration=60, num_channels=4, seed=0)
+recording, sorting = se.example_datasets.toy_example(duration=10, num_channels=4, seed=0)
 
 ##############################################################################
 # plot_timeseries()
@@ -19,10 +19,10 @@ recording, sorting = se.example_datasets.toy_example(duration=60, num_channels=4
 
 w_ts = sw.plot_timeseries(recording)
 
-w_ts1 = sw.plot_timeseries(recording, trange=[5, 15])
+w_ts1 = sw.plot_timeseries(recording, trange=[5, 8])
 
 recording.set_channel_groups(channel_ids=recording.get_channel_ids(), groups=[0, 0, 1, 1])
-w_ts2 = sw.plot_timeseries(recording, trange=[5, 15], color_groups=True)
+w_ts2 = sw.plot_timeseries(recording, trange=[5, 8], color_groups=True)
 
 ##############################################################################
 # **Note**: each function returns a widget object, which allows to access the figure and axis.

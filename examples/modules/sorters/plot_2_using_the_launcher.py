@@ -13,7 +13,7 @@ import spikeinterface.sorters as ss
 ##############################################################################
 # First, let's create the usueal toy example:
 
-recording, sorting_true = se.example_datasets.toy_example(duration=60, seed=0)
+recording, sorting_true = se.example_datasets.toy_example(duration=10, seed=0)
 
 ##############################################################################
 # The launcher enables to call any spike sorter with the same functions:  :code:`run_sorter` and :code`run_sorters`.
