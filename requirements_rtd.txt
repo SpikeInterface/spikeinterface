@@ -1,19 +1,9 @@
 # sphinx-gallery
 sphinx-gallery
 
-spikeextractors>=0.5.6
-spiketoolkit>=0.4.3
-spikesorters>=0.1.4
-spikewidgets>=0.2.3
-spikecomparison>=0.1.0
 
-# temporary until spikesorters MdaExtractor is removed...
-requests
+## install sorters ##
 
-# should be remove when toolkit will be released
-spikemetrics>=0.1.2
-
-# install sorters
 # ms4
 ml_ms4alg==0.3.1
 
@@ -27,5 +17,3 @@ klustakwik2==0.2.6
 
 # tridesclous
 tridesclous==1.2.2
-
-
