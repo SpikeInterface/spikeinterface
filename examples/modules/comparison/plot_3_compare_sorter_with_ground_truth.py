@@ -27,7 +27,7 @@ import spikeinterface.comparison as sc
 
 ##############################################################################
 
-recording, sorting_true = se.example_datasets.toy_example(num_channels=4, duration=30, seed=0)
+recording, sorting_true = se.example_datasets.toy_example(num_channels=4, duration=10, seed=0)
 
 sorting_MS4 = sorters.run_mountainsort4(recording)
 
