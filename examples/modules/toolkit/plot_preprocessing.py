@@ -81,13 +81,13 @@ recording_single_groups = st.preprocessing.common_reference(recording, reference
                                                             groups=[[0, 1], [2, 3]], ref_channels=[0, 2])
 
 
-fig, ax = plt.subplots()
-ax.plot(recording_car.get_traces()[0])
-ax.plot(recording_cmr.get_traces()[0])
+fig1, ax1 = plt.subplots()
+ax1.plot(recording_car.get_traces()[0])
+ax1.plot(recording_cmr.get_traces()[0])
 
-plt.figure()
-ax.plot(recording_single_groups.get_traces()[1])  # not zero
-ax.plot(recording_single_groups.get_traces()[0])
+fig2, ax2 = plt.subplots()
+ax2.plot(recording_single_groups.get_traces()[1])  # not zero
+ax2.plot(recording_single_groups.get_traces()[0])
 
 ##############################################################################
 # Remove bad channels
@@ -133,9 +133,9 @@ recording_rmartifact = st.preprocessing.remove_artifacts(recording,
                                                          triggers=stimulation_trigger_frames,
                                                          ms_before=100, ms_after=200)
 
-fig, ax = plt.subplots()
-ax.plot(recording.get_traces()[0])
-ax.plot(recording_rmartifact.get_traces()[0])
+fig3, ax3 = plt.subplots()
+ax3.plot(recording.get_traces()[0])
+ax3.plot(recording_rmartifact.get_traces()[0])
 
 ##############################################################################
 # You can list the available preprocessors with:
