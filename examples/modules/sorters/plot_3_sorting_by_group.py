@@ -24,7 +24,7 @@ import time
 #
 # Let's create a toy example with 16 channels:
 
-recording_tetrodes, sorting_true = se.example_datasets.toy_example(duration=30, num_channels=16)
+recording_tetrodes, sorting_true = se.example_datasets.toy_example(duration=10, num_channels=16)
 
 ##############################################################################
 # Initially there is no group information ('location' is loaded automatically when creating toy data):

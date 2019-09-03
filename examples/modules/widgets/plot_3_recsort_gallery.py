@@ -11,7 +11,7 @@ import spikeinterface.widgets as sw
 ##############################################################################
 # First, let's create a toy example with the `extractors` module:
 
-recording, sorting = se.example_datasets.toy_example(duration=60, num_channels=4, seed=0)
+recording, sorting = se.example_datasets.toy_example(duration=10, num_channels=4, seed=0)
 
 ##############################################################################
 # plot_unit_waveforms()
