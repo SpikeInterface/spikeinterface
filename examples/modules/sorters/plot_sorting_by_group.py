@@ -2,7 +2,9 @@
 Run spike sorting by property
 =============================
 
-
+Sometimes you may want to spike sort different electrodes separately. For example your probe can have several channel
+groups (for example tetrodes) or you might want to spike sort different brain regions separately, In these cases, you
+can spike sort by property.
 """
 
 import spikeinterface.extractors as se
@@ -76,8 +78,32 @@ sorting_tetrodes_p = ss.run_sorter('klusta', recording_tetrodes, output_folder='
 print('Elapsed time parallel: ', time.time() - t_start)
 
 ##############################################################################
+# The units of the sorted output will have the same property used for spike sorting:
+
+print(sorting_tetrodes.get_unit_property_names())
+
+##############################################################################
 # Note that some spike sorters (e.g. Klusta, Spyking Circus) can handle automatically group information. In those cases
 # the 'group' is automatically parsed. Other spike sorters can handle 'group' only through the 'grouping_property'
 # parameter.
+#
+# Note that channels can be split by any property. Let's for example assume that half of the tetrodes are in hippocampus
+# CA1 region, and the other half is in CA3. first we have to load this property (this can be done also from the '.prb'
+# file):
 
+for ch in recording_tetrodes.get_channel_ids()[:int(recording_tetrodes.get_num_channels() / 2)]:
+    recording_tetrodes.set_channel_property(ch, property_name='region', value='CA1')
 
+for ch in recording_tetrodes.get_channel_ids()[int(recording_tetrodes.get_num_channels() / 2):]:
+    recording_tetrodes.set_channel_property(ch, property_name='region', value='CA3')
+
+for ch in recording_tetrodes.get_channel_ids():
+    print(recording_tetrodes.get_channel_property(ch, property_name='region'))
+
+##############################################################################
+# Now let's spike sort by 'region' and check that the units of the sorted output have this property:
+
+sorting_regions = ss.run_sorter('klusta', recording_tetrodes, output_folder='tmp_regions',
+                                grouping_property='region', parallel=True)
+
+print(sorting_regions.get_unit_property_names())
