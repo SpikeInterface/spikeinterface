@@ -62,7 +62,7 @@ mcmp.sorting_comparisons['MS4']['TDC'].get_mapped_sorting1().get_mapped_unit_ids
 # ---------------------------
 # 
 # We can pull the units in agreement with different sorters using the
-# ``get_agreement_sorting`` method. This allows to make spike sorting more
+# :code:`get_agreement_sorting` method. This allows to make spike sorting more
 # robust by integrating the output of several algorithms. On the other
 # hand, it might suffer from weak performance of single algorithms.
 # 
@@ -84,7 +84,7 @@ agr_all = mcmp.get_agreement_sorting()
 
 #############################################################################
 # The unit index of the different sorters can also be retrieved from the
-# agreement sorting object (``agr_3``) property ``sorter_unit_ids``.
+# agreement sorting object (:code:`agr_3`) property :code:`sorter_unit_ids`.
 
 print(agr_3.get_unit_property_names())
 

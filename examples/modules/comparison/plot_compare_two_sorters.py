@@ -30,8 +30,8 @@ sorting_KL = sorters.run_klusta(recording)
 sorting_MS4 = sorters.run_mountainsort4(recording)
 
 #############################################################################
-# The ``compare_two_sorters`` function allows us to compare the spike
-# sorting output. It returns a ``SortingComparison`` object, with methods
+# The :code:`compare_two_sorters` function allows us to compare the spike
+# sorting output. It returns a :code:`SortingComparison` object, with methods
 # to inspect the comparison output easily. The comparison matches the
 # units by comparing the agreement between unit spike trains.
 # 
@@ -41,7 +41,7 @@ cmp_KL_MS4 = sc.compare_two_sorters(sorting1=sorting_KL, sorting2=sorting_MS4,
                                                sorting1_name='klusta', sorting2_name='ms4')
 
 #############################################################################
-# In order to check which units were matched, the ``get_mapped_sorting``
+# In order to check which units were matched, the :code:`get_mapped_sorting`
 # methods can be used. If units are not matched they are listed as -1.
 
 # units matched to klusta units
@@ -55,7 +55,7 @@ print('Mountainsort units:',sorting_MS4.get_unit_ids())
 print('Mountainsort mapped units:',mapped_sorting_ms4.get_mapped_unit_ids())
 
 #############################################################################
-# The ``get_unit_spike_train`` returns the mapped spike train. We can use
+# The :code:get_unit_spike_train` returns the mapped spike train. We can use
 # it to check the spike times.
 
 # find a unit from KL that have a match
