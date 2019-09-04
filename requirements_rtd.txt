@@ -13,7 +13,7 @@ h5py
 tqdm
 click
 klusta
-klustakwik2==0.2.6
+klustakwik2==0.2.7
 
 # tridesclous
 tridesclous==1.2.2
