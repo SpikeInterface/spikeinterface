@@ -34,11 +34,12 @@ available as modules as shown in the figure.
 .. image:: images/overview.png
 
 
-Imporant links
---------------
+Related projects
+-----------------
 
 - `spikeforest <https://spikeforest.flatironinstitute.org>`_ is a reproducible, continuously updating platform which
-  benchmarks the performance of some spike sorting codes (kilosort, herdingspike, ironcliust, jrclust, klusta, moutainsort4,
-  spykingcircus, tridesclous, waveclust, ...) based on spikeinterface modules.
-- `spikely <https://github.com/SpikeInterface/spikely>`_ released very soon that make possible to use spikeinterface with
-  a graphicall user interface done in Qt.
+  benchmarks the performance of some spike sorting software (kilosort, herdingspike, ironcliust, jrclust, klusta,
+  moutainsort4, spykingcircus, tridesclous, waveclus) using several ground-truth datasets. It is based on
+  SpikeInterface modules.
+- `spikely <https://github.com/SpikeInterface/spikely>`_ is a graphical user interface (GUI) that allows users to build
+  and run SpikeInterface pipelines to analyze electrophysiological data.

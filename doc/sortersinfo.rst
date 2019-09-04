@@ -2,30 +2,34 @@ Sorters installation
 ====================
 
 An important aspect of spikeinterface is the `spikeinterface.sorters` module.
-This module wrap several popular spike sorting tools.
-This means that you can run multiple sorters on the same dataset without pain
-through an unified layer with python code. See tutorial.
+This module wraps several popular spike sorting tools.
+This means that you can run multiple sorters on the same dataset without a few lines of code
+through an unified layer in Python. 
 
-Wrapper also means that theses spike sorting tools **must be installed externally**.
-Some of theses sorters are written in matlab, so you will also to install if you want
-to use them (kilosort, kilosrt2, ironclust, jrclust, ...)
-Some of then will also need some computing library  like cuda (kilosort, kilosort2),
-opencl (tridesclous) to use hardware acceleration (GPU).
+The spike sorting software **must be installed externally**.
+Some of theses sorters are written in Matlab, so you will also to install Matlab if you want
+to use them (Kilosort, Kilosort2, Ironclust, JRclust, ...)
+Some of then will also need some computing library  like cuda (Kilosort, Kilosort2, Ironclust (optional)),
+opencl (Tridesclous) to use hardware acceleration (GPU).
 
-Here a list of implemented wrappers and some tips to install then on your local machine.
-Installation tips are given for unbuntu platform and must transposed to other OS/distro.
-We use **pip** but **conda** should also work in many cases.
+Here is a list of the implemented wrappers and some instructions to install them on your local machine.
+Installation instructions are given for an Unbuntu platform. Please check the documentation of the different spike 
+sorters to retrieve installation instructions for other operating systems.
+We use **pip** to install packages, but **conda** should also work in many cases.
 
-If you experience installation problems please contact directly authors or mailing list
-of theses tools. Please feel free to enhance this document.
+If you experience installation problems please contact directly the authors of theses tools or write on the 
+relative mailing list, google groups, etc.
+ 
+Please feel free to enhance this document with more installation tips.
 
 Herdingspikes2
 --------------
 
-Url: https://github.com/mhhennig/hs2
-Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez
-Raimon Wintzer: GUI and visualisation
-Installation::
+* Python + C++
+* Url: https://github.com/mhhennig/hs2
+* Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez
+           Raimon Wintzer: GUI and visualisation
+* Installation::
 
     pip install herdingspikes
 
@@ -35,7 +39,7 @@ IronClust
 * Matlab based
 * Url: https://github.com/jamesjun/ironclust
 * Authors: James J. Jun
-* Installation need matlab::
+* Installation need Matlab::
 
       git clone https://github.com/jamesjun/ironclust
       # provide installation path by setting the IRONCLUST_PATH environment variable
@@ -44,36 +48,36 @@ IronClust
 Kilosort
 --------
 
-* Matlab based, need cuda
+* Matlab based, needs cuda
 * Url: https://github.com/cortex-lab/KiloSort
 * Authors: Marius Pachitariu
-* Installation need matlab and cudatoolkit::
+* Installation needs Matlab and cudatoolkit::
 
       git clone https://github.com/cortex-lab/KiloSort
       # provide installation path by setting the KILOSORT_PATH environment variable
       # or using KilosortSorter.set_kilosort_path()
 
-* See also for matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
     
 Kilosort2
 ---------
 
-* Matlab based, need cuda
+* Matlab based, needs cuda
 * Url: https://github.com/MouseLand/Kilosort2
 * Authors: Marius Pachitariu
-* Installation need matlab and cudatoolkit::
+* Installation need Matlab and cudatoolkit::
 
       git clone https://github.com/MouseLand/Kilosort2
       # provide installation path by setting the KILOSORT2_PATH environment variable
       # or using Kilosort2Sorter.set_kilosort2_path()
 
-* See also for matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
 
 Klusta
 ------
 
-* python based
+* Python based
 * Url: https://github.com/kwikteam/klusta
 * Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
 * Installation::
@@ -87,7 +91,7 @@ Klusta
 Mountainsort4
 -------------
 
-* python based
+* Python based
 * Url: https://github.com/flatironinstitute/mountainsort
 * Authors: 	Jeremy Magland, Alex Barnett, Jason Chung, Loren Frank, Leslie Greengard
 * Installation::
@@ -98,7 +102,7 @@ Mountainsort4
 SpykingCircus
 -------------
 
-* python based, need MPICH installed
+* Python based, needs MPICH installed
 * Url: https://spyking-circus.readthedocs.io
 * Authors: Pierre Yger, Olivier Marre
 * Installation::
@@ -108,10 +112,10 @@ SpykingCircus
         pip install spyking-circus
 
 
-tredesclous
+Tridesclous
 -----------
 
-* python based, run faster with opencl installed but optional
+* Python based, runs faster with opencl installed but optional
 * Url: https://tridesclous.readthedocs.io
 * Authors: Samuel Garcia, Christophe Pouzat
 * Installation::
