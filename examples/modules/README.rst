@@ -1,4 +1,4 @@
-Spikeinterface modules
+Spikeinterface tutorial
 =======================
 
 Spike interface is split in 5 submodules.

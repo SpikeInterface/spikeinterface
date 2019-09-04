@@ -106,6 +106,7 @@ venv.bak/
 doc/_build/*
 doc/getting_started/*
 doc/modules/*
+doc/sources/*
 
 examples/getting_started/tmp_*
 examples/getting_started/phy
@@ -113,6 +114,10 @@ examples/modules/widgets/tmp_*
 examples/modules/sorters/tmp_*
 examples/modules/sorters/my_sorter_output/*
 examples/modules/extractors/sample_mountainsort_dataset/*
+examples/modules/extractors/firings_true.mda
+examples/modules/extractors/circular_layout.csv
 examples/modules/comparison/tmp_*
 examples/modules/comparison/a_study_folder/*
 examples/modules/toolkit/phy/*
+examples/modules/toolkit/tmp_*
+
