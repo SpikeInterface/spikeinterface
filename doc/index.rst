@@ -18,15 +18,17 @@ With `spikeinterface` one can:
 - visualize recordings and spike sorting output
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
    
    overview
    installation
+   sortersinfo
    getting_started/plot_getting_started.rst
    modules/index.rst
    contribute
    api
+   authors
 
 
 Indices and tables
