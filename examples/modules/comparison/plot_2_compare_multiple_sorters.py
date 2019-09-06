@@ -83,7 +83,7 @@ agr_all = mcmp.get_agreement_sorting()
 #  The unit index of the different sorters can also be retrieved from the
 #  agreement sorting object (:code:`agr_3`) property :code:`sorter_unit_ids`.
 
-print(agr_3.get_unit_property_names())
+print(agr_3.get_shared_unit_property_names())
 
 #############################################################################
 

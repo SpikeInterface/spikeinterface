@@ -80,7 +80,7 @@ print('Elapsed time parallel: ', time.time() - t_start)
 ##############################################################################
 # The units of the sorted output will have the same property used for spike sorting:
 
-print(sorting_tetrodes.get_unit_property_names())
+print(sorting_tetrodes.get_shared_unit_property_names())
 
 ##############################################################################
 # Note that some spike sorters (e.g. Klusta, Spyking Circus) can handle automatically group information. In those cases
@@ -106,4 +106,4 @@ for ch in recording_tetrodes.get_channel_ids():
 sorting_regions = ss.run_sorter('klusta', recording_tetrodes, output_folder='tmp_regions',
                                 grouping_property='region', parallel=True)
 
-print(sorting_regions.get_unit_property_names())
+print(sorting_regions.get_shared_unit_property_names())
