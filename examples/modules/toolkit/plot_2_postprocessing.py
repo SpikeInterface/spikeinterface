@@ -41,7 +41,7 @@ wf = st.postprocessing.get_unit_waveforms(recording, sorting, ms_before=1, ms_af
 ##############################################################################
 #  Now :code:`waveforms` is a unit spike feature!
 
-sorting.get_unit_spike_feature_names()
+print(sorting.get_shared_unit_spike_feature_names())
 print(wf[0].shape)
 
 ##############################################################################
@@ -93,7 +93,7 @@ templates = st.postprocessing.get_unit_templates(recording, sorting, max_num_wav
 
 ##############################################################################
 
-print(sorting.get_unit_property_names())
+print(sorting.get_shared_unit_property_names())
 
 ##############################################################################
 # Plotting templates of units 0,1,2 on all four channels
@@ -115,7 +115,7 @@ print(max_chan)
 
 ##############################################################################
 
-print(sorting.get_unit_property_names())
+print(sorting.get_shared_unit_property_names())
 
 ##############################################################################
 #  Compute pca scores

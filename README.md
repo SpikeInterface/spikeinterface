@@ -1,6 +1,6 @@
 # SpikeInterface
 
-SpikeInterface is a unified framework for spike sorting of extracellular neural recordings. 
+SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
 `spikeinterface` is a meta-package that wraps 5 other Python packages from the SpikeInterface team:
 
