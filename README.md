@@ -49,6 +49,5 @@ All documentation for SpikeInterface can be found here: https://spikeinterface.r
 [Samuel Garcia](https://github.com/samuelgarcia) - Centre de Recherche en Neuroscience de Lyon (CRNL), Lyon, France
 
 <br/>
-<br/>
 For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (cole.hurwitz@ed.ac.uk), or just write an issue!
 
