@@ -26,11 +26,15 @@ pip install .
 
 Soon a `pip install spikeinterface` will be available!
 
+##
+
+For using SpikeInterface, please checkout these [examples](https://github.com/SpikeInterface/spikeinterface/tree/master/examples).
+
+Also, you can checkout this [tutorial](https://github.com/SpikeInterface/spiketutorials/tree/master/Spike_sorting_workshop_2019) for getting started with SpikeInterface.
+
 ## Documentation
 
-We are currently reorganizing the documentation of each package to a unified documentation.
-For now, check out this updated [tutorial](https://github.com/SpikeInterface/spiketutorials/tree/master/Spike_sorting_workshop_2019) for a getting started to SpikeInterface.
-
+All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
 
 ### Authors
 
