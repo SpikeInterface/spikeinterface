@@ -26,7 +26,7 @@ pip install .
 
 Soon a `pip install spikeinterface` will be available!
 
-##
+## Examples
 
 For using SpikeInterface, please checkout these [examples](https://github.com/SpikeInterface/spikeinterface/tree/master/examples).
 
