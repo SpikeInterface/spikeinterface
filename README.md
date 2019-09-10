@@ -4,7 +4,7 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 `spikeinterface` is a meta-package that wraps 5 other Python packages from the SpikeInterface team:
 
-- [spikeextractors](https://github.com/SpikeInterface/spikeextractors): data I/O and probe handling
+- [spikeextractors](https://github.com/SpikeInterface/spikeextractors): data I/O and probe handling. [![Build Status](https://travis-ci.org/SpikeInterface/spikeextractors.svg?branch=master)](https://travis-ci.org/SpikeInterface/spikeextractors) [![PyPI version](https://badge.fury.io/py/spikeextractors.svg)](https://badge.fury.io/py/spikeextractors)
 - [spikesorters](https://github.com/SpikeInterface/spikesorters): Python wrappers to spike sorting algorithms
 - [spiketoolkit](https://github.com/SpikeInterface/spiketoolkit): toolkit for pre-, post-processing, validation, and automatic curation
 - [spikecomparison](https://github.com/SpikeInterface/spikecomparison): comparison of spike sorting output (with and without ground-truth)
