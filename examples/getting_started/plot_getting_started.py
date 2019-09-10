@@ -91,10 +91,10 @@ print('Spike train of first unit:', spike_train)
 # 'channel_group', or dictionaries with the channel id as key and the property as value (e.g. 'labels':
 # {1: 'first_channel', 0: 'second_channel'})
 #
-# You can load the probe file using the :code:`se.load_probe_file()` function. This function returns another
+# You can load the probe file using the :code:`load_probe_file` function in the RecordingExtractor. This function returns another
 # :code:`RecordingExtractor` object:
 
-recording_prb = se.load_probe_file(recording, 'custom_probe.prb')
+recording_prb = recording.load_probe_file('custom_probe.prb')
 print('Channel ids:', recording_prb.get_channel_ids())
 print('Loaded properties', recording_prb.get_shared_channel_property_names())
 print('Label of channel 0:', recording_prb.get_channel_property(channel_id=0, property_name='label'))
@@ -224,11 +224,3 @@ sorting_agreement = comp_multi.get_agreement_sorting(minimum_matching=2)
 print('Units in agreement between Klusta and Mountainsort4:', sorting_agreement.get_unit_ids())
 
 w_multi = sw.plot_multicomp_graph(comp_multi)
-
-
-
-
-
-
-
-
