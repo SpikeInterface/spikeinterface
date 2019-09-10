@@ -45,8 +45,8 @@ recording, sorting_true = se.example_datasets.toy_example(duration=10, num_chann
 #
 #  Let's use the widgets to visualize the traces and the raster plots.
 
-w_ts = sw.plot_timeseries(recording)
-w_rs = sw.plot_rasters(sorting_true)
+w_ts = sw.plot_timeseries(recording, trange=[0,5])
+w_rs = sw.plot_rasters(sorting_true, trange=[0,5])
 
 ##############################################################################
 # This is how you retrieve info from a `RecordingExtractor`...
