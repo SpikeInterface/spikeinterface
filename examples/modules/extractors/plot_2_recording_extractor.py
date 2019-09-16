@@ -15,9 +15,9 @@ import spikeinterface.extractors as se
 # Let's define the properties of the dataset
 
 num_channels = 7
-samplerate = 30000  # in Hz
+sampling_frequency = 30000  # in Hz
 duration = 20
-num_timepoints = int(samplerate * duration)
+num_timepoints = int(sampling_frequency * duration)
 
 ##############################################################################
 # We can generate a pure-noise timeseries dataset recorded by a linear probe geometry
@@ -29,7 +29,7 @@ geom[:, 0] = range(num_channels)
 ##############################################################################
 # And instantiate a :code:`NumpyRecordingExtractor`:
 
-recording = se.NumpyRecordingExtractor(timeseries=timeseries, geom=geom, samplerate=samplerate)
+recording = se.NumpyRecordingExtractor(timeseries=timeseries, geom=geom, sampling_frequency=sampling_frequency)
 
 ##############################################################################
 # We can now print properties that the RecordingExtractor retrieves from the underlying recording.
@@ -49,7 +49,7 @@ se.MdaRecordingExtractor.write_recording(recording=recording, save_path='sample_
 ##############################################################################
 # and read it back with the proper extractor:
 
-recording2 = se.MdaRecordingExtractor(dataset_directory='sample_mountainsort_dataset')
+recording2 = se.MdaRecordingExtractor(folder_path='sample_mountainsort_dataset')
 print('Num. channels = {}'.format(len(recording2.get_channel_ids())))
 print('Sampling frequency = {} Hz'.format(recording2.get_sampling_frequency()))
 print('Num. timepoints = {}'.format(recording2.get_num_frames()))
