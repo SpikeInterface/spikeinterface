@@ -1,5 +1,5 @@
 """
-Compare spike sprting output with ground-truth recordings
+Compare spike sorting output with ground-truth recordings
 =========================================================
 
 Simulated recordings or paired pipette and extracellular recordings can
