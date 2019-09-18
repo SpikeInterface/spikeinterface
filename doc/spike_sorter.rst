@@ -57,9 +57,9 @@ Then, you can start creating a new class:
          'title': "My second param"},
     ]
 
-    _gui_params = copy.deepcopy(BaseSorter._gui_params)
+    sorter_gui_params = copy.deepcopy(BaseSorter.sorter_gui_params)
     for param in _extra_gui_params:
-        _gui_params.append(param)
+        sorter_gui_params.append(param)
 
     installation_mesg = """
         >>> pip install myspikesorter

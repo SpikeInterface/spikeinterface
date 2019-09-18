@@ -32,7 +32,7 @@ w_ampd = sw.plot_amplitudes_distribution(recording, sorting, max_num_waveforms=3
 w_ampt = sw.plot_amplitudes_timeseries(recording, sorting, max_num_waveforms=300)
 
 ##############################################################################
-# plot_features()
+# plot_pca_features()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 
 w_feat = sw.plot_pca_features(recording, sorting, colormap='rainbow', nproj=3, max_num_waveforms=100)

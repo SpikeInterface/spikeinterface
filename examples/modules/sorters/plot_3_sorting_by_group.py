@@ -35,7 +35,7 @@ print(recording_tetrodes.get_shared_channel_property_names())
 # The file tetrode_16.prb contain the channel group description
 #
 # .. parsed-literal::
-# 
+#
 #     channel_groups = {
 #         0: {
 #             'channels': [0,1,2,3],
@@ -54,7 +54,7 @@ print(recording_tetrodes.get_shared_channel_property_names())
 ##############################################################################
 # We can load 'group' information using the '.prb' file:
 
-recording_tetrodes = se.load_probe_file(recording_tetrodes, 'tetrode_16.prb')
+recording_tetrodes = recording_tetrodes.load_probe_file('tetrode_16.prb')
 print(recording_tetrodes.get_shared_channel_property_names())
 
 ##############################################################################
