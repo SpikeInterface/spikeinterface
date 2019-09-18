@@ -14,9 +14,9 @@ import spikeinterface.extractors as se
 #
 # Let's define the properties of the dataset
 
-samplerate = 30000
+sampling_frequency = 30000
 duration = 20
-num_timepoints = int(samplerate * duration)
+num_timepoints = int(sampling_frequency * duration)
 num_units = 4
 num_events = 1000
 
@@ -31,7 +31,7 @@ labels = np.random.randint(1, num_units + 1, size=num_events)
 
 sorting = se.NumpySortingExtractor()
 sorting.set_times_labels(times=times, labels=labels)
-sorting.set_sampling_frequency(sampling_frequency=samplerate)
+sorting.set_sampling_frequency(sampling_frequency=sampling_frequency)
 
 ##############################################################################
 # We can now print properties that the SortingExtractor retrieves from the underlying sorted dataset.
@@ -51,8 +51,8 @@ se.MdaSortingExtractor.write_sorting(sorting=sorting, save_path='firings_true.md
 ##############################################################################
 # and read it back with the proper extractor:
 
-sorting2 = se.MdaSortingExtractor(firings_file='firings_true.mda',
-                                  sampling_frequency=samplerate)
+sorting2 = se.MdaSortingExtractor(file_path='firings_true.mda',
+                                  sampling_frequency=sampling_frequency)
 print('Unit ids = {}'.format(sorting2.get_unit_ids()))
 st = sorting2.get_unit_spike_train(unit_id=1)
 print('Num. events for unit 1 = {}'.format(len(st)))

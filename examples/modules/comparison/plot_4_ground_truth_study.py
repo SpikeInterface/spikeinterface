@@ -85,7 +85,7 @@ study.run_comparisons(exhaustive_gt=True)
 for (rec_name, sorter_name), comp in study.comparisons.items():
     print('*' * 10)
     print(rec_name, sorter_name)
-    print(comp.count)  # raw counting of tp/fp/...
+    print(comp.count_score)  # raw counting of tp/fp/...
     comp.print_summary()
     perf_unit = comp.get_performance(method='by_unit')
     perf_avg = comp.get_performance(method='pooled_with_average')
@@ -110,7 +110,7 @@ print(dataframes.keys())
 
 ##############################################################################
 
-print(dataframes['perf_pooled_with_average'])
+#print(dataframes['perf_pooled_with_average'])
 
 ##############################################################################
 
@@ -130,12 +130,9 @@ ax.set_title('Run times')
 
 ##############################################################################
 
-perfs = dataframes['perf_pooled_with_average']
+perfs = dataframes['perf_by_units']
 fig, ax = plt.subplots()
-sns.barplot(data=perfs, x='rec_name', y='recall', hue='sorter_name', ax=ax)
+sns.swarmplot(data=perfs, x='sorter_name', y='recall', hue='rec_name', ax=ax)
 ax.set_title('Recall')
-ax.set_ylim(0, 1)
+ax.set_ylim(-0.1, 1.1)
 
-##############################################################################
-
-# TODO swarm plot NB edimburg
