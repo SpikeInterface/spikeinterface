@@ -109,7 +109,7 @@ SpykingCircus
       
         sudo apt install libmpich-dev
         pip install mpy4py
-        pip install spyking-circus
+        pip install spyking-circus --no-binary=mpi4py
 
 
 Tridesclous
@@ -129,4 +129,16 @@ Tridesclous
         sudo apt-get install pocl-opencl-icd (optional for multi core CPU)
         sudo apt-get install opencl-headers ocl-icd-opencl-dev libclc-dev ocl-icd-libopencl1
         pip install pyopencl
+
+Waveclus
+--------
+
+* Matlab based
+* Url: https://github.com/csn-le/wave_clus/wiki
+* Authors: Fernando Chaure, Hernan Rey and Rodrigo Quian Quiroga
+* Installation needs Matlab::
+
+      git clone https://github.com/csn-le/wave_clus/
+      # provide installation path by setting the WAVECLUS_PATH environment variable
+      # or using WaveClusSorter.set_waveclus_path()
 

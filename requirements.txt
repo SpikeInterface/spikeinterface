@@ -1,5 +1,5 @@
-spikeextractors>=0.6.0
+spikeextractors==0.6.1
 spiketoolkit>=0.4.5
-spikesorters>=0.1.7
-spikewidgets>=0.2.5
-spikecomparison>=0.1.1
+spikesorters>=0.1.8
+spikewidgets>=0.2.3
+spikecomparison>=0.1.2
