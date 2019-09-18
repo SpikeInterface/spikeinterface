@@ -1,5 +1,5 @@
 '''
-RecordingExtractor+SortingExtractor Widgets Gallery
+Recording+Sorting Widgets Gallery
 ===================================================
 
 Here is a gallery of all the available widgets using a pair of RecordingExtractor-SortingExtractor objects.
@@ -35,4 +35,4 @@ w_ampt = sw.plot_amplitudes_timeseries(recording, sorting, max_num_waveforms=300
 # plot_features()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 
-w_feat = sw.plot_features(recording, sorting, colormap='rainbow', nproj=3, max_num_waveforms=100)
+w_feat = sw.plot_pca_features(recording, sorting, colormap='rainbow', nproj=3, max_num_waveforms=100)

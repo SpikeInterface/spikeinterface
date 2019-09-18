@@ -41,6 +41,12 @@ w_comp_MS4 = sw.plot_confusion_matrix(comp_MS4, count_text=False)
 w_comp_KL = sw.plot_confusion_matrix(comp_KL, count_text=False)
 
 ##############################################################################
+# plot_agreement_matrix()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+w_agr_MS4 = sw.plot_agreement_matrix(comp_MS4, count_text=False)
+
+##############################################################################
 # plot_sorting_performance()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~
 #

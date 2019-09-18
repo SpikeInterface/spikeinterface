@@ -42,11 +42,12 @@ mcmp = sc.compare_multiple_sorters(sorting_list=[sorting_KL, sorting_MS4, sortin
 # The multiple sorters comparison internally computes pairwise comparison,
 # that can be accessed as follows:
 
-mcmp.sorting_comparisons['KL']['TDC'].get_mapped_sorting1().get_mapped_unit_ids()
+print(mcmp.comparisons[0].sorting1, mcmp.comparisons[0].sorting2)
+mcmp.comparisons[0].get_mapped_sorting1().get_mapped_unit_ids()
 
 #############################################################################
-
-mcmp.sorting_comparisons['MS4']['TDC'].get_mapped_sorting1().get_mapped_unit_ids()
+print(mcmp.comparisons[1].sorting1, mcmp.comparisons[1].sorting2)
+mcmp.comparisons[0].get_mapped_sorting1().get_mapped_unit_ids()
 
 #############################################################################
 #  We can see that there is a better agreement between tridesclous and
