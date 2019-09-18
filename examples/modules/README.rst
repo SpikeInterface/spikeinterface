@@ -1,6 +1,5 @@
-Spikeinterface tutorial
+Module tutorials
 =======================
 
-Spike interface is split in 5 submodules.
-Here some example for each one.
+Spike interface is split in 5 modules. Here are tutorials for each one.
 

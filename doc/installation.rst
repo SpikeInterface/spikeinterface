@@ -1,14 +1,14 @@
 Installation
 ============
 
-:code:`spikeinterface` is a Python package and it can be easily installed using pip:
+:code:`spikeinterface` is a Python package. It can be installed using pip:
 
 .. code-block:: python
 
     pip install spikeinterface
 
 
-If you want to install from sources and be updated with the latest development you can install with:
+If you want to install from the source so that you are up-to-date with the latest development, you can install with:
 
 .. code-block:: bash
 
@@ -19,11 +19,11 @@ If you want to install from sources and be updated with the latest development y
 Requirements
 ------------
 
-The following are the Python requirements from the SpikeInterface project, which are installed when running the pip installer.
+The following Python packages are required for running the full SpikeInterface framework.
+They are installed when using the pip installer for :code:`spikeinterface`.
 
 - spikeextractors
 - spiketoolkit
 - spikesorters
 - spikecomparison
 - spikewidgets
-
