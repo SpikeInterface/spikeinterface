@@ -1,5 +1,5 @@
 '''
-RecordingExtractor+SortingExtractor Widgets Gallery
+Recording+Sorting Widgets Gallery
 ===================================================
 
 Here is a gallery of all the available widgets using a pair of RecordingExtractor-SortingExtractor objects.
