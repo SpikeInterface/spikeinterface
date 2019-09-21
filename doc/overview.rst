@@ -1,26 +1,28 @@
 Overview
 ========
 
-When recording from extracellular electrodes, **spike sorting** is needed to separate the activity of individual
-neurons, or units.
+Extracellular recordings are an essential source of data in experimental and clinical neuroscience. 
+Of particular interest in these recordings is the activity of single neurons which must be inferred 
+using a blind source separation procedure called spike sorting. 
 
-However, there are many different file formats for recording data and several spike sorting algorithms available. This
-usually results in custom-made codes to parse the data and set up a specific spike sorting software.
+Given the importance of spike sorting, much attention has been directed towards the development of tools 
+and algorithms that can increase its performance and automation. These developments, however, introduce new challenges 
+in software and file format incompatibility which reduce interoperability, hinder benchmarking, and preclude reproducible analysis.
 
-SpikeInterface is therefore here to make the analysis of extracellular electrophysiology data easy and accessible, even
-with very little coding experience.
+To address these limitations, we developed **SpikeInterface**, a Python framework designed to unify preexisting spike sorting technologies 
+into a single code base and to standardize extracellular data file handling. 
 
-SpikeInterface interfaces with several file formats and allows to run numerous spike sorting algorithms with a few lines
-of code. Moreover, it enables users to run common pre- and post-processing functions, to validate the spike sorting
-output with state-of-the-art quality metrics, to compare the output of different sorters, and to visualize all steps
-involved in the electrophysiology pipeline.
+With a few lines of code, users can run, compare, and benchmark most modern spike sorting algorithms; 
+pre-process, post-process, and visualize extracellular datasets; validate, curate, and export sorted results; 
+and more, regardless of the underlying data format. 
+
+In the following documentation, we provide an overview of SpikeInterface.
+
 
 Organization
 ------------
 
-SpikeInterface consists of a collection of Python packages aimed to ease the spike sorting process.
-
-There are 5 packages with different scopes and functions:
+SpikeInterface consists of 5 main packages which encapsulate all steps in a typical spike sorting pipeline:
 
 - `spikeextractors <https://github.com/SpikeInterface/spikeextractors/>`_
 - `spiketoolkit <https://github.com/SpikeInterface/spiketoolkit/>`_
@@ -28,8 +30,8 @@ There are 5 packages with different scopes and functions:
 - `spikecomparison <https://github.com/SpikeInterface/spikecomparison/>`_
 - `spikewidgets <https://github.com/SpikeInterface/spikewidgets/>`_
 
-On top of these packages, the :code:`spikeinterface` package allows users to install and use all of the packages,
-available as modules as shown in the figure.
+Along with these packages, the :code:`spikeinterface` meta-package allows users to install and
+use all 5 packages as shown in the figure.
 
 .. image:: images/overview.png
 
@@ -39,7 +41,7 @@ Related projects
 
 - `spikeforest <https://spikeforest.flatironinstitute.org>`_ is a reproducible, continuously updating platform which
   benchmarks the performance of some spike sorting software (kilosort, herdingspike, ironcliust, jrclust, klusta,
-  moutainsort4, spykingcircus, tridesclous, waveclus) using several ground-truth datasets. It is based on
-  SpikeInterface modules.
+  moutainsort4, spykingcircus, tridesclous, waveclus) using many ground-truth datasets. Its processing is based on
+  SpikeInterface.
 - `spikely <https://github.com/SpikeInterface/spikely>`_ is a graphical user interface (GUI) that allows users to build
-  and run SpikeInterface pipelines to analyze electrophysiological data.
+  and run SpikeInterface spike sorting pipelines on extracellular datasets.
