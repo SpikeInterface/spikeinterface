@@ -10,10 +10,8 @@ and algorithms that can increase its performance and automation. These developme
 in software and file format incompatibility which reduce interoperability, hinder benchmarking, and preclude reproducible analysis.
 
 To address these limitations, we developed **SpikeInterface**, a Python framework designed to unify preexisting spike sorting technologies 
-into a single code base and to standardize extracellular data file handling. 
-
-With a few lines of code, users can run, compare, and benchmark most modern spike sorting algorithms; 
-pre-process, post-process, and visualize extracellular datasets; validate, curate, and export sorted results; 
+into a single code base and to standardize extracellular data file handling. With a few lines of code, users can run, compare, and benchmark 
+most modern spike sorting algorithms; pre-process, post-process, and visualize extracellular datasets; validate, curate, and export sorted results; 
 and more, regardless of the underlying data format. 
 
 In the following documentation, we provide an overview of SpikeInterface.
