@@ -6,7 +6,7 @@ Welcome to SpikeInterface's documentation!
   :align: right
 
 Spikeinterface is a collection of Python modules designed to simplify spike sorting
-and the associated computation.
+and all associated computations.
 
 With `spikeinterface` one can:
 
@@ -24,6 +24,7 @@ With `spikeinterface` one can:
    
    overview
    installation
+   supported
    sortersinfo
    getting_started/plot_getting_started.rst
    modules/index.rst
