@@ -134,6 +134,10 @@ Currently, we support many popular semi-automatic spike sorters.  Given the stan
 * **Tridesclous** - TridesclousSorter
 * **Wave clus** - WaveClusSorter
 
+
+Installed Sorters
+------------------
+
 To check which sorters are useable in a given python environment, one can print the installed sorters list. An example is shown in a pre-defined miniconda3 environment.
 
 First, import the spikesorters package,
