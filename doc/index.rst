@@ -7,7 +7,7 @@ Welcome to SpikeInterface's documentation!
 
 Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility of spike sorting and all its associated computations.
 
-With `spikeinterface` one can:
+With SpikeInterface, users can:
 
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
