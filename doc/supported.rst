@@ -1,5 +1,6 @@
 Supported Technology
 ~~~~~~~~~~~~~~~~~~~~
+Below are the supported file formats and sorters that can be accessed through SpikeInterface.
 
 Supported File Formats
 ======================
