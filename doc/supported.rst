@@ -120,6 +120,9 @@ So to use either of the Exdir extractors, you must install the python package ex
 Supported Spike Sorters
 =======================
 
+Currently, we support many popular semi-automatic spike sorters.  Given the standardized, modular design of our sorters, adding new ones is straightforward so we expect this list to grow in future versions.
+
+
 * **HerdingSpikes2** - HerdingspikesSorter
 * **IronClust** - IronClustSorter
 * **Kilosort** - KilosortSorter
