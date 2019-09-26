@@ -84,11 +84,11 @@ print(wf_by_group[0].shape)
 #  
 #  Similarly to waveforms, templates - average waveforms - can be easily
 #  extracted using the :code:`get_unit_templates`. When spike trains have
-#  numerous spikes, you can set the :code:`max_num_waveforms` to be extracted.
+#  numerous spikes, you can set the :code:`max_spikes_per_unit` to be extracted.
 #  If waveforms have already been computd and stored as :code:`features`, those
 #  will be used. Templates can be saved as unit properties.
 
-templates = st.postprocessing.get_unit_templates(recording, sorting, max_num_waveforms=200,
+templates = st.postprocessing.get_unit_templates(recording, sorting, max_spikes_per_unit=200,
                                                  save_as_property=True, verbose=True)
 
 ##############################################################################
