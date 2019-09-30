@@ -117,8 +117,8 @@ So to use either of the Exdir extractors, you must install the python package ex
 .. parsed-literal::
   pip install exdir h5py pyintan MEArec pyopenephys tridesclous
   
-Dealing with Non-Supported Formats
-==================================
+Dealing with Non-Supported File Formats
+=======================================
 
 Many users may store their datasets in custom file formats that are not general enough to create new extractors. To allow these users to still utilize SpikeInterface with their data,
 we built two in-memory Extractors: the **NumpyRecordingExtractor** and the **NumpySortingExtractor**.
