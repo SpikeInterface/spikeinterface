@@ -130,7 +130,7 @@ The NumpySortingExtractor does not need any data during instantiation. However, 
 After sorted data is added to the NumpySortingExtractor, it can be used like any other SortingExtractor.
 
 With these two objects, we hope that any user can access SpikeInterface regardless of the nature of their underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as 
-an actual extractor, please leave an issue in the [spikeextractors](https://github.com/SpikeInterface/spikeextractors) repository.
+an actual extractor, please leave an issue in the spikeextractors repository.
 
 Supported Spike Sorters
 =======================
