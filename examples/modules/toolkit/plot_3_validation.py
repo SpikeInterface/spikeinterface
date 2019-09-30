@@ -18,11 +18,9 @@ recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=10
 ##############################################################################
 # The :code:`toolkit.validation` submodule has a :code:`MetricCalculator` class that enables to compute metrics in a
 # compact and easy way. You first need to instantiate a :code:`MetricCalculator` object with the
-# :code:`SortingExtractor` and :code:`RecordingExtractor` objects. In order to compute the metrics, you need to
-# calculate the postprocess the data in order to compute all the required data:
+# :code:`SortingExtractor` and :code:`RecordingExtractor` objects.
 
 mc = st.validation.MetricCalculator(sorting, recording)
-mc.compute_all_metric_data()
 
 ##############################################################################
 # You can then compute metrics as follows:
