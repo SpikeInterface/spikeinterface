@@ -1,6 +1,5 @@
-Supported Technology
-~~~~~~~~~~~~~~~~~~~~
-Below are the supported file formats and sorters that can be accessed through SpikeInterface.
+Compatible Technology
+~~~~~~~~~~~~~~~~~~~~~
 
 Supported File Formats
 ======================
@@ -117,6 +116,21 @@ So to use either of the Exdir extractors, you must install the python package ex
 
 .. parsed-literal::
   pip install exdir h5py pyintan MEArec pyopenephys tridesclous
+  
+Dealing with Non-Supported Formats
+==================================
+
+Many users may store their datasets in custom file formats that are not general enough to create new extractors. To allow these users to still utilize SpikeInterface with their data,
+we built two in-memory Extractors: the **NumpyRecordingExtractor** and the **NumpySortingExtractor**.
+
+The NumpyRecordingExtractor can be instantiated with a numpy array that contains the underlying extracellular traces (channels x frames), the sampling frequency, and the probe geometry (optional).
+Once instantiated, the NumpyRecordingExtractor can be used like any other RecordingExtractor.
+
+The NumpySortingExtractor does not need any data during instantiation. However, after instantiation, it can be filled with data using its built-in functions (load_from_extractor, set_times_labels, and add_unit).
+After sorted data is added to the NumpySortingExtractor, it can be used like any other SortingExtractor.
+
+With these two objects, we hope that any user can access SpikeInterface regardless of the nature of their underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as 
+an actual extractor, please leave an issue in the [spikeextractors](https://github.com/SpikeInterface/spikeextractors) repository.
 
 Supported Spike Sorters
 =======================
