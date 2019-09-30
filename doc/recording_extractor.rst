@@ -14,7 +14,9 @@ The :code:`RecordingExtractors` class has three abstract methods: :code:`get_cha
 So all you need to do is create a class that inherits from :code:`RecordingExtractor` and implement these four methods. 
 
 If your file format contains information about the locations of the channels, you are suggested to add that as a channel property upon initialization (this is optional).
-An example of a RecordingExtractor that adds channel locations is shown [here](https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/biocamrecordingextractor/biocamrecordingextractor.py).
+An example of a RecordingExtractor that adds channel locations is shown here_.
+
+.. _here: https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/biocamrecordingextractor/biocamrecordingextractor.py
 
 The contributed extractors are in the **spikeextractors/extractors** folder. You can fork the repo and create a new folder
 **myformatextractors** there. In the folder, create a new file named **myformatrecordingextractor.py**.
@@ -24,7 +26,7 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
     from spikeextractors import RecordingExtractor
 
     class MyFormatRecordingExtractor(RecordingExtractor):
-        def __init__(self, ex_parameter_1, ex_parameter_2):
+        def __init__(self, file_path, ex_parameter):
             RecordingExtractor.__init__(self)
 
             ## All file specific initialization code can go here.
