@@ -120,7 +120,7 @@ So to use either of the Exdir extractors, you must install the python package ex
 Dealing with Non-Supported File Formats
 =======================================
 
-Many users may store their datasets in custom file formats that are not general enough to create new extractors. To allow these users to still utilize SpikeInterface with their data,
+Many users store their datasets in custom file formats that are not general enough to create new extractors. To allow these users to still utilize SpikeInterface with their data,
 we built two in-memory Extractors: the **NumpyRecordingExtractor** and the **NumpySortingExtractor**.
 
 The NumpyRecordingExtractor can be instantiated with a numpy array that contains the underlying extracellular traces (channels x frames), the sampling frequency, and the probe geometry (optional).
