@@ -1,10 +1,12 @@
 Spike sorting comparison methods
 ================================
 
+
 SpikeInterface has a comparison module that can be used for three distinct use cases:
-  * compare a spike sorting output with a ground-truth dataset
-  * compare the output of two spike sorters (symmetric comparison)
-  * compare the output of multiple spike sorters
+
+  1. compare a spike sorting output with a ground-truth dataset
+  2. compare the output of two spike sorters (symmetric comparison)
+  3. compare the output of multiple spike sorters
   
 
 Even if the three comparison cases share the same underlying idea (they compare spike trains!) the internal
@@ -12,8 +14,8 @@ implementations are slightly different.
 
 
 
-Comparison with ground truth
-----------------------------
+1. Comparison with ground truth
+-------------------------------
 
 A ground-truth dataset can be a paired recording, in which the a neuron is recorded both extracellularly and with
 a patch or juxtacellular electrode (either **in vitro** or **in vivo**), or it can be a simulated dataset
@@ -47,9 +49,9 @@ Given:
     Note that this matrix represents the number of **true positive** (TP) spikes
     of each pair. We can also compute the number of **false negatives** (FN) and **false positive** (FP) spikes.
     
-      *  **num_tp**[i, k] = match_event_count[i, k]
-      *  **num_fn**[i, k] = event_counts_GT[i] - match_event_count[i, k]
-      *  **num_fp**[i, k] = event_counts_ST[k] - match_event_count[i, k]
+      *  **num_tp** [i, k] = match_event_count[i, k]
+      *  **num_fn** [i, k] = event_counts_GT[i] - match_event_count[i, k]
+      *  **num_fp** [i, k] = event_counts_ST[k] - match_event_count[i, k]
 
   2. **Compute agreement score**
    
@@ -88,10 +90,10 @@ Given:
       For matching, a **min_accuracy** threshold is used (0.5 by default). If the agreement is below this threshold,
       the possible match is discarded.
 
-      There are two methods to perform the match: **hugarian** and **best** match.
+      There are two methods to perform the match: **hungarian** and **best** match.
 
 
-      The `hugarian method <https://en.wikipedia.org/wiki/Hungarian_algorithm>`_
+      The `hungarian method <https://en.wikipedia.org/wiki/Hungarian_algorithm>`_
       finds the best association between GT and tested units. With this method, both GT and tested units can be matched
       only to another unit, or not matched at all.
       
@@ -181,9 +183,23 @@ More information about **hungarian** or **best** match methods
 
 Classification of identified units
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Tested units are classified depending on their performance. We identify three different classes:
+
+  * **well-detected** units
+  * **false positive** units
+  * **redundant** units
+
+A **well-detected** unit is a unit whose performance is good. By default, a good performance is measured by an accuracy
+greater than 0.8-
+
+A **false positive** unit has low agreement scores for all GT units and it is not matched.
+
+A **redundant** unit has a relatively high agreement (>= 0.3 by default), but it is not a best match. This means that
+it could either be an oversplit unit or a duplicate unit.
   
-Compare the output of two spike sorters (symmetric comparison)
----------------------------------------------------------------
+2. Compare the output of two spike sorters (symmetric comparison)
+------------------------------------------------------------------
 
 The comparison of two sorter is a quite similar to the procedure of **compare to ground truth**.
 The difference is that no assumption is done on which is the units are ground-truth.
@@ -198,8 +214,8 @@ As there is no ground-truth information, performance metrics are not computed.
 However, the confusion and agreement matrices can be visualised to assess the level of agreement.
 
 
-Compare the output of multiple spike sorters
-----------------------------------------------
+3. Compare the output of multiple spike sorters
+------------------------------------------------
 
 Comparison of multiple sorters uses the following procedure:
 
