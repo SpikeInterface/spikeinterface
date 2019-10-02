@@ -87,10 +87,10 @@ recording, sorting_true = se.example_datasets.toy_example(duration=10, num_chann
 #            }
 #        }
 #
-# You can load the probe file using the :code:`se.load_probe_file()` function. This function returns another
+# You can load the probe file using the :code:`load_probe_file` function in the RecordingExtractor. This function returns another
 # :code:`RecordingExtractor` object:
 
-recording_tetrodes = se.load_probe_file(recording, probe_file='eight_tetrodes.prb')
+recording_tetrodes = recording.load_probe_file(probe_file='eight_tetrodes.prb')
 
 ###############################################################################
 # Now let's check what we have loaded:
@@ -132,9 +132,9 @@ print('Created channel groups', channel_groups)
 #######################################################################################
 # We can now load the probe information from the newly created '.csv' file:
 
-recording_circ = se.load_probe_file(recording, probe_file='circular_layout.csv',
-                                    channel_map=channel_map,
-                                    channel_groups=channel_groups)
+recording_circ = recording.load_probe_file(probe_file='circular_layout.csv',
+                                           channel_map=channel_map,
+                                           channel_groups=channel_groups)
 
 #######################################################################################
 # Here is now the probe layout:
@@ -146,10 +146,3 @@ w_el_circ = sw.plot_electrode_geometry(recording_circ)
 
 print('Loaded channel ids', recording_circ.get_channel_ids())
 print('Loaded channel groups', recording_circ.get_channel_groups())
-
-
-
-
-
-
-

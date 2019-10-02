@@ -27,8 +27,8 @@ Module :mod:`spikeinterface.extractors`
 
 
     .. autofunction:: load_probe_file
-    .. autofunction:: save_probe_file
-    .. autofunction:: write_binary_dat_format
+    .. autofunction:: save_to_probe_file
+    .. autofunction:: write_to_binary_dat_format
     .. autofunction:: get_sub_extractors_by_property
 
 
@@ -158,5 +158,3 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_confusion_matrix
     .. autofunction:: plot_sorting_performance
     .. autofunction:: plot_multicomp_graph
-
-
