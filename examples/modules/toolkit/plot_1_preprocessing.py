@@ -96,7 +96,7 @@ ax2.plot(recording_single_groups.get_traces()[0])
 # In to remove noisy channels from the analysis, the
 # :code:`remove_bad_channels` function can be used.
 
-recording_remove_bad = st.preprocessing.remove_bad_channels(recording, bad_channels=[0])
+recording_remove_bad = st.preprocessing.remove_bad_channels(recording, bad_channel_ids=[0])
 
 print(recording_remove_bad.get_channel_ids())
 
@@ -107,7 +107,7 @@ print(recording_remove_bad.get_channel_ids())
 # removed. The standard deviations are computed on the traces with length
 # :code:`seconds` from the middle of the recordings.
 
-recording_remove_bad_auto = st.preprocessing.remove_bad_channels(recording, bad_channels='auto', bad_threshold=2,
+recording_remove_bad_auto = st.preprocessing.remove_bad_channels(recording, bad_channel_ids=None, bad_threshold=2,
                                                                  seconds=2)
 
 print(recording_remove_bad_auto.get_channel_ids())

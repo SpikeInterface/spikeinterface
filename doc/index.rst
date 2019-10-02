@@ -2,20 +2,20 @@ Welcome to SpikeInterface's documentation!
 ==========================================
 
 .. image:: images/logo.png
-  :scale: 120 %
+  :scale: 100 %
   :align: right
 
-Spikeinterface is a collection of modules designed to simplify the analysis of extracellular neural recordings,
-in particular spike sorting.
-With `spikeinterface` one can:
+Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility of spike sorting and all its associated computations.
 
-- read/write many file format
-- pre-process extracellular recordings
-- run several popular spike sorters
-- post-process spike sorting outputs
-- compare spike sorting outputs
-- validate and curate the spike sorting output
-- visualize recordings and spike sorting output
+With SpikeInterface, users can:
+
+- read/write many extracellular file formats.
+- pre-process extracellular recordings.
+- run many popular, semi-automatic spike sorters.
+- post-process sorted datasets.
+- compare and benchmark spike sorting outputs.
+- validate and curate spike sorting outputs.
+- visualize recordings and spike sorting outputs.
 
 .. toctree::
    :maxdepth: 1
@@ -23,6 +23,7 @@ With `spikeinterface` one can:
    
    overview
    installation
+   supported
    sortersinfo
    getting_started/plot_getting_started.rst
    modules/index.rst
@@ -31,9 +32,9 @@ With `spikeinterface` one can:
    authors
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. Indices and tables
+.. ==================
+.. 
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`

@@ -45,8 +45,8 @@ recording, sorting_true = se.example_datasets.toy_example(duration=10, num_chann
 #
 #  Let's use the widgets to visualize the traces and the raster plots.
 
-w_ts = sw.plot_timeseries(recording)
-w_rs = sw.plot_rasters(sorting_true)
+w_ts = sw.plot_timeseries(recording, trange=[0,5])
+w_rs = sw.plot_rasters(sorting_true, trange=[0,5])
 
 ##############################################################################
 # This is how you retrieve info from a `RecordingExtractor`...
@@ -91,10 +91,10 @@ print('Spike train of first unit:', spike_train)
 # 'channel_group', or dictionaries with the channel id as key and the property as value (e.g. 'labels':
 # {1: 'first_channel', 0: 'second_channel'})
 #
-# You can load the probe file using the :code:`se.load_probe_file()` function. This function returns another
+# You can load the probe file using the :code:`load_probe_file` function in the RecordingExtractor. This function returns another
 # :code:`RecordingExtractor` object:
 
-recording_prb = se.load_probe_file(recording, 'custom_probe.prb')
+recording_prb = recording.load_probe_file('custom_probe.prb')
 print('Channel ids:', recording_prb.get_channel_ids())
 print('Loaded properties', recording_prb.get_shared_channel_property_names())
 print('Label of channel 0:', recording_prb.get_channel_property(channel_id=0, property_name='label'))
@@ -224,11 +224,3 @@ sorting_agreement = comp_multi.get_agreement_sorting(minimum_matching=2)
 print('Units in agreement between Klusta and Mountainsort4:', sorting_agreement.get_unit_ids())
 
 w_multi = sw.plot_multicomp_graph(comp_multi)
-
-
-
-
-
-
-
-

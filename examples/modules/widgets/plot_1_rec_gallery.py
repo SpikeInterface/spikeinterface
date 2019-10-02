@@ -34,3 +34,13 @@ w_ts.ax.set_ylabel("Channel_ids")
 # plot_electrode_geometry()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
 w_el = sw.plot_electrode_geometry(recording)
+
+##############################################################################
+# plot_spectrum()
+# ~~~~~~~~~~~~~~~~
+w_sp = sw.plot_spectrum(recording)
+
+##############################################################################
+# plot_spectrogram()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+w_spg = sw.plot_spectrogram(recording, channel=0, nfft=2048)
