@@ -43,3 +43,4 @@ Related projects
   SpikeInterface modules.
 - `spikely <https://github.com/SpikeInterface/spikely>`_ is a graphical user interface (GUI) that allows users to build
   and run SpikeInterface pipelines to analyze electrophysiological data.
+- `MEArec <https://mearec.readthedocs.io>`_ is a fast customzable biophysical simulation of extracellular recording.
