@@ -68,9 +68,10 @@ perf = cmp_gt_MS4.get_performance()
 ##############################################################################
 # Lets use seaborn swarm plot
 
-fig, ax = plt.subplots()
+fig1, ax1 = plt.subplots()
 perf2 = pd.melt(perf, var_name='measurement')
-sns.swarmplot(data=perf2, x='measurement', y='value')
+ax1 = sns.swarmplot(data=perf2, x='measurement', y='value', ax=ax1)
+ax1.set_xticklabels(labels=ax1.get_xticklabels(), rotation=45)
 
 
 ##############################################################################
@@ -102,20 +103,21 @@ perf = cmp_gt_KL.get_performance()
 ##############################################################################
 # Lets use seaborn swarm plot
 
-fig, ax = plt.subplots()
+fig2, ax2 = plt.subplots()
 perf2 = pd.melt(perf, var_name='measurement')
-sns.swarmplot(data=perf2, x='measurement', y='value')
+ax2 = sns.swarmplot(data=perf2, x='measurement', y='value', ax=ax2)
+ax2.set_xticklabels(labels=ax2.get_xticklabels(), rotation=45)
 
 ##############################################################################
 
-cmp_gt_KL.get_well_detected_units
+print(cmp_gt_KL.get_well_detected_units)
 
 ##############################################################################
 
-cmp_gt_KL.get_false_positive_units()
+print(cmp_gt_KL.get_false_positive_units())
 
 ##############################################################################
 
-cmp_gt_KL.get_redundant_units()
+print(cmp_gt_KL.get_redundant_units())
 
 
