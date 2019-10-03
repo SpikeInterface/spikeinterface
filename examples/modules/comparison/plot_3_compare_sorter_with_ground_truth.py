@@ -38,7 +38,7 @@ cmp_gt_MS4 = sc.compare_sorter_to_ground_truth(sorting_true, sorting_MS4, exhaus
 
 
 ##############################################################################
-# To have an overview of the match we can use the matrix agreement unordered
+# To have an overview of the match we can use the unordered agreement matrix
 
 sw.plot_agreement_matrix(cmp_gt_MS4, ordered=False)
 
@@ -86,8 +86,8 @@ ax1 = sns.swarmplot(data=perf2, x='measurement', y='value', ax=ax1)
 ax1.set_xticklabels(labels=ax1.get_xticklabels(), rotation=45)
 
 ##############################################################################
-# The confusion matrix is also a good summary of the score
-# it have the same shape as agreement matrix but have an extra columns for FN
+# The confusion matrix is also a good summary of the score as it has
+# the same shape as agreement matrix, but it contains an extra column for FN
 # and an extra row for FP
 
 sw.plot_confusion_matrix(cmp_gt_MS4)
