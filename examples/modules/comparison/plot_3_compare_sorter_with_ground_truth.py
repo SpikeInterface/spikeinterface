@@ -24,6 +24,7 @@ import seaborn as sns
 import spikeinterface.extractors as se
 import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
 
 ##############################################################################
 
@@ -34,6 +35,17 @@ sorting_MS4 = sorters.run_mountainsort4(recording)
 ##############################################################################
 
 cmp_gt_MS4 = sc.compare_sorter_to_ground_truth(sorting_true, sorting_MS4, exhaustive_gt=True)
+
+
+##############################################################################
+# To have an overview of the match we can use the matrix agreement unordered
+
+sw.plot_agreement_matrix(cmp_gt_MS4, ordered=False)
+
+##############################################################################
+# or ordered
+
+sw.plot_agreement_matrix(cmp_gt_MS4, ordered=True)
 
 ##############################################################################
 # This function first matches the ground-truth and spike sorted units, and
@@ -73,6 +85,12 @@ perf2 = pd.melt(perf, var_name='measurement')
 ax1 = sns.swarmplot(data=perf2, x='measurement', y='value', ax=ax1)
 ax1.set_xticklabels(labels=ax1.get_xticklabels(), rotation=45)
 
+##############################################################################
+# The confusion matrix is also a good summary of the score
+# it have the same shape as agreement matrix but have an extra columns for FN
+# and an extra row for FP
+
+sw.plot_confusion_matrix(cmp_gt_MS4)
 
 ##############################################################################
 # We can query the well and bad detected units. By default, the threshold
@@ -99,6 +117,8 @@ cmp_gt_KL = sc.compare_sorter_to_ground_truth(sorting_true, sorting_KL, exhausti
 ##############################################################################
 
 perf = cmp_gt_KL.get_performance()
+
+print(perf)
 
 ##############################################################################
 # Lets use seaborn swarm plot

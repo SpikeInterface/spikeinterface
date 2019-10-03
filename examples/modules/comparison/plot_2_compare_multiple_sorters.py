@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import spikeinterface.extractors as se
 import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
 
 ##############################################################################
 # First, let's create a toy example:
@@ -48,6 +49,12 @@ mcmp.comparisons[0].get_mapped_sorting1().get_mapped_unit_ids()
 #############################################################################
 print(mcmp.comparisons[1].sorting1, mcmp.comparisons[1].sorting2)
 mcmp.comparisons[0].get_mapped_sorting1().get_mapped_unit_ids()
+
+
+#############################################################################
+# The global multi caomparison can be visualize with this graph
+
+sw.plot_multicomp_graph(mcmp)
 
 #############################################################################
 #  We can see that there is a better agreement between tridesclous and
@@ -121,5 +128,6 @@ print('Agreement spike train length', st3.size)
 #############################################################################
 #  As we can see, the best match is between Mountainsort and Tridesclous,
 #  but only the true positive spikes make up the agreement spike train.
+
 
 plt.show()
