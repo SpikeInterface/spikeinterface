@@ -25,6 +25,7 @@ With SpikeInterface, users can:
    installation
    supported
    sortersinfo
+   sorters_comparison
    getting_started/plot_getting_started.rst
    modules/index.rst
    contribute

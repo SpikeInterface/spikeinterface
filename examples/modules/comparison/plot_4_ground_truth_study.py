@@ -110,10 +110,6 @@ print(dataframes.keys())
 
 ##############################################################################
 
-#print(dataframes['perf_pooled_with_average'])
-
-##############################################################################
-
 print(dataframes['run_times'])
 
 ##############################################################################
@@ -124,15 +120,15 @@ print(dataframes['run_times'])
 #  examples.
 
 run_times = dataframes['run_times']
-fig, ax = plt.subplots()
-sns.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax)
-ax.set_title('Run times')
+fig1, ax1 = plt.subplots()
+sns.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax1)
+ax1.set_title('Run times')
 
 ##############################################################################
 
 perfs = dataframes['perf_by_units']
-fig, ax = plt.subplots()
-sns.swarmplot(data=perfs, x='sorter_name', y='recall', hue='rec_name', ax=ax)
-ax.set_title('Recall')
-ax.set_ylim(-0.1, 1.1)
+fig2, ax2 = plt.subplots()
+sns.swarmplot(data=perfs, x='sorter_name', y='recall', hue='rec_name', ax=ax2)
+ax2.set_title('Recall')
+ax2.set_ylim(-0.1, 1.1)
 
