@@ -43,13 +43,13 @@ cmp_KL_MS4 = sc.compare_two_sorters(sorting1=sorting_KL, sorting2=sorting_MS4,
                                                sorting1_name='klusta', sorting2_name='ms4')
 
 #############################################################################
-# We can check the agreement matrix to check the matching.
+# We can check the agreement matrix to inspect the matching.
 
 sw.plot_agreement_matrix(cmp_KL_MS4)
 
 #############################################################################
-# Some usefull internal dataframes help to check the match and count like **match_event_count**
-# or **agreement_scores**
+# Some useful internal dataframes help to check the match and count
+#  like **match_event_count** or **agreement_scores**
 
 print(comp.match_event_count)
 print(comp.agreement_scores)
