@@ -27,10 +27,10 @@ recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=10
 #############################################################################
 # Then run two spike sorters and compare their ouput.
 
-#~ sorting_KL = sorters.run_klusta(recording)
+sorting_KL = sorters.run_klusta(recording)
 sorting_MS4 = sorters.run_mountainsort4(recording)
 
-exit()
+
 #############################################################################
 # The :code:`compare_two_sorters` function allows us to compare the spike
 # sorting output. It returns a :code:`SortingComparison` object, with methods
