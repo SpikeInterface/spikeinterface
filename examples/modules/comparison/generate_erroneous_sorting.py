@@ -62,11 +62,9 @@ def generate_erroneous_sorting():
     
     return sorting_true, sorting_err
     
-    
-    
-    
 
 
+    
 if __name__ == '__main__':
     # just for check
     sorting_true, sorting_err = generate_erroneous_sorting()
