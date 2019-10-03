@@ -1,67 +1,63 @@
-Sorters comparison
-==================
+Spike sorting comparison methods
+================================
 
-spiekinterface have a comparison module that can be used for 3
-distinct use cases:
-  * compare to ground a ground truth dataset
-  * compare the output of 2 sorters (symetric comparison)
-  * compare the output of multiple sorters
+
+SpikeInterface has a comparison module that can be used for three distinct use cases:
+
+  1. compare a spike sorting output with a ground-truth dataset
+  2. compare the output of two spike sorters (symmetric comparison)
+  3. compare the output of multiple spike sorters
   
-  
-Even if the global idea if this 3 cases have common method (compare spiketrain!)
-Internal implementations are slightly different depending the use.
+
+Even if the three comparison cases share the same underlying idea (they compare spike trains!) the internal
+implementations are slightly different.
 
 
 
-Comparison with ground truth
-----------------------------
+1. Comparison with ground truth
+-------------------------------
+
+A ground-truth dataset can be a paired recording, in which the a neuron is recorded both extracellularly and with
+a patch or juxtacellular electrode (either **in vitro** or **in vivo**), or it can be a simulated dataset
+(**in silico**) using spiking activity simulators such as `MEArec <https://mearec.readthedocs.io/en/latest/>`_.
+
+The comparison to ground-truth datasets is useful to benchmark spike sorting algorithms.
+
+As an example, the SpikeForest platform benchmarks the performance of several spike sorters on a variety of
+available gorund-truth datasets on a daily basis. For more detailse see
+`spikeforest notes <https://spikeforest.flatironinstitute.org/metrics>`_.
 
 
-
-
-A ground truth dataset can be a pair recording **in vitro**, **in vivo** with a patch electrode
-or **in silico** with a simulated dataset using engine like mearec.
-
-The comparison to ground truth is useful to make benchmarks on a sorter engine.
-The spikeforest portal do daily built benchmark on several sorters diffrents dataset.
-
-See also `spikeforest notes <https://spikeforest.flatironinstitute.org/metrics>`_
-
-
-  
-To compute performances the work flow is the following:
+This is the main workflow used to compute perfomance metrics:
 
 Given:
-  * **i = 1, ..., n_gt** the list ground truth units
-  * **k = 1, ...., n_tested** the list of tested units from a sorter
-  * **event_counts_GT[i]** the number of spike for each units of GT
-  * **event_counts_ST[k]** the number of spike for each units of tested sorter
+  * **i = 1, ..., n_gt** the list ground-truth (GT) units
+  * **k = 1, ...., n_tested** the list of tested units from spike sorting output
+  * **event_counts_GT[i]** the number of spikes for each units of GT unit
+  * **event_counts_ST[k]** the number of spikes for each units of tested unit
 
   1. **Matching firing events**
    
-    For all pairs of GT unit and tested unit : count how many
-    events coincide with a *delta_time* tolerence (0.4 ms by defualt).
-    
-    In short we count
-    
+    For all pairs of GT unit and tested unit we first count how many
+    events are matched within a *delta_time* tolerence (0.4 ms by defualt).
       
-    This give a matrix **match_event_count** of size *(n_gt X n_tested)* like this one.
+    This gives a matrix called **match_event_count** of size *(n_gt X n_tested)*. This is an example of such matrices:
       
     .. image:: images/spikecomparison_match_count.png
         :scale: 100 %
     
-    Note that this matrix represent the number of **True positive (TP)**
-    of each pairs. We can also deduce **False negative (FN)** and **False postive (FP)**
+    Note that this matrix represents the number of **true positive** (TP) spikes
+    of each pair. We can also compute the number of **false negatives** (FN) and **false positive** (FP) spikes.
     
-      * **num_tp**[i, k] = match_event_count[i, k]
-      * **num_fn**[i, k] = event_counts_GT[i] - match_event_count[i, k]
-      * **num_fp**[i, k] = event_counts_ST[k] - match_event_count[i, k]
+      *  **num_tp** [i, k] = match_event_count[i, k]
+      *  **num_fn** [i, k] = event_counts_GT[i] - match_event_count[i, k]
+      *  **num_fp** [i, k] = event_counts_ST[k] - match_event_count[i, k]
 
-   2. **Compute agreement score** 
+  2. **Compute agreement score**
    
-    Given the **match_event_count** we compute the **agreement_score**
-    matrix which a normalisation in the range [0, 1].
-    This is done with:
+    Given the **match_event_count** we cn then compute the **agreement_score**, which is normalized in the range [0, 1].
+
+    This is done as follows:
     
       * agreement_score[i, k] = match_event_count[i, k] / (event_counts_GT[i] + event_counts_ST[k] - match_event_count[i, k])
     
@@ -69,19 +65,19 @@ Given:
     
       * agreement_score[i, k] = match_event_count[i, k] / (num_tp[i, k] + num_fp[i, k] + num_fn[i,k])
     
-    or more pratically
+    or more practically:
     
-      * agreement_score[i, k] = insertion(I, K) / union(I, K)
+      * agreement_score[i, k] = intersection(I, K) / union(I, K)
     
-    which is also equivalent to the **accuracy**
+    which is also equivalent to the **accuracy** metric.
 
     
-    Here an example of the agreement matrix
+    Here is an example of the agreement matrix:
     
     .. image:: images/spikecomparison_agreement_unordered.png
         :scale: 100 %
     
-    This matrix can be ordered for better reading.
+    This matrix can be ordered for a better visualization:
     
     .. image:: images/spikecomparison_agreement.png
         :scale: 100 %
@@ -90,25 +86,25 @@ Given:
 
    3. **Match units**
    
-      During this step, given the **agreement_score** matrix each GT units is associated
-      or not to a tested units.
-      For matching, a **min_accuracy** threhold is needed (0.5 by default).
-      Under this threshold not match is done. 
-      There are 2 methods : **hugarian** match or **best** match.
-      Pros and cons are discuss below.
+      During this step, given the **agreement_score** matrix each GT units can be matched to a tested units.
+      For matching, a **min_accuracy** threshold is used (0.5 by default). If the agreement is below this threshold,
+      the possible match is discarded.
+
+      There are two methods to perform the match: **hungarian** and **best** match.
+
+
+      The `hungarian method <https://en.wikipedia.org/wiki/Hungarian_algorithm>`_
+      finds the best association between GT and tested units. With this method, both GT and tested units can be matched
+      only to another unit, or not matched at all.
       
-      The `hugarian method <https://en.wikipedia.org/wiki/Hungarian_algorithm>`_
-      optimize the best association between GT and tested units. With this method a GT unit can
-      be associated only once or not and a tested units can be associated once or not.
+      For the **best** method, each GT unit is associated to a tested unit that has
+      the **best** agreement_score, independently of all others units. Using this method
+      several tested units can be associated to the same GT unit.
       
-      In the **best** method, each GT unit is associated to a tested unit that have
-      the **best** agreement_score independently of all others units. In this method
-      several tested units can be associated to a GT unit.
+      Here is an example of matching with the **hungarian** method. The first column represents the GT unit id
+      and the second column the tested unit id. -1 means that the tested unit is not matched:
       
-      Here an example of association with **hungarian** method, the first column is the GT unit id
-      and the second column the tested unit id. -1 means no match:
-      
-      .. code-block::
+      .. parsed-literal::
       
           GT    TESTED
           0     49
@@ -122,97 +118,111 @@ Given:
           8     42
           ...
       
-      The spikeforest portal that make daily benchmark on sorter use the **best** match method.
+      Note that the SpikeForest project uses the **best** match method.
        
    
    4. **Compute performances**
    
-      With the list of matched units some performance metrics are computed.
+      With the list of matched units we can compute performance metrics.
       Given : **tp** the number of true positive events, **fp** number of false
       positive event, **fn** the number of false negative event, **num_gt** the number 
-      of event of the matched tested units.
+      of event of the matched tested units, the following metrics are computed for each GT unit:
       
-      For each GT units we have:
         * accuracy = tp / (tp + fn + fp)
         * recall = tp / (tp + fn)
         * precision = tp / (tp + fp)
         * false_discovery_rate = fp / (tp + fp)
         * miss_rate = fn / num_gt
       
-      Theses performances can be visualised with the **confusion matrix**, where
-      the last columns count **FN** and the last row count **FP**
+      The overall performances can be visualised with the **confusion matrix**, where
+      the last columns counts **FN** and the last row counts **FP**.
       
     .. image:: images/spikecomparison_confusion.png
         :scale: 100 %
 
     
     
-    Information about **hugarian** or **best** match method.
+More information about **hungarian** or **best** match methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     
-    * **hugarian**:
+    * **Hungarian**:
       
-      Optimize best paring. If the matrix is square then all
-      units are associated. If the matrix is rectangle, then either each line
-      or each row is associated.
-      A GT unit is associated maximum once.
+      Finds the best paring. If the matrix is square, then all units are associated.
+      If the matrix is rectangular, then each row is matched.
+      A GT unit (row) can be match one time only.
       
       * Pros
       
-        * each spike is counted only once
-        * hit score near the chance level are set to zero
-        * good FP estimation
+        * Each spike is counted only once
+        * Hit score near chance levels are set to zero
+        * Good FP estimation
       
       
       * Cons
       
-        * do not catch a cell is splitted in several part only the best math will be listed
-        * more complicated implementation
+        * Does not catch units that are split in several sub-units. Only the best math will be listed
+        * More complicated implementation
     
-    * **best**
+    * **Best**
     
-        Each GT units is associated to the tested unit that share the best **agreement score**.
-        
+        Each GT units is associated to the tested unit that has the best **agreement score**.
 
       * Pros:
       
-        * Each GT unit is matched totally independently from others units.
-        * Accuracy score a GT units is totally independent from other units
-        * Can enhance the "over merge pathology" of a sorter.
+        * Each GT unit is matched totally independently from others units
+        * The accuracy score of a GT unit is totally independent from other units
+        * It can identify over-merged units, as they would match multiple GT units
 
       * Cons:
 
-        * a tested unit can be matched linked time
-        * so some spike can counted several times
-        * so can have biased FP score for units associated several times.
-        * less robust with units having high firing rates
+        * A tested unit can be matched to multiple GT units, so some spikes can be counted several times
+        * FP scores for units associated several times can be biased
+        * Less robust with units having high firing rates
 
+
+Classification of identified units
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Tested units are classified depending on their performance. We identify three different classes:
+
+  * **well-detected** units
+  * **false positive** units
+  * **redundant** units
+
+A **well-detected** unit is a unit whose performance is good. By default, a good performance is measured by an accuracy
+greater than 0.8-
+
+A **false positive** unit has low agreement scores for all GT units and it is not matched.
+
+A **redundant** unit has a relatively high agreement (>= 0.3 by default), but it is not a best match. This means that
+it could either be an oversplit unit or a duplicate unit.
   
-Compare the output of 2 sorters (symetric comparison)
------------------------------------------------------
+2. Compare the output of two spike sorters (symmetric comparison)
+------------------------------------------------------------------
 
-The comparison of two sorter is a quite similar to the procedure 
-of **compare to ground truth** except that no assumption is done on
-which is the ground truth.
-So the procedure is:
+The comparison of two sorter is a quite similar to the procedure of **compare to ground truth**.
+The difference is that no assumption is done on which is the units are ground-truth.
+
+So the procedure is the following:
 
   * **Matching firing events** : same a ground truth comparison
   * **Compute agreement score** : same a ground truth comparison
-  * **Match units** : force with **hugarian** method
+  * **Match units** : only with **hungarian** method
 
-Of course no performances are computed but agreement matrix can be visualised.
+As there is no ground-truth information, performance metrics are not computed.
+However, the confusion and agreement matrices can be visualised to assess the level of agreement.
 
 
+3. Compare the output of multiple spike sorters
+------------------------------------------------
 
-Compare the output of multiple sorters
---------------------------------------
+Comparison of multiple sorters uses the following procedure:
 
-Comparison of multiple sorters is the following procedure:
-
-  1. do pairwise symetric comparison
-  2. construct a graph of all possible agreement across sorters and units
-  3. extract agreement from graph
-  4. make agreement spiketrains
+  1. Perform pairwise symmetric comparisons between spike sorters
+  2. Construct a graph in which nodes are units and edges are the agreements between units (of different sorters)
+  3. Extract units in agreement between two or more spike sorters
+  4. Build agreement spike trains, which only contain the spikes in agreement for the comparison with the highest agreement score
 
   
   

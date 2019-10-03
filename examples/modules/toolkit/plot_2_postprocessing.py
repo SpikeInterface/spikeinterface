@@ -79,8 +79,8 @@ wf_by_group = st.postprocessing.get_unit_waveforms(recording, sorting, ms_before
 print(wf_by_group[0].shape)
 
 ##############################################################################
-#  Compute unit templates (EAP)
-#  -------------------------------
+# Compute unit templates
+# --------------------------
 #  
 #  Similarly to waveforms, templates - average waveforms - can be easily
 #  extracted using the :code:`get_unit_templates`. When spike trains have
@@ -152,8 +152,8 @@ ax.plot(pca_scores_by_electrode[0][:, 0, 0], pca_scores_by_electrode[0][:, 1, 0]
 ax.plot(pca_scores_by_electrode[2][:, 0, 0], pca_scores_by_electrode[2][:, 1, 1], 'b*')
 
 ##############################################################################
-#  Export sorted data to phy to manually curate the results
-#  -----------------------------------------------------------
+# Export sorted data to Phy for manual curation
+# -----------------------------------------------
 #  
 #  Finally, it is common to visualize and manually curate the data after
 #  spike sorting. In order to do so, we interface wiht the Phy
