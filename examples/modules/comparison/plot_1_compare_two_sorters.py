@@ -51,8 +51,8 @@ sw.plot_agreement_matrix(cmp_KL_MS4)
 # Some useful internal dataframes help to check the match and count
 #  like **match_event_count** or **agreement_scores**
 
-print(comp.match_event_count)
-print(comp.agreement_scores)
+print(cmp_KL_MS4.match_event_count)
+print(cmp_KL_MS4.agreement_scores)
 
 #############################################################################
 # In order to check which units were matched, the :code:`get_mapped_sorting`
