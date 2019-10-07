@@ -1,5 +1,5 @@
 """
-Ground truth study Tutorial
+Ground truth study tutorial
 ==================================
 
 This tutorial illustrates how to run a "study".
@@ -35,11 +35,11 @@ import spikeinterface.widgets as sw
 from spikeinterface.comparison import GroundTruthStudy
 
 ##############################################################################
-#  Setup study folder and run all sorters
+# Setup study folder and run all sorters
 # ------------------------------------------------------
 # 
-#  We first generate the folder.
-#  this can take some time because recordings are copied inside the folder.
+# We first generate the folder.
+# this can take some time because recordings are copied inside the folder.
 
 
 rec0, gt_sorting0 = se.example_datasets.toy_example(num_channels=4, duration=10, seed=10)
@@ -52,33 +52,33 @@ study_folder = 'a_study_folder'
 study = GroundTruthStudy.create(study_folder, gt_dict)
 
 ##############################################################################
-#  Then just run all sorters on all recordings in one functions.
+# Then just run all sorters on all recordings in one functions.
 
-#  sorter_list = st.sorters.available_sorters() # this get all sorters.
+# sorter_list = st.sorters.available_sorters() # this get all sorters.
 sorter_list = ['klusta', 'tridesclous', 'mountainsort4']
 study.run_sorters(sorter_list, mode="keep")
 
 ##############################################################################
-#  You can re run **run_study_sorters** as many time as you want.
-#  By default **mode='keep'** so only uncomputed sorter are rerun.
-#  For instance, so just remove the "sorter_folders/rec1/herdingspikes" to re run
-#  only one sorter on one recording.
+# You can re run **run_study_sorters** as many time as you want.
+# By default **mode='keep'** so only uncomputed sorter are rerun.
+# For instance, so just remove the "sorter_folders/rec1/herdingspikes" to re-run
+# only one sorter on one recording.
 #
-#  Then we copy copy sorting into a separate subfolder.
-# This allow to remote the "big" sorter_folders.
+# Then we copy the spike sorting outputs into a separate subfolder.
+# This allow to remove the "large" sorter_folders.
 
 study.copy_sortings()
 
 ##############################################################################
-#  Collect comparisons
+# Collect comparisons
 # --------------------------------
 #  
-#  You can collect in one shot all results and run the
-#  GroundTruthComparison on it.
-#  So you can acces finely to all individual results.
+# You can collect in one shot all results and run the
+# GroundTruthComparison on it.
+# So you can acces finely to all individual results.
 #  
-#  Note that exhaustive_gt=True when you excatly how many
-#  units in ground truth (for synthetic datasets)
+# Note that exhaustive_gt=True when you excatly how many
+# units in ground truth (for synthetic datasets)
 
 study.run_comparisons(exhaustive_gt=True)
 
@@ -94,11 +94,11 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
     w_comp.ax.set_title(rec_name  + ' - ' + sorter_name)
 
 ##############################################################################
-#  Collect synthetic dataframes and display
+# Collect synthetic dataframes and display
 # -------------------------------------------------------------
 # 
 # As shown previously, the performance is returned as a pandas dataframe.
-#  The :code:`aggregate_performances_table` function, gathers all the outputs in
+# The :code:`aggregate_performances_table` function, gathers all the outputs in
 # the study folder and merges them in a single dataframe.
 
 dataframes = study.aggregate_dataframes()
@@ -113,11 +113,11 @@ print(dataframes.keys())
 print(dataframes['run_times'])
 
 ##############################################################################
-#  Easy plot with seaborn
-#  ------------------------
+# Easy plot with seaborn
+# ------------------------
 #  
-#  Seaborn allows to easily plot pandas dataframes. Let’s see some
-#  examples.
+# Seaborn allows to easily plot pandas dataframes. Let’s see some
+# examples.
 
 run_times = dataframes['run_times']
 fig1, ax1 = plt.subplots()

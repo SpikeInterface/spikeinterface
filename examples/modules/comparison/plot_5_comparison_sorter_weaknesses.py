@@ -1,6 +1,6 @@
 """
 Explore sorters weaknesses with with ground-truth comparison
-=========================================================
+=============================================================
 
 Here a syntetic dataset will demonstrate some weaknesses.
 

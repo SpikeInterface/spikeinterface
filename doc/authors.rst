@@ -10,7 +10,7 @@ and may not be the current affiliation of a contributor.
 * `Jeremy Magland <https://www.simonsfoundation.org/team/jeremy-magland>`_ [3]
 * `Matthias Hennig <http://homepages.inf.ed.ac.uk/mhennig/>`_ [2]
 * `Samuel Garcia <https://github.com/samuelgarcia>`_ [4]
-* `Josh Siegle <https://github.com/jsiegle>`_ [5]
+* `Josh Siegle <https://alleninstitute.org/what-we-do/brain-science/about/team/staff-profiles/josh-siegle/>`_ [5]
 
 For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (cole.hurwitz@ed.ac.uk), or just write an issue!
 

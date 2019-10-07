@@ -57,10 +57,8 @@ print('Units found with threshold = 4:', sorting_MS4.get_unit_ids())
 print('Units found with threshold = 10:', sorting_MS4_10.get_unit_ids())
 
 ##############################################################################
-# Run sorters
-# --------------
-
-# TODO add section about MATLAB sorters (set path, env variables etc)
+# Run other sorters
+# ------------------
 
 # SpyKING Circus spike sorting
 # sorting_SC = ss.run_spykingcircus(recording, output_folder='tmp_SC')
