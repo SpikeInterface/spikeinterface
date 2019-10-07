@@ -27,3 +27,5 @@ They are installed when using the pip installer for :code:`spikeinterface`.
 - spikesorters
 - spikecomparison
 - spikewidgets
+
+You can also install each package from GitHub to keep up with the latest updates.

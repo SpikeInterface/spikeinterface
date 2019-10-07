@@ -55,7 +55,7 @@ Given:
 
   2. **Compute agreement score**
    
-    Given the **match_event_count** we cn then compute the **agreement_score**, which is normalized in the range [0, 1].
+    Given the **match_event_count** we can then compute the **agreement_score**, which is normalized in the range [0, 1].
 
     This is done as follows:
     
@@ -63,7 +63,7 @@ Given:
     
     which is equivalent to:
     
-      * agreement_score[i, k] = match_event_count[i, k] / (num_tp[i, k] + num_fp[i, k] + num_fn[i,k])
+      * agreement_score[i, k] = num_tp[i, k] / (num_tp[i, k] + num_fp[i, k] + num_fn[i,k])
     
     or more practically:
     
@@ -72,7 +72,7 @@ Given:
     which is also equivalent to the **accuracy** metric.
 
     
-    Here is an example of the agreement matrix:
+    Here is an example of the agreement matrix, in which only scores > 0.5 are displayed:
     
     .. image:: images/spikecomparison_agreement_unordered.png
         :scale: 100 %
@@ -87,7 +87,7 @@ Given:
    3. **Match units**
    
       During this step, given the **agreement_score** matrix each GT units can be matched to a tested units.
-      For matching, a **min_accuracy** threshold is used (0.5 by default). If the agreement is below this threshold,
+      For matching, a minimum **match_score** is used (0.5 by default). If the agreement is below this threshold,
       the possible match is discarded.
 
       There are two methods to perform the match: **hungarian** and **best** match.
@@ -99,7 +99,8 @@ Given:
       
       For the **best** method, each GT unit is associated to a tested unit that has
       the **best** agreement_score, independently of all others units. Using this method
-      several tested units can be associated to the same GT unit.
+      several tested units can be associated to the same GT unit. Note that for the "best match" the minimum
+      score is not the match_Score, but the **chance_score** (0.1 by default).
       
       Here is an example of matching with the **hungarian** method. The first column represents the GT unit id
       and the second column the tested unit id. -1 means that the tested unit is not matched:
@@ -189,14 +190,17 @@ Tested units are classified depending on their performance. We identify three di
   * **well-detected** units
   * **false positive** units
   * **redundant** units
+  * **over-merged** units
 
 A **well-detected** unit is a unit whose performance is good. By default, a good performance is measured by an accuracy
 greater than 0.8-
 
 A **false positive** unit has low agreement scores for all GT units and it is not matched.
 
-A **redundant** unit has a relatively high agreement (>= 0.3 by default), but it is not a best match. This means that
+A **redundant** unit has a relatively high agreement (>= 0.2 by default), but it is not a best match. This means that
 it could either be an oversplit unit or a duplicate unit.
+
+An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for more than one GT unit.
   
 2. Compare the output of two spike sorters (symmetric comparison)
 ------------------------------------------------------------------

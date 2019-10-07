@@ -21,6 +21,7 @@ For raw data formats, we currently support:
 * **MEArec** - MEArecRecordingExtractor
 * **Mountainsort MDA** - MdaRecordingExtractor
 * **Neurodata Without Borders** - NwbRecordingExtractor
+* **NIX** - NIXIORecordingExtractor
 * **Open Ephys** - OpenEphysRecordingExtractor
 * **Phy/Kilosort** - PhyRecordingExtractor/KilosortRecordingExtractor
 * **SpikeGLX** - SpikeGLXRecordingExtractor

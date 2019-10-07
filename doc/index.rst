@@ -30,6 +30,7 @@ With SpikeInterface, users can:
    modules/index.rst
    contribute
    api
+   whatisnew
    authors
 
 
