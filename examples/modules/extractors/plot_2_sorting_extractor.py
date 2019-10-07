@@ -21,7 +21,7 @@ num_units = 4
 num_events = 1000
 
 ##############################################################################
-# We generatesome random events.
+# We generate some random events.
 
 times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_events)))
 labels = np.random.randint(1, num_units + 1, size=num_events)
@@ -34,7 +34,7 @@ sorting.set_times_labels(times=times, labels=labels)
 sorting.set_sampling_frequency(sampling_frequency=sampling_frequency)
 
 ##############################################################################
-# We can now print properties that the SortingExtractor retrieves from the underlying sorted dataset.
+# We can now print properties that the :code:`SortingExtractor` retrieves from the underlying sorted dataset.
 
 print('Unit ids = {}'.format(sorting.get_unit_ids()))
 st = sorting.get_unit_spike_train(unit_id=1)
@@ -61,7 +61,7 @@ print('Num. events for first second of unit 1 = {}'.format(len(st1)))
 
 ##############################################################################
 # Unit properties are name value pairs that we can store for any unit. We will now calculate a unit
-# property and store it in the SortingExtractor
+# property and store it in the :code:`SortingExtractor`
 
 full_spike_train = sorting2.get_unit_spike_train(unit_id=1)
 firing_rate = float(len(full_spike_train)) / sorting2.get_sampling_frequency()

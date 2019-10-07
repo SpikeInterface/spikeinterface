@@ -8,7 +8,7 @@ and through Python.
 
 These spike sorting algorithms **must be installed externally**.
 Some of theses sorters are written in Matlab, so you will also to install Matlab if you want
-to use them (Kilosort, Kilosort2, Ironclust, JRclust, ...)
+to use them (Kilosort, Kilosort2, Ironclust, ...)
 Some of then will also need some computing library like CUDA (Kilosort, Kilosort2, Ironclust (optional)) or
 opencl (Tridesclous) to use hardware acceleration (GPU).
 
@@ -27,8 +27,7 @@ Herdingspikes2
 
 * Python + C++
 * Url: https://github.com/mhhennig/hs2
-* Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez
-           Raimon Wintzer: GUI and visualisation
+* Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez, Raimon Wintzer: GUI and visualisation
 * Installation::
 
     pip install herdingspikes

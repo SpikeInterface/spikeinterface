@@ -148,6 +148,8 @@ Module :mod:`spikeinterface.widgets`
 
     .. autofunction:: plot_timeseries
     .. autofunction:: plot_electrode_geometry
+    .. autofunction:: plot_spectrum
+    .. autofunction:: plot_spectrogram
     .. autofunction:: plot_rasters
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms

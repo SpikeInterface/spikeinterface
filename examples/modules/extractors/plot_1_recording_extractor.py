@@ -32,7 +32,7 @@ geom[:, 0] = range(num_channels)
 recording = se.NumpyRecordingExtractor(timeseries=timeseries, geom=geom, sampling_frequency=sampling_frequency)
 
 ##############################################################################
-# We can now print properties that the RecordingExtractor retrieves from the underlying recording.
+# We can now print properties that the :code:`RecordingExtractor` retrieves from the underlying recording.
 
 print('Num. channels = {}'.format(len(recording.get_channel_ids())))
 print('Sampling frequency = {} Hz'.format(recording.get_sampling_frequency()))
