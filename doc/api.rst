@@ -129,7 +129,7 @@ Module :mod:`spikeinterface.comparison`
     .. autoclass:: GroundTruthComparison
         :members:
 
-    .. autoclass:: MultiSortingComparison
+    .. autoclass:: SymmetricSortingComparison
         :members:
         :undoc-members:
 
@@ -156,5 +156,6 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_amplitudes_distribution
     .. autofunction:: plot_amplitudes_timeseries
     .. autofunction:: plot_confusion_matrix
+    .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_sorting_performance
     .. autofunction:: plot_multicomp_graph
