@@ -123,9 +123,6 @@ Module :mod:`spikeinterface.comparison`
     .. autofunction:: compare_multiple_sorters
     .. autofunction:: compare_sorter_to_ground_truth
 
-    .. autoclass:: SortingComparison
-        :members:
-
     .. autoclass:: GroundTruthComparison
         :members:
 
