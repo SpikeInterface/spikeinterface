@@ -1,0 +1,6 @@
+SpikeInterface 0.9.0 release notes
+-----------------------------------
+
+7th October 2019
+
+First release of SpikeInterface, a unified Python framework for spike sorting.
