@@ -5,7 +5,7 @@ sphinx-gallery
 ## install sorters ##
 
 # ms4
-ml_ms4alg==0.3.1
+ml_ms4alg==0.3.2
 
 # klusta
 Cython
