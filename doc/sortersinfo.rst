@@ -1,24 +1,24 @@
-Sorters installation
-====================
+Installing Spike Sorters 
+========================
 
 An important aspect of spikeinterface is the `spikeinterface.sorters` module.
-This module wraps several popular spike sorting tools.
-This means that you can run multiple sorters on the same dataset without a few lines of code
-through an unified layer in Python. 
+This module wraps many popular spike sorting tools.
+This means that you can run multiple sorters on the same dataset with only a few lines of code
+and through Python. 
 
-The spike sorting software **must be installed externally**.
+These spike sorting algorithms **must be installed externally**.
 Some of theses sorters are written in Matlab, so you will also to install Matlab if you want
-to use them (Kilosort, Kilosort2, Ironclust, JRclust, ...)
-Some of then will also need some computing library  like cuda (Kilosort, Kilosort2, Ironclust (optional)),
+to use them (Kilosort, Kilosort2, Ironclust, ...)
+Some of then will also need some computing library like CUDA (Kilosort, Kilosort2, Ironclust (optional)) or
 opencl (Tridesclous) to use hardware acceleration (GPU).
 
 Here is a list of the implemented wrappers and some instructions to install them on your local machine.
-Installation instructions are given for an Unbuntu platform. Please check the documentation of the different spike 
+Installation instructions are given for an **Unbuntu** platform. Please check the documentation of the different spike 
 sorters to retrieve installation instructions for other operating systems.
 We use **pip** to install packages, but **conda** should also work in many cases.
 
-If you experience installation problems please contact directly the authors of theses tools or write on the 
-relative mailing list, google groups, etc.
+If you experience installation problems please directly contact the authors of theses tools or write on the 
+related mailing list, google group, etc.
  
 Please feel free to enhance this document with more installation tips.
 
@@ -27,8 +27,7 @@ Herdingspikes2
 
 * Python + C++
 * Url: https://github.com/mhhennig/hs2
-* Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez
-           Raimon Wintzer: GUI and visualisation
+* Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez, Raimon Wintzer: GUI and visualisation
 * Installation::
 
     pip install herdingspikes
@@ -109,7 +108,7 @@ SpykingCircus
       
         sudo apt install libmpich-dev
         pip install mpy4py
-        pip install spyking-circus
+        pip install spyking-circus --no-binary=mpi4py
 
 
 Tridesclous
@@ -130,3 +129,14 @@ Tridesclous
         sudo apt-get install opencl-headers ocl-icd-opencl-dev libclc-dev ocl-icd-libopencl1
         pip install pyopencl
 
+Waveclus
+--------
+
+* Matlab based
+* Url: https://github.com/csn-le/wave_clus/wiki
+* Authors: Fernando Chaure, Hernan Rey and Rodrigo Quian Quiroga
+* Installation needs Matlab::
+
+      git clone https://github.com/csn-le/wave_clus/
+      # provide installation path by setting the WAVECLUS_PATH environment variable
+      # or using WaveClusSorter.set_waveclus_path()

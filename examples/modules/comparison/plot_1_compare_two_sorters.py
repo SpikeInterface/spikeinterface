@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import spikeinterface.extractors as se
 import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
 
 ##############################################################################
 # First, let's create a toy example:
@@ -29,6 +30,7 @@ recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=10
 sorting_KL = sorters.run_klusta(recording)
 sorting_MS4 = sorters.run_mountainsort4(recording)
 
+
 #############################################################################
 # The :code:`compare_two_sorters` function allows us to compare the spike
 # sorting output. It returns a :code:`SortingComparison` object, with methods
@@ -39,6 +41,18 @@ sorting_MS4 = sorters.run_mountainsort4(recording)
 
 cmp_KL_MS4 = sc.compare_two_sorters(sorting1=sorting_KL, sorting2=sorting_MS4, 
                                                sorting1_name='klusta', sorting2_name='ms4')
+
+#############################################################################
+# We can check the agreement matrix to inspect the matching.
+
+sw.plot_agreement_matrix(cmp_KL_MS4)
+
+#############################################################################
+# Some useful internal dataframes help to check the match and count
+#  like **match_event_count** or **agreement_scores**
+
+print(cmp_KL_MS4.match_event_count)
+print(cmp_KL_MS4.agreement_scores)
 
 #############################################################################
 # In order to check which units were matched, the :code:`get_mapped_sorting`

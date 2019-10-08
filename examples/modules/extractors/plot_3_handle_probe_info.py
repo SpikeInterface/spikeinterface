@@ -87,8 +87,8 @@ recording, sorting_true = se.example_datasets.toy_example(duration=10, num_chann
 #            }
 #        }
 #
-# You can load the probe file using the :code:`load_probe_file` function in the RecordingExtractor. This function returns another
-# :code:`RecordingExtractor` object:
+# You can load the probe file using the :code:`load_probe_file` function in the RecordingExtractor.
+# **IMPORTANT** This function returns a **new** :code:`RecordingExtractor` object:
 
 recording_tetrodes = recording.load_probe_file(probe_file='eight_tetrodes.prb')
 

@@ -13,32 +13,49 @@
 import os
 import sys
 import shutil
+from pathlib import Path
 # sys.path.insert(0, os.path.abspath('.'))
+
+
 if not os.path.isdir('sources'):
     os.mkdir('sources')
 
-# clone git repos
+# parse requirements file
+req_file = Path(os.getcwd()).parent / 'requirements.txt'
+version_dict = {}
+with req_file.open('r') as f:
+    for line in f.readlines():
+        split_line = line.split('==')
+        version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
+
+print(version_dict)
+
+# clone git repos and checkout the right tag
 cwd = os.getcwd()
 os.chdir('sources')
-os.system('git clone https://github.com/SpikeInterface/spikeextractors.git')
-os.system('git clone https://github.com/SpikeInterface/spiketoolkit.git')
-os.system('git clone https://github.com/SpikeInterface/spikesorters.git')
-os.system('git clone https://github.com/SpikeInterface/spikecomparison.git')
-os.system('git clone https://github.com/SpikeInterface/spikewidgets.git')
-
+os.system('git clone --branch ' + version_dict['spikeextractors']
+          + ' https://github.com/SpikeInterface/spikeextractors.git')
+os.system('git clone --branch ' + version_dict['spiketoolkit']
+          + ' https://github.com/SpikeInterface/spiketoolkit.git')
+os.system('git clone --branch ' + version_dict['spikesorters']
+          + ' https://github.com/SpikeInterface/spikesorters.git')
+os.system('git clone --branch ' + version_dict['spikecomparison']
+          + ' https://github.com/SpikeInterface/spikecomparison.git')
+os.system('git clone --branch ' + version_dict['spikewidgets']
+          + ' https://github.com/SpikeInterface/spikewidgets.git')
 os.chdir(cwd)
-
-# clean study
-study_folder = '../examples/modules/comparison/a_study_folder'
-if os.path.isdir(study_folder):
-    print('Removing study folder')
-    shutil.rmtree(study_folder)
 
 sys.path.insert(0, os.path.abspath('sources/spikeextractors/'))
 sys.path.insert(0, os.path.abspath('sources/spiketoolkit/'))
 sys.path.insert(0, os.path.abspath('sources/spikesorters/'))
 sys.path.insert(0, os.path.abspath('sources/spikecomparison/'))
 sys.path.insert(0, os.path.abspath('sources/spikewidgets/'))
+
+# clean study
+study_folder = '../examples/modules/comparison/a_study_folder'
+if os.path.isdir(study_folder):
+    print('Removing study folder')
+    shutil.rmtree(study_folder)
 
 # -- Project information -----------------------------------------------------
 
@@ -105,4 +122,3 @@ sphinx_gallery_conf = {
                                        ]),
     'within_subsection_order': FileNameSortKey,
 }
-

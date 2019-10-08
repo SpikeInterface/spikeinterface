@@ -24,6 +24,7 @@ import seaborn as sns
 import spikeinterface.extractors as se
 import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
 
 ##############################################################################
 
@@ -34,6 +35,17 @@ sorting_MS4 = sorters.run_mountainsort4(recording)
 ##############################################################################
 
 cmp_gt_MS4 = sc.compare_sorter_to_ground_truth(sorting_true, sorting_MS4, exhaustive_gt=True)
+
+
+##############################################################################
+# To have an overview of the match we can use the unordered agreement matrix
+
+sw.plot_agreement_matrix(cmp_gt_MS4, ordered=False)
+
+##############################################################################
+# or ordered
+
+sw.plot_agreement_matrix(cmp_gt_MS4, ordered=True)
 
 ##############################################################################
 # This function first matches the ground-truth and spike sorted units, and
@@ -68,10 +80,17 @@ perf = cmp_gt_MS4.get_performance()
 ##############################################################################
 # Lets use seaborn swarm plot
 
-fig, ax = plt.subplots()
+fig1, ax1 = plt.subplots()
 perf2 = pd.melt(perf, var_name='measurement')
-sns.swarmplot(data=perf2, x='measurement', y='value')
+ax1 = sns.swarmplot(data=perf2, x='measurement', y='value', ax=ax1)
+ax1.set_xticklabels(labels=ax1.get_xticklabels(), rotation=45)
 
+##############################################################################
+# The confusion matrix is also a good summary of the score as it has
+# the same shape as agreement matrix, but it contains an extra column for FN
+# and an extra row for FP
+
+sw.plot_confusion_matrix(cmp_gt_MS4)
 
 ##############################################################################
 # We can query the well and bad detected units. By default, the threshold
@@ -99,23 +118,26 @@ cmp_gt_KL = sc.compare_sorter_to_ground_truth(sorting_true, sorting_KL, exhausti
 
 perf = cmp_gt_KL.get_performance()
 
+print(perf)
+
 ##############################################################################
 # Lets use seaborn swarm plot
 
-fig, ax = plt.subplots()
+fig2, ax2 = plt.subplots()
 perf2 = pd.melt(perf, var_name='measurement')
-sns.swarmplot(data=perf2, x='measurement', y='value')
+ax2 = sns.swarmplot(data=perf2, x='measurement', y='value', ax=ax2)
+ax2.set_xticklabels(labels=ax2.get_xticklabels(), rotation=45)
 
 ##############################################################################
 
-cmp_gt_KL.get_well_detected_units
+print(cmp_gt_KL.get_well_detected_units)
 
 ##############################################################################
 
-cmp_gt_KL.get_false_positive_units()
+print(cmp_gt_KL.get_false_positive_units())
 
 ##############################################################################
 
-cmp_gt_KL.get_redundant_units()
+print(cmp_gt_KL.get_redundant_units())
 
 

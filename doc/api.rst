@@ -123,13 +123,10 @@ Module :mod:`spikeinterface.comparison`
     .. autofunction:: compare_multiple_sorters
     .. autofunction:: compare_sorter_to_ground_truth
 
-    .. autoclass:: SortingComparison
-        :members:
-
     .. autoclass:: GroundTruthComparison
         :members:
 
-    .. autoclass:: MultiSortingComparison
+    .. autoclass:: SymmetricSortingComparison
         :members:
         :undoc-members:
 
@@ -148,6 +145,8 @@ Module :mod:`spikeinterface.widgets`
 
     .. autofunction:: plot_timeseries
     .. autofunction:: plot_electrode_geometry
+    .. autofunction:: plot_spectrum
+    .. autofunction:: plot_spectrogram
     .. autofunction:: plot_rasters
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms
@@ -156,5 +155,6 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_amplitudes_distribution
     .. autofunction:: plot_amplitudes_timeseries
     .. autofunction:: plot_confusion_matrix
+    .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_sorting_performance
     .. autofunction:: plot_multicomp_graph
