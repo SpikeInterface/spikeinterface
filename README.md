@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/spikeinterface.svg)](https://badge.fury.io/py/spikeinterface)
+
 # SpikeInterface
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
