@@ -18,15 +18,19 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 ## Installation
 
-Clone the repository and install from sources:
+You can install SpikeInterface from pip:
+
+`pip install spikeinterface` 
+
+Alternatively, you can clone the repository and install from sources the development version:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git
 cd spikeinterface
-pip install .
+python setup.py develop
 ```
 
-Soon a `pip install spikeinterface` will be available!
+Similarly, you can reinstall all packages listed above.
 
 ## Examples
 
