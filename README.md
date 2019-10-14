@@ -15,7 +15,7 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 **On October 8, 2019, we have released the very first beta version of spikeinterface (0.9.1)**
 
-**Please have a look to the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describe in detail this project**
+**Please have a look at the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describe in detail this project**
 
 
 
