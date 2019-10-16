@@ -56,9 +56,6 @@ sw.plot_agreement_matrix(cmp_gt_MS4, ordered=True)
 # - true positive (tp): spike found both in :code:`gt_sorting` and :code:`tested_sorting`
 # - false negative (fn): spike found in :code:`gt_sorting`, but not in :code:`tested_sorting` 
 # - false positive (fp): spike found in :code:`tested_sorting`, but not in :code:`gt_sorting` 
-# - misclassification errors (cl): spike found in :code:`gt_sorting`, not in 
-# :code:`tested_sorting`, found in another matched spike train of :code:`tested_sorting`, and 
-# not labelled as true positives
 # 
 # From the counts of these labels the following performance measures are
 # computed:
