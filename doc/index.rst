@@ -33,6 +33,9 @@ With SpikeInterface, users can:
    whatisnew
    authors
 
+   
+Please have a look at the `preprint paper <https://www.biorxiv.org/content/10.1101/796599v1>`_  for more info.
+   
 
 .. Indices and tables
 .. ==================

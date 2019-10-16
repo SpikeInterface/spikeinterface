@@ -13,20 +13,27 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 - [spikewidgets](https://github.com/SpikeInterface/spikewidgets): Data visualization widgets. [![Build Status](https://travis-ci.org/SpikeInterface/spikewidgets.svg?branch=master)](https://travis-ci.org/SpikeInterface/spikewidgets) 
 
 
-**ALPHA version. The release of an beta version is scheduled for August 31st 2019**
+**On October 8, 2019, we have released the very first beta version of spikeinterface (0.9.1)**
+
+**Please have a look at the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describe in detail this project**
+
 
 
 ## Installation
 
-Clone the repository and install from sources:
+You can install SpikeInterface from pip:
+
+`pip install spikeinterface` 
+
+Alternatively, you can clone the repository and install from sources the development version:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git
 cd spikeinterface
-pip install .
+python setup.py develop
 ```
 
-Soon a `pip install spikeinterface` will be available!
+Similarly, you can reinstall all packages listed above.
 
 ## Examples
 
