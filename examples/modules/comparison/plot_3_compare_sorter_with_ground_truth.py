@@ -51,14 +51,11 @@ sw.plot_agreement_matrix(cmp_gt_MS4, ordered=True)
 # This function first matches the ground-truth and spike sorted units, and
 # then it computes several performance metrics.
 # 
-# Once the spike trains are matched, each spike is labelled as: - true
-# positive (tp): spike found both in :code:`gt_sorting` and :code:`tested_sorting`
-# - false negative (fn): spike found in :code:`gt_sorting`, but not in
-# :code:`tested_sorting` - false positive (fp): spike found in
-# :code:`tested_sorting`, but not in :code:`gt_sorting` - misclassification errors
-# (cl): spike found in :code:`gt_sorting`, not in :code:`tested_sorting`, found in
-# another matched spike train of :code:`tested_sorting`, and not labelled as
-# true positives
+# Once the spike trains are matched, each spike is labelled as: 
+# 
+# - true positive (tp): spike found both in :code:`gt_sorting` and :code:`tested_sorting`
+# - false negative (fn): spike found in :code:`gt_sorting`, but not in :code:`tested_sorting` 
+# - false positive (fp): spike found in :code:`tested_sorting`, but not in :code:`gt_sorting` 
 # 
 # From the counts of these labels the following performance measures are
 # computed:
