@@ -107,7 +107,7 @@ SpykingCircus
 * Installation::
       
         sudo apt install libmpich-dev
-        pip install mpy4py
+        pip install mpi4py
         pip install spyking-circus --no-binary=mpi4py
 
 
