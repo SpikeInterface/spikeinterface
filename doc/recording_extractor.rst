@@ -6,7 +6,7 @@ subclass based on the predefined base classes provided in the
 `spikeextractors <https://github.com/SpikeInterface/spikeextractors>`_ package.
 
 To enable standardization among subclasses, the :code:`RecordingExtractors` is an abstract base class which require a new
-subclass to override all methods which are decorated with @abstractmethod. The :code:`RecordingExtractors` class has four abstract methods: :code:`get_channel_ids()`, :code:`get_num_frames()`, :code:`get_sampling_frequency()`, and :code:`get_traces()`. So all you need to do is create a class that inherits from :code:`RecordingExtractor` and implements these four methods. 
+subclass to **override all methods which are decorated with @abstractmethod**. The :code:`RecordingExtractors` class has four abstract methods: :code:`get_channel_ids()`, :code:`get_num_frames()`, :code:`get_sampling_frequency()`, and :code:`get_traces()`. So all you need to do is create a class that inherits from :code:`RecordingExtractor` and implements these four methods. 
 
 Along with these four methods, you can also optionally override the :code:`write_recording()` function which enables any :code:`RecordingExtractor` to be written into your format. Also, if you have an implementation of :code:`get_snippets()` that is more efficient that the original implementation, you can optionally override that as well.
 
