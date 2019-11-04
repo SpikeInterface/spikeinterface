@@ -6,14 +6,14 @@ subclass based on the predefined base classes provided in the
 `spikeextractors <https://github.com/SpikeInterface/spikeextractors>`_ package.
 
 To enable standardization among subclasses, the :code:`RecordingExtractors` is an abstract base class which require a new
-subclass to override all methods which are decorated with @abstractmethod.
+subclass to **override all methods which are decorated with @abstractmethod**. The :code:`RecordingExtractors` class has four abstract methods: :code:`get_channel_ids()`, :code:`get_num_frames()`, :code:`get_sampling_frequency()`, and :code:`get_traces()`. So all you need to do is create a class that inherits from :code:`RecordingExtractor` and implements these four methods. 
 
-The :code:`RecordingExtractors` class has three abstract methods: :code:`get_channel_ids()`, :code:`get_num_frames()`,
-:code:`get_sampling_frequency()`, and :code:`get_traces()`.
+Along with these four methods, you can also optionally override the :code:`write_recording()` function which enables any :code:`RecordingExtractor` to be written into your format. Also, if you have an implementation of :code:`get_snippets()` that is more efficient that the original implementation, you can optionally override that as well.
 
-So all you need to do is create a class that inherits from :code:`RecordingExtractor` and implement these four methods. 
+Any other methods, such as :code:`set_channel_locations()` or :code:`get_epoch()`, **should not** be overwritten as they are generic functions that any :code:`RecordingExtractor` has access to upon initialization.
 
-If your file format contains information about the locations of the channels, you are suggested to add that as a channel property upon initialization (this is optional).
+Finally, if your file format contains information about the channels (e.g. location, group, etc.), you are suggested to add that as a channel property upon initialization (this is optional).
+
 An example of a RecordingExtractor that adds channel locations is shown `here <https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/biocamrecordingextractor/biocamrecordingextractor.py>`_.
 
 The contributed extractors are in the **spikeextractors/extractors** folder. You can fork the repo and create a new folder
