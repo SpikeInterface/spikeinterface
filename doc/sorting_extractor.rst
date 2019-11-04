@@ -6,11 +6,14 @@ subclass based on the predefined base classes provided in the
 `spikeextractors <https://github.com/SpikeInterface/spikeextractors>`_ package.
 
 To enable standardization among subclasses, the :code:`SortingExtractor` is an abstract base class which require a new
-subclass to override all methods which are decorated with @abstractmethod.
+subclass to **override all methods which are decorated with @abstractmethod**. The :code:`SortingExtractor` class has two abstract methods: :code:`get_unit_ids()`, :code:`get_unit_spike_trains()`. So all you need to do is create a class that inherits from :code:`:code:`SortingExtractor`` and implements these two methods.
 
-The :code:`SortingExtractor` class has three abstract methods: :code:`get_unit_ids()`, :code:`get_unit_spike_trains()`.
+Along with these two methods, you can also optionally override the :code:`write_sorting()` function which enables any :code:`SortingExtractor` to be written into your format.
 
-So all you need to do is create a class that inherits from :code:`:code:`SortingExtractor`` and implement these two methods.
+Any other methods, such as :code:`set_unit_spike_features()` or :code:`clear_unit_property()`, **should not** be overwritten as they are generic functions that any :code:`SortingExtractor` has access to upon initialization.
+
+Finally, if your file format contains information about the units (e.g. location, morphology, etc.) or spikes (e.g. locations, pcs, etc.), you are suggested to add that as either unit properties or spike features upon initialization (this is optional).
+
 The contributed extractors are in the **spikeextractors/extractors** folder. You can fork the repo and create a new folder
 **myformatextractors** there. In the folder, create a new file named **myformatsortingextractor.py**.
 
