@@ -16,4 +16,4 @@ klusta
 klustakwik2==0.2.7
 
 # tridesclous
-tridesclous==1.2.2
+tridesclous==1.3.1
