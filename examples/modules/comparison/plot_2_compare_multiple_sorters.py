@@ -52,7 +52,7 @@ mcmp.comparisons[0].get_mapped_sorting1().get_mapped_unit_ids()
 
 
 #############################################################################
-# The global multi caomparison can be visualized with this graph
+# The global multi comparison can be visualized with this graph
 
 sw.plot_multicomp_graph(mcmp)
 
