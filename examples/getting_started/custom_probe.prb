@@ -1,0 +1,12 @@
+channel_groups = {
+    0: {
+         'channels': [1, 0],
+ 	      'geometry': [[0, 0], [0, 1]],
+ 	      'label': ['first_channel', 'second_channel'],
+     },
+     1: {
+         'channels': [2, 3],
+ 	      'geometry': [[3,0], [3,1]],
+         'label': ['third_channel', 'fourth_channel'],
+     }
+ }

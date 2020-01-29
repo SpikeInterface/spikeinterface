@@ -1,0 +1,19 @@
+# sphinx-gallery
+sphinx-gallery
+
+
+## install sorters ##
+
+# ms4
+ml_ms4alg==0.3.2
+
+# klusta
+Cython
+h5py
+tqdm
+click
+klusta
+klustakwik2==0.2.7
+
+# tridesclous
+tridesclous==1.3.1
