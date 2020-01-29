@@ -1,28 +1,22 @@
 language: python
 cache: pip
 os:
-  - linux
+- linux
 python:
-  - '3.6'
-sudo: enabled
-addons:
-  apt:
-    packages:
-    - libopenmpi-dev
-    - libglib2.0-0
-    - libgl1-mesa-glx
-    - qt5-default
-    - packagekit-gtk3-module
-    - libcanberra-gtk-module
+- '3.6'
 install:
-  - pip install requirements.txt
+- pip install -r requirements.txt
+- pip install -r requirements_rtd.txt
+- pip install sphinx sphinx-gallery
+- pip install .
 script:
-  # py.test -s
-  python -m pytest
+- python -m pytest --ignore=doc/
+- cd doc
+- make html
 deploy:
   provider: pypi
   user: alejoe91
   on:
     tags: true
   password:
-    secure: Ya7Z6AouMhTiBA7G8sUNncA92h+j+JTW4a8AwyDklFB/0poxrhUZwpfMj80yaLfEGspTFaUCvc5oBQB3bLbrHmYAFP3TQKm2X8tQSR5XZXew1uvtGBVMebW4DHSFeQLEVyHjY6q8tzA0jSbHetVlc+Vfv3xtAeD4w7Ff2x4HoWQJUKMkdVvROi/OIjLeTqiMc7LOGfDtT0AJUFp86u1auv8Mriw9L06dKI9E9SFd1t85sOv/RosTtQD/f8o0kHZbkkkpQOSLsh5xQZ472pGk/zfvAk1BEB7hr1eaWNeJqdk/NQL1ONr5nvs5O0SzURz/PH8lAMBdV1tr5NzBWXy7dTtHPW7WXvJlvZR/s39XZFRnSWXJlhvZRoGrY54tzpYjnH5+dkzdZYcTcCIgpmNPGGZ8cckq5E4pQTAduhIwfTJ5v8EMBMFqXpr9+T+ynk/MXkDX2x1VSGetTpR2IR+mAx49xi7gC+4YmbJk7Y0lATNpoCSAcf0pSrYHtPsrUhU/2sd4PGFxkrqTTluf1LJb/g+IFSF8EnaQFCoBcxmJUVDyM+LReAhTjaENFKB9r7H75YZE9h0xcC0N/dGEeZGE3DVmfkfJIDGtdDezXuWlrWZQT6ICvItasA8RZn1v+MtwuenQI8050emwvaNvStypkQEpcYuTkV59FzT828pK5cE=
+    secure: kMLey7aksRbho8zpaSMhUT4p/fLAipYrDmCvcqcHtAqdOYv17lU0YGY99NjAU5LIYidttcLW+jGQr35tgCzYTY4NbqwQ19CHLrMZgUWVyw+bnjftmLnyr/9+tPG0cJnAF+QnWemStz9XVhyHSlLpAl/mIAHSd60EJWlO/zgFmtvRqKz0tX//3EN84AdYxBlZxDebdYZUG8+cIsQ3OcY8x7oAhaNoJxRmwKIgmvoNpwSlOPamqXxpURCM+EzWnCM1hu2j29CyT/gUxlHVdmdVTu0OsfY7YMbjMQQJPC2D0QBPODLAZ1rH5OT84PJg1j4IkldfKSdPa5C2s+IEp5dreuv7/K6oUWy08LlDoSPFwm0NIC2y5/OqtWmDBYp7s06nqIr+KtWBTJRiDQGHm5qDEcIEKIMlYX7YJAy7JGuOlHrXe5u99NIiZPInPe6yB5x5pZ0VyjPDNGBzfqXWbNovDpKFQa6NaHAlTL7USUIbj+RNkb4nMSDFiwnGHhKYmPRuaOjGKNDWuVR99mSeds/d81BVYXql+c8DedwX2qk+XnHON5M/2h0tsWY0dUBbpB3EghMyjSLBIhnp+ifCQ3v1fW8LfSM04Zg8CJ33rqkJJUnWo5JB+4CPUsnp1k3MDy3Ifll5hlAh1WHo6UyzGthi4zb/FYEuHTTUYJqpk+CbumE=
