@@ -25,8 +25,14 @@ req_file = Path(os.getcwd()).parent / 'requirements.txt'
 version_dict = {}
 with req_file.open('r') as f:
     for line in f.readlines():
-        split_line = line.split('==')
-        version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
+        if '==' in line:
+            split_line = line.split('==')
+            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
+        elif '>=' in line:
+            split_line = line.split('>=')
+            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
+        else:
+            continue
 
 print(version_dict)
 
