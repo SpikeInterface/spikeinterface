@@ -27,11 +27,14 @@ with req_file.open('r') as f:
     for line in f.readlines():
         if '==' in line:
             split_line = line.split('==')
+            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
         elif '>=' in line:
             split_line = line.split('>=')
-        version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
+            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
+        else:
+            continue
 
-print(version_dict)
+#print(version_dict)
 
 # clone git repos and checkout the right tag
 cwd = os.getcwd()
