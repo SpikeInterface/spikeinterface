@@ -17,4 +17,4 @@ klustakwik2==0.2.7
 
 # tridesclous
 pyqt5==5.13
-tridesclous==1.2.2
+tridesclous==1.5.0

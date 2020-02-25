@@ -183,7 +183,7 @@ print('Isolation distances', isolations)
 # Quality metrics can be also used to automatically curate the spike sorting output. For example, you can select
 # sorted units with a SNR above a certain threshold:
 
-sorting_curated_snr = st.curation.threshold_snr(sorting_KL, recording, threshold=5)
+sorting_curated_snr = st.curation.threshold_snr(sorting_KL, recording, threshold=5, threshold_sign='less')
 snrs_above = st.validation.compute_snrs(sorting_curated_snr, recording_cmr)
 
 print('Curated SNR', snrs_above)
