@@ -1,6 +1,6 @@
-spikeextractors>=0.7.1
-spiketoolkit>=0.5.1
-spikesorters>=0.2.3
-spikemetrics>=0.1.3
-spikecomparison>=0.2.2
-spikewidgets>=0.3.2
+spikeextractors>=0.7.2
+spiketoolkit>=0.5.2
+spikesorters>=0.2.4
+spikemetrics>=0.1.4
+spikecomparison>=0.2.3
+spikewidgets>=0.3.3
