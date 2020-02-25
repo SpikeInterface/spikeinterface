@@ -66,7 +66,7 @@ print(recording_tetrodes.get_shared_channel_property_names())
 
 t_start = time.time()
 sorting_tetrodes = ss.run_sorter('klusta', recording_tetrodes, output_folder='tmp_tetrodes',
-                                 grouping_property='group', parallel=False)
+                                 grouping_property='group', parallel=False, verbose=False)
 print('Elapsed time: ', time.time() - t_start)
 
 ##############################################################################
@@ -74,7 +74,7 @@ print('Elapsed time: ', time.time() - t_start)
 
 t_start = time.time()
 sorting_tetrodes_p = ss.run_sorter('klusta', recording_tetrodes, output_folder='tmp_tetrodes_par',
-                                   grouping_property='group', parallel=True)
+                                   grouping_property='group', parallel=True, verbose=False)
 print('Elapsed time parallel: ', time.time() - t_start)
 
 ##############################################################################
@@ -83,10 +83,6 @@ print('Elapsed time parallel: ', time.time() - t_start)
 print(sorting_tetrodes.get_shared_unit_property_names())
 
 ##############################################################################
-# Note that some spike sorters (e.g. Klusta, Spyking Circus) can handle automatically group information. In those cases
-# the 'group' is automatically parsed. Other spike sorters can handle 'group' only through the 'grouping_property'
-# parameter.
-#
 # Note that channels can be split by any property. Let's for example assume that half of the tetrodes are in hippocampus
 # CA1 region, and the other half is in CA3. first we have to load this property (this can be done also from the '.prb'
 # file):

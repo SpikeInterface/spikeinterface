@@ -34,28 +34,34 @@ with req_file.open('r') as f:
         else:
             continue
 
-print(version_dict)
+#print(version_dict)
 
 # clone git repos and checkout the right tag
 cwd = os.getcwd()
-os.chdir('sources')
-os.system('git clone --branch ' + version_dict['spikeextractors']
-          + ' https://github.com/SpikeInterface/spikeextractors.git')
-os.system('git clone --branch ' + version_dict['spiketoolkit']
-          + ' https://github.com/SpikeInterface/spiketoolkit.git')
-os.system('git clone --branch ' + version_dict['spikesorters']
-          + ' https://github.com/SpikeInterface/spikesorters.git')
-os.system('git clone --branch ' + version_dict['spikecomparison']
-          + ' https://github.com/SpikeInterface/spikecomparison.git')
-os.system('git clone --branch ' + version_dict['spikewidgets']
-          + ' https://github.com/SpikeInterface/spikewidgets.git')
-os.chdir(cwd)
 
-sys.path.insert(0, os.path.abspath('sources/spikeextractors/'))
-sys.path.insert(0, os.path.abspath('sources/spiketoolkit/'))
-sys.path.insert(0, os.path.abspath('sources/spikesorters/'))
-sys.path.insert(0, os.path.abspath('sources/spikecomparison/'))
-sys.path.insert(0, os.path.abspath('sources/spikewidgets/'))
+subpacakges_sources = {
+    'spikeextractors' : ' https://github.com/SpikeInterface/spikeextractors.git',
+    'spiketoolkit' : ' https://github.com/SpikeInterface/spiketoolkit.git',
+    'spikesorters' : ' https://github.com/SpikeInterface/spikesorters.git',
+    'spikecomparison' : ' https://github.com/SpikeInterface/spikecomparison.git',
+    'spikewidgets' : ' https://github.com/SpikeInterface/spikewidgets.git',
+}
+
+for name, url in subpacakges_sources.items():
+    os.chdir(cwd)
+    folder = 'sources/' + name
+    
+    if os.path.exists(folder):
+        os.chdir(folder)
+        os.system('git fetch')
+        os.system('git checkout '+version_dict[name])
+    else:
+        os.chdir('sources')
+        os.system('git clone --branch ' + version_dict[name] + ' '+url)
+
+    os.chdir(cwd)
+    sys.path.insert(0, os.path.abspath(folder))
+    
 
 # clean study
 study_folder = '../examples/modules/comparison/a_study_folder'
