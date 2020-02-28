@@ -64,11 +64,12 @@ print('Num. events for first second of unit 1 = {}'.format(len(st1)))
 # property and store it in the :code:`SortingExtractor`
 
 full_spike_train = sorting2.get_unit_spike_train(unit_id=1)
-firing_rate = float(len(full_spike_train)) / sorting2.get_sampling_frequency()
+firing_rate = float(len(full_spike_train)) / duration
 sorting2.set_unit_property(unit_id=1, property_name='firing_rate', value=firing_rate)
 print('Average firing rate during the recording of unit 1 = {}'.format(sorting2.get_unit_property(unit_id=1,
-                                                                                                  property_name='firing_rate')))
-print("Spike property names: " + str(sorting2.get_shared_unit_property_names()))
+                                                                                                  property_name=
+                                                                                                  'firing_rate')))
+print("Spike property names: " + str(sorting2.get_unit_property_names(unit_id=1)))
 
 ##############################################################################
 # :code:`SubSortingExtractor` objects can be used to extract arbitrary subsets of your units/spike trains manually
@@ -77,7 +78,7 @@ sorting3 = se.SubSortingExtractor(parent_sorting=sorting2, unit_ids=[1, 2],
                                   start_frame=10000, end_frame=20000)
 print('Num. units = {}'.format(len(sorting3.get_unit_ids())))
 print('Average firing rate of units1 during frames 10000-20000 = {}'.format(
-    float(len(sorting3.get_unit_spike_train(unit_id=1))) / 6000))
+    float(len(sorting3.get_unit_spike_train(unit_id=1))) / (10000 / sorting3.get_sampling_frequency())))
 
 ##############################################################################
 # Unit features are name value pairs that we can store for each spike. Let's load a randomly generated 'random_value'
@@ -86,4 +87,4 @@ print('Average firing rate of units1 during frames 10000-20000 = {}'.format(
 random_values = np.random.randn(len(sorting3.get_unit_spike_train(unit_id=1)))
 sorting3.set_unit_spike_features(unit_id=1, feature_name='random_value',
                                  value=random_values)
-print("Spike feature names: " + str(sorting3.get_shared_unit_spike_feature_names()))
+print("Spike feature names: " + str(sorting3.get_unit_spike_feature_names(unit_id=1)))
