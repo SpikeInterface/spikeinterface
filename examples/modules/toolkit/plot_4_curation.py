@@ -29,12 +29,12 @@ print('Number of units:', len(sorting_KL.get_unit_ids()))
 # let's automatically curate the sorting output so that only the units with SNR > 10 and mean firing rate > 2.3 Hz are
 # kept:
 
-sorting_fr = st.curation.threshold_firing_rate(sorting_KL, threshold=2.3, threshold_sign='less')
+sorting_fr = st.curation.threshold_firing_rates(sorting_KL, threshold=2.3, threshold_sign='less')
 
 print('Units after FR theshold:', sorting_fr.get_unit_ids())
 print('Number of units after FR theshold:', len(sorting_fr.get_unit_ids()))
 
-sorting_snr = st.curation.threshold_snr(sorting_fr, recording, threshold=10, threshold_sign='less')
+sorting_snr = st.curation.threshold_snrs(sorting_fr, recording, threshold=10, threshold_sign='less')
 
 print('Units after SNR theshold:', sorting_snr.get_unit_ids())
 print('Number of units after SNR theshold:', len(sorting_snr.get_unit_ids()))
@@ -47,6 +47,3 @@ snrs = st.validation.compute_snrs(sorting_snr, recording)
 
 print('Firing rates:', fr)
 print('SNR:', snrs)
-
-
-
