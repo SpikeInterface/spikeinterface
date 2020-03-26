@@ -33,7 +33,8 @@ cd spikeinterface
 python setup.py develop
 ```
 
-Similarly, you can reinstall all packages listed above.
+**Important**: installing with `python setup.py develop` DOES NOT install the latest version of the different modules.
+In order to get the latest updates, clone the above-mentioned repositories and install them from source.
 
 ## Examples
 
