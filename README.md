@@ -15,7 +15,7 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 **On October 8, 2019, we have released the very first beta version of spikeinterface (0.9.1)**
 
-**Please have a look at the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describe in detail this project**
+**Please have a look at the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describes in detail this project**
 
 
 
@@ -33,7 +33,8 @@ cd spikeinterface
 python setup.py develop
 ```
 
-Similarly, you can reinstall all packages listed above.
+**Important**: installing with `python setup.py develop` DOES NOT install the latest version of the different modules.
+In order to get the latest updates, clone the above-mentioned repositories and install them from source.
 
 ## Examples
 
