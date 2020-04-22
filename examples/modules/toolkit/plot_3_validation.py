@@ -28,8 +28,8 @@ nn_hit_rate, nn_miss_rate = st.validation.compute_nn_metrics(recording=recording
 ##############################################################################
 # To compute more than one metric at once, a user can use the :code:`compute_quality_metrics` function and indicate
 # which metrics they want to compute. This will return a dictionary of metrics or optionally a pandas dataframe.
-metrics = st.validation.compute_quality_metrics(sorting=sorting, recording=recording, 
-                                                metric_names=['firing_rate', 'isi_viol', 'snr', 'nn_hit_rate', 'nn_miss_rate'], 
+metrics = st.validation.compute_quality_metrics(sorting=sorting, recording=recording,
+                                                metric_names=['firing_rate', 'isi_violation', 'snr', 'nn_hit_rate', 'nn_miss_rate'],
                                                 as_dataframe=True)
 
 ##############################################################################
@@ -40,8 +40,8 @@ sorting.add_epoch(epoch_name="first_half", start_frame=0, end_frame=recording.ge
 recording.add_epoch(epoch_name="first_half", start_frame=0, end_frame=recording.get_num_frames()/2)
 subsorting = sorting.get_epoch("first_half")
 subrecording = recording.get_epoch("first_half")
-metrics_first_half = st.validation.compute_quality_metrics(sorting=subsorting, recording=subrecording, 
-                                                           metric_names=['firing_rate', 'isi_viol', 'snr', 'nn_hit_rate', 'nn_miss_rate'], 
+metrics_first_half = st.validation.compute_quality_metrics(sorting=subsorting, recording=subrecording,
+                                                           metric_names=['firing_rate', 'isi_violation', 'snr', 'nn_hit_rate', 'nn_miss_rate'],
                                                            as_dataframe=True)
 
 print("Metrics full recording")
