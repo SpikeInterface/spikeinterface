@@ -75,12 +75,12 @@ sw.plot_multicomp_graph(mcmp)
 # that only the true positive spikes between the comparison with the best
 # match are used.
 
-agr_3 = mcmp.get_agreement_sorting(minimum_matching=3)
+agr_3 = mcmp.get_agreement_sorting(minimum_agreement_count=3)
 print('Units in agreement for all three sorters: ', agr_3.get_unit_ids())
 
 #############################################################################
 
-agr_2 = mcmp.get_agreement_sorting(minimum_matching=2)
+agr_2 = mcmp.get_agreement_sorting(minimum_agreement_count=2)
 print('Units in agreement for at least two sorters: ', agr_2.get_unit_ids())
 
 #############################################################################

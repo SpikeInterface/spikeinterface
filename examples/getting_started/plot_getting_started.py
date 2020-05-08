@@ -220,7 +220,7 @@ print('Mapped Mountainsort4 units:', mapped_units)
 # When comparing multiple sorters (3), you can extract a :code:`SortingExtractor` object with units in agreement
 # between sorters. You can also plot a graph showing how the units are matched between the sorters.
 
-sorting_agreement = comp_multi.get_agreement_sorting(minimum_matching=2)
+sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
 
 print('Units in agreement between Klusta and Mountainsort4:', sorting_agreement.get_unit_ids())
 
