@@ -72,8 +72,8 @@ if os.path.isdir(study_folder):
 # -- Project information -----------------------------------------------------
 
 project = 'spikeinterface'
-copyright = '2019, Cole Hurwitz, Jeremy Magland, Alessio Paolo Buccino, Matthias Hennig, Samuel Garcia'
-author = 'Cole Hurwitz, Jeremy Magland, Alessio Paolo Buccino, Matthias Hennig, Samuel Garcia'
+copyright = '2019, Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
+author = 'Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
 
 
 # -- General configuration ---------------------------------------------------
@@ -133,4 +133,5 @@ sphinx_gallery_conf = {
                                        '../examples/modules/widgets',
                                        ]),
     'within_subsection_order': FileNameSortKey,
+    'ignore_pattern': '/generate_',
 }
