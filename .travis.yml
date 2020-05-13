@@ -7,7 +7,7 @@ python:
 install:
 - pip install -r requirements.txt
 - pip install -r requirements_rtd.txt
-- pip install sphinx sphinx-gallery
+- pip install sphinx pillow sphinx-gallery
 - pip install .
 script:
 - python -m pytest --ignore=doc/
