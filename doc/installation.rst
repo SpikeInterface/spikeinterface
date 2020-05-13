@@ -28,4 +28,12 @@ They are installed when using the pip installer for :code:`spikeinterface`.
 - spikecomparison
 - spikewidgets
 
-You can also install each package from GitHub to keep up with the latest updates.
+You can also install each package from GitHub to keep up with the latest updates. In order to do so, for example for
+:code:`spikeextractors`, run:
+
+.. code-block:: bash
+
+    pip uninstall spikeextractors
+    git clone https://github.com/SpikeInterface/spikeextractors
+    cd spikeextractors
+    python setup.py install (or develop)

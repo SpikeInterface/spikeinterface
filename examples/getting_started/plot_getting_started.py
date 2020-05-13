@@ -172,8 +172,8 @@ st.postprocessing.export_to_phy(recording, sorting_KL, output_folder='phy')
 # ratio, isolation distance, and many more.
 
 snrs = st.validation.compute_snrs(sorting_KL, recording_cmr)
-isi_violations = st.validation.compute_isi_violations(sorting_KL)
-isolations = st.validation.compute_isolation_distances(sorting_KL, recording)
+isi_violations = st.validation.compute_isi_violations(sorting_KL, duration_in_frames=recording_cmr.get_num_frames())
+isolations = st.validation.compute_isolation_distances(sorting_KL, recording_cmr)
 
 print('SNR', snrs)
 print('ISI violation ratios', isi_violations)
@@ -183,7 +183,7 @@ print('Isolation distances', isolations)
 # Quality metrics can be also used to automatically curate the spike sorting output. For example, you can select
 # sorted units with a SNR above a certain threshold:
 
-sorting_curated_snr = st.curation.threshold_snr(sorting_KL, recording, threshold=5, threshold_sign='less')
+sorting_curated_snr = st.curation.threshold_snrs(sorting_KL, recording_cmr, threshold=5, threshold_sign='less')
 snrs_above = st.validation.compute_snrs(sorting_curated_snr, recording_cmr)
 
 print('Curated SNR', snrs_above)
@@ -220,7 +220,7 @@ print('Mapped Mountainsort4 units:', mapped_units)
 # When comparing multiple sorters (3), you can extract a :code:`SortingExtractor` object with units in agreement
 # between sorters. You can also plot a graph showing how the units are matched between the sorters.
 
-sorting_agreement = comp_multi.get_agreement_sorting(minimum_matching=2)
+sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
 
 print('Units in agreement between Klusta and Mountainsort4:', sorting_agreement.get_unit_ids())
 

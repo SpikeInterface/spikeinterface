@@ -4,7 +4,11 @@ Compatible Technology
 Supported File Formats
 ======================
 
-Currently, we support many popular file formats for both raw and sorted extracellular datasets. Given the standardized, modular design of our recording and sorting extractors, adding new file formats is straightforward so we expect this list to grow in future versions.
+Currently, we support many popular file formats for both raw and sorted extracellular datasets.
+Given the standardized, modular design of our recording and sorting extractors, adding new file formats is
+straightforward so we expect this list to grow in future versions.
+
+We are also integrating extractors based on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 
 Raw Data Formats
 ----------------
@@ -19,11 +23,15 @@ For raw data formats, we currently support:
 * **MaxOne** - MaxOneRecordingExtractor
 * **MCSH5** - MCSH5RecordingExtractor
 * **MEArec** - MEArecRecordingExtractor
+* **MaxOne** - MaxOneRecordingExtractor
 * **Mountainsort MDA** - MdaRecordingExtractor
 * **Neurodata Without Borders** - NwbRecordingExtractor
 * **NIX** - NIXIORecordingExtractor
+* **Neuralynx** - NeuralynxRecordingExtractor
 * **Open Ephys** - OpenEphysRecordingExtractor
 * **Phy/Kilosort** - PhyRecordingExtractor/KilosortRecordingExtractor
+* **Plexon** - PlexonRecordingExtractor
+* **Shybrid** - SHYBRIDRecordingExtractor
 * **SpikeGLX** - SpikeGLXRecordingExtractor
 * **Spyking Circus** - SpykingCircusRecordingExtractor
 
@@ -34,6 +42,7 @@ For sorted data formats, we currently support:
 
 * **Experimental Directory Structure (Exdir)** - ExdirSortingExtractor
 * **HerdingSpikes2** - HS2SortingExtractor
+* **JRClust** - JRCSortingExtractor
 * **Kilosort/Kilosort2** - KiloSortSortingExtractor
 * **Klusta** - KlustaSortingExtractor
 * **MEArec** - MEArecSortingExtractor
@@ -42,13 +51,15 @@ For sorted data formats, we currently support:
 * **Neuroscope** - NeuroscopeSortingExtractor
 * **NPZ (created by SpikeInterface)** - NpzSortingExtractor
 * **Open Ephys** - OpenEphysSortingExtractor
+* **Shybrid** - SHYBRIDSortingExtractor
 * **Spyking Circus** - SpykingCircusSortingExtractor
 * **Trideclous** - TridesclousSortingExtractor
 
 Installed Extractors
 --------------------
 
-To check which extractors are useable in a given python environment, one can print the installed recording extractor list and the installed sorting extractor list. An example from a newly installed miniconda3 environment is shown below,
+To check which extractors are useable in a given python environment, one can print the installed recording extractor
+list and the installed sorting extractor list. An example from a newly installed miniconda3 environment is shown below,
 
 First, import the spikeextractors package,
 
