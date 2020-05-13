@@ -1,0 +1,29 @@
+SpikeInterface 0.10.0 release notes
+-----------------------------------
+
+14th May 2020
+
+- spikeextractors:
+    - bug fixes
+    - introduced dumping mechanism
+    - introduced several new extractors
+
+- spiketoolkit:
+    - bug fixes
+    - introduced dumping mechanism
+    - improved postprocessing performance with memmap and parallel processing
+    - introduced template feature extraction
+    - refractoring of validation and curation modules
+    - extended curation to all quality metrics
+
+- spikesorters:
+    - bug fixes
+    - introduced dask engine for server processing
+
+- spikecomparison:
+    - refractor of multisortingcomparison
+
+- spikewidgets:
+    - bug fixes
+    - improved several widgets
+    - added plot_activity_maps, plot_unit_template_maps, plot_multicomp_agreement, and plot_multicomp_agreement_by_sorter widgets

@@ -3,7 +3,6 @@ sphinx-gallery
 
 
 ## install sorters ##
-
 # ms4
 ml_ms4alg==0.3.2
 
@@ -17,4 +16,4 @@ klustakwik2==0.2.7
 
 # tridesclous
 pyqt5==5.13
-tridesclous==1.5.0
+tridesclous==1.6.0
