@@ -58,7 +58,12 @@ recording_tetrodes = recording_tetrodes.load_probe_file('tetrode_16.prb')
 print(recording_tetrodes.get_shared_channel_property_names())
 
 ##############################################################################
-# We can now use the launcher to spike sort by the property 'group'. The different groups can also be sorted in
+# We can now use the launcher to spike sort by the property 'group'.
+# Internally, the recording is split into :code:`SubRecordingExtractor` objects, one for each group. Each of them is
+# spike sorted separately, yielding as many :code:`SortingExtractor` objects as the number of groups. Finally, the
+# sorting extractor objects are re-assembled into a single :code:`MultiSortingExtractor`.
+#
+# The different groups can also be sorted in
 # parallel, and the output sorting extractor will have the same property used for sorting. Running in parallel
 # (in separate threads) can speed up the computations.
 #
