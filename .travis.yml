@@ -7,7 +7,7 @@ python:
 install:
 - pip install -r requirements.txt
 - pip install -r requirements_rtd.txt
-- pip install sphinx sphinx-gallery
+- pip install sphinx pillow sphinx-gallery
 - pip install .
 script:
 - python -m pytest --ignore=doc/
@@ -19,4 +19,4 @@ deploy:
   on:
     tags: true
   password:
-    secure: kMLey7aksRbho8zpaSMhUT4p/fLAipYrDmCvcqcHtAqdOYv17lU0YGY99NjAU5LIYidttcLW+jGQr35tgCzYTY4NbqwQ19CHLrMZgUWVyw+bnjftmLnyr/9+tPG0cJnAF+QnWemStz9XVhyHSlLpAl/mIAHSd60EJWlO/zgFmtvRqKz0tX//3EN84AdYxBlZxDebdYZUG8+cIsQ3OcY8x7oAhaNoJxRmwKIgmvoNpwSlOPamqXxpURCM+EzWnCM1hu2j29CyT/gUxlHVdmdVTu0OsfY7YMbjMQQJPC2D0QBPODLAZ1rH5OT84PJg1j4IkldfKSdPa5C2s+IEp5dreuv7/K6oUWy08LlDoSPFwm0NIC2y5/OqtWmDBYp7s06nqIr+KtWBTJRiDQGHm5qDEcIEKIMlYX7YJAy7JGuOlHrXe5u99NIiZPInPe6yB5x5pZ0VyjPDNGBzfqXWbNovDpKFQa6NaHAlTL7USUIbj+RNkb4nMSDFiwnGHhKYmPRuaOjGKNDWuVR99mSeds/d81BVYXql+c8DedwX2qk+XnHON5M/2h0tsWY0dUBbpB3EghMyjSLBIhnp+ifCQ3v1fW8LfSM04Zg8CJ33rqkJJUnWo5JB+4CPUsnp1k3MDy3Ifll5hlAh1WHo6UyzGthi4zb/FYEuHTTUYJqpk+CbumE=
+    secure: gIQuJWwhcLnOlKYOqo8TpfyEGQGa/vS5b1oljTkc3+s6WF65XH5/2E81DqI+ybrxGVA/77Vas+pcdnWiPaTs1wHnsFvWoXrAlTxKlcCPIzOWSpQpCXpMsphOPjvT+45SdQ2Z6QEqFe/J+t9gNUzQrNjaqk638w3sdbJiIaWSTQ9imzuM6vSyj1lnQGV5zAT4d4mrEh1GuwopbKBV1fXWJG50GAJMN/gEqcgAsBPRV8b81jCvZmIvES9euFSAKEzDTWvfFOecYFLtOrcCWMPR/CJiNB8yDq4WWoA+9O2HjsRzzpA/D7NGYZOTRBR4+LEhCKNRyZ7rt3rIWA5TT4fQR004baVqgQhVwQRNq3JU7jPy0ehLgxPsGw/JbRB78U+zHoiTA74oaUzjwrC0G/ebehZEyaEFYxfvQmUVKnsS37XcGdKg10CrdK34YINKPEt0bRHwYOr6seGR0OA099N+pUB9PAu06kRSWOqDjWC9VRVgchlvM1JZr8xN4Ig4Z5BRMVZRs2iQY5dqp7lqVeocA/oviD7I7ENG25lL88m5tmS5s4dvaRy/GjmJeF9mcwXbDRkqX4ZJinGvuVHW1PpYzg1Mg99kPBlp7Dl5BSZZqr1ii+xlmYThR6GQ4YKXORcH5p3qyf0CIFlm0vcI2cq+b7z9hFETPglmlIJGAkYOaSM=

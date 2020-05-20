@@ -5,6 +5,8 @@ Module :mod:`spikeinterface.extractors`
 ---------------------------------------
 .. automodule:: spikeextractors
 
+    .. autoclass:: spikeextractors.baseextractor.BaseExtractor
+        :members:
     .. autoclass:: RecordingExtractor
         :members:
     .. autoclass:: SortingExtractor
@@ -25,7 +27,9 @@ Module :mod:`spikeinterface.extractors`
     .. autoclass:: MultiSortingExtractor
         :members:
 
-
+    .. autofunction:: load_extractor_from_dict
+    .. autofunction:: load_extractor_from_json
+    .. autofunction:: load_extractor_from_pickle
     .. autofunction:: load_probe_file
     .. autofunction:: save_to_probe_file
     .. autofunction:: write_to_binary_dat_format
@@ -42,14 +46,14 @@ Preprocessing
 
     .. autofunction:: bandpass_filter
     .. autofunction:: blank_saturation
-    .. autofunction:: clip_traces
+    .. autofunction:: clip
     .. autofunction:: normalize_by_quantile
     .. autofunction:: notch_filter
     .. autofunction:: rectify
     .. autofunction:: remove_artifacts
     .. autofunction:: remove_bad_channels
     .. autofunction:: resample
-    .. autofunction:: transform_traces
+    .. autofunction:: transform
     .. autofunction:: whiten
     .. autofunction:: common_reference
 
@@ -65,6 +69,7 @@ Postprocessing
     .. autofunction:: set_unit_properties_by_max_channel_properties
     .. autofunction:: compute_unit_pca_scores
     .. autofunction:: export_to_phy
+    .. autofunction:: compute_unit_template_features
 
 Validation
 ~~~~~~~~~~~~~~
@@ -78,25 +83,29 @@ Validation
     .. autofunction:: compute_drift_metrics
     .. autofunction:: compute_firing_rates
     .. autofunction:: compute_l_ratios
-    .. autofunction:: compute_metrics
     .. autofunction:: compute_nn_metrics
     .. autofunction:: compute_num_spikes
     .. autofunction:: compute_presence_ratios
     .. autofunction:: compute_silhouette_scores
+    .. autofunction:: compute_quality_metrics
 
-
-    .. autoclass:: MetricCalculator
-        :members:
 
 Curation
 ~~~~~~~~~~~~~~
 .. automodule:: spiketoolkit.curation
 
-    .. autofunction:: threshold_snr
-    .. autofunction:: threshold_firing_rate
+    .. autofunction:: threshold_amplitude_cutoffs
+    .. autofunction:: threshold_d_primes
+    .. autofunction:: threshold_drift_metrics
+    .. autofunction:: threshold_firing_rates
     .. autofunction:: threshold_isi_violations
+    .. autofunction:: threshold_isolation_distances
+    .. autofunction:: threshold_l_ratios
+    .. autofunction:: threshold_nn_metrics
     .. autofunction:: threshold_num_spikes
-    .. autofunction:: threshold_presence_ratio
+    .. autofunction:: threshold_presence_ratios
+    .. autofunction:: threshold_silhouette_scores
+    .. autofunction:: threshold_snrs
 
     .. autoclass:: CurationSortingExtractor
         :members:
@@ -147,14 +156,19 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_electrode_geometry
     .. autofunction:: plot_spectrum
     .. autofunction:: plot_spectrogram
+    .. autofunction:: plot_activity_map
     .. autofunction:: plot_rasters
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms
     .. autofunction:: plot_isi_distribution
     .. autofunction:: plot_unit_waveforms
+    .. autofunction:: plot_unit_templates
+    .. autofunction:: plot_unit_template_maps
     .. autofunction:: plot_amplitudes_distribution
     .. autofunction:: plot_amplitudes_timeseries
     .. autofunction:: plot_confusion_matrix
     .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_sorting_performance
     .. autofunction:: plot_multicomp_graph
+    .. autofunction:: plot_multicomp_agreement
+    .. autofunction:: plot_multicomp_agreement_by_sorter
