@@ -47,7 +47,7 @@ Also, you can checkout this [tutorial](https://github.com/SpikeInterface/spiketu
 All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
 
 ## SpikeInterface contributors
-For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (colehurwitz@gmail.com), Jeremy Magland (jmagland@flatironinstitute.org) or Matthias Hennig (m.hennig@ed.ac.uk), or just write an issue!
+For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (colehurwitz@gmail.com), Samuel Garcia (samuel.garcia@cnrs.fr), Jeremy Magland (jmagland@flatironinstitute.org) or Matthias Hennig (m.hennig@ed.ac.uk), or just write an issue!
 
 The following people have contributed code to the project as of 08 June 2020:
 
