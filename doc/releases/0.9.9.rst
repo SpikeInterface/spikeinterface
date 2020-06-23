@@ -1,4 +1,4 @@
-SpikeInterface 0.10.0 release notes
+SpikeInterface 0.9.9 release notes
 -----------------------------------
 
 14th May 2020
