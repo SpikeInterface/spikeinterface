@@ -46,6 +46,21 @@ Also, you can checkout this [tutorial](https://github.com/SpikeInterface/spiketu
 
 All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
 
+## Citation
+
+If you find SpikeInterface useful in your research, please cite:
+
+```bibtex
+@article{buccino2019spikeinterface,
+  title={SpikeInterface, a unified framework for spike sorting},
+  author={Buccino, Alessio P and Hurwitz, Cole L and Magland, Jeremy and Garcia, Samuel and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
+  journal={BioRxiv},
+  pages={796599},
+  year={2019},
+  publisher={Cold Spring Harbor Laboratory}
+}
+```
+
 ## SpikeInterface contributors
 For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (colehurwitz@gmail.com), Samuel Garcia (samuel.garcia@cnrs.fr), Jeremy Magland (jmagland@flatironinstitute.org) or Matthias Hennig (m.hennig@ed.ac.uk), or just write an issue!
 
