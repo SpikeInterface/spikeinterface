@@ -16,5 +16,4 @@ klusta
 klustakwik2==0.2.7
 
 # tridesclous
-pyqt5==5.13
 tridesclous==1.6.0
