@@ -1,6 +1,6 @@
-import matplotlib
-matplotlib.rcParams['backend'] = 'agg'
-matplotlib.use('agg')
+# import matplotlib
+# matplotlib.rcParams['backend'] = 'agg'
+# matplotlib.use('agg')
 
 
 def test_import1():
