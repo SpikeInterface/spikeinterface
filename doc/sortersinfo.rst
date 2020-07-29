@@ -32,10 +32,22 @@ Herdingspikes2
 
     pip install herdingspikes
 
+HDSort
+-------
+
+* Matlab
+* Url: https://git.bsse.ethz.ch/hima_public/HDsort.git
+* Authors: Roland Diggelmann, Felix Franke
+* Installation::
+
+      git clone https://git.bsse.ethz.ch/hima_public/HDsort.git
+      # provide installation path by setting the HDSORT_PATH environment variable
+      # or using HDSortSorter.set_hdsort_path()
+
 IronClust
 ---------
 
-* Matlab based
+* Matlab
 * Url: https://github.com/jamesjun/ironclust
 * Authors: James J. Jun
 * Installation need Matlab::
@@ -47,7 +59,7 @@ IronClust
 Kilosort
 --------
 
-* Matlab based, needs cuda
+* Matlab, requires CUDA
 * Url: https://github.com/cortex-lab/KiloSort
 * Authors: Marius Pachitariu
 * Installation needs Matlab and cudatoolkit::
@@ -61,10 +73,10 @@ Kilosort
 Kilosort2
 ---------
 
-* Matlab based, needs cuda
+* Matlab, requires CUDA
 * Url: https://github.com/MouseLand/Kilosort2
 * Authors: Marius Pachitariu
-* Installation need Matlab and cudatoolkit::
+* Installation needs Matlab and cudatoolkit::
 
       git clone https://github.com/MouseLand/Kilosort2
       # provide installation path by setting the KILOSORT2_PATH environment variable
@@ -76,7 +88,7 @@ Kilosort2
 Klusta
 ------
 
-* Python based
+* Python
 * Url: https://github.com/kwikteam/klusta
 * Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
 * Installation::
@@ -90,7 +102,7 @@ Klusta
 Mountainsort4
 -------------
 
-* Python based
+* Python
 * Url: https://github.com/flatironinstitute/mountainsort
 * Authors: 	Jeremy Magland, Alex Barnett, Jason Chung, Loren Frank, Leslie Greengard
 * Installation::
@@ -101,7 +113,7 @@ Mountainsort4
 SpykingCircus
 -------------
 
-* Python based, needs MPICH installed
+* Python, requires MPICH
 * Url: https://spyking-circus.readthedocs.io
 * Authors: Pierre Yger, Olivier Marre
 * Installation::
@@ -114,7 +126,7 @@ SpykingCircus
 Tridesclous
 -----------
 
-* Python based, runs faster with opencl installed but optional
+* Python, runs faster with opencl installed but optional
 * Url: https://tridesclous.readthedocs.io
 * Authors: Samuel Garcia, Christophe Pouzat
 * Installation::
@@ -132,7 +144,7 @@ Tridesclous
 Waveclus
 --------
 
-* Matlab based
+* Matlab
 * Url: https://github.com/csn-le/wave_clus/wiki
 * Authors: Fernando Chaure, Hernan Rey and Rodrigo Quian Quiroga
 * Installation needs Matlab::
