@@ -1,4 +1,5 @@
 import matplotlib
+matplotlib.rcParams['backend'] = 'agg'
 matplotlib.use('agg')
 
 
