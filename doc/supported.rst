@@ -23,9 +23,9 @@ For raw data formats, we currently support:
 * **MaxOne** - MaxOneRecordingExtractor
 * **MCSH5** - MCSH5RecordingExtractor
 * **MEArec** - MEArecRecordingExtractor
-* **MaxOne** - MaxOneRecordingExtractor
 * **Mountainsort MDA** - MdaRecordingExtractor
 * **Neurodata Without Borders** - NwbRecordingExtractor
+* **Neuroscope** - NeuroscopeRecordingExtractor
 * **NIX** - NIXIORecordingExtractor
 * **Neuralynx** - NeuralynxRecordingExtractor
 * **Open Ephys** - OpenEphysRecordingExtractor
