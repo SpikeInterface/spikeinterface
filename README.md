@@ -46,18 +46,42 @@ Also, you can checkout this [tutorial](https://github.com/SpikeInterface/spiketu
 
 All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
 
-### Authors
+## Citation
 
-[Alessio Paolo Buccino](https://www.mn.uio.no/ifi/english/people/aca/alessiob/) - Center for Inegrative Neurolasticity (CINPLA), Department of Biosciences, Physics, and Informatics, University of Oslo, Oslo, Norway
+If you find SpikeInterface useful in your research, please cite:
 
-[Cole Hurwitz](https://www.inf.ed.ac.uk/people/students/Cole_Hurwitz.html) - The Institute for Adaptive and Neural Computation (ANC), University of Edinburgh, Edinburgh, Scotland
+```bibtex
+@article{buccino2019spikeinterface,
+  title={SpikeInterface, a unified framework for spike sorting},
+  author={Buccino, Alessio P and Hurwitz, Cole L and Magland, Jeremy and Garcia, Samuel and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
+  journal={BioRxiv},
+  pages={796599},
+  year={2019},
+  publisher={Cold Spring Harbor Laboratory}
+}
+```
 
-[Jeremy Magland](https://www.simonsfoundation.org/team/jeremy-magland/) - Center for Computational Biology (CCB), Flatiron Institute, New York, United States
+## SpikeInterface contributors
+For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (colehurwitz@gmail.com), Samuel Garcia (samuel.garcia@cnrs.fr), Jeremy Magland (jmagland@flatironinstitute.org) or Matthias Hennig (m.hennig@ed.ac.uk), or just write an issue!
 
-[Matthias Hennig](http://homepages.inf.ed.ac.uk/mhennig/) - The Institute for Adaptive and Neural Computation (ANC), University of Edinburgh, Edinburgh, Scotland
+The following people have contributed code to the project as of 08 June 2020:
 
-[Samuel Garcia](https://github.com/samuelgarcia) - Centre de Recherche en Neuroscience de Lyon (CRNL), Lyon, France
-
-<br/>
-For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (cole.hurwitz@ed.ac.uk), or just write an issue!
-
+* <img src="https://avatars0.githubusercontent.com/u/2369197?v=4" width="16"/> [Achilleas Koutsou](https://github.com/achilleas-k), @G-Node 
+* <img src="https://avatars0.githubusercontent.com/u/17097257?v=4" width="16"/> [Alessio Buccino](https://github.com/alejoe91), ETH
+* <img src="https://avatars2.githubusercontent.com/u/13655521?v=4" width="16"/> [Alexander Morley](https://github.com/alexmorley), MRC BNDU (University of Oxford)
+* <img src="https://avatars0.githubusercontent.com/u/844306?v=4" width="16"/> [Ben Dichter](https://github.com/bendichter), CatalystNeuro
+* <img src="https://avatars3.githubusercontent.com/u/31068646?v=4" width="16"/> [Cole Hurwitz](https://github.com/colehurwitz), University of Edinburgh
+* <img src="https://avatars1.githubusercontent.com/u/815627?v=4" width="16"/> [Garcia Samuel](https://github.com/samuelgarcia), CNRS, Centre de recherche en neuroscience de Lyon
+* <img src="https://avatars2.githubusercontent.com/u/46056408?v=4" width="16"/> [Jasper Wouters](https://github.com/jwouters91)
+* <img src="https://avatars2.githubusercontent.com/u/3679296?v=4" width="16"/> [Jeremy Magland](https://github.com/magland)
+* <img src="https://avatars3.githubusercontent.com/u/6409964?v=4" width="16"/> [Jose Guzman](https://github.com/JoseGuzman), Austrian Academy of Sciences - OEAW
+* <img src="https://avatars3.githubusercontent.com/u/24541631?v=4" width="16"/> [Luiz Tauffer](https://github.com/luiztauffer), @kth
+* <img src="https://avatars2.githubusercontent.com/u/11293950?v=4" width="16"/> [Martino Sorbaro](https://github.com/martinosorb), Neuroinformatics, UZH & SynSense.ai
+* <img src="https://avatars0.githubusercontent.com/u/5928956?v=4" width="16"/> [Matthias H. Hennig](https://github.com/mhhennig), University of Edinburgh
+* <img src="https://avatars2.githubusercontent.com/u/3418096?v=4" width="16"/> [Mikkel Elle Lepperød](https://github.com/lepmik)
+* <img src="https://avatars2.githubusercontent.com/u/38734201?v=4" width="16"/> [NMI Biomedical Micro and Nano Engineering](https://github.com/NMI-MSNT)
+* <img src="https://avatars1.githubusercontent.com/u/1672447?v=4" width="16"/> [Pierre Yger](https://github.com/yger), Institut de la Vision
+* <img src="https://avatars0.githubusercontent.com/u/10051773?v=4" width="16"/> [Roger Hurwitz](https://github.com/rogerhurwitz)
+* <img src="https://avatars2.githubusercontent.com/u/15884111?v=4" width="16"/> [Shawn Guo](https://github.com/Shawn-Guo-CN)
+* <img src="https://avatars1.githubusercontent.com/u/56535869?v=4" width="16"/> [TRRuikes](https://github.com/TRRuikes)
+* <img src="https://avatars3.githubusercontent.com/u/39889?v=4" width="16"/> [Yaroslav Halchenko](https://github.com/yarikoptic), Dartmouth College, @Debian, @DataLad, @PyMVPA, @fail2ban
