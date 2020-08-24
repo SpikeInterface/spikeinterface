@@ -1,3 +1,7 @@
+# This could be useful!
+# import matplotlib
+# matplotlib.rcParams['backend'] = 'agg'
+# matplotlib.use('agg')
 
 
 def test_import1():
