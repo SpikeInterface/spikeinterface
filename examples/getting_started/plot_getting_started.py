@@ -118,11 +118,11 @@ recording_cmr = st.preprocessing.common_reference(recording_f, reference='median
 # Let's first check which sorters are implemented and which are installed
 
 print('Available sorters', ss.available_sorters())
-print('Installed sorters', ss.installed_sorter_list)
+print('Installed sorters', ss.installed_sorters())
 
 ##############################################################################
-# The :code:`ss.installed_sorter_list` will list the sorters installed in the machine. Each spike sorter
-# is implemented as a class. We can see we have Klusta and Mountainsort4 installed.
+# The :code:`ss.installed_sorters()` will list the sorters installed in the machine.
+# We can see we have Klusta and Mountainsort4 installed.
 # Spike sorters come with a set of parameters that users can change. The available parameters are dictionaries and
 # can be accessed with:
 

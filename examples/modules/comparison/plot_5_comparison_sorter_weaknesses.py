@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import spikeinterface.extractors as se
-import spikeinterface.sorters as sorters
+import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 

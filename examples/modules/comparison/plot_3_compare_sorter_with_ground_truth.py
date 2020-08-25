@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import spikeinterface.extractors as se
-import spikeinterface.sorters as sorters
+import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
@@ -30,7 +30,7 @@ import spikeinterface.widgets as sw
 
 recording, sorting_true = se.example_datasets.toy_example(num_channels=4, duration=10, seed=0)
 
-sorting_MS4 = sorters.run_mountainsort4(recording)
+sorting_MS4 = ss.run_mountainsort4(recording)
 
 ##############################################################################
 
@@ -108,7 +108,7 @@ cmp_gt_MS4.get_redundant_units()
 ##############################################################################
 # Lets do the same for klusta
 
-sorting_KL = sorters.run_klusta(recording)
+sorting_KL = ss.run_klusta(recording)
 cmp_gt_KL = sc.compare_sorter_to_ground_truth(sorting_true, sorting_KL, exhaustive_gt=True)
 
 ##############################################################################

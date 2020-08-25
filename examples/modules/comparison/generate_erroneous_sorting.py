@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import spikeinterface.extractors as se
-import spikeinterface.sorters as sorters
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
