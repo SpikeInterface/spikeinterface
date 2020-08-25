@@ -18,4 +18,5 @@ klustakwik2==0.2.7
 
 # tridesclous
 pyqt5
+hdbscan
 tridesclous==1.6.0
