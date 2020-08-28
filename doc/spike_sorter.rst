@@ -105,7 +105,7 @@ Moreover, you have to add a `launcher function <https://github.com/SpikeInterfac
 .. code-block:: python
 
     def run_myspikesorter(*args, **kargs):
-    return run_sorter('myspikesorter', *args, **kargs)
+        return run_sorter('myspikesorter', *args, **kargs)
 
 
 When you are done you can optionally write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
