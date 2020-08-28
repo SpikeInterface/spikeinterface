@@ -26,7 +26,7 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
             SortingExtractor.__init__(self)
 
             ## All file specific initialization code can go here.
-            # If your format stores the sampling frequency, you can overweite the self._sampling_frequency. This way,
+            # If your format stores the sampling frequency, you can overwrite the self._sampling_frequency. This way,
             # the base method self.get_sampling_frequency() will return the correct sampling frequency
 
             self._sampling_frequency = my_sampling_frequency

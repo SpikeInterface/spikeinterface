@@ -170,22 +170,22 @@ First, import the spikesorters package,
 
 .. code:: python
 
-  import spikesorters as sorters
+  import spikesorters as ss
 
 Then you can check the installed Sorter list,
 
 .. code:: python
 
-  sorters.installed_sorter_list
+  ss.installed_sorters()
   
 which outputs,
 
 .. parsed-literal::
-  [spikesorters.klusta.klusta.KlustaSorter,
-   spikesorters.tridesclous.tridesclous.TridesclousSorter,
-   spikesorters.mountainsort4.mountainsort4.Mountainsort4Sorter,
-   spikesorters.spyking_circus.spyking_circus.SpykingcircusSorter,
-   spikesorters.herdingspikes.herdingspikes.HerdingspikesSorter]
+  ['herdingspikes',
+   'klusta',
+   'mountainsort4',
+   'spykingcircus',
+   'tridesclous']
 
 
 When trying to use an sorter that has not been installed in your environment, an installation message will appear indicating how to install the given sorter,
