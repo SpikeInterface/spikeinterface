@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import spikeinterface.extractors as se
-import spikeinterface.sorters as sorters
+import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
@@ -26,11 +26,11 @@ import spikeinterface.widgets as sw
 recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=20, seed=0)
 
 #############################################################################
-# Then run 3 spike sorters and compare their ouput.
+# Then run 3 spike sorters and compare their output.
 
-sorting_KL = sorters.run_klusta(recording)
-sorting_MS4 = sorters.run_mountainsort4(recording)
-sorting_TDC = sorters.run_tridesclous(recording)
+sorting_KL = ss.run_klusta(recording)
+sorting_MS4 = ss.run_mountainsort4(recording)
+sorting_TDC = ss.run_tridesclous(recording)
 
 #############################################################################
 # Compare multiple spike sorter outputs

@@ -36,15 +36,13 @@ python setup.py develop
 **Important**: installing with `python setup.py develop` DOES NOT install the latest version of the different modules.
 In order to get the latest updates, clone the above-mentioned repositories and install them from source.
 
-## Examples
-
-For using SpikeInterface, please checkout these [examples](https://github.com/SpikeInterface/spikeinterface/tree/master/examples).
-
-Also, you can checkout this [tutorial](https://github.com/SpikeInterface/spiketutorials/tree/master/Spike_sorting_workshop_2019) for getting started with SpikeInterface.
-
 ## Documentation
 
 All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
+
+You can also check out this 1-hour video tutorial for the NWB User Days 2019:
+https://www.youtube.com/watch?v=nWJGwFB7oII
+
 
 ## Citation
 

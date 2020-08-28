@@ -21,10 +21,10 @@ recording, sorting_true = se.example_datasets.toy_example(duration=10, seed=0)
 print(ss.available_sorters())
 
 ##############################################################################
-# This will list the sorters installed in the machine. Each spike sorter
-# is implemented in a class. To access the class names you can run:
+# This will list the sorters available through SpikeInterface. To see which sorters are installed on the machine
+# you can run:
 
-print(ss.installed_sorter_list)
+print(ss.installed_sorters())
 
 ##############################################################################
 # Change sorter parameters
