@@ -1,6 +1,49 @@
-[![PyPI version](https://badge.fury.io/py/spikeinterface.svg)](https://badge.fury.io/py/spikeinterface)
+<img src="doc/images/logo.png" />
 
-# SpikeInterface
+# SpikeInterface: a unified framework for spike sorting
+
+<table>
+<tr>
+  <td>Latest Release</td>
+  <td>
+    <a href="https://pypi.org/project/spikeinterface/">
+    <img src="https://img.shields.io/pypi/v/spikeinterface.svg" alt="latest release" />
+    </a>
+  </td>
+</tr>
+<tr>
+  <td>Documentation</td>
+  <td>
+    <a href="https://spikeinterface.readthedocs.io/">
+    <img src="https://readthedocs.org/projects/spikeinterface/badge/?version=latest" alt="latest documentation" />
+    </a>
+  </td>
+</tr>
+<tr>
+  <td>License</td>
+  <td>
+    <a href="https://github.com/SpikeInterface/spikeinterface/blob/master/LICENSE">
+    <img src="https://img.shields.io/pypi/l/spikeinterface.svg" alt="license" />
+    </a>
+</td>
+</tr>
+<tr>
+  <td>Build Status</td>
+  <td>
+    <a href="https://travis-ci.org/SpikeInterface/spikeinterface">
+    <img src="https://travis-ci.org/SpikeInterface/spikeinterface.svg?branch=master" alt="travis build status" />
+    </a>
+  </td>
+</tr>
+<tr>
+	<td>Gitter</td>
+	<td>
+		<a href="https://gitter.im/SpikeInterface/community">
+		<img src="https://badges.gitter.im/SpikeInterface.svg" />
+	</a>
+	</td>
+</tr>
+</table>
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
