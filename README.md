@@ -1,4 +1,4 @@
-<img src="doc/images/logo.png" />
+<img src="doc/images/logo.png" class="center" />
 
 # SpikeInterface: a unified framework for spike sorting
 
