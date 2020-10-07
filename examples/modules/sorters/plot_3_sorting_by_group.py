@@ -22,9 +22,10 @@ import time
 # (using the :code:`set_channel_property` method), or by using a probe file. In this example we will create a 16 channel
 # recording and split it in four channel groups (tetrodes).
 #
-# Let's create a toy example with 16 channels:
+# Let's create a toy example with 16 channels (the :code:`dumpable=True` dumps the extractors to a file, which is
+# required for parallel sorting):
 
-recording_tetrodes, sorting_true = se.example_datasets.toy_example(duration=10, num_channels=16)
+recording_tetrodes, sorting_true = se.example_datasets.toy_example(duration=10, num_channels=16, dumpable=True)
 
 ##############################################################################
 # Initially there is no group information ('location' is loaded automatically when creating toy data):

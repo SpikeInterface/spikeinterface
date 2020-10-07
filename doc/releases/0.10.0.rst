@@ -1,0 +1,33 @@
+SpikeInterface 0.10.0 release notes
+-----------------------------------
+
+28th Aug 2020
+
+- spikeextractors: https://github.com/SpikeInterface/spikeextractors/releases/tag/0.9.0
+    - Support for pynwb >= 1.3.3
+    - Improved NWB sorting extractor
+    - Added NeuroscopeRecordingExtractor
+    - Added HDsort sorting extractor
+    - Added WaveClusSortingExtractor
+    - Various bug fixes
+
+- spiketoolkit: https://github.com/SpikeInterface/spiketoolkit/releases/tag/0.7.0
+    - Various fixes and improvements to the export_to_phy function
+    - Improved performance of compute_amplitudes
+    - Fix indexing bug in validation and curation when a subset of units is used
+
+- spikesorters: https://github.com/SpikeInterface/spikesorters/releases/tag/0.4.2
+    - Improved logging and verbose system
+    - Fixed bugs for parallel processing by having supported backends for eash sorter
+    - Updates to WaveClus, HDSort
+    - Fix param bug in Kilosort
+    - Check installed sorters with dynamic is_installed() function
+
+- spikecomparison: https://github.com/SpikeInterface/spikecomparison/releases/tag/0.3.0
+    - Fixed bug in GT study due to changes in spiketoolkit
+    - Updates to reflect changes in spikesorters
+
+- spikewidgets: https://github.com/SpikeInterface/spikewidgets/releases/tag/0.5.0
+    - Improved map widgets with possibility to add bounding box
+    - Made interactive plots to show channel labels upom clicking
+    - Imprived handling of multiple axes in BaseMultiWidget
