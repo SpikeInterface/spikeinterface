@@ -49,17 +49,10 @@ Then, you can start creating a new class:
         'param2': 2,
         }
 
-    # (optional) rewrite the params as a list for the Spikely GUI to use
-    _extra_gui_params = [
-        {'name': 'param1', 'type': 'str', 'value': None, 'default': None,
-         'title': "My first param"},
-        {'name': 'param2', 'type': 'int', 'value': 2, 'default': 2,
-         'title': "My second param"},
-    ]
-
-    sorter_gui_params = copy.deepcopy(BaseSorter.sorter_gui_params)
-    for param in _extra_gui_params:
-        sorter_gui_params.append(param)
+    _params_description = {
+        'param1': 'Description for param1',
+        'param1': 'Description for param1',
+    }
 
     installation_mesg = """
         >>> pip install myspikesorter
@@ -79,12 +72,18 @@ Now you can start filling out the required methods:
     def get_sorter_version():
         return myspikesorter.__version__
 
+    @classmethod
+    def is_installed(cls):
+
+        # Fill code to check sorter installation. It returns a boolean
+        return HAVE_MSS
+
     def _setup_recording(self, recording, output_folder):
 
         # Fill code to set up the recording: convert to required file, parse config files, etc.
         # The files should be placed in the 'output_folder'
 
-    def _run(self,  recording, output_folder):
+    def _run(self, recording, output_folder):
 
         # Fill code to run your spike sorter based on the files created in the _setup_recording()
         # You can run CLI commands (e.g. klusta, spykingcircus, tridescous), pure Python code (e.g. Mountainsort4,
@@ -106,7 +105,7 @@ Moreover, you have to add a `launcher function <https://github.com/SpikeInterfac
 .. code-block:: python
 
     def run_myspikesorter(*args, **kargs):
-    return run_sorter('myspikesorter', *args, **kargs)
+        return run_sorter('myspikesorter', *args, **kargs)
 
 
 When you are done you can optionally write a test in **tests/test_myspikesorter.py**. In order to be tested, you can

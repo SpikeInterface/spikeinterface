@@ -33,9 +33,13 @@ With SpikeInterface, users can:
    whatisnew
    authors
 
+For more informatio, please have a look at:
+
+- The bioRxiv `preprint <https://www.biorxiv.org/content/10.1101/796599v1>`_
+
+- 1-hour `video tutorial <https://www.youtube.com/watch?v=nWJGwFB7oII>`_, recorded for the NWB User Days (May 2020)
    
-Please have a look at the `preprint paper <https://www.biorxiv.org/content/10.1101/796599v1>`_  for more info.
-   
+- A collection of analysis notebook `spikeinterface report <https://spikeinterface.github.io/>`_
 
 .. Indices and tables
 .. ==================
