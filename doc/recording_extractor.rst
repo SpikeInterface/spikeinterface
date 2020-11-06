@@ -105,7 +105,7 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
             '''
 
 
-When you are done you can optionally write a test in the **tests/test_extractors.py** (this is easier if a
+When you are done you should add your :code:`RecordingExtractor` to the **extarctorlist.py** file. You can optionally write a test in the **tests/test_extractors.py** (this is easier if a
 :code:`write_recording` function is implemented).
 
 Finally, make a pull request to the spikeextractor repo, so we can review the code and merge it to the spikeextractors!
