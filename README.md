@@ -105,11 +105,12 @@ If you find SpikeInterface useful in your research, please cite:
 ## SpikeInterface contributors
 For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (colehurwitz@gmail.com), Samuel Garcia (samuel.garcia@cnrs.fr), Jeremy Magland (jmagland@flatironinstitute.org) or Matthias Hennig (m.hennig@ed.ac.uk), or just write an issue!
 
-The following people have contributed code to the project as of 24 August 2020:
+The following people have contributed code to the project as of 10 Nov 2020:
+
 * <img src="https://avatars0.githubusercontent.com/u/2369197?v=4" width="16"/> [Achilleas Koutsou](https://github.com/achilleas-k), @G-Node
 * <img src="https://avatars3.githubusercontent.com/u/844464?v=4" width="16"/> [Alan Liddell](https://github.com/aliddell), Vidrio Technologies
 * <img src="https://avatars0.githubusercontent.com/u/17097257?v=4" width="16"/> [Alessio Buccino](https://github.com/alejoe91), ETH
-* <img src="https://avatars2.githubusercontent.com/u/13655521?v=4" width="16"/> [Alexander Morley](https://github.com/alexmorley), MRC BNDU (University of Oxford)
+* <img src="https://avatars2.githubusercontent.com/u/13655521?v=4" width="16"/> [Alexander Morley](https://github.com/alexmorley), Babylon Health
 * <img src="https://avatars0.githubusercontent.com/u/844306?v=4" width="16"/> [Ben Dichter](https://github.com/bendichter), CatalystNeuro
 * <img src="https://avatars1.githubusercontent.com/u/51133164?v=4" width="16"/> [Cody Baker](https://github.com/CodyCBakerPhD)
 * <img src="https://avatars3.githubusercontent.com/u/31068646?v=4" width="16"/> [Cole Hurwitz](https://github.com/colehurwitz), University of Edinburgh
@@ -129,7 +130,7 @@ The following people have contributed code to the project as of 24 August 2020:
 * <img src="https://avatars1.githubusercontent.com/u/1672447?v=4" width="16"/> [Pierre Yger](https://github.com/yger), Institut de la Vision
 * <img src="https://avatars0.githubusercontent.com/u/10051773?v=4" width="16"/> [Roger Hurwitz](https://github.com/rogerhurwitz)
 * <img src="https://avatars2.githubusercontent.com/u/11883463?v=4" width="16"/> [Roland Diggelmann](https://github.com/rdiggelmann), ETH Zurich
-* <img src="https://avatars2.githubusercontent.com/u/15884111?v=4" width="16"/> [Shawn Guo](https://github.com/Shawn-Guo-CN), Computer Laboratory, University of Cambridge
+* <img src="https://avatars2.githubusercontent.com/u/15884111?v=4" width="16"/> [Shawn Guo](https://github.com/Shawn-Guo-CN), School of Informatics, University of Edinburgh
 * <img src="https://avatars1.githubusercontent.com/u/56535869?v=4" width="16"/> [TRRuikes](https://github.com/TRRuikes)
 * <img src="https://avatars3.githubusercontent.com/u/39889?v=4" width="16"/> [Yaroslav Halchenko](https://github.com/yarikoptic), Dartmouth College, @Debian, @DataLad, @PyMVPA, @fail2ban
 * <img src="https://avatars3.githubusercontent.com/u/41306197?v=4" width="16"/> [Michael Scudder](https://github.com/mikeyale)
