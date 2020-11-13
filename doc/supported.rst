@@ -40,6 +40,7 @@ Sorted Data Formats
 
 For sorted data formats, we currently support:
 
+* **Combinato** - CombinatoSortingExtractor
 * **Experimental Directory Structure (Exdir)** - ExdirSortingExtractor
 * **HerdingSpikes2** - HS2SortingExtractor
 * **JRClust** - JRCSortingExtractor
@@ -54,6 +55,7 @@ For sorted data formats, we currently support:
 * **Shybrid** - SHYBRIDSortingExtractor
 * **Spyking Circus** - SpykingCircusSortingExtractor
 * **Trideclous** - TridesclousSortingExtractor
+* **YASS** - YassSortingExtractor
 
 Installed Extractors
 --------------------
