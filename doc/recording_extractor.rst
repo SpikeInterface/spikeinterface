@@ -86,6 +86,32 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 
             return traces
 
+        # optional
+        def get_ttl_events(self, start_frame=None, end_frame=None, channel_id=0):
+            '''
+            Returns an array with frames of TTL signals. To be implemented in sub-classes
+
+            Parameters
+            ----------
+            start_frame: int
+                The starting frame of the ttl to be returned (inclusive)
+            end_frame: int
+                The ending frame of the ttl to be returned (exclusive)
+            channel_id: int
+                The TTL channel id
+
+            Returns
+            -------
+            ttl_frames: array-like
+                Frames of TTL signal for the specified channel
+            ttl_state: array-like
+                State of the transition: 1 - rising, -1 - falling
+            '''
+
+            # Fill code to return ttl frames and states
+
+            return ttl_frames, ttl_states
+
         .
         .
         .
