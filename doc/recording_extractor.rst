@@ -29,6 +29,12 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 
             ## All file specific initialization code can go here.
 
+            # Important pieces of information include (if available): channel locations, groups, and gains
+            # To set these, one can use:
+            self.set_channel_locations(locations)  # locations is a np.array (num_channels x 2)
+            self.set_channel_groups(groups)  # groups is a list or a np.array with length num_channels
+            self.set_channel_gains(gains)  # gains is a list or a np.array with length num_channels
+
         def get_channel_ids(self):
 
             # Fill code to get a list of channel_ids. If channel ids are not specified, you can use:
