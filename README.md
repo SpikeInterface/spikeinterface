@@ -56,9 +56,9 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 - [spikewidgets](https://github.com/SpikeInterface/spikewidgets): Data visualization widgets. [![Build Status](https://travis-ci.org/SpikeInterface/spikewidgets.svg?branch=master)](https://travis-ci.org/SpikeInterface/spikewidgets) 
 
 
-**On October 8, 2019, we have released the very first beta version of spikeinterface (0.9.1)**
+**On December 10, 2020, a new version of `spikeinterface` has been released (0.11.0). Check out the [release notes](https://spikeinterface.readthedocs.io/en/latest/whatisnew.html)**
 
-**Please have a look at the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describes in detail this project**
+**Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
 
 
@@ -68,23 +68,36 @@ You can install SpikeInterface from pip:
 
 `pip install spikeinterface` 
 
-Alternatively, you can clone the repository and install from sources the development version:
+The pip installation will install a specific and fixed version of the spikeinterface packages. 
+
+To use the latest updates, install `spikeinterface` and the related packages from source:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git
 cd spikeinterface
-python setup.py develop
+python setup.py install (or develop)
 ```
 
-**Important**: installing with `python setup.py develop` DOES NOT install the latest version of the different modules.
-In order to get the latest updates, clone the above-mentioned repositories and install them from source.
+Then you can install the latest releases of the spikeinterface packages:
+
+```bash
+pip install --upgrade spikeextractors spiketoolkit spikesorters spikecomparison spikewidgets
+```
+
+You can also install the five packages from sources (e.g. for `spikeextractors`): 
+
+```bash
+git clone https://github.com/SpikeInterface/spikeextractors.git
+cd spikeextractors
+python setup.py install (or develop)
+```
 
 ## Documentation
 
-All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
+All documentation for SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
 
-You can also check out this 1-hour video tutorial for the NWB User Days 2019:
-https://www.youtube.com/watch?v=nWJGwFB7oII
+You can also check out this [1-hour video tutorial](https://www.youtube.com/watch?v=fvKG_-xQ4D8&t=3364s&ab_channel=NeurodataWithoutBorders) for the NWB User Days 2020:
+
 
 
 ## Citation
@@ -92,13 +105,14 @@ https://www.youtube.com/watch?v=nWJGwFB7oII
 If you find SpikeInterface useful in your research, please cite:
 
 ```bibtex
-@article{buccino2019spikeinterface,
+@article{buccino2020spikeinterface,
   title={SpikeInterface, a unified framework for spike sorting},
-  author={Buccino, Alessio P and Hurwitz, Cole L and Magland, Jeremy and Garcia, Samuel and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
-  journal={BioRxiv},
-  pages={796599},
-  year={2019},
-  publisher={Cold Spring Harbor Laboratory}
+  author={Buccino, Alessio Paolo and Hurwitz, Cole Lincoln and Garcia, Samuel and Magland, Jeremy and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
+  journal={Elife},
+  volume={9},
+  pages={e61834},
+  year={2020},
+  publisher={eLife Sciences Publications Limited}
 }
 ```
 
