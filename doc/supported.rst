@@ -15,8 +15,10 @@ Raw Data Formats
 
 For raw data formats, we currently support:
 
+* **BlackRock** - BlackRockRecordingExtractor
 * **Binary** - BinDatRecordingExtractor
 * **Biocam HDF5** - BiocamRecordingExtractor
+* **CED** - CEDRecordingExtractor
 * **Experimental Directory Structure (Exdir)** - ExdirRecordingExtractor
 * **Intan** - IntanRecordingExtractor
 * **Klusta** - KlustaRecordingExtractor
@@ -40,7 +42,9 @@ Sorted Data Formats
 
 For sorted data formats, we currently support:
 
+* **BlackRock** - BlackRockSortingExtractor
 * **Combinato** - CombinatoSortingExtractor
+* **Cell Explorer** - CellExplorerSortingExtractor
 * **Experimental Directory Structure (Exdir)** - ExdirSortingExtractor
 * **HerdingSpikes2** - HS2SortingExtractor
 * **JRClust** - JRCSortingExtractor

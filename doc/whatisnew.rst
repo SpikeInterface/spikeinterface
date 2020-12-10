@@ -6,9 +6,15 @@ Release notes
 .. toctree::
    :maxdepth: 1
 
+   releases/0.11.0.rst
    releases/0.10.0.rst
    releases/0.9.9.rst
    releases/0.9.1.rst
+
+Version 0.11.0
+---------------
+
+  * Bug fixes and improvements on efficiency
 
 Version 0.10.0
 ---------------
