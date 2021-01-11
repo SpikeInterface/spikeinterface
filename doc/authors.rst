@@ -14,7 +14,7 @@ and may not be the current affiliation of a contributor.
 
 For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (cole.hurwitz@ed.ac.uk), or just write an issue!
 
-1. Center for Inegrative Neurolasticity (CINPLA), Department of Biosciences, Physics, and Informatics, University of Oslo, Oslo, Norway.
+1. Bio Engineering Laboratory, Dept. of Biosystems Science and Engineering, ETH Zurich, Switzerland.
 2. The Institute for Adaptive and Neural Computation (ANC), University of Edinburgh, Edinburgh, Scotland.
 3. Center for Computational Biology (CCB), Flatiron Institute, New York, United States.
 4. Centre de Recherche en Neuroscience de Lyon (CRNL), Lyon, France.

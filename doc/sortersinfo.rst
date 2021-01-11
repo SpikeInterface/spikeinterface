@@ -85,6 +85,21 @@ Kilosort2
 * See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
 
+Kilosort2.5
+-----------
+
+* Matlab, requires CUDA
+* Url: https://github.com/MouseLand/Kilosort
+* Authors: Marius Pachitariu
+* Installation needs Matlab and cudatoolkit::
+
+      git clone https://github.com/MouseLand/Kilosort
+      # provide installation path by setting the KILOSORT2_5_PATH environment variable
+      # or using Kilosort2_5Sorter.set_kilosort2_path()
+
+* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+
+
 Klusta
 ------
 
@@ -152,3 +167,19 @@ Waveclus
       git clone https://github.com/csn-le/wave_clus/
       # provide installation path by setting the WAVECLUS_PATH environment variable
       # or using WaveClusSorter.set_waveclus_path()
+
+
+Combinato
+---------
+
+* Python
+* Url: https://github.com/jniediek/combinato/wiki
+* Authors: Johannes Niediek, Jan Boström, Christian E. Elger, Florian Mormann
+* Installation::
+
+      git clone https://github.com/jniediek/combinato
+      # Then inside that folder, run:
+      python setup_options.py
+      # provide installation path by setting the COMBINATO_PATH environment variable
+      # or using CombinatoSorter.set_combinato_path()
+
