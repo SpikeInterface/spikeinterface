@@ -56,9 +56,9 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 - [spikewidgets](https://github.com/SpikeInterface/spikewidgets): Data visualization widgets. [![Build Status](https://travis-ci.org/SpikeInterface/spikewidgets.svg?branch=master)](https://travis-ci.org/SpikeInterface/spikewidgets) 
 
 
-**On October 8, 2019, we have released the very first beta version of spikeinterface (0.9.1)**
+**On December 10, 2020, a new version of `spikeinterface` has been released (0.11.0). Check out the [release notes](https://spikeinterface.readthedocs.io/en/latest/whatisnew.html)**
 
-**Please have a look at the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describes in detail this project**
+**Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
 
 
@@ -68,23 +68,36 @@ You can install SpikeInterface from pip:
 
 `pip install spikeinterface` 
 
-Alternatively, you can clone the repository and install from sources the development version:
+The pip installation will install a specific and fixed version of the spikeinterface packages. 
+
+To use the latest updates, install `spikeinterface` and the related packages from source:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git
 cd spikeinterface
-python setup.py develop
+python setup.py install (or develop)
 ```
 
-**Important**: installing with `python setup.py develop` DOES NOT install the latest version of the different modules.
-In order to get the latest updates, clone the above-mentioned repositories and install them from source.
+Then you can install the latest releases of the spikeinterface packages:
+
+```bash
+pip install --upgrade spikeextractors spiketoolkit spikesorters spikecomparison spikewidgets
+```
+
+You can also install the five packages from sources (e.g. for `spikeextractors`): 
+
+```bash
+git clone https://github.com/SpikeInterface/spikeextractors.git
+cd spikeextractors
+python setup.py install (or develop)
+```
 
 ## Documentation
 
-All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
+All documentation for SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
 
-You can also check out this 1-hour video tutorial for the NWB User Days 2019:
-https://www.youtube.com/watch?v=nWJGwFB7oII
+You can also check out this [1-hour video tutorial](https://www.youtube.com/watch?v=fvKG_-xQ4D8&t=3364s&ab_channel=NeurodataWithoutBorders) for the NWB User Days 2020:
+
 
 
 ## Citation
@@ -92,24 +105,26 @@ https://www.youtube.com/watch?v=nWJGwFB7oII
 If you find SpikeInterface useful in your research, please cite:
 
 ```bibtex
-@article{buccino2019spikeinterface,
+@article{buccino2020spikeinterface,
   title={SpikeInterface, a unified framework for spike sorting},
-  author={Buccino, Alessio P and Hurwitz, Cole L and Magland, Jeremy and Garcia, Samuel and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
-  journal={BioRxiv},
-  pages={796599},
-  year={2019},
-  publisher={Cold Spring Harbor Laboratory}
+  author={Buccino, Alessio Paolo and Hurwitz, Cole Lincoln and Garcia, Samuel and Magland, Jeremy and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
+  journal={Elife},
+  volume={9},
+  pages={e61834},
+  year={2020},
+  publisher={eLife Sciences Publications Limited}
 }
 ```
 
 ## SpikeInterface contributors
 For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (colehurwitz@gmail.com), Samuel Garcia (samuel.garcia@cnrs.fr), Jeremy Magland (jmagland@flatironinstitute.org) or Matthias Hennig (m.hennig@ed.ac.uk), or just write an issue!
 
-The following people have contributed code to the project as of 24 August 2020:
+The following people have contributed code to the project as of 10 Nov 2020:
+
 * <img src="https://avatars0.githubusercontent.com/u/2369197?v=4" width="16"/> [Achilleas Koutsou](https://github.com/achilleas-k), @G-Node
 * <img src="https://avatars3.githubusercontent.com/u/844464?v=4" width="16"/> [Alan Liddell](https://github.com/aliddell), Vidrio Technologies
 * <img src="https://avatars0.githubusercontent.com/u/17097257?v=4" width="16"/> [Alessio Buccino](https://github.com/alejoe91), ETH
-* <img src="https://avatars2.githubusercontent.com/u/13655521?v=4" width="16"/> [Alexander Morley](https://github.com/alexmorley), MRC BNDU (University of Oxford)
+* <img src="https://avatars2.githubusercontent.com/u/13655521?v=4" width="16"/> [Alexander Morley](https://github.com/alexmorley), Babylon Health
 * <img src="https://avatars0.githubusercontent.com/u/844306?v=4" width="16"/> [Ben Dichter](https://github.com/bendichter), CatalystNeuro
 * <img src="https://avatars1.githubusercontent.com/u/51133164?v=4" width="16"/> [Cody Baker](https://github.com/CodyCBakerPhD)
 * <img src="https://avatars3.githubusercontent.com/u/31068646?v=4" width="16"/> [Cole Hurwitz](https://github.com/colehurwitz), University of Edinburgh
@@ -129,7 +144,7 @@ The following people have contributed code to the project as of 24 August 2020:
 * <img src="https://avatars1.githubusercontent.com/u/1672447?v=4" width="16"/> [Pierre Yger](https://github.com/yger), Institut de la Vision
 * <img src="https://avatars0.githubusercontent.com/u/10051773?v=4" width="16"/> [Roger Hurwitz](https://github.com/rogerhurwitz)
 * <img src="https://avatars2.githubusercontent.com/u/11883463?v=4" width="16"/> [Roland Diggelmann](https://github.com/rdiggelmann), ETH Zurich
-* <img src="https://avatars2.githubusercontent.com/u/15884111?v=4" width="16"/> [Shawn Guo](https://github.com/Shawn-Guo-CN), Computer Laboratory, University of Cambridge
+* <img src="https://avatars2.githubusercontent.com/u/15884111?v=4" width="16"/> [Shawn Guo](https://github.com/Shawn-Guo-CN), School of Informatics, University of Edinburgh
 * <img src="https://avatars1.githubusercontent.com/u/56535869?v=4" width="16"/> [TRRuikes](https://github.com/TRRuikes)
 * <img src="https://avatars3.githubusercontent.com/u/39889?v=4" width="16"/> [Yaroslav Halchenko](https://github.com/yarikoptic), Dartmouth College, @Debian, @DataLad, @PyMVPA, @fail2ban
 * <img src="https://avatars3.githubusercontent.com/u/41306197?v=4" width="16"/> [Michael Scudder](https://github.com/mikeyale)
