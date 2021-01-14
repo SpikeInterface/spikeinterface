@@ -385,6 +385,8 @@ class ExtractorBase:
         
     def allocate_array_from(self,  engine, array_name, existing_array):
         self.allocate_array(engine, array_name, existing_array.shape, existing_array.dtype)
+        
+    #~ get_sub_extractors_by_propertys
 
 
 def _check_if_dumpable(d):
@@ -399,9 +401,10 @@ def _check_if_dumpable(d):
 def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
-    probe_file = None
+    
     kwargs = deepcopy(dic['kwargs'])
-    if np.any([isinstance(v, dict) for v in kwargs.values()]):
+
+    if any(isinstance(v, dict) for v in kwargs.values()):
         # nested
         for k in kwargs.keys():
             if isinstance(kwargs[k], dict):
@@ -411,7 +414,7 @@ def _load_extractor_from_dict(dic):
                     cls = _get_class_from_string(class_name)
                     kwargs[k] = extractor
                     break
-    elif np.any([isinstance(v, list) and isinstance(v[0], dict) for v in kwargs.values()]):
+    elif any(isinstance(v, list) and isinstance(v[0], dict) for v in kwargs.values()):
         # multi
         for k in kwargs.keys():
             if isinstance(kwargs[k], list) and isinstance(kwargs[k][0], dict):
@@ -420,8 +423,8 @@ def _load_extractor_from_dict(dic):
                     if 'module' in kw.keys() and 'class' in kw.keys() and 'version' in kw.keys():
                         extr = _load_extractor_from_dict(kw)
                         extractors.append(extr)
-                class_name = dic['class']
-                cls = _get_class_from_string(class_name)
+                #~ class_name = dic['class']
+                #~ cls = _get_class_from_string(class_name)
                 kwargs[k] = extractors
                 break
     else:
@@ -433,25 +436,15 @@ def _load_extractor_from_dict(dic):
         print('Versions are not the same. This might lead to errors. Use ', class_name.split('.')[0],
               'version', dic['version'])
 
-    if 'probe_file' in kwargs.keys():
-        probe_file = kwargs.pop('probe_file')
-
     # instantiate extrator object
     extractor = cls(**kwargs)
-
-    # load probe file
-    if probe_file is not None:
-        assert 'Recording' in class_name, "Only recording extractors can have probe files"
-        extractor = extractor.load_probe_file(probe_file=probe_file)
-
-    # load properties and features
-    if 'key_properties' in dic.keys():
-        extractor._key_properties = dic['key_properties']
-
-    if 'annotations' in dic.keys():
-        extractor._annotations = dic['annotations']
-
+    
+    extractor._annotations.update(dic['annotations'])
+    extractor._properties.update(dic['properties'])
+    extractor._features.update(dic['features'])
+    
     return extractor
+
 
 def _get_class_from_string(class_string):
     class_name = class_string.split('.')[-1]

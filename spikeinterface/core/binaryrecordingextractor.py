@@ -56,24 +56,6 @@ class BinaryRecordingExtractor(Recording):
     def get_sampling_frequency(self):
         return self._sampling_frequency
 
-    @check_get_traces_args
-    def get_traces(self, channel_ids=None, start_frame=None, end_frame=None):
-        if np.all(channel_ids == self.get_channel_ids()):
-            recordings = self._timeseries[:, start_frame:end_frame]
-        else:
-            channel_idxs = np.array([self.get_channel_ids().index(ch) for ch in channel_ids])
-            if np.all(np.diff(channel_idxs) == 1):
-                recordings = self._timeseries[channel_idxs[0]:channel_idxs[0]+len(channel_idxs), start_frame:end_frame]
-            else:
-                # This block of the execution will return the data as an array, not a memmap
-                recordings = self._timeseries[channel_idxs, start_frame:end_frame]
-        if self._dtype.startswith('uint'):
-            exp_idx = self._dtype.find('int') + 3
-            exp = int(self._dtype[exp_idx:])
-            recordings = recordings.astype('float32') - 2**(exp - 1)
-        if self._gain is not None:
-            recordings = recordings * self._gain
-        return recordings
 
     def write_to_binary_dat_format(self, save_path, time_axis=0, dtype=None, chunk_size=None, chunk_mb=500,
                                    n_jobs=1, joblib_backend='loky', verbose=False):

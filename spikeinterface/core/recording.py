@@ -1,5 +1,7 @@
 from typing import List, Union
 
+from probeinterface import Probe, ProbeGroup
+
 from .mytypes import ChannelId, ChannelIndex, Order, SamplingFrequencyHz
 from .base import Base
 
@@ -100,17 +102,70 @@ class Recording(ExtractorBase):
         
         return cached
     
-    ## for backward compatibilities
+    def set_probe(self, probe_or_probegroup, group_mode='by_probe'):
+        """
+        
+        Args
+        ------
+        probe_or_probegroup
+        
+        group_mode: 'by_probe' or 'by_shank'
+        """
+        assert isistance(probe_or_probegroup, (Probe, ProbeGroup)), 'must Probe or ProbeGroup'
+        assert group_mode in ('by_probe', 'by_shank')
+        
+        if 'probes' in self._annotations:
+            self._annotations.pop('probes')
+        
+        if isinstance(probe_or_probegroup, Probe):
+            probes = [probe_or_probegroup]
+        elif isinstance(probe_or_probegroup, ProbeGroup):
+            probes = probe_or_probegroup.probes
+        
+        if len(probes) > 1:
+            print('You set several probes on this recording, you should split it by group')
+        # TODO make a probe index in properties to handle this correctly!!!!
+        
+        # set channel location and groups
+        channel_ids = self.get_channel_ids()
+        self.clear_channel_locations()
+        self.clear_channel_groups()
+        ngroup = 0
+        for probe_index, probe in probes:
+            assert probe.channel_device_indices is not None, 'Probe dont have channel_device_indices'
+            
+            inds = probe.channel_device_indices
+            # -1 is an electrode not connected
+            ok = inds != -1
+            chan_ids = channel_ids[inds[ok]]
+            
+            locations = probe.electrode_positions[ok]
+            self.set_channel_locations(locations, channel_ids=chan_ids)
+            
+            if group_mode == 'by_probe':
+                groups = np.ones(len(chan_ids), dtype='int64') * probe_index
+            elif group_mode == 'by_shank':
+                groups =  probe.shank_ids[ok] + ngroup
+                ngroup = np.max(groups) + 1
+            self.set_channel_groups(groups, channel_ids=chan_ids)
+        
+        # keep probe description in annotation as a dict (easy to dump)
+        probes_dict = [ probe.to_dict() for probe in probes]
+        self.annotate('probes', probes_dict)
     
-    def set_channel_property(self, channel_id, property_name, value):
-        print('depreciated please use recording.set_property(..) in the vector way')
-        self.set_property(property_name, [value], ids=[value])
-    
-    def get_channel_property_names(self):
-        print(' get_channel_property_names() depreciated please use get_property_keys')
-        return self.get_property_keys()
-    
+    def get_probes(self):
+        dict_probes = self._annotations.get('probes', None)
+        if probes is None:
+            print('Warning: probe is not set a dummy probe is generated'
+            raise NotImplementedError
+            # TODO
+        else:
+            probes = [Probe.from_dict(d) for d in dict_probes]
+            return probes
+
     def set_channel_locations(self, locations, channel_ids=None):
+        if 'probes' in self._annotations:
+            print('warning: set_channel_locations(..) destroy the probe description, prefer set_probe(..)'
         self.set_property('location', locations,  ids=channel_ids)
         
     def get_channel_locations(self, channel_ids=None, locations_2d=True):
@@ -125,6 +180,8 @@ class Recording(ExtractorBase):
         self.set_property('location', locations,  ids=channel_ids)
     
     def set_channel_groups(self, groups, channel_ids=None):
+        if 'probes' in self._annotations:
+            print('warning: set_channel_groups(..) destroy the probe description, prefer set_probe(..)'
         self.set_property('group', groups,  ids=channel_ids)
         
     def get_channel_groups(self, channel_ids=None):
@@ -143,6 +200,18 @@ class Recording(ExtractorBase):
     
     def get_channel_gains(self, channel_ids=None):
         return self.get_property('gain')
+    
+    ## for backward compatibilities
+    
+    def set_channel_property(self, channel_id, property_name, value):
+        print('depreciated please use recording.set_property(..) in the vector way')
+        self.set_property(property_name, [value], ids=[value])
+    
+    def get_channel_property_names(self):
+        print(' get_channel_property_names() depreciated please use get_property_keys')
+        return self.get_property_keys()
+    
+
 
 
 class RecordingSegment(object):
