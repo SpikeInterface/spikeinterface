@@ -8,7 +8,7 @@ from .base import Base
 from .core_tools import write_to_binary_dat_format
 
 
-class Recording(ExtractorBase):
+class BaseRecording(BaseExtractor):
     """
     Abstract class representing several a multichannel timeseries (or block of raw ephys traces).
     Internally handle list of RecordingSegment
@@ -102,70 +102,91 @@ class Recording(ExtractorBase):
         
         return cached
     
-    def set_probe(self, probe_or_probegroup, group_mode='by_probe'):
+    def set_probe(self, probe):
         """
-        
+        Wrapper on top on set_probes when there one unique probe.
+        """
+        assert isistance(probe, Probe), 'must give Probe'
+        probegroup = ProbeGroup()
+        probegroup.add_probe(probe)
+        return self.set_probes(probegroup)
+    
+    def set_probes(self, probe_or_probegroup, group_mode='by_probe'):
+        """
         Args
         ------
-        probe_or_probegroup
+        probe_or_probegroup:
+            can be Porbe or list of Probe or ProbeGroup
         
         group_mode: 'by_probe' or 'by_shank'
         """
-        assert isistance(probe_or_probegroup, (Probe, ProbeGroup)), 'must Probe or ProbeGroup'
-        assert group_mode in ('by_probe', 'by_shank')
-        
-        if 'probes' in self._annotations:
-            self._annotations.pop('probes')
-        
+        from channelslicerecording import ChannelSliceRecording
+
+        # handle several input possibilities
         if isinstance(probe_or_probegroup, Probe):
-            probes = [probe_or_probegroup]
+            probegroup = ProbeGroup()
+            probegroup.add_probe(probe_or_probegroup)
         elif isinstance(probe_or_probegroup, ProbeGroup):
-            probes = probe_or_probegroup.probes
+            probegroup = probe_or_probegroup
+        elif isinstance(probe_or_probegroup, list):
+            assert all(isinstance(e, Probe) for e in isinstance(probe_or_probegroup, Probe))
+            probegroup = ProbeGroup()
+            for probe in probe_or_probegroup:
+                probegroup.add_probe(probe_or_probegroup)
+        else:
+            raise ValueError( 'must give Probe or ProbeGroup or list of Probe')
+        
+        # handle not connected channels
+        assert all(probe.channel_device_indices is not None), 'Probe must have channel_device_indices'
+        all_connected = all(np.all(probe.channel_device_indices != -1) for probe in probes)
+        if not all_connected:
+            print('warning given probes have not connected channels : remove then')
+            sliced_probes = []
+            for probe in probes:
+                keep = probe.channel_device_indices != -1
+                sliced_probes.append(probe.get_slice(keep))
+            probes = sliced_probes
         
         if len(probes) > 1:
             print('You set several probes on this recording, you should split it by group')
         # TODO make a probe index in properties to handle this correctly!!!!
         
-        # set channel location and groups
-        channel_ids = self.get_channel_ids()
-        self.clear_channel_locations()
-        self.clear_channel_groups()
-        ngroup = 0
-        for probe_index, probe in probes:
-            assert probe.channel_device_indices is not None, 'Probe dont have channel_device_indices'
-            
-            inds = probe.channel_device_indices
-            # -1 is an electrode not connected
-            ok = inds != -1
-            chan_ids = channel_ids[inds[ok]]
-            
-            locations = probe.electrode_positions[ok]
-            self.set_channel_locations(locations, channel_ids=chan_ids)
-            
-            if group_mode == 'by_probe':
-                groups = np.ones(len(chan_ids), dtype='int64') * probe_index
-            elif group_mode == 'by_shank':
-                groups =  probe.shank_ids[ok] + ngroup
-                ngroup = np.max(groups) + 1
-            self.set_channel_groups(groups, channel_ids=chan_ids)
         
+        # create ChannelSliceRecording
+        group_positions, group_device_indices = probegroup.get_groups(self, group_mode='by_probe')
+        new_channel_ids = np.concatenate([self.get_channel_ids()[inds] for inds in group_device_indices])
+        sub_recording = ChannelSliceRecording(self, new_channel_ids)
+        
+        # set channel location and groups
+        ngroup = len(group_positions)
+        for group_id in  range(ngroup):
+            locations = group_positions[group_id]
+            device_indices = group_device_indices[group_id]
+            
+            chan_ids = self.get_channel_ids()[device_indices]
+            groups = np.ones(len(inds), dtype='int64') * group_id
+            
+            sub_recording.set_channel_locations(locations, channel_ids=chan_ids)
+            sub_recording.set_channel_groups(groups, channel_ids=chan_ids)
+            
         # keep probe description in annotation as a dict (easy to dump)
-        probes_dict = [ probe.to_dict() for probe in probes]
-        self.annotate('probes', probes_dict)
+        probes_dict = [ probe.to_dict() for probe in probegroup.probes]
+        sub_recording.annotate('probes', probes_dict)
+        
+        return sub_recording
     
     def get_probes(self):
         dict_probes = self._annotations.get('probes', None)
-        if probes is None:
-            print('Warning: probe is not set a dummy probe is generated'
-            raise NotImplementedError
-            # TODO
+        if dict_probes is None:
+            return None
         else:
             probes = [Probe.from_dict(d) for d in dict_probes]
             return probes
 
     def set_channel_locations(self, locations, channel_ids=None):
         if 'probes' in self._annotations:
-            print('warning: set_channel_locations(..) destroy the probe description, prefer set_probe(..)'
+            print('warning: set_channel_locations(..) destroy the probe description, prefer set_probes(..)'
+            self._annotations.pop('probes')
         self.set_property('location', locations,  ids=channel_ids)
         
     def get_channel_locations(self, channel_ids=None, locations_2d=True):
@@ -182,6 +203,7 @@ class Recording(ExtractorBase):
     def set_channel_groups(self, groups, channel_ids=None):
         if 'probes' in self._annotations:
             print('warning: set_channel_groups(..) destroy the probe description, prefer set_probe(..)'
+            self._annotations.pop('probes')
         self.set_property('group', groups,  ids=channel_ids)
         
     def get_channel_groups(self, channel_ids=None):
@@ -202,7 +224,6 @@ class Recording(ExtractorBase):
         return self.get_property('gain')
     
     ## for backward compatibilities
-    
     def set_channel_property(self, channel_id, property_name, value):
         print('depreciated please use recording.set_property(..) in the vector way')
         self.set_property(property_name, [value], ids=[value])
@@ -214,7 +235,7 @@ class Recording(ExtractorBase):
 
 
 
-class RecordingSegment(object):
+class BaseRecordingSegment(object):
     """
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
