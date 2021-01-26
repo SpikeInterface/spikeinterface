@@ -4,7 +4,7 @@ from .mytypes import ChannelId, ChannelIndex, Order, SamplingFrequencyHz, UnitId
 
 
 
-class Sorting(object):
+class BaseSorting(BaseExtractor):
     """
     Abstract class representing several segment several units and relative spiketrains.
     """

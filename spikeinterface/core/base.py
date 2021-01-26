@@ -6,7 +6,7 @@ import numpy as np
 
 from .default import get_global_tmp_folder, is_set_global_tmp_folder
 
-class ExtractorBase:
+class BaseExtractor:
     """
     Base class for Recording/Sorting
     
@@ -22,7 +22,7 @@ class ExtractorBase:
     _main_features = []
     
     def __init__(self, main_ids):
-        # store init kwargs for nested seriolisation
+        # store init kwargs for nested serialisation
         self._kwargs = {}
         
         # main_ids will either channel_ids or units_ids
