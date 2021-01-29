@@ -1,6 +1,13 @@
+from typing import List, Union
+from .mytypes import ChannelId, ChannelIndex, Order, SamplingFrequencyHz
+
 from pathlib import Path
 import importlib
 from copy import deepcopy
+import weakref
+import json
+import pickle
+import datetime
 
 import numpy as np
 
@@ -43,10 +50,24 @@ class BaseExtractor:
 
         # cache folder
         self._cache_folder = None
+
+        
+        self.is_dumpable = True        
+        
         
     def get_num_segments(self):
-        # must be implemented in subclass
+        # This implemented in BaseRecording or baseSorting
         raise NotImplementedError
+
+    def _check_segment_index(self, segment_index: Union[int, None]) -> int:
+        if segment_index is None:
+            if self.get_num_segments() == 1:
+                return 0
+            else:
+                raise ValueError()
+        else:
+            return segment_index
+
         
     def ids_to_indices(self, ids, prefer_slice=False):
         """
@@ -74,7 +95,10 @@ class BaseExtractor:
                     indices = slice(indices[0], indices[-1] +1)
         return indices
     
-    def annotate(self, annotation_key, value, overwrite=False):
+    def annotate(self, **new_nnotations):
+        self._annotations.update(new_nnotations)
+    
+    def set_annotation(self, annotation_key, value, overwrite=False):
         '''This function adds an entry to the annotations dictionary.
 
         Parameters
@@ -100,7 +124,7 @@ class BaseExtractor:
         Get a annotation.
         Return a copy by dfault
         """
-        v = self._annotaions.get(key, None)
+        v = self._annotations.get(key, None)
         if copy:
             v = deepcopy(v)
         return v
@@ -171,18 +195,28 @@ class BaseExtractor:
             version = imported_module.__version__
         except AttributeError:
             version = 'unknown'
+
+        dump_dict = {
+                'class': class_name,
+                'module': module,
+                'kwargs': self._kwargs,
+                'dumpable': self.is_dumpable,
+            }
+
+        try:
+            dump_dict['version'] = imported_module.__version__
+        except AttributeError:
+            dump_dict['version'] = 'unknown'
         
         if include_annotations:
-            
+            dump_dict['annotations'] = self._annotations
+        
         if include_properties:
                 dump_dict['properties'] = self._properties
         if include_features:
                 dump_dict['features'] = self._features
 
-        dump_dict = {'class': class_name,
-                        'module': module,
-                        'kwargs': self._kwargs,
-                        'dumpable': self.is_dumpable}
+
         
         if include_annotations:
             dump_dict['annotations'] = self._annotations
@@ -194,7 +228,7 @@ class BaseExtractor:
             dump_dict['properties'] = self._properties
         else:
             # include only main properties
-            dump_dict['properties'] = {k:self._properties[k] for k in self._main_properties}
+            dump_dict['properties'] = {k:self._properties.get(k, None) for k in self._main_properties}
         
         if include_features:
             dump_dict['features'] = self._features
@@ -203,8 +237,9 @@ class BaseExtractor:
             dump_dict['features'] = {k:self._features[k] for k in self._main_features}
         
         return dump_dict
-
-    def from_dict(self):
+    
+    @staticmethod
+    def from_dict(d):
         '''
         Instantiates extractor from dictionary
 
@@ -222,8 +257,7 @@ class BaseExtractor:
         return extractor        
 
     def check_if_dumpable(self):
-        if not _check_if_dumpable(self.to_dict()):
-            raise NotDumpableExtractorError(f"The extractor is not dumpable")
+        return _check_if_dumpable(self.to_dict())
 
     def _get_file_path(self, file_path, extensions):
         '''
@@ -263,8 +297,10 @@ class BaseExtractor:
     def dump(self, file_path):
         if str(file_path).endswith('.json'):
             self.dump_to_json(file_path)
-        else str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
+        elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
             self.dump_to_pickle(file_path)
+        else:
+            raise ValueError('Dump: file must .json or .pkl')
     
     def dump_to_json(self, file_path=None):
         '''
@@ -312,20 +348,24 @@ class BaseExtractor:
           * dump(...) json or pickle file
           * cache (...)  a folder which contain data  + json or pickle
         """
+        
         file_path = Path(file_path)
         if file_path.is_file():
             # standard case based on a file (json or pickle)
-            if str(file_path).endwith('.json'):
-                with open(str(json_file), 'r') as f:
+            if str(file_path).endswith('.json'):
+                with open(str(file_path), 'r') as f:
                     d = json.load(f)
-            else str(file_path).endwith('.pkl') or str(file_path).endwith('.pickle'):
-                with open(str(pkl_file), 'rb') as f:
+            elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
+                with open(str(file_path), 'rb') as f:
                     d = pickle.load(f)
-            extractor = self.from_dict(d)
+            else:
+                raise ValueError('Impossible to load {file_path}')
+            extractor = BaseExtractor.from_dict(d)
             return extractor
 
         elif file_path.is_dir():
             # case from a folder after a calling extractor.cache(...)
+            folder = file_path
             file = None
             for dump_ext in ('json', 'pkl', 'pickle'):
                 f = folder / f'cached.{dump_ext}' 
@@ -333,13 +373,18 @@ class BaseExtractor:
                     file = f
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
-            return self.load(file)
+            return BaseExtractor.load(file)
             
         else:
             raise ValueError('bad boy')
-
+    
+    @staticmethod
+    def load_from_cache(cache_folder, name):
+        file_path = Path(cache_folder) / name
+        return BaseExtractor.load(file_path)
+    
     def _save_data(self, folder, **cache_kargs):
-        # must be implemented in subclass
+        # This implemented in BaseRecording or baseSorting
         raise NotImplementedError
     
     def cache(self, name=None, dump_ext='json', **cache_kargs):
@@ -364,7 +409,7 @@ class BaseExtractor:
         
         folder = cache_folder / name
         assert not folder.exists(), f'folder {folder} already exists, choose other name'
-        folder.mkdir()
+        folder.mkdir(parents=True, exist_ok=False)
         
         # dump provenance
         self.dump(folder / f'provenance.{dump_ext}' )
@@ -392,6 +437,7 @@ class BaseExtractor:
 def _check_if_dumpable(d):
     kwargs = d['kwargs']
     if np.any([isinstance(v, dict) and 'dumpable' in v.keys() for (k, v) in kwargs.items()]):
+        # check nested
         for k, v in kwargs.items():
             if 'dumpable' in v.keys():
                 return _check_if_dumpable(v)
@@ -555,3 +601,15 @@ def load_extractor_from_json(json_file):
 def load_extractor_from_pickle(pkl_file):
     print('Use load_extractor(..) instead')
     return BaseExtractor.load(pkl_file)
+
+
+class BaseSegment:
+    def __init__(self):
+        self._parent_extractor = None
+    
+    @property
+    def parent_extractor(self):
+        return self._parent_extractor()
+    
+    def set_parent_extractor(self, parent_extractor):
+        self._parent_extractor = weakref.ref(parent_extractor)
