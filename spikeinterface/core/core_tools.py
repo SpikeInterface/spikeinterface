@@ -1,13 +1,16 @@
-"""
-Utils function cor
-"""
+from pathlib import Path
+import os
+import numpy as np
 
-def add_suffix(file_path, suffix):
+from joblib import Parallel, delayed
+
+def add_suffix(file_path, possible_suffix):
     file_path = Path(file_path)
-    if isinstance(suffix, str):
-        suffix = [suffix]
-    if file_path.suffix not in suffix:
-        file_path = file_path.parent / (file_path.name + '.' + suffix[0])
+    if isinstance(possible_suffix, str):
+        possible_suffix = [possible_suffix]
+    possible_suffix = [s if s.startswith('.') else '.' + s for s in possible_suffix ]
+    if file_path.suffix not in possible_suffix:
+        file_path = file_path.parent / (file_path.name + '.' + possible_suffix[0])
     return file_path
 
 
@@ -55,19 +58,20 @@ def divide_recording_into_time_chunks(num_frames, chunk_size, padding_size):
     return chunks
 
 
-def _write_dat_one_chunk(i, rec_arg, chunks, rec_memmap, dtype, time_axis, verbose):
+def _write_dat_one_chunk(i, rec_arg, chunks, segment_index, rec_memmap, dtype, time_axis, verbose):
     chunk = chunks[i]
 
     if verbose:
         print(f"Writing chunk {i + 1} / {len(chunks)}")
     if isinstance(rec_arg, dict):
-        recording = load_extractor_from_dict(rec_arg)
+        from spikeinterface.core import load_extractor
+        recording = load_extractor(rec_arg)
     else:
         recording = rec_arg
 
     start_frame = chunk['istart']
     end_frame = chunk['iend']
-    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     if time_axis == 1:
         traces = traces.T
     if dtype is not None:
@@ -108,7 +112,7 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
     verbose: bool
         If True, output is verbose (when chunks are used)
     '''
-    assert file_path is not None or file_handle is not None, "Provide 'file_path' or 'file handle'"
+    assert files_path is not None or file_handle is not None, "Provide 'file_path' or 'file handle'"
     
     # file path or file handle as list
     if files_path is None:
@@ -116,10 +120,10 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
         assert recording.get_num_segments() == 1, 'If file_handle is given then only deals with one segment'
         
     else:
-        if not tisinstance(files_path, list):
+        if not isinstance(files_path, list):
             files_path = [files_path]
         files_path = [Path(e) for e in files_path]
-        files_path = [add_suffix(file_path, 'dat') for file_path in files_path]
+        files_path = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in files_path]
 
     if chunk_size is not None or chunk_mb is not None:
         if time_axis == 1:
@@ -140,15 +144,15 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
     #~ elif n_jobs > 1:
         #~ if chunk_size is not None:
             #~ chunk_size /= n_jobs
-
-    if not recording.check_if_dumpable():
+    
+    if not recording.is_dumpable:
         if n_jobs > 1:
             n_jobs = 1
             print("RecordingExtractor is not dumpable and can't be processed in parallel")
         rec_arg = recording
     else:
         if n_jobs > 1:
-            rec_arg = recording.dump_to_dict()
+            rec_arg = recording.to_dict()
         else:
             rec_arg = recording
 
@@ -173,7 +177,7 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
     else:
         for segment_index in range(recording.get_num_segments()):
             # chunk size is not None
-            num_frames = recording.get_num_frames()
+            num_frames = recording.get_num_samples(segment_index)
             num_channels = recording.get_num_channels()
 
             # chunk_size = num_bytes_per_chunk / num_bytes_per_frame
@@ -201,10 +205,10 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
                 
                 if n_jobs == 1:
                     for i in chunks_loop:
-                        _write_dat_one_chunk(i, rec_arg, chunks, rec_memmap, dtype, time_axis, verbose=False)
+                        _write_dat_one_chunk(i, rec_arg, chunks, segment_index, rec_memmap, dtype, time_axis, verbose=False)
                 else:
                     Parallel(n_jobs=n_jobs, backend=joblib_backend)(
-                        delayed(_write_dat_one_chunk)(i, rec_arg, chunks, rec_memmap, dtype, time_axis, verbose,)
+                        delayed(_write_dat_one_chunk)(i, rec_arg, chunks, segment_index, rec_memmap, dtype, time_axis, verbose,)
                         for i in chunks_loop)
             
             else:

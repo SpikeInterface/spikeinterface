@@ -1,3 +1,9 @@
+tests/core/*.raw
+tests/core/*.json
+tests/core/*.pkl
+tests/core/simple_recording/*
+tests/core/my_cache_folder/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

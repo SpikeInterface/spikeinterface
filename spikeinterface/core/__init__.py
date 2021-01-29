@@ -8,7 +8,13 @@ And contain also "core extractors" used for caching:
   * NpzSortingExtractor
 
 """
-from .recording import Recording, RecordingSegment
-from .sorting import Sorting, SortingSegment
+from .base import load_extractor #, load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
+from .baserecording import BaseRecording, BaseRecordingSegment
+from .basesorting import BaseSorting, BaseSortingSegment
 
-# from .types import Order, ChannelIndex, SampleIndex, SamplingFrequencyHz
+# main extractor from dump and cache
+from .binaryrecordingextractor import BinaryRecordingExtractor
+from .npzsortingextractor import NpzSortingExtractor
+
+# utility extractors
+from .channelslicerecording import ChannelSliceRecording

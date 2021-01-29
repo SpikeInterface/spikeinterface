@@ -1,11 +1,13 @@
 from typing import List, Union
+from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
+
+import numpy as np
 
 from probeinterface import Probe, ProbeGroup
 
-from .mytypes import ChannelId, ChannelIndex, Order, SamplingFrequencyHz
-from .base import Base
 
-from .core_tools import write_to_binary_dat_format
+from .base import BaseExtractor, BaseSegment
+from .core_tools import write_binary_recording
 
 
 class BaseRecording(BaseExtractor):
@@ -17,22 +19,35 @@ class BaseRecording(BaseExtractor):
     _main_properties = ['group', 'location']
     _main_features = [] # recording do not handle features
     
-    def __init__(self, sampling_frequency: SamplingFrequencyHz, channel_ids: List[ChannelId]):
-        ExtractorBase.__init__(self, channel_ids)
+    def __init__(self, sampling_frequency: SamplingFrequencyHz, channel_ids: List[ChannelId], dtype):
+        BaseExtractor.__init__(self, channel_ids)
+        
+        self.is_dumpable = True
+        
+        self._sampling_frequency = sampling_frequency
+        self._dtype = np.dtype(dtype)
         
         self._recording_segments: List[RecordingSegment] = []
         
         # initialize main annoation and properties
         self.annotate(is_filtered=False)
-        #~ self.
+        
     
+    def __repr__(self):
+        clsname = self.__class__.__name__
+        nseg = self.get_num_segments()
+        nchan = self.get_num_channels()
+        sf_khz = self.get_sampling_frequency()
+        txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz'
+        return txt
     
     def get_num_segments(self):
         return len(self._recording_segments)
 
-    def add_recording_segment(self, signal_segment: RecordingSegment):
+    def add_recording_segment(self, recording_segment):
         # todo: check channel count and sampling frequency
-        self._recording_segments.append(signal_segment)
+        self._recording_segments.append(recording_segment)
+        recording_segment.set_parent_extractor(self)
 
     def get_sampling_frequency(self):
         return self._sampling_frequency
@@ -47,31 +62,29 @@ class BaseRecording(BaseExtractor):
     def get_num_channels(self):
         return len(self.get_channel_ids())
 
-    
-    def _check_segment_index(self, segment_index: Union[int, None]) -> int:
-        if segment_index is None:
-            if self.get_num_segments() == 1:
-                return 0
-            else:
-                raise ValueError()
-        else:
-            return segment_index
+    def get_dtype(self):
+        return self._dtype
 
     def get_num_samples(self, segment_index: Union[int, None]):
         segment_index = self._check_segment_index(segment_index)
         return self._recording_segments[segment_index].get_num_samples()
-
+    
+    get_num_frames = get_num_samples
+    
     def get_traces(self,
             segment_index: Union[int, None]=None,
-            start: Union[SampleIndex, None]=None,
-            end: Union[SampleIndex, None]=None,
+            start_frame: Union[SampleIndex, None]=None,
+            end_frame: Union[SampleIndex, None]=None,
             channel_ids: Union[List[ChannelId], None]=None,
-            order: Order = Order.K
+            order: Union[Order, None]=None,
         ):
         segment_index = self._check_segment_index(segment_index)
-        channel_indices = self.ids_to_indices(channel_ids, prefer_silce=True)
+        channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
         rs = self._recording_segments[segment_index]
-        return rs.get_traces(start=start, end=end, channel_indices=channel_indices, order=order)
+        traces = rs.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=channel_indices)
+        if order is not None:
+            traces = np.asanyarray(traces, order=order)
+        return traces
 
     def is_filtered(self):
         # the is_filtered is handle with annotation
@@ -84,15 +97,15 @@ class BaseRecording(BaseExtractor):
         My plan is to add also zarr support.
         """
         if format == 'binary':
-            files_path = [ folder / f'traces_{i}.raw' for i in range(self.get_num_segment())]
+            files_path = [ folder / f'traces_{i}.raw' for i in range(self.get_num_segments())]
             dtype = cache_kargs.get('dtype', 'float32')
             keys = ['chunk_size', 'chunk_mb', 'n_jobs', 'joblib_backend']
-            job_kwargs = {cache_kargs[k] for k in keys if k in cache_kargs}
-            write_to_binary_dat_format(self, files_path, time_axis=0, dtype=dtype, **job_kwargs)
+            job_kwargs = {k:cache_kargs[k] for k in keys if k in cache_kargs}
+            write_binary_recording(self, files_path=files_path, time_axis=0, dtype=dtype, **job_kwargs)
             
             from . binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
-                                self.get_num_channels(), dtype, channel_ids=self._channel_ids, time_axis=0)
+                                self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(), time_axis=0)
             
         elif format == 'zarr':
             # TODO implement a format based on zarr
@@ -185,7 +198,7 @@ class BaseRecording(BaseExtractor):
 
     def set_channel_locations(self, locations, channel_ids=None):
         if 'probes' in self._annotations:
-            print('warning: set_channel_locations(..) destroy the probe description, prefer set_probes(..)'
+            print('warning: set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
             self._annotations.pop('probes')
         self.set_property('location', locations,  ids=channel_ids)
         
@@ -202,7 +215,7 @@ class BaseRecording(BaseExtractor):
     
     def set_channel_groups(self, groups, channel_ids=None):
         if 'probes' in self._annotations:
-            print('warning: set_channel_groups(..) destroy the probe description, prefer set_probe(..)'
+            print('warning: set_channel_groups(..) destroy the probe description, prefer set_probe(..)')
             self._annotations.pop('probes')
         self.set_property('group', groups,  ids=channel_ids)
         
@@ -235,13 +248,13 @@ class BaseRecording(BaseExtractor):
 
 
 
-class BaseRecordingSegment(object):
+class BaseRecordingSegment(BaseSegment):
     """
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
 
     def __init__(self):
-        pass
+        BaseSegment.__init__(self)
 
     def get_num_samples(self) -> SampleIndex:
         """Returns the number of samples in this signal block
@@ -253,10 +266,9 @@ class BaseRecordingSegment(object):
         raise NotImplementedError
 
     def get_traces(self,
-                   start: Union[SampleIndex, None] = None,
-                   end: Union[SampleIndex, None] = None,
+                   start_frame: Union[SampleIndex, None] = None,
+                   end_frame: Union[SampleIndex, None] = None,
                    channel_indices: Union[List[ChannelIndex], None] = None,
-                   order: Order = Order.K
                    ) -> np.ndarray:
         """Returns the raw traces, optionally for a subset of samples and/or channels
 

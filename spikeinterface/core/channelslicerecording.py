@@ -1,13 +1,12 @@
-from copy import deepcopy
+from typing import List, Union
+from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
+
 import numpy as np
 
-from .recording import BaseRecording
-
-from .extraction_tools import check_get_traces_args, cast_start_end_frame, check_get_ttl_args
+from .baserecording import BaseRecording, BaseRecordingSegment
 
 
 
-# Encapsulates a sub-dataset
 class ChannelSliceRecording(BaseRecording):
     """
     
