@@ -39,6 +39,10 @@ class BaseRecording(BaseExtractor):
         nchan = self.get_num_channels()
         sf_khz = self.get_sampling_frequency()
         txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz'
+        if 'files_path' in self._kwargs:
+            txt += '\n  files_path: {}'.format(self._kwargs['files_path'])
+        if 'file_path' in self._kwargs:
+            txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
         return txt
     
     def get_num_segments(self):
@@ -97,7 +101,7 @@ class BaseRecording(BaseExtractor):
         My plan is to add also zarr support.
         """
         if format == 'binary':
-            files_path = [ folder / f'traces_{i}.raw' for i in range(self.get_num_segments())]
+            files_path = [ folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
             dtype = cache_kargs.get('dtype', 'float32')
             keys = ['chunk_size', 'chunk_mb', 'n_jobs', 'joblib_backend']
             job_kwargs = {k:cache_kargs[k] for k in keys if k in cache_kargs}

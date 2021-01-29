@@ -14,7 +14,8 @@ class BaseSorting(BaseExtractor):
     """
     def __init__(self, sampling_frequency: SamplingFrequencyHz, unit_ids: List[UnitId]):
         
-        ExtractorBase.__init__(self, unit_ids)
+        BaseExtractor.__init__(self, unit_ids)
+        self._sampling_frequency = sampling_frequency
         self._sorting_segments: List[SortingSegment] = []
 
     def __repr__(self):
@@ -23,6 +24,8 @@ class BaseSorting(BaseExtractor):
         nunits = self.get_num_units()
         sf_khz = self.get_sampling_frequency()
         txt = f'{clsname}: {nunits} nunits - {nseg} segments - {sf_khz:0.1f}kHz'
+        if 'file_path' in self._kwargs:
+            txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
         return txt
 
     @property
@@ -39,6 +42,9 @@ class BaseSorting(BaseExtractor):
         # todo: check consistency with unit ids and freq
         self._sorting_segments.append(sorting_segment)
         sorting_segment.set_parent_extractor(self)
+
+    def get_sampling_frequency(self):
+        return self._sampling_frequency
     
     def get_num_segments(self):
         return len(self._sorting_segments)
@@ -52,6 +58,23 @@ class BaseSorting(BaseExtractor):
         segment_index = self._check_segment_index(segment_index)
         S = self._sorting_segments[segment_index]
         return S.get_unit_spike_train(unit_id=unit_id, start_frame=start_frame, end_frame=end_frame)
+    
+    def _save_data(self, folder, format='npz', **cache_kargs):
+        """
+        This replace the old CacheSortingExtractor but enable more engine 
+        for caching a results. At the moment only npz.
+        """
+        if format == 'npz':
+            assert len(cache_kargs) == 0, 'Sorting.cache() with npz do not support options'
+            
+            from .npzsortingextractor import NpzSortingExtractor
+            save_path = folder / 'sorting_cached.npz'
+            NpzSortingExtractor.write_sorting(self, save_path)
+            cached = NpzSortingExtractor(save_path)
+        else:
+            raise ValueError(f'format {format} not supported')
+        
+        return cached
 
 
 class BaseSortingSegment(BaseSegment):
