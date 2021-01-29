@@ -412,7 +412,14 @@ class BaseExtractor:
         folder.mkdir(parents=True, exist_ok=False)
         
         # dump provenance
-        self.dump(folder / f'provenance.{dump_ext}' )
+        provenance_file = folder / f'provenance.{dump_ext}' 
+        if self.check_if_dumpable():
+            self.dump(provenance_file)
+        else:
+            provenance_file.write_text(
+                    json.dumps({'warning' : 'the provenace is not dumpable!!!'}),
+                    encoding='utf8'
+                )
         
         # save data (done the subclass)
         cached = self._save_data(folder, **cache_kargs)

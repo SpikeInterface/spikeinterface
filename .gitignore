@@ -2,8 +2,13 @@ spikeinterface/core/tests/*.raw
 spikeinterface/core/tests/*.json
 spikeinterface/core/tests/*.pkl
 spikeinterface/core/tests/*.npz
-spikeinterface/core/tests/simple_recording/*
-spikeinterface/core/tests/my_cache_folder/*
+spikeinterface/core/tests/*/*/*.json
+spikeinterface/core/tests/*/*/*.raw
+
+spikeinterface/extractors/tests/*/*/*.json
+spikeinterface/extractors/tests/*/*/*.raw
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
