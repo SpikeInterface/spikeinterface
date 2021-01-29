@@ -20,7 +20,7 @@ class ChannelSliceRecording(BaseRecording):
         
         self._parent_recording = parent_recording
         self._channel_ids = np.asarray(channel_ids)
-        self._renamed_channel_ids = np.asarry(renamed_channel_ids)
+        self._renamed_channel_ids = np.asarray(renamed_channel_ids)
         
         parents_chan_ids = self._parent_recording.get_channel_ids()
         
@@ -28,12 +28,12 @@ class ChannelSliceRecording(BaseRecording):
         assert all(chan_id in parents_chan_ids for chan_id in self._channel_ids), 'channel ids are not all in parents'
         assert len( self._channel_ids) == len( self._renamed_channel_ids), 'renamed channel_ids must be the same size'
         
-        
-        
         #~ self._original_channel_id_lookup = dict(zip(self._renamed_channel_ids, self._channel_ids))
         
-        BaseRecording.__init__(sampling_frequency = parent_recording.get_sampling_frequency(), 
-                                channel_ids=self._renamed_channel_ids)
+        BaseRecording.__init__(self, 
+                                sampling_frequency=parent_recording.get_sampling_frequency(), 
+                                channel_ids=self._renamed_channel_ids,
+                                dtype=parent_recording.get_dtype())
         
         
         self._parent_channel_indices = parent_recording.ids_to_indices(self._channel_ids)
@@ -67,11 +67,10 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
         return self._parent_recording_segment.self.parent_recording_segment()
 
     def get_traces(self,
-                   start: Union[SampleIndex, None] = None,
-                   end: Union[SampleIndex, None] = None,
+                   start_frame: Union[SampleIndex, None] = None,
+                   end_frame: Union[SampleIndex, None] = None,
                    channel_indices: Union[List[ChannelIndex], None] = None,
-                   order: Order = Order.K
                    ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
-        self._parent_channel_indices(start, end, parent_indices, order)
-
+        traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)
+        return traces
