@@ -1,6 +1,7 @@
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
 
+
 class NumpyRecording(BaseRecording):
     """
     In memory recording.
@@ -67,57 +68,77 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 # TODO
 
 class NumpySorting(BaseSorting):
-    pass
-    #~ is_writable = False
+    is_writable = False
 
-    #~ def __init__(self, sampling_frequency, times=None, labels=None):
+    def __init__(self, sampling_frequency, unit_ids=[]):
+        BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        self.is_dumpable = False
+    
+    @staticmethod
+    def from_extractor(source_sorting):
+        """
+        Create a numpy sorting from another exatractor
+        """
+        unit_ids = source_sorting.get_unit_ids()
+        nseg = source_sorting.get_num_segments()
         
+        sorting = NumpySorting(source_sorting.get_sampling_frequency(), unit_ids)
         
+        for segment_index in range(nseg):
+            units_dict = {}
+            for unit_id in unit_ids:
+                    units_dict[unit_id] = source_sorting.get_unit_spike_train(unit_ids, segment_index)
+            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
         
-        #~ BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        sorting.copy_metadata(source_sorting)
         
-        #~ BaseSorting.__init__(self)
-        #~ self._units = {}
-        #~ self.is_dumpable = False
+        return sorting
+    
+    @staticmethod
+    def from_times_labels(times_list, labels_list, sampling_frequency):
+        """
+        Construct sorting extractor from:
+          * an array of spike times (in frames) 
+          * an array of spike labels and adds all the
+        In case of multisegment, it is a list of array.
 
-    #~ def set_times_labels(self, times, labels):
-        #~ '''This function takes in an array of spike times (in frames) and an array of spike labels and adds all the
-        #~ unit information in these lists into the extractor.
-
-        #~ Parameters
-        #~ ----------
-        #~ times: np.array
-            #~ An array of spike times (in frames).
-        #~ labels: np.array
-            #~ An array of spike labels corresponding to the given times.
-        #~ '''
-        #~ units = np.sort(np.unique(labels))
-        #~ for unit in units:
-            #~ times0 = times[np.where(labels == unit)[0]]
-            #~ self.add_unit(unit_id=int(unit), times=times0)
-
-    #~ def add_unit(self, unit_id, times):
-        #~ '''This function adds a new unit with the given spike times.
-
-        #~ Parameters
-        #~ ----------
-        #~ unit_id: int
-            #~ The unit_id of the unit to be added.
-        #~ times: np.array
-            #~ An array of spike times (in frames).
-        #~ '''
-        #~ self._units[unit_id] = dict(times=times)
+        Parameters
+        ----------
+        times_list: list of array (or array)
+            An array of spike times (in frames).
+        labels_list: list of array (or array)
+            An array of spike labels corresponding to the given times.
+        
+        """
+        
+        if isinstance(times_list, np.ndarray):
+            assert isinstance(labels_list, np.ndarray)
+            times_list = [times_list]
+            labels_list = [labels_list]
+        
+        nseg = len(times_list)
+        unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
+        
+        sorting = NumpySorting(sampling_frequency, unit_ids)
+        for i in range(nseg):
+            units_dict = {}
+            for unit_id in unit_ids:
+                times, labels = times_list[i], labels_list[i]
+                units_dict[unit_id] = times[labels == unit_id]
+            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
+        
+        return sorting
 
 
 class NumpySortingSegment(BaseSortingSegment):
-    def __init__(self, units):
+    def __init__(self, units_dict):
         BaseSortingSegment.__init__(self)
-        for unit_id, times in units.items():
+        for unit_id, times in units_dict.items():
             assert times.dtype.kind == 'i', 'numpy array of spike times must be integer'
-        self._units = units
+        self._units_dict = units_dict
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        times = self._units[unit_id]['times']
+        times = self._units_dict[unit_id]
         if start_frame is not None:
             times = times[times >= start_frame]
         if end_frame is not None:

@@ -13,7 +13,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
 
     Parameters
     ----------
-    duration: float
+    duration: float (or list if multi segment)
         Duration in s (default 10)
     num_channels: int
         Number of channels (default 4)
@@ -40,38 +40,56 @@ def toy_example(duration=10, num_channels=4, num_units=10,
         NpzSortingExtractor
     '''
     
+    if isinstance(duration, int):
+        duration = float(duration)
+    
+    if isinstance(duration, float):
+        durations = [duration] * num_segments
+    else:
+        durations = duration
+        assert isinstance(duration, list)
+        assert len(durations) == num_segments
+        assert all(isinstance(d, float) for d in durations)
+    
+    
     waveforms, geom = synthesize_random_waveforms(K=num_units, M=num_channels,
                         average_peak_amplitude=average_peak_amplitude, upsamplefac=upsamplefac, seed=seed)
-    times, labels = synthesize_random_firings(K=K, duration=duration, sampling_frequency=sampling_frequency, seed=seed)
-    print(times, labels)
-    exit()
     
-    labels = labels.astype(np.int64)
-    SX = se.NumpySortingExtractor()
-    SX.set_times_labels(times, labels)
-    X = synthesize_timeseries(sorting=SX, waveforms=waveforms, noise_level=10, sampling_frequency=sampling_frequency,
-                              duration=duration,
-                              waveform_upsamplefac=upsamplefac, seed=seed)
-    SX.set_sampling_frequency(sampling_frequency)
+    unit_ids = np.arange(num_units, dtype='int64')
+    
+    traces_list = []
+    times_list = []
+    labels_list = []
+    for segment_index in range(num_segments):
+        times, labels = synthesize_random_firings(K=num_units, duration=duration, sampling_frequency=sampling_frequency, seed=seed)
+        times_list.append(times)
+        labels_list.append(labels)
 
-    RX = se.NumpyRecordingExtractor(timeseries=X, sampling_frequency=sampling_frequency, geom=geom)
-    RX.is_filtered = True
+        traces = synthesize_timeseries(times, labels, unit_ids, waveforms, sampling_frequency, duration,
+                                noise_level=10, waveform_upsamplefac=upsamplefac, seed=seed)
+        traces_list.append(traces)
+                                  
 
-    if dumpable:
-        if dump_folder is None:
-            dump_folder = 'toy_example'
-        dump_folder = Path(dump_folder)
+    
+    sorting = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency)
+    recording = NumpyRecording(traces_list, sampling_frequency)
+    recording.annotate(is_filtered=True)
+    
+    #~ if dumpable:
+        #~ if dump_folder is None:
+            #~ dump_folder = 'toy_example'
+        #~ dump_folder = Path(dump_folder)
 
-        se.MdaRecordingExtractor.write_recording(RX, dump_folder)
-        RX = se.MdaRecordingExtractor(dump_folder)
-        se.NpzSortingExtractor.write_sorting(SX, dump_folder / 'sorting.npz')
-        SX = se.NpzSortingExtractor(dump_folder / 'sorting.npz')
+        #~ se.MdaRecordingExtractor.write_recording(RX, dump_folder)
+        #~ RX = se.MdaRecordingExtractor(dump_folder)
+        #~ se.NpzSortingExtractor.write_sorting(SX, dump_folder / 'sorting.npz')
+        #~ SX = se.NpzSortingExtractor(dump_folder / 'sorting.npz')
 
-    return RX, SX
+    return recording, sorting
 
 
 
-def synthesize_random_firings(*, K=20, sampling_frequency=30000.0, duration=60, seed=None):
+def synthesize_random_firings(K=20, sampling_frequency=30000.0, duration=60, seed=None):
     if seed is not None:
         np.random.seed(seed)
         seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, K)
@@ -85,22 +103,32 @@ def synthesize_random_firings(*, K=20, sampling_frequency=30000.0, duration=60, 
 
     # events/sec * sec/timepoint * N
     populations = np.ceil(firing_rates / sampling_frequency * N).astype('int')
+    #~ print(populations)
     times = np.zeros(0)
-    labels = np.zeros(0)
+    labels = np.zeros(0, dtype='int64')
 
-    for i, k in enumerate(range(1, K + 1)):
+    #~ for i, k in enumerate(range(1, K + 1)):
+    times = []
+    labels = []
+    
+    for unit_id in range(K):
         refr_timepoints = refr / 1000 * sampling_frequency
 
-        times0 = np.random.rand(populations[k - 1]) * (N - 1) + 1
+        times0 = np.random.rand(populations[unit_id]) * (N - 1) + 1
 
         ## make an interesting autocorrelogram shape
-        times0 = np.hstack((times0, times0 + rand_distr2(refr_timepoints, refr_timepoints * 20, times0.size, seeds[i])))
-        times0 = times0[np.random.RandomState(seed=seeds[i]).choice(times0.size, int(times0.size / 2))]
-        times0 = times0[np.where((0 <= times0) & (times0 < N))]
+        times0 = np.hstack((times0, times0 + rand_distr2(refr_timepoints, refr_timepoints * 20, times0.size, seeds[unit_id])))
+        times0 = times0[np.random.RandomState(seed=seeds[unit_id]).choice(times0.size, int(times0.size / 2))]
+        times0 = times0[(0 <= times0) & (times0 < N)]
 
         times0 = enforce_refractory_period(times0, refr_timepoints)
-        times = np.hstack((times, times0))
-        labels = np.hstack((labels, k * np.ones(times0.shape)))
+        labels0 = np.ones(times0.size,dtype='int64')
+        
+        times.append(times0.astype('int64'))
+        labels.append(labels0)
+        
+    times = np.concatenate(times)
+    labels = np.concatenate(labels)
 
     sort_inds = np.argsort(times)
     times = times[sort_inds]
@@ -259,7 +287,9 @@ def synthesize_single_waveform(N=800, durations=[200, 10, 30, 200], amps=[0.5, 1
 
     return Y
 
-def synthesize_timeseries(sorting, waveforms, noise_level=1, sampling_frequency=30000.0, duration=60, waveform_upsamplefac=13, seed=None):
+def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampling_frequency, duration,
+                                noise_level=10, waveform_upsamplefac=13, seed=None):
+    
     num_timepoints = np.int64(sampling_frequency * duration)
     waveform_upsamplefac = int(waveform_upsamplefac)
     W = waveforms
@@ -275,10 +305,10 @@ def synthesize_timeseries(sorting, waveforms, noise_level=1, sampling_frequency=
     else:
         X = np.random.randn(M, N) * noise_level
 
-    unit_ids = sorting.get_unit_ids()
     for k0 in unit_ids:
         waveform0 = waveforms[:, :, k0 - 1]
-        times0 = sorting.get_unit_spike_train(unit_id=k0)
+        times0 = spike_times[spike_labels == k0]
+        
         for t0 in times0:
             amp0 = 1
             frac_offset = int(np.floor((t0 - np.floor(t0)) * waveform_upsamplefac))
@@ -288,4 +318,8 @@ def synthesize_timeseries(sorting, waveforms, noise_level=1, sampling_frequency=
                                                                     frac_offset::waveform_upsamplefac] * amp0
 
     return X
+
+
+#~ if __name__ == '__main__':
+    #~ rec, sorting = toy_example(num_segments=2)
 

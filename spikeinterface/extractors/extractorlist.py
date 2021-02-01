@@ -1,9 +1,15 @@
 from .numpyextractors import NumpyRecording , NumpySorting
 
+from .neoextractors import(
+    MEArecRecordingExtractor, MEArecSortingExtractor,
+    )
+
 
 recording_extractor_full_list = [
     NumpyRecording,
     
+    # neo based
+    MEArecRecordingExtractor,
     
     ##OLD
     #~ MdaRecordingExtractor,
@@ -40,6 +46,9 @@ recording_extractor_full_list = [
 
 sorting_extractor_full_list = [
     NumpySorting,
+    
+    # neo based
+    MEArecSortingExtractor,
     
     ##OLD
     #~ MdaSortingExtractor,

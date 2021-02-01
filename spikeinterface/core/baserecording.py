@@ -37,7 +37,7 @@ class BaseRecording(BaseExtractor):
         clsname = self.__class__.__name__
         nseg = self.get_num_segments()
         nchan = self.get_num_channels()
-        sf_khz = self.get_sampling_frequency()
+        sf_khz = self.get_sampling_frequency() / 1000.
         txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz'
         if 'files_path' in self._kwargs:
             txt += '\n  files_path: {}'.format(self._kwargs['files_path'])

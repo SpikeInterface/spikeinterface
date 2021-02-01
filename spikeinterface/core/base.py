@@ -34,7 +34,8 @@ class BaseExtractor:
         
         # main_ids will either channel_ids or units_ids
         # it is used for properties and features
-        self._main_ids = np.array(main_ids, dtype=int)
+        #~ self._main_ids = np.array(main_ids, dtype=int)
+        self._main_ids = np.array(main_ids)
 
         # dict at object level
         self._annotations = {}
@@ -141,7 +142,7 @@ class BaseExtractor:
         """
         values = np.asarray(values)
         if ids is None:
-            assert values.size == self._main_ids.size
+            assert values.shape[0] == self._main_ids.size
             self._properties[key] = values
         else:
             assert key in self._properties, 'The key is not in properties'
