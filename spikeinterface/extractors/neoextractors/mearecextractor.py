@@ -25,7 +25,8 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename' : file_path}
         NeoBaseRecordingExtractor.__init__(self, **neo_kwargs)
         
-        # channel location
+        # channel location 
+        # this will be handled with probeinterface (when Alessio will do his homework)
         recgen = self.neo_reader._recgen
         locations = np.array(recgen.channel_positions)
         if locs_2d:
@@ -41,15 +42,8 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
             if locations.shape[1] == 3:
                 locations = locations[:, 1:]
         
-        print(locations.shape)
-        print(self._main_ids)
         self.set_channel_locations(locations)
     
-    @staticmethod
-    def write_recording(recording, save_path, check_suffix=True):
-        # Alessio : I think we don't need this
-        raise NotImplementedError
-
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
     mode = 'file'
@@ -62,9 +56,3 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
                     sampling_frequency=None, # auto guess is correct here
                     use_natural_unit_ids=use_natural_unit_ids,
                     **neo_kwargs)
-
-
-    @staticmethod
-    def write_sorting(sorting, save_path, sampling_frequency, check_suffix=True):
-        # Alessio : I think we don't need this
-        raise NotImplementedError

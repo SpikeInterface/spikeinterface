@@ -1,1 +1,2 @@
 from .mearecextractor import MEArecRecordingExtractor, MEArecSortingExtractor
+from .spikeglxextractor import SpikeGLXRecordingExtractor
