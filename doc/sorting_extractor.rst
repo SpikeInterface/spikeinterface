@@ -20,6 +20,8 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 .. code-block:: python
 
     from spikeextractors import SortingExtractor
+    from spikeextractors.extraction_tools import check_get_unit_spike_train
+
 
     class MyFormatSortingExtractor(SortingExtractor):
         def __init__(self, ex_parameter_1, ex_parameter_2):
@@ -37,6 +39,7 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 
             return unit_ids
 
+        @check_get_unit_spike_train
         def get_unit_spike_train(self, unit_id, start_frame=None, end_frame=None):
 
             '''Code to extract spike frames from the specified unit.
