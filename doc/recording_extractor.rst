@@ -22,6 +22,7 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 .. code-block:: python
 
     from spikeextractors import RecordingExtractor
+    from spikeextractors.extraction_tools import check_get_traces_args, check_get_ttl_args
 
     class MyFormatRecordingExtractor(RecordingExtractor):
         def __init__(self, file_path, ex_parameter):
@@ -54,7 +55,8 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 
             return sampling_frequency
 
-        def get_traces(self, channel_ids=None, start_frame=None, end_frame=None):
+        @check_get_traces_args
+        def get_traces(self, channel_ids=None, start_frame=None, end_frame=None, return_scaled=True):
             '''This function extracts and returns a trace from the recorded data from the
             given channels ids and the given start and end frame. It will return
             traces from within three ranges:
@@ -80,6 +82,8 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
             channel_ids: array_like
                 A list or 1D array of channel ids (ints) from which each trace will be
                 extracted.
+            return_scaled: bool
+                If True, traces are returned after scaling (using gain/offset). If False, the raw traces are returned
 
             Returns
             ----------
@@ -93,6 +97,7 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
             return traces
 
         # optional
+        @check_get_ttl_args
         def get_ttl_events(self, start_frame=None, end_frame=None, channel_id=0):
             '''
             Returns an array with frames of TTL signals. To be implemented in sub-classes
