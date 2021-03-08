@@ -20,7 +20,7 @@ def test_toy_example():
     
     #~ import matplotlib.pyplot as plt
     #~ fig, ax = plt.subplots()
-    #~ ax.plot(rec.get_traces().T)
+    #~ ax.plot(rec.get_traces())
     #~ plt.show()
 
     

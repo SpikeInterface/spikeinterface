@@ -22,7 +22,7 @@ class _NeoBaseExtractor:
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
-    def __init__(self, channel_selection=None, **neo_kwargs):
+    def __init__(self, stream_id=None, **neo_kwargs):
         
         _NeoBaseExtractor.__init__(self, **neo_kwargs)
 
@@ -30,33 +30,38 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # TODO propose a meachanisim to select the appropriate channel groups
         # in neo one channel group have the same dtype/sampling_rate/group_id
         #~ channel_indexes_list = self.neo_reader.get_group_signal_channel_indexes()
+        stream_channels = self.neo_reader.header['signal_streams']
+        stream_ids = stream_channels['id']
+        if stream_id is None:
+            if stream_channels.size > 1:
+                raise ValueError(f'This reader have several streams({stream_ids}), specify it with stream_id=')
+            else:
+                stream_id = stream_ids[0]
+        else:
+            assert stream_id in stream_ids, f'stream_id {stream_id} is no in {stream_ids}'
         
-        self.channel_selection = channel_selection
+        self.stream_index = list(stream_ids).index(stream_id)
+        self.stream_id = stream_id
+        
+        # need neo 0.10.0
+        signal_channels = self.neo_reader.header['signal_channels']
+        mask = signal_channels['stream_id'] == stream_id
+        signal_channels = signal_channels[mask]
         
         # check channel groups
-        chan_ids = self.neo_reader.header['signal_channels']['id']
-        group_id = self.neo_reader.header['signal_channels']['group_id']
-        raw_dtypes = self.neo_reader.header['signal_channels']['dtype']
-        if self.channel_selection is not None:
-            chan_ids = chan_ids[self.channel_selection]
-            group_id = group_id[self.channel_selection]
-            raw_dtypes = raw_dtypes[self.channel_selection]
-        assert np.unique(group_id).size == 1,\
-                'This file have several channel groups, use channel_selection=[...] to specify channel selection'
+        chan_ids = signal_channels['id']
+        raw_dtypes = signal_channels['dtype']
         
-        assert np.unique(raw_dtypes).size == 1,\
-                'This file have several dtype across channel, use channel_selection=[...] to specify channel selection'
-        
-        sampling_frequency = self.neo_reader.get_signal_sampling_rate(channel_indexes=self.channel_selection)
+        sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
         # TODO propose a mechanism to select scaled/raw dtype
         scaled_dtype = 'float32'
         BaseRecording.__init__(self, sampling_frequency, chan_ids, scaled_dtype)
         
         # spikeinterface for units to be uV implicitly
-        units = self.neo_reader.header['signal_channels']['units']
+        units = signal_channels['units']
         if not np.all(np.isin(units, ['V', 'mV', 'uV'])):
             # check that units are V, mV or uV
-            error = f'This extractor base on  neo.{self.NeoRawIOClass} have strange units not in (V, mV, uV)'
+            error = f'This extractor based on  neo.{self.NeoRawIOClass} have strange units not in (V, mV, uV) {units}'
             print(error)
         self.additional_gain = np.ones(units.size, dtype='float')
         self.additional_gain[units == 'V'] = 1e6
@@ -66,23 +71,24 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
-            rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.additional_gain)
+            rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index, self.additional_gain)
             self.add_recording_segment(rec_segment)
 
 class NeoRecordingSegment(BaseRecordingSegment):
-    def __init__(self, neo_reader, segment_index, additional_gain):
+    def __init__(self, neo_reader, segment_index, stream_index, additional_gain):
         BaseRecordingSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
+        self.stream_index = stream_index
         self.additional_gain = additional_gain
 
     def get_num_samples(self):
         n = self.neo_reader.get_signal_size(block_index=0,
                         seg_index=self.segment_index,
-                        channel_indexes=None)
+                        stream_index=self.stream_index)
         return n
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def get_traces(self, start_frame, end_frame, channel_indices, return_scaled=True):
         # in neo rawio channel can acces by names/ids/indexes
         # there is no garranty that ids/names are unique on some formats
         raw_traces = self.neo_reader.get_analogsignal_chunk(
@@ -90,16 +96,22 @@ class NeoRecordingSegment(BaseRecordingSegment):
                             seg_index=self.segment_index,
                             i_start=start_frame,
                             i_stop=end_frame,
-                            channel_indexes=channel_indices
+                            stream_index=self.stream_index,
+                            channel_indexes=channel_indices,
                         )
-
-        # rescale traces to natural units (can be anything)
-        scaled_traces = self.neo_reader.rescale_signal_raw_to_float(raw_traces,
-                                                            dtype='float32', channel_indexes=channel_indices)
-        # and then to uV
-        scaled_traces *= self.additional_gain[:, channel_indices]
-
-        return scaled_traces
+        
+        if return_scaled:
+            # rescale traces to natural units (can be anything)
+            scaled_traces = self.neo_reader.rescale_signal_raw_to_float(raw_traces,
+                                                                dtype='float32', stream_index=self.stream_index,
+                                                                channel_indexes=channel_indices)
+            # and then to uV
+            if channel_indices is None:
+                channel_indices = slice(None)
+            scaled_traces *= self.additional_gain[:, channel_indices]
+            return scaled_traces
+        else:
+            return raw_traces
 
 
 
@@ -116,14 +128,14 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         if sampling_frequency is None:
             sampling_frequency = self._auto_guess_sampling_frequency()
         
-        unit_channels = self.neo_reader.header['unit_channels']
+        spike_channels = self.neo_reader.header['spike_channels']
         
         if use_natural_unit_ids:
-            unit_ids = unit_channels['id']
+            unit_ids = spike_channels['id']
             assert np.unique(unit_ids).size == unit_ids.size, 'unit_ids is have duplications'
         else:
             # use interger based unit_ids
-            unit_ids = np.arange(unit_channels.size, dtype='int64')
+            unit_ids = np.arange(spike_channels.size, dtype='int64')
         
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
@@ -178,7 +190,7 @@ class NeoSortingSegment(BaseSortingSegment):
     
     def get_natural_ids(self):
         if self._natural_ids is None:
-            self._natural_ids = list(self._parent_extractor().neo_reader.header['unit_channels']['id'])
+            self._natural_ids = list(self._parent_extractor().neo_reader.header['spike_channels']['id'])
         return self._natural_ids
         
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):

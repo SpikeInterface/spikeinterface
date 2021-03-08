@@ -3,6 +3,8 @@ from .numpyextractors import NumpyRecording , NumpySorting
 from .neoextractors import(
     MEArecRecordingExtractor, MEArecSortingExtractor,
     SpikeGLXRecordingExtractor,
+    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor,
+    IntanRecordingExtractor,
     )
 
 
@@ -12,19 +14,23 @@ recording_extractor_full_list = [
     # neo based
     MEArecRecordingExtractor,
     SpikeGLXRecordingExtractor,
+    OpenEphysLegacyRecordingExtractor,
+    OpenEphysBinaryRecordingExtractor,
+    IntanRecordingExtractor,
+
     
     ##OLD
     #~ MdaRecordingExtractor,
-    #~ MEArecRecordingExtractor,
+    #~ MEArecRecordingExtractor,       OK
     #~ BiocamRecordingExtractor,
     #~ ExdirRecordingExtractor,
-    #~ OpenEphysRecordingExtractor,
-    #~ IntanRecordingExtractor,
+    #~ OpenEphysRecordingExtractor,  OK
+    #~ IntanRecordingExtractor, 
     #~ BinDatRecordingExtractor,
     #~ KlustaRecordingExtractor,
     #~ KiloSortRecordingExtractor,
     #~ SpykingCircusRecordingExtractor,
-    #~ SpikeGLXRecordingExtractor,
+    #~ SpikeGLXRecordingExtractor,    OK
     #~ PhyRecordingExtractor,
     #~ MaxOneRecordingExtractor,
     #~ Mea1kRecordingExtractor,
