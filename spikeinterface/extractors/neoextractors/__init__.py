@@ -1,2 +1,5 @@
-from .mearecextractor import MEArecRecordingExtractor, MEArecSortingExtractor
-from .spikeglxextractor import SpikeGLXRecordingExtractor
+from .mearec import MEArecRecordingExtractor, MEArecSortingExtractor
+from .spikeglx import SpikeGLXRecordingExtractor
+from .openephys import OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor
+from .intan import IntanRecordingExtractor
+

@@ -50,7 +50,7 @@ def test_NumpySorting():
     labels[1::3] = 1
     labels[2::3] = 2
     sorting = NumpySorting.from_times_labels(times, labels, sampling_frequency)
-    #~ print(sorting)
+    print(sorting)
     assert sorting.get_num_segments() == 1
 
     sorting = NumpySorting.from_times_labels([times]*3, [labels]*3, sampling_frequency)
@@ -71,5 +71,5 @@ def test_NumpySorting():
 
 if __name__ == '__main__':
     _clean_all()
-    #~ test_NumpyRecording()
+    test_NumpyRecording()
     test_NumpySorting()

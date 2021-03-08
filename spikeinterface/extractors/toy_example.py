@@ -6,7 +6,7 @@ from spikeinterface.extractors import NumpyRecording, NumpySorting
 
 def toy_example(duration=10, num_channels=4, num_units=10,
                 sampling_frequency=30000.0, num_segments=2,
-                average_peak_amplitude=-100, upsamplefac=13,
+                average_peak_amplitude=-100, upsample_factor=13,
                 dumpable=False, dump_folder=None, seed=None):
     '''
     Creates toy recording and sorting extractors.
@@ -52,8 +52,8 @@ def toy_example(duration=10, num_channels=4, num_units=10,
         assert all(isinstance(d, float) for d in durations)
     
     
-    waveforms, geom = synthesize_random_waveforms(K=num_units, M=num_channels,
-                        average_peak_amplitude=average_peak_amplitude, upsamplefac=upsamplefac, seed=seed)
+    waveforms, geom = synthesize_random_waveforms(num_units=num_units, M=num_channels,
+                        average_peak_amplitude=average_peak_amplitude, upsample_factor=upsample_factor, seed=seed)
     
     unit_ids = np.arange(num_units, dtype='int64')
     
@@ -61,12 +61,12 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     times_list = []
     labels_list = []
     for segment_index in range(num_segments):
-        times, labels = synthesize_random_firings(K=num_units, duration=duration, sampling_frequency=sampling_frequency, seed=seed)
+        times, labels = synthesize_random_firings(num_units=num_units, duration=duration, sampling_frequency=sampling_frequency, seed=seed)
         times_list.append(times)
         labels_list.append(labels)
 
         traces = synthesize_timeseries(times, labels, unit_ids, waveforms, sampling_frequency, duration,
-                                noise_level=10, waveform_upsamplefac=upsamplefac, seed=seed)
+                                noise_level=10, waveform_upsample_factor=upsample_factor, seed=seed)
         traces_list.append(traces)
                                   
 
@@ -89,14 +89,14 @@ def toy_example(duration=10, num_channels=4, num_units=10,
 
 
 
-def synthesize_random_firings(K=20, sampling_frequency=30000.0, duration=60, seed=None):
+def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration=60, seed=None):
     if seed is not None:
         np.random.seed(seed)
-        seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, K)
+        seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
     else:
-        seeds = np.random.randint(0, 2147483647, K)
+        seeds = np.random.randint(0, 2147483647, num_units)
 
-    firing_rates = 3 * np.ones((K))
+    firing_rates = 3 * np.ones((num_units))
     refr = 4
 
     N = np.int64(duration * sampling_frequency)
@@ -107,11 +107,11 @@ def synthesize_random_firings(K=20, sampling_frequency=30000.0, duration=60, see
     times = np.zeros(0)
     labels = np.zeros(0, dtype='int64')
 
-    #~ for i, k in enumerate(range(1, K + 1)):
+    #~ for i, k in enumerate(range(1, num_units + 1)):
     times = []
     labels = []
     
-    for unit_id in range(K):
+    for unit_id in range(num_units):
         refr_timepoints = refr / 1000 * sampling_frequency
 
         times0 = np.random.rand(populations[unit_id]) * (N - 1) + 1
@@ -164,13 +164,13 @@ def enforce_refractory_period(times_in, refr):
 
 
 
-def synthesize_random_waveforms(M=5, T=500, K=20, upsamplefac=13, timeshift_factor=3, average_peak_amplitude=-10,
+def synthesize_random_waveforms(M=5, T=500, num_units=20, upsample_factor=13, timeshift_factor=3, average_peak_amplitude=-10,
                                 seed=None):
     if seed is not None:
         np.random.seed(seed)
-        seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, K)
+        seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
     else:
-        seeds = np.random.randint(0, 2147483647, K)
+        seeds = np.random.randint(0, 2147483647, num_units)
     geometry = None
     avg_durations = [200, 10, 30, 200]
     avg_amps = [0.5, 10, -1, 0]
@@ -191,20 +191,20 @@ def synthesize_random_waveforms(M=5, T=500, K=20, upsamplefac=13, timeshift_fact
     rand_amps_stdev = np.array(rand_amps_stdev)
     rand_amp_factor_range = np.array(rand_amp_factor_range)
 
-    neuron_locations = get_default_neuron_locations(M, K, geometry)
+    neuron_locations = get_default_neuron_locations(M, num_units, geometry)
 
     ## The waveforms_out
-    WW = np.zeros((M, T * upsamplefac, K))
+    WW = np.zeros((M, T * upsample_factor, num_units))
 
-    for i, k in enumerate(range(1, K + 1)):
+    for i, k in enumerate(range(1, num_units + 1)):
         for m in range(1, M + 1):
             diff = neuron_locations[:, k - 1] - geometry[:, m - 1]
             dist = np.sqrt(np.sum(diff ** 2))
             durations0 = np.maximum(np.ones(avg_durations.shape),
-                                    avg_durations + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_durations_stdev) * upsamplefac
+                                    avg_durations + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_durations_stdev) * upsample_factor
             amps0 = avg_amps + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_amps_stdev
-            waveform0 = synthesize_single_waveform(N=T * upsamplefac, durations=durations0, amps=amps0)
-            waveform0 = np.roll(waveform0, int(timeshift_factor * dist * upsamplefac))
+            waveform0 = synthesize_single_waveform(N=T * upsample_factor, durations=durations0, amps=amps0)
+            waveform0 = np.roll(waveform0, int(timeshift_factor * dist * upsample_factor))
             waveform0 = waveform0 * np.random.RandomState(seed=seeds[i]).uniform(rand_amp_factor_range[0], rand_amp_factor_range[1])
             WW[m - 1, :, k - 1] = waveform0 / (geom_spread_coef1 + dist * geom_spread_coef2)
 
@@ -214,12 +214,12 @@ def synthesize_random_waveforms(M=5, T=500, K=20, upsamplefac=13, timeshift_fact
     return (WW, geometry.T)
 
 
-def get_default_neuron_locations(M, K, geometry):
+def get_default_neuron_locations(M, num_units, geometry):
     num_dims = geometry.shape[0]
-    neuron_locations = np.zeros((num_dims, K))
-    for k in range(1, K + 1):
-        if K > 0:
-            ind = (k - 1) / (K - 1) * (M - 1) + 1
+    neuron_locations = np.zeros((num_dims, num_units))
+    for k in range(1, num_units + 1):
+        if num_units > 0:
+            ind = (k - 1) / (num_units - 1) * (M - 1) + 1
             ind0 = int(ind)
             if ind0 == M:
                 ind0 = M - 1
@@ -288,22 +288,22 @@ def synthesize_single_waveform(N=800, durations=[200, 10, 30, 200], amps=[0.5, 1
     return Y
 
 def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampling_frequency, duration,
-                                noise_level=10, waveform_upsamplefac=13, seed=None):
+                                noise_level=10, waveform_upsample_factor=13, seed=None):
     
-    num_timepoints = np.int64(sampling_frequency * duration)
-    waveform_upsamplefac = int(waveform_upsamplefac)
+    num_samples = np.int64(sampling_frequency * duration)
+    waveform_upsample_factor = int(waveform_upsample_factor)
     W = waveforms
 
-    M, TT, K = W.shape[0], W.shape[1], W.shape[2]
-    T = int(TT / waveform_upsamplefac)
-    Tmid = int(np.ceil((T + 1) / 2 - 1))
 
-    N = num_timepoints
+    num_channels, full_width, num_units = W.shape[0], W.shape[1], W.shape[2]
+    width = int(full_width / waveform_upsample_factor)
+    half_width = int(np.ceil((width + 1) / 2 - 1))
+
 
     if seed is not None:
-        X = np.random.RandomState(seed=seed).randn(M, N) * noise_level
+        traces = np.random.RandomState(seed=seed).randn(num_samples, num_channels) * noise_level
     else:
-        X = np.random.randn(M, N) * noise_level
+        traces = np.random.randn(num_samples, num_channels) * noise_level
 
     for k0 in unit_ids:
         waveform0 = waveforms[:, :, k0 - 1]
@@ -311,15 +311,19 @@ def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampli
         
         for t0 in times0:
             amp0 = 1
-            frac_offset = int(np.floor((t0 - np.floor(t0)) * waveform_upsamplefac))
-            tstart = np.int64(np.floor(t0)) - Tmid
-            if (0 <= tstart) and (tstart + T <= N):
-                X[:, tstart:tstart + T] = X[:, tstart:tstart + T] + waveform0[:,
-                                                                    frac_offset::waveform_upsamplefac] * amp0
+            frac_offset = int(np.floor((t0 - np.floor(t0)) * waveform_upsample_factor))
+            # note for later this frac_offset is supposed to mimic jitter but
+            # is always 0 : TODO improve this
+            i_start = np.int64(np.floor(t0)) - half_width
+            if (0 <= i_start) and (i_start + width <= num_samples):
+                wf = waveform0[:, frac_offset::waveform_upsample_factor] * amp0
+                traces[i_start:i_start + width, :] += wf.T
 
-    return X
+    return traces
 
 
-#~ if __name__ == '__main__':
-    #~ rec, sorting = toy_example(num_segments=2)
+if __name__ == '__main__':
+    rec, sorting = toy_example(num_segments=2)
+    print(rec)
+    print(sorting)
 
