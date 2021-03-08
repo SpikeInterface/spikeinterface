@@ -14,7 +14,7 @@ else:
 
 class TestWidgets(unittest.TestCase):
     def setUp(self):
-        self._rec, self._sorting = se.toy_example(num_channels=4, duration=10, num_segments=1)
+        self._rec, self._sorting = se.toy_example(num_channels=10, duration=10, num_segments=1)
         self.num_units = len(self._sorting.get_unit_ids())
 
     def tearDown(self):
@@ -22,9 +22,10 @@ class TestWidgets(unittest.TestCase):
 
     def test_timeseries(self):
         sw.plot_timeseries(self._rec)
+        plt.show()
 
-    def test_rasters(self):
-        sw.plot_rasters(self._sorting)
+    #~ def test_rasters(self):
+        #~ sw.plot_rasters(self._sorting)
 
     #~ def test_spectrum(self):
         #~ sw.plot_spectrum(self._rec)

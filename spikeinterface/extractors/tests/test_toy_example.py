@@ -19,10 +19,12 @@ def test_toy_example():
     print(rec)
     print(sorting)
     
-    #~ import matplotlib.pyplot as plt
-    #~ fig, ax = plt.subplots()
-    #~ ax.plot(rec.get_traces())
-    #~ plt.show()
+    #~ print(rec.get_channel_locations())
+    
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(rec.get_traces())
+    plt.show()
 
     
 if __name__ == '__main__':
