@@ -122,7 +122,7 @@ def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration
         times0 = times0[(0 <= times0) & (times0 < N)]
 
         times0 = enforce_refractory_period(times0, refr_timepoints)
-        labels0 = np.ones(times0.size,dtype='int64')
+        labels0 = np.ones(times0.size,dtype='int64') * unit_id
         
         times.append(times0.astype('int64'))
         labels.append(labels0)

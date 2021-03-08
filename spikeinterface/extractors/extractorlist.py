@@ -35,7 +35,7 @@ recording_extractor_full_list = [
     #~ ExdirRecordingExtractor,
     #~ OpenEphysRecordingExtractor,  OK
     #~ IntanRecordingExtractor,              OK
-    #~ BinDatRecordingExtractor,
+    #~ BinDatRecordingExtractor,            OK
     #~ KlustaRecordingExtractor,
     #~ KiloSortRecordingExtractor,
     #~ SpykingCircusRecordingExtractor,

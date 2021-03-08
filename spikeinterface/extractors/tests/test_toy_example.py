@@ -6,17 +6,18 @@ from spikeinterface.extractors import toy_example
 
 
 def test_toy_example():
-    rec, sorting = toy_example(num_segments=2)
+    rec, sorting = toy_example(num_segments=2, num_units=10)
     assert rec.get_num_segments() == 2
     assert sorting.get_num_segments() == 2
+    assert sorting.get_num_units() == 10
     #~ print(rec)
     #~ print(sorting)
     
     rec, sorting = toy_example(num_segments=1)
     assert rec.get_num_segments() == 1
     assert sorting.get_num_segments() == 1
-    #~ print(rec)
-    #~ print(sorting)
+    print(rec)
+    print(sorting)
     
     #~ import matplotlib.pyplot as plt
     #~ fig, ax = plt.subplots()
