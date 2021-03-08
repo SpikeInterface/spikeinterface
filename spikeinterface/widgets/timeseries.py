@@ -4,7 +4,7 @@ from matplotlib.ticker import MaxNLocator
 from .basewidget import BaseWidget
 
 
-def plot_timeseries(recording, channel_ids=None, trange=None, color_groups=False, color=None, 
+def plot_timeseries(recording, channel_ids=None, time_range=None, color_groups=False, color=None, 
                     figure=None, ax=None):
     """
     Plots recording timeseries.
@@ -17,7 +17,7 @@ def plot_timeseries(recording, channel_ids=None, trange=None, color_groups=False
         The segment index.
     channel_ids: list
         The channel ids to display.
-    trange: list
+    time_range: list
         List with start time and end time
     color_groups: bool
         If True groups are plotted with different colors
@@ -36,7 +36,7 @@ def plot_timeseries(recording, channel_ids=None, trange=None, color_groups=False
     W = TimeseriesWidget(
         recording=recording,
         channel_ids=channel_ids,
-        trange=trange,
+        time_range=time_range,
         color_groups=color_groups,
         color=color,
         figure=figure,
@@ -47,7 +47,7 @@ def plot_timeseries(recording, channel_ids=None, trange=None, color_groups=False
 
 
 class TimeseriesWidget(BaseWidget):
-    def __init__(self, *, recording, segment_index=None, channel_ids=None,  trange=None,
+    def __init__(self, *, recording, segment_index=None, channel_ids=None,  time_range=None,
                  color_groups=False, color=None, figure=None,  ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._recording = recording
@@ -63,18 +63,21 @@ class TimeseriesWidget(BaseWidget):
 
         if self._visible_channels is None:
             self._visible_channels = recording.get_channel_ids()
-        self._visible_trange = trange
-        if self._visible_trange is None:
-            self._visible_trange = [0, np.minimum(10000, recording.get_num_frames(segment_index=self.segment_index))]
-        else:
-            assert len(trange) == 2, "'trange' should be a list with start and end time in seconds"
-            self._visible_trange = [int(t * recording.get_sampling_frequency()) for t in trange]
+        
+        fs = recording.get_sampling_frequency()
+        if time_range is None:
+            time_range=(0, 1.)
+        time_range = np.array(time_range)
+        
+        self._frame_range = (time_range * fs).astype('int64')
+        a_max = self._recording.get_num_frames(segment_index=self.segment_index)
+        self._frame_range = np.clip(self._frame_range, 0, a_max)
+ 
         self._initialize_stats()
 
         # self._vspacing = self._mean_channel_std * 20
         self._vspacing = self._max_channel_amp * 1.5
-        self._visible_trange = self._fix_trange(self._visible_trange)
-        self._ax = ax
+        
         self._color_groups = color_groups
         self._color = color
         if color_groups:
@@ -99,11 +102,11 @@ class TimeseriesWidget(BaseWidget):
         chunk0 = self._recording.get_traces(
             segment_index=self.segment_index,
             channel_ids=self._visible_channels,
-            start_frame=self._visible_trange[0],
-            end_frame=self._visible_trange[1]
+            start_frame=self._frame_range[0],
+            end_frame=self._frame_range[1]
         )
 
-        self.ax.set_xlim(self._visible_trange[0] / self._sampling_frequency, self._visible_trange[1] / self._sampling_frequency)
+        self.ax.set_xlim(self._frame_range[0] / self._sampling_frequency, self._frame_range[1] / self._sampling_frequency)
         self.ax.set_ylim(-self._vspacing, self._vspacing * len(self._visible_channels))
         self.ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
         self.ax.get_yaxis().set_ticks([])
@@ -112,37 +115,23 @@ class TimeseriesWidget(BaseWidget):
         self._plots = {}
         self._plot_offsets = {}
         offset0 = self._vspacing * (len(self._visible_channels) - 1)
-        tt = np.arange(self._visible_trange[0], self._visible_trange[1]) / self._sampling_frequency
+        times = np.arange(self._frame_range[0], self._frame_range[1]) / self._sampling_frequency
+        
         for im, m in enumerate(self._visible_channels):
             self._plot_offsets[m] = offset0
             if self._color_groups:
-                group = self._recording.get_channel_groups(channel_ids=[m])[0]
-                group_color_idx = self._group_color_map[group]
-                self._plots[m] = self.ax.plot(tt, self._plot_offsets[m] + chunk0[:, im],
-                                              color=self._colors[group_color_idx])
+                color=self._colors[group_color_idx]
             else:
-                self._plots[m] = self.ax.plot(tt, self._plot_offsets[m] + chunk0[:, im:], color=self._color)
+                color=self._color
+            self._plots[m] = self.ax.plot(times, self._plot_offsets[m] + chunk0[:, im], color=color)
             offset0 = offset0 - self._vspacing
-
-    def _fix_trange(self, trange):
-        N = self._recording.get_num_frames(segment_index=self.segment_index)
-        if trange[1] > N:
-            # trange[0] += N - trange[1]
-            # trange[1] = N - trange[1]
-            trange[1] = N
-        if trange[0] < 0:
-            # trange[1] += -trange[0]
-            trange[0] = 0
-        # trange[0] = np.maximum(0, trange[0])
-        # trange[1] = np.minimum(N, trange[1])
-        return trange
 
     def _initialize_stats(self):
         chunk0 = self._recording.get_traces(
             segment_index=self.segment_index,
             channel_ids=self._visible_channels,
-            start_frame=self._visible_trange[0],
-            end_frame=self._visible_trange[1]
+            start_frame=self._frame_range[0],
+            end_frame=self._frame_range[1]
         )
         
         self._mean_channel_std = np.mean(np.std(chunk0, axis=0))

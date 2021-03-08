@@ -1,3 +1,7 @@
+# most important extractor are in spikeinterface.core
+from spikeinterface.core import BinaryRecordingExtractor, NpzSortingExtractor
+
+
 from .numpyextractors import NumpyRecording , NumpySorting
 
 from .neoextractors import (
@@ -14,6 +18,9 @@ from .neoextractors import (
 
 
 recording_extractor_full_list = [
+BinaryRecordingExtractor,
+
+    # natively implemented in spikeinterface.extractors
     NumpyRecording,
     
     # neo based
@@ -62,6 +69,9 @@ recording_extractor_full_list = [
 #~ installed_recording_extractor_list = [rx for rx in recording_extractor_full_list if rx.installed]
 
 sorting_extractor_full_list = [
+    NpzSortingExtractor,
+    
+    # natively implemented in spikeinterface.extractors
     NumpySorting,
     
     # neo based

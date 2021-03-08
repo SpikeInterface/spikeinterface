@@ -12,6 +12,7 @@ import datetime
 import numpy as np
 
 from .default import get_global_tmp_folder, is_set_global_tmp_folder
+from .core_tools import check_json
 
 class BaseExtractor:
     """
@@ -318,7 +319,7 @@ class BaseExtractor:
         file_path = self._get_file_path(file_path, ['.json'])
         
         file_path.write_text(
-                json.dumps(_check_json(dump_dict), indent=4),
+                json.dumps(check_json(dump_dict), indent=4),
                 encoding='utf8'
             )
 
@@ -523,54 +524,7 @@ def _check_same_version(class_string, version):
         return 'unknown'
     
     
-def _check_json(d):
-    # quick hack to ensure json writable
-    for k, v in d.items():
-        if isinstance(v, dict):
-            d[k] = _check_json(v)
-        elif isinstance(v, Path):
-            d[k] = str(v.absolute())
-        elif isinstance(v, bool):
-            d[k] = bool(v)
-        elif isinstance(v, (np.int, np.int32, np.int64)):
-            d[k] = int(v)
-        elif isinstance(v, (np.float, np.float32, np.float64)):
-            d[k] = float(v)
-        elif isinstance(v, datetime.datetime):
-            d[k] = v.isoformat()
-        elif isinstance(v, (np.ndarray, list)):
-            if len(v) > 0:
-                if isinstance(v[0], dict):
-                    # these must be extractors for multi extractors
-                    d[k] = [_check_json(v_el) for v_el in v]
-                else:
-                    v_arr = np.array(v)
-                    if len(v_arr.shape) == 1:
-                        if 'int' in str(v_arr.dtype):
-                            v_arr = [int(v_el) for v_el in v_arr]
-                            d[k] = v_arr
-                        elif 'float' in str(v_arr.dtype):
-                            v_arr = [float(v_el) for v_el in v_arr]
-                            d[k] = v_arr
-                        elif isinstance(v_arr[0], str):
-                            v_arr = [str(v_el) for v_el in v_arr]
-                            d[k] = v_arr
-                        else:
-                            print(f'Skipping field {k}: only 1D arrays of int, float, or str types can be serialized')
-                    elif len(v_arr.shape) == 2:
-                        if 'int' in str(v_arr.dtype):
-                            v_arr = [[int(v_el) for v_el in v_row] for v_row in v_arr]
-                            d[k] = v_arr
-                        elif 'float' in str(v_arr.dtype):
-                            v_arr = [[float(v_el) for v_el in v_row] for v_row in v_arr]
-                            d[k] = v_arr
-                        else:
-                            print(f'Skipping field {k}: only 2D arrays of int or float type can be serialized')
-                    else:
-                        print(f"Skipping field {k}: only 1D and 2D arrays can be serialized")
-            else:
-                d[k] = list(v)
-    return d
+
 
 
 def load_extractor(file_or_folder_or_dict):

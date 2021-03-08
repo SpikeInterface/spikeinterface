@@ -50,9 +50,11 @@ def toy_example(duration=10, num_channels=4, num_units=10,
         assert isinstance(duration, list)
         assert len(durations) == num_segments
         assert all(isinstance(d, float) for d in durations)
+
+    assert num_channels > 0
+    assert num_units > 0
     
-    
-    waveforms, geom = synthesize_random_waveforms(num_units=num_units, M=num_channels,
+    waveforms, geometry = synthesize_random_waveforms(num_units=num_units, num_channels=num_channels,
                         average_peak_amplitude=average_peak_amplitude, upsample_factor=upsample_factor, seed=seed)
     
     unit_ids = np.arange(num_units, dtype='int64')
@@ -74,6 +76,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     sorting = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency)
     recording = NumpyRecording(traces_list, sampling_frequency)
     recording.annotate(is_filtered=True)
+    recording.set_channel_locations(geometry)
     
     #~ if dumpable:
         #~ if dump_folder is None:
@@ -103,14 +106,11 @@ def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration
 
     # events/sec * sec/timepoint * N
     populations = np.ceil(firing_rates / sampling_frequency * N).astype('int')
-    #~ print(populations)
     times = np.zeros(0)
     labels = np.zeros(0, dtype='int64')
 
-    #~ for i, k in enumerate(range(1, num_units + 1)):
     times = []
     labels = []
-    
     for unit_id in range(num_units):
         refr_timepoints = refr / 1000 * sampling_frequency
 
@@ -161,17 +161,15 @@ def enforce_refractory_period(times_in, refr):
     return times0
 
 
-
-
-
-def synthesize_random_waveforms(M=5, T=500, num_units=20, upsample_factor=13, timeshift_factor=3, average_peak_amplitude=-10,
-                                seed=None):
+def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
+            upsample_factor=13, timeshift_factor=3, average_peak_amplitude=-10, 
+            distance_um=20, seed=None):
     if seed is not None:
         np.random.seed(seed)
         seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
     else:
         seeds = np.random.randint(0, 2147483647, num_units)
-    geometry = None
+
     avg_durations = [200, 10, 30, 200]
     avg_amps = [0.5, 10, -1, 0]
     rand_durations_stdev = [10, 4, 6, 20]
@@ -180,58 +178,54 @@ def synthesize_random_waveforms(M=5, T=500, num_units=20, upsample_factor=13, ti
     geom_spread_coef1 = 0.2
     geom_spread_coef2 = 1
 
-    if not geometry:
-        geometry = np.zeros((2, M))
-        geometry[0, :] = np.arange(1, M + 1)
+    geometry = np.zeros((num_channels, 2))
+    geometry[:, 0] = np.arange(num_channels ) * distance_um
 
-    geometry = np.array(geometry)
     avg_durations = np.array(avg_durations)
     avg_amps = np.array(avg_amps)
     rand_durations_stdev = np.array(rand_durations_stdev)
     rand_amps_stdev = np.array(rand_amps_stdev)
     rand_amp_factor_range = np.array(rand_amp_factor_range)
 
-    neuron_locations = get_default_neuron_locations(M, num_units, geometry)
+    neuron_locations = get_default_neuron_locations(num_channels, num_units, geometry)
+    
+    full_width = width * upsample_factor
 
     ## The waveforms_out
-    WW = np.zeros((M, T * upsample_factor, num_units))
+    WW = np.zeros((num_channels, width * upsample_factor, num_units))
 
-    for i, k in enumerate(range(1, num_units + 1)):
-        for m in range(1, M + 1):
-            diff = neuron_locations[:, k - 1] - geometry[:, m - 1]
+    for i, k in enumerate(range(num_units)):
+        for m in range(num_channels):
+            diff = neuron_locations[k, :] - geometry[m, :]
             dist = np.sqrt(np.sum(diff ** 2))
             durations0 = np.maximum(np.ones(avg_durations.shape),
                                     avg_durations + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_durations_stdev) * upsample_factor
             amps0 = avg_amps + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_amps_stdev
-            waveform0 = synthesize_single_waveform(N=T * upsample_factor, durations=durations0, amps=amps0)
+            waveform0 = synthesize_single_waveform(full_width, durations0, amps0)
             waveform0 = np.roll(waveform0, int(timeshift_factor * dist * upsample_factor))
             waveform0 = waveform0 * np.random.RandomState(seed=seeds[i]).uniform(rand_amp_factor_range[0], rand_amp_factor_range[1])
-            WW[m - 1, :, k - 1] = waveform0 / (geom_spread_coef1 + dist * geom_spread_coef2)
+            WW[m, :, k] = waveform0 / (geom_spread_coef1 + dist * geom_spread_coef2)
 
     peaks = np.max(np.abs(WW), axis=(0, 1))
     WW = WW / np.mean(peaks) * average_peak_amplitude
 
-    return (WW, geometry.T)
+    return WW, geometry
 
 
-def get_default_neuron_locations(M, num_units, geometry):
-    num_dims = geometry.shape[0]
-    neuron_locations = np.zeros((num_dims, num_units))
-    for k in range(1, num_units + 1):
-        if num_units > 0:
-            ind = (k - 1) / (num_units - 1) * (M - 1) + 1
-            ind0 = int(ind)
-            if ind0 == M:
-                ind0 = M - 1
-                p = 1
-            else:
-                p = ind - ind0
-            if M > 0:
-                neuron_locations[:, k - 1] = (1 - p) * geometry[:, ind0 - 1] + p * geometry[:, ind0]
-            else:
-                neuron_locations[:, k - 1] = geometry[:, 0]
+def get_default_neuron_locations(num_channels, num_units, geometry):
+    num_dims = geometry.shape[1]
+    neuron_locations = np.zeros((num_units, num_dims), dtype='float64')
+
+    for k in range(num_units):
+        ind = k / (num_units - 1) * (num_channels - 1) + 1
+        ind0 = int(ind)
+        
+        if ind0 == num_channels:
+            ind0 = num_channels - 1
+            p = 1
         else:
-            neuron_locations[:, k - 1] = geometry[:, 0]
+            p = ind - ind0
+        neuron_locations[k, :] = (1 - p) * geometry[ind0 - 1, :] + p * geometry[ind0, :]
 
     return neuron_locations
 
@@ -260,10 +254,10 @@ def smooth_it(Y, t):
     return Z
 
 
-def synthesize_single_waveform(N=800, durations=[200, 10, 30, 200], amps=[0.5, 10, -1, 0]):
+def synthesize_single_waveform(full_width, durations, amps):
     durations = np.array(durations).ravel()
-    if (np.sum(durations) >= N - 2):
-        durations[-1] = N - 2 - np.sum(durations[0:durations.size - 1])
+    if (np.sum(durations) >= full_width - 2):
+        durations[-1] = full_width - 2 - np.sum(durations[0:durations.size - 1])
 
     amps = np.array(amps).ravel()
 
@@ -280,8 +274,8 @@ def synthesize_single_waveform(N=800, durations=[200, 10, 30, 200], amps=[0.5, 1
                                                    durations[3] / 5)
     Y = smooth_it(Y, 3)
     Y = Y - np.linspace(Y[0], Y[-1], len(t))
-    Y = np.hstack((Y, np.zeros(N - len(t))))
-    Nmid = int(np.floor(N / 2))
+    Y = np.hstack((Y, np.zeros(full_width - len(t))))
+    Nmid = int(np.floor(full_width / 2))
     peakind = np.argmax(np.abs(Y))
     Y = np.roll(Y, Nmid - peakind)
 
