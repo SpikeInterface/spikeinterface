@@ -3,22 +3,21 @@ import neo
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
-class IntanRecordingExtractor(NeoBaseRecordingExtractor):
+class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading data from a intan board support rhd and rhs format.
+    Class for reading neuralynx folder
     
-    Based on neo.rawio.IntanRawIO
+    Based on neo.rawio.NeuralynxRawIO
     
     Parameters
     ----------
     file_path: str
-        
+        The xml  file.
     stream_id: str or None
-        
     """ 
     mode = 'file'
-    NeoRawIOClass = 'IntanRawIO'
-    
+    NeoRawIOClass = 'BlackrockRawIO'
+
     def __init__(self, file_path, stream_id=None):
         neo_kwargs = {'filename' : file_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)

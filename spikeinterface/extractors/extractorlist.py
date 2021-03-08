@@ -1,10 +1,15 @@
 from .numpyextractors import NumpyRecording , NumpySorting
 
-from .neoextractors import(
+from .neoextractors import (
     MEArecRecordingExtractor, MEArecSortingExtractor,
     SpikeGLXRecordingExtractor,
     OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor,
     IntanRecordingExtractor,
+    NeuroScopeRecordingExtractor,
+    PlexonRecordingExtractor,
+    NeuralynxRecordingExtractor,
+    BlackrockRecordingExtractor,
+    MCSRawRecordingExtractor,
     )
 
 
@@ -17,35 +22,39 @@ recording_extractor_full_list = [
     OpenEphysLegacyRecordingExtractor,
     OpenEphysBinaryRecordingExtractor,
     IntanRecordingExtractor,
-
+    NeuroScopeRecordingExtractor,
+    PlexonRecordingExtractor,
+    NeuralynxRecordingExtractor,
+    BlackrockRecordingExtractor,
+    MCSRawRecordingExtractor,
     
     ##OLD
     #~ MdaRecordingExtractor,
-    #~ MEArecRecordingExtractor,       OK
+    #~ MEArecRecordingExtractor,          OK
     #~ BiocamRecordingExtractor,
     #~ ExdirRecordingExtractor,
     #~ OpenEphysRecordingExtractor,  OK
-    #~ IntanRecordingExtractor, 
+    #~ IntanRecordingExtractor,              OK
     #~ BinDatRecordingExtractor,
     #~ KlustaRecordingExtractor,
     #~ KiloSortRecordingExtractor,
     #~ SpykingCircusRecordingExtractor,
-    #~ SpikeGLXRecordingExtractor,    OK
+    #~ SpikeGLXRecordingExtractor,      OK
     #~ PhyRecordingExtractor,
     #~ MaxOneRecordingExtractor,
     #~ Mea1kRecordingExtractor,
     #~ MCSH5RecordingExtractor,
     #~ SHYBRIDRecordingExtractor,
     #~ NIXIORecordingExtractor,
-    #~ NeuroscopeRecordingExtractor,
-    #~ NeuroscopeMultiRecordingTimeExtractor,
+    #~ NeuroscopeRecordingExtractor,  OK
+    #~ NeuroscopeMultiRecordingTimeExtractor,   OK
     #~ CEDRecordingExtractor,
 
     #~ # neo based
-    #~ PlexonRecordingExtractor,
-    #~ NeuralynxRecordingExtractor,
-    #~ BlackrockRecordingExtractor,
-    #~ MCSRawRecordingExtractor,
+    #~ PlexonRecordingExtractor,       OK
+    #~ NeuralynxRecordingExtractor,  OK
+    #~ BlackrockRecordingExtractor,  OK
+    #~ MCSRawRecordingExtractor,  OK
 ]
 
 #~ recording_extractor_dict = {recording_class.extractor_name: recording_class

@@ -4,18 +4,14 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.extractors import (
-        SpikeGLXRecordingExtractor,
-        MEArecRecordingExtractor,MEArecSortingExtractor,
-        OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor,
-        IntanRecordingExtractor,
-        )
-        
+from spikeinterface.extractors import *
 
-from spikeinterface.extractors.tests.file_retrieve import download_test_file
+
+
 
 
 # TODO use datalad and make this folder at API
+# from spikeinterface.extractors.tests.file_retrieve import download_test_file
 basefolder = '/home/samuel/Documents/ephy_testing_data/'
 
 
@@ -68,9 +64,45 @@ def test_intan():
         rec = IntanRecordingExtractor(intan_file, stream_id=stream_id)
 
 
+def test_neuroscope():
+    neuroscope_file = basefolder +  'neuroscope/test1/test1.xml'
+    rec = NeuroScopeRecordingExtractor(neuroscope_file)
+    print(rec)
+    
+def test_plexon():
+    plexon_file = basefolder + 'plexon/File_plexon_3.plx'
+    PlexonRecordingExtractor
+    rec = PlexonRecordingExtractor(plexon_file)
+    print(rec)
+
+def test_neuralynx():
+    neuralynx_folder = basefolder + 'neuralynx/Cheetah_v5.6.3/'
+    rec = NeuralynxRecordingExtractor(neuralynx_folder)
+    print(rec)
+
+def test_blackrock():
+    blackrock_file = basefolder + 'blackrock/FileSpec2.3001.ns5'
+    rec = BlackrockRecordingExtractor(blackrock_file)
+    print(rec)
+
+def test_mcsraw():
+    mcsraw_file = basefolder + 'rawmcs/raw_mcs_with_header_1.raw'
+    rec = MCSRawRecordingExtractor(mcsraw_file)
+    print(rec)
+
+
+
 if __name__ == '__main__':
     #~ test_mearec_extractors()
     #~ test_spikeglx_extractors()
     #~ test_openephy_legacy()
     #~ test_openephy_binary()
-    test_intan()
+    #~ test_intan()
+    #~ test_neuroscope()
+    #~ test_plexon()
+    #~ test_neuralynx()
+    #~ test_blackrock()
+    test_mcsraw()
+    
+    
+

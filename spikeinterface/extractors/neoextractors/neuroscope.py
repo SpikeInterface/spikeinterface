@@ -3,21 +3,21 @@ import neo
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
-class IntanRecordingExtractor(NeoBaseRecordingExtractor):
+class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading data from a intan board support rhd and rhs format.
+    Class for reading data from neuroscope
+    Ref: http://neuroscope.sourceforge.net
     
-    Based on neo.rawio.IntanRawIO
+    Based on neo.rawio.NeuroScopeRawIO
     
     Parameters
     ----------
     file_path: str
-        
+        The xml  file.
     stream_id: str or None
-        
     """ 
     mode = 'file'
-    NeoRawIOClass = 'IntanRawIO'
+    NeoRawIOClass = 'NeuroScopeRawIO'
     
     def __init__(self, file_path, stream_id=None):
         neo_kwargs = {'filename' : file_path}
