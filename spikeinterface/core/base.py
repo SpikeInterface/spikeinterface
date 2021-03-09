@@ -141,12 +141,26 @@ class BaseExtractor:
         Then is modify only a subset of channels/units
         
         """
+        size = self._main_ids.size
         values = np.asarray(values)
         if ids is None:
-            assert values.shape[0] == self._main_ids.size
+            assert values.shape[0] == size
             self._properties[key] = values
         else:
-            assert key in self._properties, 'The key is not in properties'
+            if key not in self._properties:
+                # create the property with nan or empty
+                shape = (size, ) + values.shape[1:]
+                if values.dtype.kind in ('i', 'f', 'S', 'U'):
+                    dtype = values.dtype
+                else:
+                    dtype = object
+                empty_values = np.zeros(shape, dtype=dtype)
+                if values.dtype.kind == 'f':
+                    empty_values = empty_values * np.nan
+                #~ elif values.dtype.kind == 'i':
+                    #~ # TODO find a way to put missing values
+                self._properties[key] = empty_values
+                
             indices = self.ids_to_indices(ids)
             self._properties[key][indices] = values
     

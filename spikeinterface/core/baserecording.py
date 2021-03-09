@@ -123,7 +123,7 @@ class BaseRecording(BaseExtractor):
         """
         Wrapper on top on set_probes when there one unique probe.
         """
-        assert isistance(probe, Probe), 'must give Probe'
+        assert isinstance(probe, Probe), 'must give Probe'
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
         return self.set_probes(probegroup)
@@ -137,7 +137,7 @@ class BaseRecording(BaseExtractor):
         
         group_mode: 'by_probe' or 'by_shank'
         """
-        from channelslicerecording import ChannelSliceRecording
+        from spikeinterface import ChannelSliceRecording
 
         # handle several input possibilities
         if isinstance(probe_or_probegroup, Probe):
@@ -153,14 +153,16 @@ class BaseRecording(BaseExtractor):
         else:
             raise ValueError( 'must give Probe or ProbeGroup or list of Probe')
         
+        probes = probegroup.probes
         # handle not connected channels
-        assert all(probe.channel_device_indices is not None), 'Probe must have channel_device_indices'
-        all_connected = all(np.all(probe.channel_device_indices != -1) for probe in probes)
+        assert all(probe.device_channel_indices is not None for probe in probes), \
+                'Probe must have channel_device_indices'
+        all_connected = all(np.all(probe.device_channel_indices != -1) for probe in probes)
         if not all_connected:
             print('warning given probes have not connected channels : remove then')
             sliced_probes = []
             for probe in probes:
-                keep = probe.channel_device_indices != -1
+                keep = probe.device_channel_indices != -1
                 sliced_probes.append(probe.get_slice(keep))
             probes = sliced_probes
         
@@ -170,35 +172,94 @@ class BaseRecording(BaseExtractor):
         
         
         # create ChannelSliceRecording
-        group_positions, group_device_indices = probegroup.get_groups(self, group_mode='by_probe')
-        new_channel_ids = np.concatenate([self.get_channel_ids()[inds] for inds in group_device_indices])
+        #~ probe_indices, group_positions, group_device_indices = probegroup.get_groups(group_mode='by_probe')
+        #~ new_channel_ids = np.concatenate([self.get_channel_ids()[inds] for inds in group_device_indices])
+        #~ sub_recording = ChannelSliceRecording(self, new_channel_ids)
+   
+        groups = probegroup.get_groups(group_mode=group_mode)
+        #~ new_channel_ids = np.concatenate([self.get_channel_ids()[inds] for inds in group_device_indices])
+        new_channel_ids = []
+        for probe_index, arr in groups:
+            keep = arr['device_channel_indices'] >= 0
+            inds = arr['device_channel_indices'][keep]
+            chan_ids = self.get_channel_ids()[inds]
+            print(probe_index, 'keep', keep, chan_ids)
+            new_channel_ids.extend(chan_ids)
+        print('new_channel_ids', new_channel_ids)
+        
+        # create ChannelSliceRecording because some channel may be not connected
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         
+        
+        #~ exit()
+        
+           
         # set channel location and groups
+        # set properties:
+        #   Probe.contact_positions > "location" property
+        #   group_ids > "group" property
+        #   Probe.contact_shapes > "probe_contact_shapes" property
+        #   Probe.contact_shape_params > "contact_shape_params" property
+
+        for group_id, (probe_index, arr) in enumerate(groups):
+            keep = arr['device_channel_indices'] >= 0
+            inds = arr['device_channel_indices'][keep]
+            chan_ids = self.get_channel_ids()[inds]
+            arr = arr[keep]
+            
+            locations = arr[['x', 'y']]
+            print(locations)
+            print(chan_ids)
+        exit()
+        
         ngroup = len(group_positions)
         for group_id in  range(ngroup):
+            probe_index = probe_indices[group_id]
+            probe = probes[probe_index]
+            
             locations = group_positions[group_id]
             device_indices = group_device_indices[group_id]
             
             chan_ids = self.get_channel_ids()[device_indices]
-            groups = np.ones(len(inds), dtype='int64') * group_id
+            groups = np.ones(chan_ids.size, dtype='int64') * group_id
             
-            sub_recording.set_channel_locations(locations, channel_ids=chan_ids)
-            sub_recording.set_channel_groups(groups, channel_ids=chan_ids)
+            #~ self.set_property('location', locations,  ids=channel_ids)
+            #~ sub_recording.set_channel_groups(groups, channel_ids=chan_ids)
+            sub_recording.set_property('location', locations, ids=chan_ids)
+            sub_recording.set_property('group', groups, ids=chan_ids)
             
-        # keep probe description in annotation as a dict (easy to dump)
-        probes_dict = [ probe.to_dict() for probe in probegroup.probes]
-        sub_recording.annotate('probes', probes_dict)
+            # put other vector to reconstruct the Probe
+            for k in ('contact_shapes', 'contact_shape_params'):
+                values = getattr(probe, k)
+                self.set_property(k, locations,  ids=chan_ids)
+            
+        
+        #~ # keep probe description in annotation as a dict (easy to dump)
+        #~ probes_dict = [ probe.to_dict() for probe in probegroup.probes]
+        #~ sub_recording.annotate(probes=probes_dict)
         
         return sub_recording
     
+    def get_probe(self):
+        probes = self.get_probes()
+        assert len(probes) == 1, 'there are several probe use .get_probes()'
+        return probes[0]
+    
     def get_probes(self):
-        dict_probes = self._annotations.get('probes', None)
-        if dict_probes is None:
-            return None
-        else:
-            probes = [Probe.from_dict(d) for d in dict_probes]
-            return probes
+        probegroup = get_probegroup()
+        return probegroup.probes
+    
+    def get_probegroup(self):
+        probegroup = ProbeGroup()
+        return probegroup
+    
+    #~ def get_probes(self):
+        #~ dict_probes = self._annotations.get('probes', None)
+        #~ if dict_probes is None:
+            #~ return None
+        #~ else:
+            #~ probes = [Probe.from_dict(d) for d in dict_probes]
+            #~ return probes
 
     def set_channel_locations(self, locations, channel_ids=None):
         if 'probes' in self._annotations:

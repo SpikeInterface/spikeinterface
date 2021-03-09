@@ -39,18 +39,18 @@ BinaryRecordingExtractor,
     #~ MdaRecordingExtractor,
     #~ MEArecRecordingExtractor,          OK
     #~ BiocamRecordingExtractor,
-    #~ ExdirRecordingExtractor,
+    #~ ExdirRecordingExtractor,    DROP
     #~ OpenEphysRecordingExtractor,  OK
     #~ IntanRecordingExtractor,              OK
     #~ BinDatRecordingExtractor,            OK
-    #~ KlustaRecordingExtractor,
+    #~ KlustaRecordingExtractor,     
     #~ KiloSortRecordingExtractor,
     #~ SpykingCircusRecordingExtractor,
     #~ SpikeGLXRecordingExtractor,      OK
     #~ PhyRecordingExtractor,
     #~ MaxOneRecordingExtractor,
-    #~ Mea1kRecordingExtractor,
-    #~ MCSH5RecordingExtractor,
+    #~ Mea1kRecordingExtractor,  DROP
+    #~ MCSH5RecordingExtractor, 
     #~ SHYBRIDRecordingExtractor,
     #~ NIXIORecordingExtractor,
     #~ NeuroscopeRecordingExtractor,  OK
@@ -79,27 +79,28 @@ sorting_extractor_full_list = [
     
     ##OLD
     #~ MdaSortingExtractor,
-    #~ MEArecSortingExtractor,
-    #~ ExdirSortingExtractor,
+    #~ MEArecSortingExtractor,   OK
+    #~ ExdirSortingExtractor,   DROP
     #~ HDSortSortingExtractor,
     #~ HS2SortingExtractor,
     #~ KlustaSortingExtractor,
     #~ KiloSortSortingExtractor,
     #~ OpenEphysSortingExtractor,
-    #~ PhySortingExtractor,
-    #~ SpykingCircusSortingExtractor,
-    #~ TridesclousSortingExtractor,
-    #~ Mea1kSortingExtractor,
+    #~ PhySortingExtractor,        NEAR OK
+    #~ SpykingCircusSortingExtractor,   NEAR OK
+    #~ TridesclousSortingExtractor,     NEAR OK
+    #~ Mea1kSortingExtractor,    DROP
     #~ MaxOneSortingExtractor,
-    #~ NpzSortingExtractor,
+    #~ NpzSortingExtractor,    OK
     #~ SHYBRIDSortingExtractor,
     #~ NIXIOSortingExtractor,
-    #~ NeuroscopeSortingExtractor,
-    #~ NeuroscopeMultiSortingExtractor,
+    #~ NeuroscopeSortingExtractor,   DROP ?
+    #~ NeuroscopeMultiSortingExtractor,   DROP ?
     #~ WaveClusSortingExtractor,
     #~ YassSortingExtractor,
     #~ CombinatoSortingExtractor,
     #~ ALFSortingExtractor,
+
     #~ # neo based
     #~ PlexonSortingExtractor,
     #~ NeuralynxSortingExtractor,
