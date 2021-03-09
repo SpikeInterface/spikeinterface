@@ -55,11 +55,16 @@ class BaseSorter:
         if output_folder.is_dir():
             shutil.rmtree(str(output_folder))
         
-        if recording.get_num_segments():
+        if recording.get_num_segments() > 1:
             if not self.handle_multi_segment:
-                raise ValueError(f'This sorter {} do not handle multi segment, use recording.split(by=...)')
+                raise ValueError(f'This sorter {self.sorter_name} do not handle multi segment, use recording.split(by=...)')
         
         self.recording = recording
+        
+        if recording.is_dumpable:
+            rec_file = self.output_folder / 'spikeinterface_recording.json'
+            recording.dump_to_json(rec_file)
+        
         #~ if grouping_property is None:
             #~ # only one groups
             #~ self.recording_list = [recording]
@@ -113,7 +118,7 @@ class BaseSorter:
 
         # dump parameters inside the folder with json
         self._dump_params()
-
+        
     def _dump_params(self):
         #~ for output_folder, recording in zip(self.output_folders, self.recording_list):
             #~ with open(str(output_folder / 'spikeinterface_params.json'), 'w', encoding='utf8') as f:
@@ -127,10 +132,13 @@ class BaseSorter:
             params = dict()
             params['sorter_params'] = self.params
             # only few properties/features are put to json
-            params['recording'] = self.recording.to_dict(include_properties=False, include_features=False)
+            #~ params['recording'] = self.recording.to_dict(include_properties=False, include_features=False)
+            from pprint import pprint
+            pprint(params)
             json.dump(check_json(params), f, indent=4)
 
-    def run(self, raise_error=True, parallel=False, n_jobs=-1, joblib_backend='loky'):
+    #~ def run(self, raise_error=True, parallel=False, n_jobs=-1, joblib_backend='loky'):
+    def run(self, raise_error=True):
         #~ for i, recording in enumerate(self.recording_list):
             #~ self._setup_recording(recording, self.output_folders[i])
         self._setup_recording(self.recording, self.output_folder)

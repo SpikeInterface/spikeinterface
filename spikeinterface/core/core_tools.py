@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+import datetime
+
 import numpy as np
 
 from joblib import Parallel, delayed
@@ -8,7 +10,7 @@ def check_json(d):
     # quick hack to ensure json writable
     for k, v in d.items():
         if isinstance(v, dict):
-            d[k] = _check_json(v)
+            d[k] = check_json(v)
         elif isinstance(v, Path):
             d[k] = str(v.absolute())
         elif isinstance(v, bool):
@@ -23,7 +25,7 @@ def check_json(d):
             if len(v) > 0:
                 if isinstance(v[0], dict):
                     # these must be extractors for multi extractors
-                    d[k] = [_check_json(v_el) for v_el in v]
+                    d[k] = [check_json(v_el) for v_el in v]
                 else:
                     v_arr = np.array(v)
                     if len(v_arr.shape) == 1:

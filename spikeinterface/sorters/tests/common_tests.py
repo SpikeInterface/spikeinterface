@@ -15,19 +15,19 @@ class SorterCommonTestSuite:
     SorterClass = None
 
     def test_on_toy(self):
-
-        recording, sorting_gt = se.example_datasets.toy_example(num_channels=4, duration=60, seed=0)
+        print('yop')
+        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
+        print(recording)
 
         params = self.SorterClass.default_params()
 
-        sorter = self.SorterClass(recording=recording, output_folder=None,
-                                  grouping_property=None, verbose=False)
+        sorter = self.SorterClass(recording=recording, output_folder=None, verbose=False)
         sorter.set_params(**params)
-        sorter.run(parallel=False)
+        sorter.run()
         sorting = sorter.get_result()
 
-        for unit_id in sorting.get_unit_ids():
-            print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
+        #~ for unit_id in sorting.get_unit_ids():
+            #~ print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
         del sorting
 
     #~ def test_several_groups(self):
@@ -64,7 +64,7 @@ class SorterCommonTestSuite:
         # some sorter (TDC, KS, KS2, ...) work by default with the raw binary
         # format as input to avoid copy when the recording is already this format
         
-        recording, sorting_gt = se.example_datasets.toy_example(num_channels=2, duration=10, seed=0,
+        recording, sorting_gt = toy_example(num_channels=2, duration=10, seed=0,
                             num_segments=1)
 
         # create a raw dat file and prb file
@@ -92,4 +92,6 @@ class SorterCommonTestSuite:
         del sorting
 
     def test_get_version(self):
-        self.SorterClass.get_sorter_version()
+        print('yep')
+        version = self.SorterClass.get_sorter_version()
+        print(self.SorterClass.sorter_name, version)

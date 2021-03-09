@@ -1,5 +1,6 @@
 import numpy as np
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
+from spikeinterface.core import (BaseRecording, BaseSorting,
+                                BaseRecordingSegment, BaseSortingSegment)
 
 
 class NumpyRecording(BaseRecording):

@@ -5,7 +5,8 @@ import numpy as np
 from numpy.lib.format import open_memmap
 import sys
 
-import spikeextractors as se
+
+import spikeinterface.extractors as se
 from ..basesorter import BaseSorter
 from ..utils.shellscript import ShellScript
 from ..sorter_tools import recover_recording
@@ -84,8 +85,12 @@ class SpykingcircusSorter(BaseSorter):
         # save prb file
         # note: only one group here, the split is done in basesorter
         probe_file = output_folder / 'probe.prb'
-        recording.save_to_probe_file(probe_file, grouping_property=None,
-                                     radius=p['adjacency_radius'])
+        #~ recording.save_to_probe_file(probe_file, grouping_property=None,
+                                     #~ radius=p['adjacency_radius'])
+        probes = recording.get_probes()
+        print('probes')
+        print(probes)
+        exit()
 
         # save binary file
         file_name = 'recording'
