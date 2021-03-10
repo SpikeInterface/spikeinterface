@@ -22,10 +22,13 @@ class TestWidgets(unittest.TestCase):
 
     def test_timeseries(self):
         sw.plot_timeseries(self._rec)
-        plt.show()
 
-    #~ def test_rasters(self):
-        #~ sw.plot_rasters(self._sorting)
+    def test_rasters(self):
+        sw.plot_rasters(self._sorting)
+    
+    def test_plot_probe_map(self):
+        sw.plot_probe_map(self._rec)
+        plt.show()
 
     #~ def test_spectrum(self):
         #~ sw.plot_spectrum(self._rec)

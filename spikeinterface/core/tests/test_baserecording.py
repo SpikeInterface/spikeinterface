@@ -48,49 +48,63 @@ def test_BaseRecording():
     assert np.all(rec.ids_to_indices([0,1,2]) == [0, 1, 2])
     assert np.all(rec.ids_to_indices([0,1,2], prefer_slice=True) == slice(0,3, None))
     
-    #~ # annotations / properties
-    #~ rec.annotate(yep='yop')
-    #~ assert rec.get_annotation('yep') == 'yop'
+    # annotations / properties
+    rec.annotate(yep='yop')
+    assert rec.get_annotation('yep') == 'yop'
     
-    #~ rec.set_property('quality', [1., 3.3, np.nan])
-    #~ values = rec.get_property('quality')
-    #~ assert np.all(values[:2] == [1., 3.3, ])
+    rec.set_property('quality', [1., 3.3, np.nan])
+    values = rec.get_property('quality')
+    assert np.all(values[:2] == [1., 3.3, ])
     
-    #~ # dump/load dict
-    #~ d = rec.to_dict()
-    #~ rec2 = BaseExtractor.from_dict(d)
-    #~ rec3 = load_extractor(d)
+    # dump/load dict
+    d = rec.to_dict()
+    rec2 = BaseExtractor.from_dict(d)
+    rec3 = load_extractor(d)
     
-    #~ # dump/load json
-    #~ rec.dump_to_json('test_BaseRecording.json')
-    #~ rec2 = BaseExtractor.load('test_BaseRecording.json')
-    #~ rec3 = load_extractor('test_BaseRecording.json')
+    # dump/load json
+    rec.dump_to_json('test_BaseRecording.json')
+    rec2 = BaseExtractor.load('test_BaseRecording.json')
+    rec3 = load_extractor('test_BaseRecording.json')
     
-    #~ # dump/load pickle
-    #~ rec.dump_to_pickle('test_BaseRecording.pkl')
-    #~ rec2 = BaseExtractor.load('test_BaseRecording.pkl')
-    #~ rec3 = load_extractor('test_BaseRecording.pkl')
+    # dump/load pickle
+    rec.dump_to_pickle('test_BaseRecording.pkl')
+    rec2 = BaseExtractor.load('test_BaseRecording.pkl')
+    rec3 = load_extractor('test_BaseRecording.pkl')
     
-    #~ # cache
-    #~ cache_folder = './my_cache_folder'
-    #~ rec.set_cache_folder(cache_folder)
-    #~ rec.cache(name='simple_recording')
-    #~ rec2 = BaseExtractor.load_from_cache(cache_folder, 'simple_recording')
-    #~ # but also possible
-    #~ rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
+    # cache
+    cache_folder = './my_cache_folder'
+    rec.set_cache_folder(cache_folder)
+    rec.cache(name='simple_recording')
+    rec2 = BaseExtractor.load_from_cache(cache_folder, 'simple_recording')
+    # but also possible
+    rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
     
-    #~ # cache joblib several jobs
-    #~ rec.cache(name='simple_recording_2', chunk_size=10, n_jobs=4)
+    # cache joblib several jobs
+    rec.cache(name='simple_recording_2', chunk_size=10, n_jobs=4)
     
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
-    positions = [[0., 0.], [0., 20.], [0, 30.]]
+    positions = [[0., 0.], [0., 15.], [0, 30.]]
     probe.set_contacts(positions=positions, shapes='circle', shape_params={'radius': 5})
     probe.set_device_channel_indices([2, -1, 0])
+    probe.create_auto_shape()
     
-    rec = rec.set_probe(probe)
-    positions2 = rec.get_channel_locations()
-    print(positions2)
+    rec2 = rec.set_probe(probe, group_mode='by_shank')
+    rec2 = rec.set_probe(probe, group_mode='by_probe')
+    positions2 = rec2.get_channel_locations()
+    assert np.array_equal(positions2, [[0, 30.], [0., 0.]])
+    
+    probe2 = rec2.get_probe()
+    positions3 = probe2.contact_positions
+    assert np.array_equal(positions2, positions3)
+    
+
+    #~ from probeinterface.plotting import plot_probe_group, plot_probe
+    #~ import matplotlib.pyplot as plt
+    #~ plot_probe(probe)
+    #~ plot_probe(probe2)
+    #~ plt.show()    
+    
     
     
     
