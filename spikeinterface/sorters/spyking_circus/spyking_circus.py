@@ -11,6 +11,8 @@ from ..basesorter import BaseSorter
 from ..utils.shellscript import ShellScript
 from ..sorter_tools import recover_recording
 
+from probeinterface import write_prb
+
 try:
     import circus
     HAVE_SC = True
@@ -84,20 +86,23 @@ class SpykingcircusSorter(BaseSorter):
 
         # save prb file
         # note: only one group here, the split is done in basesorter
-        probe_file = output_folder / 'probe.prb'
+        prb_file = output_folder / 'probe.prb'
         #~ recording.save_to_probe_file(probe_file, grouping_property=None,
                                      #~ radius=p['adjacency_radius'])
-        probes = recording.get_probes()
-        print('probes')
-        print(probes)
-        exit()
-
+        #~ probes = recording.get_probes()
+        #~ print('probes')
+        #~ print(probes)
+        probegroup = recording.get_probegroup()
+        write_prb(prb_file, probegroup,
+                        total_nb_channels=recording.get_num_channels(),
+                        radius=p['adjacency_radius'])
+        
         # save binary file
         file_name = 'recording'
         # We should make this copy more efficient with chunks
 
         n_chan = recording.get_num_channels()
-        n_frames = recording.get_num_frames()
+        n_frames = recording.get_num_frames(segment_index=0)
         chunk_size = 2 ** 24 // n_chan
         npy_file = str(output_folder / file_name) + '.npy'
         data_file = open_memmap(npy_file, shape=(n_frames, n_chan), dtype=np.float32, mode='w+')
@@ -124,7 +129,7 @@ class SpykingcircusSorter(BaseSorter):
             auto = p['auto_merge']
         else:
             auto = 0
-        circus_config = ''.join(circus_config).format(sample_rate, probe_file, p['template_width_ms'],
+        circus_config = ''.join(circus_config).format(sample_rate, prb_file, p['template_width_ms'],
                     p['detect_threshold'], detect_sign, p['filter'], p['whitening_max_elts'],
                     p['clustering_max_elts'], auto)
         with (output_folder / (file_name + '.params')).open('w') as f:

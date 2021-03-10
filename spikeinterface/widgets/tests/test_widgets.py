@@ -28,7 +28,7 @@ class TestWidgets(unittest.TestCase):
     
     def test_plot_probe_map(self):
         sw.plot_probe_map(self._rec)
-        plt.show()
+        #~ plt.show()
 
     #~ def test_spectrum(self):
         #~ sw.plot_spectrum(self._rec)

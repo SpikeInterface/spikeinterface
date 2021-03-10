@@ -124,7 +124,7 @@ class BaseExtractor:
     def get_annotation(self, key, copy=True):
         """
         Get a annotation.
-        Return a copy by dfault
+        Return a copy by default
         """
         v = self._annotations.get(key, None)
         if copy:

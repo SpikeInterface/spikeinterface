@@ -83,7 +83,6 @@ class RasterWidget(BaseWidget):
         units_ids = self._unit_ids
         if units_ids is None:
             units_ids = self._sorting.get_unit_ids()
-        print('units_ids', units_ids)
 
         with plt.rc_context({'axes.edgecolor': 'gray'}):
             for u_i, unit_id in enumerate(units_ids):
