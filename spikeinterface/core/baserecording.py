@@ -309,6 +309,17 @@ class BaseRecording(BaseExtractor):
         sub_recording = ChannelSliceRecording(self, channel_ids)
         return sub_recording
     
+    def split_by(self, property='group'):
+        values = self.set_property(property)
+        if values is None:
+            raise ValueError(f'property {property} is not set')
+        
+        rec_list = []
+        for value in np.unique(values):
+            inds,  = np.nonzero(values == value)
+            new_channel_ids = self.get_channel_ids()[inds]
+            rec_list.append(ChannelSliceRecording(self, new_channel_ids))
+        return rec_list
 
 
 
