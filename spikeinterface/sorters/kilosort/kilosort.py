@@ -11,7 +11,7 @@ from ..basesorter import BaseSorter
 from ..utils.shellscript import ShellScript
 from ..sorter_tools import get_git_commit, recover_recording
 
-from spikeinterface.extractors import BinaryRecordingExtractor #, KiloSortSortingExtractor
+from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
 def check_if_installed(kilosort_path: Union[str, None]):
     if kilosort_path is None:
@@ -80,16 +80,16 @@ class KilosortSorter(BaseSorter):
     def is_installed(cls):
         return check_if_installed(cls.kilosort_path)
     
-    @staticmethod
-    def get_sorter_version():
+    @classmethod
+    def get_sorter_version(cls):
         commit = get_git_commit(os.getenv('KILOSORT_PATH', None))
         if commit is None:
             return 'unknown'
         else:
             return 'git-' + commit
 
-    @staticmethod
-    def set_kilosort_path(kilosort_path: str):
+    @classmethod
+    def set_kilosort_path(cls, kilosort_path: str):
         kilosort_path = str(Path(kilosort_path).absolute())
         KilosortSorter.kilosort_path = kilosort_path
         try:
@@ -112,8 +112,7 @@ class KilosortSorter(BaseSorter):
             raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
 
         # save binary file : handle only one segment
-        input_file_path = output_folder / 'recording'
-        #~ recording.write_to_binary_dat_format(input_file_path, dtype='int16', chunk_mb=500)
+        input_file_path = output_folder / 'recording.dat'
         BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
                                                                 time_axis=0, dtype='int16', chunk_mb=500, verbose=False)
 

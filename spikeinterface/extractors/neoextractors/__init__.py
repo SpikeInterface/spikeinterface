@@ -8,5 +8,3 @@ from .neuralynx import NeuralynxRecordingExtractor
 from .blackrock import BlackrockRecordingExtractor
 from .mscraw import MCSRawRecordingExtractor
 from .kilosort import KiloSortSortingExtractor
-
-
