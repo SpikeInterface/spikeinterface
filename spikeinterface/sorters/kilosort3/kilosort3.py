@@ -9,7 +9,7 @@ import json
 
 from ..basesorter import BaseSorter
 from ..utils.shellscript import ShellScript
-from ..sorter_tools import get_git_commit, recover_recording
+from ..sorter_tools import get_git_commit
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
@@ -211,7 +211,6 @@ class Kilosort3Sorter(BaseSorter):
     def _compute_from_folder(cls, output_folder, params, verbose):
         sorter_name = cls.sorter_name
         
-        #~ recording = recover_recording(recording)
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
                         {disk_move}
@@ -232,8 +231,8 @@ class Kilosort3Sorter(BaseSorter):
         if retcode != 0:
             raise Exception('kilosort3 returned a non-zero exit code')
 
-    @staticmethod
-    def get_result_from_folder(output_folder):
+    @classmethod
+    def get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         with (output_folder / 'spikeinterface_params.json').open('r') as f:
             sorter_params = json.load(f)['sorter_params']

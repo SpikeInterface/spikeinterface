@@ -9,7 +9,7 @@ import numpy as np
 
 from ..basesorter import BaseSorter
 from ..utils.shellscript import ShellScript
-from ..sorter_tools import get_git_commit, recover_recording
+from ..sorter_tools import get_git_commit
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 

@@ -161,7 +161,7 @@ class BaseSorter:
         }
         t0 = time.perf_counter()
         
-        SorterClass._compute_from_folder(output_folder, sorter_params, verbose)
+        #~ SorterClass._compute_from_folder(output_folder, sorter_params, verbose)
         
         try:
             SorterClass._compute_from_folder(output_folder, sorter_params, verbose)

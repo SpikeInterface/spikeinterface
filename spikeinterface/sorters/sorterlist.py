@@ -34,9 +34,8 @@ sorter_dict = {s.sorter_name: s for s in sorter_full_list}
 
 
 # generic launcher via function approach
-def run_sorter(sorter_name_or_class, recording, output_folder=None, delete_output_folder=False,
-               grouping_property=None, parallel=False, verbose=False, raise_error=True, n_jobs=-1, joblib_backend='loky',
-               **params):
+def run_sorter(sorter_name, recording, output_folder=None, delete_output_folder=False,
+               verbose=False, raise_error=True,  **sorter_params):
     """
     Generic function to run a sorter via function approach.
 
@@ -50,28 +49,20 @@ def run_sorter(sorter_name_or_class, recording, output_folder=None, delete_outpu
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
-        The sorter to retrieve default parameters from
+    sorter_name: str
+        The sorter name
     recording: RecordingExtractor
         The recording extractor to be spike sorted
     output_folder: str or Path
         Path to output folder
     delete_output_folder: bool
         If True, output folder is deleted (default False)
-    grouping_property: str
-        Splits spike sorting by 'grouping_property' (e.g. 'groups')
-    parallel: bool
-        If True and spike sorting is by 'grouping_property', spike sorting jobs are launched in parallel
     verbose: bool
         If True, output is verbose
     raise_error: bool
         If True, an error is raised if spike sorting fails (default). If False, the process continues and the error is
         logged in the log file.
-    n_jobs: int
-        Number of jobs when parallel=True (default=-1)
-    joblib_backend: str
-        joblib backend when parallel=True (default='loky')
-    **params: keyword args
+    **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
     Returns
@@ -80,20 +71,15 @@ def run_sorter(sorter_name_or_class, recording, output_folder=None, delete_outpu
         The spike sorted data
 
     """
-    if isinstance(sorter_name_or_class, str):
-        SorterClass = sorter_dict[sorter_name_or_class]
-    elif sorter_name_or_class in sorter_full_list:
-        SorterClass = sorter_name_or_class
-    else:
-        raise (ValueError('Unknown sorter'))
+    SorterClass = sorter_dict[sorting]
 
-    sorter = SorterClass(recording=recording, output_folder=output_folder, grouping_property=grouping_property,
+    sorter = SorterClass(recording=recording, output_folder=output_folder,
                          verbose=verbose, delete_output_folder=delete_output_folder)
-    sorter.set_params(**params)
-    sorter.run(raise_error=raise_error, parallel=parallel, n_jobs=n_jobs, joblib_backend=joblib_backend)
-    sortingextractor = sorter.get_result()
+    sorter.set_params(**sorter_params)
+    sorter.run(raise_error=raise_error)
+    sorting = sorter.get_result()
 
-    return sortingextractor
+    return sorting
 
 
 def available_sorters():
