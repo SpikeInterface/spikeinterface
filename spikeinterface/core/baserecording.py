@@ -147,7 +147,7 @@ class BaseRecording(BaseExtractor):
         
         return
         -------
-        A view of the recording (ChannelSliceRecording)
+        A view of the recording (ChannelSliceRecording or clone of irself)
         """
         from spikeinterface import ChannelSliceRecording
         
@@ -189,8 +189,11 @@ class BaseRecording(BaseExtractor):
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
         
-        # create recording : channel slice
-        sub_recording = ChannelSliceRecording(self, new_channel_ids)
+        # create recording : channel slice or clone
+        if np.array_equal(new_channel_ids, self.get_channel_ids()):
+            sub_recording = self.clone()
+        else:
+            sub_recording = ChannelSliceRecording(self, new_channel_ids)
         
         # create a vector that handle all conatcts in property
         sub_recording.set_property('contact_vector', arr, ids=None)

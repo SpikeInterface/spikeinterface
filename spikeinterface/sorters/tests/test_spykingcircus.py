@@ -12,6 +12,6 @@ class SpykingcircusCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    SpykingcircusCommonTestSuite().test_on_toy()
-    #~ SpykingcircusCommonTestSuite().test_with_BinDatRecordingExtractor()
+    #~ SpykingcircusCommonTestSuite().test_on_toy()
+    SpykingcircusCommonTestSuite().test_with_BinDatRecordingExtractor()
     #~ SpykingcircusCommonTestSuite().test_get_version()

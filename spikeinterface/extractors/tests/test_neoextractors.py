@@ -90,6 +90,11 @@ def test_mcsraw():
     rec = MCSRawRecordingExtractor(mcsraw_file)
     print(rec)
 
+def test_kilosort():
+    kilosort_folder = basefolder + 'phy/phy_example_0'
+    sorting = KiloSortSortingExtractor(kilosort_folder)
+    print(sorting)
+
 
 
 if __name__ == '__main__':
@@ -102,7 +107,8 @@ if __name__ == '__main__':
     #~ test_plexon()
     #~ test_neuralynx()
     #~ test_blackrock()
-    test_mcsraw()
+    #~ test_mcsraw()
+    test_kilosort()
     
     
 

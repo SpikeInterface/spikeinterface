@@ -81,7 +81,23 @@ class SpykingcircusSorter(BaseSorter):
         return circus.__version__
 
     def _setup_recording(self, recording, output_folder):
+        # check and re dump params
         p = self.params
+        if p['detect_sign'] < 0:
+            detect_sign = 'negative'
+        elif p['detect_sign'] > 0:
+            detect_sign = 'positive'
+        else:
+            detect_sign = 'both'
+        if p['num_workers'] is None:
+            p['num_workers'] = np.maximum(1, int(os.cpu_count()/2))
+        if p['merge_spikes']:
+            auto = p['auto_merge']
+        else:
+            auto = 0
+        self.set_params(**p)
+        
+        
         source_dir = Path(__file__).parent
 
         # save prb file
@@ -113,38 +129,25 @@ class SpykingcircusSorter(BaseSorter):
             data = recording.get_traces(start_frame=start_frame, end_frame=end_frame).astype('float32')
             data_file[start_frame:end_frame, :] = data
 
-        if p['detect_sign'] < 0:
-            detect_sign = 'negative'
-        elif p['detect_sign'] > 0:
-            detect_sign = 'positive'
-        else:
-            detect_sign = 'both'
 
         sample_rate = float(recording.get_sampling_frequency())
 
         # set up spykingcircus config file
         with (source_dir / 'config_default.params').open('r') as f:
             circus_config = f.readlines()
-        if p['merge_spikes']:
-            auto = p['auto_merge']
-        else:
-            auto = 0
         circus_config = ''.join(circus_config).format(sample_rate, prb_file, p['template_width_ms'],
                     p['detect_threshold'], detect_sign, p['filter'], p['whitening_max_elts'],
                     p['clustering_max_elts'], auto)
         with (output_folder / (file_name + '.params')).open('w') as f:
             f.writelines(circus_config)
 
-        if p['num_workers'] is None:
-            p['num_workers'] = np.maximum(1, int(os.cpu_count()/2))
-
-    def _run(self,  recording, output_folder):
-        recording = recover_recording(recording)
-        if recording.is_filtered and self.params['filter']:
-            print("Warning! The recording is already filtered, but Spyking-Circus filter is enabled. You can disable "
-                  "filters by setting 'filter' parameter to False")
-
-        num_workers = self.params['num_workers']
+    
+    @classmethod
+    def _compute_from_folder(cls, output_folder, params, verbose):
+        sorter_name = cls.sorter_name
+        
+        num_workers = params['num_workers']
+        
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
                         spyking-circus {recording} -c {num_workers}
@@ -155,8 +158,8 @@ class SpykingcircusSorter(BaseSorter):
                         spyking-circus {recording} -c {num_workers}
                     '''.format(recording=output_folder / 'recording.npy', num_workers=num_workers)
 
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{self.sorter_name}',
-                                   log_path=output_folder / f'{self.sorter_name}.log', verbose=self.verbose)
+        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{sorter_name}',
+                                   log_path=output_folder / f'{sorter_name}.log', verbose=verbose)
         shell_script.start()
 
         retcode = shell_script.wait()
@@ -164,7 +167,11 @@ class SpykingcircusSorter(BaseSorter):
         if retcode != 0:
             raise Exception('spykingcircus returned a non-zero exit code')
 
-    @staticmethod
-    def get_result_from_folder(output_folder):
+    @classmethod
+    def get_result_from_folder(cls, output_folder):
         sorting = se.SpykingCircusSortingExtractor(file_or_folder_path=Path(output_folder) / 'recording')
         return sorting
+
+    @classmethod
+    def _check_already_filtered(cls, params):
+        return params['filter']
