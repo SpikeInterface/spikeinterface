@@ -14,6 +14,7 @@ from .neoextractors import (
     NeuralynxRecordingExtractor,
     BlackrockRecordingExtractor,
     MCSRawRecordingExtractor,
+    KiloSortSortingExtractor,
     )
 
 
@@ -76,6 +77,7 @@ sorting_extractor_full_list = [
     
     # neo based
     MEArecSortingExtractor,
+    KiloSortSortingExtractor,
     
     ##OLD
     #~ MdaSortingExtractor,

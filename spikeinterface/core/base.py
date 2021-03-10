@@ -270,7 +270,15 @@ class BaseExtractor:
             The loaded extractor object
         '''        
         extractor = _load_extractor_from_dict(d)
-        return extractor        
+        return extractor
+
+    def clone(self):
+        """
+        Make an instance
+        """
+        d = self.to_dict(include_annotations=True, include_properties=True, include_features=True)
+        clone = BaseExtractor.from_dict(d)
+        return clone
 
     def check_if_dumpable(self):
         return _check_if_dumpable(self.to_dict())
@@ -331,7 +339,6 @@ class BaseExtractor:
         self.check_if_dumpable()
         dump_dict = self.to_dict( include_properties=False, include_features=False)
         file_path = self._get_file_path(file_path, ['.json'])
-        
         file_path.write_text(
                 json.dumps(check_json(dump_dict), indent=4),
                 encoding='utf8'

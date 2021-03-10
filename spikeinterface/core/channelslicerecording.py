@@ -64,7 +64,7 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
         
 
     def get_num_samples(self) -> SampleIndex:
-        return self._parent_recording_segment.self.parent_recording_segment()
+        return self._parent_recording_segment.get_num_samples()
 
     def get_traces(self,
                    start_frame: Union[SampleIndex, None] = None,
