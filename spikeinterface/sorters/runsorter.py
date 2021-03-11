@@ -1,15 +1,8 @@
+from spikeinterface.core import BaseRecording
 from .sorterlist import sorter_dict
-from pathlib import Path
 
 
-def run_sorter(sorter_name, recording, output_folder=None,
-            remove_existing_folder=False, delete_output_folder=False,
-            verbose=False, raise_error=True,  **sorter_params):
-    """
-    Generic function to run a sorter via function approach.
-
-    >>> sorting = run_sorter('tridesclous', recording)
-
+_common_param_doc = """
     Parameters
     ----------
     sorter_name: str
@@ -36,6 +29,19 @@ def run_sorter(sorter_name, recording, output_folder=None,
         The spike sorted data
 
     """
+
+def run_sorter(sorter_name, recording, output_folder=None,
+            remove_existing_folder=False, delete_output_folder=False,
+            verbose=False, raise_error=True,  **sorter_params):
+    """
+    Generic function to run a sorter via function approach.
+
+    >>> sorting = run_sorter('tridesclous', recording)
+    """ + _common_param_doc
+    
+    if isinstance(recording, list):
+        raise Exception('You you want to run several sorters/recordings use run_sorters(...)')
+
     SorterClass = sorter_dict[sorter_name]
     
     # only classmethod call not instance (stateless at instance level but state is in folder) 
@@ -52,97 +58,75 @@ def run_sorter(sorter_name, recording, output_folder=None,
     return sorting
 
 
-_common_doc =     """
+_common_run_doc =     """
     Runs {} sorter
+    """ + _common_param_doc
 
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor to be spike sorted
-    output_folder: str or Path
-        Path to output folder
-    remove_existing_folder: bool
-        Tf True and output_folder exists yet then delete.
-    delete_output_folder: bool
-        If True, output folder is deleted (default False)
-    verbose: bool
-        If True, output is verbose
-    raise_error: bool
-        If True, an error is raised if spike sorting fails (default). If False, the process continues and the error is
-        logged in the log file.
-    **sorter_params: keyword args
-        Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
-
-    Returns
-    -------
-    sortingextractor: SortingExtractor
-        The spike sorted data
-    """
 
 def run_hdsort(*args, **kwargs):
-    __doc__ = _common_doc.dormat('hdsort')
+    __doc__ = _common_run_doc.dormat('hdsort')
     return run_sorter('hdsort', *args, **kwargs)
 
 
 def run_klusta(*args, **kwargs):
-    __doc__ = _common_doc.dormat('klusta')
+    __doc__ = _common_run_doc.dormat('klusta')
     return run_sorter('klusta', *args, **kwargs)
 
 
 def run_tridesclous(*args, **kwargs):
-    __doc__ = _common_doc.dormat('tridesclous')
+    __doc__ = _common_run_doc.dormat('tridesclous')
     return run_sorter('tridesclous', *args, **kwargs)
 
 
 def run_mountainsort4(*args, **kwargs):
-    __doc__ = _common_doc.dormat('mountainsort4')
+    __doc__ = _common_run_doc.dormat('mountainsort4')
     return run_sorter('mountainsort4', *args, **kwargs)
 
 
 def run_ironclust(*args, **kwargs):
-    __doc__ = _common_doc.dormat('ironclust')
+    __doc__ = _common_run_doc.dormat('ironclust')
     return run_sorter('ironclust', *args, **kwargs)
 
 
 def run_kilosort(*args, **kwargs):
-    __doc__ = _common_doc.dormat('kilosort')
+    __doc__ = _common_run_doc.dormat('kilosort')
     return run_sorter('kilosort', *args, **kwargs)
 
 
 def run_kilosort2(*args, **kwargs):
-    __doc__ = _common_doc.dormat('kilosort2')
+    __doc__ = _common_run_doc.dormat('kilosort2')
     return run_sorter('kilosort2', *args, **kwargs)
 
 def run_kilosort2_5(*args, **kwargs):
-    __doc__ = _common_doc.dormat('kilosort2_5')
+    __doc__ = _common_run_doc.dormat('kilosort2_5')
     return run_sorter('kilosort2_5', *args, **kwargs)
 
 
 def run_kilosort3(*args, **kwargs):
-    __doc__ = _common_doc.dormat('kilosort3')
+    __doc__ = _common_run_doc.dormat('kilosort3')
     return run_sorter('kilosort3', *args, **kwargs)
 
 
 def run_spykingcircus(*args, **kwargs):
-    __doc__ = _common_doc.dormat('spykingcircus')
+    __doc__ = _common_run_doc.dormat('spykingcircus')
     return run_sorter('spykingcircus', *args, **kwargs)
 
 
 def run_herdingspikes(*args, **kwargs):
-    __doc__ = _common_doc.dormat('herdingspikes')
+    __doc__ = _common_run_doc.dormat('herdingspikes')
     return run_sorter('herdingspikes', *args, **kwargs)
 
 
 def run_waveclus(*args, **kwargs):
-    __doc__ = _common_doc.dormat('waveclus')
+    __doc__ = _common_run_doc.dormat('waveclus')
     return run_sorter('waveclus', *args, **kwargs)
 
 
 def run_combinato(*args, **kwargs):
-    __doc__ = _common_doc.dormat('combinato')
+    __doc__ = _common_run_doc.dormat('combinato')
     return run_sorter('combinato', *args, **kwargs)
 
 
 def run_yass(*args, **kwargs):
-    __doc__ = _common_doc.dormat('yass')
+    __doc__ = _common_run_doc.dormat('yass')
     return run_sorter('yass', *args, **kwargs)

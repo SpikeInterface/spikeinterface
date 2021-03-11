@@ -14,7 +14,7 @@ import numpy as np
 
 from joblib import Parallel, delayed
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load_extractor, BaseRecording
 from spikeinterface.core.core_tools import check_json
 from .utils import SpikeSortingError
 
@@ -36,7 +36,6 @@ class BaseSorter:
 
     def __init__(self, recording=None, output_folder=None, verbose=False,
                 remove_existing_folder=False, delete_output_folder=False, ):
-        
         output_folder = self.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
         
         self.recording = recording
@@ -77,9 +76,14 @@ class BaseSorter:
     
     @classmethod
     def initialize_folder(cls, recording, output_folder, verbose, remove_existing_folder):
-        #~ if not cls.is_installed():
-            #~ raise Exception(f"The sorter {cls.sorter_name} is not installed."
-                        #~ f"Please install it with:  \n{cls.installation_mesg} ")
+        
+        # installed ?
+        if not cls.is_installed():
+            raise Exception(f"The sorter {cls.sorter_name} is not installed."
+                        f"Please install it with:  \n{cls.installation_mesg} ")
+        
+        if not isinstance(recording, BaseRecording):
+            raise ValueError('recording must be a Recording!!')
         
         if cls.requires_locations:
             locations = recording.get_channel_locations()

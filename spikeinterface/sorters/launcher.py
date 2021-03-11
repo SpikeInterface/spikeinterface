@@ -14,31 +14,53 @@ import spikeextractors as se
 
 from spikeinterface.core import load_extractor
 
-from .sorterlist import sorter_dict, run_sorter
+from .sorterlist import sorter_dict
 
 
 def _run_one(arg_list):
     # the multiprocessing python module force to have one unique tuple argument
-    rec, sorter_name, output_folder, grouping_property, verbose, sorter_params, run_sorter_kwargs = arg_list
-    if isinstance(rec, dict):
-        recording = se.load_extractor_from_dict(rec)
+    sorter_name, recording, output_folder, verbose, sorter_params = arg_list
+    if isinstance(recording, dict):
+        recording = load_extractor(recording)
     else:
-        recording = rec
+        recording = recording
 
     SorterClass = sorter_dict[sorter_name]
-    sorter = SorterClass(recording=recording, output_folder=output_folder,
-                         grouping_property=grouping_property, verbose=verbose, delete_output_folder=False)
-    sorter.set_params(**params)
-    sorter.run(**run_sorter_kwargs)
-
-    run_sorter(sorter_name, recording, output_folder=output_folder,
-            delete_output_folder=delete_output_folder, verbose=verbose, raise_error=raise_error,  **sorter_params):
+    
+    # because this is checks in run_sorters before this call
+    remove_existing_folder = False
+    # result is retrieve later
+    delete_output_folder = False
+    # because we won't want the loop/worker to break
+    raise_error=False
 
     
+    
+    # only classmethod call not instance (stateless at instance level but state is in folder) 
+    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
+    SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
+    SorterClass.setup_recording(recording, output_folder, verbose=verbose)
+    SorterClass.run_from_folder(output_folder, raise_error, verbose)
+    
+    #~ run_sorter(sorter_name, recording, output_folder=output_folder,
+            #~ remove_existing_folder=False, delete_output_folder=False,
+            #~ verbose=verbose, raise_error=False,  **sorter_params):
 
+    
+_implemented_engine = ('loop', 'joblib', 'dask')
 
-def run_sorters(sorter_list, recording_dict_or_list, working_folder, sorter_params={}, grouping_property=None,
-                mode='raise', engine=None, engine_kwargs={}, verbose=False, with_output=True, run_sorter_kwargs={}):
+def run_sorters(sorter_list,
+                recording_dict_or_list,
+                working_folder,
+                remove_existing_folder=False,
+                raise_error=True,
+                sorter_params={},
+                mode_if_folder_exists='raise',
+                engine='loop',
+                engine_kwargs={},
+                verbose=False,
+                with_output=True, 
+                ):
     """
     This run several sorter on several recording.
     Simple implementation are nested loops or with multiprocessing.
@@ -67,22 +89,18 @@ def run_sorters(sorter_list, recording_dict_or_list, working_folder, sorter_para
 
     working_folder: str
         The working directory.
-        This must not exist before calling this function.
-
-    grouping_property: str or None
-        The property of grouping given to sorters.
 
     sorter_params: dict of dict with sorter_name as key
         This allow to overwrite default params for sorter.
 
-    mode: 'raise_if_exists' or 'overwrite' or 'keep'
+    mode_if_folder_exists: 'raise_if_exists' or 'overwrite' or 'keep'
         The mode when the subfolder of recording/sorter already exists.
             * 'raise' : raise error if subfolder exists
-            * 'overwrite' : force recompute
+            * 'overwrite' : delete and force recompute
             * 'keep' : do not compute again if f=subfolder exists and log is OK
 
     engine: str
-        'loop', 'multiprocessing', or 'dask'
+        'loop', 'joblib', or 'dask'
 
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
@@ -110,15 +128,18 @@ def run_sorters(sorter_list, recording_dict_or_list, working_folder, sorter_para
         The output is nested dict[(rec_name, sorter_name)] of SortingExtractor.
 
     """
-    if mode == 'raise':
-        assert not os.path.exists(working_folder), 'working_folder already exists, please remove it'
     working_folder = Path(working_folder)
-
-    if engine is None:
-        engine = 'loop'
+    
+    if mode_if_folder_exists == 'raise' and working_folder.is_dir():
+        raise Exception('working_folder already exists, please remove it')
+    
+    assert engine in _implemented_engine, f'egine must be in {_implemented_engine}'
+    
+    if isinstance(sorter_list, str):
+        sorter_list = [sorter_list]
 
     for sorter_name in sorter_list:
-        assert sorter_name in sorter_dict, '{} is not in sorter list'.format(sorter_name)
+        assert sorter_name in sorter_dict, f'{sorter_name} is not in sorter list'
 
     if isinstance(recording_dict_or_list, list):
         # in case of list
@@ -126,22 +147,11 @@ def run_sorters(sorter_list, recording_dict_or_list, working_folder, sorter_para
     elif isinstance(recording_dict_or_list, dict):
         recording_dict = recording_dict_or_list
     else:
-        raise (ValueError('bad recording dict'))
+        raise ValueError('bad recording dict')
 
-    # when  grouping_property is not None : split in subrecording
-    # but the subrecording must have len=1 because otherwise it break
-    # the internal organisation of folder name.
-    if grouping_property is not None:
-        for rec_name, recording in recording_dict.items():
-            recording_list = recording.get_sub_extractors_by_property(grouping_property)
-            n_group = len(recording_list)
-            assert n_group == 1, 'run_sorters() works only if grouping_property=None or if it split into one subrecording'
-            recording_dict[rec_name] = recording_list[0]
-        grouping_property = None
-
-    need_serialize = engine != 'loop'
-
-    task_list = []
+    need_dump = engine != 'loop'
+    
+    task_args_list = []
     for rec_name, recording in recording_dict.items():
         for sorter_name in sorter_list:
 
@@ -149,41 +159,44 @@ def run_sorters(sorter_list, recording_dict_or_list, working_folder, sorter_para
 
             if is_log_ok(output_folder):
                 # check is output_folders exists
-                if mode == 'raise':
+                if mode_if_folder_exists == 'raise':
                     raise (Exception('output folder already exists for {} {}'.format(rec_name, sorter_name)))
-                elif mode == 'overwrite':
+                elif mode_if_folder_exists == 'overwrite':
                     shutil.rmtree(str(output_folder))
-                elif mode == 'keep':
+                elif mode_if_folder_exists == 'keep':
                     continue
                 else:
-                    raise (ValueError('mode not in raise, overwrite, keep'))
-            params = sorter_params.get(sorter_name, {})
-            if need_serialize:
-                assert recording.check_if_dumpable(), 'run_sorters(engine=... ) if engine is not "loop" then recording have to be dumpable'
-                rec = recording.dump_to_dict()
-            else:
-                rec = recording
-            task_list.append((rec, sorter_name, output_folder, grouping_property, verbose, params, run_sorter_kwargs))
+                    raise (ValueError('mode_if_folder_exists not in raise, overwrite, keep'))
 
+            params = sorter_params.get(sorter_name, {})
+            if need_dump:
+                if not recording.is_dumpable:
+                    raise Exception('recording not dumpable call recording.cache() before')
+                recording = recording.to_dict()
+            else:
+                recording = recording
+            task_args = (sorter_name, recording, output_folder, verbose, params)
+            task_args_list.append(task_args)
+    
     if engine == 'loop':
         # simple loop in main process
-        for arg_list in task_list:
-            _run_one(arg_list)
+        for task_args in task_args_list:
+            _run_one(task_args)
 
-    elif engine == 'multiprocessing':
-        # use mp.Pool
-        processes = engine_kwargs.get('processes', None)
-        pool = multiprocessing.Pool(processes)
-        pool.map(_run_one, task_list)
-        pool.close()
+    elif engine == 'joblib':
+        from joblib import Parallel, delayed
+        n_jobs = engine_kwargs.get('n_jobs', -1)
+        backend = engine_kwargs.get('backend', 'loky')
+        Parallel(n_jobs=n_jobs, backend=backend)(
+            delayed(_run_one)(task_args) for task_args in task_args_list)
 
     elif engine == 'dask':
         client = engine_kwargs.get('client', None)
         assert client is not None, 'For dask engine you have to provide : client = dask.distributed.Client(...)'
 
         tasks = []
-        for arg_list in task_list:
-            task = client.submit(_run_one, arg_list)
+        for task_args in task_args_list:
+            task = client.submit(_run_one, task_args)
             tasks.append(task)
 
         for task in tasks:
@@ -202,7 +215,7 @@ def run_sorters(sorter_list, recording_dict_or_list, working_folder, sorter_para
 
 def is_log_ok(output_folder):
     # log is OK when run_time is not None
-    if os.path.exists(output_folder / 'spikeinterface_log.json'):
+    if (output_folder / 'spikeinterface_log.json').is_file():
         with open(output_folder / 'spikeinterface_log.json', mode='r', encoding='utf8') as logfile:
             log = json.load(logfile)
             run_time = log.get('run_time', None)
