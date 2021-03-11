@@ -12,7 +12,6 @@ import distutils.version
 #~ from spikeinterface.extractors import TridesclousSortingExtractor
 
 from ..basesorter import BaseSorter
-from ..sorter_tools import recover_recording
 from spikeinterface.core import BinaryRecordingExtractor
 
 from probeinterface import write_prb
@@ -88,7 +87,13 @@ class TridesclousSorter(BaseSorter):
     def get_sorter_version(cls):
         return tdc.__version__
 
-    def _setup_recording(self, recording, output_folder):
+
+    @classmethod
+    def _check_params(cls, recording, output_folder, params):
+        return params
+
+    @classmethod
+    def _setup_recording(cls, recording, output_folder, params, verbose):
         # reset the output folder
         #~ if output_folder.is_dir():
             #~ shutil.rmtree(str(output_folder))
@@ -115,7 +120,7 @@ class TridesclousSorter(BaseSorter):
             #~ recording.write_to_binary_dat_format(raw_filename, time_axis=0, dtype='float32', chunk_mb=500)
             #~ dtype = 'float32'
             #~ offset = 0
-        if self.verbose:
+        if verbose:
             print('Local copy of recording')
         # save binary file (chunk by hcunk) into a new file
         raw_filename = output_folder / 'raw_signals.raw'
@@ -133,14 +138,12 @@ class TridesclousSorter(BaseSorter):
                                    dtype=dtype, sample_rate=recording.get_sampling_frequency(),
                                    total_channel=nb_chan, offset=offset)
         tdc_dataio.set_probe_file(str(prb_file))
-        if self.verbose:
+        if verbose:
             print(tdc_dataio)
 
-
     @classmethod
-    def _compute_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, output_folder, params, verbose):
 
-        #~ recording = recover_recording(recording)
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
 
         #~ params = dict(self.params)
@@ -195,7 +198,7 @@ class TridesclousSorter(BaseSorter):
 
 
     @classmethod
-    def get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, output_folder):
         sorting = TridesclousSortingExtractor(folder_path=output_folder)
         return sorting
 

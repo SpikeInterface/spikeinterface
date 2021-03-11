@@ -3,6 +3,7 @@ import unittest
 from spikeinterface.extractors import toy_example, BinaryRecordingExtractor
 from probeinterface import write_probeinterface, read_probeinterface
 
+from spikeinterface.sorters import run_sorter
 
 
 class SorterCommonTestSuite:
@@ -17,17 +18,25 @@ class SorterCommonTestSuite:
         #~ self.recording, self.sorting_gt = toy_example(num_channels=4, duration=10, seed=0, num_segments=1)
 
     def test_on_toy(self):
+        SorterClass = self.SorterClass
+        
         recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
+        
+        sorter_params = SorterClass.default_params()
 
-        params = self.SorterClass.default_params()
+        output_folder = None
+        verbose = False
+        remove_existing_folder = True
+        raise_error = True
 
-        sorter = self.SorterClass(recording=recording, output_folder=None, verbose=False)
-        sorter.set_params(**params)
-        sorter.run()
-        sorting = sorter.get_result()
+        output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
+        SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
+        SorterClass.setup_recording(recording, output_folder, sorter_params, verbose)
+        SorterClass.run_from_folder(output_folder, raise_error)
+        sorting = SorterClass.get_result_from_folder(output_folder)
 
-        #~ for unit_id in sorting.get_unit_ids():
-            #~ print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
+        for unit_id in sorting.get_unit_ids():
+            print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
 
         del sorting
 
@@ -51,12 +60,20 @@ class SorterCommonTestSuite:
         recording = BinaryRecordingExtractor(raw_filename, samplerate, num_chan, 'float32')
         probegroup = read_probeinterface(probe_filename)
         recording = recording.set_probes(probegroup)
-
-        params = self.SorterClass.default_params()
-        sorter = self.SorterClass(recording=recording, output_folder=None)
-        sorter.set_params(**params)
-        sorter.run()
-        sorting = sorter.get_result()
+        
+        sorter_name = self.SorterClass.sorter_name
+        
+        sorter_params = self.SorterClass.default_params()
+        
+        sorting = run_sorter(sorter_name, recording, output_folder=None,
+            remove_existing_folder=True, delete_output_folder=True,
+            verbose=False, raise_error=True,  **sorter_params)
+        
+        #~ params = self.SorterClass.default_params()
+        #~ sorter = self.SorterClass(recording=recording, output_folder=None)
+        #~ sorter.set_params(**params)
+        #~ sorter.run()
+        #~ sorting = sorter.get_result()
 
         #~ for unit_id in sorting.get_unit_ids():
             #~ print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
