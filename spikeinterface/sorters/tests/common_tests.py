@@ -31,8 +31,8 @@ class SorterCommonTestSuite:
 
         output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
         SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
-        SorterClass.setup_recording(recording, output_folder, sorter_params, verbose)
-        SorterClass.run_from_folder(output_folder, raise_error)
+        SorterClass.setup_recording(recording, output_folder, verbose)
+        SorterClass.run_from_folder(output_folder, raise_error, verbose)
         sorting = SorterClass.get_result_from_folder(output_folder)
 
         for unit_id in sorting.get_unit_ids():

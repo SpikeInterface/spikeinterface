@@ -11,6 +11,9 @@ import json
 
 import spikeextractors as se
 
+
+from spikeinterface.core import load_extractor
+
 from .sorterlist import sorter_dict, run_sorter
 
 

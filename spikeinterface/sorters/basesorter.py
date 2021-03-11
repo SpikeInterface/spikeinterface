@@ -77,8 +77,9 @@ class BaseSorter:
     
     @classmethod
     def initialize_folder(cls, recording, output_folder, verbose, remove_existing_folder):
-        assert cls.is_installed(), """The sorter {} is not installed.
-        Please install it with:  \n{} """.format(cls.sorter_name, cls.installation_mesg)
+        #~ if not cls.is_installed():
+            #~ raise Exception(f"The sorter {cls.sorter_name} is not installed."
+                        #~ f"Please install it with:  \n{cls.installation_mesg} ")
         
         if cls.requires_locations:
             locations = recording.get_channel_locations()
@@ -95,7 +96,6 @@ class BaseSorter:
         # .absolute() not anymore
         output_folder = Path(output_folder) 
 
-        print('remove_existing_folder', remove_existing_folder)
         if output_folder.is_dir():
             if remove_existing_folder:
                 shutil.rmtree(str(output_folder))
@@ -148,9 +148,9 @@ class BaseSorter:
         # custum check params
         params = cls._check_params(recording, output_folder, params)
         # common check : filter warning
-        if recording.is_filtered and cls._check_already_filtered(params) and verbose:
+        if recording.is_filtered and cls._check_apply_filter_in_params(params) and verbose:
             print(f"Warning! The recording is already filtered, but {cls.sorter_name} filter is enabled")
-
+        
         # dump parameters inside the folder with json
         cls._dump_params(recording, output_folder, params, verbose)
         
@@ -159,20 +159,21 @@ class BaseSorter:
     @classmethod
     def _dump_params(cls, recording, output_folder, sorter_params, verbose):
         with (output_folder / 'spikeinterface_params.json').open(mode='w', encoding='utf8') as f:
-            params = dict()
-            params['sorter_name'] = cls.sorter_name
-            params['sorter_params'] = sorter_params
-            params['verbose'] = verbose
-            json.dump(check_json(params), f, indent=4)
-
+            all_params = dict()
+            all_params['sorter_name'] = cls.sorter_name
+            all_params['sorter_params'] = sorter_params
+            json.dump(check_json(all_params), f, indent=4)
     
     @classmethod
-    def setup_recording(cls, recording, output_folder, params, verbose):
+    def setup_recording(cls, recording, output_folder, verbose):
         output_folder = Path(output_folder)
-        cls._setup_recording(recording, output_folder, params, verbose)
-        
+        with (output_folder / 'spikeinterface_params.json').open(mode='r', encoding='utf8') as f:
+            all_params =  json.load(f)
+            sorter_params = all_params['sorter_params']
+        cls._setup_recording(recording, output_folder, sorter_params, verbose)
+
     @classmethod
-    def run_from_folder(cls, output_folder, raise_error):
+    def run_from_folder(cls, output_folder, raise_error, verbose):
         # need setup_recording to be done.
         output_folder = Path(output_folder)
         
@@ -181,7 +182,6 @@ class BaseSorter:
             params = json.load(f)
         sorter_params = params['sorter_params']
         sorter_name = params['sorter_name']
-        verbose = params['verbose']
 
         from .sorterlist import sorter_dict
         SorterClass = sorter_dict[sorter_name]
@@ -291,7 +291,7 @@ class BaseSorter:
         raise NotImplementedError
 
     @classmethod
-    def _check_already_filtered(cls, params):
+    def _check_apply_filter_in_params(cls, params):
         return False
         # need be implemented in subclass for custum checks
 

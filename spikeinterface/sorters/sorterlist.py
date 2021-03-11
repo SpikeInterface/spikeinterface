@@ -4,8 +4,8 @@ from .tridesclous import TridesclousSorter
 #~ from .mountainsort4 import Mountainsort4Sorter
 #~ from .ironclust import IronClustSorter
 from .kilosort import KilosortSorter
-#~ from .kilosort2 import Kilosort2Sorter
-#~ from .kilosort2_5 import Kilosort2_5Sorter
+from .kilosort2 import Kilosort2Sorter
+from .kilosort2_5 import Kilosort2_5Sorter
 from .kilosort3 import Kilosort3Sorter
 from .spyking_circus import SpykingcircusSorter
 #~ from .herdingspikes import HerdingspikesSorter
@@ -20,8 +20,8 @@ sorter_full_list = [
     #~ Mountainsort4Sorter,
     #~ IronClustSorter,
     KilosortSorter,
-    #~ Kilosort2Sorter,
-    #~ Kilosort2_5Sorter,
+    Kilosort2Sorter,
+    Kilosort2_5Sorter,
     Kilosort3Sorter,
     SpykingcircusSorter,
     #~ HerdingspikesSorter,
