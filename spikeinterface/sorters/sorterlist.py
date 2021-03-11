@@ -1,4 +1,5 @@
-#~ from .hdsort import HDSortSorter
+from .combinato import CombinatoSorter
+from .hdsort import HDSortSorter
 #~ from .klusta import KlustaSorter
 from .tridesclous import TridesclousSorter
 #~ from .mountainsort4 import Mountainsort4Sorter
@@ -11,10 +12,11 @@ from .spyking_circus import SpykingcircusSorter
 #~ from .herdingspikes import HerdingspikesSorter
 #~ from .waveclus import WaveClusSorter
 #~ from .yass import YassSorter
-#~ from .combinato import CombinatoSorter
+
 
 sorter_full_list = [
-    #~ HDSortSorter,
+    CombinatoSorter,
+    HDSortSorter,
     #~ KlustaSorter,
     TridesclousSorter,
     #~ Mountainsort4Sorter,
@@ -27,7 +29,7 @@ sorter_full_list = [
     #~ HerdingspikesSorter,
     #~ WaveClusSorter,
     #~ YassSorter,
-    #~ CombinatoSorter
+    
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
