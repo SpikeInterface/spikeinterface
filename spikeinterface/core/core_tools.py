@@ -6,6 +6,8 @@ import numpy as np
 
 from joblib import Parallel, delayed
 
+
+
 def check_json(d):
     # quick hack to ensure json writable
     for k, v in d.items():
@@ -310,7 +312,8 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     verbose: bool
         If True, output is verbose (when chunks are used)
     '''
-    assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
+    import h5py
+    #~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
     assert save_path is not None or file_handle is not None, "Provide 'save_path' or 'file handle'"
 
     if save_path is not None:
@@ -320,7 +323,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
             save_path = save_path.parent / (save_path.name + '.h5')
 
     num_channels = recording.get_num_channels()
-    num_frames = recording.get_num_frames()
+    num_frames = recording.get_num_frames(segment_index=0)
 
     if file_handle is not None:
         assert isinstance(file_handle, h5py.File)
@@ -333,10 +336,11 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         dtype_file = dtype
 
     if time_axis == 0:
-        dset = file_handle.create_dataset(dataset_path, shape=(num_frames, num_channels), dtype=dtype_file)
+        shape= (num_frames, num_channels)
     else:
-        dset = file_handle.create_dataset(dataset_path, shape=(num_channels, num_frames), dtype=dtype_file)
-
+        shape= (num_channels, num_frames)
+    dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
+    
     # set chunk size
     if chunk_size is not None:
         chunk_size = int(chunk_size)
@@ -349,7 +353,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         traces = recording.get_traces()
         if dtype is not None:
             traces = traces.astype(dtype_file)
-        if time_axis == 0:
+        if time_axis == 1:
             traces = traces.T
         dset[:] = traces
     else:
@@ -365,13 +369,13 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         for i in chunks:
             traces = recording.get_traces(start_frame=i * chunk_size,
                                           end_frame=min((i + 1) * chunk_size, num_frames))
-            chunk_frames = traces.shape[1]
+            chunk_frames = traces.shape[0]
             if dtype is not None:
                 traces = traces.astype(dtype_file)
             if time_axis == 0:
-                dset[chunk_start:chunk_start + chunk_frames] = traces.T
+                dset[chunk_start:chunk_start + chunk_frames, :] = traces
             else:
-                dset[:, chunk_start:chunk_start + chunk_frames] = traces
+                dset[:, chunk_start:chunk_start + chunk_frames] = traces.T
             chunk_start += chunk_frames
 
     if save_path is not None:

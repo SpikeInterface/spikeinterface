@@ -8,10 +8,6 @@ if getpass.getuser() == 'samuel':
 import unittest
 import pytest
 
-
-print(KilosortSorter.get_sorter_version())
-print(KilosortSorter.get_sorter_version())
-
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
 

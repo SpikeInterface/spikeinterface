@@ -87,7 +87,9 @@ class Kilosort2Sorter(BaseSorter):
     More information on Kilosort2 at:
         https://github.com/MouseLand/Kilosort2
     """
-
+    
+    handle_multi_segment = False
+    
     def __init__(self, **kargs):
         BaseSorter.__init__(self, **kargs)
 
@@ -222,8 +224,8 @@ class Kilosort2Sorter(BaseSorter):
         if retcode != 0:
             raise Exception('kilosort2 returned a non-zero exit code')
 
-    @staticmethod
-    def get_result_from_folder(output_folder):
+    @classmethod
+    def get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         with (output_folder / 'spikeinterface_params.json').open('r') as f:
             sorter_params = json.load(f)['sorter_params']

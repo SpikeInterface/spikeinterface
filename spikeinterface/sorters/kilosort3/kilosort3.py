@@ -94,6 +94,8 @@ class Kilosort3Sorter(BaseSorter):
     More information on Kilosort3 at:
         https://github.com/MouseLand/Kilosort
     """
+    
+    handle_multi_segment = False
 
     def __init__(self, **kargs):
         BaseSorter.__init__(self, **kargs)
