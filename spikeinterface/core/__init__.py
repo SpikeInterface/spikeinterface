@@ -18,3 +18,7 @@ from .npzsortingextractor import NpzSortingExtractor
 
 # utility extractors
 from .channelslicerecording import ChannelSliceRecording
+
+# default folder
+from .default import (set_global_tmp_folder,
+        get_global_tmp_folder, is_set_global_tmp_folder)
