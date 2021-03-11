@@ -12,7 +12,7 @@ import pytest
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
 # This run several tests
-@pytest.mark.skipif(not Kilosort3Sorter.is_installed(), reason='kilosort not installed')
+@pytest.mark.skipif(not Kilosort3Sorter.is_installed(), reason='kilosort3 not installed')
 class Kilosort3SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = Kilosort3Sorter
 

@@ -87,7 +87,6 @@ class TridesclousSorter(BaseSorter):
     def get_sorter_version(cls):
         return tdc.__version__
 
-
     @classmethod
     def _check_params(cls, recording, output_folder, params):
         return params

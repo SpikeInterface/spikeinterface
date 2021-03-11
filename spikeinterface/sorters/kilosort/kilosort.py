@@ -8,8 +8,7 @@ import numpy as np
 
 
 from ..basesorter import BaseSorter
-from ..utils.shellscript import ShellScript
-from ..sorter_tools import get_git_commit
+from ..utils import ShellScript, get_git_commit
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
@@ -98,12 +97,27 @@ class KilosortSorter(BaseSorter):
         except Exception as e:
             print("Could not set KILOSORT_PATH environment variable:", e)
 
-    def _setup_recording(self, recording, output_folder):
-        source_dir = Path(__file__).parent
-        p = self.params
+    @classmethod
+    def _check_params(cls, recording, output_folder, params):
+        p = params
+        nchan = recording.get_num_channels()
+        if p['Nfilt'] is None:
+            p['Nfilt'] = (nchan // 32) * 32 * 8
+        else:
+            p['Nfilt'] = p['Nfilt'] // 32 * 32
+        if p['Nfilt'] == 0:
+            p['Nfilt'] = nchan * 8
+        if p['NT'] is None:
+            p['NT'] = 64 * 1024 + p['ntbuff']
+        else:
+            p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
+        return p
 
-        if not self.is_installed():
-            raise Exception(KilosortSorter.installation_mesg)
+    @classmethod
+    def _setup_recording(cls, recording, output_folder, params, verbose):
+        p = params
+        
+        source_dir = Path(__file__).parent
 
         # prepare electrode positions for this group (only one group, the split is done in basesorter)
         groups = [1] * recording.get_num_channels()
@@ -125,17 +139,7 @@ class KilosortSorter(BaseSorter):
             kilosort_channelmap_txt = f.read()
 
         nchan = recording.get_num_channels()
-        if p['Nfilt'] is None:
-            p['Nfilt'] = (nchan // 32) * 32 * 8
-        else:
-            p['Nfilt'] = p['Nfilt'] // 32 * 32
-        if p['Nfilt'] == 0:
-            p['Nfilt'] = nchan * 8
-        if p['NT'] is None:
-            p['NT'] = 64 * 1024 + p['ntbuff']
-        else:
-            p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
-
+        
         if p['useGPU']:
             useGPU = 1
         else:
@@ -190,7 +194,7 @@ class KilosortSorter(BaseSorter):
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
 
     @classmethod
-    def _compute_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, output_folder, params, verbose):
         sorter_name = cls.sorter_name
         
         if 'win' in sys.platform and sys.platform != 'darwin':

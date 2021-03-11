@@ -8,8 +8,7 @@ import sys
 
 import spikeinterface.extractors as se
 from ..basesorter import BaseSorter
-from ..utils.shellscript import ShellScript
-from ..sorter_tools import recover_recording
+from ..utils import ShellScript
 
 from probeinterface import write_prb
 
@@ -80,23 +79,33 @@ class SpykingcircusSorter(BaseSorter):
     def get_sorter_version():
         return circus.__version__
 
-    def _setup_recording(self, recording, output_folder):
+    @classmethod
+    def _check_params(cls, recording, output_folder, params):
         # check and re dump params
-        p = self.params
+        p = params
+        if p['num_workers'] is None:
+            p['num_workers'] = np.maximum(1, int(os.cpu_count()/2))
+        return p
+
+    @classmethod
+    def _check_apply_filter_in_params(cls, params):
+        print('_check_apply_filter_in_params', params['filter'])
+        return params['filter']
+
+    @classmethod
+    def _setup_recording(cls, recording, output_folder, params, verbose):
+        p = params
+        
         if p['detect_sign'] < 0:
             detect_sign = 'negative'
         elif p['detect_sign'] > 0:
             detect_sign = 'positive'
         else:
             detect_sign = 'both'
-        if p['num_workers'] is None:
-            p['num_workers'] = np.maximum(1, int(os.cpu_count()/2))
         if p['merge_spikes']:
             auto = p['auto_merge']
         else:
             auto = 0
-        self.set_params(**p)
-        
         
         source_dir = Path(__file__).parent
 
@@ -129,7 +138,6 @@ class SpykingcircusSorter(BaseSorter):
             data = recording.get_traces(start_frame=start_frame, end_frame=end_frame).astype('float32')
             data_file[start_frame:end_frame, :] = data
 
-
         sample_rate = float(recording.get_sampling_frequency())
 
         # set up spykingcircus config file
@@ -143,7 +151,7 @@ class SpykingcircusSorter(BaseSorter):
 
     
     @classmethod
-    def _compute_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, output_folder, params, verbose):
         sorter_name = cls.sorter_name
         
         num_workers = params['num_workers']
@@ -172,6 +180,3 @@ class SpykingcircusSorter(BaseSorter):
         sorting = se.SpykingCircusSortingExtractor(file_or_folder_path=Path(output_folder) / 'recording')
         return sorting
 
-    @classmethod
-    def _check_already_filtered(cls, params):
-        return params['filter']

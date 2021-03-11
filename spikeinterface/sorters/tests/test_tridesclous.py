@@ -27,6 +27,6 @@ class TridesclousCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 if __name__ == '__main__':
     #~ TridesclousCommonTestSuite().test_on_toy()
-    #~ TridesclousCommonTestSuite().test_with_BinDatRecordingExtractor()
+    TridesclousCommonTestSuite().test_with_BinDatRecordingExtractor()
     #~ TridesclousCommonTestSuite().test_get_version()
-    unittest.main()
+    #~ unittest.main()
