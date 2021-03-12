@@ -111,6 +111,10 @@ class HDSortSorter(BaseSorter):
             print("Could not set HDSORT_PATH environment variable:", e)
 
     @classmethod
+    def _check_apply_filter_in_params(cls, params):
+        return params['filter']
+
+    @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
         source_dir = Path(__file__).parent
         utils_path = source_dir.parent / 'utils'
@@ -191,9 +195,6 @@ class HDSortSorter(BaseSorter):
         with open(samplerate_fname, 'w') as f:
             f.write('{}'.format(samplerate))
 
-    @classmethod
-    def _check_apply_filter_in_params(cls, params):
-        return params['filter']
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
