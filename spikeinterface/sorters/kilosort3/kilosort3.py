@@ -169,8 +169,6 @@ class Kilosort3Sorter(BaseSorter):
             config_path=str((output_folder / 'kilosort3_config.m').absolute()),
         )
 
-
-
         kilosort3_config_txt = kilosort3_config_txt.format(
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),

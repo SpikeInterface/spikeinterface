@@ -152,11 +152,9 @@ class KilosortSorter(BaseSorter):
 
         # make substitutions in txt files
         kilosort_master_txt = kilosort_master_txt.format(
-            kilosort_path=str(
-                Path(KilosortSorter.kilosort_path).absolute()),
-            output_folder=str(output_folder),
-            channel_path=str(
-                (output_folder / 'kilosort_channelmap.m').absolute()),
+            kilosort_path=str(Path(KilosortSorter.kilosort_path).absolute()),
+            output_folder=str(output_folder.absolute()),
+            channel_path=str((output_folder / 'kilosort_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort_config.m').absolute()),
             useGPU=useGPU,
         )
