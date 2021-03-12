@@ -478,6 +478,8 @@ def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
     
+    if 'kwargs' not in dic:
+        raise Exception(f'This dict cannot be load into extractor {d}')
     kwargs = deepcopy(dic['kwargs'])
 
     if any(isinstance(v, dict) for v in kwargs.values()):

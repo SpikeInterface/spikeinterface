@@ -71,8 +71,8 @@ class Mountainsort4Sorter(BaseSorter):
       * https://github.com/flatironinstitute/mountainsort
     """
 
-    def __init__(self, **kargs):
-        BaseSorter.__init__(self, **kargs)
+    #~ def __init__(self, **kargs):
+        #~ BaseSorter.__init__(self, **kargs)
     
     @classmethod
     def is_installed(cls):
