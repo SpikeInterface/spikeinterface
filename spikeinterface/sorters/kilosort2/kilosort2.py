@@ -15,7 +15,6 @@ from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingE
 
 PathType = Union[str, Path]
 
-
 def check_if_installed(kilosort2_path: Union[str, None]):
     if kilosort2_path is None:
         return False
@@ -24,7 +23,6 @@ def check_if_installed(kilosort2_path: Union[str, None]):
     if kilosort2_path.startswith('"'):
         kilosort2_path = kilosort2_path[1:-1]
     kilosort2_path = str(Path(kilosort2_path).absolute())
-
     if (Path(kilosort2_path) / 'master_kilosort.m').is_file() or (Path(kilosort2_path) / 'main_kilosort.m').is_file():
         return True
     else:
@@ -97,16 +95,16 @@ class Kilosort2Sorter(BaseSorter):
     def is_installed(cls):
         return check_if_installed(cls.kilosort2_path)
 
-    @staticmethod
-    def get_sorter_version():
+    @classmethod
+    def get_sorter_version(cls):
         commit = get_git_commit(os.getenv('KILOSORT2_PATH', None))
         if commit is None:
             return 'unknown'
         else:
             return 'git-' + commit
 
-    @staticmethod
-    def set_kilosort2_path(kilosort2_path: PathType):
+    @classmethod
+    def set_kilosort2_path(cls, kilosort2_path: PathType):
         kilosort2_path = str(Path(kilosort2_path).absolute())
         Kilosort2Sorter.kilosort2_path = kilosort2_path
         try:
@@ -157,11 +155,9 @@ class Kilosort2Sorter(BaseSorter):
 
         # make substitutions in txt files
         kilosort2_master_txt = kilosort2_master_txt.format(
-            kilosort2_path=str(
-                Path(Kilosort2Sorter.kilosort2_path).absolute()),
-            output_folder=str(output_folder),
-            channel_path=str(
-                (output_folder / 'kilosort2_channelmap.m').absolute()),
+            kilosort2_path=str(Path(Kilosort2Sorter.kilosort2_path).absolute()),
+            output_folder=str(output_folder.absolute()),
+            channel_path=str((output_folder / 'kilosort2_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort2_config.m').absolute()),
         )
 
@@ -202,8 +198,9 @@ class Kilosort2Sorter(BaseSorter):
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
 
-    def _run(self, recording, output_folder):
-        recording = recover_recording(recording)
+    @classmethod
+    def _run_from_folder(cls, output_folder, params, verbose):
+        
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
                         {disk_move}

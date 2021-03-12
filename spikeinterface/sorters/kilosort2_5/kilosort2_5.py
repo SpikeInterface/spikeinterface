@@ -167,11 +167,9 @@ class Kilosort2_5Sorter(BaseSorter):
 
         # make substitutions in txt files
         kilosort2_5_master_txt = kilosort2_5_master_txt.format(
-            kilosort2_5_path=str(
-                Path(Kilosort2_5Sorter.kilosort2_5_path).absolute()),
-            output_folder=str(output_folder),
-            channel_path=str(
-                (output_folder / 'kilosort2_5_channelmap.m').absolute()),
+            kilosort2_5_path=str(Path(Kilosort2_5Sorter.kilosort2_5_path).absolute()),
+            output_folder=str(output_folder.absolute()),
+            channel_path=str((output_folder / 'kilosort2_5_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort2_5_config.m').absolute()),
         )
 
