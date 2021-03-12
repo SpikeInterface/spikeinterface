@@ -10,6 +10,8 @@ from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
 from spikeinterface.core import load_extractor
+# TODO
+# from spikeinterface.extractors import WaveClusSortingExtractor
 
 
 PathType = Union[str, Path]
@@ -200,27 +202,19 @@ class WaveClusSorter(BaseSorter):
                 value = '{}'.format(value).lower()
             if key in par_renames:
                 key = par_renames[key]
-            par_str += 'par.{} = {};'.format(key, value)
+            par_str += 'par.{} = {};\n'.format(key, value)
 
         if verbose:
             print('Running waveclus in {tmpdir}...'.format(tmpdir=tmpdir))
-        cmd = '''
-            addpath(genpath('{waveclus_path}'), '{source_path}');
-            {parameters}
-            try
-                p_waveclus('{tmpdir}', {nChans}, par);
-            catch
-                fprintf('----------------------------------------');
-                fprintf(lasterr());
-                quit(1);
-            end
-            quit(0);
-        '''
-        cmd = cmd.format(waveclus_path=WaveClusSorter.waveclus_path, source_path=source_dir,
-                         tmpdir=tmpdir, nChans=num_channels, parameters=par_str)
 
-        matlab_cmd = ShellScript(cmd, script_path=str(tmpdir / 'run_waveclus.m'), keep_temp_files=True)
-        matlab_cmd.write()
+        matlab_code = _matlab_code.format(waveclus_path=WaveClusSorter.waveclus_path, 
+                    source_path=source_dir,
+                    tmpdir=tmpdir.absolute(),
+                    nChans=num_channels,
+                    parameters=par_str)
+
+        with (output_folder / 'run_waveclus.m').open('w') as f:
+            f.write(matlab_code)        
 
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
@@ -238,6 +232,8 @@ class WaveClusSorter(BaseSorter):
                                 log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_cmd.start()
 
+        
+
         retcode = shell_cmd.wait()
 
         if retcode != 0:
@@ -249,8 +245,22 @@ class WaveClusSorter(BaseSorter):
 
     @classmethod
     def get_result_from_folder(cls, output_folder):
-
         output_folder = Path(output_folder)
         result_fname = str(output_folder / 'times_results.mat')
-        sorting = se.WaveClusSortingExtractor(file_path=result_fname)
+        sorting = WaveClusSortingExtractor(file_path=result_fname)
         return sorting
+
+
+_matlab_code = '''
+addpath(genpath('{waveclus_path}'));
+addpath(genpath('{source_path}'));
+{parameters}
+try
+    p_waveclus('{tmpdir}', {nChans}, par);
+catch
+    fprintf('----------------------------------------');
+    fprintf(lasterr());
+    quit(1);
+end
+quit(0);
+'''
