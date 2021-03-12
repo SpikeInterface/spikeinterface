@@ -11,8 +11,8 @@ from .klusta import KlustaSorter
 from .mountainsort4 import Mountainsort4Sorter
 from .spyking_circus import SpykingcircusSorter
 from .tridesclous import TridesclousSorter
-#~ from .waveclus import WaveClusSorter
-#~ from .yass import YassSorter
+from .waveclus import WaveClusSorter
+from .yass import YassSorter
 
 
 sorter_full_list = [
@@ -28,8 +28,8 @@ sorter_full_list = [
     Mountainsort4Sorter,
     SpykingcircusSorter,
     TridesclousSorter,
-    #~ WaveClusSorter,
-    #~ YassSorter,
+    WaveClusSorter,
+    YassSorter,
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
