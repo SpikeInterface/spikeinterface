@@ -2,7 +2,7 @@ from spikeinterface.sorters import KilosortSorter
 
 import os, getpass
 if getpass.getuser() == 'samuel':
-    kilosort_path = '/home/samuel/Documents/SpikeInterface/KiloSort/'
+    kilosort_path = '/home/samuel/Documents/SpikeInterface/KiloSort1/'
     KilosortSorter.set_kilosort_path(kilosort_path)
 
 import unittest
