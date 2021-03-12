@@ -99,8 +99,8 @@ class Kilosort2_5Sorter(BaseSorter):
     
     handle_multi_segment = False
     
-    def __init__(self, **kargs):
-        BaseSorter.__init__(self, **kargs)
+    #~ def __init__(self, **kargs):
+        #~ BaseSorter.__init__(self, **kargs)
 
     @classmethod
     def is_installed(cls):
