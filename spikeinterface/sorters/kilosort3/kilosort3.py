@@ -163,11 +163,9 @@ class Kilosort3Sorter(BaseSorter):
 
         # make substitutions in txt files
         kilosort3_master_txt = kilosort3_master_txt.format(
-            kilosort3_path=str(
-                Path(Kilosort3Sorter.kilosort3_path).absolute()),
-            output_folder=str(output_folder),
-            channel_path=str(
-                (output_folder / 'kilosort3_channelmap.m').absolute()),
+            kilosort3_path=str(Path(Kilosort3Sorter.kilosort3_path).absolute()),
+            output_folder=str(output_folder.absolute()),
+            channel_path=str((output_folder / 'kilosort3_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort3_config.m').absolute()),
         )
 
