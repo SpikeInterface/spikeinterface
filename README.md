@@ -56,7 +56,7 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 - [spikewidgets](https://github.com/SpikeInterface/spikewidgets): Data visualization widgets. [![Build Status](https://travis-ci.org/SpikeInterface/spikewidgets.svg?branch=master)](https://travis-ci.org/SpikeInterface/spikewidgets) 
 
 
-**On December 10, 2020, a new version of `spikeinterface` has been released (0.11.0). Check out the [release notes](https://spikeinterface.readthedocs.io/en/latest/whatisnew.html)**
+**On March 13th, 2021, a new version of `spikeinterface` has been released (0.12.0). Check out the [release notes](https://spikeinterface.readthedocs.io/en/latest/whatisnew.html)**
 
 **Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
