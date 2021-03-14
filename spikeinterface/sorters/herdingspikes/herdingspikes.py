@@ -5,7 +5,7 @@ import copy
 #~ import spiketoolkit as st
 
 from ..basesorter import BaseSorter
-#~ from ..sorter_tools import recover_recording
+from ..utils import RecordingExtractorOldAPI
 
 from spikeinterface.core import load_extractor
 # from spikeinterface.extractors import HS2SortingExtractor
@@ -149,9 +149,11 @@ class HerdingspikesSorter(BaseSorter):
     
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        raise NotImplementedError('Herdingspikes need to use the new get_traces() transpose + segment_index!!!')
+        #~ raise NotImplementedError('Herdingspikes need to use the new get_traces() transpose + segment_index!!!')
+        
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+        
         
         p = params
 
@@ -169,19 +171,17 @@ class HerdingspikesSorter(BaseSorter):
             )
         """
         
+        print('Herdingspikes use the OLD spikeextractors: use RecordingExtractorOldAPI')
+        old_api_recording = RecordingExtractorOldAPI(recording)
+        
         # this should have its name changed
         Probe = hs.probe.RecordingExtractor(
-            recording,
+            old_api_recording,
             masked_channels=p['probe_masked_channels'],
             inner_radius=p['probe_inner_radius'],
             neighbor_radius=p['probe_neighbor_radius'],
             event_length=p['probe_event_length'],
             peak_jitter=p['probe_peak_jitter'])
-
-
-        if recording.is_filtered and p['filter']:
-            print("Warning! The recording is already filtered, but Herding Spikes filter is enabled. You can disable "
-                  "filters by setting 'filter' parameter to False")
 
         H = hs.HSDetection(
             Probe, file_directory_name=str(output_folder),

@@ -6,7 +6,9 @@ from pathlib import Path
 #~ from spiketoolkit.preprocessing import bandpass_filter, whiten
 
 from ..basesorter import BaseSorter
+from ..utils import RecordingExtractorOldAPI
 from spikeinterface.core import load_extractor
+
 
 # TODO
 # from spikeinterface.extractors import MdaSortingExtractor
@@ -94,26 +96,29 @@ class Mountainsort4Sorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        raise NotImplementedError('Mountainsort4 need to use the new get_traces() transpose + segment_index!!!')
-        
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
         # alias to params
         p = params
 
         samplerate = recording.get_sampling_frequency()
-
+        
+        # TODO
         # Bandpass filter
-        if p['filter'] and p['freq_min'] is not None and p['freq_max'] is not None:
-            recording = bandpass_filter(recording=recording, freq_min=p['freq_min'], freq_max=p['freq_max'])
+        #~ if p['filter'] and p['freq_min'] is not None and p['freq_max'] is not None:
+            #~ recording = bandpass_filter(recording=recording, freq_min=p['freq_min'], freq_max=p['freq_max'])
 
         # Whiten
-        if p['whiten']:
-            recording = whiten(recording=recording)
+        #~ if p['whiten']:
+            #~ recording = whiten(recording=recording)
+            
+        print('Mountainsort4 use the OLD spikeextractors: use RecordingExtractorOldAPI')
+        old_api_recording = RecordingExtractorOldAPI(recording)
+
 
         # Check location no more needed done in basesorter
         sorting = ml_ms4alg.mountainsort4(
-            recording=recording,
+            recording=old_api_recording,
             detect_sign=p['detect_sign'],
             adjacency_radius=p['adjacency_radius'],
             clip_size=p['clip_size'],
@@ -124,14 +129,15 @@ class Mountainsort4Sorter(BaseSorter):
         )
 
         # Curate
-        if p['noise_overlap_threshold'] is not None and p['curation'] is True:
-            if verbose:
-                print('Curating')
-            sorting = ml_ms4alg.mountainsort4_curation(
-                recording=recording,
-                sorting=sorting,
-                noise_overlap_threshold=p['noise_overlap_threshold']
-            )
+        # TODO
+        #~ if p['noise_overlap_threshold'] is not None and p['curation'] is True:
+            #~ if verbose:
+                #~ print('Curating')
+            #~ sorting = ml_ms4alg.mountainsort4_curation(
+                #~ recording=recording,
+                #~ sorting=sorting,
+                #~ noise_overlap_threshold=p['noise_overlap_threshold']
+            #~ )
 
         # MdaSortingExtractor.write_sorting(sorting, str(output_folder / 'firings.mda'))
         # samplerate_fname = str(output_folder / 'samplerate.txt')
