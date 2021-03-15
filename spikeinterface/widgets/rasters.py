@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
 
-def plot_rasters(sorting, segment_index=None, unit_ids=None, trange=None, color='k', figure=None, ax=None):
+def plot_rasters(sorting, segment_index=None, unit_ids=None, time_range=None, color='k', figure=None, ax=None):
     """
     Plots spike train rasters.
 
@@ -16,7 +16,7 @@ def plot_rasters(sorting, segment_index=None, unit_ids=None, trange=None, color=
         The segment index.
     unit_ids: list
         List of unit ids
-    trange: list
+    time_range: list
         List with start time and end time
     color: matplotlib color
         The color to be used
@@ -34,7 +34,7 @@ def plot_rasters(sorting, segment_index=None, unit_ids=None, trange=None, color=
         sorting=sorting,
         
         unit_ids=unit_ids,
-        trange=trange,
+        time_range=time_range,
         color=color,
         figure=figure,
         ax=ax
@@ -45,7 +45,7 @@ def plot_rasters(sorting, segment_index=None, unit_ids=None, trange=None, color=
 
 class RasterWidget(BaseWidget):
     def __init__(self, *, sorting, segment_index=None,  unit_ids=None,
-                                            trange=None, color='k', figure=None, ax=None):
+                                            time_range=None, color='k', figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
         
@@ -68,12 +68,18 @@ class RasterWidget(BaseWidget):
             curr_max_frame = np.max(spike_train)
             if curr_max_frame > self._max_frame:
                 self._max_frame = curr_max_frame
-        self._visible_trange = trange
+        self._visible_trange = time_range
         if self._visible_trange is None:
             self._visible_trange = [0, self._max_frame]
         else:
-            assert len(trange) == 2, "'trange' should be a list with start and end time in seconds"
-            self._visible_trange = [int(t * sampling_frequency) for t in trange]
+            assert len(time_range) == 2, "'trange' should be a list with start and end time in seconds"
+            self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
+
+        #~ if time_range is None:
+            #~ time_range=(0, 1.)
+        #~ time_range = np.array(time_range)
+
+            
         self._visible_trange = self._fix_trange(self._visible_trange)
         self.name = 'Raster'
 
