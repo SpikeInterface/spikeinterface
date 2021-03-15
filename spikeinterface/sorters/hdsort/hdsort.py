@@ -133,7 +133,7 @@ class HDSortSorter(BaseSorter):
                             save_path=str(output_folder / 'recording.h5'),
                             chunk_mb=params["chunk_mb"])
             #~ self.params['file_format'] = 'mea1k'
-            file_format = 'maxone'
+            file_format = 'mea1k'
 
         p = params
         #~ p['sort_name'] = 'hdsort_output'

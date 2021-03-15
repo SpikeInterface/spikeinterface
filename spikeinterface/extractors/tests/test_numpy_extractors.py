@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.extractors import NumpyRecording,NumpySorting
+from spikeinterface.extractors import NumpyRecording, NumpySorting
 from spikeinterface.core.tests.testing_tools import create_sorting_npz
 from spikeinterface.core import NpzSortingExtractor
 
