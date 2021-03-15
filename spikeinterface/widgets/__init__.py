@@ -8,3 +8,6 @@ from .multicompgraph import (
     plot_multicomp_graph, MultiCompGraphWidget,
     plot_multicomp_agreement, MultiCompGlobalAgreementWidget,
     plot_multicomp_agreement_by_sorter, MultiCompAgreementBySorterWidget)
+from .collisioncomp import (
+    plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
+    plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget)
