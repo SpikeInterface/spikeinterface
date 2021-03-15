@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from spikewidgets.widgets.basewidget import BaseWidget
+
+from .basewidget import BaseWidget
 
 
 def plot_rasters(sorting, segment_index=None, unit_ids=None, trange=None, color='k', figure=None, ax=None):

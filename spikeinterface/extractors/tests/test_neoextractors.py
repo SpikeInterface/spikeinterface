@@ -21,6 +21,8 @@ def test_mearec_extractors():
     
     rec = MEArecRecordingExtractor(mearec_file)
     print(rec)
+    probe = rec.get_probe()
+    print(probe)
     
     sorting = MEArecSortingExtractor(mearec_file, use_natural_unit_ids=True)
     print(sorting)
@@ -35,6 +37,10 @@ def test_spikeglx_extractors():
     spikeglx_folder = basefolder + 'spikeglx/Noise4Sam_g0'
     rec = SpikeGLXRecordingExtractor(spikeglx_folder, stream_id='imec0.ap')
     print(rec)
+
+    probe = rec.get_probe()
+    print(probe)
+    
 
 from spikeinterface.extractors.tests.file_retrieve import download_test_file
 
@@ -99,7 +105,7 @@ def test_kilosort():
 
 if __name__ == '__main__':
     #~ test_mearec_extractors()
-    #~ test_spikeglx_extractors()
+    test_spikeglx_extractors()
     #~ test_openephy_legacy()
     #~ test_openephy_binary()
     #~ test_intan()
@@ -108,7 +114,7 @@ if __name__ == '__main__':
     #~ test_neuralynx()
     #~ test_blackrock()
     #~ test_mcsraw()
-    test_kilosort()
+    #~ test_kilosort()
     
     
 
