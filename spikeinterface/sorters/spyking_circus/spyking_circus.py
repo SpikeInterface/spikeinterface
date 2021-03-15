@@ -89,7 +89,6 @@ class SpykingcircusSorter(BaseSorter):
 
     @classmethod
     def _check_apply_filter_in_params(cls, params):
-        print('_check_apply_filter_in_params', params['filter'])
         return params['filter']
 
     @classmethod

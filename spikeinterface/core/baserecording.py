@@ -3,7 +3,7 @@ from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFreque
 
 import numpy as np
 
-from probeinterface import Probe, ProbeGroup
+from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface
 
 
 from .base import BaseExtractor, BaseSegment
@@ -94,12 +94,15 @@ class BaseRecording(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
     
-    def _save_data(self, folder, format='binary', **cache_kargs):
+    def _save_to_cache(self, folder, format='binary', **cache_kargs):
         """
         This replace the old CacheRecordingExtractor but enable more engine 
         for caching a results. at the moment only binaray with memmap is supported.
         My plan is to add also zarr support.
         """
+        
+        # TODO save propreties as npz!!!!!
+        
         if format == 'binary':
             files_path = [ folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
             dtype = cache_kargs.get('dtype', 'float32')
@@ -110,7 +113,12 @@ class BaseRecording(BaseExtractor):
             from . binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
                                 self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(), time_axis=0)
-            
+
+        if self.get_property('contact_vector') is not None:
+            probegroup = self.get_probegroup()
+            write_probeinterface(folder / 'probe.json', probegroup)
+            cached.set_probegroup(probegroup)
+
         elif format == 'zarr':
             # TODO implement a format based on zarr
             raise NotImplementedError
@@ -118,6 +126,17 @@ class BaseRecording(BaseExtractor):
             raise ValueError(f'format {format} not supported')
         
         return cached
+    
+    def _after_load_cache(self, folder):
+        # load probe
+        if (folder  / 'probe.json').is_file():
+            probegroup = read_probeinterface(folder  / 'probe.json')
+            other = self.set_probegroup(probegroup)
+            return other
+        else:
+            return self
+            
+            
     
     def set_probe(self, probe, group_mode='by_probe'):
         """
@@ -128,6 +147,9 @@ class BaseRecording(BaseExtractor):
         probegroup.add_probe(probe)
         return self.set_probes(probegroup, group_mode=group_mode)
     
+    def set_probegroup(self, probegroup, group_mode='by_probe'):
+        return self.set_probes(probegroup, group_mode=group_mode)
+
     def set_probes(self, probe_or_probegroup, group_mode='by_probe'):
         """
         Attached a Probe a recording.
@@ -169,7 +191,7 @@ class BaseRecording(BaseExtractor):
         
         # handle not connected channels
         assert all(probe.device_channel_indices is not None for probe in probegroup.probes), \
-                'Probe must have channel_device_indices'
+                'Probe must have device_channel_indices'
         
         # this is a vector with complex fileds (dataframe like) that handle all contact attr
         arr = probegroup.to_numpy(complete=True)
@@ -185,7 +207,7 @@ class BaseRecording(BaseExtractor):
         inds = inds[order]
         # check
         if np.max(inds) >= self.get_num_channels():
-            raise ValueError('The given Probe have "channel_device_indices" that do not match channel count')
+            raise ValueError('The given Probe have "device_channel_indices" that do not match channel count')
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
         
@@ -201,7 +223,7 @@ class BaseRecording(BaseExtractor):
         for probe_index, probe in enumerate(probegroup.probes):
             contour = probe.probe_planar_contour
             if contour is not None:
-                sub_recording.set_annotation(f'probe_{probe_index}_planar_contour', contour)
+                sub_recording.set_annotation(f'probe_{probe_index}_planar_contour', contour, overwrite=True)
         
         # duplicate positions to "locations" property
         ndim = probegroup.ndim

@@ -195,9 +195,6 @@ class BaseExtractor:
             other._features = deepcopy(self._features)
 
     
-    def set_cache_folder(self, folder):
-        self._cache_folder = Path(folder)
-    
     def to_dict(self, include_annotations=True, include_properties=True, include_features=True):
         '''
         Makes a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
@@ -401,8 +398,10 @@ class BaseExtractor:
                     file = f
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
-            return BaseExtractor.load(file)
-            
+            extractor = BaseExtractor.load(file)
+            extractor = extractor._after_load_cache(folder)
+            return extractor
+
         else:
             raise ValueError('bad boy')
     
@@ -411,9 +410,18 @@ class BaseExtractor:
         file_path = Path(cache_folder) / name
         return BaseExtractor.load(file_path)
     
-    def _save_data(self, folder, **cache_kargs):
+    def _save_to_cache(self, folder, **cache_kargs):
         # This implemented in BaseRecording or baseSorting
+        # this is internally call by cache(...) main function
         raise NotImplementedError
+    
+    def _after_load_cache(self, folder):
+        # This implemented in BaseRecording or baseSorting
+        # this is internally call by cache(...) main function
+        raise NotImplementedError
+
+    def set_cache_folder(self, folder):
+        self._cache_folder = Path(folder)
     
     def cache(self, name=None, dump_ext='json', **cache_kargs):
         """
@@ -450,7 +458,7 @@ class BaseExtractor:
                 )
         
         # save data (done the subclass)
-        cached = self._save_data(folder, **cache_kargs)
+        cached = self._save_to_cache(folder, **cache_kargs)
         
         # copy properties/
         self.copy_metadata(cached)
