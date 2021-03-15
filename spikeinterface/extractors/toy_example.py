@@ -78,7 +78,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     
     probe = Probe(ndim=2)
     probe.set_contacts(positions=geometry, 
-                    shapes='circle', shape_params={'radius': 10})
+                    shapes='circle', shape_params={'radius': 5})
     probe.create_auto_shape(probe_type='rect', margin=20)
     probe.set_device_channel_indices(np.arange(num_channels, dtype='int64'))
     recording = recording.set_probe(probe)

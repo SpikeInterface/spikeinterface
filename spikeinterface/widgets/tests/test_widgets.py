@@ -1,10 +1,12 @@
+import unittest
+import sys
+
+import matplotlib.pyplot as plt
 
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
-#~ import spikeinterface.comparison as sc
-import matplotlib.pyplot as plt
-import unittest
-import sys
+import spikeinterface.comparison as sc
+
 
 if sys.platform == "win32":
     memmaps = [False]
@@ -91,27 +93,29 @@ class TestWidgets(unittest.TestCase):
         #~ sw.plot_isi_distribution(self._sorting, axes=axes)
 
 
-    #~ def test_confusion(self):
-        #~ gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
-        #~ sw.plot_confusion_matrix(gt_comp, count_text=True)
+    def test_confusion(self):
+        gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
+        sw.plot_confusion_matrix(gt_comp, count_text=True)
 
-    #~ def test_agreement(self):
-        #~ comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
-        #~ sw.plot_agreement_matrix(comp, count_text=True)
+    def test_agreement(self):
+        comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
+        sw.plot_agreement_matrix(comp, count_text=True)
         
-        #~ gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
-        #~ sw.plot_agreement_matrix(gt_comp, ordered=True, count_text=True, )
-        #~ sw.plot_agreement_matrix(gt_comp, ordered=False, count_text=True, )
-
-    #~ def test_multicomp_graph(self):
-        #~ msc = sc.compare_multiple_sorters([self._sorting, self._sorting, self._sorting])
-        #~ sw.plot_multicomp_graph(msc, edge_cmap='viridis', node_cmap='rainbow', draw_labels=False)
-        #~ sw.plot_multicomp_agreement(msc)
-        #~ sw.plot_multicomp_agreement_by_sorter(msc)
-        #~ fig, axes = plt.subplots(len(msc.sorting_list), 1)
-        #~ sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
+        
+    def test_multicomp_graph(self):
+        msc = sc.compare_multiple_sorters([self._sorting, self._sorting, self._sorting])
+        sw.plot_multicomp_graph(msc, edge_cmap='viridis', node_cmap='rainbow', draw_labels=False)
+        sw.plot_multicomp_agreement(msc)
+        sw.plot_multicomp_agreement_by_sorter(msc)
+        fig, axes = plt.subplots(len(msc.sorting_list), 1)
+        sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    #~ unittest.main()
+    
+    mytest = TestWidgets()
+    mytest.setUp()
+    mytest.test_plot_probe_map()
+    
     plt.show()
