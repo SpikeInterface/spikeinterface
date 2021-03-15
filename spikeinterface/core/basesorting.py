@@ -75,6 +75,12 @@ class BaseSorting(BaseExtractor):
             raise ValueError(f'format {format} not supported')
         
         return cached
+    
+    def get_unit_property(self, unit_id, key):
+        values = self.get_property(key)
+        v = values[self.id_to_indice(unit_id)]
+        return v
+    
 
 
 class BaseSortingSegment(BaseSegment):

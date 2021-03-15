@@ -299,13 +299,18 @@ class BaseRecording(BaseExtractor):
         return self.get_property('gain')
     
     ## for backward compatibilities
-    def set_channel_property(self, channel_id, property_name, value):
-        print('depreciated please use recording.set_property(..) in the vector way')
-        self.set_property(property_name, [value], ids=[value])
+    #~ def set_channel_property(self, channel_id, property_name, value):
+        #~ print('depreciated please use recording.set_property(..) in the vector way')
+        #~ self.set_property(property_name, [value], ids=[value])
     
-    def get_channel_property_names(self):
-        print(' get_channel_property_names() depreciated please use get_property_keys')
-        return self.get_property_keys()
+    #~ def get_channel_property_names(self):
+        #~ print(' get_channel_property_names() depreciated please use get_property_keys')
+        #~ return self.get_property_keys()
+
+    def get_channel_property(self, channel_id, key):
+        values = self.get_property(key)
+        v = values[self.id_to_indice(channel_id)]
+        return v
     
     def channel_slice(self, channel_ids):
         from spikeinterface import ChannelSliceRecording

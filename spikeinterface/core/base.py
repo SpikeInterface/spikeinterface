@@ -97,6 +97,11 @@ class BaseExtractor:
                     indices = slice(indices[0], indices[-1] +1)
         return indices
     
+    def id_to_indice(self, id):
+        ind= list(self._main_ids).index(id)
+        return ind
+
+    
     def annotate(self, **new_nnotations):
         self._annotations.update(new_nnotations)
     

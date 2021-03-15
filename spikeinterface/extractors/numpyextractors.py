@@ -117,6 +117,9 @@ class NumpySorting(BaseSorting):
             times_list = [times_list]
             labels_list = [labels_list]
         
+        times_list = [np.asarray(e) for e in times_list]
+        labels_list = [np.asarray(e) for e in labels_list]
+        
         nseg = len(times_list)
         unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
         
