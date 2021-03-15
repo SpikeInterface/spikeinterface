@@ -109,6 +109,8 @@ class TestWidgets(unittest.TestCase):
         sw.plot_multicomp_agreement_by_sorter(msc)
         fig, axes = plt.subplots(len(msc.sorting_list), 1)
         sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
+    
+    
 
 
 if __name__ == '__main__':
