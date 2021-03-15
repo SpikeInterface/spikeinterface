@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.extractors import NumpyRecording, NumpySorting
-
+from probeinterface import Probe
 
 def toy_example(duration=10, num_channels=4, num_units=10,
                 sampling_frequency=30000.0, num_segments=2,
@@ -70,23 +70,19 @@ def toy_example(duration=10, num_channels=4, num_units=10,
         traces = synthesize_timeseries(times, labels, unit_ids, waveforms, sampling_frequency, duration,
                                 noise_level=10, waveform_upsample_factor=upsample_factor, seed=seed)
         traces_list.append(traces)
-                                  
 
-    
     sorting = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency)
+    
     recording = NumpyRecording(traces_list, sampling_frequency)
     recording.annotate(is_filtered=True)
-    recording.set_channel_locations(geometry)
     
-    #~ if dumpable:
-        #~ if dump_folder is None:
-            #~ dump_folder = 'toy_example'
-        #~ dump_folder = Path(dump_folder)
-
-        #~ se.MdaRecordingExtractor.write_recording(RX, dump_folder)
-        #~ RX = se.MdaRecordingExtractor(dump_folder)
-        #~ se.NpzSortingExtractor.write_sorting(SX, dump_folder / 'sorting.npz')
-        #~ SX = se.NpzSortingExtractor(dump_folder / 'sorting.npz')
+    probe = Probe(ndim=2)
+    probe.set_contacts(positions=geometry, 
+                    shapes='circle', shape_params={'radius': 10})
+    probe.create_auto_shape(probe_type='rect', margin=20)
+    probe.set_device_channel_indices(np.arange(num_channels, dtype='int64'))
+    recording = recording.set_probe(probe)
+    
 
     return recording, sorting
 

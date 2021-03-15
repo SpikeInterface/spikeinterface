@@ -130,6 +130,8 @@ def run_sorters(sorter_list,
     """
     working_folder = Path(working_folder)
     
+    mode_if_folder_exists in ('raise', 'keep', 'overwrite')
+    
     if mode_if_folder_exists == 'raise' and working_folder.is_dir():
         raise Exception('working_folder already exists, please remove it')
     
@@ -156,17 +158,18 @@ def run_sorters(sorter_list,
         for sorter_name in sorter_list:
 
             output_folder = working_folder / rec_name / sorter_name
-
-            if is_log_ok(output_folder):
-                # check is output_folders exists
+            
+            if output_folder.is_dir():
+                # sorter folder exists
                 if mode_if_folder_exists == 'raise':
                     raise (Exception('output folder already exists for {} {}'.format(rec_name, sorter_name)))
                 elif mode_if_folder_exists == 'overwrite':
                     shutil.rmtree(str(output_folder))
                 elif mode_if_folder_exists == 'keep':
-                    continue
-                else:
-                    raise (ValueError('mode_if_folder_exists not in raise, overwrite, keep'))
+                    if is_log_ok(output_folder):
+                        continue
+                    else:
+                        shutil.rmtree(str(output_folder))
 
             params = sorter_params.get(sorter_name, {})
             if need_dump:
