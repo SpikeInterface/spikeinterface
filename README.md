@@ -47,6 +47,8 @@
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
+CIAO!
+
 `spikeinterface` is a meta-package that wraps 5 other Python packages from the SpikeInterface team:
 
 - [spikeextractors](https://github.com/SpikeInterface/spikeextractors): Data file I/O and probe handling. [![Build Status](https://travis-ci.org/SpikeInterface/spikeextractors.svg?branch=master)](https://travis-ci.org/SpikeInterface/spikeextractors)
