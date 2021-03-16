@@ -18,6 +18,6 @@ class Kilosort3SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    Kilosort3SorterCommonTestSuite().test_on_toy()
+    #~ Kilosort3SorterCommonTestSuite().test_on_toy()
     Kilosort3SorterCommonTestSuite().test_with_BinDatRecordingExtractor()
-    Kilosort3SorterCommonTestSuite().test_get_version()
+    #~ Kilosort3SorterCommonTestSuite().test_get_version()
