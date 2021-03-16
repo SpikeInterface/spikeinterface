@@ -4,6 +4,11 @@ from spikeinterface.core import BinaryRecordingExtractor, NpzSortingExtractor
 
 from .numpyextractors import NumpyRecording , NumpySorting
 
+# sorting extractors in relation with a sorter
+from .klustaextractors import KlustaSortingExtractor
+from .hdsortextractors import HDSortSortingExtractor
+
+
 from .neoextractors import (
     MEArecRecordingExtractor, MEArecSortingExtractor,
     SpikeGLXRecordingExtractor,
@@ -23,6 +28,7 @@ BinaryRecordingExtractor,
 
     # natively implemented in spikeinterface.extractors
     NumpyRecording,
+    
     
     # neo based
     MEArecRecordingExtractor,
@@ -74,6 +80,8 @@ sorting_extractor_full_list = [
     
     # natively implemented in spikeinterface.extractors
     NumpySorting,
+    KlustaSortingExtractor,
+    HDSortSortingExtractor,
     
     # neo based
     MEArecSortingExtractor,
@@ -83,9 +91,9 @@ sorting_extractor_full_list = [
     #~ MdaSortingExtractor,
     #~ MEArecSortingExtractor,   OK
     #~ ExdirSortingExtractor,   DROP
-    #~ HDSortSortingExtractor,
+    #~ HDSortSortingExtractor,  
     #~ HS2SortingExtractor,
-    #~ KlustaSortingExtractor,
+    #~ KlustaSortingExtractor,  OK
     #~ KiloSortSortingExtractor,
     #~ OpenEphysSortingExtractor,
     #~ PhySortingExtractor,        NEAR OK
