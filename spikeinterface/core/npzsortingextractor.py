@@ -2,7 +2,6 @@ from .basesorting import BaseSorting, BaseSortingSegment
 
 
 from pathlib import Path
-from spikeextractors.extraction_tools import check_valid_unit_id
 import numpy as np
 
 

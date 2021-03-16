@@ -193,14 +193,6 @@ class HDSortSortingSegment(BaseSortingSegment):
         self._spiketrains  = spiketrains
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        #~ uidx = np.where(np.array(self.get_unit_ids()) == unit_id)[0][0]
-
-        #~ start_frame, end_frame = self._cast_start_end_frame(start_frame, end_frame)
-        #~ start_frame = start_frame or 0
-        #~ end_frame = end_frame or np.infty
-        #~ st = self._spike_trains[uidx]
-        #~ return st[(st >= start_frame) & (st < end_frame)]
-        
         unit_index = self._unit_ids.index(unit_id)
         times = self._spiketrains[unit_index]
         times = self._spiketrains[unit_index]
