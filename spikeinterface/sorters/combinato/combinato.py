@@ -171,13 +171,17 @@ class CombinatoSorter(BaseSorter):
         else:
             extra_cmd = '# !/bin/bash'
 
-        shell_cmd = shell_cmd.format(extra_cmd=extra_cmd, tmpdir=tmpdir, css_folder=CombinatoSorter.combinato_path,
-                                     sign_thr=sign_thr)
-        shell_cmd = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
-        shell_cmd.start()
+        shell_cmd = shell_cmd.format(
+            extra_cmd=extra_cmd,
+            tmpdir=output_folder.absolute(),
+            css_folder=CombinatoSorter.combinato_path,
+            sign_thr=sign_thr)
 
-        retcode = shell_cmd.wait()
+        
+        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
+                                log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script.start()
+        retcode = shell_script.wait()
 
         if retcode != 0:
             raise Exception('combinato returned a non-zero exit code')

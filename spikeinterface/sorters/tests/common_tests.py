@@ -44,7 +44,7 @@ class SorterCommonTestSuite:
         # some sorter (TDC, KS, KS2, ...) work by default with the raw binary
         # format as input to avoid copy when the recording is already this format
         
-        recording, sorting_gt = toy_example(num_channels=4, duration=10, seed=0, num_segments=1)
+        recording, sorting_gt = toy_example(num_channels=4, duration=300, seed=0, num_segments=1)
 
         # create a raw dat file and probeinterface file
         raw_filename = 'raw_file.dat'

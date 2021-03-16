@@ -25,6 +25,6 @@ class YassCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    YassCommonTestSuite().test_on_toy()
-    #~ YassCommonTestSuite().test_with_BinDatRecordingExtractor()
+    #~ YassCommonTestSuite().test_on_toy()
+    YassCommonTestSuite().test_with_BinDatRecordingExtractor()
     #~ YassCommonTestSuite().test_get_version()    

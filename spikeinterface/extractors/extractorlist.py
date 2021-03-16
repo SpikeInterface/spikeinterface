@@ -8,8 +8,10 @@ from .numpyextractors import NumpyRecording , NumpySorting
 from .klustaextractors import KlustaSortingExtractor
 from .hdsortextractors import HDSortSortingExtractor
 from .waveclustextractors import WaveClusSortingExtractor
+from .yassextractors import YassSortingExtractor
+from .combinatoextractors import CombinatoSortingExtractor
 
-
+# sorting/recording from neo
 from .neoextractors import (
     MEArecRecordingExtractor, MEArecSortingExtractor,
     SpikeGLXRecordingExtractor,
@@ -84,6 +86,8 @@ sorting_extractor_full_list = [
     KlustaSortingExtractor,
     HDSortSortingExtractor,
     WaveClusSortingExtractor,
+    YassSortingExtractor,
+    CombinatoSortingExtractor,
     
     # neo based
     MEArecSortingExtractor,
@@ -108,9 +112,9 @@ sorting_extractor_full_list = [
     #~ NIXIOSortingExtractor,
     #~ NeuroscopeSortingExtractor,   DROP ?
     #~ NeuroscopeMultiSortingExtractor,   DROP ?
-    #~ WaveClusSortingExtractor,
-    #~ YassSortingExtractor,
-    #~ CombinatoSortingExtractor,
+    #~ WaveClusSortingExtractor,     OK
+    #~ YassSortingExtractor,                OK
+    #~ CombinatoSortingExtractor,   OK
     #~ ALFSortingExtractor,
 
     #~ # neo based
