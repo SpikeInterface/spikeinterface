@@ -132,6 +132,28 @@ class NumpySorting(BaseSorting):
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
         
         return sorting
+    
+    @staticmethod
+    def from_dict(units_dict_list, sampling_frequency):
+        """
+        Construct sorting extractor from a list of dict.
+        The list lenght is the segment count
+        Each dict have unit_ids as keys and spike times as values.
+
+        Parameters
+        ----------
+        dict_list: list of dict
+        """
+        if isinstance(units_dict_list, dict):
+            units_dict_list = [units_dict_list]
+        
+        unit_ids = list(units_dict_list[0].keys())
+        
+        sorting = NumpySorting(sampling_frequency, unit_ids)
+        for i, units_dict in enumerate(units_dict_list):
+            print(units_dict)
+            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
+        
 
 
 class NumpySortingSegment(BaseSortingSegment):

@@ -31,7 +31,7 @@ _common_param_doc = """
     """
 
 def run_sorter(sorter_name, recording, output_folder=None,
-            remove_existing_folder=False, delete_output_folder=False,
+            remove_existing_folder=True, delete_output_folder=False,
             verbose=False, raise_error=True,  **sorter_params):
     """
     Generic function to run a sorter via function approach.

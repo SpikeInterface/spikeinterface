@@ -139,7 +139,7 @@ sorting_KL = ss.run_klusta(recording=recording_cmr)
 # The :code:`sorting_MS4` and :code:`sorting_MS4` are :code:`SortingExtractor`
 # objects. We can print the units found using:
 
-print('Units found by spkikingcircus:', sorting_SC.get_unit_ids())
+print('Units found by spykingcircus:', sorting_SC.get_unit_ids())
 print('Units found by Klusta:', sorting_KL.get_unit_ids())
 
 

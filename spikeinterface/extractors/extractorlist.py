@@ -12,6 +12,9 @@ from .yassextractors import YassSortingExtractor
 from .combinatoextractors import CombinatoSortingExtractor
 from .tridesclousextractors import TridesclousSortingExtractor
 from .spykingcircusextractors import SpykingCircusSortingExtractor
+from .herdingspikesextractors import HerdingspikesSortingExtractor
+
+
 
 # sorting/recording from neo
 from .neoextractors import (
@@ -92,6 +95,7 @@ sorting_extractor_full_list = [
     CombinatoSortingExtractor,
     TridesclousSortingExtractor,
     SpykingCircusSortingExtractor,
+    HerdingspikesSortingExtractor,
     
     # neo based
     MEArecSortingExtractor,
