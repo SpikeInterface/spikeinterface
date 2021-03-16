@@ -8,6 +8,7 @@ import numpy as np
 
 
 from ..basesorter import BaseSorter
+from ..kilosortbase import KilosortBase
 from ..utils import ShellScript, get_git_commit
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
@@ -27,7 +28,7 @@ def check_if_installed(kilosort_path: Union[str, None]):
         return False
 
 
-class KilosortSorter(BaseSorter):
+class KilosortSorter(KilosortBase, BaseSorter):
     """
     """
 
@@ -191,31 +192,31 @@ class KilosortSorter(BaseSorter):
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
 
-    @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-        sorter_name = cls.sorter_name
+    #~ @classmethod
+    #~ def _run_from_folder(cls, output_folder, params, verbose):
+        #~ sorter_name = cls.sorter_name
         
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            shell_cmd = '''
-                        cd {tmpdir}
-                        matlab -nosplash -wait -log -r kilosort_master
-                    '''.format(tmpdir=output_folder)
-        else:
-            shell_cmd = '''
-                        #!/bin/bash
-                        cd "{tmpdir}"
-                        matlab -nosplash -nodisplay -log -r kilosort_master
-                    '''.format(tmpdir=output_folder)
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{sorter_name}',
-                                   log_path=output_folder / f'{sorter_name}.log', verbose=verbose)
-        shell_script.start()
+        #~ if 'win' in sys.platform and sys.platform != 'darwin':
+            #~ shell_cmd = '''
+                        #~ cd {tmpdir}
+                        #~ matlab -nosplash -wait -log -r kilosort_master
+                    #~ '''.format(tmpdir=output_folder)
+        #~ else:
+            #~ shell_cmd = '''
+                        #~ #!/bin/bash
+                        #~ cd "{tmpdir}"
+                        #~ matlab -nosplash -nodisplay -log -r kilosort_master
+                    #~ '''.format(tmpdir=output_folder)
+        #~ shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{sorter_name}',
+                                   #~ log_path=output_folder / f'{sorter_name}.log', verbose=verbose)
+        #~ shell_script.start()
 
-        retcode = shell_script.wait()
+        #~ retcode = shell_script.wait()
 
-        if retcode != 0:
-            raise Exception('kilosort returned a non-zero exit code')
+        #~ if retcode != 0:
+            #~ raise Exception('kilosort returned a non-zero exit code')
 
-    @classmethod
-    def get_result_from_folder(cls, output_folder):
-        sorting = KiloSortSortingExtractor(folder_path=output_folder)
-        return sorting
+    #~ @classmethod
+    #~ def _get_result_from_folder(cls, output_folder):
+        #~ sorting = KiloSortSortingExtractor(folder_path=output_folder)
+        #~ return sorting

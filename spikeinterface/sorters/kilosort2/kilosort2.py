@@ -8,6 +8,7 @@ import json
 
 
 from ..basesorter import BaseSorter
+from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
@@ -29,7 +30,7 @@ def check_if_installed(kilosort2_path: Union[str, None]):
         return False
 
 
-class Kilosort2Sorter(BaseSorter):
+class Kilosort2Sorter(KilosortBase, BaseSorter):
     """
     """
 
@@ -198,33 +199,33 @@ class Kilosort2Sorter(BaseSorter):
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
 
-    @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    #~ @classmethod
+    #~ def _run_from_folder(cls, output_folder, params, verbose):
         
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            shell_cmd = '''
-                        {disk_move}
-                        cd {tmpdir}
-                        matlab -nosplash -wait -log -r kilosort2_master
-                    '''.format(disk_move=str(output_folder)[:2], tmpdir=output_folder)
-        else:
-            shell_cmd = '''
-                        #!/bin/bash
-                        cd "{tmpdir}"
-                        matlab -nosplash -nodisplay -log -r kilosort2_master
-                    '''.format(tmpdir=output_folder)
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
-        shell_script.start()
-        retcode = shell_script.wait()
+        #~ if 'win' in sys.platform and sys.platform != 'darwin':
+            #~ shell_cmd = '''
+                        #~ {disk_move}
+                        #~ cd {tmpdir}
+                        #~ matlab -nosplash -wait -log -r kilosort2_master
+                    #~ '''.format(disk_move=str(output_folder)[:2], tmpdir=output_folder)
+        #~ else:
+            #~ shell_cmd = '''
+                        #~ #!/bin/bash
+                        #~ cd "{tmpdir}"
+                        #~ matlab -nosplash -nodisplay -log -r kilosort2_master
+                    #~ '''.format(tmpdir=output_folder)
+        #~ shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
+                                   #~ log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        #~ shell_script.start()
+        #~ retcode = shell_script.wait()
 
-        if retcode != 0:
-            raise Exception('kilosort2 returned a non-zero exit code')
+        #~ if retcode != 0:
+            #~ raise Exception('kilosort2 returned a non-zero exit code')
 
-    @classmethod
-    def get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        with (output_folder / 'spikeinterface_params.json').open('r') as f:
-            sorter_params = json.load(f)['sorter_params']
-        sorting = se.KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=sorter_params['keep_good_only'])
-        return sorting
+    #~ @classmethod
+    #~ def get_result_from_folder(cls, output_folder):
+        #~ output_folder = Path(output_folder)
+        #~ with (output_folder / 'spikeinterface_params.json').open('r') as f:
+            #~ sorter_params = json.load(f)['sorter_params']
+        #~ sorting = KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=sorter_params['keep_good_only'])
+        #~ return sorting
