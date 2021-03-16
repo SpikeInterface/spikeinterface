@@ -142,7 +142,7 @@ clean_up:
   # relative maximum difference (to ptp of larger template)
   rel_max_diff: 0.1 # range: 0.05 (oversplits) to 0.2 (overmerges)
   # minimum ptp allowed (in standardized unit)
-  min_ptp: 2.5 # range: 1 (keep more small units) to 8
+  min_ptp: 3.0 # range: 1 (keep more small units) to 8
   # minimum firing rates (in Hz)
   min_fr: 0.2
   # if a template is off centered, it is a gabarage template
