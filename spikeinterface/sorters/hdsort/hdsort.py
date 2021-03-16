@@ -226,7 +226,7 @@ class HDSortSorter(BaseSorter):
     @classmethod
     def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
-        sorting = se.HDSortSortingExtractor(file_path=str(output_folder / 'hdsort_output' /
+        sorting = HDSortSortingExtractor(file_path=str(output_folder / 'hdsort_output' /
                                                           'hdsort_output_results.mat'))
         return sorting
 
