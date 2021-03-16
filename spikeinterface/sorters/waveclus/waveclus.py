@@ -10,8 +10,7 @@ from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
 from spikeinterface.core import load_extractor
-# TODO
-# from spikeinterface.extractors import WaveClusSortingExtractor
+from spikeinterface.extractors import WaveClusSortingExtractor
 
 
 PathType = Union[str, Path]

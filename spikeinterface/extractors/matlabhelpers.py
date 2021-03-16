@@ -56,10 +56,9 @@ class MatlabHelper:
                 self._old_style_mat = False
             except NameError:
                 raise ImportError("Version 7.2 .mat file given, but you don't have h5py installed.")
-        print('self._old_style_mat', self._old_style_mat)
 
     def __del__(self):
-        if not self._old_style_mat:
+        if hasattr(self, '_old_style_mat') and not self._old_style_mat:
             self._data.close()
 
     def _getfield(self, fieldname: str):

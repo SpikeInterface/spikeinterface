@@ -8,7 +8,7 @@ from spikeinterface.extractors import *
 
 
 def test_waveclustextractors():
-    hdsort_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/waveclus_output/'
+    hdsort_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/waveclus_output/times_results.mat'
     sorting = WaveClusSortingExtractor(hdsort_folder)
     print(sorting)
 

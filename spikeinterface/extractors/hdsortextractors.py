@@ -76,7 +76,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
             unit_id = int(_squeeze_ds(unit["ID"]))
             spike_times = _squeeze(unit["spikeTrain"]).astype('int64') - self.start_frame
             unit_ids.append(unit_id)
-            spiketrains.append(times)
+            spiketrains.append(spike_times)
         
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         
@@ -187,14 +187,13 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
 
 
 class HDSortSortingSegment(BaseSortingSegment):
-    def __init__(self):
-        BaseSortingSegment.__init__(self, unit_ids, spiketrains)
+    def __init__(self, unit_ids, spiketrains):
+        BaseSortingSegment.__init__(self)
         self._unit_ids = list(unit_ids)
         self._spiketrains  = spiketrains
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         unit_index = self._unit_ids.index(unit_id)
-        times = self._spiketrains[unit_index]
         times = self._spiketrains[unit_index]
         if start_frame is not None:
             times = times[times >= start_frame]
