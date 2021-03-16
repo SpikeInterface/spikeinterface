@@ -119,9 +119,11 @@ class GroundTruthStudy:
             SorterClass = sorter_dict[sorter_name]
             fname = rec_name + '[#]' + sorter_name
             npz_filename = sorting_folders / (fname + '.npz')
+
+            sorting = SorterClass.get_result_from_folder(output_folder)
             try:
                 sorting = SorterClass.get_result_from_folder(output_folder)
-                se.NpzSortingExtractor.write_sorting(sorting, npz_filename)
+                NpzSortingExtractor.write_sorting(sorting, npz_filename)
             except:
                 if npz_filename.is_file():
                     npz_filename.unlink()
@@ -147,7 +149,7 @@ class GroundTruthStudy:
         perf_by_units = []
         for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
             comp = self.comparisons[(rec_name, sorter_name)]
-
+            
             perf = comp.get_performance(method='by_unit', output='pandas')
             perf['rec_name'] = rec_name
             perf['sorter_name'] = sorter_name

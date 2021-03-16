@@ -117,6 +117,7 @@ class BaseTwoSorterComparison(BaseComparison):
         # spike count for each spike train
         self.event_counts1 = do_count_event(self.sorting1)
         self.event_counts2 = do_count_event(self.sorting2)
+       
 
         # matrix of  event match count for each pair
         self.match_event_count = make_match_count_matrix(self.sorting1, self.sorting2, self.delta_frames,

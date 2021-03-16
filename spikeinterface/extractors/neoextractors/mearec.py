@@ -45,15 +45,16 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         #~ self.set_channel_locations(locations)
         
         probe = read_mearec(file_path)
-        self.set_probegroup(probe)
+        self.set_probe(probe, in_place=True)
         
+        self._kwargs = {'file_path' : str(file_path)}
         
     
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
-    handle_raw_spike_directly = True
+    handle_raw_spike_directly = False
     
     def __init__(self, file_path, use_natural_unit_ids=True):
         neo_kwargs = {'filename' : file_path}
@@ -61,3 +62,5 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
                     sampling_frequency=None, # auto guess is correct here
                     use_natural_unit_ids=use_natural_unit_ids,
                     **neo_kwargs)
+        
+        self._kwargs = {'file_path' : str(file_path), 'use_natural_unit_ids': use_natural_unit_ids}

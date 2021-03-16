@@ -145,7 +145,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 t_start = None
             else: 
                 t_start = self.neo_reader.get_signal_t_start(0, segment_index)
-            
+
             sorting_segment = NeoSortingSegment(self.neo_reader, segment_index,
                                 self.use_natural_unit_ids, t_start, sampling_frequency)
             self.add_sorting_segment(sorting_segment)
