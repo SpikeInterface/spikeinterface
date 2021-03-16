@@ -21,6 +21,7 @@ import pandas as pd
 
 
 from spikeinterface.core import load_extractor
+from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict
 from spikeinterface.sorters.launcher import  iter_output_folders, iter_sorting_output
 
@@ -46,6 +47,12 @@ def setup_comparison_study(study_folder, gt_dict):
     assert not study_folder.is_dir(), "'study_folder' already exists. Please remove it"
 
     study_folder.mkdir(parents=True, exist_ok=True)
+    sorting_folders = study_folder / 'sortings'
+    log_folder = sorting_folders / 'run_log'
+    log_folder.mkdir(parents=True, exist_ok=True)
+    tables_folder = study_folder / 'tables'
+    tables_folder.mkdir(parents=True, exist_ok=True)
+    
     
     for rec_name, (recording, sorting_gt) in gt_dict.items():
         # write recording using cache with binary
@@ -155,7 +162,7 @@ def iter_computed_sorting(study_folder):
     for filename in os.listdir(sorting_folder):
         if filename.endswith('.npz') and '[#]' in filename:
             rec_name, sorter_name = filename.replace('.npz', '').split('[#]')
-            sorting = se.NpzSortingExtractor(sorting_folder / filename)
+            sorting = NpzSortingExtractor(sorting_folder / filename)
             yield rec_name, sorter_name, sorting
 
 

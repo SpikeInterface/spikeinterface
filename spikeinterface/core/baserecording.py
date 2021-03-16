@@ -138,19 +138,19 @@ class BaseRecording(BaseExtractor):
             
             
     
-    def set_probe(self, probe, group_mode='by_probe'):
+    def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """
         Wrapper on top on set_probes when there one unique probe.
         """
         assert isinstance(probe, Probe), 'must give Probe'
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
-        return self.set_probes(probegroup, group_mode=group_mode)
+        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
     
-    def set_probegroup(self, probegroup, group_mode='by_probe'):
-        return self.set_probes(probegroup, group_mode=group_mode)
+    def set_probegroup(self, probegroup, group_mode='by_probe',  in_place=False):
+        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def set_probes(self, probe_or_probegroup, group_mode='by_probe'):
+    def set_probes(self, probe_or_probegroup, group_mode='by_probe', in_place=False):
         """
         Attached a Probe a recording.
         For this Probe.device_channel_indices is used to link contact to recording channels.
@@ -166,6 +166,9 @@ class BaseRecording(BaseExtractor):
             can be Porbe or list of Probe or ProbeGroup
         
         group_mode: 'by_probe' or 'by_shank'
+        
+        in_place: False by default
+            Usefull internally when extractor do self.set_probegroup(probe)
         
         return
         -------
@@ -211,11 +214,16 @@ class BaseRecording(BaseExtractor):
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
         
-        # create recording : channel slice or clone
-        if np.array_equal(new_channel_ids, self.get_channel_ids()):
-            sub_recording = self.clone()
+        # create recording : channel slice or clone or self
+        if in_place:
+            if not np.array_equal(new_channel_ids, self.get_channel_ids()):
+                raise Exception('set_proce(inplace=True) must have all channel indices')
+            sub_recording = self
         else:
-            sub_recording = ChannelSliceRecording(self, new_channel_ids)
+            if np.array_equal(new_channel_ids, self.get_channel_ids()):
+                sub_recording = self.clone()
+            else:
+                sub_recording = ChannelSliceRecording(self, new_channel_ids)
         
         # create a vector that handle all conatcts in property
         sub_recording.set_property('contact_vector', arr, ids=None)

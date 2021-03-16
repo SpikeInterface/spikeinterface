@@ -137,11 +137,11 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
 
     # preload all spiketrains 2 into a list
     s2_spiketrains = [sorting2.get_unit_spike_train(u2) for u2 in unit2_ids]
-
+    
     match_event_count_lists = Parallel(n_jobs=n_jobs)(delayed(count_match_spikes)(sorting1.get_unit_spike_train(u1),
                                                                                   s2_spiketrains, delta_frames) for
                                                       i1, u1 in enumerate(unit1_ids))
-
+    
     match_event_count = pd.DataFrame(np.array(match_event_count_lists),
                                      index=unit1_ids, columns=unit2_ids)
 
@@ -287,7 +287,8 @@ def make_best_match(agreement_scores, min_score):
 
     scores = agreement_scores.values.copy()
 
-    best_match_12 = pd.Series(index=unit1_ids, dtype='int64')
+    #~ best_match_12 = pd.Series(index=unit1_ids, dtype='int64')
+    best_match_12 = pd.Series(index=unit1_ids, dtype=unit2_ids.dtype)
     best_match_12[:] = -1
     for i1, u1 in enumerate(unit1_ids):
         if scores.shape[1]>0: 
@@ -295,7 +296,8 @@ def make_best_match(agreement_scores, min_score):
             if scores[i1, ind_max] >= min_score:
                 best_match_12[u1] = unit2_ids[ind_max]
 
-    best_match_21 = pd.Series(index=unit2_ids, dtype='int64')
+    #~ best_match_21 = pd.Series(index=unit2_ids, dtype='int64')
+    best_match_21 = pd.Series(index=unit2_ids, dtype=unit1_ids.dtype)
     best_match_21[:] = -1
     for i2, u2 in enumerate(unit2_ids):
         if scores.shape[0]>0: 
@@ -328,6 +330,9 @@ def make_hungarian_match(agreement_scores, min_score):
     """
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
+    print('make_hungarian_match')
+    print(unit1_ids, type(unit1_ids))
+    print(unit2_ids, type(unit2_ids))
 
     # threshold the matrix
     scores = agreement_scores.values.copy()
@@ -335,9 +340,11 @@ def make_hungarian_match(agreement_scores, min_score):
 
     [inds1, inds2] = linear_sum_assignment(-scores)
 
-    hungarian_match_12 = pd.Series(index=unit1_ids, dtype='int64')
+    #~ hungarian_match_12 = pd.Series(index=unit1_ids, dtype='int64')
+    hungarian_match_12 = pd.Series(index=unit1_ids, dtype=unit2_ids.dtype)
     hungarian_match_12[:] = -1
-    hungarian_match_21 = pd.Series(index=unit2_ids, dtype='int64')
+    #~ hungarian_match_21 = pd.Series(index=unit2_ids, dtype='int64')
+    hungarian_match_21 = pd.Series(index=unit2_ids, dtype=unit1_ids.dtype)
     hungarian_match_21[:] = -1
 
     for i1, i2 in zip(inds1, inds2):

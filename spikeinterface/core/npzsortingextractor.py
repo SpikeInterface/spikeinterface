@@ -54,7 +54,8 @@ class NpzSortingExtractor(BaseSorting):
             for unit_id in units_ids:
                 sp_ind = sorting.get_unit_spike_train(unit_id, segment_index=seg_index)
                 spike_indexes.append(sp_ind)
-                spike_labels.append(np.ones(sp_ind.size, dtype='int64')*unit_id)
+                # spike_labels.append(np.ones(sp_ind.size, dtype='int64')*unit_id)
+                spike_labels.append(np.array([unit_id] * sp_ind.size))
 
             # order times
             if len(spike_indexes) > 0:
