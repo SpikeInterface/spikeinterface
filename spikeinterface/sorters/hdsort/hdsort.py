@@ -8,7 +8,8 @@ from spikeinterface.core.core_tools import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
-# from spikeinterface.extractor import MaxOneRecordingExtractor, HDSortSortingExtractor
+# from spikeinterface.extractor import MaxOneRecordingExtractor
+from spikeinterface.extractor import HDSortSortingExtractor
 
 
 PathType = Union[str, Path]
@@ -223,7 +224,7 @@ class HDSortSorter(BaseSorter):
             raise Exception('HDsort returned a non-zero exit code')
         
     @classmethod
-    def get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         sorting = se.HDSortSortingExtractor(file_path=str(output_folder / 'hdsort_output' /
                                                           'hdsort_output_results.mat'))
