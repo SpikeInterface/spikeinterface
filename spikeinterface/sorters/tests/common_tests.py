@@ -66,7 +66,7 @@ class SorterCommonTestSuite:
         sorter_params = self.SorterClass.default_params()
         
         sorting = run_sorter(sorter_name, recording, output_folder=None,
-            remove_existing_folder=True, delete_output_folder=True,
+            remove_existing_folder=True, delete_output_folder=False,
             verbose=False, raise_error=True,  **sorter_params)
         
         #~ params = self.SorterClass.default_params()
