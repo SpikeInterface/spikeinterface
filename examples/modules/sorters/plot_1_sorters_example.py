@@ -7,62 +7,63 @@ This example shows the basic usage of the :code:`sorters` module of :code:`spike
 
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
+from pprint import pprint
 
 ##############################################################################
 # First, let's create a toy example:
+# We choose explicitly one segment because many sorters handle only recording with unique segment
 
-recording, sorting_true = se.example_datasets.toy_example(duration=10, seed=0)
+recording, sorting_true = se.toy_example(duration=10, seed=0, num_segments=1)
+print(recording)
+print(sorting_true)
 
 ##############################################################################
 # Check available sorters
 # --------------------------
 # 
 
-print(ss.available_sorters())
+pprint(ss.available_sorters())
 
 ##############################################################################
 # This will list the sorters available through SpikeInterface. To see which sorters are installed on the machine
 # you can run:
 
-print(ss.installed_sorters())
+pprint(ss.installed_sorters())
 
 ##############################################################################
 # Change sorter parameters
 # -----------------------------------
 # 
 
-default_ms4_params = ss.Mountainsort4Sorter.default_params()
-print(default_ms4_params)
+default_SC_params = ss.SpykingcircusSorter.default_params()
+pprint(default_SC_params)
 
 ##############################################################################
 #  Parameters can be changed either by passing a full dictionary, or by
 # passing single arguments.
 
 # Mountainsort4 spike sorting
-default_ms4_params['detect_threshold'] = 4
-default_ms4_params['curation'] = False
+default_SC_params['detect_threshold'] = 4
 
 # parameters set by params dictionary
-sorting_MS4 = ss.run_mountainsort4(recording=recording, **default_ms4_params,
-                                   output_folder='tmp_MS4')
+sorting_SC = ss.run_spykingcircus(recording=recording, **default_SC_params,
+                                   output_folder='tmp_SC')
 ##############################################################################
 
 # parameters set by params dictionary
-sorting_MS4_10 = ss.run_mountainsort4(recording=recording, detect_threshold=10,
+sorting_SC_10 = ss.run_spykingcircus(recording=recording, detect_threshold=10,
                                       output_folder='tmp_MS4')
 
 ##############################################################################
 
-print('Units found with threshold = 4:', sorting_MS4.get_unit_ids())
-print('Units found with threshold = 10:', sorting_MS4_10.get_unit_ids())
+print('Units found with threshold = 4:', sorting_SC.get_unit_ids())
+print('Units found with threshold = 10:', sorting_SC_10.get_unit_ids())
 
 ##############################################################################
 # Run other sorters
 # ------------------
-
-# SpyKING Circus spike sorting
-# sorting_SC = ss.run_spykingcircus(recording, output_folder='tmp_SC')
-# print('Units found with Spyking Circus:', sorting_SC.get_unit_ids())
+# 
+# Some sorters (kilosort, ironclust, hdsort, ...) need to manually set the path to the source folder
 
 ##############################################################################
 

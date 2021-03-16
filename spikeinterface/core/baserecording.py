@@ -348,7 +348,8 @@ class BaseRecording(BaseExtractor):
         return sub_recording
     
     def split_by(self, property='group'):
-        values = self.set_property(property)
+        from .channelslicerecording import ChannelSliceRecording
+        values = self.get_property(property)
         if values is None:
             raise ValueError(f'property {property} is not set')
         

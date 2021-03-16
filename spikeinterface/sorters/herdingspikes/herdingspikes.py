@@ -6,7 +6,7 @@ from ..basesorter import BaseSorter
 from ..utils import RecordingExtractorOldAPI
 
 from spikeinterface.core import load_extractor
-# from spikeinterface.extractors import HS2SortingExtractor
+from spikeinterface.extractors import HerdingspikesSortingExtractor
 
 try:
     import herdingspikes as hs
@@ -227,4 +227,4 @@ class HerdingspikesSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
-        return se.HS2SortingExtractor(file_path=Path(output_folder) / 'HS2_sorted.hdf5', load_unit_info=True)
+        return HerdingspikesSortingExtractor(file_path=Path(output_folder) / 'HS2_sorted.hdf5', load_unit_info=True)

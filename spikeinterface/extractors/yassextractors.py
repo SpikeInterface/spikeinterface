@@ -44,8 +44,8 @@ class YassSortingExtractor(BaseSorting):
 
 
 class YassSortingSegment(BaseSortingSegment):
-    def __init__(self):
-        BaseSortingSegment.__init__(self, spiketrains)
+    def __init__(self, spiketrains):
+        BaseSortingSegment.__init__(self)
         # spiketrains is a 2 columns
         self._spiketrains  = spiketrains
 
