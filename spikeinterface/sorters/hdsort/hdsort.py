@@ -8,8 +8,8 @@ from spikeinterface.core.core_tools import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
-# from spikeinterface.extractor import MaxOneRecordingExtractor
-from spikeinterface.extractor import HDSortSortingExtractor
+# from spikeinterface.extractors import MaxOneRecordingExtractor
+from spikeinterface.extractors import HDSortSortingExtractor
 
 
 PathType = Union[str, Path]
