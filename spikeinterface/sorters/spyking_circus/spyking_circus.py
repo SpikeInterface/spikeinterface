@@ -6,7 +6,7 @@ from numpy.lib.format import open_memmap
 import sys
 
 
-import spikeinterface.extractors as se
+from spikeinterface.extractors import SpykingCircusSortingExtractor
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
@@ -175,7 +175,7 @@ class SpykingcircusSorter(BaseSorter):
             raise Exception('spykingcircus returned a non-zero exit code')
 
     @classmethod
-    def get_result_from_folder(cls, output_folder):
-        sorting = se.SpykingCircusSortingExtractor(file_or_folder_path=Path(output_folder) / 'recording')
+    def _get_result_from_folder(cls, output_folder):
+        sorting = SpykingCircusSortingExtractor(folder_path=Path(output_folder) / 'recording')
         return sorting
 

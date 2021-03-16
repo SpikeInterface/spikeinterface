@@ -9,7 +9,7 @@ from pprint import pprint
 import distutils.version
 
 
-#~ from spikeinterface.extractors import TridesclousSortingExtractor
+from spikeinterface.extractors import TridesclousSortingExtractor
 
 from ..basesorter import BaseSorter
 from spikeinterface.core import BinaryRecordingExtractor
@@ -145,7 +145,7 @@ class TridesclousSorter(BaseSorter):
 
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
 
-        #~ params = dict(self.params)
+        params = params.copy()
 
         clean_catalogue_gui = params.pop('clean_catalogue_gui')
         # make catalogue
