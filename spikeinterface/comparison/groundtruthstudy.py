@@ -93,7 +93,7 @@ class GroundTruthStudy:
     def get_recording(self, rec_name=None):
         rec_name = self._check_rec_name(rec_name)
         #~ rec = get_one_recording(self.study_folder, rec_name)
-        rec = load_extractor(study_folder /  'raw_files' / rec_name)
+        rec = load_extractor(self.study_folder /  'raw_files' / rec_name)
         
         return rec
 
