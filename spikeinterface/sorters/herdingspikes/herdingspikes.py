@@ -1,8 +1,6 @@
 from pathlib import Path
 import copy
 
-#~ import spikeextractors as se
-#~ import spiketoolkit as st
 
 from ..basesorter import BaseSorter
 from ..utils import RecordingExtractorOldAPI

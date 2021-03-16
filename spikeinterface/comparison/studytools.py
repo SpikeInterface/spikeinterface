@@ -18,7 +18,6 @@ import json
 import os
 
 import pandas as pd
-import spikeextractors as se
 
 
 from spikeinterface.core import load_extractor

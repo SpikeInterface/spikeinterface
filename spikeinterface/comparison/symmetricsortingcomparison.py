@@ -1,5 +1,4 @@
 import numpy as np
-import spikeextractors as se
 
 from .basecomparison import BaseTwoSorterComparison
 from .comparisontools import make_possible_match, make_best_match, make_hungarian_match

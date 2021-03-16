@@ -7,6 +7,7 @@ from .numpyextractors import NumpyRecording , NumpySorting
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor
 from .hdsortextractors import HDSortSortingExtractor
+from .waveclustextractors import WaveClusSortingExtractor
 
 
 from .neoextractors import (
@@ -82,6 +83,7 @@ sorting_extractor_full_list = [
     NumpySorting,
     KlustaSortingExtractor,
     HDSortSortingExtractor,
+    WaveClusSortingExtractor,
     
     # neo based
     MEArecSortingExtractor,
@@ -94,7 +96,7 @@ sorting_extractor_full_list = [
     #~ HDSortSortingExtractor,  
     #~ HS2SortingExtractor,
     #~ KlustaSortingExtractor,  OK
-    #~ KiloSortSortingExtractor,
+    #~ KiloSortSortingExtractor, OK
     #~ OpenEphysSortingExtractor,
     #~ PhySortingExtractor,        NEAR OK
     #~ SpykingCircusSortingExtractor,   NEAR OK

@@ -9,8 +9,6 @@ import json
 import traceback
 import json
 
-import spikeextractors as se
-
 
 from spikeinterface.core import load_extractor
 
