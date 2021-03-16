@@ -243,7 +243,7 @@ class WaveClusSorter(BaseSorter):
             raise Exception(f'Result file does not exist: {result_fname}')
 
     @classmethod
-    def get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         result_fname = str(output_folder / 'times_results.mat')
         sorting = WaveClusSortingExtractor(file_path=result_fname)

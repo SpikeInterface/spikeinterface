@@ -187,7 +187,7 @@ class CombinatoSorter(BaseSorter):
             raise Exception('combinato returned a non-zero exit code')
 
     @classmethod
-    def get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         result_fname = str(output_folder / 'recording')
         sorting = se.CombinatoSortingExtractor(datapath=result_fname)

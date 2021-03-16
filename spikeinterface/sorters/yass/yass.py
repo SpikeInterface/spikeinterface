@@ -291,7 +291,7 @@ class YassSorter(BaseSorter):
                 output_folder, "/tmp/nn_train/denoise.pt")
 
     @classmethod
-    def get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, output_folder):
         sorting = YassSortingExtractor(folder_path=Path(output_folder))
         return sorting
 
