@@ -12,7 +12,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
     extractor_name = "HDSortSortingExtractor"
 
     def __init__(self, file_path, keep_good_only=True):
-        MatlabHelper.__init__(file_path)
+        MatlabHelper.__init__(self, file_path)
 
         if not self._old_style_mat:
             _units = self._data['Units']

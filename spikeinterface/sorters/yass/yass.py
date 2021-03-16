@@ -119,9 +119,7 @@ class YassSorter(BaseSorter):
 
                             1.  Retraining Neural Networks (Default)
 
-                            import spikesorters as ss
-                            import spikeextractors as se
-                            rec, sort = se.example_datasets.toy_example(duration=300)
+                            rec, sort = se.toy_example(duration=300)
                             sorting_yass = ss.run_yass(rec, '/home/cat/Downloads/test2')
 
 
