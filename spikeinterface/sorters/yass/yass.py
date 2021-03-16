@@ -227,20 +227,19 @@ class YassSorter(BaseSorter):
         '''
         '''
         recording = recover_recording(recording)  # allows this to run on multiple jobs (not just multi-core)
-
+        
+        config_file = output_folder / 'config.yaml'
         if 'win' in sys.platform and sys.platform != 'darwin':
-            shell_cmd = '''
-                        yass sort {config}
-                    '''.format(config=os.path.join(output_folder, 'config.yaml'))
+            shell_cmd = f'''yass sort {config_file}'''
         else:
-            shell_cmd = '''
+            shell_cmd = f'''
                         #!/bin/bash
-                        yass sort {config}
-                    '''.format(config=os.path.join(output_folder, 'config.yaml'))
+                        yass sort {config_file}'''
 
         shell_script = ShellScript(shell_cmd,
-                                   script_path=os.path.join(output_folder, self.sorter_name),
-                                   log_path=os.path.join(output_folder, self.sorter_name + '.log'),
+                                   # script_path=os.path.join(output_folder, self.sorter_name),
+                                   script_path=output_folder / 'run_yass',
+                                   log_path= output_folder / (self.sorter_name + '.log'),
                                    verbose=self.verbose)
         shell_script.start()
 
@@ -261,22 +260,17 @@ class YassSorter(BaseSorter):
             print("            ss.set_NNs('path_to_NNs') (or set params['neural_nets_path'] = path_toNNs)")
             print("prior to running ss.run_sorter()")
 
-        #~ recording = recover_recording(recording)  # allows this to run on multiple jobs (not just multi-core)
-        #~ recording = load_extractor(output_folder / 'spikeinterface_recording.json')
-
+        config_file = output_folder / 'config.yaml'
         if 'win' in sys.platform and sys.platform != 'darwin':
-            shell_cmd = '''
-                        yass train {config}
-                    '''.format(config=os.path.join(output_folder, 'config.yaml'))
+            shell_cmd = f'yass train {config_file}'
         else:
-            shell_cmd = '''
+            shell_cmd = f'''
                         #!/bin/bash
-                        yass train {config}
-                    '''.format(config=os.path.join(output_folder, 'config.yaml'))
+                        yass train {config_file}'''
 
         shell_script = ShellScript(shell_cmd,
-                                   script_path=os.path.join(output_folder, cls.sorter_name),
-                                   log_path=os.path.join(output_folder, cls.sorter_name + '.log'),
+                                   script_path=output_folder / 'run_yass_train', #os.path.join(output_folder, cls.sorter_name),
+                                   log_path= output_folder / (cls.sorter_name + '_train.log'),
                                    verbose=verbose)
         shell_script.start()
 
