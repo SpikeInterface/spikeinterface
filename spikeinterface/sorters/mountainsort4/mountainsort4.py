@@ -148,7 +148,7 @@ class Mountainsort4Sorter(BaseSorter):
 
    
     @classmethod
-    def get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         
         #~ tmpdir = output_folder
