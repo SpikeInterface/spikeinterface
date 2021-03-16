@@ -34,7 +34,6 @@ class MatlabHelper:
 
     def __init__(self, file_path):
         assert HAVE_MAT, self.installation_mesg
-        super().__init__()
 
         file_path = Path(file_path) if isinstance(file_path, str) else file_path
         if not isinstance(file_path, Path):

@@ -105,9 +105,8 @@ def test_kilosort():
 
 if __name__ == '__main__':
     #~ test_mearec_extractors()
-    test_spikeglx_extractors()
-    #~ test_openephy_legacy()
-    #~ test_openephy_binary()
+    #~ test_spikeglx_extractors()
+    test_openephys()
     #~ test_intan()
     #~ test_neuroscope()
     #~ test_plexon()
