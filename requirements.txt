@@ -1,4 +1,4 @@
 numpy
-neo>=0.9.0
+neo
 joblib
 probeinterface
