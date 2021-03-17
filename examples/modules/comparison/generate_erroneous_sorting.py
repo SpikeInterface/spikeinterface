@@ -7,7 +7,6 @@ some possible mistake catch in ground truth comparison.
 import numpy as np
 import matplotlib.pyplot as plt
 
-from spikeinterface.core import UnitsSelectionSorting
 import spikeinterface.extractors as se
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
@@ -16,7 +15,7 @@ def generate_erroneous_sorting():
     rec, sorting_true = se.toy_example(num_channels=4, num_units=10, duration=10, seed=10, num_segments=1)
     
     # artificilaly remap to one based
-    sorting_true = UnitsSelectionSorting(sorting_true, unit_ids=None,
+    sorting_true = sorting_true.select_units(unit_ids=None,
                 renamed_unit_ids=np.arange(10, dtype='int64')+1)
     
     sampling_frequency = sorting_true.get_sampling_frequency()
