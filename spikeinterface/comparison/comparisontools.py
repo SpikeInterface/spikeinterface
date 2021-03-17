@@ -330,9 +330,6 @@ def make_hungarian_match(agreement_scores, min_score):
     """
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
-    print('make_hungarian_match')
-    print(unit1_ids, type(unit1_ids))
-    print(unit2_ids, type(unit2_ids))
 
     # threshold the matrix
     scores = agreement_scores.values.copy()

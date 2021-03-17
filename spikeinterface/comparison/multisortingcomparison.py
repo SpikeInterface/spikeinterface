@@ -328,7 +328,7 @@ class AgreementSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         ind = list(self._msc._new_units.keys()).index(unit_id)
         spiketrains = self._msc._spiketrains[ind]
-        return spiketrains
+        return np.asarray(spiketrains)
 
 
 def compare_multiple_sorters(sorting_list, name_list=None, delta_time=0.4, match_score=0.5, chance_score=0.1,

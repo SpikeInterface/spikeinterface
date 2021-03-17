@@ -78,6 +78,9 @@ class TimeseriesWidget(BaseWidget):
         # self._vspacing = self._mean_channel_std * 20
         self._vspacing = self._max_channel_amp * 1.5
         
+        if recording.get_channel_groups() is None:
+            color_groups = False
+
         self._color_groups = color_groups
         self._color = color
         if color_groups:
@@ -120,6 +123,8 @@ class TimeseriesWidget(BaseWidget):
         for im, m in enumerate(self._visible_channels):
             self._plot_offsets[m] = offset0
             if self._color_groups:
+                group = self._recording.get_channel_groups(channel_ids=[m])[0]
+                group_color_idx = self._group_color_map[group]
                 color=self._colors[group_color_idx]
             else:
                 color=self._color

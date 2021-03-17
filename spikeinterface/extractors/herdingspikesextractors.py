@@ -29,9 +29,10 @@ class HerdingspikesSortingExtractor(BaseSorting):
             else:
                 sampling_frequency = self._rf['Sampling'][()]
 
-        self._cluster_id = self._rf['cluster_id'][()]
-        unit_ids = list(set(self._cluster_id))
+        spike_ids = self._rf['cluster_id'][()]
+        unit_ids = np.unique(spike_ids)
         spike_times = self._rf['times'][()]
+        
 
         if load_unit_info:
             self.load_unit_info()
@@ -39,7 +40,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
         self._kwargs = {'file_path': str(Path(file_path).absolute()), 'load_unit_info': load_unit_info}
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times))        
+        self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))        
 
     def load_unit_info(self):
         # TODO
@@ -67,15 +68,16 @@ class HerdingspikesSortingExtractor(BaseSorting):
 HS2SortingExtractor = HerdingspikesSortingExtractor
 
 class HerdingspikesSortingSegment(BaseSortingSegment):
-    def __init__(self, unit_ids, spike_times):
+    def __init__(self, unit_ids, spike_times, spike_ids):
         BaseSortingSegment.__init__(self)
         # spike_times is a dict
-        self_unit_ids = list(unit_ids)
+        self._unit_ids = list(unit_ids)
         self._spike_times  = spike_times
+        self._spike_ids = spike_ids
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        unit_index = self_unit_ids.index(unit_id)
-        times = self._spike_times[unit_index]
+        mask = self._spike_ids == unit_id
+        times = self._spike_times[mask]
         if start_frame is not None:
             times = times[times >= start_frame]
         if end_frame is not None:

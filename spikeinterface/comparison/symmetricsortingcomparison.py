@@ -54,7 +54,10 @@ class SymmetricSortingComparison(BaseTwoSorterComparison):
         #~ of sorting 1 mapped to the unit_ids of sorting 2.
         #~ """
         #~ return MappedSortingExtractor(self.sorting1, self.hungarian_match_21.to_dict())
-
+    
+    def get_matching(self):
+        return self.hungarian_match_12, self.hungarian_match_21
+    
     def get_matching_event_count(self, unit1, unit2):
         if (unit1 is not None) and (unit2 is not None):
             return self.match_event_count.at[unit1, unit2]
