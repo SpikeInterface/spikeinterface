@@ -23,7 +23,7 @@ class BaseSorting(BaseExtractor):
         nseg = self.get_num_segments()
         nunits = self.get_num_units()
         sf_khz = self.get_sampling_frequency() / 1000.
-        txt = f'{clsname}: {nunits} nunits - {nseg} segments - {sf_khz:0.1f}kHz'
+        txt = f'{clsname}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz'
         if 'file_path' in self._kwargs:
             txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
         return txt

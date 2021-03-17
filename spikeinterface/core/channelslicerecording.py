@@ -44,9 +44,10 @@ class ChannelSliceRecording(BaseRecording):
             self.add_recording_segment(sub_segment)
         
         # copy annotation and properties
-        self.annotate(**parent_recording._annotations)
-        for k in parent_recording._properties:
-            self._properties[k] = parent_recording._properties[k][self._parent_channel_indices]
+        parent_recording.copy_metadata(self, only_main=False)
+        #~ self.annotate(**parent_recording._annotations)
+        #~ for k in parent_recording._properties:
+            #~ self._properties[k] = parent_recording._properties[k][self._parent_channel_indices]
         
         # update dump dict
         self._kwargs = {'parent_recording': parent_recording.to_dict(), 'channel_ids': channel_ids,

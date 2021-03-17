@@ -172,7 +172,7 @@ class BaseRecording(BaseExtractor):
         
         return
         -------
-        A view of the recording (ChannelSliceRecording or clone of irself)
+        A view of the recording (ChannelSliceRecording or clone or irself)
         """
         from spikeinterface import ChannelSliceRecording
         
@@ -342,9 +342,9 @@ class BaseRecording(BaseExtractor):
         v = values[self.id_to_indice(channel_id)]
         return v
     
-    def channel_slice(self, channel_ids):
+    def channel_slice(self, channel_ids, renamed_channel_ids=None):
         from spikeinterface import ChannelSliceRecording
-        sub_recording = ChannelSliceRecording(self, channel_ids)
+        sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
     
     def split_by(self, property='group'):

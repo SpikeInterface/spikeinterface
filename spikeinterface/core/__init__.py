@@ -16,8 +16,9 @@ from .basesorting import BaseSorting, BaseSortingSegment
 from .binaryrecordingextractor import BinaryRecordingExtractor
 from .npzsortingextractor import NpzSortingExtractor
 
-# utility extractors
+# utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslicerecording import ChannelSliceRecording
+from .unitsselectionsorting import UnitsSelectionSorting
 
 # default folder
 from .default import (set_global_tmp_folder,
