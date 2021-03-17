@@ -8,7 +8,7 @@ After spike sorting, you might want to validate the goodness of the sorted units
 """
 
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
+# import spikeinterface.toolkit as st
 
 #~ ##############################################################################
 #~ # First, let's create a toy example:

@@ -50,8 +50,8 @@ sorting_output = ss.run_sorters(sorter_list, recordings, working_folder='tmp_som
 # To 'sorting_output' is a dictionary that has (recording, sorter) pairs as keys and the correspondent
 # :code:`SortingExtractor` as values. It can be accessed as follows:
 
-for (rec_name, sorter_name), sort in sorting_output.items():
-    print(rec, sorter, ':', sort.get_unit_ids())
+for (rec_name, sorter_name), sorting in sorting_output.items():
+    print(rec_name, sorter_name, ':', sorting.get_unit_ids())
 
 ##############################################################################
 # With the same mechanism, you can run several spike sorters on many recordings, just by creating a list/dict of

@@ -8,6 +8,8 @@ algorithms, inspect and validate the results, export to Phy, and compare spike s
 
 """
 
+import matplotlib.pyplot as plt
+
 ##############################################################################
 # The spikeinterface module by itself import only the spikeinterface.core submodule
 # which is not usefull for end user
@@ -131,16 +133,16 @@ sorting_SC_2 = ss.run_spykingcircus(recording=recording, **sc_params)
 print(sorting_SC_2)
 
 ##############################################################################
-# Let's run Klusta as well, with default parameters:
+# Let's run tridesclous as well, with default parameters:
 
-sorting_KL = ss.run_klusta(recording=recording_cmr)
+sorting_TDC = ss.run_tridesclous(recording=recording_cmr)
 
 ##############################################################################
 # The :code:`sorting_MS4` and :code:`sorting_MS4` are :code:`SortingExtractor`
 # objects. We can print the units found using:
 
 print('Units found by spykingcircus:', sorting_SC.get_unit_ids())
-print('Units found by Klusta:', sorting_KL.get_unit_ids())
+print('Units found by Klusta:', sorting_TDC.get_unit_ids())
 
 
 ##############################################################################
@@ -152,7 +154,7 @@ print('Units found by Klusta:', sorting_KL.get_unit_ids())
 # curation of the spike sorting output. To export to phy you can run:
 
 # TODO
-# st.postprocessing.export_to_phy(recording, sorting_KL, output_folder='phy')
+# st.postprocessing.export_to_phy(recording, sorting_TDC, output_folder='phy')
 
 ##############################################################################
 # Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
@@ -166,9 +168,9 @@ print('Units found by Klusta:', sorting_KL.get_unit_ids())
 # are signal-to-noise ratio, ISI violation ratio, isolation distance, and many more.
 
 # TODO
-# snrs = st.validation.compute_snrs(sorting_KL, recording_cmr)
-# isi_violations = st.validation.compute_isi_violations(sorting_KL, duration_in_frames=recording_cmr.get_num_frames())
-# isolations = st.validation.compute_isolation_distances(sorting_KL, recording_cmr)
+# snrs = st.validation.compute_snrs(sorting_TDC, recording_cmr)
+# isi_violations = st.validation.compute_isi_violations(sorting_TDC, duration_in_frames=recording_cmr.get_num_frames())
+# isolations = st.validation.compute_isolation_distances(sorting_TDC, recording_cmr)
 
 # print('SNR', snrs)
 # print('ISI violation ratios', isi_violations)
@@ -180,7 +182,7 @@ print('Units found by Klusta:', sorting_KL.get_unit_ids())
 # certain threshold:
 
 # TODO
-# sorting_curated_snr = st.curation.threshold_snrs(sorting_KL, recording_cmr, threshold=5, threshold_sign='less')
+# sorting_curated_snr = st.curation.threshold_snrs(sorting_TDC, recording_cmr, threshold=5, threshold_sign='less')
 # snrs_above = st.validation.compute_snrs(sorting_curated_snr, recording_cmr)
 
 # print('Curated SNR', snrs_above)
@@ -191,9 +193,9 @@ print('Units found by Klusta:', sorting_KL.get_unit_ids())
 # sorting :code:`sorting_true`, (2) compare the output of two (Klusta 
 # and Mountainsor4), or (3) compare the output of multiple sorters:
 
-comp_gt_KL = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_KL)
-comp_KL_SC = sc.compare_two_sorters(sorting1=sorting_KL, sorting2=sorting_SC)
-comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_KL, sorting_SC],
+comp_gt_TDC = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
+comp_TDC_SC = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC)
+comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_SC],
                                          name_list=['klusta', 'circus'])
 
 
@@ -201,21 +203,21 @@ comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_KL, sorting_SC],
 # When comparing with a ground-truth sorting extractor (1), you can get the sorting performance and plot a confusion
 # matrix
 
-comp_gt_KL.get_performance()
-w_conf = sw.plot_confusion_matrix(comp_gt_KL)
-w_conf = sw.plot_agreement_matrix(comp_gt_KL)
+comp_gt_TDC.get_performance()
+w_conf = sw.plot_confusion_matrix(comp_gt_TDC)
+w_conf = sw.plot_agreement_matrix(comp_gt_TDC)
 
 
 ##############################################################################
 # When comparing two sorters (2), we can see the matching of units between sorters.
 #  Units which are not mapped has -1 as unit id.
 
-comp_KL_SC.hungarian_match_12
+comp_TDC_SC.hungarian_match_12
 
 ##############################################################################
 # or reverse
 
-comp_KL_SC.hungarian_match_21
+comp_TDC_SC.hungarian_match_21
 
 
 ##############################################################################
