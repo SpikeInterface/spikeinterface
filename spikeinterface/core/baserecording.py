@@ -253,7 +253,7 @@ class BaseRecording(BaseExtractor):
                 mask = (arr['probe_index'] == a['probe_index']) & (arr['shank_ids'] == a['shank_ids'])
                 groups[mask] = group
         sub_recording.set_property('group', groups, ids=None)
-
+        
         return sub_recording
 
     def get_probe(self):
@@ -312,7 +312,8 @@ class BaseRecording(BaseExtractor):
         self.set_property('group', groups,  ids=channel_ids)
         
     def get_channel_groups(self, channel_ids=None):
-        return self.get_property('group')
+        groups = self.get_property('group', ids=channel_ids)
+        return groups
         
     def clear_channel_groups(self, channel_ids=None):
         if channel_ids is None:
@@ -326,7 +327,7 @@ class BaseRecording(BaseExtractor):
         self.set_property('gain', groups,  ids=channel_ids)
     
     def get_channel_gains(self, channel_ids=None):
-        return self.get_property('gain')
+        return self.get_property('gain', ids=channel_ids)
     
     ## for backward compatibilities
     #~ def set_channel_property(self, channel_id, property_name, value):

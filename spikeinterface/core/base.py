@@ -169,8 +169,12 @@ class BaseExtractor:
             indices = self.ids_to_indices(ids)
             self._properties[key][indices] = values
     
-    def get_property(self, key):
-        return self._properties.get(key, None)
+    def get_property(self, key, ids=None):
+        values = self._properties.get(key, None)
+        if ids is not None and values is not None:
+            inds = self.ids_to_indices(ids)
+            values = values[inds]
+        return values
     
     def get_property_keys(self):
         return self._properties.keys()

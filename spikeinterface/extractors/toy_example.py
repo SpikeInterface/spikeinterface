@@ -82,7 +82,6 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     probe.create_auto_shape(probe_type='rect', margin=20)
     probe.set_device_channel_indices(np.arange(num_channels, dtype='int64'))
     recording = recording.set_probe(probe)
-    
 
     return recording, sorting
 
