@@ -85,6 +85,12 @@ class BaseSorting(BaseExtractor):
         values = self.get_property(key)
         v = values[self.id_to_indice(unit_id)]
         return v
+
+    def select_units(self,unit_ids, renamed_unit_ids=None):
+        from spikeinterface import UnitsSelectionSorting
+        sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
+        return sub_sorting
+        
     
 
 
