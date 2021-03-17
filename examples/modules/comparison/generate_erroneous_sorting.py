@@ -7,6 +7,7 @@ some possible mistake catch in ground truth comparison.
 import numpy as np
 import matplotlib.pyplot as plt
 
+from spikeinterface.core import UnitsSelectionSorting
 import spikeinterface.extractors as se
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
@@ -15,10 +16,8 @@ def generate_erroneous_sorting():
     rec, sorting_true = se.toy_example(num_channels=4, num_units=10, duration=10, seed=10, num_segments=1)
     
     # artificilaly remap to one based
-    # TODO
-    
-    print(sorting_true)
-    print(sorting_true.get_unit_ids())
+    sorting_true = UnitsSelectionSorting(sorting_true, unit_ids=None,
+                renamed_unit_ids=np.arange(10, dtype='int64')+1)
     
     sampling_frequency = sorting_true.get_sampling_frequency()
     
@@ -51,7 +50,8 @@ def generate_erroneous_sorting():
     # unit 7 is over split in 2 part
     st7 = sorting_true.get_unit_spike_train(7)
     st70 = st7[::2]
-    sorting_err.add_unit(70, st70)
+    #~ sorting_err.add_unit(70, st70)
+    units_err[70] = st70
     st71 = st7[1::2]
     st71 = np.sort(np.random.choice(st71, size=int(st71.size*0.9), replace=False))
     #~ sorting_err.add_unit(71, st71)
@@ -72,14 +72,12 @@ def generate_erroneous_sorting():
     # unit 9 is missing
     
     # there are some units that do not exist 15 16 and 17
-    nframes = rec.get_num_frames()
+    nframes = rec.get_num_frames(segment_index=0)
     for u in [15,16,17]:
         st = np.random.randint(0, high=nframes, size=35)
         #~ sorting_err.add_unit(u, st)
         units_err[u] = st
-    print(units_err)
-    exit()
-    sorting_err = NumpySortingExtractor.from_dict(units_err, sampling_frequency)
+    sorting_err = se.NumpySorting.from_dict(units_err, sampling_frequency)
     
     
     return sorting_true, sorting_err

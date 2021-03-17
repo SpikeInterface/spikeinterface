@@ -151,8 +151,9 @@ class NumpySorting(BaseSorting):
         
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for i, units_dict in enumerate(units_dict_list):
-            print(units_dict)
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
+        
+        return sorting
         
 
 
