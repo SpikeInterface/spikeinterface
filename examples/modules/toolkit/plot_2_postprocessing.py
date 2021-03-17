@@ -11,7 +11,7 @@ further postprocessing.
 import matplotlib.pylab as plt
 
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
+# import spikeinterface.toolkit as st
 
 #~ ##############################################################################
 #~ # First, let's create a toy example:

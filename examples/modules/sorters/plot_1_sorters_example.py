@@ -42,7 +42,7 @@ pprint(default_SC_params)
 #  Parameters can be changed either by passing a full dictionary, or by
 # passing single arguments.
 
-# Mountainsort4 spike sorting
+# spykingcircus spike sorting
 default_SC_params['detect_threshold'] = 4
 
 # parameters set by params dictionary
@@ -51,13 +51,13 @@ sorting_SC = ss.run_spykingcircus(recording=recording, **default_SC_params,
 ##############################################################################
 
 # parameters set by params dictionary
-sorting_SC_10 = ss.run_spykingcircus(recording=recording, detect_threshold=10,
-                                      output_folder='tmp_MS4')
+sorting_SC_8 = ss.run_spykingcircus(recording=recording, detect_threshold=8.,
+                                      output_folder='tmp_SC_8')
 
 ##############################################################################
 
 print('Units found with threshold = 4:', sorting_SC.get_unit_ids())
-print('Units found with threshold = 10:', sorting_SC_10.get_unit_ids())
+print('Units found with threshold = 10:', sorting_SC_8.get_unit_ids())
 
 ##############################################################################
 # Run other sorters

@@ -8,7 +8,7 @@ quality metrics. This can be done with the :code:`toolkit.curation` submodule.
 """
 
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
+# import spikeinterface.toolkit as st
 import spikeinterface.sorters as ss
 
 #~ ##############################################################################
