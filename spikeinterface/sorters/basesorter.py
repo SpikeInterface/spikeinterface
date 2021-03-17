@@ -276,8 +276,8 @@ class BaseSorter:
 
     @classmethod
     def _check_params(cls, recording, output_folder, params):
-        # need be implemented in subclass for custum checks
-        # here nothing to change
+        # optional
+        # can be implemented in subclass for custum checks
         return params
 
     @classmethod
@@ -297,7 +297,8 @@ class BaseSorter:
     @classmethod
     def _check_apply_filter_in_params(cls, params):
         return False
-        # need be implemented in subclass for custum checks
+        #  optional
+        # can be implemented in subclass to check if the filter will be apllied
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
