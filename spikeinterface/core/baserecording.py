@@ -113,17 +113,17 @@ class BaseRecording(BaseExtractor):
             from . binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
                                 self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(), time_axis=0)
+        elif format == 'zarr':
+            # TODO implement a format based on zarr
+            raise NotImplementedError
+        else:
+            raise ValueError(f'format {format} not supported')
 
         if self.get_property('contact_vector') is not None:
             probegroup = self.get_probegroup()
             write_probeinterface(folder / 'probe.json', probegroup)
             cached.set_probegroup(probegroup)
 
-        elif format == 'zarr':
-            # TODO implement a format based on zarr
-            raise NotImplementedError
-        else:
-            raise ValueError(f'format {format} not supported')
         
         return cached
     

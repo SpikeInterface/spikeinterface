@@ -22,11 +22,17 @@ if not os.path.isdir('sources'):
 
    
 
-# clean study
-study_folder = '../examples/modules/comparison/a_study_folder'
-if os.path.isdir(study_folder):
-    print('Removing study folder')
-    shutil.rmtree(study_folder)
+# clean some folder
+folders =  [
+    '../examples/modules/comparison/a_study_folder',
+    '../examples/modules/core/my_recording',
+    '../examples/modules/core/my_sorting',
+]
+
+for folder in folders:
+    if os.path.isdir(folder):
+        print('Removing folder', folder)
+        shutil.rmtree(folder)
 
 # -- Project information -----------------------------------------------------
 

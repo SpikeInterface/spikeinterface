@@ -1,4 +1,4 @@
-"""
+s"""
 Compare multiple sorters and consensus based method
 ====================================================
 

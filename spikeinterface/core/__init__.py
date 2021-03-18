@@ -15,6 +15,7 @@ from .basesorting import BaseSorting, BaseSortingSegment
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor
 from .npzsortingextractor import NpzSortingExtractor
+from .numpyextractors import NumpyRecording , NumpySorting
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslicerecording import ChannelSliceRecording

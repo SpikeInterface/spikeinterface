@@ -20,7 +20,7 @@ class NumpyRecording(BaseRecording):
     """
     is_writable = False
 
-    def __init__(self, traces_list, sampling_frequency, channel_locations=None):
+    def __init__(self, traces_list, sampling_frequency, channel_locations=None, channel_ids=None):
         if isinstance(traces_list, list):
             assert all(isinstance(e, np.ndarray) for e in traces_list), 'must give a list of numpy array'
         else:
@@ -30,8 +30,12 @@ class NumpyRecording(BaseRecording):
         dtype = traces_list[0].dtype
         assert all(dtype == ts.dtype for ts in traces_list)
         
-        chan_ids = np.arange(traces_list[0].shape[1])
-        BaseRecording.__init__(self, sampling_frequency, chan_ids, dtype)
+        if channel_ids is None:
+            channel_ids = np.arange(traces_list[0].shape[1])
+        else:
+            channel_ids = np.asarray(channel_ids)
+            assert channel_ids.size == traces_list[0].shape[1]
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         
         self.is_dumpable = False
         

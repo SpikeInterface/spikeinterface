@@ -2,110 +2,188 @@
 RecordingExtractor objects
 ==========================
 
-The :code:`RecordingExtractor` is the basic class for handling recorded data. Here is how it works.
+The :code:`RecordingExtractor` is the basic class for handling recorded data.
+Here is how it works.
+
+A RecordingExtractor handle:
+
+  * retrieve traces buffer across segments
+  * dump/load from json/dict
+  * cache (copy)
+
+
 '''
+import matplotlib.pyplot as plt
 
 import numpy as np
 import spikeinterface.extractors as se
 
-#~ ##############################################################################
-#~ # We will create a :code:`RecordingExtractor` object from scratch using :code:`numpy` and the
-#~ # :code:`NumpyRecordingExtractor`
-#~ #
-#~ # Let's define the properties of the dataset
+##############################################################################
+# We will create a :code:`RecordingExtractor` object from scratch using :code:`numpy` and the
+# :code:`NumpyRecording`
+#
+# Let's define the properties of the dataset
 
-#~ num_channels = 7
-#~ sampling_frequency = 30000  # in Hz
-#~ duration = 20
-#~ num_timepoints = int(sampling_frequency * duration)
+num_channels = 7
+sampling_frequency = 30000.  # in Hz
+durations = [10., 15.] # in s for 2 segments
+num_segments = 2
+num_timepoints = [int(sampling_frequency * d) for d in durations]
 
-#~ ##############################################################################
-#~ # We can generate a pure-noise timeseries dataset recorded by a linear probe geometry
+##############################################################################
+# We can generate a pure-noise timeseries dataset for 2 segments with 2 durations
 
-#~ timeseries = np.random.normal(0, 10, (num_channels, num_timepoints))
-#~ geom = np.zeros((num_channels, 2))
-#~ geom[:, 0] = range(num_channels)
+traces0 = np.random.normal(0, 10, (num_timepoints[0], num_channels))
+traces1 = np.random.normal(0, 10, (num_timepoints[1], num_channels))
 
-#~ ##############################################################################
-#~ # And instantiate a :code:`NumpyRecordingExtractor`:
+##############################################################################
+# And instantiate a :code:`NumpyRecording`:
+# The object have a pretty print to summary it
 
-#~ recording = se.NumpyRecordingExtractor(timeseries=timeseries, geom=geom, sampling_frequency=sampling_frequency)
+recording = se.NumpyRecording(traces_list=[traces0, traces1], sampling_frequency=sampling_frequency)
+print(recording)
 
-#~ ##############################################################################
-#~ # We can now print properties that the :code:`RecordingExtractor` retrieves from the underlying recording.
+##############################################################################
+# We can now print properties that the :code:`RecordingExtractor` retrieves from the underlying recording.
 
-#~ print('Num. channels = {}'.format(len(recording.get_channel_ids())))
-#~ print('Sampling frequency = {} Hz'.format(recording.get_sampling_frequency()))
-#~ print('Num. timepoints = {}'.format(recording.get_num_frames()))
-#~ print('Stdev. on third channel = {}'.format(np.std(recording.get_traces(channel_ids=2))))
-#~ print('Location of third electrode = {}'.format(recording.get_channel_property(channel_id=2, property_name='location')))
+print('Num. channels = {}'.format(len(recording.get_channel_ids())))
+print('Sampling frequency = {} Hz'.format(recording.get_sampling_frequency()))
+print('Num. timepoints seg0= {}'.format(recording.get_num_segments()))
+print('Num. timepoints seg0= {}'.format(recording.get_num_frames(segment_index=0)))
+print('Num. timepoints seg1= {}'.format(recording.get_num_frames(segment_index=1)))
 
-#~ ##############################################################################
-#~ # Some extractors also implement a :code:`write` function. We can for example save our newly created recording into
-#~ # MDA format (Mountainsort4 format):
 
-#~ se.MdaRecordingExtractor.write_recording(recording=recording, save_path='sample_mountainsort_dataset')
+##############################################################################
+# The geometry of the Probe is handle with the probeinterface 
+#  lets generate a linear probe
 
-#~ ##############################################################################
-#~ # and read it back with the proper extractor:
+from probeinterface import generate_linear_probe
+from probeinterface.plotting import plot_probe
+probe = generate_linear_probe(num_elec=7, ypitch=20, contact_shapes='circle', contact_shape_params={'radius': 6})
 
-#~ recording2 = se.MdaRecordingExtractor(folder_path='sample_mountainsort_dataset')
-#~ print('Num. channels = {}'.format(len(recording2.get_channel_ids())))
-#~ print('Sampling frequency = {} Hz'.format(recording2.get_sampling_frequency()))
-#~ print('Num. timepoints = {}'.format(recording2.get_num_frames()))
-#~ print('Stdev. on third channel = {}'.format(np.std(recording2.get_traces(channel_ids=2))))
-#~ print('Location of third electrode = {}'.format(recording.get_channel_property(channel_id=2, property_name='location')))
+# probe have to be wiring to the recording
+probe.set_device_channel_indices(np.arange(7))
 
-#~ ##############################################################################
-#~ # Sometimes experiments are run with different conditions, e.g. a drug is applied, or stimulation is performed. 
-#~ # In order to define different phases of an experiment, one can use epochs:
+recording = recording.set_probe(probe)
+plot_probe(probe)
 
-#~ recording2.add_epoch(epoch_name='stimulation', start_frame=1000, end_frame=6000)
-#~ recording2.add_epoch(epoch_name='post_stimulation', start_frame=6000, end_frame=10000)
-#~ recording2.add_epoch(epoch_name='pre_stimulation', start_frame=0, end_frame=1000)
 
-#~ recording2.get_epoch_names()
+##############################################################################
+# Some extractors also implement a :code:`write` function. 
 
-#~ ##############################################################################
-#~ # An Epoch can be retrieved and it is returned as a :code:`SubRecordingExtractor`, which is a subclass of the
-#~ # :code:`RecordingExtractor`, hence maintaining the same functionality.
+# TODO make an example with NWB here instead of this
+files_path=['traces0.raw', 'traces1.raw']
+se.BinaryRecordingExtractor.write_recording(recording, files_path)
 
-#~ recording3 = recording2.get_epoch(epoch_name='stimulation')
-#~ epoch_info = recording2.get_epoch_info('stimulation')
-#~ start_frame = epoch_info['start_frame']
-#~ end_frame = epoch_info['end_frame']
 
-#~ print('Epoch Name = stimulation')
-#~ print('Start Frame = {}'.format(start_frame))
-#~ print('End Frame = {}'.format(end_frame))
-#~ print('Mean. on second channel during stimulation = {}'.format(np.mean(recording3.get_traces(channel_ids=1))))
-#~ print('Location of third electrode = {}'.format(recording.get_channel_property(channel_id=2, property_name='location')))
 
-#~ ##############################################################################
-#~ # :code:`SubRecordingExtractor` objects can be used to extract arbitrary subsets of your data/channels manually without
-#~ # epoch functionality:
+##############################################################################
+# and read it back with the proper extractor:
+# not that this new recording is now "on disk" and not "in memory"
+# also note that it is a lazy loading the file is not read
 
-#~ recording4 = se.SubRecordingExtractor(parent_recording=recording2, channel_ids=[2, 3, 4, 5], start_frame=14000,
-                                      #~ end_frame=16000)
+recording2 = se.BinaryRecordingExtractor(files_path,  sampling_frequency, num_channels, traces0.dtype)
+print(recording2)
 
-#~ print('Num. channels = {}'.format(len(recording4.get_channel_ids())))
-#~ print('Sampling frequency = {} Hz'.format(recording4.get_sampling_frequency()))
-#~ print('Num. timepoints = {}'.format(recording4.get_num_frames()))
-#~ print('Stdev. on third channel = {}'.format(np.std(recording4.get_traces(channel_ids=2))))
-#~ print(
-    #~ 'Location of third electrode = {}'.format(recording4.get_channel_property(channel_id=2, property_name='location')))
+##############################################################################
+# reading traces buffer is done on demand
 
-#~ ##############################################################################
-#~ # or to remap the channel ids:
+# entire segment 0
+taces0 = recording2.get_traces(segment_index=0)
+# ârt of segment 1
+taces1_short = recording2.get_traces(segment_index=1, end_frame=50)
+print(traces0.shape)
+print(taces1_short.shape)
 
-#~ recording5 = se.SubRecordingExtractor(parent_recording=recording2, channel_ids=[2, 3, 4, 5],
-                                      #~ renamed_channel_ids=[0, 1, 2, 3],
-                                      #~ start_frame=14000, end_frame=16000)
-#~ print('New ids = {}'.format(recording5.get_channel_ids()))
-#~ print('Original ids = {}'.format(recording5.get_original_channel_ids([0, 1, 2, 3])))
-#~ print('Num. channels = {}'.format(len(recording5.get_channel_ids())))
-#~ print('Sampling frequency = {} Hz'.format(recording5.get_sampling_frequency()))
-#~ print('Num. timepoints = {}'.format(recording5.get_num_frames()))
-#~ print('Stdev. on third channel = {}'.format(np.std(recording5.get_traces(channel_ids=0))))
-#~ print(
-    #~ 'Location of third electrode = {}'.format(recording5.get_channel_property(channel_id=0, property_name='location')))
+
+##############################################################################
+# A recording have internaly a channel_ids
+# this a vector that can have dtype int or str
+
+print('chan_ids (dtype=int):', recording.get_channel_ids())
+
+recording3 = se.NumpyRecording(traces_list=[traces0, traces1],
+                                                            sampling_frequency=sampling_frequency,
+                                                            channel_ids=['a', 'b', 'c', 'd', 'e', 'f', 'g'])
+print('chan_ids (dtype=str):', recording3.get_channel_ids())
+
+
+##############################################################################
+#  theses channel_ids are used when you want get only some channels
+
+
+traces = recording3.get_traces(segment_index=1, end_frame=50, channel_ids=['a', 'd'])
+print(traces.shape)
+
+##############################################################################
+# You can also get a channel slice view of the recording
+
+recording4 = recording3.channel_slice(channel_ids=['a', 'c', 'e'])
+print(recording4)
+print(recording4.get_channel_ids())
+
+# which is equivalent to 
+from spikeinterface import ChannelSliceRecording
+recording4 = ChannelSliceRecording(recording3, channel_ids=['a', 'c', 'e'])
+
+##############################################################################
+# Here an example on how to split channels on a particular property
+
+recording3.set_property('group', [0, 0, 0, 1, 1, 1, 2])
+
+recordings = recording3.split_by(property='group')
+print(recordings)
+print(recordings[0].get_channel_ids())
+print(recordings[1].get_channel_ids())
+print(recordings[2].get_channel_ids())
+
+
+###############################################################################
+# A recording can be "dump" (export)
+#  * a dict
+#  * a json file
+#  * a pickle file
+# 
+#  A dump is lazy, the traces are not exported. Only kwargs and property that make possible the recording to
+# be reconstructed
+
+from spikeinterface import load_extractor
+from pprint import pprint
+
+d = recording2.to_dict()
+pprint(d)
+
+recording2_loaded = load_extractor(d)
+print(recording2_loaded)
+
+###############################################################################
+#  Same for JSON. Persistent on disk
+
+recording2.dump('my_recording.json')
+
+recording2_loaded = load_extractor('my_recording.json')
+print(recording2_loaded)
+
+###############################################################################
+# note that dump to not copy the buffer to disk
+# If you want to also make traces persistent you need to used cache()
+#  this of course use more ressource.
+# This operation is very usefull to saved long computation.
+
+recording2.cache(folder='./my_recording')
+
+import os
+pprint(os.listdir('./my_recording'))
+
+recording2_cached = load_extractor('my_recording.json')
+print(recording2_cached)
+
+
+
+
+
+
+
+
+
+
