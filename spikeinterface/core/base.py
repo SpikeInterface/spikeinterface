@@ -179,24 +179,29 @@ class BaseExtractor:
     def get_property_keys(self):
         return self._properties.keys()
 
-    def copy_metadata(self, other, only_main=False):
+    def copy_metadata(self, other, only_main=False, ids=None):
         """
         Copy annotations/properties/features to other extractor
         
         If only main.
         Then only "main" one are copied
         """
+        
+        if ids is None:
+            inds = slice(None)
+        else:
+            inds = self.ids_to_indices(ids)
+        
+        print('inds', inds)
+        
         if only_main:
-            other._annotations = deepcopy({self._annotations[k]
-                            for k in ExtractorBase._main_annotations})
-            other._properties = deepcopy({self._properties[k]
-                            for k in ExtractorBase._main_properties})
-            other._features = deepcopy({self._features[k]
-                            for k in ExtractorBase._main_features})
+            other._annotations = deepcopy({k: self._annotations[k] for k in ExtractorBase._main_annotations})
+            other._properties = deepcopy({k: self._properties[k][inds] for k in ExtractorBase._main_properties})
+            # other._features = deepcopy({self._features[k] for k in ExtractorBase._main_features})
         else:
             other._annotations = deepcopy(self._annotations)
-            other._properties = deepcopy(self._properties)
-            other._features = deepcopy(self._features)
+            other._properties = deepcopy({k: self._properties[k][inds] for k in self._properties})
+            # other._features = deepcopy(self._features)
 
     
     def to_dict(self, include_annotations=True, include_properties=True, include_features=True):
@@ -427,7 +432,7 @@ class BaseExtractor:
     def set_cache_folder(self, folder):
         self._cache_folder = Path(folder)
     
-    def cache(self, name=None, dump_ext='json', **cache_kargs):
+    def cache(self, name=None, folder=None, dump_ext='json', **cache_kargs):
         """
         Cache consist of:
           * compute the extractro by calling get_trace() in chunk
@@ -437,17 +442,19 @@ class BaseExtractor:
         
         This replace the use of the old CacheRecordingExtractor and CacheSortingExtractor.
         """
-        if name is None:
-            raise ValueError('You must give a name for the cache')
         
-        if self._cache_folder is None:
-            cache_folder = get_global_tmp_folder()
-            if not is_set_global_tmp_folder():
-                print(f'Use cache_folder={cache_folder}')
+        if folder is None:
+            if name is None:
+                raise ValueError('You must give a name for the cache')
+            if self._cache_folder is None:
+                cache_folder = get_global_tmp_folder()
+                if not is_set_global_tmp_folder():
+                    print(f'Use cache_folder={cache_folder}')
+            else:
+                cache_folder = self._cache_folder
+            folder = cache_folder / name
         else:
-            cache_folder = self._cache_folder
-        
-        folder = cache_folder / name
+            folder = Path(folder)
         assert not folder.exists(), f'folder {folder} already exists, choose other name'
         folder.mkdir(parents=True, exist_ok=False)
         

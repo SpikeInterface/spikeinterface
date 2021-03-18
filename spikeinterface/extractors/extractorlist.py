@@ -1,8 +1,7 @@
 # most important extractor are in spikeinterface.core
-from spikeinterface.core import BinaryRecordingExtractor, NpzSortingExtractor
+from spikeinterface.core import (BinaryRecordingExtractor,
+    NpzSortingExtractor, NumpyRecording , NumpySorting)
 
-
-from .numpyextractors import NumpyRecording , NumpySorting
 
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor

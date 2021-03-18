@@ -44,7 +44,7 @@ class ChannelSliceRecording(BaseRecording):
             self.add_recording_segment(sub_segment)
         
         # copy annotation and properties
-        parent_recording.copy_metadata(self, only_main=False)
+        parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
         #~ self.annotate(**parent_recording._annotations)
         #~ for k in parent_recording._properties:
             #~ self._properties[k] = parent_recording._properties[k][self._parent_channel_indices]
