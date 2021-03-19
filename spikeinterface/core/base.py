@@ -192,8 +192,6 @@ class BaseExtractor:
         else:
             inds = self.ids_to_indices(ids)
         
-        print('inds', inds)
-        
         if only_main:
             other._annotations = deepcopy({k: self._annotations[k] for k in ExtractorBase._main_annotations})
             other._properties = deepcopy({k: self._properties[k][inds] for k in ExtractorBase._main_properties})

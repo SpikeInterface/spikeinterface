@@ -4,8 +4,14 @@ from matplotlib.ticker import MaxNLocator
 from .basewidget import BaseWidget
 
 
-def plot_timeseries(recording, channel_ids=None, time_range=None, color_groups=False, color=None, 
-                    figure=None, ax=None):
+def plot_timeseries(*args, **kwargs):
+    __doc__ = TimeseriesWidget.__doc__
+    W = TimeseriesWidget(*args, **kwargs)
+    W.plot()
+    return W
+
+
+class TimeseriesWidget(BaseWidget):
     """
     Plots recording timeseries.
 
@@ -33,21 +39,8 @@ def plot_timeseries(recording, channel_ids=None, time_range=None, color_groups=F
     W: TimeseriesWidget
         The output widget
     """
-    W = TimeseriesWidget(
-        recording=recording,
-        channel_ids=channel_ids,
-        time_range=time_range,
-        color_groups=color_groups,
-        color=color,
-        figure=figure,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-class TimeseriesWidget(BaseWidget):
-    def __init__(self, *, recording, segment_index=None, channel_ids=None,  time_range=None,
+    
+    def __init__(self, recording, segment_index=None, channel_ids=None,  time_range=None,
                  color_groups=False, color=None, figure=None,  ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._recording = recording
