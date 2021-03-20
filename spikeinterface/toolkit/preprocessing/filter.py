@@ -84,9 +84,41 @@ class BandpassFilterRecording(FilterRecording):
     Simplied bandpass class on top of FilterRecording.
     """
     name = 'bandpassfilter'
-    def __init__(self, recording, freq_min=300., freq_max=6000.):
-        FilterRecording.__init__(self, recording, band=[freq_min, freq_max])
-        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max)
+    def __init__(self, recording, freq_min=300., freq_max=6000., margin=0.005):
+        FilterRecording.__init__(self, recording, band=[freq_min, freq_max], margin=margin)
+        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max, margin=margin)
+
+
+class NotchFilterRecording(BasePreprocessor):
+    """
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor to be notch-filtered.
+    freq: int or float
+        The target frequency of the notch filter.
+    q: int
+        The quality factor of the notch filter.
+    
+    Returns
+    -------
+    filter_recording: NotchFilterRecording
+        The notch-filtered recording extractor object
+    """
+    def __init__(self, recording, freq=3000, q=30, margin=0.005):
+        
+        # coeef is 'ba' type
+        coeff = ss.iirnotch(self._freq / fn, self._q)
+        BasePreprocessor.__init__(self, recording)
+        
+        sf = recording.get_sampling_frequency()
+        sample_margin = int(margin * sf)
+        for parent_segment in recording._recording_segments:
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', sample_margin))
+        
+        self._kwargs = dict(recording=recording.to_dict(), freq=freq, q=q, margin=margin)
+        
+
 
 # functions for API
 
@@ -98,4 +130,7 @@ def bandpass_filter(*args, **kwargs):
     __doc__ = BandpassFilterRecording.__doc__
     return BandpassFilterRecording(*args, **kwargs)
 
+def notch_filter(*args, **kwargs):
+    __doc__ = NotchFilterRecording.__doc__
+    return NotchFilterRecording(*args, **kwargs)
 
