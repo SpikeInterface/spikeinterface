@@ -5,7 +5,9 @@ import pytest
 
 from spikeinterface.toolkit.preprocessing.tests.testing_tools import generate_recording
 
-from spikeinterface.toolkit.preprocessing import get_chunk_with_margin
+from spikeinterface.toolkit.preprocessing import (
+        get_chunk_with_margin, 
+        get_random_data_for_scaling)
 
 
 def test_get_chunk_with_margin():
@@ -29,8 +31,14 @@ def test_get_chunk_with_margin():
     assert l == 10 and r == 10
     assert traces.shape[0] == 1020
 
+def test_get_random_data_for_scaling():
+    rec = generate_recording(num_channels=1, sampling_frequency = 1000., durations = [10., 20.])
+    chunks = get_random_data_for_scaling(rec, num_chunks_per_segment=50, chunk_size=500, seed=0)
+    assert chunks.shape == (50000, 1)
 
 
 
 if __name__ == '__main__':
-    test_get_chunk_with_margin()
+    #~ test_get_chunk_with_margin()
+    test_get_random_data_for_scaling()
+    
