@@ -1,5 +1,9 @@
-#~ from .bandpass_filter import bandpass_filter, BandpassFilterRecording
+
 from .filter import (FilterRecording, BandpassFilterRecording,filter, bandpass_filter)
+from .normalize import (NormalizeByQuantileRecording, normalize_by_quantile)
+
+
+
 #~ from .notch_filter import notch_filter, NotchFilterRecording
 #~ from .whiten import whiten, WhitenRecording
 #~ from .common_reference import common_reference, CommonReferenceRecording

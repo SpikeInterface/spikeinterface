@@ -10,6 +10,11 @@ class FilterRecording(BasePreprocessor):
       * scipy.signal.iirfilter
       * scipy.signal.filtfilt or scipy.signal.sosfilt
     BandpassFilterRecording is build on top of it.
+
+    Parameters
+    ----------
+    recording: Recording
+        The recording extractor to be re-referenced
     
     N: order
     filter_mode: 'sos or 'ba'
@@ -39,32 +44,25 @@ class FilterRecording(BasePreprocessor):
         # self.coeff is 'sos' or 'ab' style
         coeff = scipy.signal.iirfilter(N,Wn, analog=False, btype=btype, ftype=ftype, output =filter_mode)
         
-        
         BasePreprocessor.__init__(self, recording)
         
         sample_margin = int(margin * sf)
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, filter_mode, sample_margin))
         
-        
-        
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
                 filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin=margin)
-        
-    #~ def 
 
 class FilterRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, coeff, filter_mode,sample_margin):
-        self.parent_recording_segment = parent_recording_segment
+        BasePreprocessorSegment.__init__(self, parent_recording_segment)
+        
         self.coeff = coeff
         self.filter_mode = filter_mode
         self.sample_margin = sample_margin
 
-    def get_num_samples(self):
-        return self.parent_recording_segment.get_num_samples()
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        print('FilterRecordingSegment.get_traces', start_frame, end_frame, self.get_num_samples())
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment, 
                     start_frame, end_frame, channel_indices, self.sample_margin)
         
@@ -90,6 +88,7 @@ class BandpassFilterRecording(FilterRecording):
         FilterRecording.__init__(self, recording, band=[freq_min, freq_max])
         self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max)
 
+# functions for API
 
 def filter(*args, **kwargs):
     __doc__ = FilterRecording.__doc__
