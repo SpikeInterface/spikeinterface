@@ -20,16 +20,17 @@ In the following documentation, we provide an overview of SpikeInterface.
 Organization
 ------------
 
-SpikeInterface consists of 5 main packages which encapsulate all steps in a typical spike sorting pipeline:
+SpikeInterface consists of 5 main sub-packages which encapsulate all steps in a typical spike sorting pipeline:
 
-- `spikeextractors <https://github.com/SpikeInterface/spikeextractors/>`_
-- `spiketoolkit <https://github.com/SpikeInterface/spiketoolkit/>`_
-- `spikesorters <https://github.com/SpikeInterface/spikesorters/>`_
-- `spikecomparison <https://github.com/SpikeInterface/spikecomparison/>`_
-- `spikewidgets <https://github.com/SpikeInterface/spikewidgets/>`_
+- spikeinterface.extrtactors
+- spikeinterface.toolkit
+- spikeinterface.sorters
+- spikeinterface.comparisons
+- spikeinterface.widgets
 
-Along with these packages, the :code:`spikeinterface` meta-package allows users to install and
-use all 5 packages as shown in the figure.
+
+Contrary to previous version (<0.90.0) spikeinterface is one unique package.
+Before that spikeinterface was a metapacakge that depended on 5 independent package.
 
 .. image:: images/overview.png
 
@@ -37,6 +38,7 @@ use all 5 packages as shown in the figure.
 Related projects
 -----------------
 
+- `probeinterface <https://probeinterface.readthedocs.io>`_ Handle probe geometry.
 - `spikeforest <https://spikeforest.flatironinstitute.org>`_ is a reproducible, continuously updating platform which
   benchmarks the performance of some spike sorting software (kilosort, herdingspike, ironcliust, jrclust, klusta,
   moutainsort4, spykingcircus, tridesclous, waveclus) using many ground-truth datasets. The processing engine is based

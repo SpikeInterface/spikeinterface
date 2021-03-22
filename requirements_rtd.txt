@@ -1,3 +1,8 @@
+# optional dependancy
+h5py
+pandas
+sklearn
+
 # sphinx-gallery
 pillow
 sphinx-gallery
@@ -10,7 +15,6 @@ ml_ms4alg==0.3.2
 
 # klusta
 Cython
-h5py
 tqdm
 click
 klusta

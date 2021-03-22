@@ -19,7 +19,7 @@ With SpikeInterface, users can:
 
 **NEWS**
 
-- New SpikeInterface release! Version 0.11.0 is now out (on 10/12/2020)!
+- New SpikeInterface major release! Version 0.90.0 is now out (on xx/yy/2021)!
 
 .. toctree::
    :maxdepth: 1

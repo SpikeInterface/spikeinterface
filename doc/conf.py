@@ -20,54 +20,19 @@ from pathlib import Path
 if not os.path.isdir('sources'):
     os.mkdir('sources')
 
-# parse requirements file
-req_file = Path(os.getcwd()).parent / 'requirements.txt'
-version_dict = {}
-with req_file.open('r') as f:
-    for line in f.readlines():
-        if '==' in line:
-            split_line = line.split('==')
-            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
-        elif '>=' in line:
-            split_line = line.split('>=')
-            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
-        else:
-            continue
+   
 
-#print(version_dict)
+# clean some folder
+folders =  [
+    '../examples/modules/comparison/a_study_folder',
+    '../examples/modules/core/my_recording',
+    '../examples/modules/core/my_sorting',
+]
 
-# clone git repos and checkout the right tag
-cwd = os.getcwd()
-
-subpacakges_sources = {
-    'spikeextractors' : ' https://github.com/SpikeInterface/spikeextractors.git',
-    'spiketoolkit' : ' https://github.com/SpikeInterface/spiketoolkit.git',
-    'spikesorters' : ' https://github.com/SpikeInterface/spikesorters.git',
-    'spikecomparison' : ' https://github.com/SpikeInterface/spikecomparison.git',
-    'spikewidgets' : ' https://github.com/SpikeInterface/spikewidgets.git',
-}
-
-for name, url in subpacakges_sources.items():
-    os.chdir(cwd)
-    folder = 'sources/' + name
-    
-    if os.path.exists(folder):
-        os.chdir(folder)
-        os.system('git fetch')
-        os.system('git checkout '+version_dict[name])
-    else:
-        os.chdir('sources')
-        os.system('git clone --branch ' + version_dict[name] + ' '+url)
-
-    os.chdir(cwd)
-    sys.path.insert(0, os.path.abspath(folder))
-    
-
-# clean study
-study_folder = '../examples/modules/comparison/a_study_folder'
-if os.path.isdir(study_folder):
-    print('Removing study folder')
-    shutil.rmtree(study_folder)
+for folder in folders:
+    if os.path.isdir(folder):
+        print('Removing folder', folder)
+        shutil.rmtree(folder)
 
 # -- Project information -----------------------------------------------------
 
@@ -126,7 +91,9 @@ from sphinx_gallery.sorting import FileNameSortKey
 sphinx_gallery_conf = {
     'examples_dirs': ['../examples/getting_started', '../examples/modules'],   # path to your example scripts
     'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute'],  # path where to save gallery generated examples
-    'subsection_order': ExplicitOrder(['../examples/modules/extractors/',
+    'subsection_order': ExplicitOrder([
+                                        '../examples/modules/core/',
+                                        '../examples/modules/extractors/',
                                        '../examples/modules/toolkit',
                                        '../examples/modules/sorters',
                                        '../examples/modules/comparison',
