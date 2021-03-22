@@ -295,7 +295,14 @@ class BaseRecording(BaseExtractor):
         self.set_property('location', locations,  ids=channel_ids)
 
     def get_channel_locations(self, channel_ids=None, locations_2d=True):
-        return self.get_property('location')
+        if self.get_property('contact_vector') is not None:
+            probe = self.get_probe()
+            return probe.contact_positions
+        else:
+            location = self.get_property('location')
+            if location is None:
+                raise Exception('there is no channel location')
+            return location
         
     def clear_channel_locations(self, channel_ids=None):
         if channel_ids is None:

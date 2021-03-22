@@ -20,13 +20,13 @@ def test_clip():
     traces = rec2.get_traces(segment_index=0, channel_ids=[1])
     assert traces.shape[1] == 1
 
-    import matplotlib.pyplot as plt
-    from spikeinterface.widgets import plot_timeseries
-    fig, ax = plt.subplots()
-    ax.plot(rec.get_traces(segment_index=0)[:, 0], color='g')
-    ax.plot(rec2.get_traces(segment_index=0)[:, 0], color='r')
+    #~ import matplotlib.pyplot as plt
+    #~ from spikeinterface.widgets import plot_timeseries
+    #~ fig, ax = plt.subplots()
+    #~ ax.plot(rec.get_traces(segment_index=0)[:, 0], color='g')
+    #~ ax.plot(rec2.get_traces(segment_index=0)[:, 0], color='r')
     #~ ax.plot(rec3.get_traces(segment_index=0)[:, 0], color='y')
-    plt.show()
+    #~ plt.show()
 
     
 

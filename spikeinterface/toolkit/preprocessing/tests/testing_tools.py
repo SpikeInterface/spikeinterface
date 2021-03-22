@@ -3,6 +3,8 @@ import numpy as np
 
 from spikeinterface import NumpyRecording
 
+from probeinterface import generate_linear_probe
+
 def generate_recording(
         num_channels = 2,
         sampling_frequency = 30000.,  # in Hz
@@ -19,6 +21,10 @@ def generate_recording(
         traces += np.sin(2*np.pi*50*times)[:, None]
         traces_list.append(traces)
     recording = NumpyRecording(traces_list, sampling_frequency)
+    
+    probe = generate_linear_probe(num_elec=num_channels)
+    probe.set_device_channel_indices(np.arange(num_channels))
+    recording.set_probe(probe, in_place=True)
     
     return recording
     
