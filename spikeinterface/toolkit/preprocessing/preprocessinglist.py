@@ -11,7 +11,7 @@ from.rectify import RectifyRecording, rectify
 from .clip import (
     BlankSaturationRecording, blank_staturation,
     ClipRecording, clip)
-
+from .common_reference import CommonReferenceRecording, common_reference
 
 #~ from .notch_filter import notch_filter, NotchFilterRecording
 #~ from .whiten import whiten, WhitenRecording
@@ -44,12 +44,14 @@ preprocessers_full_list = [
     RectifyRecording,
     BlankSaturationRecording,
     
+    # rereference
+    CommonReferenceRecording,
+    
     
     #~ CommonReferenceRecording,
     #~ ResampleRecording,
     #~ RemoveArtifactsRecording,
     #~ RemoveBadChannelsRecording,
-    #~ ClipRecording,
 
 ]
 
