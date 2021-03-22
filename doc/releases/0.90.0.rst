@@ -1,0 +1,12 @@
+SpikeInterface 0.90.0 release notes
+-----------------------------------
+
+1rt July 2021 (speculative date)
+
+Major release.
+
+Many many API changes.
+
+TODO : make here the long mofification list.
+
+
