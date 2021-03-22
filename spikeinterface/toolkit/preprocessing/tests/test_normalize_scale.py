@@ -3,7 +3,7 @@ import pytest
 
 from spikeinterface.toolkit.preprocessing.tests.testing_tools import generate_recording
 
-from spikeinterface.toolkit.preprocessing import normalize_by_quantile, scale
+from spikeinterface.toolkit.preprocessing import normalize_by_quantile, scale, center
 
 import numpy as np
 
@@ -47,7 +47,16 @@ def test_scale():
     rec2.get_traces(segment_index=0)
 
 
-if __name__ == '__main__':
-    test_normalize_by_quantile()
+def test_center():
+    rec = generate_recording()
     
-    test_scale()
+    rec2 = center(rec, mode='median')
+    rec2.get_traces(segment_index=0)
+
+
+
+if __name__ == '__main__':
+    #~ test_normalize_by_quantile()
+    
+    #~ test_scale()
+    test_center()
