@@ -1,7 +1,13 @@
 
-from .filter import (FilterRecording, BandpassFilterRecording,filter, bandpass_filter)
-from .normalize import (NormalizeByQuantileRecording, normalize_by_quantile)
+from .filter import (FilterRecording, filter,
+        BandpassFilterRecording,bandpass_filter, 
+        NotchFilterRecording, notch_filter,
+        )
+from .normalize import (
+    NormalizeByQuantileRecording, normalize_by_quantile,
+    ScaleRecording, scale)
 
+from .whiten import (WhitenRecording, whiten)
 
 
 #~ from .notch_filter import notch_filter, NotchFilterRecording
@@ -20,16 +26,19 @@ from .normalize import (NormalizeByQuantileRecording, normalize_by_quantile)
 preprocessers_full_list = [
     FilterRecording,
     BandpassFilterRecording,
-    #~ BandpassFilterRecording,
-    #~ NotchFilterRecording,
-    #~ WhitenRecording,
+    NotchFilterRecording,
+    
+    NormalizeByQuantileRecording,
+    ScaleRecording,
+    
+    WhitenRecording,
+    
     #~ CommonReferenceRecording,
     #~ ResampleRecording,
     #~ RectifyRecording,
     #~ RemoveArtifactsRecording,
     #~ RemoveBadChannelsRecording,
     #~ TransformRecording,
-    #~ NormalizeByQuantileRecording,
     #~ ClipRecording,
     #~ BlankSaturationRecording,
     #~ CenterRecording
