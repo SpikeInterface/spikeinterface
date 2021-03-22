@@ -1,13 +1,16 @@
-
 from .filter import (FilterRecording, filter,
         BandpassFilterRecording,bandpass_filter, 
         NotchFilterRecording, notch_filter,
         )
-from .normalize import (
+from .normalize_scale import (
     NormalizeByQuantileRecording, normalize_by_quantile,
-    ScaleRecording, scale)
-
-from .whiten import (WhitenRecording, whiten)
+    ScaleRecording, scale,
+    CenterRecording, center)
+from .whiten import WhitenRecording, whiten
+from.rectify import RectifyRecording, rectify
+from .clip import (
+    BlankSaturationRecording, blank_staturation,
+    ClipRecording, clip)
 
 
 #~ from .notch_filter import notch_filter, NotchFilterRecording
@@ -24,24 +27,30 @@ from .whiten import (WhitenRecording, whiten)
 #~ from .center import center, CenterRecording
 
 preprocessers_full_list = [
+    #filter stuff
     FilterRecording,
     BandpassFilterRecording,
     NotchFilterRecording,
     
+    #gain offset stuff
     NormalizeByQuantileRecording,
     ScaleRecording,
+    CenterRecording,
     
+    # decorrelation stuff
     WhitenRecording,
+    
+    # misc
+    RectifyRecording,
+    BlankSaturationRecording,
+    
     
     #~ CommonReferenceRecording,
     #~ ResampleRecording,
-    #~ RectifyRecording,
     #~ RemoveArtifactsRecording,
     #~ RemoveBadChannelsRecording,
-    #~ TransformRecording,
     #~ ClipRecording,
-    #~ BlankSaturationRecording,
-    #~ CenterRecording
+
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
