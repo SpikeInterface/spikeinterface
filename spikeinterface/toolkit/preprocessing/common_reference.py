@@ -58,7 +58,7 @@ class CommonReferenceRecording(BasePreprocessor):
         if reference == 'single':
             assert ref_channels is not None, "With 'single' reference, provide 'ref_channels'"
             if groups is not None:
-                assert len(ref_channels) == len(_groups), \
+                assert len(ref_channels) == len(groups), \
                         "'ref_channel' and 'groups' must have the same length"
             else:
                 if np.isscalar(ref_channels):
@@ -77,11 +77,13 @@ class CommonReferenceRecording(BasePreprocessor):
                 mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 neighbors[i] = closest_inds[i, mask]
         
+        BasePreprocessor.__init__(self, recording)
+        
         # tranforms groups (ids) to groups (indices)
         if groups is not None:
             groups = [self.ids_to_indices(g) for g in groups]
 
-        BasePreprocessor.__init__(self, recording, )
+        
         for parent_segment in recording._recording_segments:
             rec_segment = CommonReferenceRecordingSegment(parent_segment, 
                         reference, groups, ref_channels, local_radius, neighbors)
@@ -113,19 +115,19 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         # need input trace
         all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+        _channel_indices = np.arange(all_traces.shape[1])[channel_indices]
         
         if self.reference in ('median', 'average'):
             out_traces = np.hstack([
                     all_traces[:, chan_inds] - self.reducer(all_traces[:, chan_group_inds])
-                    for chan_inds, chan_group_inds in self._groups(channel_indices)
+                    for chan_inds, chan_group_inds in self._groups(_channel_indices)
                 ])
         elif self.reference  == 'single':
             out_traces = np.hstack([
                     all_traces[:, chan_inds] - all_traces[:, [self.ref_channels[i]]]
-                    for i, (chan_inds, _) in enumerate(self._groups(channel_indices))
+                    for i, (chan_inds, _) in enumerate(self._groups(_channel_indices))
                 ])
         elif self.reference  == 'local':
-            _channel_indices = np.arange(all_traces.shape[1])[channel_indices]
             out_traces = np.hstack([
                 all_traces[:, [chan_ind]] - self.reducer(all_traces[:, self.neighbors[chan_ind]])
                 for chan_ind in _channel_indices])

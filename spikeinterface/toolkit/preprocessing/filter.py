@@ -109,7 +109,8 @@ class NotchFilterRecording(BasePreprocessor):
     def __init__(self, recording, freq=3000, q=30, margin=0.005):
         
         # coeef is 'ba' type
-        coeff = ss.iirnotch(self._freq / fn, self._q)
+        fn = 0.5 * float(recording.get_sampling_frequency())
+        coeff = scipy.signal.iirnotch(freq / fn, q)
         BasePreprocessor.__init__(self, recording)
         
         sf = recording.get_sampling_frequency()
