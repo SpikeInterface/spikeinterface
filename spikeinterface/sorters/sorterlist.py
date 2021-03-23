@@ -7,6 +7,7 @@ from .kilosort import KilosortSorter
 from .kilosort2 import Kilosort2Sorter
 from .kilosort2_5 import Kilosort2_5Sorter
 from .kilosort3 import Kilosort3Sorter
+from .pykilosort import PyKilosortSorter
 from .klusta import KlustaSorter
 from .mountainsort4 import Mountainsort4Sorter
 from .spyking_circus import SpykingcircusSorter
@@ -24,6 +25,7 @@ sorter_full_list = [
     Kilosort2Sorter,
     Kilosort2_5Sorter,
     Kilosort3Sorter,
+    PyKilosortSorter,
     KlustaSorter,
     Mountainsort4Sorter,
     SpykingcircusSorter,

@@ -130,3 +130,7 @@ def run_combinato(*args, **kwargs):
 def run_yass(*args, **kwargs):
     __doc__ = _common_run_doc.format('yass')
     return run_sorter('yass', *args, **kwargs)
+
+def run_pykilosort(*args, **kwargs):
+    __doc__ = _common_run_doc.format('pykilosort')
+    return run_sorter('pykilosort', *args, **kwargs)

@@ -66,6 +66,6 @@ def test_extract_sortings():
 
 
 if __name__ == '__main__':
-    #~ setup_module()
-    #~ test_run_study_sorters()
+    setup_module()
+    test_run_study_sorters()
     test_extract_sortings()
