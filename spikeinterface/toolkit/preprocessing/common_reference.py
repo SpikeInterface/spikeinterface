@@ -74,7 +74,7 @@ class CommonReferenceRecording(BasePreprocessor):
             
             neighbors = {}
             for i in range(num_chans):
-                mask = (dist[i, :] > local_radius[0]) & (dist[i, :] < local_radius[1])
+                mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 neighbors[i] = closest_inds[i, mask]
         
         # tranforms groups (ids) to groups (indices)

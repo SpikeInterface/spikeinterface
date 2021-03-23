@@ -12,6 +12,8 @@ from .clip import (
     BlankSaturationRecording, blank_staturation,
     ClipRecording, clip)
 from .common_reference import CommonReferenceRecording, common_reference
+from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
+from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
 
 #~ from .notch_filter import notch_filter, NotchFilterRecording
 #~ from .whiten import whiten, WhitenRecording
@@ -39,19 +41,19 @@ preprocessers_full_list = [
     
     # decorrelation stuff
     WhitenRecording,
+
+    # re-reference
+    CommonReferenceRecording,
     
     # misc
     RectifyRecording,
     BlankSaturationRecording,
+    RemoveArtifactsRecording,
+    RemoveBadChannelsRecording,
     
-    # rereference
-    CommonReferenceRecording,
-    
-    
-    #~ CommonReferenceRecording,
+    # this one  is for you Alessio
     #~ ResampleRecording,
-    #~ RemoveArtifactsRecording,
-    #~ RemoveBadChannelsRecording,
+    
 
 ]
 
