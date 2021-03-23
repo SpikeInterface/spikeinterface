@@ -17,7 +17,6 @@ class BasePreprocessor(BaseRecording):
         if dtype is None:
             dtype = recording.get_dtype()
         
-        
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         recording.copy_metadata(self, only_main=False, ids=None)
         
