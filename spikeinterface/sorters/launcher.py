@@ -172,7 +172,7 @@ def run_sorters(sorter_list,
             params = sorter_params.get(sorter_name, {})
             if need_dump:
                 if not recording.is_dumpable:
-                    raise Exception('recording not dumpable call recording.cache() before')
+                    raise Exception('recording not dumpable call recording.save() before')
                 recording = recording.to_dict()
             else:
                 recording = recording

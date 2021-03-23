@@ -10,16 +10,15 @@ import numpy as np
 
 def test_normalize_by_quantile():
     rec = generate_recording()
-    print(rec.channel_ids)
     
     rec2 = normalize_by_quantile(rec, mode='by_channel')
-    rec2.cache('yep')
+    rec2.save(verbose=False)
     
     traces = rec2.get_traces(segment_index=0, channel_ids=[1])
     assert traces.shape[1] == 1
     
     rec2 = normalize_by_quantile(rec, mode='pool_channel')
-    rec2.cache('yop')
+    rec2.save(verbose=False)
     
     
     
@@ -56,7 +55,7 @@ def test_center():
 
 
 if __name__ == '__main__':
-    #~ test_normalize_by_quantile()
+    test_normalize_by_quantile()
     
-    #~ test_scale()
+    test_scale()
     test_center()

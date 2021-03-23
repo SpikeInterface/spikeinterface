@@ -9,13 +9,9 @@ from spikeinterface.toolkit.preprocessing import whiten
 
 def test_normalize_by_quantile():
     rec = generate_recording()
-    print(rec.channel_ids)
     
     rec2 = whiten(rec)
-    rec2.cache('yep')
-    
-    
-    
+    rec2.save(verbose=False)
     
     #~ import matplotlib.pyplot as plt
     #~ from spikeinterface.widgets import plot_timeseries

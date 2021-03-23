@@ -123,11 +123,11 @@ print(sorting2_loaded)
 
 ###############################################################################
 # note that dump to not copy the buffer to disk
-# If you want to also make spiketrain persistent you need to used cache()
+# If you want to also make spiketrain persistent you need to used save()
 #  this of course use more ressource.
 
 
-sorting2.cache(folder='./my_sorting')
+sorting2.save(folder='./my_sorting')
 
 import os
 pprint(os.listdir('./my_sorting'))

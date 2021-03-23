@@ -18,6 +18,7 @@ class HDSortSorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    HDSortSorterCommonTestSuite().test_on_toy()
-    #~ HDSortSorterCommonTestSuite().test_with_BinDatRecordingExtractor()
-    #~ HDSortSorterCommonTestSuite().test_get_version()
+    test = HDSortSorterCommonTestSuite()
+    test.setUp()
+    test.test_with_class()
+    test.test_with_run()

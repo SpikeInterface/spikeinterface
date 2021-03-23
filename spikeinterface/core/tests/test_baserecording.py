@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-#~ import probeinterface as pi
+
 from probeinterface import Probe
 
 from spikeinterface.core import BinaryRecordingExtractor, load_extractor
@@ -72,15 +72,15 @@ def test_BaseRecording():
     rec3 = load_extractor('test_BaseRecording.pkl')
     
     # cache
-    cache_folder = './my_cache_folder'
-    rec.set_cache_folder(cache_folder)
-    rec.cache(name='simple_recording')
-    rec2 = BaseExtractor.load_from_cache(cache_folder, 'simple_recording')
+    cache_folder = Path('./my_cache_folder')
+    folder = cache_folder / 'simple_recording'
+    rec.save(folder=folder)
+    rec2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
     
     # cache joblib several jobs
-    rec.cache(name='simple_recording_2', chunk_size=10, n_jobs=4)
+    rec.save(name='simple_recording_2', chunk_size=10, n_jobs=4)
     
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
@@ -104,19 +104,7 @@ def test_BaseRecording():
     #~ plot_probe(probe)
     #~ plot_probe(probe2)
     #~ plt.show()    
-    
-    
-    
-    
-    
-    
 
-    
-    
-    
-    
-
-    
 
 if __name__ == '__main__':
     _clean_all()

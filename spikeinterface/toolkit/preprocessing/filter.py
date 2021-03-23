@@ -39,7 +39,6 @@ class FilterRecording(BasePreprocessor):
             Wn = [e / sf * 2 for e in band]
         else:
             Wn = float(band) / sf * 2
-            print('Wn', Wn)
         N = filter_order
         # self.coeff is 'sos' or 'ab' style
         coeff = scipy.signal.iirfilter(N,Wn, analog=False, btype=btype, ftype=ftype, output =filter_mode)

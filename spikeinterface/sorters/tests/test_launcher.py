@@ -23,8 +23,8 @@ def test_run_sorters_with_list():
     
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.cache(name='rec0')
-    rec1 = rec1.cache(name='rec1')
+    rec0 = rec0.save(name='rec0')
+    rec1 = rec1.save(name='rec1')
     
     recording_list = [rec0, rec1]
     sorter_list = ['tridesclous']
@@ -48,8 +48,8 @@ def test_run_sorters_with_dict():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.cache(name='rec0')
-    rec1 = rec1.cache(name='rec1')
+    rec0 = rec0.save(name='rec0')
+    rec1 = rec1.save(name='rec1')
 
     recording_dict = {'toy_tetrode': rec0, 'toy_octotrode': rec1}
 
@@ -62,9 +62,9 @@ def test_run_sorters_with_dict():
 
     # simple loop
     t0 = time.perf_counter()
-    run_sorters(sorter_list, recording_dict, working_folder,
+    results = run_sorters(sorter_list, recording_dict, working_folder,
                 engine='loop', sorter_params=sorter_params,
-                with_output=False,
+                with_output=True,
                 mode_if_folder_exists='raise')
 
     t1 = time.perf_counter()
@@ -92,7 +92,7 @@ def test_run_sorters_joblib():
     for i in range(8):
         rec, _ = toy_example(num_channels=4, duration=30, seed=0, num_segments=1)
         # make dumpable
-        rec = rec.cache(name=f'rec_{i}')
+        rec = rec.save(name=f'rec_{i}')
         recording_dict[f'rec_{i}'] = rec
 
     sorter_list = ['tridesclous', ]
@@ -121,7 +121,7 @@ def test_run_sorters_dask():
     for i in range(8):
         rec, _ = toy_example(num_channels=4, duration=30, seed=0, num_segments=1)
         # make dumpable
-        rec = rec.cache(name=f'rec_{i}')
+        rec = rec.save(name=f'rec_{i}')
         recording_dict[f'rec_{i}'] = rec
 
     sorter_list = ['tridesclous', ]
@@ -154,9 +154,9 @@ def test_collect_sorting_outputs():
 if __name__ == '__main__':
     #~ test_run_sorters_with_list()
 
-    #~ test_run_sorters_with_dict()
+    test_run_sorters_with_dict()
 
-    test_run_sorters_joblib()
+    #~ test_run_sorters_joblib()
     
     #~ test_run_sorters_dask()
 

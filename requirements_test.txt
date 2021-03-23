@@ -1,0 +1,34 @@
+pytest
+
+# optional dependancy
+h5py
+pandas
+sklearn
+
+# sphinx-gallery
+pillow
+sphinx-gallery
+matplotlib==3.2.2
+
+
+## install sorters ##
+
+# MS4: do not work
+# Do not work anumore
+# ml_ms4alg==0.3.2
+
+# klusta
+# Do not work anumore
+# Cython
+# tqdm
+# click
+# klusta
+# klustakwik2==0.2.7
+
+# tridesclous
+pyqt5
+hdbscan
+tridesclous
+
+# spyking-circus
+spyking-circus
