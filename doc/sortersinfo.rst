@@ -114,6 +114,23 @@ Kilosort3
 * See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
 
+pykilosort
+----------
+
+* python, requires cuda
+* Url: https://github.com/MouseLand/pykilosort
+* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyril Rossant
+
+* Installation needs Matlab and cudatoolkit::
+    
+    pip install cupy  (or pip install cupy-cudaXXX)
+    git clone https://github.com/MouseLand/pykilosort
+    cd pykilosort
+    python setup.py install
+
+* See also https://github.com/MouseLand/pykilosort#installation
+
+
 Klusta
 ------
 
