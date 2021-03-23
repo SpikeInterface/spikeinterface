@@ -9,13 +9,13 @@ import numpy as np
 
 def test_clip():
     rec = generate_recording()
-    print(rec.channel_ids)
+
     
     rec2 = clip(rec, a_min=-2, a_max=3.)
-    rec2.cache('yep')
+    rec2.save(verbose=False)
     
     rec3 = clip(rec, a_min=-1.5)
-    rec3.cache('yop')
+    rec3.save(verbose=False)
     
     traces = rec2.get_traces(segment_index=0, channel_ids=[1])
     assert traces.shape[1] == 1
@@ -33,13 +33,12 @@ def test_clip():
 
 def test_blank_staturationy():
     rec = generate_recording()
-    print(rec.channel_ids)
     
     rec2 = blank_staturation(rec, abs_threshold=3.)
-    rec2.cache('yep')
+    rec2.save(verbose=False)
     
     rec3 = blank_staturation(rec, quantile_threshold=0.01, direction='both')
-    rec3.cache('yop')
+    rec3.save(verbose=False)
     
     traces = rec2.get_traces(segment_index=0, channel_ids=[1])
     assert traces.shape[1] == 1
@@ -54,5 +53,5 @@ def test_blank_staturationy():
 
 
 if __name__ == '__main__':
-    #~ test_clip()
+    test_clip()
     test_blank_staturationy()

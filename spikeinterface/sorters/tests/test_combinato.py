@@ -21,6 +21,7 @@ class CombinatoSorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    CombinatoSorterCommonTestSuite().test_on_toy()
-    #~ CombinatoSorterCommonTestSuite().test_with_BinDatRecordingExtractor()
-    #~ CombinatoSorterCommonTestSuite().test_get_version()
+    test = CombinatoSorterCommonTestSuite()
+    test.setUp()
+    test.test_with_class()
+    test.test_with_run()

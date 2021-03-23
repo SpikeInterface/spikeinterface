@@ -8,10 +8,12 @@ import weakref
 import json
 import pickle
 import datetime
+import random
+import string
 
 import numpy as np
 
-from .default import get_global_tmp_folder, is_set_global_tmp_folder
+from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json
 
 class BaseExtractor:
@@ -50,10 +52,6 @@ class BaseExtractor:
         # features dict of array (at spike level)
         self._features = {}
 
-        # cache folder
-        self._cache_folder = None
-
-        
         self.is_dumpable = True        
         
         
@@ -378,7 +376,7 @@ class BaseExtractor:
         """
         Used both after:
           * dump(...) json or pickle file
-          * cache (...)  a folder which contain data  + json or pickle
+          * cache (...)  a folder which contain data  + json (or pickle) + metadata.
         """
         
         file_path = Path(file_path)
@@ -396,7 +394,7 @@ class BaseExtractor:
             return extractor
 
         elif file_path.is_dir():
-            # case from a folder after a calling extractor.cache(...)
+            # case from a folder after a calling extractor.save(...)
             folder = file_path
             file = None
             for dump_ext in ('json', 'pkl', 'pickle'):
@@ -406,54 +404,76 @@ class BaseExtractor:
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file)
-            extractor = extractor._after_load_cache(folder)
+            extractor = extractor._after_load(folder)
             return extractor
 
         else:
             raise ValueError('bad boy')
     
     @staticmethod
-    def load_from_cache(cache_folder, name):
-        file_path = Path(cache_folder) / name
-        return BaseExtractor.load(file_path)
+    def load_from_folder(folder):
+        return BaseExtractor.load(folder)
     
-    def _save_to_cache(self, folder, **cache_kargs):
+    def _save_to_folder(self, folder, **cache_kargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
         raise NotImplementedError
     
-    def _after_load_cache(self, folder):
+    def _after_load(self, folder):
         # This implemented in BaseRecording or baseSorting
-        # this is internally call by cache(...) main function
+        # this is internally call by load(...) main function
         raise NotImplementedError
 
-    def set_cache_folder(self, folder):
-        self._cache_folder = Path(folder)
-    
-    def cache(self, name=None, folder=None, dump_ext='json', **cache_kargs):
+    def save(self, name=None, folder=None, dump_ext='json', verbose=True, **cache_kargs):
         """
-        Cache consist of:
+        Save consist of:
           * compute the extractro by calling get_trace() in chunk
           * save data into file (memmap with BinaryRecordingExtractor)
           * dump to json/pickle the actual extractor for provenance
           * dump to json/pickle the cached extractor (memmap with BinaryRecordingExtractor)
         
         This replace the use of the old CacheRecordingExtractor and CacheSortingExtractor.
-        """
+
+        There is 2 usages for the folder:
+          * explicit folder: `extractor.save(folder="/path/for/saving/")`
+          * explicit sub-folder implicit base-folder : `extractor.save(name="extarctor_name")`
+          * generated: `extractor.save()`
         
+        The second option save to subfolder "extarctor_name" in 
+        "get_global_tmp_folder()" if this is set before if not 
+
+        The final folder must not exists.
+
+        Parameters
+        ----------
+        name: None str or Path
+            Name of the subfolder in get_global_tmp_folder()
+            If not None `folder` must be None.
+
+        folder: None str or Path
+            Name of the folder.
+            If not None `name` must be None.
+
+        Returns
+        -------
+        cached: saved copy of the extractor.
+
+        """
         if folder is None:
+            cache_folder = get_global_tmp_folder()
             if name is None:
-                raise ValueError('You must give a name for the cache')
-            if self._cache_folder is None:
-                cache_folder = get_global_tmp_folder()
-                if not is_set_global_tmp_folder():
-                    print(f'Use cache_folder={cache_folder}')
+                name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                folder = cache_folder / name
+                if verbose:
+                    print(f'Use cache_folder={folder}')
             else:
-                cache_folder = self._cache_folder
-            folder = cache_folder / name
+                folder = cache_folder / name
+                if not is_set_global_tmp_folder():
+                    if verbose:
+                        print(f'Use cache_folder={folder}')
         else:
             folder = Path(folder)
-        assert not folder.exists(), f'folder {folder} already exists, choose other name'
+        assert not folder.exists(), f'folder {folder} already exists, choose enother name'
         folder.mkdir(parents=True, exist_ok=False)
         
         # dump provenance
@@ -467,7 +487,7 @@ class BaseExtractor:
                 )
         
         # save data (done the subclass)
-        cached = self._save_to_cache(folder, **cache_kargs)
+        cached = self._save_to_folder(folder, **cache_kargs)
         
         # copy properties/
         self.copy_metadata(cached)

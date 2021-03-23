@@ -3,7 +3,7 @@ import pytest
 
 from spikeinterface.toolkit.preprocessing.tests.testing_tools import generate_recording
 
-from spikeinterface.toolkit.preprocessing import filter, bandpass_filter
+from spikeinterface.toolkit.preprocessing import filter, bandpass_filter,notch_filter
 
 
 
@@ -13,16 +13,18 @@ def test_filter():
     rec2 = bandpass_filter(rec,  freq_min=300., freq_max=6000.)
     
     # compute by chunk
-    rec2.cache('yep', chunk_size=100000)
+    rec2.save(chunk_size=100000,verbose=False)
     # compute by chunkf with joblib
-    rec2.cache('yip', chunk_size=100000, n_jobs=4)
+    rec2.save( chunk_size=100000, n_jobs=4,verbose=False)
     # compute once
-    rec2.cache('yop')
+    rec2.save(verbose=False)
     
     # other filtering types
     rec3 = filter(rec,  band=[40., 60.], btype='bandstop')
     rec4 = filter(rec,  band=500., btype='highpass', filter_mode='ba', filter_order=2)
     
+    
+    rec5 = notch_filter(rec, freq=3000, q=30, margin=0.005)
     
     # import matplotlib.pyplot as plt
     # from spikeinterface.widgets import plot_timeseries

@@ -94,7 +94,7 @@ class BaseRecording(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
     
-    def _save_to_cache(self, folder, format='binary', **cache_kargs):
+    def _save_to_folder(self, folder, format='binary', **cache_kargs):
         """
         This replace the old CacheRecordingExtractor but enable more engine 
         for caching a results. at the moment only binaray with memmap is supported.
@@ -127,7 +127,7 @@ class BaseRecording(BaseExtractor):
         
         return cached
     
-    def _after_load_cache(self, folder):
+    def _after_load(self, folder):
         # load probe
         if (folder  / 'probe.json').is_file():
             probegroup = read_probeinterface(folder  / 'probe.json')

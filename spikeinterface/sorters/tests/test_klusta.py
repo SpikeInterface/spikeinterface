@@ -13,6 +13,7 @@ class KlustaCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #~ KlustaCommonTestSuite().test_on_toy()
-    KlustaCommonTestSuite().test_with_BinDatRecordingExtractor()
-    #~ KlustaCommonTestSuite().test_get_version()
+    test = KlustaCommonTestSuite()
+    test.setUp()
+    test.test_with_class()
+    test.test_with_run()

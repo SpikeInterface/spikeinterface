@@ -166,11 +166,11 @@ print(recording2_loaded)
 
 ###############################################################################
 # note that dump to not copy the buffer to disk
-# If you want to also make traces persistent you need to used cache()
+# If you want to also make traces persistent you need to used save()
 #  this of course use more ressource.
 # This operation is very usefull to saved long computation.
 
-recording2.cache(folder='./my_recording')
+recording2.save(folder='./my_recording')
 
 import os
 pprint(os.listdir('./my_recording'))

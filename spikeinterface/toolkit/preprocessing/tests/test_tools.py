@@ -39,6 +39,6 @@ def test_get_random_data_for_scaling():
 
 
 if __name__ == '__main__':
-    #~ test_get_chunk_with_margin()
+    test_get_chunk_with_margin()
     test_get_random_data_for_scaling()
     
