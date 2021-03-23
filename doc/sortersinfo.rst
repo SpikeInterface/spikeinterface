@@ -123,7 +123,8 @@ pykilosort
 
 * Installation needs Matlab and cudatoolkit::
     
-    pip install cupy  (or pip install cupy-cudaXXX)
+    pip install cupy  (or pip install cupy-cudaXXX)  >>> can be quite hard
+    pip install phylib, pypandic
     git clone https://github.com/MouseLand/pykilosort
     cd pykilosort
     python setup.py install

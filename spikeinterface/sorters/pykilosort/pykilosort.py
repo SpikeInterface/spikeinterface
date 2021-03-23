@@ -2,6 +2,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import load_extractor
+from spikeinterface.extractors import BinaryRecordingExtractor
 from ..basesorter import BaseSorter
 
 
@@ -70,15 +71,26 @@ class PyKilosortSorter(BaseSorter):
         
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         
+        assert isinstance(recording, BinaryRecordingExtractor)
+        assert recording.get_num_segments() ==1
+        dat_path = recording._kwargs['files_path'][0]
+        print('dat_path', dat_path)
+        
+        
+        
         num_chans = recording.get_num_channels()
+        locations = recording.get_channel_locations()
+        print(locations)
+        print(type(locations))
+        
         
         # ks_probe is not probeinterface Probe at all
         ks_probe = Bunch()
         ks_probe.NchanTOT = num_chans
-        ks_probe.chanMap = np.array(range(0, n_channels))
-        ks_probe.kcoords = np.ones(n_channels)
-        ks_probe.xc = recording.get_channel_locations()[:, 0]
-        ks_probe.yc = recording.get_channel_locations()[:, 1]
+        ks_probe.chanMap = np.arange(num_chans)
+        ks_probe.kcoords = np.ones(num_chans)
+        ks_probe.xc = locations[:, 0]
+        ks_probe.yc = locations[:, 1]
 
         run(
             dat_path,

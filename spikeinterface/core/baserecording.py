@@ -302,6 +302,7 @@ class BaseRecording(BaseExtractor):
             location = self.get_property('location')
             if location is None:
                 raise Exception('there is no channel location')
+            location = np.asarray(location)
             return location
         
     def clear_channel_locations(self, channel_ids=None):

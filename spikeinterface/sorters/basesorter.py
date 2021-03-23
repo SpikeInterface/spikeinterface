@@ -240,6 +240,7 @@ class BaseSorter:
                 print(f'{sorter_name} run time {run_time:0.2f}s')
 
         if has_error and raise_error:
+            print(log['error_trace'])
             raise SpikeSortingError("Spike sorting failed. You can inspect the runtime trace in spikeinterface_log.json")
         
         return run_time
