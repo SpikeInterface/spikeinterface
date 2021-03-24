@@ -18,7 +18,7 @@ if getpass.getuser() == 'samuel':
 
 import pytest
 
-from spikesorters import print_sorter_versions
+from spikeinterface.sorters import print_sorter_versions
 
 
 def test_print_sorter_versions():
