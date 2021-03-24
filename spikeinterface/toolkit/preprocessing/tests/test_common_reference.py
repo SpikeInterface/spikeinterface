@@ -12,10 +12,10 @@ def test_common_reference():
 
     
     # no groups
-    rec_cmr = common_reference(rec, reference='median')
-    rec_car = common_reference(rec, reference='average')
+    rec_cmr = common_reference(rec, reference='global', operator='median')
+    rec_car = common_reference(rec, reference='global', operator='average')
     rec_sin = common_reference(rec, reference='single', ref_channels=0)
-    rec_local_car = common_reference(rec, reference='local', local_radius=(20, 65))
+    rec_local_car = common_reference(rec, reference='local', local_radius=(20, 65), operator='median')
     
     rec_cmr.save(verbose=False)
     rec_car.save(verbose=False)
@@ -28,8 +28,6 @@ def test_common_reference():
     assert not np.all(rec_sin.get_traces()[0])
     assert np.allclose(rec_sin.get_traces()[:, 1], traces[:, 1] - traces[:, 0])
     
-    print(traces[:, 0].shape, rec_local_car.get_traces()[:, 0].shape)
-    print(np.mean(traces[:, [2, 3]], axis=1, keepdims=True).shape)
     assert np.allclose(traces[:, 0], rec_local_car.get_traces()[:, 0] + np.mean(traces[:, [2, 3]], axis=1),
                        atol=0.01)
     assert np.allclose(traces[:, 1], rec_local_car.get_traces()[:, 1] + np.mean(traces[:, [3]], axis=1),
