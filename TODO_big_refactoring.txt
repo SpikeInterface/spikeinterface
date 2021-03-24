@@ -1,0 +1,76 @@
+Here the TODO list for the spikeinterface API
+
+core:
+
+    * add kachery extractor (jeremy)
+    * save property as np (sam)
+    * save features as np (sam)
+    * event object (sam and alessio)
+    * waveform extractors (sam)
+    * segment concatenator (sam)
+    * mono segment class (sam)
+
+extractors:
+
+    * nwb: reader/writer (with multi segment) (ben?)
+    * all event reader (get_ttl()) (alessio)
+    * MdaRecordingExtractor  : need to be done in neo ??
+    * BiocamRecordingExtractor  : need to be done in neo
+    * MaxOneRecordingExtractor  : need to be done in neo
+    * MCSH5RecordingExtractor  : need to be done in neo ???
+    * SHYBRIDRecordingExtractor:  need to be done in neo ???
+    * NIXIORecordingExtractor: wrappe neo
+    * CEDRecordingExtractor : need to be ported in neo
+    * MdaSortingExtractor
+    * HDSortSortingExtractor
+    * HS2SortingExtractor
+    * OpenEphysSortingExtractor : need to be done in neo
+    * MaxOneSortingExtractor  : need to be done in neo
+    * SHYBRIDSortingExtractor
+    * NIXIOSortingExtractor
+    * ALFSortingExtractor
+
+
+toolkit:
+  * curation: all - depend on waveform extractors
+  * postprocessing: all - depend on waveform extractors
+  * sorting components: all (sam)
+  * validation : all - depend on waveform extractors
+
+sorters:
+  * almost done : needs tests
+  * some sorter do not have yet the extractor
+
+comparison:
+  * done: need tests
+  
+widgets:
+  * many widget to port with probeinterface in mind
+
+examples:
+
+  * check and read everything
+  * toolkit examples
+
+doc:
+
+  * re make the API
+  * read everything (typos/grammar)
+  * try to build documentation with dithub actions as artifact after test (alessio ?)
+
+tests suite:
+
+  * make several workflow:
+    *multi os for : core and extractors
+    * unbuntu for all modules
+  
+
+
+Linled project:
+
+  * herdingspikes: new API transpose and multi segment (cole)
+  * mountainsort4: new API transpose and multi segment (jeremy)
+  * spikeforest: new API transpose and multi segment (jeremy)
+
+  
+
