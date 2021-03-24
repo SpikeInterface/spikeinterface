@@ -5,6 +5,7 @@ h5py
 pandas
 sklearn
 matplotlib
+networkx
 
 
 ## install sorters ##
