@@ -20,6 +20,8 @@ jobs:
           which python
       - name: Install dependencies
         run: |
+          
+          sudo apt install mpich libmpich-dev
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
           pip install -r requirements.txt
@@ -28,3 +30,6 @@ jobs:
       - name: Test with pytest
         run: |
           pytest
+
+          
+# only on ubuntu because of spkyking-circus and mpich
