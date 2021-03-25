@@ -171,13 +171,22 @@ class ChunkRecordingProcessor:
                 num_frames = self.recording.get_num_samples(segment_index)
                 chunks = devide_into_chunks(num_frames, self.chunk_size)
                 
-                if self.progress_bar and self.n_jobs == 1 and HAVE_TQDM:
+                if self.progress_bar and HAVE_TQDM:
                     chunks = tqdm(chunks, ascii=True, desc=self.job_name + f'segment {segment_index}')
 
                 for frame_start, frame_stop in chunks:
                     self.func(segment_index, frame_start, frame_stop, local_dict)
 
         else:
+            all_chunks = []
+            for segment_index in range(self.recording.get_num_segments()):
+                num_frames = self.recording.get_num_samples(segment_index)
+                chunks = devide_into_chunks(num_frames, self.chunk_size)
+                all_chunks.extend([(segment_index,  frame_start, frame_stop) for  frame_start, frame_stop in chunks])
+
+            # if self.verbose:
+            #   print('num chunks to compute', len(all_chunks))
+
             # parallel
             # we force reuse to false because it lead to bugs....
             executor = loky.get_reusable_executor(max_workers=self.n_jobs,
@@ -187,14 +196,11 @@ class ChunkRecordingProcessor:
                     reuse=False,
                     kill_workers=True)
             
-            all_chunks = []
-            for segment_index in range(self.recording.get_num_segments()):
-                num_frames = self.recording.get_num_samples(segment_index)
-                chunks = devide_into_chunks(num_frames, self.chunk_size)
-                all_chunks.extend([(segment_index,  frame_start, frame_stop) for  frame_start, frame_stop in chunks])
-            
             results = executor.map(function_wrapper, all_chunks)
-                
+            
+            if self.progress_bar and HAVE_TQDM:
+                results = tqdm(results)
+            
             for res in results:
                 pass
 

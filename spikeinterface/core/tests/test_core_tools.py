@@ -24,7 +24,7 @@ def test_write_binary_recording():
     
     # write parrallel
     write_binary_recording(recording, files_path=['binary01.raw', 'binary02.raw'], time_axis=0, dtype=None,
-            verbose=False, n_jobs=2, total_memory='200k')
+            verbose=False, n_jobs=2, total_memory='200k',  progress_bar=True)
     
     
     

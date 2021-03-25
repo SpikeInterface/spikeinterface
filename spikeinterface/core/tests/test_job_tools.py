@@ -89,8 +89,8 @@ def test_ChunkRecordingProcessor():
     
     # chunk + parralel
     processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
-            verbose=True, progress_bar=False,
-            n_jobs=2, total_memory="200k") #
+            verbose=True, progress_bar=True,
+            n_jobs=2, total_memory="200k")
     processor.run()
 
     
