@@ -212,43 +212,7 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
             processor = ChunkRecordingProcessor(recording, func, init_func, init_args, verbose=verbose,
                             job_name='write_binary_recording', **job_kwargs)
             processor.run()
-            
-            
-            #~ if not recording.is_dumpable or n_jobs ==1:
-                #~ rec_arg = recording
-            #~ else:
-                #~ rec_arg = recording.to_dict()
-            
-            #~ for segment_index in range(recording.get_num_segments()):
-                #~ # chunk size is not None
-                #~ num_frames = recording.get_num_samples(segment_index)
-                #~ num_channels = recording.get_num_channels()
 
-                #~ chunks = divide_recording_into_time_chunks(
-                    #~ num_frames=num_frames,
-                    #~ chunk_size=chunk_size,
-                    #~ padding_size=0
-                #~ )
-                #~ n_chunk = len(chunks)
-                
-                #~ chunks_loop = range(n_chunk)
-                
-                #~ if time_axis == 0:
-                    #~ shape = (num_frames, num_channels)
-                #~ else:
-                    #~ shape = (num_channels, num_frames)
-
-                #~ file_path = files_path[segment_index]
-                #~ rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', shape=shape)
-                
-                #~ if n_jobs == 1:
-                    #~ for i in chunks_loop:
-                        #~ _write_dat_one_chunk(i, rec_arg, chunks, segment_index, rec_memmap, dtype, time_axis, verbose=False)
-                #~ else:
-                    #~ Parallel(n_jobs=n_jobs, backend='loky')(
-                        #~ delayed(_write_dat_one_chunk)(i, rec_arg, chunks, segment_index, rec_memmap, dtype, time_axis, verbose,)
-                        #~ for i in chunks_loop)
-        
     else:
         # file handle case (one segment only)
         # Alessio : should be rewritten with memmap also because memmap accept filehandle
