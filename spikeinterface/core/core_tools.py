@@ -6,6 +6,7 @@ import numpy as np
 
 from joblib import Parallel, delayed
 
+from . job_tools import divide_recording_into_time_chunks
 
 
 def check_json(d):
@@ -95,20 +96,6 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
         samples = np.memmap(file, np.dtype(dtype), mode='r', offset=offset, shape=(num_chan, nsamples)).T
     return samples
 
-
-def divide_recording_into_time_chunks(num_frames, chunk_size, padding_size):
-    chunks = []
-    ii = 0
-    while ii < num_frames:
-        ii2 = int(min(ii + chunk_size, num_frames))
-        chunks.append(dict(
-            istart=ii,
-            iend=ii2,
-            istart_with_padding=int(max(0, ii - padding_size)),
-            iend_with_padding=int(min(num_frames, ii2 + padding_size))
-        ))
-        ii = ii2
-    return chunks
 
 
 def _write_dat_one_chunk(i, rec_arg, chunks, segment_index, rec_memmap, dtype, time_axis, verbose):
