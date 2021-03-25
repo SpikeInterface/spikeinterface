@@ -2,7 +2,7 @@
 
 from spikeinterface.core.tests.testing_tools import generate_recording
 
-from spikeinterface.core.job_tools import devide_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingProcessor
+from spikeinterface.core.job_tools import divide_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingProcessor
 
 
 
@@ -65,6 +65,9 @@ def test_ChunkRecordingProcessor():
         import os, time
         # print('func', segment_index, start_frame, end_frame, local_dict, os.getpid())
         time.sleep(0.010)
+        #~ time.sleep(1.0)
+        return os.getpid()
+        
     
     def init_func(arg1, arg2, arg3):
         local_dict = {}
@@ -76,16 +79,16 @@ def test_ChunkRecordingProcessor():
     init_args = 'a', 120, 'yep'
     
     # no chunk
-    processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
-            verbose=True, progress_bar=False,
-            n_jobs=1, chunk_size=None)
-    processor.run()
+    #~ processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
+            #~ verbose=True, progress_bar=False,
+            #~ n_jobs=1, chunk_size=None)
+    #~ processor.run()
     
-    # chunk + loop
-    processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
-            verbose=True, progress_bar=False,
-            n_jobs=1, chunk_memory="500k")
-    processor.run()
+    #~ # chunk + loop
+    #~ processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
+            #~ verbose=True, progress_bar=False,
+            #~ n_jobs=1, chunk_memory="500k")
+    #~ processor.run()
     
     # chunk + parralel
     processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
