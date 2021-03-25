@@ -40,22 +40,6 @@ def devide_into_chunks(num_frames, chunk_size):
     return chunks
     
     
-
-#~ def divide_recording_into_time_chunks(num_frames, chunk_size, padding_size):
-    #~ chunks = []
-    #~ ii = 0
-    #~ while ii < num_frames:
-        #~ ii2 = int(min(ii + chunk_size, num_frames))
-        #~ chunks.append(dict(
-            #~ istart=ii,
-            #~ iend=ii2,
-            #~ istart_with_padding=int(max(0, ii - padding_size)),
-            #~ iend_with_padding=int(min(num_frames, ii2 + padding_size))
-        #~ ))
-        #~ ii = ii2
-    #~ return chunks
-
-
 _exponents = {'k': 1e3, 'M':1e6, 'G':1e9}
 
 def _mem_to_int(mem):
@@ -165,25 +149,21 @@ class ChunkRecordingProcessor:
         
     
     def run(self):
+        all_chunks = []
+        for segment_index in range(self.recording.get_num_segments()):
+            num_frames = self.recording.get_num_samples(segment_index)
+            chunks = devide_into_chunks(num_frames, self.chunk_size)
+            all_chunks.extend([(segment_index,  frame_start, frame_stop) for  frame_start, frame_stop in chunks])
+
         if self.n_jobs == 1:
+            if self.progress_bar and HAVE_TQDM:
+                all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name + f'segment {segment_index}')
+            
             local_dict = self.init_func(*self.init_args)
-            for segment_index in range(self.recording.get_num_segments()):
-                num_frames = self.recording.get_num_samples(segment_index)
-                chunks = devide_into_chunks(num_frames, self.chunk_size)
-                
-                if self.progress_bar and HAVE_TQDM:
-                    chunks = tqdm(chunks, ascii=True, desc=self.job_name + f'segment {segment_index}')
-
-                for frame_start, frame_stop in chunks:
-                    self.func(segment_index, frame_start, frame_stop, local_dict)
-
+            for segment_index, frame_start, frame_stop in all_chunks:
+                self.func(segment_index, frame_start, frame_stop, local_dict)
+    
         else:
-            all_chunks = []
-            for segment_index in range(self.recording.get_num_segments()):
-                num_frames = self.recording.get_num_samples(segment_index)
-                chunks = devide_into_chunks(num_frames, self.chunk_size)
-                all_chunks.extend([(segment_index,  frame_start, frame_stop) for  frame_start, frame_stop in chunks])
-
             # if self.verbose:
             #   print('num chunks to compute', len(all_chunks))
 
