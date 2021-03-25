@@ -1,4 +1,4 @@
-Here the TODO list for the spikeinterface API
+Here the TODO list for the NEW spikeinterface API
 
 core:
 
@@ -32,25 +32,31 @@ extractors:
 
 
 toolkit:
+
   * curation: all - depend on waveform extractors
   * postprocessing: all - depend on waveform extractors
   * sorting components: all (sam)
   * validation : all - depend on waveform extractors
 
 sorters:
+
   * almost done : needs tests
   * some sorter do not have yet the extractor
 
+
 comparison:
   * done: need tests
-  
+
+
 widgets:
   * many widget to port with probeinterface in mind
+
 
 examples:
 
   * check and read everything
   * toolkit examples
+
 
 doc:
 
@@ -58,19 +64,17 @@ doc:
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
 
-tests suite:
+
+Tests suite:
 
   * make several workflow:
-    *multi os for : core and extractors
+    * multi os for : core and extractors
     * unbuntu for all modules
-  
 
 
-Linled project:
+Linked projects:
 
   * herdingspikes: new API transpose and multi segment (cole)
   * mountainsort4: new API transpose and multi segment (jeremy)
   * spikeforest: new API transpose and multi segment (jeremy)
-
-  
 

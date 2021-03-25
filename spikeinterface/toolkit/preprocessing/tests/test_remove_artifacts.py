@@ -1,7 +1,7 @@
 import unittest
 import pytest
 
-from spikeinterface.toolkit.preprocessing.tests.testing_tools import generate_recording
+from spikeinterface.core.tests.testing_tools import generate_recording
 
 from spikeinterface.toolkit.preprocessing import remove_artifacts
 
