@@ -19,7 +19,7 @@ except:
 
         
 
-def devide_into_chunks(num_frames, chunk_size):
+def divide_into_chunks(num_frames, chunk_size):
     if chunk_size is None:
         chunks = [(0, num_frames)]
     else:
@@ -153,7 +153,7 @@ class ChunkRecordingProcessor:
         all_chunks = []
         for segment_index in range(self.recording.get_num_segments()):
             num_frames = self.recording.get_num_samples(segment_index)
-            chunks = devide_into_chunks(num_frames, self.chunk_size)
+            chunks = divide_into_chunks(num_frames, self.chunk_size)
             all_chunks.extend([(segment_index,  frame_start, frame_stop) for  frame_start, frame_stop in chunks])
         print('all_chunks', len(all_chunks), self.n_jobs)
         if self.n_jobs == 1:
