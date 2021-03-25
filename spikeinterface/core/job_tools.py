@@ -9,6 +9,7 @@ from joblib import Parallel, delayed
 import joblib
 
 import loky
+from concurrent.futures import ProcessPoolExecutor
 
 try:
     from tqdm import tqdm
@@ -149,13 +150,12 @@ class ChunkRecordingProcessor:
         
     
     def run(self):
-        print('ici')
         all_chunks = []
         for segment_index in range(self.recording.get_num_segments()):
             num_frames = self.recording.get_num_samples(segment_index)
             chunks = divide_into_chunks(num_frames, self.chunk_size)
             all_chunks.extend([(segment_index,  frame_start, frame_stop) for  frame_start, frame_stop in chunks])
-        print('all_chunks', len(all_chunks), self.n_jobs)
+        
         if self.n_jobs == 1:
             if self.progress_bar and HAVE_TQDM:
                 all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name + f'segment {segment_index}')
@@ -169,13 +169,17 @@ class ChunkRecordingProcessor:
             #   print('num chunks to compute', len(all_chunks))
 
             # parallel
-            # we force reuse to false because it lead to bugs....
-            executor = loky.get_reusable_executor(max_workers=self.n_jobs,
+            executor = ProcessPoolExecutor(max_workers=self.n_jobs,
                     initializer=worker_initializer,
-                    initargs=(self.func, self.init_func, self.init_args),
-                    context="loky", timeout=10.,
-                    reuse=False,
-                    kill_workers=True)
+                    initargs=(self.func, self.init_func, self.init_args))
+            
+            # we force reuse to false because it lead to bugs....
+            #~ executor = loky.get_reusable_executor(max_workers=self.n_jobs,
+                    #~ initializer=worker_initializer,
+                    #~ initargs=(self.func, self.init_func, self.init_args),
+                    #~ context="loky", timeout=10.,
+                    #~ reuse=False,
+                    #~ kill_workers=True)
 
             results = executor.map(function_wrapper, all_chunks)
             
@@ -201,5 +205,5 @@ def function_wrapper(args):
     segment_index,start_frame, end_frame = args
     global _func
     global local_dict
-    _func(segment_index,start_frame, end_frame, local_dict)
+    return _func(segment_index,start_frame, end_frame, local_dict)
 
