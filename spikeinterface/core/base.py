@@ -414,7 +414,7 @@ class BaseExtractor:
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
     
-    def _save_to_folder(self, folder, **cache_kargs):
+    def _save_to_folder(self, folder, **save_kargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
         raise NotImplementedError
@@ -424,7 +424,7 @@ class BaseExtractor:
         # this is internally call by load(...) main function
         raise NotImplementedError
 
-    def save(self, name=None, folder=None, dump_ext='json', verbose=True, **cache_kargs):
+    def save(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kargs):
         """
         Save consist of:
           * compute the extractro by calling get_trace() in chunk
@@ -487,7 +487,7 @@ class BaseExtractor:
                 )
         
         # save data (done the subclass)
-        cached = self._save_to_folder(folder, **cache_kargs)
+        cached = self._save_to_folder(folder, verbose=verbose, **save_kargs)
         
         # copy properties/
         self.copy_metadata(cached)

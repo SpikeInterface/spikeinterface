@@ -94,25 +94,25 @@ class BaseRecording(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
     
-    def _save_to_folder(self, folder, format='binary', **cache_kargs):
+    def _save_to_folder(self, folder, format='binary', **save_kargs):
         """
         This replace the old CacheRecordingExtractor but enable more engine 
         for caching a results. at the moment only binaray with memmap is supported.
         My plan is to add also zarr support.
         """
-        
         # TODO save propreties as npz!!!!!
         
         if format == 'binary':
             files_path = [ folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
-            dtype = cache_kargs.get('dtype', 'float32')
-            keys = ['chunk_size', 'chunk_mb', 'n_jobs', 'joblib_backend']
-            job_kwargs = {k:cache_kargs[k] for k in keys if k in cache_kargs}
+            dtype = save_kargs.get('dtype', 'float32')
+            keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
+            job_kwargs = {k:save_kargs[k] for k in keys if k in save_kargs}
             write_binary_recording(self, files_path=files_path, time_axis=0, dtype=dtype, **job_kwargs)
             
             from . binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
                                 self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(), time_axis=0)
+
         elif format == 'zarr':
             # TODO implement a format based on zarr
             raise NotImplementedError
