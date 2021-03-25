@@ -149,12 +149,13 @@ class ChunkRecordingProcessor:
         
     
     def run(self):
+        print('ici')
         all_chunks = []
         for segment_index in range(self.recording.get_num_segments()):
             num_frames = self.recording.get_num_samples(segment_index)
             chunks = devide_into_chunks(num_frames, self.chunk_size)
             all_chunks.extend([(segment_index,  frame_start, frame_stop) for  frame_start, frame_stop in chunks])
-
+        print('all_chunks', len(all_chunks), self.n_jobs)
         if self.n_jobs == 1:
             if self.progress_bar and HAVE_TQDM:
                 all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name + f'segment {segment_index}')
@@ -175,7 +176,7 @@ class ChunkRecordingProcessor:
                     context="loky", timeout=10.,
                     reuse=False,
                     kill_workers=True)
-            
+
             results = executor.map(function_wrapper, all_chunks)
             
             if self.progress_bar and HAVE_TQDM:
