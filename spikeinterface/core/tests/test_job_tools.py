@@ -2,7 +2,7 @@
 
 from spikeinterface.core.tests.testing_tools import generate_recording
 
-from spikeinterface.core.job_tools import divide_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingProcessor
+from spikeinterface.core.job_tools import divide_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor
 
 
 
@@ -56,7 +56,7 @@ def test_ensure_chunk_size():
     chunk_size = ensure_chunk_size(recording, chunk_memory="1G")
     assert chunk_size == 125000000
     
-def test_ChunkRecordingProcessor():
+def test_ChunkRecordingExecutor():
     recording = generate_recording(num_channels = 2)
     # make dumpable
     recording =recording.save()
@@ -79,21 +79,22 @@ def test_ChunkRecordingProcessor():
     init_args = 'a', 120, 'yep'
     
     # no chunk
-    #~ processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
+    #~ processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
             #~ verbose=True, progress_bar=False,
             #~ n_jobs=1, chunk_size=None)
     #~ processor.run()
     
     #~ # chunk + loop
-    #~ processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
+    #~ processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
             #~ verbose=True, progress_bar=False,
             #~ n_jobs=1, chunk_memory="500k")
     #~ processor.run()
     
     # chunk + parralel
-    processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
             verbose=True, progress_bar=True,
-            n_jobs=2, total_memory="200k")
+            n_jobs=2, total_memory="200k",
+            job_name='job_name')
     processor.run()
 
     
@@ -102,6 +103,6 @@ if __name__ == '__main__':
     #~ test_devide_into_chunks()
     #~ test_ensure_n_jobs()
     #~ test_ensure_chunk_size()
-    test_ChunkRecordingProcessor()
+    test_ChunkRecordingExecutor()
     
     
