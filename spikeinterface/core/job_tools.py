@@ -118,7 +118,7 @@ def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memor
 
 
 
-class ChunkRecordingProcessor:
+class ChunkRecordingExecutor:
     """
     Helper class that runner a "function" over chunk on a recording
     
@@ -158,7 +158,7 @@ class ChunkRecordingProcessor:
         
         if self.n_jobs == 1:
             if self.progress_bar and HAVE_TQDM:
-                all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name + f'segment {segment_index}')
+                all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name)
             
             local_dict = self.init_func(*self.init_args)
             for segment_index, frame_start, frame_stop in all_chunks:
@@ -184,7 +184,7 @@ class ChunkRecordingProcessor:
             results = executor.map(function_wrapper, all_chunks)
             
             if self.progress_bar and HAVE_TQDM:
-                results = tqdm(results)
+                results = tqdm(results,  desc=self.job_name, total=len(all_chunks))
             
             for res in results:
                 pass

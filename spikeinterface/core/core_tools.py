@@ -6,7 +6,7 @@ import numpy as np
 
 from joblib import Parallel, delayed
 
-from . job_tools import ensure_chunk_size, ensure_n_jobs, ChunkRecordingProcessor
+from . job_tools import ensure_chunk_size, ensure_n_jobs, ChunkRecordingExecutor
 
 
 def check_json(d):
@@ -209,9 +209,9 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
             init_func = _init_binary_worker
             init_args = (recording.to_dict(), rec_memmaps, dtype)
             
-            processor = ChunkRecordingProcessor(recording, func, init_func, init_args, verbose=verbose,
+            executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                             job_name='write_binary_recording', **job_kwargs)
-            processor.run()
+            executor.run()
 
     else:
         # file handle case (one segment only)

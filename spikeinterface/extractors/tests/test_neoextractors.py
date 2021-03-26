@@ -62,9 +62,6 @@ def test_openephys():
         event_times = ev.get_event_times(channel_id=channel_id)
         print(event_times)
 
-
-
-
     #~ import matplotlib.pyplot as plt
     #~ fig, ax = plt.subplots()
     #~ traces = rec.get_traces()
