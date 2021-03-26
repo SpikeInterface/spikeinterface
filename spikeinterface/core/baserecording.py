@@ -107,7 +107,7 @@ class BaseRecording(BaseExtractor):
             dtype = save_kargs.get('dtype', 'float32')
             keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
             job_kwargs = {k:save_kargs[k] for k in keys if k in save_kargs}
-            write_binary_recording(self, files_path=files_path, time_axis=0, dtype=dtype, **job_kwargs)
+            write_binary_recording(self, files_path=files_path, dtype=dtype, **job_kwargs)
             
             from . binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),

@@ -55,45 +55,6 @@ class BinaryRecordingExtractor(BaseRecording):
                         'time_axis': time_axis, 'offset': offset, 'gain': gain,
                         }
 
-    #~ def write_to_binary_dat_format(self, save_path, time_axis=0, dtype=None, chunk_size=None, chunk_mb=500,
-                                   #~ n_jobs=1, joblib_backend='loky', verbose=False):
-        #~ '''Saves the traces of this recording extractor into binary .dat format.
-
-        #~ Parameters
-        #~ ----------
-        #~ save_path: str
-            #~ The path to the file.
-        #~ time_axis: 0 (default) or 1
-            #~ If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
-            #~ If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-        #~ dtype: dtype
-            #~ Type of the saved data. Default float32
-        #~ chunk_size: None or int
-            #~ If not None then the file is saved in chunks.
-            #~ This avoid to much memory consumption for big files.
-            #~ If 'auto' the file is saved in chunks of ~ 500Mb
-        #~ chunk_mb: None or int
-            #~ Chunk size in Mb (default 500Mb)
-        #~ n_jobs: int
-            #~ Number of jobs to use (Default 1)
-        #~ joblib_backend: str
-            #~ Joblib backend for parallel processing ('loky', 'threading', 'multiprocessing')
-        #~ '''
-        #~ if dtype is None or dtype == self.get_dtype():
-            #~ try:
-                #~ shutil.copy(self._datfile, save_path)
-            #~ except Exception as e:
-                #~ print('Error occurred while copying:', e)
-                #~ print('Writing to binary')
-                #~ write_to_binary_dat_format(self, save_path=save_path, time_axis=time_axis, dtype=dtype,
-                                           #~ chunk_size=chunk_size, chunk_mb=chunk_mb, n_jobs=n_jobs,
-                                           #~ joblib_backend=joblib_backend)
-        #~ else:
-            #~ write_to_binary_dat_format(self, save_path=save_path, time_axis=time_axis, dtype=dtype,
-                                       #~ chunk_size=chunk_size, chunk_mb=chunk_mb, n_jobs=n_jobs,
-                                       #~ joblib_backend=joblib_backend)
-
-
     @staticmethod
     def write_recording(recording, files_path, time_axis=0, dtype=None,**job_kwargs):
         '''Saves the traces of a recording extractor in binary .dat format.
@@ -104,16 +65,11 @@ class BinaryRecordingExtractor(BaseRecording):
             The recording extractor object to be saved in .dat format
         save_path: str
             The path to the file.
-        time_axis: 0 (default) or 1
-            If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
-            If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
         dtype: dtype
             Type of the saved data. Default float32.
-        chunk_size: None or int
-            If not None then the copy done by chunk size.
-            This avoid to much memory consumption for big files.
+        **job_kwargs
         '''
-        write_binary_recording(recording, files_path=files_path, time_axis=0, dtype=dtype, **job_kwargs)
+        write_binary_recording(recording, files_path=files_path,  dtype=dtype, **job_kwargs)
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
