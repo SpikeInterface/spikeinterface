@@ -79,16 +79,16 @@ def test_ChunkRecordingExecutor():
     init_args = 'a', 120, 'yep'
     
     # no chunk
-    #~ processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
-            #~ verbose=True, progress_bar=False,
-            #~ n_jobs=1, chunk_size=None)
-    #~ processor.run()
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
+            verbose=True, progress_bar=False,
+            n_jobs=1, chunk_size=None)
+    processor.run()
     
-    #~ # chunk + loop
-    #~ processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
-            #~ verbose=True, progress_bar=False,
-            #~ n_jobs=1, chunk_memory="500k")
-    #~ processor.run()
+    # chunk + loop
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
+            verbose=True, progress_bar=False,
+            n_jobs=1, chunk_memory="500k")
+    processor.run()
     
     # chunk + parralel
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
