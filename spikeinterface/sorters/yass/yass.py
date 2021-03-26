@@ -66,7 +66,7 @@ class YassSorter(BaseSorter):
         # new clusters
 
         # Defatul params for converting raw data to required formats.
-        'chunk_mb': 500,  # chunk of data
+        'total_memory': '500M',  # 
         'n_jobs_bin': 1  # number of cores?
     }
 
@@ -100,7 +100,7 @@ class YassSorter(BaseSorter):
         'template_update_time': '300; if reculstiner on, time (in sec) of segment in which to search for new clusters ',
 
         # Defatul params for converting raw data to required formats.
-        'chunk_mb': '500; chunk of data to be processed by a single core',
+        'total_memory': '500M; chunk of data to be processed by a single core',
         'n_jobs_bin': '1; number of cores to do data conversion',
 
     }
@@ -178,7 +178,7 @@ class YassSorter(BaseSorter):
         input_file_path = output_folder / 'data.bin'
         BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
                                                             time_axis=0, dtype=dtype, verbose=False,
-                                                            chunk_mb=p["chunk_mb"], n_jobs=p["n_jobs_bin"])
+                                                            total_memory=p["total_memory"], n_jobs=p["n_jobs_bin"])
  
         
 

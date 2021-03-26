@@ -55,7 +55,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         'nfilt_factor': 4,
         'NT': None,
         'keep_good_only': False,
-        'chunk_mb': 500,
+        'total_memory': '500M',
     }
 
     _params_description = {
@@ -74,7 +74,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
-        'chunk_mb': "Chunk size in Mb for saving to binary format (default 500Mb)",
+        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
     }
 
     sorter_description = """Kilosort3 is a GPU-accelerated and efficient template-matching spike sorter. On top of its 
@@ -147,7 +147,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         # save binary file
         input_file_path = output_folder / 'recording.dat'
         BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
-                                                                time_axis=0, dtype='int16', chunk_mb=500, verbose=False)
+                                                                time_axis=0, dtype='int16', total_memory='500M', verbose=False)
 
         if p['car']:
             use_car = 1
