@@ -45,14 +45,26 @@ def test_spikeglx_extractors():
 from spikeinterface.extractors.tests.file_retrieve import download_test_file
 
 def test_openephys():
-    oe_folder = basefolder +  'openephys/OpenEphys_SampleData_1'
-    rec = OpenEphysLegacyRecordingExtractor(oe_folder)
-    print(rec)
+    # oe_folder = basefolder +  'openephys/OpenEphys_SampleData_1'
+    # rec = OpenEphysLegacyRecordingExtractor(oe_folder)
+    # print(rec)
     
+    # oe_folder = basefolder +  'openephysbinary/v0.4.4.1_with_video_tracking/'
+    # rec = OpenEphysBinaryRecordingExtractor(oe_folder)
+    # print(rec)
+    
+
     oe_folder = basefolder +  'openephysbinary/v0.4.4.1_with_video_tracking/'
-    rec = OpenEphysBinaryRecordingExtractor(oe_folder)
-    print(rec)
-    
+    ev = OpenEphysBinaryEventExtractor(oe_folder)
+    print(ev)
+    print(ev.channel_ids)
+    for channel_id in ev.channel_ids:
+        event_times = ev.get_event_times(channel_id=channel_id)
+        print(event_times)
+
+
+
+
     #~ import matplotlib.pyplot as plt
     #~ fig, ax = plt.subplots()
     #~ traces = rec.get_traces()
@@ -104,9 +116,9 @@ def test_kilosort():
 
 
 if __name__ == '__main__':
-    test_mearec_extractors()
+    # test_mearec_extractors()
     #~ test_spikeglx_extractors()
-    #~ test_openephys()
+    test_openephys()
     #~ test_intan()
     #~ test_neuroscope()
     #~ test_plexon()
