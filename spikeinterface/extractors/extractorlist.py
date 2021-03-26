@@ -15,11 +15,11 @@ from .herdingspikesextractors import HerdingspikesSortingExtractor
 
 
 
-# sorting/recording from neo
+# sorting/recording/event from neo
 from .neoextractors import (
     MEArecRecordingExtractor, MEArecSortingExtractor,
     SpikeGLXRecordingExtractor,
-    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor,
+    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor,
     IntanRecordingExtractor,
     NeuroScopeRecordingExtractor,
     PlexonRecordingExtractor,
@@ -129,6 +129,10 @@ sorting_extractor_full_list = [
     #~ NeuralynxSortingExtractor,
     #~ BlackrockSortingExtractor,
     #~ CellExplorerSortingExtractor
+]
+
+event_extractor_full_list = [
+    OpenEphysBinaryEventExtractor,
 ]
 
 #~ installed_sorting_extractor_list = [sx for sx in sorting_extractor_full_list if sx.installed]

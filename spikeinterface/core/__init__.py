@@ -11,6 +11,7 @@ And contain also "core extractors" used for caching:
 from .base import load_extractor #, load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
+from .baseevent import BaseEvent, BaseEventSegment
 
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor

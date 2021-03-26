@@ -1,5 +1,7 @@
 import numpy as np
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
+from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
+    BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
+
 
 import neo
 
@@ -118,7 +120,7 @@ class NeoRecordingSegment(BaseRecordingSegment):
 class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     
     # this will depend on each reader
-    handle_raw_spike_directly = True
+    handle_spike_frame_directly = True
     
     def __init__(self, sampling_frequency=None, use_natural_unit_ids=False, **neo_kwargs):
         _NeoBaseExtractor.__init__(self,  **neo_kwargs)
@@ -141,7 +143,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
-            if self.handle_raw_spike_directly:
+            if self.handle_spike_frame_directly:
                 t_start = None
             else: 
                 t_start = self.neo_reader.get_signal_t_start(0, segment_index)
@@ -170,7 +172,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         # here the generic case
         #  all channels are in the same neo group so
         sig_channels = self.neo_reader.header['signal_channels']
-        assert sig_channels.size > 0, 'samplinf_frequqency is not given and it is hard to guess it'
+        assert sig_channels.size > 0, 'sampling_frequqency is not given and it is hard to guess it'
         sampling_frequency = np.max(sig_channels['sampling_rate'])
         
         # print('_auto_guess_sampling_frequency', sampling_frequency)
@@ -205,7 +207,7 @@ class NeoSortingSegment(BaseSortingSegment):
                         spike_channel_index=unit_index)
         
         if self._t_start is None:
-            # because handle_raw_spike_directly=True
+            # because handle_spike_frame_directly=True
             spike_frames = spike_timestamps
         else:
             # convert to second second
@@ -222,3 +224,53 @@ class NeoSortingSegment(BaseSortingSegment):
 
         return spike_frames        
 
+
+
+
+class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
+    handle_event_frame_directly = False
+
+    def __init__(self, **neo_kwargs):
+        _NeoBaseExtractor.__init__(self,  **neo_kwargs)
+
+        # TODO load feature from neo array_annotations
+
+        event_channels = self.neo_reader.header['event_channels']
+        
+        channel_ids = event_channels['id']
+        
+        BaseEvent.__init__(self, channel_ids)
+
+        nseg = self.neo_reader.segment_count(block_index=0)
+        for segment_index in range(nseg):
+            if self.handle_event_frame_directly:
+                t_start = None
+            else: 
+                t_start = self.neo_reader.get_signal_t_start(0, segment_index)
+
+            event_segment = NeoEventSegment(self.neo_reader, segment_index,
+                    t_start)
+            self.add_event_segment(event_segment)
+
+
+class NeoEventSegment(BaseEventSegment):
+    def __init__(self, neo_reader, segment_index, t_start):
+        BaseEventSegment.__init__(self)
+        self.neo_reader = neo_reader
+        self.segment_index = segment_index
+        self._t_start = t_start
+        self._natural_ids = None
+
+    def get_event_times(self, channel_id, start_frame, end_frame):
+
+        channel_index = list(self.neo_reader.header['event_channels']['id']).index(channel_id)
+
+        event_timestamps, event_duration, event_labels = self.neo_reader.get_event_timestamps(
+                block_index=0,
+                seg_index=self.segment_index,
+                event_channel_index=channel_index)
+
+        event_times = self.neo_reader.rescale_event_timestamp(event_timestamps,
+            dtype='float64', event_channel_index=channel_index)
+        
+        return event_times
