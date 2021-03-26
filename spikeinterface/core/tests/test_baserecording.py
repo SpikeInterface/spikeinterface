@@ -37,7 +37,8 @@ def test_BaseRecording():
     
     files_path = [f'test_base_recording_{i}.raw' for i in range(num_seg)]
     for i in range(num_seg):
-        np.memmap(files_path[i], dtype=dtype, mode='w+', shape=(num_samples, num_chan))
+        a = np.memmap(files_path[i], dtype=dtype, mode='w+', shape=(num_samples, num_chan))
+        a[:] = np.random.randn(*a.shape).astype(dtype)
 
     rec = BinaryRecordingExtractor(files_path, sampling_frequency, num_chan, dtype)
     print(rec)
@@ -71,13 +72,20 @@ def test_BaseRecording():
     rec2 = BaseExtractor.load('test_BaseRecording.pkl')
     rec3 = load_extractor('test_BaseRecording.pkl')
     
-    # cache
+    # cache to binary
     cache_folder = Path('./my_cache_folder')
     folder = cache_folder / 'simple_recording'
-    rec.save(folder=folder)
+    rec.save(format='binary', folder=folder)
     rec2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
+    
+    # cache to memory
+    rec4 = rec3.save(format='memory')
+    
+    traces4 = rec4.get_traces(segment_index=0)
+    traces = rec.get_traces(segment_index=0)
+    assert np.array_equal(traces4, traces)
     
     # cache joblib several jobs
     rec.save(name='simple_recording_2', chunk_size=10, n_jobs=4)

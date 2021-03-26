@@ -20,7 +20,7 @@ class NumpyRecording(BaseRecording):
     """
     is_writable = False
 
-    def __init__(self, traces_list, sampling_frequency, channel_locations=None, channel_ids=None):
+    def __init__(self, traces_list, sampling_frequency, channel_ids=None):
         if isinstance(traces_list, list):
             assert all(isinstance(e, np.ndarray) for e in traces_list), 'must give a list of numpy array'
         else:
@@ -43,13 +43,9 @@ class NumpyRecording(BaseRecording):
             rec_segment = NumpyRecordingSegment(traces)
             self.add_recording_segment(rec_segment)
         
-        # not sure that this is relevant!!!
-        if channel_locations is not None:
-            self.set_channel_locations(channel_locations)
         
         self._kwargs = {'traces_list': traces_list,
                             'sampling_frequency': sampling_frequency,
-                            'channel_locations': channel_locations
                             }
 
 

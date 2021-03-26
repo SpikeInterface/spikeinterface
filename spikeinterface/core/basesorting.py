@@ -59,16 +59,14 @@ class BaseSorting(BaseExtractor):
         S = self._sorting_segments[segment_index]
         return S.get_unit_spike_train(unit_id=unit_id, start_frame=start_frame, end_frame=end_frame)
     
-    def _save_to_folder(self, folder, format='npz', **cache_kargs):
+    def _save(self, format='npz', **save_kwargs):
         """
         This replace the old CacheSortingExtractor but enable more engine 
         for caching a results. At the moment only npz.
         """
         if format == 'npz':
-            assert len(cache_kargs) == 0, 'Sorting.save() with npz do not support options'
-            
+            folder = save_kwargs.pop('folder')
             # TODO save propreties/features as npz!!!!!
-            
             from .npzsortingextractor import NpzSortingExtractor
             save_path = folder / 'sorting_cached.npz'
             NpzSortingExtractor.write_sorting(self, save_path)

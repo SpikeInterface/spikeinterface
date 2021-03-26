@@ -102,7 +102,6 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
 def _init_binary_worker(recording, rec_memmaps, dtype):
     # create a local dict per worker
     local_dict = {}
-    from spikeinterface.core import load_extractor
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
         local_dict['recording'] = load_extractor(recording)
@@ -126,8 +125,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, local_dict):
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype)
     rec_memmap[start_frame:end_frame, :] = traces
-    
-
 
 
 def write_binary_recording(recording, files_path=None, dtype=None, 
@@ -198,6 +195,7 @@ def write_binary_recording_file_handle(recording, file_handle=None,
         dtype = recording.get_dtype()
 
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    
 
     if chunk_size is not None and time_axis == 1:
         print("Chunking disabled due to 'time_axis' == 1")
@@ -227,6 +225,126 @@ def write_binary_recording_file_handle(recording, file_handle=None,
 
 
 
+
+# used by write_memory_recording
+def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
+    # create a local dict per worker
+    local_dict = {}
+    if isinstance(recording, dict):
+        from spikeinterface.core import load_extractor
+        local_dict['recording'] = load_extractor(recording)
+    else:
+        local_dict['recording'] = recording
+
+    local_dict['dtype'] = np.dtype(dtype)
+    
+    if arrays is None:
+        # create it from share memory name
+        from multiprocessing.shared_memory import SharedMemory
+        arrays = []
+        # keep shm alive
+        local_dict['shms'] = []
+        for i in range(len(shm_names)):
+            shm = SharedMemory(shm_names[i])
+            local_dict['shms'].append(shm)
+            arr = np.ndarray(shape=shapes[i], dtype=dtype, buffer=shm.buf)
+            arrays.append(arr)
+    
+    local_dict['arrays'] = arrays
+    
+    return local_dict
+
+
+# used by write_memory_recording
+def _write_memory_chunk(segment_index, start_frame, end_frame, local_dict):
+    # recover variables of the worker
+    recording = local_dict['recording']
+    dtype = local_dict['dtype']
+    arr = local_dict['arrays'][segment_index]
+    
+    # apply function
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = traces.astype(dtype)
+    arr[start_frame:end_frame, :] = traces
+    #~ print('yep')
+
+
+def make_shared_array(shape, dtype):
+    # https://docs.python.org/3/library/multiprocessing.shared_memory.html
+    try:
+        from multiprocessing.shared_memory import SharedMemory
+    except Exception as e:
+        raise Exception('SharedMemory is available only for python>=3.8')
+    
+    dtype = np.dtype(dtype)
+    nbytes = shape[0] * shape[1] * dtype.itemsize
+    shm = SharedMemory(name=None, create=True, size=nbytes)
+    arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+    arr[:] = 0
+
+    return arr, shm
+    
+
+def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
+    '''
+    Saves the traces into numpy arrays (memory).
+    try to use the SharedMemory introduce in py3.8 if n_jobs > 1
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor object to be saved in .dat format
+    dtype: dtype
+        Type of the saved data. Default float32.
+    verbose: bool
+        If True, output is verbose (when chunks are used)
+
+    **job_kwargs: 
+        Use by job_tools modules to set:
+            * chunk_size or chunk_memory, or total_memory
+            * n_jobs
+            * progress_bar 
+
+    Returns
+    ---------
+    arrays: one arrays per segment
+    '''
+    
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
+    
+    if dtype is None:
+        dtype = recording.get_dtype()
+
+    # create sharedmmep
+    arrays = []
+    shm_names = []
+    shapes = []
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        num_channels = recording.get_num_channels()
+        shape = (num_frames, num_channels)
+        shapes.append(shape)
+        if n_jobs >1:
+            arr, shm = make_shared_array(shape, dtype)
+            shm_names.append(shm.name)
+        else:
+            arr = np.zeros(shape, dtype=dtype)
+        arrays.append(arr)
+    
+    # use executor (loop or workers)
+    func = _write_memory_chunk
+    init_func = _init_memory_worker
+    if n_jobs >1:
+        init_args = (recording.to_dict(), None,  shm_names, shapes, dtype)
+    else:
+        init_args = (recording.to_dict(), arrays, None, None, dtype)
+    
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
+                    job_name='write_memory_recording', **job_kwargs)
+    executor.run()
+    
+    return arrays
 
 
 
