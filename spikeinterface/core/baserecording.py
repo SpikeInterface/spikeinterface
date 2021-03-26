@@ -7,7 +7,7 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 
 
 from .base import BaseExtractor, BaseSegment
-from .core_tools import write_binary_recording
+from .core_tools import write_binary_recording, write_memory_recording
 
 
 class BaseRecording(BaseExtractor):
@@ -94,28 +94,45 @@ class BaseRecording(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
     
-    def _save_to_folder(self, folder, format='binary', **save_kargs):
+    _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
+    def _save(self, format='binary', **save_kwargs):
         """
         This replace the old CacheRecordingExtractor but enable more engine 
         for caching a results. at the moment only binaray with memmap is supported.
         My plan is to add also zarr support.
         """
-        # TODO save propreties as npz!!!!!
         
         if format == 'binary':
+            # TODO save propreties as npz!!!!!
+            folder = save_kwargs['folder']
             files_path = [ folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
-            dtype = save_kargs.get('dtype', 'float32')
-            keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
-            job_kwargs = {k:save_kargs[k] for k in keys if k in save_kargs}
+            dtype = save_kwargs.get('dtype', 'float32')
+            
+            job_kwargs = {k:save_kwargs[k] for k in self._job_keys if k in save_kwargs}
             write_binary_recording(self, files_path=files_path, dtype=dtype, **job_kwargs)
             
             from . binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
                                 self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(), time_axis=0)
 
+        elif format == 'memory':
+            job_kwargs = {k:save_kwargs[k] for k in self._job_keys if k in save_kwargs}
+            traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
+            from .numpyextractors import NumpyRecording
+            
+            cached = NumpyRecording(traces_list, self.get_sampling_frequency(), channel_ids=self.channel_ids)
+            print('cached')
+            print(cached)
+            
+
         elif format == 'zarr':
             # TODO implement a format based on zarr
             raise NotImplementedError
+
+        elif format == 'nwb':
+            # TODO implement a format based on zarr
+            raise NotImplementedError
+            
         else:
             raise ValueError(f'format {format} not supported')
 

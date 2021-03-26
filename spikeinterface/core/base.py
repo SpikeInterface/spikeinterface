@@ -191,13 +191,19 @@ class BaseExtractor:
             inds = self.ids_to_indices(ids)
         
         if only_main:
-            other._annotations = deepcopy({k: self._annotations[k] for k in ExtractorBase._main_annotations})
-            other._properties = deepcopy({k: self._properties[k][inds] for k in ExtractorBase._main_properties})
-            # other._features = deepcopy({self._features[k] for k in ExtractorBase._main_features})
+            ann_keys = ExtractorBase._main_annotations
+            prop_keys = ExtractorBase._main_properties
+            feat_keys = ExtractorBase._main_features
         else:
-            other._annotations = deepcopy(self._annotations)
-            other._properties = deepcopy({k: self._properties[k][inds] for k in self._properties})
-            # other._features = deepcopy(self._features)
+            ann_keys = self._annotations.keys()
+            prop_keys = self._properties.keys()
+            # feat_keys = ExtractorBase._features.keys()
+        
+        
+        other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
+        other._properties = deepcopy({k: self._properties[k][inds] for k in prop_keys if self._properties[k] is not None})
+        # other._features = deepcopy({k: self._features[k] for k in feat_keys})
+        
 
     
     def to_dict(self, include_annotations=True, include_properties=True, include_features=True):
@@ -414,7 +420,7 @@ class BaseExtractor:
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
     
-    def _save_to_folder(self, folder, **save_kargs):
+    def _save(self, folder, **save_kargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
         raise NotImplementedError
@@ -423,8 +429,24 @@ class BaseExtractor:
         # This implemented in BaseRecording or baseSorting
         # this is internally call by load(...) main function
         raise NotImplementedError
+    
+    def save(self, **kargs):
+        """
+        route save_to_folder() or save_to_mem()
+        """
+        if kargs.get('format', None) == 'memory':
+            return self.save_to_memory(**kargs)
+        else:
+            return self.save_to_folder(**kargs)
 
-    def save(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kargs):
+    def save_to_memory(self, **kargs):
+        print('save_to_memory')
+        # used only by recording at the moment
+        cached = self._save(**kargs)
+        self.copy_metadata(cached)
+        return cached
+
+    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kargs):
         """
         Save consist of:
           * compute the extractro by calling get_trace() in chunk
@@ -487,7 +509,7 @@ class BaseExtractor:
                 )
         
         # save data (done the subclass)
-        cached = self._save_to_folder(folder, verbose=verbose, **save_kargs)
+        cached = self._save(folder=folder, verbose=verbose, **save_kargs)
         
         # copy properties/
         self.copy_metadata(cached)
