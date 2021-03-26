@@ -20,7 +20,7 @@ print(sorting_true)
 ##############################################################################
 # Lets cache this recording to make it "dumpable"
 
-recording = recording.cache(name='toy')
+recording = recording.save(name='toy')
 print(recording)
 
 ##############################################################################

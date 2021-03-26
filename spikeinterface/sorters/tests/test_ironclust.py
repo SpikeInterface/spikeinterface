@@ -16,5 +16,7 @@ class IronclustCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #~ IronclustCommonTestSuite().test_on_toy()
-    IronclustCommonTestSuite().test_with_BinDatRecordingExtractor()
+    test = IronclustCommonTestSuite()
+    test.setUp()
+    test.test_with_class()
+    test.test_with_run()

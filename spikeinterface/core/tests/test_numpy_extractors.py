@@ -8,10 +8,11 @@ from spikeinterface.core import NumpyRecording, NumpySorting
 from spikeinterface.core.tests.testing_tools import create_sorting_npz
 from spikeinterface.core import NpzSortingExtractor
 
+cache_folder = Path('./my_cache_folder')
 
 def _clean_all():
-    cache_folder = './my_cache_folder'
-    if Path(cache_folder).exists():
+    
+    if cache_folder.exists():
         shutil.rmtree(cache_folder)
     
 def setup_module():
@@ -30,9 +31,7 @@ def test_NumpyRecording():
     rec = NumpyRecording(timeseries_list, sampling_frequency)
     print(rec)
 
-    cache_folder = './my_cache_folder'
-    rec.set_cache_folder(cache_folder)
-    rec.cache(name='test_NumpyRecording')
+    rec.save(folder= cache_folder/ 'test_NumpyRecording')
     
 
 def test_NumpySorting():

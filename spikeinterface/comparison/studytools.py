@@ -55,12 +55,11 @@ def setup_comparison_study(study_folder, gt_dict):
     
     
     for rec_name, (recording, sorting_gt) in gt_dict.items():
-        # write recording using cache with binary
-        recording.set_cache_folder(study_folder / 'raw_files')
-        recording.cache(name=rec_name, format='binary')
-        
-        sorting_gt.set_cache_folder(study_folder / 'ground_truth')
-        sorting_gt.cache(name=rec_name, format='npz')
+        # write recording using save with binary
+        folder = study_folder / 'raw_files' / rec_name
+        recording.save(folder=folder, format='binary')
+        folder = study_folder / 'ground_truth' / rec_name
+        sorting_gt.save(folder=folder, format='npz')
 
     # make an index of recording names
     with open(study_folder / 'names.txt', mode='w', encoding='utf8') as f:

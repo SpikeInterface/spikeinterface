@@ -32,3 +32,5 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         # open the corresponding stream probe
         # probe = read_spikeglx(folder_path, in_place=True)
         # self.set_probegroup(probe)
+        
+        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)

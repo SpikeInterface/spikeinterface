@@ -1,4 +1,6 @@
 numpy
 neo
 joblib
+loky
 probeinterface
+
