@@ -161,7 +161,7 @@ class YassSorter(BaseSorter):
             yass_params = yaml.load(file, Loader=yaml.FullLoader)        
 
         # update root folder
-        yass_params['data']['root_folder'] = str(output_folder)
+        yass_params['data']['root_folder'] = str(output_folder.absolute())
 
         # geometry
         probe_file_txt = os.path.join(output_folder, 'geom.txt')
@@ -214,8 +214,11 @@ class YassSorter(BaseSorter):
             # use previuosly trained NN folder location
             neural_nets_path = Path(params['neural_nets_path'])
         
-        merge_params['neuralnetwork']['denoise']['filename'] = str(neural_nets_path / 'denoise.pt')
-        merge_params['neuralnetwork']['detect']['filename'] = str(neural_nets_path / 'detect.pt')
+        merge_params['neuralnetwork']['denoise']['filename'] = str(neural_nets_path.absolute() / 'denoise.pt')
+        merge_params['neuralnetwork']['detect']['filename'] = str(neural_nets_path.absolute() / 'detect.pt')
+        from pprint import pprint
+        pprint(merge_params)
+        exit()
 
         # to yaml again (for NNs update)
         fname_config = output_folder / 'config.yaml'
@@ -228,7 +231,7 @@ class YassSorter(BaseSorter):
         '''
         recording = recover_recording(recording)  # allows this to run on multiple jobs (not just multi-core)
         
-        config_file = output_folder / 'config.yaml'
+        config_file = output_folder.absolute() / 'config.yaml'
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = f'''yass sort {config_file}'''
         else:
@@ -260,7 +263,7 @@ class YassSorter(BaseSorter):
             print("            ss.set_NNs('path_to_NNs') (or set params['neural_nets_path'] = path_toNNs)")
             print("prior to running ss.run_sorter()")
 
-        config_file = output_folder / 'config.yaml'
+        config_file = output_folder.absolute() / 'config.yaml'
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = f'yass train {config_file}'
         else:

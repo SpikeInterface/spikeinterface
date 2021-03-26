@@ -10,3 +10,13 @@ Many many API changes.
 TODO : make here the long mofification list.
 
 
+
+spikesorters:
+  * internal API change with classmethod only
+
+toolkit:
+  * API change to handle multi segment
+  * FilterRecording nor more with FFT
+  * FilterRecording have 'sos' or 'ba' option
+  * BlankSaturationRecording: works with 2 thresh
+

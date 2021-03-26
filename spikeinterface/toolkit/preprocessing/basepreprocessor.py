@@ -6,11 +6,18 @@ class BasePreprocessor(BaseRecording):
     installed = True  # check at class level if installed or not
     installation_mesg = ""  # err
 
-    def __init__(self, recording):
+    def __init__(self, recording, sampling_frequency=None, channel_ids=None, dtype=None):
         assert isinstance(recording, BaseRecording), "'recording' must be a RecordingExtractor"
         
         self._parent_recording = recording
-        BaseRecording.__init__(self, recording.get_sampling_frequency(), recording.channel_ids, recording.get_dtype())
+        if sampling_frequency is None:
+            sampling_frequency = recording.get_sampling_frequency()
+        if channel_ids is None:
+            channel_ids =  recording.channel_ids
+        if dtype is None:
+            dtype = recording.get_dtype()
+        
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         recording.copy_metadata(self, only_main=False, ids=None)
         
         # self._kwargs have to handle in subclass

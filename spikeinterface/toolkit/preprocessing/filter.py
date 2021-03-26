@@ -39,7 +39,6 @@ class FilterRecording(BasePreprocessor):
             Wn = [e / sf * 2 for e in band]
         else:
             Wn = float(band) / sf * 2
-            print('Wn', Wn)
         N = filter_order
         # self.coeff is 'sos' or 'ab' style
         coeff = scipy.signal.iirfilter(N,Wn, analog=False, btype=btype, ftype=ftype, output =filter_mode)
@@ -83,7 +82,7 @@ class BandpassFilterRecording(FilterRecording):
     """
     Simplied bandpass class on top of FilterRecording.
     """
-    name = 'bandpassfilter'
+    name = 'bandpass_filter'
     def __init__(self, recording, freq_min=300., freq_max=6000., margin=0.005):
         FilterRecording.__init__(self, recording, band=[freq_min, freq_max], margin=margin)
         self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max, margin=margin)
@@ -105,10 +104,12 @@ class NotchFilterRecording(BasePreprocessor):
     filter_recording: NotchFilterRecording
         The notch-filtered recording extractor object
     """
+    name = 'notch_filter'
     def __init__(self, recording, freq=3000, q=30, margin=0.005):
         
         # coeef is 'ba' type
-        coeff = ss.iirnotch(self._freq / fn, self._q)
+        fn = 0.5 * float(recording.get_sampling_frequency())
+        coeff = scipy.signal.iirnotch(freq / fn, q)
         BasePreprocessor.__init__(self, recording)
         
         sf = recording.get_sampling_frequency()
@@ -123,14 +124,14 @@ class NotchFilterRecording(BasePreprocessor):
 # functions for API
 
 def filter(*args, **kwargs):
-    __doc__ = FilterRecording.__doc__
     return FilterRecording(*args, **kwargs)
+filter.__doc__ = FilterRecording.__doc__
 
 def bandpass_filter(*args, **kwargs):
-    __doc__ = BandpassFilterRecording.__doc__
     return BandpassFilterRecording(*args, **kwargs)
+bandpass_filter.__doc__ = BandpassFilterRecording.__doc__
 
 def notch_filter(*args, **kwargs):
-    __doc__ = NotchFilterRecording.__doc__
     return NotchFilterRecording(*args, **kwargs)
+notch_filter.__doc__ = NotchFilterRecording.__doc__
 

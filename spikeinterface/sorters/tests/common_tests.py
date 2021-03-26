@@ -14,13 +14,17 @@ class SorterCommonTestSuite:
     """
     SorterClass = None
 
-    #~ def setUp(self):
+    def setUp(self):
         #~ self.recording, self.sorting_gt = toy_example(num_channels=4, duration=10, seed=0, num_segments=1)
-
-    def test_on_toy(self):
-        SorterClass = self.SorterClass
-        
         recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
+        self.recording =recording.save(verbose=False, format='binary')
+        print(self.recording)
+
+    def test_with_class(self):
+        # test the classmethod approach
+        
+        SorterClass = self.SorterClass
+        recording = self.recording
         
         sorter_params = SorterClass.default_params()
 
@@ -40,27 +44,12 @@ class SorterCommonTestSuite:
 
         del sorting
 
-    def test_with_BinDatRecordingExtractor(self):
+    def test_with_run(self):
         # some sorter (TDC, KS, KS2, ...) work by default with the raw binary
         # format as input to avoid copy when the recording is already this format
         
-        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
+        recording = self.recording
 
-        # create a raw dat file and probeinterface file
-        raw_filename = 'raw_file.dat'
-        BinaryRecordingExtractor.write_recording(recording,
-                                files_path=[raw_filename], time_axis=0, dtype='float32')
-        probe_filename = 'file_probe.json'
-        write_probeinterface(probe_filename, recording.get_probegroup())
-        
-        samplerate = recording.get_sampling_frequency()
-        num_chan = recording.get_num_channels()
-        
-        # load back
-        recording = BinaryRecordingExtractor(raw_filename, samplerate, num_chan, 'float32')
-        probegroup = read_probeinterface(probe_filename)
-        recording = recording.set_probes(probegroup)
-        
         sorter_name = self.SorterClass.sorter_name
         
         sorter_params = self.SorterClass.default_params()

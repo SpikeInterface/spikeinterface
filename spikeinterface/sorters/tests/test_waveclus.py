@@ -16,6 +16,7 @@ class WaveClusCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #~ WaveClusCommonTestSuite().test_on_toy()
-    WaveClusCommonTestSuite().test_with_BinDatRecordingExtractor()
-    #~ WaveClusCommonTestSuite().test_get_version()
+    test = WaveClusCommonTestSuite()
+    test.setUp()
+    test.test_with_class()
+    test.test_with_run()

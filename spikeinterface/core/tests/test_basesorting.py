@@ -63,12 +63,11 @@ def test_BaseSorting():
     sorting3 = load_extractor('test_BaseSorting.pkl')
 
     # cache
-    cache_folder = './my_cache_folder'
-    sorting.set_cache_folder(cache_folder)
-    sorting.cache(name='simple_sorting')
-    sorting2 = BaseExtractor.load_from_cache(cache_folder, 'simple_sorting')
+    folder = Path('./my_cache_folder') / 'simple_sorting'
+    sorting.save(folder=folder)
+    sorting2 = BaseExtractor.load_from_folder(folder)
     # but also possible
-    sorting3 = BaseExtractor.load('./my_cache_folder/simple_sorting')
+    sorting3 = BaseExtractor.load(folder)
 
 
 if __name__ == '__main__':
