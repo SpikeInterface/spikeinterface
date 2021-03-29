@@ -38,15 +38,13 @@ def test_write_memory_recording():
     #~ write_memory_recording(recording, dtype=None,
             #~ verbose=True, n_jobs=1, chunk_memory='100k', progress_bar=True)
 
-
     # write parrallel
     write_memory_recording(recording, dtype=None,
             verbose=False, n_jobs=2, chunk_memory='100k')
-    
+
     # write parrallel
     write_memory_recording(recording, dtype=None,
             verbose=False, n_jobs=2, total_memory='200k',  progress_bar=True)
-    
 
 
     

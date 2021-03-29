@@ -160,9 +160,9 @@ class ChunkRecordingExecutor:
             if self.progress_bar and HAVE_TQDM:
                 all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name)
             
-            local_dict = self.init_func(*self.init_args)
+            worker_ctx = self.init_func(*self.init_args)
             for segment_index, frame_start, frame_stop in all_chunks:
-                self.func(segment_index, frame_start, frame_stop, local_dict)
+                self.func(segment_index, frame_start, frame_stop, worker_ctx)
     
         else:
             # if self.verbose:
@@ -193,17 +193,17 @@ class ChunkRecordingExecutor:
 # https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool 
 # theses 2 global are global per worker
 # so they are not share
-global local_dict
+global _worker_ctx
 global _func
 def worker_initializer(func, init_func, init_args):
-    global local_dict
-    local_dict = init_func(*init_args)
+    global _worker_ctx
+    _worker_ctx = init_func(*init_args)
     global _func
     _func = func
 
 def function_wrapper(args):
     segment_index,start_frame, end_frame = args
     global _func
-    global local_dict
-    return _func(segment_index,start_frame, end_frame, local_dict)
+    global _worker_ctx
+    return _func(segment_index,start_frame, end_frame, _worker_ctx)
 

@@ -98,28 +98,28 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
 
 
 
-# used by write_binary_recording
+# used by write_binary_recording + ChunkRecordingExecutor
 def _init_binary_worker(recording, rec_memmaps, dtype):
     # create a local dict per worker
-    local_dict = {}
+    worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-        local_dict['recording'] = load_extractor(recording)
+        worker_ctx['recording'] = load_extractor(recording)
     else:
-        local_dict['recording'] = recording
+        worker_ctx['recording'] = recording
     
-    local_dict['rec_memmaps'] = rec_memmaps
-    local_dict['dtype'] = np.dtype(dtype)
+    worker_ctx['rec_memmaps'] = rec_memmaps
+    worker_ctx['dtype'] = np.dtype(dtype)
     
-    return local_dict
+    return worker_ctx
 
 
-# used by write_binary_recording
-def _write_binary_chunk(segment_index, start_frame, end_frame, local_dict):
+# used by write_binary_recording + ChunkRecordingExecutor
+def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    recording = local_dict['recording']
-    dtype = local_dict['dtype']
-    rec_memmap = local_dict['rec_memmaps'][segment_index]
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    rec_memmap = worker_ctx['rec_memmaps'][segment_index]
     
     # apply function
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
@@ -229,38 +229,38 @@ def write_binary_recording_file_handle(recording, file_handle=None,
 # used by write_memory_recording
 def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
     # create a local dict per worker
-    local_dict = {}
+    worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-        local_dict['recording'] = load_extractor(recording)
+        worker_ctx['recording'] = load_extractor(recording)
     else:
-        local_dict['recording'] = recording
+        worker_ctx['recording'] = recording
 
-    local_dict['dtype'] = np.dtype(dtype)
+    worker_ctx['dtype'] = np.dtype(dtype)
     
     if arrays is None:
         # create it from share memory name
         from multiprocessing.shared_memory import SharedMemory
         arrays = []
         # keep shm alive
-        local_dict['shms'] = []
+        worker_ctx['shms'] = []
         for i in range(len(shm_names)):
             shm = SharedMemory(shm_names[i])
-            local_dict['shms'].append(shm)
+            worker_ctx['shms'].append(shm)
             arr = np.ndarray(shape=shapes[i], dtype=dtype, buffer=shm.buf)
             arrays.append(arr)
     
-    local_dict['arrays'] = arrays
+    worker_ctx['arrays'] = arrays
     
-    return local_dict
+    return worker_ctx
 
 
 # used by write_memory_recording
-def _write_memory_chunk(segment_index, start_frame, end_frame, local_dict):
+def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    recording = local_dict['recording']
-    dtype = local_dict['dtype']
-    arr = local_dict['arrays'][segment_index]
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    arr = worker_ctx['arrays'][segment_index]
     
     # apply function
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)

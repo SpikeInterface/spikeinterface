@@ -1,14 +1,14 @@
 import numpy as np
 
-from spikeinterface import NumpyRecording
+from spikeinterface import NumpyRecording, NumpySorting
 
 from probeinterface import generate_linear_probe
 
 def generate_recording(
-        num_channels = 2,
-        sampling_frequency = 30000.,  # in Hz
-        durations = [10.325, 3.5], # in s for 2 segments
-    ):
+            num_channels = 2,
+            sampling_frequency = 30000.,  # in Hz
+            durations = [10.325, 3.5], # in s for 2 segments
+        ):
     
     num_segments = len(durations)
     num_timepoints = [int(sampling_frequency * d) for d in durations]
@@ -26,6 +26,31 @@ def generate_recording(
     recording.set_probe(probe, in_place=True)
 
     return recording
+
+def generate_sorting(
+            num_units=5,
+            sampling_frequency = 30000.,  # in Hz
+            durations = [10.325, 3.5], # in s for 2 segments
+        ):
+
+    num_segments = len(durations)
+    num_timepoints = [int(sampling_frequency * d) for d in durations]
+    
+    unit_ids = np.arange(num_units)
+    
+    units_dict_list = []
+    for seg_index in range(num_segments):
+            units_dict = {}
+            for unit_id in unit_ids:
+                #  15 Hz for all units
+                n_spike = int(15. * durations[seg_index])
+                units_dict[unit_id] = np.random.randint(0, num_timepoints[seg_index], n_spike)
+            units_dict_list.append(units_dict)
+    sorting = NumpySorting. from_dict(units_dict_list, sampling_frequency)
+    
+    return sorting
+    
+    
     
 
 
@@ -47,4 +72,5 @@ def create_sorting_npz(num_seg, file_path):
 
 
 if __name__ == '__main__':
-    print(generate_recording())    
+    print(generate_recording())
+    print(generate_sorting())

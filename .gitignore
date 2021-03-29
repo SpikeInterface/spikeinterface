@@ -2,6 +2,8 @@ spikeinterface/core/tests/*.raw
 spikeinterface/core/tests/*.json
 spikeinterface/core/tests/*.pkl
 spikeinterface/core/tests/*.npz
+spikeinterface/core/tests/*/*.json
+spikeinterface/core/tests/*/*.raw
 spikeinterface/core/tests/*/*/*.json
 spikeinterface/core/tests/*/*/*.raw
 

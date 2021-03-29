@@ -42,7 +42,7 @@ sorters:
 
   * almost done : needs tests
   * some sorter do not have yet the extractor
-
+  * unify parameters for copy to binary > common methods
 
 comparison:
   * done: need tests

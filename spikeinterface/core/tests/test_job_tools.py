@@ -61,20 +61,20 @@ def test_ChunkRecordingExecutor():
     # make dumpable
     recording =recording.save()
     
-    def func(segment_index, start_frame, end_frame, local_dict):
+    def func(segment_index, start_frame, end_frame, worker_ctx):
         import os, time
-        # print('func', segment_index, start_frame, end_frame, local_dict, os.getpid())
+        # print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
         time.sleep(0.010)
         #~ time.sleep(1.0)
         return os.getpid()
         
     
     def init_func(arg1, arg2, arg3):
-        local_dict = {}
-        local_dict['arg1'] = arg1
-        local_dict['arg2'] = arg2
-        local_dict['arg3'] = arg3
-        return local_dict
+        worker_ctx = {}
+        worker_ctx['arg1'] = arg1
+        worker_ctx['arg2'] = arg2
+        worker_ctx['arg3'] = arg3
+        return worker_ctx
     
     init_args = 'a', 120, 'yep'
     
