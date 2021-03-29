@@ -24,10 +24,11 @@ class WaveformExtractor:
     """
     def __init__(self, recording, sorting, folder):
 
-        assert recording.get_sampling_frequency() == sorting.get_sampling_frequency(), \
-            'WaveformExtractor : is it a joke ?'
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             'WaveformExtractor : is it a joke ?'
+
+        np.testing.assert_almost_equal(recording.get_sampling_frequency(),
+            sorting.get_sampling_frequency(), decimal=2)
 
 
         self.recording = recording
@@ -266,9 +267,9 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     before = worker_ctx['before']
     after = worker_ctx['after']
     unit_cum_sum = worker_ctx['unit_cum_sum']
-    #~ print('before', before, 'after', after)
+    # print('before', before, 'after', after, type(before), type(after))
     
-    #~ print('_waveform_extractor_chunk', segment_index, start_frame, end_frame)
+    # print('_waveform_extractor_chunk', segment_index, start_frame, end_frame)
     to_extract = {}
     for unit_id in sorting.unit_ids:
         spike_times = selected_spike_times[unit_id][segment_index]
@@ -282,7 +283,8 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     if len(to_extract) > 0:
         start = min(st[0] for _, _, st in to_extract.values()) - before
         end = max(st[-1] for _, _, st in to_extract.values()) + after
-        #~ print('start, end', start, end)
+        start = int(start)
+        end = int(end)
         
         # load trace in memory
         traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
@@ -291,16 +293,9 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
             wfs = wfs_memmap[unit_id]
             for i in range(spike_times.size):
                 st = spike_times[i]
+                st = int(st)
                 pos = unit_cum_sum[unit_id][segment_index] + i0 + i
-                #~ print('unit_id', unit_id, 'pos', pos)
-                #~ print(st, st - start, st - start - before)
-                #~ print(traces[st - start - before:st - start + after, :].shape)
+                # print('unit_id', unit_id, 'pos', pos)
+                # print(st, st - start, st - start - before)
+                # print(traces[st - start - before:st - start + after, :].shape)
                 wfs[pos, :, :] = traces[st - start - before:st - start + after, :]
-
-    
-    #~ # apply function
-    #~ traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
-    #~ traces = traces.astype(dtype)
-    #~ rec_memmap[start_frame:end_frame, :] = traces
-
-

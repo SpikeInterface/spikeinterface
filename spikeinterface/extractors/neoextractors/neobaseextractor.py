@@ -19,7 +19,6 @@ class _NeoBaseExtractor:
         assert self.neo_reader.block_count() == 1, \
             'This file is neo multi block spikeinterface support one block only dataset'
 
-        self._kwargs = neo_kwargs
 
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
