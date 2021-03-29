@@ -2,14 +2,20 @@ spikeinterface/core/tests/*.raw
 spikeinterface/core/tests/*.json
 spikeinterface/core/tests/*.pkl
 spikeinterface/core/tests/*.npz
+
 spikeinterface/core/tests/*/*.json
 spikeinterface/core/tests/*/*.raw
+spikeinterface/core/tests/*/*.npy
+
 spikeinterface/core/tests/*/*/*.json
 spikeinterface/core/tests/*/*/*.raw
+spikeinterface/core/tests/*/*/*.npy
+
 
 spikeinterface/extractors/tests/*/*/*.json
 spikeinterface/extractors/tests/*/*/*.raw
 spikeinterface/extractors/tests/*.npz
+spikeinterface/extractors/tests/*.npy
 spikeinterface/extractors/tests/extractor_testing_files/*
 
 
