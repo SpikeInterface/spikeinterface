@@ -18,7 +18,18 @@ class WaveformExtractor:
     
     Usage :
     
-    WaveformExtractor.create(recording, sorting, folder)
+    # create
+    we = WaveformExtractor.create(recording, sorting, folder)
+    
+    # compute
+    we = we.set_params(...)
+    we = we.run(...)
+    
+    # retrieve
+    waveforms = we.get_waveforms(unit_id)
+    template = we.get_template(unit_id, mode='median')
+    
+    # Load persistent from folder (in another session
     WaveformExtractor.load_from_folder(folder)
     
     """
@@ -75,10 +86,13 @@ class WaveformExtractor:
         waveform_folder = self.folder / 'waveforms'
         if waveform_folder.is_dir():
             shutil.rmtree(waveform_folder)
+        waveform_folder.mkdir()
         
-        waveform_folder.mkdir()    
 
     def set_params(self, ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None):
+        """
+        
+        """
         self._reset()
         
         if dtype is None:
@@ -93,31 +107,36 @@ class WaveformExtractor:
         (self.folder / 'params.json').write_text(
                 json.dumps(check_json(self._params), indent=4), encoding='utf8')
     
-    def get_waveforms(self, unit_id):
+    def get_waveforms(self, unit_id, with_index=False):
+        """
+        
+        """
         assert unit_id in self.sorting.unit_ids
         
         wfs = self._waveforms.get(unit_id, None)
-        if wfs is not None:
+        if wfs is None:
+            waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.raw'
+            if not waveform_file.is_file():
+                raise Exception('waveforms not extracted yet : please do WaveformExtractor.run() fisrt')
+            
+            p = self._params
+            sampling_frequency = self.recording.get_sampling_frequency()
+            num_chans = self.recording.get_num_channels()
+            
+            before = int(p['ms_before'] * sampling_frequency / 1000.)
+            after = int(p['ms_after'] * sampling_frequency / 1000.)
+            
+            wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, before + after, num_chans)
+            # get a copy to have a memory faster access and avoid write back in file
+            wfs = wfs.copy()
+            self._waveforms[unit_id] = wfs
+        
+        if  with_index:
+            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
+            sampled_index = np.load(sampled_index_file)
+            return wfs, sampled_index
+        else:
             return wfs
-        
-        waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.raw'
-        if not waveform_file.is_file():
-            raise Exception('waveforms not extracted yet : please do WaveformExtractor.run() fisrt')
-        
-        p = self._params
-        sampling_frequency = self.recording.get_sampling_frequency()
-        num_chans = self.recording.get_num_channels()
-        
-        before = int(p['ms_before'] * sampling_frequency / 1000.)
-        after = int(p['ms_after'] * sampling_frequency / 1000.)
-        
-        wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, before + after, num_chans)
-        # get a copy to have a memory faster access and avoid write back in file
-        wfs = wfs.copy()
-        self._waveforms[unit_id] = wfs
-        
-        return wfs
-        
 
     def get_template(self, unit_id, mode='median'):
         assert mode in ('median', 'average')
@@ -140,8 +159,35 @@ class WaveformExtractor:
                 self._template_average[unit_id] = template
                 return template
 
+    
+    def sample_spikes(self):
+        p = self._params
+        sampling_frequency = self.recording.get_sampling_frequency()
+        before = int(p['ms_before'] * sampling_frequency  / 1000.)
+        after = int(p['ms_after'] * sampling_frequency  / 1000.)
+        width = before + after
         
-
+        selected_spikes = select_random_spikes(self.recording, self.sorting, self._params['max_spikes_per_unit'], before, after)
+        
+        # store in a 2 columns (spike_index, segment_index) in a npy file
+        for unit_id in self.sorting.unit_ids:
+            
+            
+            n = np.sum([e.size for e in selected_spikes[unit_id]])
+            sampled_index = np.zeros(n, dtype=[('spike_index', 'int64'), ('segment_index', 'int64')])
+            pos = 0
+            for segment_index in range(self.sorting.get_num_segments()):
+                inds = selected_spikes[unit_id][segment_index]
+                sampled_index[pos:pos+inds.size]['spike_index'] = inds
+                sampled_index[pos:pos+inds.size]['segment_index'] = segment_index
+                pos += inds.size
+                
+            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
+            np.save(sampled_index_file, sampled_index)
+        
+        return selected_spikes
+        
+    
     def run(self, **job_kwargs):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
@@ -149,15 +195,15 @@ class WaveformExtractor:
         before = int(p['ms_before'] * sampling_frequency  / 1000.)
         after = int(p['ms_after'] * sampling_frequency  / 1000.)
         width = before + after
-
-
-        selected_spikes = select_random_spikes(self.recording, self.sorting, self._params['max_spikes_per_unit'], before, after)
+    
+        selected_spikes = self.sample_spikes()
+        #~ selected_spikes = select_random_spikes(self.recording, self.sorting, self._params['max_spikes_per_unit'], before, after)
         selected_spike_times = {}
         for unit_id in self.sorting.unit_ids:
             selected_spike_times[unit_id] = []
-            for seg_index in range(self.sorting.get_num_segments()):
-                spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_index)
-                sel = selected_spikes[unit_id][seg_index]
+            for segment_index in range(self.sorting.get_num_segments()):
+                spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                sel = selected_spikes[unit_id][segment_index]
                 selected_spike_times[unit_id].append(spike_times[sel])
         
         
@@ -203,16 +249,16 @@ def select_random_spikes(recording, sorting, max_spikes_per_unit, before=None, a
         else:
             global_inds = np.arange(total)
         sel_spikes = []
-        for seg_index in range(num_seg):
-            in_segment = (global_inds>=cum_sum[seg_index]) & (global_inds < cum_sum[seg_index+1])
-            inds = global_inds[in_segment] - cum_sum[seg_index]
+        for segment_index in range(num_seg):
+            in_segment = (global_inds>=cum_sum[segment_index]) & (global_inds < cum_sum[segment_index+1])
+            inds = global_inds[in_segment] - cum_sum[segment_index]
             
             if before is not None:
                 # clean border
                 assert after is not None
-                spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_index)
+                spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sampled_spike_times = spike_times[inds]
-                num_samples = recording.get_num_samples(segment_index=seg_index)
+                num_samples = recording.get_num_samples(segment_index=segment_index)
                 mask = (sampled_spike_times >=before) & (sampled_spike_times<(num_samples-after))
                 inds = inds[mask]
             
@@ -299,3 +345,4 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 # print(st, st - start, st - start - before)
                 # print(traces[st - start - before:st - start + after, :].shape)
                 wfs[pos, :, :] = traces[st - start - before:st - start + after, :]
+
