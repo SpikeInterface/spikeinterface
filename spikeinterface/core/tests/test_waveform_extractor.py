@@ -33,6 +33,8 @@ def test_WaveformExtractor():
     
     wfs = we.get_waveforms(0)
     
+    wfs, sampled_index = we.get_waveforms(0, with_index=True)
+    
     # load back
     we = WaveformExtractor.load_from_folder(folder)
     
