@@ -19,6 +19,7 @@ spikeinterface/extractors/tests/*.npy
 spikeinterface/extractors/tests/extractor_testing_files/*
 
 
+.vscode/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
