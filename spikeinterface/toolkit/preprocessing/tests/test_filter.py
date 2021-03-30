@@ -29,7 +29,7 @@ def test_filter():
     rec4 = filter(rec,  band=500., btype='highpass', filter_mode='ba', filter_order=2)
     
     
-    rec5 = notch_filter(rec, freq=3000, q=30, margin=0.005)
+    rec5 = notch_filter(rec, freq=3000, q=30, margin_ms=5.)
     
     # import matplotlib.pyplot as plt
     # from spikeinterface.widgets import plot_timeseries
@@ -39,6 +39,35 @@ def test_filter():
     # plot_timeseries(rec4, segment_index=0)
     # plt.show()
 
+@pytest.mark.skip('OpenCL not tested')
+def test_filter_opencl():
+    rec = generate_recording(
+            #~ num_channels = 256,
+            num_channels = 32,
+            sampling_frequency = 30000.,
+            #~ durations = [100.325, 3.5],
+            durations = [10.325, 3.5],
+        )
+    
+    print(rec.get_dtype())
+    
+    #~ rec_filtered = filter(rec, engine='scipy')
+    #~ rec_filtered = rec_filtered.save(chunk_size=1000, progress_bar=True, n_jobs=4)
+    
+    rec2 = filter(rec, engine='opencl')
+    rec2_cached0 = rec2.save(chunk_size=1000,verbose=False, progress_bar=True, n_jobs=1)
+    #~ rec2_cached0 = rec2.save(chunk_size=1000,verbose=False, progress_bar=True, n_jobs=4)
+
+    #~ import matplotlib.pyplot as plt
+    #~ from spikeinterface.widgets import plot_timeseries
+    #~ plot_timeseries(rec, segment_index=0)
+    #~ plot_timeseries(rec_filtered, segment_index=0)
+    #~ plot_timeseries(rec2_cached0, segment_index=0)
+    #~ plt.show()    
+
+
 
 if __name__ == '__main__':
-    test_filter()
+    #~ test_filter()
+    test_filter_opencl()
+    
