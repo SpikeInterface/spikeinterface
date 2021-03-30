@@ -10,6 +10,7 @@ from spikeinterface.toolkit.preprocessing import filter, bandpass_filter,notch_f
 
 def test_filter():
     rec = generate_recording()
+    rec = rec.save()
     
     rec2 = bandpass_filter(rec,  freq_min=300., freq_max=6000.)
     
@@ -42,17 +43,20 @@ def test_filter():
 @pytest.mark.skip('OpenCL not tested')
 def test_filter_opencl():
     rec = generate_recording(
-            #~ num_channels = 256,
-            num_channels = 32,
+            num_channels = 256,
+            #~ num_channels = 32,
             sampling_frequency = 30000.,
-            #~ durations = [100.325, 3.5],
-            durations = [10.325, 3.5],
+            durations = [100.325,],
+            #~ durations = [10.325, 3.5],
         )
+    rec = rec.save(total_memory="100M", n_jobs=1,  progress_bar=True)
     
     print(rec.get_dtype())
+    print(rec.is_dumpable)
+    #~ print(rec.to_dict())
     
-    #~ rec_filtered = filter(rec, engine='scipy')
-    #~ rec_filtered = rec_filtered.save(chunk_size=1000, progress_bar=True, n_jobs=4)
+    rec_filtered = filter(rec, engine='scipy')
+    rec_filtered = rec_filtered.save(chunk_size=1000, progress_bar=True, n_jobs=30)
     
     rec2 = filter(rec, engine='opencl')
     rec2_cached0 = rec2.save(chunk_size=1000,verbose=False, progress_bar=True, n_jobs=1)

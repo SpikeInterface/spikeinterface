@@ -206,7 +206,7 @@ class BaseExtractor:
         
 
     
-    def to_dict(self, include_annotations=True, include_properties=True, include_features=True):
+    def to_dict(self, include_annotations=False, include_properties=False, include_features=False):
         '''
         Makes a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
         extractor with spikeextractors.load_extractor_from_dict(dump_dict)
@@ -239,19 +239,9 @@ class BaseExtractor:
         
         if include_annotations:
             dump_dict['annotations'] = self._annotations
-        
-        if include_properties:
-                dump_dict['properties'] = self._properties
-        if include_features:
-                dump_dict['features'] = self._features
-
-
-        
-        if include_annotations:
-            dump_dict['annotations'] = self._annotations
         else:
             # include only main annotations
-            dump_dict['annotations'] = {k:self._main_annotations[k] for k in self._main_annotations}
+            dump_dict['annotations'] = {k:self._annotations.get(k, None) for k in self._main_annotations}
         
         if include_properties:
             dump_dict['properties'] = self._properties
@@ -259,11 +249,11 @@ class BaseExtractor:
             # include only main properties
             dump_dict['properties'] = {k:self._properties.get(k, None) for k in self._main_properties}
         
-        if include_features:
-            dump_dict['features'] = self._features
-        else:
-            # include only main features
-            dump_dict['features'] = {k:self._features[k] for k in self._main_features}
+        #~ if include_features:
+            #~ dump_dict['features'] = self._features
+        #~ else:
+            #~ # include only main features
+            #~ dump_dict['features'] = {k:self._features[k] for k in self._main_features}
         
         return dump_dict
     
@@ -349,8 +339,8 @@ class BaseExtractor:
         file_path: str
             Path of the json file
         '''
-        self.check_if_dumpable()
-        dump_dict = self.to_dict( include_properties=False, include_features=False)
+        assert self.check_if_dumpable()
+        dump_dict = self.to_dict(include_properties=False, include_features=False)
         file_path = self._get_file_path(file_path, ['.json'])
         file_path.write_text(
                 json.dumps(check_json(dump_dict), indent=4),
@@ -371,7 +361,7 @@ class BaseExtractor:
         include_features: bool
             If True, all features are dumped
         '''
-        self.check_if_dumpable()
+        assert self.check_if_dumpable()
         dump_dict = self.to_dict( include_properties=include_properties, include_features=include_features)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
         
@@ -583,7 +573,7 @@ def _load_extractor_from_dict(dic):
     
     extractor._annotations.update(dic['annotations'])
     extractor._properties.update(dic['properties'])
-    extractor._features.update(dic['features'])
+    #~ extractor._features.update(dic['features'])
     
     return extractor
 
