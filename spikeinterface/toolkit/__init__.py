@@ -4,6 +4,9 @@ from . import preprocessing
 #  st.bandpass_filter(...) and also st.preprocessing.bandpass_filter(...)
 from .preprocessing import *
 
+from .postprocessing import *
+
+from .qualitymetrics import *
 
 
 #~ from . import postprocessing

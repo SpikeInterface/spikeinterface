@@ -18,6 +18,16 @@ spikeinterface/extractors/tests/*.npz
 spikeinterface/extractors/tests/*.npy
 spikeinterface/extractors/tests/extractor_testing_files/*
 
+spikeinterface/toolkit/*/tests/*/*.json
+spikeinterface/toolkit/*/tests/*/*.raw
+spikeinterface/toolkit/*/tests/*/*.npy
+spikeinterface/toolkit/*/tests/*/*.npz
+spikeinterface/toolkit/*/tests/*/*/*.json
+spikeinterface/toolkit/*/tests/*/*/*.raw
+spikeinterface/toolkit/*/tests/*/*/*.npy
+spikeinterface/toolkit/*/tests/*/*/*.npz
+
+
 
 .vscode/*
 
