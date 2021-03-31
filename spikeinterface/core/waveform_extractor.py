@@ -107,6 +107,22 @@ class WaveformExtractor:
         (self.folder / 'params.json').write_text(
                 json.dumps(check_json(self._params), indent=4), encoding='utf8')
     
+    @property
+    def before(self):
+        sampling_frequency = self.recording.get_sampling_frequency()
+        before = int(self._params['ms_before'] * sampling_frequency  / 1000.)
+        return before
+        
+    @property
+    def after(self):
+        sampling_frequency = self.recording.get_sampling_frequency()
+        after = int(self._params['ms_after'] * sampling_frequency  / 1000.)
+        return after
+
+    @property
+    def width(self):
+        return self.before + self.after
+
     def get_waveforms(self, unit_id, with_index=False):
         """
         
@@ -123,8 +139,8 @@ class WaveformExtractor:
             sampling_frequency = self.recording.get_sampling_frequency()
             num_chans = self.recording.get_num_channels()
             
-            before = int(p['ms_before'] * sampling_frequency / 1000.)
-            after = int(p['ms_after'] * sampling_frequency / 1000.)
+            before = self.before
+            after = self.after
             
             wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, before + after, num_chans)
             # get a copy to have a memory faster access and avoid write back in file
@@ -163,9 +179,9 @@ class WaveformExtractor:
     def sample_spikes(self):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
-        before = int(p['ms_before'] * sampling_frequency  / 1000.)
-        after = int(p['ms_after'] * sampling_frequency  / 1000.)
-        width = before + after
+        before = self.before
+        after = self.after
+        width = self.width
         
         selected_spikes = select_random_spikes_uniformly(self.recording, self.sorting, self._params['max_spikes_per_unit'], before, after)
         
@@ -192,8 +208,8 @@ class WaveformExtractor:
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
         num_chans = self.recording.get_num_channels()
-        before = int(p['ms_before'] * sampling_frequency  / 1000.)
-        after = int(p['ms_after'] * sampling_frequency  / 1000.)
+        before = self.before
+        after = self.after
         width = before + after
     
         selected_spikes = self.sample_spikes()
