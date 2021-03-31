@@ -33,6 +33,10 @@ def  get_unit_extremum_channel(waveform_extractor, peak_sign='neg'):
 
 
 def get_unit_extremum_amplitude(waveform_extractor, peak_sign='neg'):
+    """
+    Computes the center of mass (COM) of a unit based on the template amplitudes.
+    """
+    
     unit_ids = waveform_extractor.sorting.unit_ids
     
     before = waveform_extractor.before
