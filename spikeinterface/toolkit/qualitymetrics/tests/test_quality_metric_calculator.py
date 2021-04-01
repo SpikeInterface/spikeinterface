@@ -9,6 +9,7 @@ from spikeinterface.extractors import toy_example
 
 from spikeinterface.toolkit.qualitymetrics import compute_metrics
 
+
 def setup_module():
     for folder in ('toy_rec', 'toy_sorting', 'toy_waveforms'):
         if Path(folder).is_dir():
@@ -34,3 +35,4 @@ def test_compute_metrics():
 if __name__ == '__main__':
     setup_module()
     test_compute_metrics()
+
