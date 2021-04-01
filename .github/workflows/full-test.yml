@@ -27,6 +27,11 @@ jobs:
           sudo apt install mpich libmpich-dev
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
+          ##
+          # Force install neo from github
+          pip install git+https://github.com/NeuralEnsemble/python-neo.git
+          # TODO remove it after neo release
+          ##
           pip install -r requirements.txt
           pip install -r requirements_test.txt
           pip install -e .
