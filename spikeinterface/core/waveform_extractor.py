@@ -57,6 +57,17 @@ class WaveformExtractor:
             with open(str(self.folder / 'params.json'), 'r') as f:
                 self._params =  json.load(f)
 
+    def __repr__(self):
+        clsname = self.__class__.__name__
+        nseg = self.recording.get_num_segments()
+        nchan = self.recording.get_num_channels()
+        nunits = self.sorting.get_num_units()
+        txt = f'{clsname}: {nchan} channels - {nunits} units - {nseg} segments'
+        if len(self._params) > 0:
+            max_spikes_per_unit = self._params['max_spikes_per_unit']
+            txt = txt + f'\n  before:{self.before} after{self.after} n_per_units: {max_spikes_per_unit}'
+        return txt
+
     @classmethod
     def load_from_folder(cls, folder):
         folder = Path(folder)
