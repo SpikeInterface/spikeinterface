@@ -1,5 +1,4 @@
 numpy
-#neo
-git+https://github.com/NeuralEnsemble/python-neo.git
+neo
 joblib
 probeinterface
