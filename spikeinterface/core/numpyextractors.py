@@ -88,7 +88,7 @@ class NumpySorting(BaseSorting):
         for segment_index in range(nseg):
             units_dict = {}
             for unit_id in unit_ids:
-                    units_dict[unit_id] = source_sorting.get_unit_spike_train(unit_ids, segment_index)
+                units_dict[unit_id] = source_sorting.get_unit_spike_train(unit_id, segment_index)
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
         
         sorting.copy_metadata(source_sorting)
