@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.core.channelslicerecording import ChannelSliceRecordingSegment
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from .tools import get_random_data_for_scaling
+from ..utils import get_random_data_for_scaling
 
 class RemoveBadChannelsRecording(BasePreprocessor):
     """

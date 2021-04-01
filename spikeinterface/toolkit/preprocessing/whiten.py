@@ -2,7 +2,7 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from .tools import get_random_data_for_scaling
+from ..utils import get_random_data_for_scaling
 
 class WhitenRecording(BasePreprocessor):
     """
