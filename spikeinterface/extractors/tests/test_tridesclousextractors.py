@@ -6,11 +6,14 @@ import numpy as np
 
 from spikeinterface.extractors import *
 
-
+@pytest.mark.skip('')
 def test_tridesclousextractors():
-    tdc_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/tridesclous_output/'
-    sorting = TridesclousSortingExtractor(tdc_folder)
-    print(sorting)
+    # not tested here, tested in run_tridesclous(...)
+    pass
+    
+    # tdc_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/tridesclous_output/'
+    # sorting = TridesclousSortingExtractor(tdc_folder)
+    # print(sorting)
 
     
 if __name__ == '__main__':

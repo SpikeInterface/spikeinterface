@@ -6,10 +6,10 @@ from spikeinterface.core.job_tools import divide_into_chunks, ensure_n_jobs, ens
 
 
 
-def test_devide_into_chunks():
-    chunks =  devide_into_chunks(10, 5)
+def test_divide_into_chunks():
+    chunks =  divide_into_chunks(10, 5)
     assert len(chunks) == 2
-    chunks =  devide_into_chunks(11, 5)
+    chunks =  divide_into_chunks(11, 5)
     assert len(chunks) == 3
     assert chunks[0] == (0, 5)
     assert chunks[1] == (5, 10)
@@ -100,9 +100,9 @@ def test_ChunkRecordingExecutor():
     
     
 if __name__ == '__main__':
-    #~ test_devide_into_chunks()
-    #~ test_ensure_n_jobs()
-    #~ test_ensure_chunk_size()
+    test_divide_into_chunks()
+    test_ensure_n_jobs()
+    test_ensure_chunk_size()
     test_ChunkRecordingExecutor()
     
     

@@ -1,6 +1,5 @@
 """
 Some utils to handle parral jobs on top of job and/or loky
-
 """
 from pathlib import Path
 import numpy as np
@@ -8,7 +7,7 @@ import numpy as np
 from joblib import Parallel, delayed
 import joblib
 
-import loky
+# import loky
 from concurrent.futures import ProcessPoolExecutor
 
 try:
@@ -122,7 +121,10 @@ class ChunkRecordingExecutor:
     """
     Helper class that runner a "function" over chunk on a recording
     
-    Do it in loop or in parrael witj joblib/loky or at once if chunk_size is None.
+    Do i:
+        * in loop with chunk processing (less memory)
+        * or at once if chunk_size is None (lot of memory if recording is long)
+        * or in parralel with ProcessPoolExecutor: high speed.
     
     Handle initializer when needed to avoid heavy serilization of args.
     """
@@ -173,13 +175,13 @@ class ChunkRecordingExecutor:
                     initializer=worker_initializer,
                     initargs=(self.func, self.init_func, self.init_args))
             
-            # we force reuse to false because it lead to bugs....
-            #~ executor = loky.get_reusable_executor(max_workers=self.n_jobs,
-                    #~ initializer=worker_initializer,
-                    #~ initargs=(self.func, self.init_func, self.init_args),
-                    #~ context="loky", timeout=10.,
-                    #~ reuse=False,
-                    #~ kill_workers=True)
+            # loky : this bug!!!
+            # executor = loky.get_reusable_executor(max_workers=self.n_jobs,
+                    # initializer=worker_initializer,
+                    # initargs=(self.func, self.init_func, self.init_args),
+                    # context="loky", timeout=10.,
+                    # reuse=False,
+                    # kill_workers=True)
 
             results = executor.map(function_wrapper, all_chunks)
             

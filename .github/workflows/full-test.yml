@@ -29,6 +29,12 @@ jobs:
           pip install setuptools wheel twine
           pip install -r requirements.txt
           pip install -r requirements_test.txt
+          #######
+          # force install neo from master repo
+          pip uninstall neo
+          pip install --upgrade https://github.com/NeuralEnsemble/python-neo/archive/master.zip
+          # TODO remove this after neo release!!!
+          #######
           pip install -e .
       - name: Test with pytest
         run: |
