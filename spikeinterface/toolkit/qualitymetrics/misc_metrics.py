@@ -160,7 +160,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5):
     return res(isi_violations_rate, isi_violations_count)
 
 
-def compute_amplitudes_cuoff(waveform_extractor,  peak_sign='neg', 
+def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg', 
             num_histogram_bins=500, histogram_smoothing_value=3, **kargs):
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes

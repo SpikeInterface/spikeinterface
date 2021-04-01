@@ -4,7 +4,7 @@ from .misc_metrics import (
     compute_presence_ratio,
     compute_snrs,
     compute_isi_violations,
-    compute_amplitudes_cuoff,
+    compute_amplitudes_cutoff,
     )
 
 _metric_name_to_func = {
@@ -14,9 +14,9 @@ _metric_name_to_func = {
     "presence_ratio": compute_presence_ratio,
     "snr": compute_snrs,
     "isi_violation": compute_isi_violations,
-    "amplitude_cutoff": compute_amplitudes_cuoff,
+    "amplitude_cutoff": compute_amplitudes_cutoff,
 
-    
+    # TODO
     #~ "max_drift",
     #~ "cumulative_drift",
     #~ "silhouette_score",
