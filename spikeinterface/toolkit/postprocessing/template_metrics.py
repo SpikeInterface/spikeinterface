@@ -17,7 +17,7 @@ This replace : spikefeatures.features + spiketoolkit.postprocessing.features but
 
 """
 
-def calculate_template_features(waveform_extractor, feature_names=None, peak_sign='neg', **kargs):
+def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign='neg', **kargs):
     """
     Compute template features like: peak_to_valley/peak_trough_ratio/half_width/repolarization_slope/recovery_slope
     
@@ -26,7 +26,7 @@ def calculate_template_features(waveform_extractor, feature_names=None, peak_sig
     sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
     
     if feature_names is None:
-        feature_names = list(_feature_name_to_func.keys())
+        feature_names = list(_metric_name_to_func.keys())
     
     
     extremum_channels_ids =  get_unit_extremum_channel(waveform_extractor, peak_sign=peak_sign)
@@ -44,7 +44,7 @@ def calculate_template_features(waveform_extractor, feature_names=None, peak_sig
         
         
         for feature_name in feature_names:
-            func = _feature_name_to_func[feature_name]
+            func = _metric_name_to_func[feature_name]
             value = func(template, sampling_frequency, **kargs)
             features.at[unit_id, feature_name] = value
 
@@ -160,7 +160,7 @@ def get_recovery_slope(template, sampling_frequency, window_ms=0.7, **kargs):
     return res.slope
 
 
-_feature_name_to_func = {
+_metric_name_to_func = {
     'peak_to_valley': get_peak_to_valley,
     'peak_trough_ratio': get_peak_trough_ratio,
     'half_width': get_half_width,
