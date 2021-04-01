@@ -64,6 +64,42 @@ def compute_firing_rate(waveform_extractor, **kargs):
     return firing_rates
 
 
+def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
+    """
+    Calculate fraction of time the unit is is firing for epochs.
+    
+    The total duration over segment is divide into "num_bins".
+    
+    For the computation spiketrain over segment are concatenated to mimic a on-unique-segment,
+    before spltting into epochs
+
+    presence_ratio : fraction of time bins in which this unit is spiking
+    """
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    unit_ids = sorting.unit_ids
+    num_segs = sorting.get_num_segments()
+    fs = recording.get_sampling_frequency()
+    
+    seg_length = [ recording.get_num_samples(i)  for i in range(num_segs)]
+    total_length = np.sum(seg_length)
+    seg_durations = [ recording.get_num_samples(i)  / fs for i in range(num_segs)]
+    
+    presence_ratio = {}
+    for unit_id in unit_ids:
+        spiketrain = []
+        for segment_index in range(num_segs):
+            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            st = st + np.sum(seg_length[:segment_index])
+            spiketrain.append(st)
+        spiketrain = np.concatenate(spiketrain)
+        h, b = np.histogram(spiketrain, np.linspace(0, total_length, num_bin_edges))
+        presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
+    
+    return presence_ratio
+
+
+
 def compute_snrs(waveform_extractor, peak_sign='neg', **kargs):
     """
     Compute signal to noise ratio.
