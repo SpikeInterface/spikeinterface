@@ -10,6 +10,9 @@ from spikeinterface.sorters import run_sorters, collect_sorting_outputs
 
 
 def test_run_sorters_with_list():
+    # This import is to get error on github whenn import fails
+    import tridesclous
+    
     cache_folder = './local_cache'
     working_folder = 'test_run_sorters_list'
 
@@ -34,6 +37,9 @@ def test_run_sorters_with_list():
 
 
 def test_run_sorters_with_dict():
+    # This import is to get error on github whenn import fails
+    import tridesclous
+    import circus
 
     cache_folder = './local_cache'
     working_folder = 'test_run_sorters_dict'
