@@ -54,7 +54,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
-    handle_raw_spike_directly = False
+    handle_spike_frame_directly = False
     
     def __init__(self, file_path, use_natural_unit_ids=True):
         neo_kwargs = {'filename' : file_path}
