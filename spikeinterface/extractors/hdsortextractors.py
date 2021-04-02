@@ -1,11 +1,9 @@
 from pathlib import Path
 import numpy as np
 
-
 from spikeinterface.core import (BaseRecording, BaseSorting,
-                                BaseRecordingSegment, BaseSortingSegment)
+                                 BaseRecordingSegment, BaseSortingSegment)
 from .matlabhelpers import MatlabHelper
-
 
 
 class HDSortSortingExtractor(MatlabHelper, BaseSorting):
@@ -66,9 +64,8 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
 
         self._units = units
         self._multi_electrode = multi_electrode
-        
+
         self._kwargs = {'file_path': str(file_path), 'keep_good_only': keep_good_only}
-        
 
         unit_ids = []
         spiketrains = []
@@ -77,11 +74,11 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
             spike_times = _squeeze(unit["spikeTrain"]).astype('int64') - self.start_frame
             unit_ids.append(unit_id)
             spiketrains.append(spike_times)
-        
+
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        
+
         self.add_sorting_segment(HDSortSortingSegment(unit_ids, spiketrains))
-        
+
         # property
         templates = []
         templates_frames_cut_before = []
@@ -94,17 +91,17 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
             templates_frames_cut_before.append(unit["cutLeft"].flatten())
         self.set_property("template", np.array(templates))
         self.set_property("template_frames_cut_before", np.array(templates_frames_cut_before))
-        
+
         # TODO features
-        #~ for uc, unit in enumerate(units):
-            #~ unit_id = int(_squeeze_ds(unit["ID"]))
-            #~ self.set_unit_spike_features(unit_id, "amplitudes", _squeeze(unit["spikeAmplitudes"]))
-            #~ self.set_unit_spike_features(unit_id, "detection_channel", _squeeze(unit["detectionChannel"]).astype(np.int))
-            #~ idx = unit["detectionChannel"].astype(int) - 1
-            #~ spikePositions = np.vstack((_squeeze(multi_electrode["electrodePositions"][0][idx]),
-                                        #~ _squeeze(multi_electrode["electrodePositions"][1][idx]))).T
-            #~ self.set_unit_spike_features(unit_id, "positions", spikePositions)
-    
+        # ~ for uc, unit in enumerate(units):
+        # ~ unit_id = int(_squeeze_ds(unit["ID"]))
+        # ~ self.set_unit_spike_features(unit_id, "amplitudes", _squeeze(unit["spikeAmplitudes"]))
+        # ~ self.set_unit_spike_features(unit_id, "detection_channel", _squeeze(unit["detectionChannel"]).astype(np.int))
+        # ~ idx = unit["detectionChannel"].astype(int) - 1
+        # ~ spikePositions = np.vstack((_squeeze(multi_electrode["electrodePositions"][0][idx]),
+        # ~ _squeeze(multi_electrode["electrodePositions"][1][idx]))).T
+        # ~ self.set_unit_spike_features(unit_id, "positions", spikePositions)
+
     """
     @staticmethod
     def write_sorting(sorting, save_path, locations=None, noise_std_by_channel=None, start_frame=0):
@@ -190,7 +187,7 @@ class HDSortSortingSegment(BaseSortingSegment):
     def __init__(self, unit_ids, spiketrains):
         BaseSortingSegment.__init__(self)
         self._unit_ids = list(unit_ids)
-        self._spiketrains  = spiketrains
+        self._spiketrains = spiketrains
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         unit_index = self._unit_ids.index(unit_id)
@@ -200,8 +197,6 @@ class HDSortSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
-
-
 
 
 # For .mat v7.3: Function to extract all fields of a struct-array:
