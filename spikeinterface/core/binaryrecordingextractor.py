@@ -41,14 +41,7 @@ class BinaryRecordingExtractor(BaseRecording):
         for datfile in datfiles:
             rec_segment = BinaryRecordingSegment(datfile, num_chan, dtype, time_axis, offset, gain)
             self.add_recording_segment(rec_segment)
-        
-        
-        #~ self._datfiles = Path(datfiles)
-        #~ self._dtype = dtype
-        #~ self._sampling_frequency = float(sampling_frequency)
-        #~ self._gain = gain
-        #~ self._num_chan = num_chan
-        
+
         self._kwargs = {'files_path': [ str(e.absolute()) for e in datfiles],
                         'sampling_frequency': sampling_frequency,
                         'num_chan': num_chan, 'dtype': dtype.str,
@@ -56,8 +49,9 @@ class BinaryRecordingExtractor(BaseRecording):
                         }
 
     @staticmethod
-    def write_recording(recording, files_path, time_axis=0, dtype=None,**job_kwargs):
-        '''Saves the traces of a recording extractor in binary .dat format.
+    def write_recording(recording, files_path, dtype=None, **job_kwargs):
+        '''
+        Save the traces of a recording extractor in binary .dat format.
 
         Parameters
         ----------
@@ -67,7 +61,10 @@ class BinaryRecordingExtractor(BaseRecording):
             The path to the file.
         dtype: dtype
             Type of the saved data. Default float32.
-        **job_kwargs
+        **job_kwargs: keyword argumentds for "write_binary_recording" function:
+            * chunk_size or chunk_memory, or total_memory
+            * n_jobs
+            * progress_bar
         '''
         write_binary_recording(recording, files_path=files_path,  dtype=dtype, **job_kwargs)
 
@@ -86,7 +83,11 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         """
         return self._timeseries.shape[0]
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def get_traces(self,
+                   start_frame: Union[SampleIndex, None] = None,
+                   end_frame: Union[SampleIndex, None] = None,
+                   channel_indices: Union[List[ChannelIndex], None] = None,
+                   ) -> np.ndarray:
         traces = self._timeseries[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
