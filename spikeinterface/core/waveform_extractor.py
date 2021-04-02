@@ -144,14 +144,14 @@ class WaveformExtractor:
     @property
     def nbefore(self):
         sampling_frequency = self.recording.get_sampling_frequency()
-        before = int(self._params['ms_before'] * sampling_frequency / 1000.)
-        return before
+        nbefore = int(self._params['ms_before'] * sampling_frequency / 1000.)
+        return nbefore
 
     @property
     def nafter(self):
         sampling_frequency = self.recording.get_sampling_frequency()
-        after = int(self._params['ms_after'] * sampling_frequency / 1000.)
-        return after
+        nafter = int(self._params['ms_after'] * sampling_frequency / 1000.)
+        return nafter
 
     @property
     def nsamples(self):
@@ -187,10 +187,7 @@ class WaveformExtractor:
             sampling_frequency = self.recording.get_sampling_frequency()
             num_chans = self.recording.get_num_channels()
 
-            before = self.nbefore
-            after = self.nafter
-
-            wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, before + after, num_chans)
+            wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, self.nsamples, num_chans)
             # get a copy to have a memory faster access and avoid write back in file
             wfs = wfs.copy()
             self._waveforms[unit_id] = wfs
@@ -241,12 +238,11 @@ class WaveformExtractor:
     def sample_spikes(self):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
-        before = self.nbefore
-        after = self.nafter
-        width = self.nsamples
+        nbefore = self.nbefore
+        nafter = self.nafter
 
         selected_spikes = select_random_spikes_uniformly(self.recording, self.sorting,
-                                                         self._params['max_spikes_per_unit'], before, after)
+                                                         self._params['max_spikes_per_unit'], nbefore, nafter)
 
         # store in a 2 columns (spike_index, segment_index) in a npy file
         for unit_id in self.sorting.unit_ids:
@@ -269,9 +265,9 @@ class WaveformExtractor:
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
         num_chans = self.recording.get_num_channels()
-        before = self.nbefore
-        after = self.nafter
-        width = before + after
+        nbefore = self.nbefore
+        nafter = self.nafter
+
 
         selected_spikes = self.sample_spikes()
 
@@ -289,7 +285,7 @@ class WaveformExtractor:
         for unit_id in self.sorting.unit_ids:
             file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.raw'
             n_spikes = np.sum([e.size for e in selected_spike_times[unit_id]])
-            shape = (n_spikes, width, num_chans)
+            shape = (n_spikes, self.nsamples, num_chans)
             wfs = np.memmap(str(file_path), dtype=p['dtype'], mode='w+', shape=shape)
             wfs_memmap[unit_id] = wfs
 
@@ -297,16 +293,16 @@ class WaveformExtractor:
         func = _waveform_extractor_chunk
         init_func = _init_worker_waveform_extractor
         init_args = (self.recording.to_dict(), self.sorting.to_dict(), wfs_memmap,
-                     selected_spikes, selected_spike_times, before, after)
+                     selected_spikes, selected_spike_times, nbefore, nafter)
         processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, **job_kwargs)
         processor.run()
 
 
-def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, before=None, after=None):
+def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None):
     """
     Uniform random selection of spike across segment per units.
     
-    This function does not select spikes near border if before/after are not None.
+    This function does not select spikes near border if nbefore/nafter are not None.
     """
     unit_ids = sorting.unit_ids
     num_seg = sorting.get_num_segments()
@@ -327,13 +323,13 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, befo
             in_segment = (global_inds >= cum_sum[segment_index]) & (global_inds < cum_sum[segment_index + 1])
             inds = global_inds[in_segment] - cum_sum[segment_index]
 
-            if before is not None:
+            if nbefore is not None:
                 # clean border
-                assert after is not None
+                assert nafter is not None
                 spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sampled_spike_times = spike_times[inds]
                 num_samples = recording.get_num_samples(segment_index=segment_index)
-                mask = (sampled_spike_times >= before) & (sampled_spike_times < (num_samples - after))
+                mask = (sampled_spike_times >= nbefore) & (sampled_spike_times < (num_samples - nafter))
                 inds = inds[mask]
 
             sel_spikes.append(inds)
@@ -344,7 +340,7 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, befo
 
 # used by WaveformExtractor + ChunkRecordingExecutor
 def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
-                                    selected_spikes, selected_spike_times, before, after):
+                                    selected_spikes, selected_spike_times, nbefore, nafter):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -360,8 +356,8 @@ def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
     worker_ctx['wfs_memmap'] = wfs_memmap
     worker_ctx['selected_spikes'] = selected_spikes
     worker_ctx['selected_spike_times'] = selected_spike_times
-    worker_ctx['before'] = before
-    worker_ctx['after'] = after
+    worker_ctx['nbefore'] = nbefore
+    worker_ctx['nafter'] = nafter
 
     num_seg = sorting.get_num_segments()
     unit_cum_sum = {}
@@ -383,8 +379,8 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     wfs_memmap = worker_ctx['wfs_memmap']
     selected_spikes = worker_ctx['selected_spikes']
     selected_spike_times = worker_ctx['selected_spike_times']
-    before = worker_ctx['before']
-    after = worker_ctx['after']
+    nbefore = worker_ctx['nbefore']
+    nafter = worker_ctx['nafter']
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
     to_extract = {}
@@ -396,8 +392,8 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
             to_extract[unit_id] = i0, i1, spike_times[i0:i1]
 
     if len(to_extract) > 0:
-        start = min(st[0] for _, _, st in to_extract.values()) - before
-        end = max(st[-1] for _, _, st in to_extract.values()) + after
+        start = min(st[0] for _, _, st in to_extract.values()) - nbefore
+        end = max(st[-1] for _, _, st in to_extract.values()) + nafter
         start = int(start)
         end = int(end)
 
@@ -410,4 +406,4 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 st = spike_times[i]
                 st = int(st)
                 pos = unit_cum_sum[unit_id][segment_index] + i0 + i
-                wfs[pos, :, :] = traces[st - start - before:st - start + after, :]
+                wfs[pos, :, :] = traces[st - start - nbefore:st - start + nafter, :]
