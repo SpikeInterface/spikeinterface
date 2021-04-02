@@ -61,8 +61,7 @@ class GroundTruthStudy:
         sorter_folders = self.study_folder / 'sorter_folders'
         recording_dict = get_recordings(self.study_folder)
         
-        print(recording_dict)
-        
+
         run_sorters(sorter_list, recording_dict, sorter_folders, 
                 with_output=False, mode_if_folder_exists=mode_if_folder_exists, **kargs)
 

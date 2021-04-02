@@ -8,7 +8,7 @@ import neo
 class KiloSortSortingExtractor(NeoBaseSortingExtractor):
     mode = 'folder'
     NeoRawIOClass = 'PhyRawIO'
-    handle_raw_spike_directly = True
+    handle_spike_frame_directly = True
     
     def __init__(self, folder_path, keep_good_only=False, use_natural_unit_ids=True):
         
