@@ -47,8 +47,6 @@ class CommonReferenceRecording(BasePreprocessor):
     def __init__(self, recording, reference='global', operator='median', groups=None, ref_channels=None,
         local_radius=(2, 8), verbose=False):
 
-        self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups,
-                ref_channels=ref_channels, local_radius=local_radius)
         
         num_chans = recording.get_num_channels()
         neighbors = None
@@ -93,6 +91,10 @@ class CommonReferenceRecording(BasePreprocessor):
             rec_segment = CommonReferenceRecordingSegment(parent_segment, 
                         reference, operator, groups, ref_channels, local_radius, neighbors)
             self.add_recording_segment(rec_segment)
+
+        self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups,
+                ref_channels=ref_channels, local_radius=local_radius)
+
 
 
 class CommonReferenceRecordingSegment(BasePreprocessorSegment):

@@ -1,6 +1,5 @@
 from .basesorting import BaseSorting, BaseSortingSegment
 
-
 from pathlib import Path
 import numpy as np
 
@@ -13,30 +12,30 @@ class NpzSortingExtractor(BaseSorting):
     It is in fact an archive of several .npy format.
     All spike are store in two columns maner index+labels
     """
-    
+
     extractor_name = 'NpzSortingExtractor'
-    installed = True # depend only on numpy
+    installed = True  # depend only on numpy
     installation_mesg = "Always installed"
     is_writable = True
     mode = 'file'
 
     def __init__(self, file_path):
-        
+
         self.npz_filename = file_path
 
         npz = np.load(file_path)
         num_segment = int(npz['num_segment'][0])
         unit_ids = npz['unit_ids']
         sampling_frequency = float(npz['sampling_frequency'][0])
-        
+
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        
+
         for seg_index in range(num_segment):
             spike_indexes = npz[f'spike_indexes_seg{seg_index}']
             spike_labels = npz[f'spike_labels_seg{seg_index}']
             sorting_segment = NpzSortingSegment(spike_indexes, spike_labels)
             self.add_sorting_segment(sorting_segment)
-        
+
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
 
     @staticmethod
@@ -46,9 +45,9 @@ class NpzSortingExtractor(BaseSorting):
         d['unit_ids'] = units_ids
         d['num_segment'] = np.array([sorting.get_num_segments()], dtype='int64')
         d['sampling_frequency'] = np.array([sorting.get_sampling_frequency()], dtype='float64')
-        
+
         for seg_index in range(sorting.get_num_segments()):
-        
+
             spike_indexes = []
             spike_labels = []
             for unit_id in units_ids:
@@ -77,7 +76,7 @@ class NpzSortingExtractor(BaseSorting):
 class NpzSortingSegment(BaseSortingSegment):
     def __init__(self, spike_indexes, spike_labels):
         BaseSortingSegment.__init__(self)
-        
+
         self.spike_indexes = spike_indexes
         self.spike_labels = spike_labels
 

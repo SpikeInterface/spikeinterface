@@ -11,6 +11,7 @@ class KiloSortSortingExtractor(NeoBaseSortingExtractor):
     handle_raw_spike_directly = True
     
     def __init__(self, folder_path, keep_good_only=False, use_natural_unit_ids=True):
+        
         neo_kwargs = {'dirname' : folder_path}
         
         # sample rate is in "params.py"
@@ -27,3 +28,6 @@ class KiloSortSortingExtractor(NeoBaseSortingExtractor):
                     sampling_frequency=sampling_frequency, # auto guess is correct here
                     use_natural_unit_ids=use_natural_unit_ids,
                     **neo_kwargs)
+
+        self._kwargs = dict(folder_path=folder_path, keep_good_only=keep_good_only,
+            use_natural_unit_ids=use_natural_unit_ids)

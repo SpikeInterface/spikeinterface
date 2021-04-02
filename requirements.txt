@@ -1,6 +1,5 @@
 numpy
 neo
 joblib
-loky
+tqdm
 probeinterface
-

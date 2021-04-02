@@ -39,7 +39,7 @@ class KlustaSorter(BaseSorter):
         'n_features_per_channel': 3,
         'pca_n_waveforms_max': 10000,
         'num_starting_clusters': 50,
-        'chunk_mb': 500,
+        'total_memory': '500M',
         'n_jobs_bin': 1
     }
 
@@ -54,7 +54,7 @@ class KlustaSorter(BaseSorter):
         'n_features_per_channel': "Number of PCA features per channel",
         'pca_n_waveforms_max': "Maximum number of waveforms for PCA",
         'num_starting_clusters': "Number of initial clusters",
-        'chunk_mb': "Chunk size in Mb for saving to binary format (default 500Mb)",
+        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
         'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
@@ -108,7 +108,7 @@ class KlustaSorter(BaseSorter):
             dtype = 'int16'
             BinaryRecordingExtractor.write_recording(recording, files_path=[raw_filename],
                                                                 time_axis=0, dtype='int16',
-                                                                chunk_mb=500, verbose=False)
+                                                                total_memory="500M", verbose=False)
                                                                 
 
         if p['detect_sign'] < 0:

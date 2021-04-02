@@ -50,7 +50,7 @@ class HDSortSorter(BaseSorter):
         'n_pc_dims': 6,
         'chunk_size': 500000,
         'loop_mode': 'local_parfor',
-        'chunk_mb': 500
+        'chunk_memory': '500M'
     }
 
     _params_description = {
@@ -68,7 +68,7 @@ class HDSortSorter(BaseSorter):
         'n_pc_dims': "Number of principal components dimensions to perform initial clustering",
         'chunk_size': "Chunk size in number of frames for template-matching",
         'loop_mode': "Loop mode: 'loop', 'local_parfor', 'grid' (requires a grid architecture)",
-        'chunk_mb': "Chunk size in Mb for saving to binary format (default 500Mb)",
+        'chunk_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
     }
 
     sorter_description = """HDSort is a template-matching spike sorter designed for high density micro-electrode arrays. 
@@ -131,8 +131,8 @@ class HDSortSorter(BaseSorter):
         else:
             # Generate three files dataset in Mea1k format
             trace_file_name = cls.write_hdsort_input_format(recording,
-                            save_path=str(output_folder / 'recording.h5'),
-                            chunk_mb=params["chunk_mb"])
+                            str(output_folder / 'recording.h5'),
+                            chunk_memory=params["chunk_memory"])
             #~ self.params['file_format'] = 'mea1k'
             file_format = 'mea1k'
 
@@ -231,7 +231,7 @@ class HDSortSorter(BaseSorter):
         return sorting
 
     @classmethod
-    def write_hdsort_input_format(cls, recording, save_path, chunk_size=None, chunk_mb=500):
+    def write_hdsort_input_format(cls, recording, save_path, chunk_memory='500M'):
         try:
             import h5py
         except:
@@ -273,12 +273,9 @@ class HDSortSorter(BaseSorter):
                     mapping[i] = (ch, x[i], y[i], ch)
                 ephys.create_dataset('mapping', data=mapping)
                 # save traces
-                # TODO 
-                #~ recording.write_to_h5_dataset_format('/ephys/signal', file_handle=f, time_axis=1,
-                                                     #~ chunk_size=chunk_size, chunk_mb=chunk_mb)
                 segment_index = 0
                 write_to_h5_dataset_format(recording, dataset_path='/ephys/signal', segment_index=0,
-                            file_handle=f, time_axis=1, chunk_size=chunk_size, chunk_mb=chunk_mb)
+                            file_handle=f, time_axis=1, chunk_memory=chunk_memory)
 
             trace_file_name = str(save_path.absolute())
         

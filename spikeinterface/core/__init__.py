@@ -11,6 +11,7 @@ And contain also "core extractors" used for caching:
 from .base import load_extractor #, load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
+from .baseevent import BaseEvent, BaseEventSegment
 
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor
@@ -25,6 +26,10 @@ from .unitsselectionsorting import UnitsSelectionSorting
 from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
     is_set_global_tmp_folder, reset_global_tmp_folder)
 
-#
+# tools 
 from .core_tools import write_binary_recording, write_to_h5_dataset_format, write_binary_recording
 from .job_tools import ensure_n_jobs, ensure_chunk_size
+
+# 
+from .waveform_extractor import WaveformExtractor
+

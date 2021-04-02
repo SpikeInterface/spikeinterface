@@ -3,10 +3,9 @@ import os
 import datetime
 
 import numpy as np
+from tqdm import tqdm
 
-from joblib import Parallel, delayed
-
-from . job_tools import ensure_chunk_size, ensure_n_jobs, ChunkRecordingProcessor
+from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_into_chunks, ChunkRecordingExecutor
 
 
 def check_json(d):
@@ -18,9 +17,9 @@ def check_json(d):
             d[k] = str(v.absolute())
         elif isinstance(v, bool):
             d[k] = bool(v)
-        elif isinstance(v, (np.int, np.int32, np.int64)):
+        elif isinstance(v, (np.int32, np.int64)):
             d[k] = int(v)
-        elif isinstance(v, (np.float, np.float32, np.float64)):
+        elif isinstance(v, (np.float32, np.float64)):
             d[k] = float(v)
         elif isinstance(v, datetime.datetime):
             d[k] = v.isoformat()
@@ -58,11 +57,12 @@ def check_json(d):
                 d[k] = list(v)
     return d
 
+
 def add_suffix(file_path, possible_suffix):
     file_path = Path(file_path)
     if isinstance(possible_suffix, str):
         possible_suffix = [possible_suffix]
-    possible_suffix = [s if s.startswith('.') else '.' + s for s in possible_suffix ]
+    possible_suffix = [s if s.startswith('.') else '.' + s for s in possible_suffix]
     if file_path.suffix not in possible_suffix:
         file_path = file_path.parent / (file_path.name + '.' + possible_suffix[0])
     return file_path
@@ -70,7 +70,7 @@ def add_suffix(file_path, possible_suffix):
 
 def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
     '''
-    Reads binary .bin or .dat file.
+    Read binary .bin or .dat file.
 
     Parameters
     ----------
@@ -97,42 +97,43 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
     return samples
 
 
-
-# used by write_binary_recording
+# used by write_binary_recording + ChunkRecordingExecutor
 def _init_binary_worker(recording, rec_memmaps, dtype):
     # create a local dict per worker
-    local_dict = {}
-    from spikeinterface.core import load_extractor
+    worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-        local_dict['recording'] = load_extractor(recording)
+        worker_ctx['recording'] = load_extractor(recording)
     else:
-        local_dict['recording'] = recording
-    
-    local_dict['rec_memmaps'] = rec_memmaps
-    local_dict['dtype'] = np.dtype(dtype)
-    
-    return local_dict
+        worker_ctx['recording'] = recording
+
+    worker_ctx['rec_memmaps'] = rec_memmaps
+    worker_ctx['dtype'] = np.dtype(dtype)
+
+    return worker_ctx
 
 
-# used by write_binary_recording
-def _write_binary_chunk(segment_index, start_frame, end_frame, local_dict):
+# used by write_binary_recording + ChunkRecordingExecutor
+def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    recording = local_dict['recording']
-    dtype = local_dict['dtype']
-    rec_memmap = local_dict['rec_memmaps'][segment_index]
-    
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    rec_memmap = worker_ctx['rec_memmaps'][segment_index]
+
     # apply function
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype)
     rec_memmap[start_frame:end_frame, :] = traces
-    
 
 
+def write_binary_recording(recording, files_path=None, dtype=None,
+                           verbose=False, **job_kwargs):
+    '''
+    Save the trace of a recording extractor in several binary .dat format.
 
-def write_binary_recording(recording, files_path=None, file_handle=None,
-                               time_axis=0, dtype=None, verbose=False, **job_kwargs):
-    '''Saves the traces of a recording extractor in several binary .dat format.
+    Note :
+        time_axis is always 0 (contrary to previous version.
+        to get time_axis=1 (which is a bad idea) use `write_binary_recording_file_handle()`
 
     Parameters
     ----------
@@ -140,12 +141,6 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
         The recording extractor object to be saved in .dat format
     file_path: str
         The path to the file.
-    file_handle: file handle
-        The file handle to dump data. This can be used to append data to an header. In case file_handle is given,
-        the file is NOT closed after writing the binary data.
-    time_axis: 0 (default) or 1
-        If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
-        If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
     dtype: dtype
         Type of the saved data. Default float32.
     verbose: bool
@@ -157,98 +152,204 @@ def write_binary_recording(recording, files_path=None, file_handle=None,
             * n_jobs
             * progress_bar 
     '''
-    assert files_path is not None or file_handle is not None, "Provide 'file_path' or 'file handle'"
-    
-    # file path or file handle as list
-    if files_path is None:
-        assert file_handle is not None
-        assert recording.get_num_segments() == 1, 'If file_handle is given then only deals with one segment'
-        
-    else:
-        if not isinstance(files_path, list):
-            files_path = [files_path]
-        files_path = [Path(e) for e in files_path]
-        files_path = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in files_path]
-    
+    assert files_path is not None, "Provide 'file_path'"
+
+    if not isinstance(files_path, list):
+        files_path = [files_path]
+    files_path = [Path(e) for e in files_path]
+    files_path = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in files_path]
+
+    if dtype is None:
+        dtype = recording.get_dtype()
+
+    # create memmap files
+    rec_memmaps = []
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        num_channels = recording.get_num_channels()
+        file_path = files_path[segment_index]
+        shape = (num_frames, num_channels)
+        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', shape=shape)
+        rec_memmaps.append(rec_memmap)
+
+    # use executor (loop or workers)
+    func = _write_binary_chunk
+    init_func = _init_binary_worker
+    init_args = (recording.to_dict(), rec_memmaps, dtype)
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
+                                      job_name='write_binary_recording', **job_kwargs)
+    executor.run()
+
+
+def write_binary_recording_file_handle(recording, file_handle=None,
+                                       time_axis=0, dtype=None, verbose=False, **job_kwargs):
+    """
+    Old variant version of write_binary_recording with one file handle.
+    Can be usefull in some case ???
+    Not used naymore at the moment.
+
+    @ SAM useful for writing with time_axis=1!
+    """
+    assert file_handle is not None
+    assert recording.get_num_segments() == 1, 'If file_handle is given then only deals with one segment'
+
     if dtype is None:
         dtype = recording.get_dtype()
 
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
-    n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
 
     if chunk_size is not None and time_axis == 1:
         print("Chunking disabled due to 'time_axis' == 1")
         chunk_size = None
-    
 
-    if file_handle is None:
-        if chunk_size is None:
-            for segment_index in range(recording.get_num_segments()):
-                with files_path[segment_index].open('wb') as f:
-                    traces = recording.get_traces(segment_index=segment_index)
-                    if time_axis == 1:
-                        traces = traces.T
-                    if dtype is not None:
-                        traces = traces.astype(dtype)
-                    traces.tofile(f)
-        else:
-            # create files
-            rec_memmaps = []
-            for segment_index in range(recording.get_num_segments()):
-                num_frames = recording.get_num_samples(segment_index)
-                num_channels = recording.get_num_channels()
-                file_path = files_path[segment_index]
-                if time_axis == 0:
-                    shape = (num_frames, num_channels)
-                else:
-                    shape = (num_channels, num_frames)                
-                rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', shape=shape)
-                rec_memmaps.append(rec_memmap)
-            
-            func = _write_binary_chunk
-            init_func = _init_binary_worker
-            init_args = (recording.to_dict(), rec_memmaps, dtype)
-            
-            processor = ChunkRecordingProcessor(recording, func, init_func, init_args, verbose=verbose,
-                            job_name='write_binary_recording', **job_kwargs)
-            processor.run()
-
+    if chunk_size is None:
+        # no chunkking
+        traces = recording.get_traces(segment_index=0)
+        if time_axis == 1:
+            traces = traces.T
+        if dtype is not None:
+            traces = traces.astype(dtype)
+        traces.tofile(file_handle)
     else:
-        # file handle case (one segment only)
-        # Alessio : should be rewritten with memmap also because memmap accept filehandle
 
-        if chunk_size is None:
-            traces = recording.get_traces(segment_index=0)
+        num_frames = recording.get_num_samples(segment_index=0)
+        chunks = divide_into_chunks(num_frames, chunk_size)
+
+        for start_frame, end_frame in chunks:
+            traces = recording.get_traces(segment_index=0,
+                                          start_frame=start_frame, end_frame=end_frame)
             if time_axis == 1:
                 traces = traces.T
             if dtype is not None:
                 traces = traces.astype(dtype)
-            traces.tofile(file_handle)
-        else:
-            chunk_size = ensure_chunk_size(recording, **job_kwargs)
-            num_frames = recording.get_num_samples(segment_index=0)
-            chunks = divide_recording_into_time_chunks(
-                num_frames=num_frames,
-                chunk_size=chunk_size,
-                padding_size=0
-            )
-            
-            for i in chunks_loop:
-                start_frame = chunks[i]['istart']
-                end_frame = chunks[i]['iend']
-                traces = recording.get_traces(segment_index=0, 
-                            start_frame=start_frame, end_frame=end_frame)
-                if time_axis == 1:
-                    traces = traces.T
-                if dtype is not None:
-                    traces = traces.astype(dtype)
-                file_handle.write(traces.tobytes())
+            file_handle.write(traces.tobytes())
 
+
+# used by write_memory_recording
+def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
+    # create a local dict per worker
+    worker_ctx = {}
+    if isinstance(recording, dict):
+        from spikeinterface.core import load_extractor
+        worker_ctx['recording'] = load_extractor(recording)
+    else:
+        worker_ctx['recording'] = recording
+
+    worker_ctx['dtype'] = np.dtype(dtype)
+
+    if arrays is None:
+        # create it from share memory name
+        from multiprocessing.shared_memory import SharedMemory
+        arrays = []
+        # keep shm alive
+        worker_ctx['shms'] = []
+        for i in range(len(shm_names)):
+            shm = SharedMemory(shm_names[i])
+            worker_ctx['shms'].append(shm)
+            arr = np.ndarray(shape=shapes[i], dtype=dtype, buffer=shm.buf)
+            arrays.append(arr)
+
+    worker_ctx['arrays'] = arrays
+
+    return worker_ctx
+
+
+# used by write_memory_recording
+def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    # recover variables of the worker
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    arr = worker_ctx['arrays'][segment_index]
+
+    # apply function
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = traces.astype(dtype)
+    arr[start_frame:end_frame, :] = traces
+    # ~ print('yep')
+
+
+def make_shared_array(shape, dtype):
+    # https://docs.python.org/3/library/multiprocessing.shared_memory.html
+    try:
+        from multiprocessing.shared_memory import SharedMemory
+    except Exception as e:
+        raise Exception('SharedMemory is available only for python>=3.8')
+
+    dtype = np.dtype(dtype)
+    nbytes = shape[0] * shape[1] * dtype.itemsize
+    shm = SharedMemory(name=None, create=True, size=nbytes)
+    arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+    arr[:] = 0
+
+    return arr, shm
+
+
+def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
+    '''
+    Save the traces into numpy arrays (memory).
+    try to use the SharedMemory introduce in py3.8 if n_jobs > 1
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor object to be saved in .dat format
+    dtype: dtype
+        Type of the saved data. Default float32.
+    verbose: bool
+        If True, output is verbose (when chunks are used)
+
+    **job_kwargs: 
+        Use by job_tools modules to set:
+            * chunk_size or chunk_memory, or total_memory
+            * n_jobs
+            * progress_bar 
+
+    Returns
+    ---------
+    arrays: one arrays per segment
+    '''
+
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
+
+    if dtype is None:
+        dtype = recording.get_dtype()
+
+    # create sharedmmep
+    arrays = []
+    shm_names = []
+    shapes = []
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        num_channels = recording.get_num_channels()
+        shape = (num_frames, num_channels)
+        shapes.append(shape)
+        if n_jobs > 1:
+            arr, shm = make_shared_array(shape, dtype)
+            shm_names.append(shm.name)
+        else:
+            arr = np.zeros(shape, dtype=dtype)
+        arrays.append(arr)
+
+    # use executor (loop or workers)
+    func = _write_memory_chunk
+    init_func = _init_memory_worker
+    if n_jobs > 1:
+        init_args = (recording.to_dict(), None, shm_names, shapes, dtype)
+    else:
+        init_args = (recording.to_dict(), arrays, None, None, dtype)
+
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
+                                      job_name='write_memory_recording', **job_kwargs)
+    executor.run()
+
+    return arrays
 
 
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
-                               time_axis=0, dtype=None, chunk_size=None, chunk_mb=500, verbose=False):
-    '''Saves the traces of a recording extractor in an h5 dataset.
+                               time_axis=0, dtype=None, chunk_size=None, chunk_memory='500M', verbose=False):
+    '''
+    Save the traces of a recording extractor in an h5 dataset.
 
     Parameters
     ----------
@@ -271,13 +372,13 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     chunk_size: None or int
         Number of chunks to save the file in. This avoid to much memory consumption for big files.
         If None and 'chunk_mb' is given, the file is saved in chunks of 'chunk_mb' Mb (default 500Mb)
-    chunk_mb: None or int
+    chunk_memory: None or int
         Chunk size in Mb (default 500Mb)
     verbose: bool
         If True, output is verbose (when chunks are used)
     '''
     import h5py
-    #~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
+    # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
     assert save_path is not None or file_handle is not None, "Provide 'save_path' or 'file handle'"
 
     if save_path is not None:
@@ -300,18 +401,19 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         dtype_file = dtype
 
     if time_axis == 0:
-        shape= (num_frames, num_channels)
+        shape = (num_frames, num_channels)
     else:
-        shape= (num_channels, num_frames)
+        shape = (num_channels, num_frames)
     dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
-    
+
     # set chunk size
     if chunk_size is not None:
         chunk_size = int(chunk_size)
-    elif chunk_mb is not None:
+    elif chunk_memory is not None:
         n_bytes = np.dtype(recording.get_dtype()).itemsize
-        max_size = int(chunk_mb * 1e6)  # set Mb per chunk
+        max_size = int(chunk_memory * 1e6)  # set Mb per chunk
         chunk_size = max_size // (num_channels * n_bytes)
+    chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
         traces = recording.get_traces()
@@ -331,7 +433,8 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         else:
             chunks = range(n_chunk)
         for i in chunks:
-            traces = recording.get_traces(start_frame=i * chunk_size,
+            traces = recording.get_traces(segment_index=segment_index,
+                                          start_frame=i * chunk_size,
                                           end_frame=min((i + 1) * chunk_size, num_frames))
             chunk_frames = traces.shape[0]
             if dtype is not None:
@@ -345,5 +448,3 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     if save_path is not None:
         file_handle.close()
     return save_path
-
-

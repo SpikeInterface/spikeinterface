@@ -2,14 +2,14 @@
 
 from spikeinterface.core.tests.testing_tools import generate_recording
 
-from spikeinterface.core.job_tools import divide_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingProcessor
+from spikeinterface.core.job_tools import divide_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor
 
 
 
-def test_devide_into_chunks():
-    chunks =  devide_into_chunks(10, 5)
+def test_divide_into_chunks():
+    chunks =  divide_into_chunks(10, 5)
     assert len(chunks) == 2
-    chunks =  devide_into_chunks(11, 5)
+    chunks =  divide_into_chunks(11, 5)
     assert len(chunks) == 3
     assert chunks[0] == (0, 5)
     assert chunks[1] == (5, 10)
@@ -56,52 +56,53 @@ def test_ensure_chunk_size():
     chunk_size = ensure_chunk_size(recording, chunk_memory="1G")
     assert chunk_size == 125000000
     
-def test_ChunkRecordingProcessor():
+def test_ChunkRecordingExecutor():
     recording = generate_recording(num_channels = 2)
     # make dumpable
     recording =recording.save()
     
-    def func(segment_index, start_frame, end_frame, local_dict):
+    def func(segment_index, start_frame, end_frame, worker_ctx):
         import os, time
-        # print('func', segment_index, start_frame, end_frame, local_dict, os.getpid())
+        # print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
         time.sleep(0.010)
         #~ time.sleep(1.0)
         return os.getpid()
         
     
     def init_func(arg1, arg2, arg3):
-        local_dict = {}
-        local_dict['arg1'] = arg1
-        local_dict['arg2'] = arg2
-        local_dict['arg3'] = arg3
-        return local_dict
+        worker_ctx = {}
+        worker_ctx['arg1'] = arg1
+        worker_ctx['arg2'] = arg2
+        worker_ctx['arg3'] = arg3
+        return worker_ctx
     
     init_args = 'a', 120, 'yep'
     
     # no chunk
-    #~ processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
-            #~ verbose=True, progress_bar=False,
-            #~ n_jobs=1, chunk_size=None)
-    #~ processor.run()
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
+            verbose=True, progress_bar=False,
+            n_jobs=1, chunk_size=None)
+    processor.run()
     
-    #~ # chunk + loop
-    #~ processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
-            #~ verbose=True, progress_bar=False,
-            #~ n_jobs=1, chunk_memory="500k")
-    #~ processor.run()
+    # chunk + loop
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
+            verbose=True, progress_bar=False,
+            n_jobs=1, chunk_memory="500k")
+    processor.run()
     
     # chunk + parralel
-    processor = ChunkRecordingProcessor(recording, func, init_func, init_args, 
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, 
             verbose=True, progress_bar=True,
-            n_jobs=2, total_memory="200k")
+            n_jobs=2, total_memory="200k",
+            job_name='job_name')
     processor.run()
 
     
     
 if __name__ == '__main__':
-    #~ test_devide_into_chunks()
-    #~ test_ensure_n_jobs()
-    #~ test_ensure_chunk_size()
-    test_ChunkRecordingProcessor()
+    test_divide_into_chunks()
+    test_ensure_n_jobs()
+    test_ensure_chunk_size()
+    test_ChunkRecordingExecutor()
     
     

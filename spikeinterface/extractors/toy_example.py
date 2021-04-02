@@ -63,11 +63,12 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     times_list = []
     labels_list = []
     for segment_index in range(num_segments):
-        times, labels = synthesize_random_firings(num_units=num_units, duration=duration, sampling_frequency=sampling_frequency, seed=seed)
+        times, labels = synthesize_random_firings(num_units=num_units, duration=durations[segment_index],
+                    sampling_frequency=sampling_frequency, seed=seed)
         times_list.append(times)
         labels_list.append(labels)
 
-        traces = synthesize_timeseries(times, labels, unit_ids, waveforms, sampling_frequency, duration,
+        traces = synthesize_timeseries(times, labels, unit_ids, waveforms, sampling_frequency, durations[segment_index],
                                 noise_level=10, waveform_upsample_factor=upsample_factor, seed=seed)
         traces_list.append(traces)
 

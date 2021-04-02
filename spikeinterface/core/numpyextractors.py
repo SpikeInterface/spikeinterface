@@ -1,56 +1,52 @@
 import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting,
-                                BaseRecordingSegment, BaseSortingSegment)
+                                 BaseRecordingSegment, BaseSortingSegment)
 
 
 class NumpyRecording(BaseRecording):
     """
     In memory recording.
-    Contrary to previous version this do not handle file npz.
-    **It is only  in memory numpy buffer**
-    
+    Contrary to previous version this class does not handle npy files.
+
     Parameters
     ----------
-    traces_list: list of array or array (if mono segment)
+    traces_list:  list of array or array (if mono segment)
+        The traces to instantiate a mono or multisegment Recording
 
     sampling_frequency: float
+        The ssampling frequency in Hz
     
-    geom
-    
+    channel_ids: list
+        An optional list of channel_ids. If None, linear channels are assumed
     """
     is_writable = False
 
-    def __init__(self, traces_list, sampling_frequency, channel_locations=None, channel_ids=None):
+    def __init__(self, traces_list, sampling_frequency, channel_ids=None):
         if isinstance(traces_list, list):
             assert all(isinstance(e, np.ndarray) for e in traces_list), 'must give a list of numpy array'
         else:
             assert isinstance(traces_list, np.ndarray), 'must give a list of numpy array'
             traces_list = [traces_list]
-        
+
         dtype = traces_list[0].dtype
         assert all(dtype == ts.dtype for ts in traces_list)
-        
+
         if channel_ids is None:
             channel_ids = np.arange(traces_list[0].shape[1])
         else:
             channel_ids = np.asarray(channel_ids)
             assert channel_ids.size == traces_list[0].shape[1]
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
-        
+
         self.is_dumpable = False
-        
+
         for traces in traces_list:
             rec_segment = NumpyRecordingSegment(traces)
             self.add_recording_segment(rec_segment)
-        
-        # not sure that this is relevant!!!
-        if channel_locations is not None:
-            self.set_channel_locations(channel_locations)
-        
+
         self._kwargs = {'traces_list': traces_list,
-                            'sampling_frequency': sampling_frequency,
-                            'channel_locations': channel_locations
-                            }
+                        'sampling_frequency': sampling_frequency,
+                        }
 
 
 class NumpyRecordingSegment(BaseRecordingSegment):
@@ -67,7 +63,6 @@ class NumpyRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
-    
 
 
 # TODO
@@ -78,7 +73,7 @@ class NumpySorting(BaseSorting):
     def __init__(self, sampling_frequency, unit_ids=[]):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.is_dumpable = False
-    
+
     @staticmethod
     def from_extractor(source_sorting):
         """
@@ -86,19 +81,19 @@ class NumpySorting(BaseSorting):
         """
         unit_ids = source_sorting.get_unit_ids()
         nseg = source_sorting.get_num_segments()
-        
+
         sorting = NumpySorting(source_sorting.get_sampling_frequency(), unit_ids)
-        
+
         for segment_index in range(nseg):
             units_dict = {}
             for unit_id in unit_ids:
-                    units_dict[unit_id] = source_sorting.get_unit_spike_train(unit_ids, segment_index)
+                units_dict[unit_id] = source_sorting.get_unit_spike_train(unit_id, segment_index)
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
-        
+
         sorting.copy_metadata(source_sorting)
-        
+
         return sorting
-    
+
     @staticmethod
     def from_times_labels(times_list, labels_list, sampling_frequency):
         """
@@ -115,18 +110,18 @@ class NumpySorting(BaseSorting):
             An array of spike labels corresponding to the given times.
         
         """
-        
+
         if isinstance(times_list, np.ndarray):
             assert isinstance(labels_list, np.ndarray)
             times_list = [times_list]
             labels_list = [labels_list]
-        
+
         times_list = [np.asarray(e) for e in times_list]
         labels_list = [np.asarray(e) for e in labels_list]
-        
+
         nseg = len(times_list)
         unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
-        
+
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for i in range(nseg):
             units_dict = {}
@@ -134,9 +129,9 @@ class NumpySorting(BaseSorting):
                 times, labels = times_list[i], labels_list[i]
                 units_dict[unit_id] = times[labels == unit_id]
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
-        
+
         return sorting
-    
+
     @staticmethod
     def from_dict(units_dict_list, sampling_frequency):
         """
@@ -150,15 +145,14 @@ class NumpySorting(BaseSorting):
         """
         if isinstance(units_dict_list, dict):
             units_dict_list = [units_dict_list]
-        
+
         unit_ids = list(units_dict_list[0].keys())
-        
+
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for i, units_dict in enumerate(units_dict_list):
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
-        
+
         return sorting
-        
 
 
 class NumpySortingSegment(BaseSortingSegment):
