@@ -10,17 +10,18 @@ https://github.com/kwikteam/phy-doc/blob/master/docs/kwik-model.md
 
 import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting,
-                                BaseRecordingSegment, BaseSortingSegment)
+                                 BaseRecordingSegment, BaseSortingSegment)
 
 import numpy as np
 from pathlib import Path
 
-
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
+
 
 # noinspection SpellCheckingInspection
 class KlustaSortingExtractor(BaseSorting):
@@ -34,8 +35,8 @@ class KlustaSortingExtractor(BaseSorting):
 
     def __init__(self, file_or_folder_path, exclude_cluster_groups=None):
         assert HAVE_H5PY, self.installation_mesg
-        #~ SortingExtractor.__init__(self)
-        
+        # ~ SortingExtractor.__init__(self)
+
         kwik_file_or_folder = Path(file_or_folder_path)
         kwikfile = None
         klustafolder = None
@@ -78,14 +79,15 @@ class KlustaSortingExtractor(BaseSorting):
             chan_cluster_id_arr = kf_reader.get(f'/channel_groups/{channel_group}/spikes/clusters/main')[()]
             chan_cluster_times_arr = kf_reader.get(f'/channel_groups/{channel_group}/spikes/time_samples')[()]
             chan_cluster_ids = np.unique(chan_cluster_id_arr)  # if clusters were merged in gui,
-                                                                # the original id's are still in the kwiktree, but
-                                                                # in this array
+            # the original id's are still in the kwiktree, but
+            # in this array
 
             for cluster_id in chan_cluster_ids:
                 cluster_frame_idx = np.nonzero(chan_cluster_id_arr == cluster_id)  # the [()] is a h5py thing
                 st = chan_cluster_times_arr[cluster_frame_idx]
                 assert st.shape[0] > 0, 'no spikes in cluster'
-                cluster_group = kf_reader.get(f'/channel_groups/{channel_group}/clusters/main/{cluster_id}').attrs['cluster_group']
+                cluster_group = kf_reader.get(f'/channel_groups/{channel_group}/clusters/main/{cluster_id}').attrs[
+                    'cluster_group']
 
                 assert cluster_group in self.default_cluster_groups.keys(), f'cluster_group not in "default_dict: {cluster_group}'
                 cluster_group_name = self.default_cluster_groups[cluster_group]
@@ -94,7 +96,7 @@ class KlustaSortingExtractor(BaseSorting):
                     continue
 
                 spiketrains.append(st)
-                
+
                 klusta_units.append(int(cluster_id))
                 unique_units.append(unit)
                 unit += 1
@@ -109,13 +111,13 @@ class KlustaSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.is_dumpable = False
-        
+
         self.add_sorting_segment(KlustSortingSegment(unit_ids, spiketrains))
-        
+
         self.set_property('group', groups)
         quality = [e.lower() for e in cluster_groups_name]
         self.set_property('quality', quality)
-        
+
         self._kwargs = {'file_or_folder_path': str(Path(file_or_folder_path).absolute())}
 
 
@@ -123,7 +125,7 @@ class KlustSortingSegment(BaseSortingSegment):
     def __init__(self, unit_ids, spiketrains):
         BaseSortingSegment.__init__(self)
         self._unit_ids = list(unit_ids)
-        self._spiketrains  = spiketrains
+        self._spiketrains = spiketrains
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         unit_index = self._unit_ids.index(unit_id)
@@ -133,5 +135,3 @@ class KlustSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
-
-    

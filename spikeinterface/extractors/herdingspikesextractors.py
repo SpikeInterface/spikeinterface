@@ -20,7 +20,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
 
     def __init__(self, file_path, load_unit_info=True):
         assert self.installed, self.installation_mesg
-        
+
         self._recording_file = file_path
         self._rf = h5py.File(self._recording_file, mode='r')
         if 'Sampling' in self._rf:
@@ -32,7 +32,6 @@ class HerdingspikesSortingExtractor(BaseSorting):
         spike_ids = self._rf['cluster_id'][()]
         unit_ids = np.unique(spike_ids)
         spike_times = self._rf['times'][()]
-        
 
         if load_unit_info:
             self.load_unit_info()
@@ -40,7 +39,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
         self._kwargs = {'file_path': str(Path(file_path).absolute()), 'load_unit_info': load_unit_info}
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))        
+        self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))
 
     def load_unit_info(self):
         # TODO
@@ -63,16 +62,16 @@ class HerdingspikesSortingExtractor(BaseSorting):
         """
 
 
-
 # alias for backward compatiblity
 HS2SortingExtractor = HerdingspikesSortingExtractor
+
 
 class HerdingspikesSortingSegment(BaseSortingSegment):
     def __init__(self, unit_ids, spike_times, spike_ids):
         BaseSortingSegment.__init__(self)
         # spike_times is a dict
         self._unit_ids = list(unit_ids)
-        self._spike_times  = spike_times
+        self._spike_times = spike_times
         self._spike_ids = spike_ids
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
@@ -83,7 +82,6 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
-
 
     """
     @staticmethod
@@ -127,6 +125,3 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
         rf.create_dataset("cluster_id", data=all_labels)
         rf.close()
     """
-
-
-
