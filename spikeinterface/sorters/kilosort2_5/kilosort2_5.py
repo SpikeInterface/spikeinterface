@@ -150,8 +150,9 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         # save binary file
         input_file_path = output_folder / 'recording.dat'
         BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
-                                                                time_axis=0, dtype='int16', total_memory=p["total_memory"],
-                                                                verbose=False)
+                                                                dtype='int16', total_memory=p["total_memory"],
+                                                                n_jobs=-1, verbose=False, progress_bar=verbose)
+
 
         if p['car']:
             use_car = 1
