@@ -185,7 +185,7 @@ def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg',
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     
-    before = waveform_extractor.samples_before
+    before = waveform_extractor.nbefore
     
     extremum_channels_ids = get_unit_extremum_channel(waveform_extractor, peak_sign=peak_sign)
     

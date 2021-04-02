@@ -78,7 +78,7 @@ class WaveformExtractor:
         txt = f'{clsname}: {nchan} channels - {nunits} units - {nseg} segments'
         if len(self._params) > 0:
             max_spikes_per_unit = self._params['max_spikes_per_unit']
-            txt = txt + f'\n  before:{self.samples_before} after{self.samples_after} n_per_units: {max_spikes_per_unit}'
+            txt = txt + f'\n  before:{self.nbefore} after{self.nafter} n_per_units: {max_spikes_per_unit}'
         return txt
 
     @classmethod
@@ -142,20 +142,20 @@ class WaveformExtractor:
             json.dumps(check_json(self._params), indent=4), encoding='utf8')
 
     @property
-    def samples_before(self):
+    def nbefore(self):
         sampling_frequency = self.recording.get_sampling_frequency()
         before = int(self._params['ms_before'] * sampling_frequency / 1000.)
         return before
 
     @property
-    def samples_after(self):
+    def nafter(self):
         sampling_frequency = self.recording.get_sampling_frequency()
         after = int(self._params['ms_after'] * sampling_frequency / 1000.)
         return after
 
     @property
-    def tot_samples(self):
-        return self.samples_before + self.samples_after
+    def nsamples(self):
+        return self.nbefore + self.nafter
 
     def get_waveforms(self, unit_id, with_index=False):
         """
@@ -187,8 +187,8 @@ class WaveformExtractor:
             sampling_frequency = self.recording.get_sampling_frequency()
             num_chans = self.recording.get_num_channels()
 
-            before = self.samples_before
-            after = self.samples_after
+            before = self.nbefore
+            after = self.nafter
 
             wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, before + after, num_chans)
             # get a copy to have a memory faster access and avoid write back in file
@@ -241,9 +241,9 @@ class WaveformExtractor:
     def sample_spikes(self):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
-        before = self.samples_before
-        after = self.samples_after
-        width = self.tot_samples
+        before = self.nbefore
+        after = self.nafter
+        width = self.nsamples
 
         selected_spikes = select_random_spikes_uniformly(self.recording, self.sorting,
                                                          self._params['max_spikes_per_unit'], before, after)
@@ -269,8 +269,8 @@ class WaveformExtractor:
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
         num_chans = self.recording.get_num_channels()
-        before = self.samples_before
-        after = self.samples_after
+        before = self.nbefore
+        after = self.nafter
         width = before + after
 
         selected_spikes = self.sample_spikes()
