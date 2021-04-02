@@ -177,7 +177,7 @@ class YassSorter(BaseSorter):
         dtype = 'int16'  # HARD CODE THIS FOR YASS
         input_file_path = output_folder / 'data.bin'
         BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
-                                                            time_axis=0, dtype=dtype, verbose=False,
+                                                            dtype=dtype, verbose=False,
                                                             total_memory=p["total_memory"], n_jobs=p["n_jobs_bin"])
  
         
