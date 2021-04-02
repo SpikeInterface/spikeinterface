@@ -11,7 +11,7 @@ def  get_unit_extremum_channel(waveform_extractor, peak_sign='neg'):
     unit_ids = waveform_extractor.sorting.unit_ids
     channel_ids = waveform_extractor.recording.channel_ids
     
-    before = waveform_extractor.samples_before
+    before = waveform_extractor.nbefore
     
     extremum_channels_ids = {}
     
@@ -39,7 +39,7 @@ def get_unit_extremum_amplitude(waveform_extractor, peak_sign='neg'):
     
     unit_ids = waveform_extractor.sorting.unit_ids
     
-    before = waveform_extractor.samples_before
+    before = waveform_extractor.nbefore
     
     extremum_channels_ids = get_unit_extremum_channel(waveform_extractor, peak_sign=peak_sign)
     
