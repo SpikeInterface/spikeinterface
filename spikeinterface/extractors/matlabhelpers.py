@@ -4,19 +4,21 @@ import numpy as np
 
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
 
 try:
     from scipy.io.matlab import loadmat, savemat
+
     HAVE_LOADMAT = True
 except ImportError:
     HAVE_LOADMAT = False
 
-
 try:
     import hdf5storage
+
     HAVE_HDF5STORAGE = True
 except ImportError:
     HAVE_HDF5STORAGE = False
