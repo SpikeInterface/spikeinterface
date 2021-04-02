@@ -1,22 +1,21 @@
 from typing import List, Union
-from .mytypes import UnitId, ChannelId, SampleIndex,  ChannelIndex, Order, SamplingFrequencyHz
+from .mytypes import UnitId, ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
 from .base import BaseExtractor, BaseSegment
 
 
-
-
 class BaseSorting(BaseExtractor):
     """
     Abstract class representing several segment several units and relative spiketrains.
     """
+
     def __init__(self, sampling_frequency: SamplingFrequencyHz, unit_ids: List[UnitId]):
-        
+
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
-        self._sorting_segments: List[SortingSegment] = []
+        self._sorting_segments: List[BaseSortingSegment] = []
 
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -30,10 +29,10 @@ class BaseSorting(BaseExtractor):
 
     @property
     def unit_ids(self):
-        return self._main_ids 
+        return self._main_ids
 
     def get_unit_ids(self) -> List[UnitId]:
-        return  self._main_ids
+        return self._main_ids
 
     def get_num_units(self) -> int:
         return len(self.get_unit_ids())
@@ -45,24 +44,24 @@ class BaseSorting(BaseExtractor):
 
     def get_sampling_frequency(self):
         return self._sampling_frequency
-    
+
     def get_num_segments(self):
         return len(self._sorting_segments)
- 
+
     def get_unit_spike_train(self,
-            unit_id: UnitId,
-            segment_index: Union[int, None]=None,
-            start_frame: Union[SampleIndex, None]=None,
-            end_frame: Union[SampleIndex, None]=None,
-        ):
+                             unit_id: UnitId,
+                             segment_index: Union[int, None] = None,
+                             start_frame: Union[SampleIndex, None] = None,
+                             end_frame: Union[SampleIndex, None] = None,
+                             ):
         segment_index = self._check_segment_index(segment_index)
         S = self._sorting_segments[segment_index]
         return S.get_unit_spike_train(unit_id=unit_id, start_frame=start_frame, end_frame=end_frame)
-    
+
     def _save(self, format='npz', **save_kwargs):
         """
-        This replace the old CacheSortingExtractor but enable more engine 
-        for caching a results. At the moment only npz.
+        This function replaces the old CachesortingExtractor, but enables more engines
+        for caching a results. At the moment only 'npz' is supported.
         """
         if format == 'npz':
             folder = save_kwargs.pop('folder')
@@ -73,36 +72,35 @@ class BaseSorting(BaseExtractor):
             cached = NpzSortingExtractor(save_path)
         else:
             raise ValueError(f'format {format} not supported')
-        
+
         return cached
 
     def _after_load(self, folder):
         return self
-    
+
     def get_unit_property(self, unit_id, key):
         values = self.get_property(key)
-        v = values[self.id_to_indice(unit_id)]
+        v = values[self.id_to_index(unit_id)]
         return v
 
-    def select_units(self,unit_ids, renamed_unit_ids=None):
+    def select_units(self, unit_ids, renamed_unit_ids=None):
         from spikeinterface import UnitsSelectionSorting
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
-        
-    
 
 
 class BaseSortingSegment(BaseSegment):
     """
     Abstract class representing several units and relative spiketrain inside a segment.
     """
+
     def __init__(self):
         BaseSegment.__init__(self)
-    
-    def get_unit_spike_train(self, 
-            unit_id: UnitId,
-           start_frame: Union[SampleIndex, None] = None,
-           end_frame: Union[SampleIndex, None] = None,
-        ) -> np.ndarray:
+
+    def get_unit_spike_train(self,
+                             unit_id: UnitId,
+                             start_frame: Union[SampleIndex, None] = None,
+                             end_frame: Union[SampleIndex, None] = None,
+                             ) -> np.ndarray:
         # must be implemented in subclass
         raise NotImplementedError
