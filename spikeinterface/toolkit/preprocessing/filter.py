@@ -27,7 +27,7 @@ class FilterRecording(BasePreprocessor):
     """
     name = 'filter'
     def __init__(self, recording, band=[300., 6000.], btype='bandpass',
-                filter_order=5,  ftype='butter', filter_mode='sos', margin=0.005):
+                filter_order=5,  ftype='butter', filter_mode='sos', margin_ms=5.0):
         
         assert btype in  ('bandpass', 'lowpass', 'highpass', 'bandstop')
         assert filter_mode in ('sos', 'ba')
@@ -45,25 +45,26 @@ class FilterRecording(BasePreprocessor):
         
         BasePreprocessor.__init__(self, recording)
         
-        sample_margin = int(margin * sf)
+        margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, filter_mode, sample_margin))
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, filter_mode, margin))
         
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
-                filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin=margin)
+                filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin_ms=margin_ms)
+
 
 class FilterRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, coeff, filter_mode,sample_margin):
+    def __init__(self, parent_recording_segment, coeff, filter_mode,margin):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         
         self.coeff = coeff
         self.filter_mode = filter_mode
-        self.sample_margin = sample_margin
+        self.margin = margin
 
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment, 
-                    start_frame, end_frame, channel_indices, self.sample_margin)
+                    start_frame, end_frame, channel_indices, self.margin)
         
         if self.filter_mode == 'sos':
             filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
@@ -83,9 +84,9 @@ class BandpassFilterRecording(FilterRecording):
     Simplied bandpass class on top of FilterRecording.
     """
     name = 'bandpass_filter'
-    def __init__(self, recording, freq_min=300., freq_max=6000., margin=0.005):
-        FilterRecording.__init__(self, recording, band=[freq_min, freq_max], margin=margin)
-        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max, margin=margin)
+    def __init__(self, recording, freq_min=300., freq_max=6000., margin_ms=5.0):
+        FilterRecording.__init__(self, recording, band=[freq_min, freq_max], margin_ms=margin_ms)
+        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max, margin_ms=margin_ms)
 
 
 class NotchFilterRecording(BasePreprocessor):
@@ -105,7 +106,7 @@ class NotchFilterRecording(BasePreprocessor):
         The notch-filtered recording extractor object
     """
     name = 'notch_filter'
-    def __init__(self, recording, freq=3000, q=30, margin=0.005):
+    def __init__(self, recording, freq=3000, q=30, margin_ms=5.0):
         
         # coeef is 'ba' type
         fn = 0.5 * float(recording.get_sampling_frequency())
@@ -113,18 +114,22 @@ class NotchFilterRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording)
         
         sf = recording.get_sampling_frequency()
-        sample_margin = int(margin * sf)
+        margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', sample_margin))
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', margin))
         
-        self._kwargs = dict(recording=recording.to_dict(), freq=freq, q=q, margin=margin)
+        self._kwargs = dict(recording=recording.to_dict(), freq=freq, q=q, margin_ms=margin_ms)
         
 
 
 # functions for API
 
-def filter(*args, **kwargs):
-    return FilterRecording(*args, **kwargs)
+def filter(recording, engine='scipy', **kwargs):
+    if engine == 'scipy':
+        return FilterRecording(recording, **kwargs)
+    elif engine == 'opencl':
+        from .filter_opencl import FilterOpenCLRecording
+        return FilterOpenCLRecording(recording, **kwargs)
 filter.__doc__ = FilterRecording.__doc__
 
 def bandpass_filter(*args, **kwargs):

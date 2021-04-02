@@ -55,7 +55,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'nfilt_factor': 4,
         'NT': None,
         'keep_good_only': False,
-        'chunk_mb': 500,
+        'total_memory': '500M',
         'n_jobs_bin': 1
     }
 
@@ -75,7 +75,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
-        'chunk_mb': "Chunk size in Mb for saving to binary format (default 500Mb)",
+        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
         'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
@@ -150,7 +150,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         # save binary file
         input_file_path = output_folder / 'recording.dat'
         BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
-                                                                time_axis=0, dtype='int16', chunk_mb=p["chunk_mb"],
+                                                                time_axis=0, dtype='int16', total_memory=p["total_memory"],
                                                                 verbose=False)
 
         if p['car']:

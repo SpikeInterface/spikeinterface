@@ -126,7 +126,7 @@ class TridesclousSorter(BaseSorter):
         #~ recording.write_to_binary_dat_format(raw_filename, time_axis=0, dtype='float32', chunk_mb=500)
         dtype = recording.get_dtype().str
         BinaryRecordingExtractor.write_recording(recording, files_path=[raw_filename],
-                                                                time_axis=0, dtype=dtype, chunk_mb=500, verbose=False)
+                                                                time_axis=0, dtype=dtype, total_memory="500M", n_jobs=-1, verbose=False)
         offset = 0
 
         # initialize source and probe file

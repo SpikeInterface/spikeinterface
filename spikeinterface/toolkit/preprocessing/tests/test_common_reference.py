@@ -9,6 +9,7 @@ import numpy as np
 
 def test_common_reference():
     rec = generate_recording(durations=[5.], num_channels=4)
+    rec = rec.save()
 
     
     # no groups

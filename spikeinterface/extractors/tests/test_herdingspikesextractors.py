@@ -7,10 +7,14 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
+@pytest.mark.skip('')
 def test_herdingspikesextractors():
-    hs_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/herdingspikes_output/HS2_sorted.hdf5'
-    sorting = HerdingspikesSortingExtractor(hs_folder)
-    print(sorting)
+    # no tested here, tested un run_herdingspikes()
+    pass
+    
+    # hs_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/herdingspikes_output/HS2_sorted.hdf5'
+    # sorting = HerdingspikesSortingExtractor(hs_folder)
+    # print(sorting)
 
     
 if __name__ == '__main__':

@@ -129,7 +129,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         # save binary file : handle only one segment
         input_file_path = output_folder / 'recording.dat'
         BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
-                                                                time_axis=0, dtype='int16', chunk_mb=500, verbose=False)
+                                                                time_axis=0, dtype='int16', total_memory='500M', verbose=False)
 
         # set up kilosort config files and run kilosort on data
         with (source_dir / 'kilosort_master.m').open('r') as f:
