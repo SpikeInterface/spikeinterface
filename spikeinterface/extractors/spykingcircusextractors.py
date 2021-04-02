@@ -1,11 +1,11 @@
 import numpy as np
 from pathlib import Path
 
-
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
@@ -20,10 +20,9 @@ class SpykingCircusSortingExtractor(BaseSorting):
 
     def __init__(self, folder_path):
         assert HAVE_H5PY, self.installation_mesg
-        
+
         spykingcircus_folder = Path(folder_path)
         listfiles = spykingcircus_folder.iterdir()
-        
 
         parent_folder = None
         result_folder = None
@@ -53,13 +52,12 @@ class SpykingCircusSortingExtractor(BaseSorting):
         if results is None:
             raise Exception(spykingcircus_folder, " is not a spyking circus folder")
 
-
         # load params
         sample_rate = None
         for f in parent_folder.iterdir():
             if f.suffix == '.params':
                 sample_rate = _load_sample_rate(f)
-        
+
         assert sample_rate is not None, 'sample rate not found'
 
         with h5py.File(results, 'r') as f_results:
@@ -71,7 +69,7 @@ class SpykingCircusSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sample_rate, unit_ids)
         self.add_sorting_segment(SpykingcircustSortingSegment(unit_ids, spiketrains))
-        
+
         self._kwargs = {'folder_path': str(Path(folder_path).absolute())}
 
 
@@ -79,7 +77,7 @@ class SpykingcircustSortingSegment(BaseSortingSegment):
     def __init__(self, unit_ids, spiketrains):
         BaseSortingSegment.__init__(self)
         self._unit_ids = list(unit_ids)
-        self._spiketrains  = spiketrains
+        self._spiketrains = spiketrains
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         unit_index = self._unit_ids.index(unit_id)
@@ -89,8 +87,6 @@ class SpykingcircustSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
-
-
 
 
 def _load_sample_rate(params_file):

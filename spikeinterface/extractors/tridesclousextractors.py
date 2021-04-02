@@ -20,7 +20,7 @@ class TridesclousSortingExtractor(BaseSorting):
     def __init__(self, folder_path, chan_grp=None):
         assert HAVE_TDC, self.installation_mesg
         tdc_folder = Path(folder_path)
-        
+
         dataio = tdc.DataIO(str(tdc_folder))
         if chan_grp is None:
             # if chan_grp is not provided, take the first one if unique
@@ -29,22 +29,22 @@ class TridesclousSortingExtractor(BaseSorting):
             chan_grp = chan_grps[0]
 
         catalogue = dataio.load_catalogue(name='initial', chan_grp=chan_grp)
-        
+
         labels = catalogue['clusters']['cluster_label']
         labels = labels[labels >= 0]
         unit_ids = list(labels)
-        
+
         sampling_frequency = dataio.sample_rate
-        
+
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         for seg_num in range(dataio.nb_segment):
             # load all spike in memory (this avoid to lock the folder with memmap throug dataio
             all_spikes = dataio.get_spikes(seg_num=seg_num, chan_grp=chan_grp, i_start=None, i_stop=None).copy()
             self.add_sorting_segment(TridesclousSortingSegment(all_spikes))
-    
+
         self._kwargs = {'folder_path': str(Path(folder_path).absolute()), 'chan_grp': chan_grp}
 
-    
+
 class TridesclousSortingSegment(BaseSortingSegment):
     def __init__(self, all_spikes):
         BaseSortingSegment.__init__(self)

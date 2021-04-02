@@ -2,9 +2,8 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import (BaseRecording, BaseSorting,
-                                BaseRecordingSegment, BaseSortingSegment)
+                                 BaseRecordingSegment, BaseSortingSegment)
 from .matlabhelpers import MatlabHelper
-
 
 
 class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
@@ -13,7 +12,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
 
     def __init__(self, file_path):
         MatlabHelper.__init__(self, file_path)
-        
+
         cluster_classes = self._getfield("cluster_class")
         classes = cluster_classes[:, 0]
         spike_times = cluster_classes[:, 1]
@@ -24,13 +23,13 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         spiketrains = {}
         for unit_id in unit_ids:
             mask = (classes == unit_id)
-            spiketrains[unit_id] = np.rint(spike_times[mask] * (sampling_frequency/1000))
+            spiketrains[unit_id] = np.rint(spike_times[mask] * (sampling_frequency / 1000))
         self._unsorted_train = np.rint(spike_times[classes == 0] * (sampling_frequency / 1000))
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        
+
         self.add_sorting_segment(WaveClustSortingSegment(unit_ids, spiketrains))
-    
+
     """
     def get_unsorted_spike_train(self, start_frame=None, end_frame=None):
         start_frame, end_frame = self._cast_start_end_frame(start_frame, end_frame)
@@ -46,7 +45,7 @@ class WaveClustSortingSegment(BaseSortingSegment):
     def __init__(self, unit_ids, spiketrains):
         BaseSortingSegment.__init__(self)
         self._unit_ids = list(unit_ids)
-        self._spiketrains  = spiketrains
+        self._spiketrains = spiketrains
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         times = self._spiketrains[unit_id]
