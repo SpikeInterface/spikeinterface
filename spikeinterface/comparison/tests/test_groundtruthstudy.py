@@ -32,7 +32,8 @@ def _setup_comparison_study():
 
 def test_run_study_sorters():
     study = GroundTruthStudy(study_folder)
-    sorter_list = ['tridesclous', 'spykingcircus']
+    #~ sorter_list = ['tridesclous', 'spykingcircus']
+    sorter_list = ['tridesclous', ]
     print(f"\n#################################\nINSTALLED SORTERS\n#################################\n"
           f"{installed_sorters()}")
     study.run_sorters(sorter_list)
@@ -40,32 +41,43 @@ def test_run_study_sorters():
 
 def test_extract_sortings():
     study = GroundTruthStudy(study_folder)
-    print(study)
+    #~ print(study)
     
     study.copy_sortings()
     
-    exit()
+    
 
     for rec_name in study.rec_names:
         gt_sorting = study.get_ground_truth(rec_name)
-        # ~ print(rec_name, gt_sorting)
+        #~ print(rec_name, gt_sorting)
+    
 
     for rec_name in study.rec_names:
+        #~ print('rec_name', rec_name)
+        metrics = study.get_metrics(rec_name=rec_name)
+        #~ print(metrics)
+        
         snr = study.get_units_snr(rec_name=rec_name)
-        # print(snr)
+        #~ print(snr)
+
+    
 
     study.copy_sortings()
-    study.run_comparisons(exhaustive_gt=True)
 
     run_times = study.aggregate_run_times()
+    #~ print(run_times)
+    
+
+    study.run_comparisons(exhaustive_gt=True)
+
     perf = study.aggregate_performance_by_units()
+    
     count_units = study.aggregate_count_units()
     dataframes = study.aggregate_dataframes()
-
-    shutil.rmtree(study_folder)
+    print(dataframes)
 
 
 if __name__ == '__main__':
-    setup_module()
-    test_run_study_sorters()
+    #~ setup_module()
+    #~ test_run_study_sorters()
     test_extract_sortings()

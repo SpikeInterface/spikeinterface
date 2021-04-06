@@ -8,6 +8,9 @@ from spikeinterface.core import load_extractor
 from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict, run_sorters
 
+from spikeinterface import WaveformExtractor
+from spikeinterface.toolkit import compute_metrics
+
 
 
 from .comparisontools import _perf_keys
@@ -208,41 +211,57 @@ class GroundTruthStudy:
 
         return dataframes
 
-    def _compute_snr(self, rec_name, **snr_kargs):
-        # TODO
-        raise NotImplementedError        
-        
-        # print('compute SNR', rec_name)
+    def compute_metrics(self, rec_name, metric_names=['snr'],
+                ms_before=3., ms_after=4., max_spikes_per_unit=500, 
+                n_jobs=-1, total_memory='1G', **snr_kargs):
+
         rec = self.get_recording(rec_name)
         gt_sorting = self.get_ground_truth(rec_name)
+        
+        # waveform extractor
+        waveform_folder = self.study_folder / 'metrics' / f'waveforms_{rec_name}'
+        if waveform_folder.is_dir():
+            shutil.rmtree(waveform_folder)
+        we = WaveformExtractor.create(rec, gt_sorting, waveform_folder)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
+        we.run(n_jobs=n_jobs, total_memory=total_memory)
+        
+        # metrics
+        metrics = compute_metrics(we, metric_names=metric_names)
+        filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
+        metrics.to_csv(filename, sep='\t', index=True)
 
-        snr_list = st.validation.compute_snrs(gt_sorting, rec, unit_ids=None, save_as_property=False, **snr_kargs)
-
-        snr = pd.DataFrame(index=gt_sorting.get_unit_ids(), columns=['snr'])
-        snr.index.name = 'gt_unit_id'
-        snr.loc[:, 'snr'] = snr_list
-
-        return snr
-
-    def get_units_snr(self, rec_name=None, **snr_kargs):
+        return metrics
+    
+    def get_metrics(self, rec_name=None, **metric_kargs):
         """
-        Load or compute units SNR for a given recording.
+        Load or compute units metrics  for a given recording.
         """
         rec_name = self._check_rec_name(rec_name)
-
         metrics_folder = self.study_folder / 'metrics'
         metrics_folder.mkdir(parents=True, exist_ok=True)
 
-        filename = metrics_folder / ('SNR ' + rec_name + '.txt')
-
+        filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
         if filename.is_file():
-            snr = pd.read_csv(filename, sep='\t', index_col=None)
-            snr = snr.set_index('gt_unit_id')
+            metrics = pd.read_csv(filename, sep='\t', index_col=0)
+            gt_sorting = self.get_ground_truth(rec_name)
+            metrics.index = gt_sorting.unit_ids
         else:
-            snr = self._compute_snr(rec_name, **snr_kargs)
-            snr.reset_index().to_csv(filename, sep='\t', index=False)
-        snr['rec_name'] = rec_name
-        return snr
+            metrics = self.compute_metrics(rec_name, **metric_kargs)
+        
+        metrics.index.name = 'unit_id'
+        #  add rec name columns 
+        metrics['rec_name'] = rec_name
+
+        return metrics
+        
+
+    def get_units_snr(self, rec_name=None, **metric_kargs):
+        """
+        
+        """
+        metric = self.get_metrics(rec_name=rec_name, **metric_kargs)
+        return metric['snr']
     
     def concat_all_snr(self):
         snr = []
