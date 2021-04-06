@@ -32,6 +32,11 @@ def test_compute_metrics():
     print(metrics)
     print(metrics.columns)
 
+    metrics = compute_metrics(we, metric_names=['snr'])
+    print(metrics)
+    print(metrics.columns)
+
+
     
 if __name__ == '__main__':
     setup_module()

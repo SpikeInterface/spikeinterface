@@ -33,8 +33,11 @@ extractors:
 
 toolkit:
 
-  * curation: all - depend on waveform extractors
-  * postprocessing: all - depend on waveform extractors
+  * curation:
+    * ALL
+  * postprocessing: 
+     * export to phy
+     * PCA
   * sorting components: all (sam)
   * validation : all - depend on waveform extractors
 
@@ -43,9 +46,11 @@ sorters:
   * almost done : needs tests
   * some sorter do not have yet the extractor
   * unify parameters for copy to binary > common methods
+  * make something to not copy binary when not needed
 
 comparison:
   * done: need tests
+  * integrate SNR
 
 
 widgets:

@@ -193,7 +193,7 @@ def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg',
     for unit_id in unit_ids:
         waveforms = waveform_extractor.get_waveforms(unit_id)
         chan_id = extremum_channels_ids[unit_id]
-        chan_ind = sorting.id_to_index(chan_id)
+        chan_ind = recording.id_to_index(chan_id)
         amplitudes = waveforms[:, before, chan_ind]
 
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
