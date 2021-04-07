@@ -31,5 +31,5 @@ from .core_tools import write_binary_recording, write_to_h5_dataset_format, writ
 from .job_tools import ensure_n_jobs, ensure_chunk_size
 
 # 
-from .waveform_extractor import WaveformExtractor
+from .waveform_extractor import WaveformExtractor, extract_waveforms
 

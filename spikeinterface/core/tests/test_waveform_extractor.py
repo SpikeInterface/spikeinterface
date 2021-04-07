@@ -4,7 +4,7 @@ import shutil
 
 from spikeinterface.core.tests.testing_tools import generate_recording, generate_sorting
 
-from spikeinterface import WaveformExtractor
+from spikeinterface import WaveformExtractor, extract_waveforms
 
 def test_WaveformExtractor():
     durations = [30, 40]
@@ -41,9 +41,26 @@ def test_WaveformExtractor():
     wfs = we.get_waveforms(0)
 
 
+def test_extract_waveforms():
+    # 2 segments
+    durations = [30, 40]
+    sampling_frequency = 30000.
+    
+    recording = generate_recording(num_channels = 2, durations=durations, sampling_frequency=sampling_frequency)
+    sorting =generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
+    recording = recording.save()
+    sorting = sorting.save()
+
+    folder = Path('test_extract_waveforms')
+    if folder.is_dir():
+        shutil.rmtree(folder)
+    
+    we = extract_waveforms(recording, sorting, folder)
+    print(we)
+    
+
 
 if __name__ == '__main__':
-    test_WaveformExtractor()
-    
-    
-    
+    #~ test_WaveformExtractor()
+    test_extract_waveforms()
+

@@ -26,9 +26,9 @@ import spikeinterface
 # - :code:`comparison` : comparison of spike sorting output
 # - :code:`widgets` : visualization
 
-
+import spikeinterface as si
 import spikeinterface.extractors as se
-# import spikeinterface.toolkit as st
+import spikeinterface.toolkit as st
 import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
@@ -94,11 +94,19 @@ plot_probe(probe)
 # Each pre-processing function also returns a :code:`RecordingExtractor`, 
 # which makes it easy to build pipelines. Here, we filter the recording and 
 # apply common median reference (CMR)
+# All theses preprocessing steps are "lazy". The computation is done on demand with
+# `recording.get_traces(...)` or when we save it to disk.
 
-# TODO
 recording_cmr = recording
-# recording_f = st.preprocessing.bandpass_filter(recording, freq_min=300, freq_max=6000)
-# recording_cmr = st.preprocessing.common_reference(recording_f, reference='median')
+recording_f = st.bandpass_filter(recording, freq_min=300, freq_max=6000)
+print(recording_f)
+recording_cmr = st.common_reference(recording_f, reference='global', operator='median')
+print(recording_cmr)
+
+# this compute and save the preprocessing chain
+recording_preprocessed = recording_cmr.save(format='binary')
+print(recording_preprocessed)
+
 
 ##############################################################################
 # Now you are ready to spikesort using the :code:`sorters` module!
@@ -119,7 +127,7 @@ print(ss.get_default_params('klusta'))
 ##############################################################################
 # Let's run spkykingcircus and change one of the parameter, the detection_threshold:
 
-sorting_SC = ss.run_spykingcircus(recording=recording_cmr, detect_threshold=6)
+sorting_SC = ss.run_spykingcircus(recording=recording_preprocessed, detect_threshold=6)
 print(sorting_SC)
 
 ##############################################################################
@@ -129,13 +137,13 @@ sc_params = ss.get_default_params('spykingcircus')
 sc_params['detect_threshold'] = 4
 
 # parameters set by params dictionary
-sorting_SC_2 = ss.run_spykingcircus(recording=recording, **sc_params)
+sorting_SC_2 = ss.run_spykingcircus(recording=recording_preprocessed, **sc_params)
 print(sorting_SC_2)
 
 ##############################################################################
 # Let's run tridesclous as well, with default parameters:
 
-sorting_TDC = ss.run_tridesclous(recording=recording_cmr)
+sorting_TDC = ss.run_tridesclous(recording=recording_preprocessed)
 
 ##############################################################################
 # The :code:`sorting_MS4` and :code:`sorting_MS4` are :code:`SortingExtractor`
@@ -162,19 +170,42 @@ print('Units found by Klusta:', sorting_TDC.get_unit_ids())
 
 
 ##############################################################################
-# Validation of spike sorting output is very important.
-# The :code:`toolkit.validation` module implements several quality metrics
+# spikeinterface provide a efficient way to extractor waveform snippets from a sorting given
+# a recording. This class sample some spikes (`max_spikes_per_unit=500`) for each cluster and store
+# then on disk. Theses waveforms per cluster are helpfull to compute the average "template" for each
+# and then compute quality metrics.
+
+we_TDC = si.WaveformExtractor.create(recording_preprocessed, sorting_TDC, 'waveforms', remove_if_exists=True)
+we_TDC.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
+we_TDC.run(n_jobs=-1, chunk_size=30000)
+print(we_TDC)
+
+unit_id0 = sorting_TDC.unit_ids[0]
+wavefroms = we_TDC.get_waveforms(unit_id0)
+print(wavefroms.shape)
+
+template = we_TDC.get_template(unit_id0)
+print(template.shape)
+
+##############################################################################
+# Quality metric of spike sorting output is very important.
+# The :code:`spikeinterface.toolkit.qualitymetrics` module implements several quality metrics
 #  to assess the goodness of sorted units. Among those, for example, 
 # are signal-to-noise ratio, ISI violation ratio, isolation distance, and many more.
+# Theses metrics are built on top of WaveformExtractor class and render a dict (key=unit_id)
 
-# TODO
-# snrs = st.validation.compute_snrs(sorting_TDC, recording_cmr)
-# isi_violations = st.validation.compute_isi_violations(sorting_TDC, duration_in_frames=recording_cmr.get_num_frames())
-# isolations = st.validation.compute_isolation_distances(sorting_TDC, recording_cmr)
+snrs = st.compute_snrs(we_TDC)
+print(snrs)
+isi_violations_rate, isi_violations_count = st.compute_isi_violations(we_TDC, isi_threshold_ms=1.5)
+print(isi_violations_rate)
+print(isi_violations_count)
 
-# print('SNR', snrs)
-# print('ISI violation ratios', isi_violations)
-# print('Isolation distances', isolations)
+
+##############################################################################
+# All theses quality mertics can be computed in one shot into a pandas.Dataframe
+
+metrics = st.compute_metrics(we_TDC, metric_names = ['snr', 'isi_violation', 'amplitude_cutoff'])
+print(metrics)
 
 ##############################################################################
 # Quality metrics can be also used to automatically curate the spike sorting
