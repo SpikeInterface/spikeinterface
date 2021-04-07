@@ -16,8 +16,8 @@ import scipy.ndimage
 from ..utils import get_noise_levels
 
 from ..postprocessing import (
-        get_unit_extremum_channel,
-        get_unit_extremum_amplitude,
+        get_template_extremum_channel,
+        get_template_extremum_amplitude,
     )
 
 
@@ -110,8 +110,8 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kargs):
     channel_ids = recording.channel_ids
 
     
-    extremum_channels_ids = get_unit_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-    unit_amplitudes = get_unit_extremum_amplitude(waveform_extractor, peak_sign=peak_sign)
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+    unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign)
     noise_levels = get_noise_levels(recording, **kargs)
     
     # make a dict to acces by chan_id
@@ -187,7 +187,7 @@ def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg',
     
     before = waveform_extractor.nbefore
     
-    extremum_channels_ids = get_unit_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
     
     all_fraction_missing = {}
     for unit_id in unit_ids:
