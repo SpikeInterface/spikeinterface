@@ -5,7 +5,7 @@ import numpy as np
 
 
 from spikeinterface import BaseRecording, BaseSorting, write_binary_recording
-from .template_tools import get_unit_extremum_channel
+from .template_tools import get_template_extremum_channel
 
 # @alessio: this is a basic phy export, still need to:
 #  * integrate PCA
