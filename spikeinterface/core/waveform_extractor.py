@@ -90,10 +90,13 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def create(cls, recording, sorting, folder):
+    def create(cls, recording, sorting, folder, remove_if_exists=False):
         folder = Path(folder)
         if folder.is_dir():
-            raise FileExistsError('Folder already exists')
+            if remove_if_exists:
+                shutil.rmtree(folder)
+            else:
+                raise FileExistsError('Folder already exists')
         folder.mkdir()
 
         recording.dump(folder / 'recording.json')
@@ -407,3 +410,16 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 st = int(st)
                 pos = unit_cum_sum[unit_id][segment_index] + i0 + i
                 wfs[pos, :, :] = traces[st - start - nbefore:st - start + nafter, :]
+
+
+
+def extract_waveforms(recording, sorting, folder, 
+        ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None,**job_kwargs):
+    we = WaveformExtractor.create(recording, sorting, folder)
+    we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
+    we.run(**job_kwargs)
+    return we
+
+    
+    
+    
