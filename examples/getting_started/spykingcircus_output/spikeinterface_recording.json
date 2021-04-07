@@ -1,3 +1,46 @@
 {
-    "warning": "The recording is not dumpable"
+    "class": "spikeinterface.core.binaryrecordingextractor.BinaryRecordingExtractor",
+    "module": "spikeinterface",
+    "kwargs": {
+        "files_path": [
+            "/tmp/spikeinterface_cache/tmptkgf30vj/1O0H2S0X/traces_cached_seg0.raw"
+        ],
+        "sampling_frequency": 30000.0,
+        "num_chan": 4,
+        "dtype": "<f4",
+        "time_axis": 0,
+        "offset": 0,
+        "gain": null
+    },
+    "dumpable": true,
+    "version": "0.90.0",
+    "annotations": {
+        "is_filtered": true
+    },
+    "properties": {
+        "group": [
+            0,
+            0,
+            0,
+            0
+        ],
+        "location": [
+            [
+                0.0,
+                0.0
+            ],
+            [
+                20.0,
+                0.0
+            ],
+            [
+                40.0,
+                0.0
+            ],
+            [
+                60.0,
+                0.0
+            ]
+        ]
+    }
 }
