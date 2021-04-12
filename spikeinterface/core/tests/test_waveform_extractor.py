@@ -61,6 +61,6 @@ def test_extract_waveforms():
 
 
 if __name__ == '__main__':
-    #~ test_WaveformExtractor()
+    test_WaveformExtractor()
     test_extract_waveforms()
 
