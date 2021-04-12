@@ -6,9 +6,10 @@ core:
     * save property as np (sam)
     * save features as np (sam)
     * event object (sam and alessio)
-    * waveform extractors (sam)
     * segment concatenator (sam)
     * mono segment class (sam)
+    * add hither (alessio, sam or jeremy) for launcher and/or container
+    * data retreiver based on datalad
 
 extractors:
 
@@ -30,6 +31,7 @@ extractors:
     * NIXIOSortingExtractor
     * ALFSortingExtractor
 
+    * make tests with gin
 
 toolkit:
 
@@ -39,18 +41,27 @@ toolkit:
      * export to phy
      * PCA
   * sorting components: all (sam)
-  * validation : all - depend on waveform extractors
+  * validation aka qualitymetrics:
+     * "max_drift",
+     *  "cumulative_drift",
+     * "silhouette_score",
+     * "isolation_distance",
+     * "l_ratio",
+     * "d_prime", 
+     * "noise_overlap",
+     * "nn_hit_rate",
+     * "nn_miss_rate",
 
 sorters:
 
   * almost done : needs tests
+  * is_installed() on run time
   * some sorter do not have yet the extractor
   * unify parameters for copy to binary > common methods
   * make something to not copy binary when not needed
-
+  
 comparison:
   * done: need tests
-  * integrate SNR
 
 
 widgets:
@@ -82,4 +93,6 @@ Linked projects:
   * herdingspikes: new API transpose and multi segment (cole)
   * mountainsort4: new API transpose and multi segment (jeremy)
   * spikeforest: new API transpose and multi segment (jeremy)
+  * tridesclous integrate recording extractor
+
 

@@ -15,15 +15,17 @@ _metric_name_to_func = {
     "snr": compute_snrs,
     "isi_violation": compute_isi_violations,
     "amplitude_cutoff": compute_amplitudes_cutoff,
+    
+    # based on PCA
+    #~ "isolation_distance",
+    #~ "l_ratio",
+    #~ "d_prime", 
+    #~ "nn_hit_rate",
+    #~ "nn_miss_rate",
+    #~ "silhouette_score",
+    #~ "noise_overlap",
 
     # TODO
     #~ "max_drift",
     #~ "cumulative_drift",
-    #~ "silhouette_score",
-    #~ "isolation_distance",
-    #~ "l_ratio",
-     #~ "d_prime", 
-     #~ "noise_overlap",
-     #~ "nn_hit_rate",
-     #~ "nn_miss_rate",
 }
