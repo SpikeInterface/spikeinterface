@@ -6,6 +6,8 @@ from sklearn.decomposition import IncrementalPCA
 
 from spikeinterface.core.core_tools import check_json
 
+from spikeinterface.core import WaveformExtractor
+
 
 _possible_modes = [ 'by_channel_local', 'by_channel_global', 'concatenated']
 
@@ -20,6 +22,13 @@ class WaveformPrincipalComponent:
             with open(str(self.folder / 'params_pca.json'), 'r') as f:
                 self._params = json.load(f)
 
+    @classmethod
+    def load_from_folder(cls, folder):
+        we = WaveformExtractor.load_from_folder(folder)
+        pca = WaveformPrincipalComponent(we)
+        return pca
+    
+    
     def __repr__(self):
         we = self.waveform_extractor
         clsname = self.__class__.__name__
@@ -73,6 +82,28 @@ class WaveformPrincipalComponent:
         component_file = self.folder / 'PCA' / f'pca_{unit_id}.npy'
         comp = np.load(component_file)
         return comp
+    
+    def get_concatenated_components(self, channel_ids=None, unit_ids=None):
+        recording = self.waveform_extractor.recording
+        
+        if unit_ids is None:
+            unit_ids = self.waveform_extractor.sorting.unit_ids
+
+        all_labels = []
+        all_components = []
+        for unit_id in unit_ids:
+            comp = self.get_components(unit_id)
+            if channel_ids is not None:
+                chan_inds = recording.ids_to_indices(channel_ids)
+                comp = comp[:, :, chan_inds]
+            n = comp.shape[0]
+            labels = np.array([unit_id] * n)
+            all_labels.append(labels)
+            all_components.append(comp)
+        all_labels = np.concatenate(all_labels, axis=0)
+        all_components = np.concatenate(all_components, axis=0)
+        
+        return all_labels, all_components
     
     def run(self):
         
@@ -187,6 +218,7 @@ class WaveformPrincipalComponent:
             wfs_fat = wfs.reshape(wfs.shape[0], -1)
             comp = pca.transform(wfs_fat)
             component_memmap[unit_id][:, :] = comp
+
 
 
 
