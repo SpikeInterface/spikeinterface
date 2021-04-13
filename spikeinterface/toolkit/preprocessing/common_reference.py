@@ -45,7 +45,7 @@ class CommonReferenceRecording(BasePreprocessor):
     name = 'common_reference'
 
     def __init__(self, recording, reference='global', operator='median', groups=None, ref_channels=None,
-        local_radius=(2, 8), verbose=False):
+        local_radius=(30, 55), verbose=False):
 
         
         num_chans = recording.get_num_channels()
@@ -74,11 +74,11 @@ class CommonReferenceRecording(BasePreprocessor):
         elif reference == 'local':
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)
-            
             neighbors = {}
             for i in range(num_chans):
                 mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 neighbors[i] = closest_inds[i, mask]
+                assert len(neighbors[i]) > 0, "No reference channels available in the local annulus for selection."
         
         BasePreprocessor.__init__(self, recording)
         
