@@ -45,7 +45,7 @@ class CommonReferenceRecording(BasePreprocessor):
     name = 'common_reference'
 
     def __init__(self, recording, reference='global', operator='median', groups=None, ref_channels=None,
-        local_radius=(2, 8), verbose=False):
+        local_radius=(30, 55), verbose=False):
 
         
         num_chans = recording.get_num_channels()
