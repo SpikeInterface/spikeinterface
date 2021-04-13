@@ -7,6 +7,9 @@ It is useful when we do extractor.save(name='name').
 import tempfile
 from pathlib import Path
 
+
+########################################
+
 global temp_folder
 base = Path(tempfile.gettempdir()) / 'spikeinterface_cache'
 base.mkdir(exist_ok=True)
@@ -14,7 +17,6 @@ temp_folder = Path(tempfile.mkdtemp(dir=base))
 
 global temp_folder_set
 temp_folder_set = False
-
 
 def get_global_tmp_folder():
     """
@@ -51,4 +53,43 @@ def reset_global_tmp_folder():
     print('New global_tmp_folder: ', temp_folder)
     global temp_folder_set
     temp_folder_set = False
+
+########################################
+
+global dataset_folder
+dataset_folder = Path.home() / 'spikeinterface_datasets'
+dataset_folder.mkdir(exist_ok=True)
+
+global dataset_folder_set
+dataset_folder_set = False
+
+def get_global_dataset_folder():
+    """
+    Get the global dataset folder.
+    """
+    global dataset_folder
+    return dataset_folder
+
+
+def set_global_dataset_folder(folder):
+    """
+    Set the global dataset folder.
+    """
+    global dataset_folder
+    dataset_folder = Path(folder)
+    global temp_folder_set
+    dataset_folder_set = True
+
+def is_set_global_dataset_folder():
+    """
+    Check is the global path dataset folder have been manually set.
+    """
+    global dataset_folder_set
+    return dataset_folder_set
+
+
+
+
+
+
 

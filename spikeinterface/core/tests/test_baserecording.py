@@ -77,6 +77,7 @@ def test_BaseRecording():
     folder = cache_folder / 'simple_recording'
     rec.save(format='binary', folder=folder)
     rec2 = BaseExtractor.load_from_folder(folder)
+    assert 'quality' in rec2.get_property_keys()
     # but also possible
     rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
     

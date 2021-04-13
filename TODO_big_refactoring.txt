@@ -3,7 +3,6 @@ Here the TODO list for the NEW spikeinterface API
 core:
 
     * add kachery extractor (jeremy)
-    * save property as np (sam)
     * save features as np (sam)
     * event object (sam and alessio)
     * segment concatenator (sam)
@@ -38,19 +37,13 @@ toolkit:
   * curation:
     * ALL
   * postprocessing: 
-     * export to phy
-     * PCA
+     * export to phy (pca + amplitudes)
   * sorting components: all (sam)
   * validation aka qualitymetrics:
      * "max_drift",
-     *  "cumulative_drift",
+     * "cumulative_drift",
      * "silhouette_score",
-     * "isolation_distance",
-     * "l_ratio",
-     * "d_prime", 
      * "noise_overlap",
-     * "nn_hit_rate",
-     * "nn_miss_rate",
 
 sorters:
 
@@ -59,7 +52,7 @@ sorters:
   * some sorter do not have yet the extractor
   * unify parameters for copy to binary > common methods
   * make something to not copy binary when not needed
-  
+
 comparison:
   * done: need tests
 
