@@ -39,6 +39,8 @@ def test_WaveformExtractor():
     we = WaveformExtractor.load_from_folder(folder)
     
     wfs = we.get_waveforms(0)
+    
+    template = we.get_template(0)
 
 
 def test_extract_waveforms():
