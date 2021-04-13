@@ -20,5 +20,5 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = 'NeuroScopeRawIO'
     
     def __init__(self, file_path, stream_id=None):
-        neo_kwargs = {'filename' : file_path}
+        neo_kwargs = {'filename' : str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)

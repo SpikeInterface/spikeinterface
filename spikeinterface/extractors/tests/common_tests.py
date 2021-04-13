@@ -8,7 +8,7 @@ from spikeinterface import download_dataset, get_global_dataset_folder
 gin_repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 local_folder = get_global_dataset_folder() / 'ephy_testing_data'
 
-class RecordingCommonTestSuite:
+class CommonTestSuite:
     ExtractorClass = None
     downloads = []
     entities = []
@@ -16,6 +16,9 @@ class RecordingCommonTestSuite:
     def setUp(self):
         for distant_path in self.downloads:
             download_dataset(repo=gin_repo, distant_path=distant_path, local_folder=local_folder)
+    
+
+class RecordingCommonTestSuite(CommonTestSuite):
     
     def test_open(self):
         for entity in self.entities:
@@ -25,9 +28,9 @@ class RecordingCommonTestSuite:
             elif isinstance(entity, str):
                 path = entity
                 kwargs = {}
-            print(path, kwargs)
+            
             rec = self.ExtractorClass(local_folder / path, **kwargs)
-            print(rec)
+            # print(rec)
             
             num_seg = rec.get_num_segments()
             num_chans = rec.get_num_channels()
@@ -51,8 +54,24 @@ class RecordingCommonTestSuite:
 
 
 
-class SortingCommonTestSuite:
-    ExtractorClass = None
+class SortingCommonTestSuite(CommonTestSuite):
     
-    #~ def setUp(self):
-        #~ pass
+    def test_open(self):
+        for entity in self.entities:
+            
+            if isinstance(entity, tuple):
+                path, kwargs = entity
+            elif isinstance(entity, str):
+                path = entity
+                kwargs = {}
+                
+            sorting = self.ExtractorClass(local_folder / path, **kwargs)
+            # print(sorting)
+            
+            num_seg = sorting.get_num_segments()
+            unit_ids = sorting.unit_ids
+            
+            for segment_index in range(num_seg):
+                for unit_id in unit_ids:
+                    st = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+
