@@ -41,58 +41,65 @@ class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'openephys/OpenEphys_SampleData_1',
     ]
 
+class ItanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanRecordingExtractor
+    downloads = ['intan']
+    entities = [
+        ('intan/intan_rhd_test_1.rhd', {'stream_id': '0'}),
+        ('intan/intan_rhd_test_1.rhd', {'stream_id': '2'}),
+        ('intan/intan_rhd_test_1.rhd', {'stream_id': '3'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '0'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '3'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '4'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '11'}),
+    ]
+
+class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroScopeRecordingExtractor
+    downloads = ['neuroscope']
+    entities = [
+        'neuroscope/test1/test1.xml',
+    ]
+
+class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = PlexonRecordingExtractor
+    downloads = ['plexon']
+    entities = [
+        'plexon/File_plexon_3.plx',
+    ]
+
+# TODO : this fail, need investigate
+# class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    # ExtractorClass = NeuralynxRecordingExtractor
+    # downloads = ['neuralynx']
+    # entities = [
+        # 'neuralynx/Cheetah_v5.6.3',
+    # ]
 
 
+class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = BlackrockRecordingExtractor
+    downloads = ['blackrock']
+    entities = [
+        'blackrock/FileSpec2.3001.ns5',
+        ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
+        ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
+    ]
+
+class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = MCSRawRecordingExtractor
+    downloads = ['rawmcs']
+    entities = [
+        'rawmcs/raw_mcs_with_header_1.raw',
+    ]
 
 
-#~ @pytest.mark.skip('')
-#~ def test_intan():
-    #~ intan_file = basefolder +  'intan/intan_rhd_test_1.rhd'
-    #~ for stream_id in ('0', '2', '3'):
-        #~ rec = IntanRecordingExtractor(intan_file, stream_id=stream_id)
-        #~ print(rec)
-    
-    #~ intan_file = basefolder +  'intan/intan_rhs_test_1.rhs'
-    #~ for stream_id in ('0', '11', '3', '4'):
-        #~ rec = IntanRecordingExtractor(intan_file, stream_id=stream_id)
-
-#~ @pytest.mark.skip('')
-#~ def test_neuroscope():
-    #~ neuroscope_file = basefolder +  'neuroscope/test1/test1.xml'
-    #~ rec = NeuroScopeRecordingExtractor(neuroscope_file)
-    #~ print(rec)
-
-#~ @pytest.mark.skip('')
-#~ def test_plexon():
-    #~ plexon_file = basefolder + 'plexon/File_plexon_3.plx'
-    #~ PlexonRecordingExtractor
-    #~ rec = PlexonRecordingExtractor(plexon_file)
-    #~ print(rec)
-
-#~ @pytest.mark.skip('')
-#~ def test_neuralynx():
-    #~ neuralynx_folder = basefolder + 'neuralynx/Cheetah_v5.6.3/'
-    #~ rec = NeuralynxRecordingExtractor(neuralynx_folder)
-    #~ print(rec)
-
-#~ @pytest.mark.skip('')
-#~ def test_blackrock():
-    #~ blackrock_file = basefolder + 'blackrock/FileSpec2.3001.ns5'
-    #~ rec = BlackrockRecordingExtractor(blackrock_file)
-    #~ print(rec)
-
-#~ @pytest.mark.skip('')
-#~ def test_mcsraw():
-    #~ mcsraw_file = basefolder + 'rawmcs/raw_mcs_with_header_1.raw'
-    #~ rec = MCSRawRecordingExtractor(mcsraw_file)
-    #~ print(rec)
-
-#~ @pytest.mark.skip('')
-#~ def test_kilosort():
-    #~ kilosort_folder = basefolder + 'phy/phy_example_0'
-    #~ sorting = KiloSortSortingExtractor(kilosort_folder)
-    #~ print(sorting)
-
+class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = KiloSortSortingExtractor
+    downloads = ['phy']
+    entities = [
+        'phy/phy_example_0',
+    ]
 
 
 if __name__ == '__main__':
@@ -100,6 +107,13 @@ if __name__ == '__main__':
     #~ test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     #~ test = OpenEphysLegacyRecordingTest()
+    #~ test = ItanRecordingTest()
+    #~ test = NeuroScopeRecordingTest()
+    #~ test = PlexonRecordingTest()
+    #~ test = NeuralynxRecordingTest()
+    #~ test = BlackrockRecordingTest()
+    #~ test = MCSRawRecordingTest()
+    test = KiloSortSortingTest()
     
     test.setUp()
     test.test_open()
