@@ -7,6 +7,7 @@ sklearn
 matplotlib
 networkx
 datalad
+MEArec
 
 
 ## install sorters ##

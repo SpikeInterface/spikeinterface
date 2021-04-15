@@ -1,7 +1,6 @@
 Here the TODO list for the NEW spikeinterface API
 
 core:
-
     * add kachery extractor (jeremy)
     * save features as np (sam)
     * event object (sam and alessio)
