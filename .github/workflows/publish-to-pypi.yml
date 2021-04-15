@@ -18,6 +18,9 @@ jobs:
           python-version: 3.8
       - name: Install dependencies for testing
         run: |
+          sudo apt install git git-annex
+          sudo apt install mpich libmpich-dev
+
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
           pip install -r requirements.txt
