@@ -6,6 +6,7 @@ pandas
 sklearn
 matplotlib
 networkx
+datalad
 
 
 ## install sorters ##

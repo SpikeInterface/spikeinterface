@@ -8,8 +8,8 @@ core:
     * segment concatenator (sam)
     * mono segment class (sam)
     * add hither (alessio, sam or jeremy) for launcher and/or container
-    * data retreiver based on datalad
 
+    
 extractors:
 
     * nwb: reader/writer (with multi segment) (ben?)
