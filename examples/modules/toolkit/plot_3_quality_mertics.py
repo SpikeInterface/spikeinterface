@@ -14,6 +14,7 @@ import spikeinterface.toolkit as st
 ##############################################################################
 # First, let's download a simulated dataset
 #  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+
 local_path = si.download_dataset(distant_path='mearec/mearec_test_10s.h5')
 recording = se.MEArecRecordingExtractor(local_path)
 sorting = se.MEArecSortingExtractor(local_path)
