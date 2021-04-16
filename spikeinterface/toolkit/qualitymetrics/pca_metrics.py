@@ -38,7 +38,7 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neig
         # END DEBUG
         
 
-        labels, pcs = pca.get_concatenated_components(
+        labels, pcs = pca.get_all_components(
                 channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
         
         pcs_flat = pcs.reshape(pcs.shape[0], -1)

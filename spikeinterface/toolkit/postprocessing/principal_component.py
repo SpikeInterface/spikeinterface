@@ -1,5 +1,7 @@
 import shutil
 import json
+from pathlib import Path
+
 import numpy as np
 
 from sklearn.decomposition import IncrementalPCA 
@@ -25,9 +27,13 @@ class WaveformPrincipalComponent:
     @classmethod
     def load_from_folder(cls, folder):
         we = WaveformExtractor.load_from_folder(folder)
-        pca = WaveformPrincipalComponent(we)
-        return pca
-    
+        pc = WaveformPrincipalComponent(we)
+        return pc
+
+    @classmethod
+    def create(cls, waveform_extractor):
+        pc = WaveformPrincipalComponent(waveform_extractor)
+        return pc
     
     def __repr__(self):
         we = self.waveform_extractor
@@ -83,7 +89,7 @@ class WaveformPrincipalComponent:
         comp = np.load(component_file)
         return comp
     
-    def get_concatenated_components(self, channel_ids=None, unit_ids=None):
+    def get_all_components(self, channel_ids=None, unit_ids=None):
         recording = self.waveform_extractor.recording
         
         if unit_ids is None:
@@ -221,4 +227,24 @@ class WaveformPrincipalComponent:
 
 
 
+def compute_principal_components(waveform_extractor, load_if_exists=False, 
+            n_components=5, mode='by_channel_local',  whiten=True, dtype='float32'):
+    """
+    
+    
+    """
+    
+    folder = waveform_extractor.folder
+    if load_if_exists and folder.is_dir() and (folder / 'PCA').is_dir():
+        pc = WaveformPrincipalComponent.load_from_folder(folder)
+    else:
+        pc = WaveformPrincipalComponent.create(waveform_extractor)
+        pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype)
+        print('ici')
+        pc.run()
+        print('ici')
+    
+    return pc
 
+    
+    

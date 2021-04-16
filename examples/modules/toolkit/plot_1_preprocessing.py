@@ -82,8 +82,8 @@ recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max
 # computed on different groups. Single channels can also be used as
 # reference.
 
-recording_car = st.common_reference(recording, reference='average')
-recording_cmr = st.common_reference(recording, reference='median')
+recording_car = st.common_reference(recording, reference='global', operator='average')
+recording_cmr = st.common_reference(recording, reference='global', operator='median')
 recording_single = st.common_reference(recording, reference='single', ref_channels=[1])
 recording_single_groups = st.common_reference(recording, reference='single',
                                                             groups=[[0, 1], [2, 3]], ref_channels=[0, 2])

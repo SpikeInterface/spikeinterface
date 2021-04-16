@@ -14,6 +14,12 @@ class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['mearec']
     entities = ['mearec/mearec_test_10s.h5']
 
+class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = MEArecSortingExtractor
+    downloads = ['mearec']
+    entities = ['mearec/mearec_test_10s.h5']
+
+
 class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = SpikeGLXRecordingExtractor
     downloads = ['spikeglx']
@@ -104,6 +110,7 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
 
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
+    test = MearecSortingTest()
     #~ test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     #~ test = OpenEphysLegacyRecordingTest()
@@ -113,7 +120,7 @@ if __name__ == '__main__':
     #~ test = NeuralynxRecordingTest()
     #~ test = BlackrockRecordingTest()
     #~ test = MCSRawRecordingTest()
-    test = KiloSortSortingTest()
+    #~ test = KiloSortSortingTest()
     
     test.setUp()
     test.test_open()
