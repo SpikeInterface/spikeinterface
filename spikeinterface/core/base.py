@@ -400,6 +400,15 @@ class BaseExtractor:
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file)
+            
+            # load properties
+            prop_folder = folder / 'properties'
+            for prop_file in prop_folder.iterdir():
+                if prop_file.suffix == '.npy':
+                    values = np.load(prop_file)
+                    key = prop_file.stem
+                    extractor.set_property(key, values)
+
             extractor = extractor._after_load(folder)
             return extractor
 
@@ -500,6 +509,13 @@ class BaseExtractor:
                 json.dumps({'warning': 'the provenace is not dumpable!!!'}),
                 encoding='utf8'
             )
+        
+        # save properties
+        prop_folder = folder / 'properties'
+        prop_folder.mkdir(parents=True, exist_ok=False)
+        for key in self.get_property_keys():
+            values = self.get_property(key)
+            np.save(prop_folder / (key + '.npy'), values)
 
         # save data (done the subclass)
         cached = self._save(folder=folder, verbose=verbose, **save_kargs)
@@ -511,12 +527,7 @@ class BaseExtractor:
         cached.dump(folder / f'cached.{dump_ext}')
 
         return cached
-
-    def allocate_array(self, engine, array_name, shape, dtype, ):
-        raise NotImplementedError
-
-    def allocate_array_from(self, engine, array_name, existing_array):
-        self.allocate_array(engine, array_name, existing_array.shape, existing_array.dtype)
+    
 
 
 def _check_if_dumpable(d):

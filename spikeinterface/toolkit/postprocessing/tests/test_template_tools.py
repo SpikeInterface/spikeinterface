@@ -8,7 +8,9 @@ import pytest
 
 from spikeinterface import WaveformExtractor
 from spikeinterface.extractors import toy_example
-from spikeinterface.toolkit.postprocessing import get_unit_extremum_channel, get_unit_extremum_amplitude
+from spikeinterface.toolkit.postprocessing import (get_template_amplitudes,
+    get_template_extremum_channel, get_template_best_channels,
+    get_template_extremum_amplitude, compute_unit_centers_of_mass)
 
 
 def setup_module():
@@ -25,27 +27,39 @@ def setup_module():
     we.run(n_jobs=1, chunk_size=30000)
 
 
-def test_get_unit_extremum_channel():
+def test_get_template_amplitudes():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
-    extremum_channels_ids = get_unit_extremum_channel(we, peak_sign='both')
+    peak_values= get_template_amplitudes(we)
+    print(peak_values)
+
+def test_get_template_extremum_channel():
+    we = WaveformExtractor.load_from_folder('toy_waveforms')
+    extremum_channels_ids = get_template_extremum_channel(we, peak_sign='both')
     print(extremum_channels_ids)
+
+def test_get_template_best_channels():
+    we = WaveformExtractor.load_from_folder('toy_waveforms')
+    best_channels = get_template_best_channels(we, num_channels=2)
+    print(best_channels)
     
-    
-    
-    
-def test_get_unit_extremum_amplitude():
+def test_get_template_extremum_amplitude():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
     
-    extremum_channels_ids = get_unit_extremum_amplitude(we, peak_sign='both')
+    extremum_channels_ids = get_template_extremum_amplitude(we, peak_sign='both')
     print(extremum_channels_ids)
     
 def test_compute_unit_centers_of_mass():
-    pass
+    we = WaveformExtractor.load_from_folder('toy_waveforms')
+    
+    coms = compute_unit_centers_of_mass(we, num_channels=4)
+    print(coms)
 
 
 if __name__ == '__main__':
     #~ setup_module()
     
-    #~ test_get_unit_extremum_channel()
-    test_get_unit_extremum_amplitude()
-    #~ test_compute_unit_centers_of_mass()
+    #~ test_get_template_amplitudes()
+    #~ test_get_template_extremum_channel()
+    #~ test_get_template_best_channels()
+    #~ test_get_template_extremum_amplitude()
+    test_compute_unit_centers_of_mass()

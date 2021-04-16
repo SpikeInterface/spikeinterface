@@ -1,134 +1,129 @@
-import shutil
-from pathlib import Path
+import unittest
+
 
 import pytest
 import numpy as np
 
+from spikeinterface import download_dataset
 from spikeinterface.extractors import *
 
+from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
+
+class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = MEArecRecordingExtractor
+    downloads = ['mearec']
+    entities = ['mearec/mearec_test_10s.h5']
+
+class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = MEArecSortingExtractor
+    downloads = ['mearec']
+    entities = ['mearec/mearec_test_10s.h5']
 
 
+class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = SpikeGLXRecordingExtractor
+    downloads = ['spikeglx']
+    entities = [
+        ('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.ap'}),
+        ('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.lf'}),
+        ('spikeglx/Noise4Sam_g0', {'stream_id': 'nidq'}),
+    ]
+
+class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = OpenEphysBinaryRecordingExtractor
+    downloads = ['openephysbinary']
+    entities = [
+        'openephysbinary/v0.4.4.1_with_video_tracking',
+        ('openephysbinary/v0.5.3_two_neuropixels_stream', {'stream_id': '0'}),
+        ('openephysbinary/v0.5.3_two_neuropixels_stream', {'stream_id': '1'}),
+        ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '0'}),
+        ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '1'}),
+    ]
+
+class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = OpenEphysLegacyRecordingExtractor
+    downloads = ['openephys']
+    entities = [
+        'openephys/OpenEphys_SampleData_1',
+    ]
+
+class ItanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanRecordingExtractor
+    downloads = ['intan']
+    entities = [
+        ('intan/intan_rhd_test_1.rhd', {'stream_id': '0'}),
+        ('intan/intan_rhd_test_1.rhd', {'stream_id': '2'}),
+        ('intan/intan_rhd_test_1.rhd', {'stream_id': '3'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '0'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '3'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '4'}),
+        ('intan/intan_rhs_test_1.rhs', {'stream_id': '11'}),
+    ]
+
+class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroScopeRecordingExtractor
+    downloads = ['neuroscope']
+    entities = [
+        'neuroscope/test1/test1.xml',
+    ]
+
+class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = PlexonRecordingExtractor
+    downloads = ['plexon']
+    entities = [
+        'plexon/File_plexon_3.plx',
+    ]
+
+# TODO : this fail, need investigate
+# class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    # ExtractorClass = NeuralynxRecordingExtractor
+    # downloads = ['neuralynx']
+    # entities = [
+        # 'neuralynx/Cheetah_v5.6.3',
+    # ]
 
 
-# TODO use datalad and make this folder at API
-# from spikeinterface.extractors.tests.file_retrieve import download_test_file
-basefolder = '/home/samuel/Documents/ephy_testing_data/'
+class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = BlackrockRecordingExtractor
+    downloads = ['blackrock']
+    entities = [
+        'blackrock/FileSpec2.3001.ns5',
+        ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
+        ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
+    ]
+
+class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = MCSRawRecordingExtractor
+    downloads = ['rawmcs']
+    entities = [
+        'rawmcs/raw_mcs_with_header_1.raw',
+    ]
 
 
-@pytest.mark.skip('')
-def test_mearec_extractors():
-    mearec_file = basefolder + 'mearec/mearec_test_10s.h5'
-    
-    rec = MEArecRecordingExtractor(mearec_file)
-    print(rec)
-    probe = rec.get_probe()
-    print(probe)
-    
-    sorting = MEArecSortingExtractor(mearec_file, use_natural_unit_ids=True)
-    print(sorting)
-    print(sorting.get_unit_ids())
-
-    sorting = MEArecSortingExtractor(mearec_file, use_natural_unit_ids=False)
-    print(sorting)
-    print(sorting.get_unit_ids())
-
-@pytest.mark.skip('')
-def test_spikeglx_extractors():
-    spikeglx_folder = basefolder + 'spikeglx/Noise4Sam_g0'
-    rec = SpikeGLXRecordingExtractor(spikeglx_folder, stream_id='imec0.ap')
-    print(rec)
-
-    probe = rec.get_probe()
-    print(probe)
-    
-
-from spikeinterface.extractors.tests.file_retrieve import download_test_file
-@pytest.mark.skip('')
-def test_openephys():
-    # oe_folder = basefolder +  'openephys/OpenEphys_SampleData_1'
-    # rec = OpenEphysLegacyRecordingExtractor(oe_folder)
-    # print(rec)
-    
-    # oe_folder = basefolder +  'openephysbinary/v0.4.4.1_with_video_tracking/'
-    # rec = OpenEphysBinaryRecordingExtractor(oe_folder)
-    # print(rec)
-    
-
-    oe_folder = basefolder +  'openephysbinary/v0.4.4.1_with_video_tracking/'
-    ev = OpenEphysBinaryEventExtractor(oe_folder)
-    print(ev)
-    print(ev.channel_ids)
-    for channel_id in ev.channel_ids:
-        event_times = ev.get_event_times(channel_id=channel_id)
-        print(event_times)
-
-    #~ import matplotlib.pyplot as plt
-    #~ fig, ax = plt.subplots()
-    #~ traces = rec.get_traces()
-    #~ ax.plot(traces[:32000*4, 5])
-    #~ plt.show()
-
-@pytest.mark.skip('')
-def test_intan():
-    intan_file = basefolder +  'intan/intan_rhd_test_1.rhd'
-    for stream_id in ('0', '2', '3'):
-        rec = IntanRecordingExtractor(intan_file, stream_id=stream_id)
-        print(rec)
-    
-    intan_file = basefolder +  'intan/intan_rhs_test_1.rhs'
-    for stream_id in ('0', '11', '3', '4'):
-        rec = IntanRecordingExtractor(intan_file, stream_id=stream_id)
-
-@pytest.mark.skip('')
-def test_neuroscope():
-    neuroscope_file = basefolder +  'neuroscope/test1/test1.xml'
-    rec = NeuroScopeRecordingExtractor(neuroscope_file)
-    print(rec)
-
-@pytest.mark.skip('')
-def test_plexon():
-    plexon_file = basefolder + 'plexon/File_plexon_3.plx'
-    PlexonRecordingExtractor
-    rec = PlexonRecordingExtractor(plexon_file)
-    print(rec)
-
-@pytest.mark.skip('')
-def test_neuralynx():
-    neuralynx_folder = basefolder + 'neuralynx/Cheetah_v5.6.3/'
-    rec = NeuralynxRecordingExtractor(neuralynx_folder)
-    print(rec)
-
-@pytest.mark.skip('')
-def test_blackrock():
-    blackrock_file = basefolder + 'blackrock/FileSpec2.3001.ns5'
-    rec = BlackrockRecordingExtractor(blackrock_file)
-    print(rec)
-
-@pytest.mark.skip('')
-def test_mcsraw():
-    mcsraw_file = basefolder + 'rawmcs/raw_mcs_with_header_1.raw'
-    rec = MCSRawRecordingExtractor(mcsraw_file)
-    print(rec)
-
-@pytest.mark.skip('')
-def test_kilosort():
-    kilosort_folder = basefolder + 'phy/phy_example_0'
-    sorting = KiloSortSortingExtractor(kilosort_folder)
-    print(sorting)
-
+class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = KiloSortSortingExtractor
+    downloads = ['phy']
+    entities = [
+        'phy/phy_example_0',
+    ]
 
 
 if __name__ == '__main__':
-    # test_mearec_extractors()
-    #~ test_spikeglx_extractors()
-    test_openephys()
-    #~ test_intan()
-    #~ test_neuroscope()
-    #~ test_plexon()
-    #~ test_neuralynx()
-    #~ test_blackrock()
-    #~ test_mcsraw()
-    #~ test_kilosort()
+    #~ test = MearecRecordingTest()
+    test = MearecSortingTest()
+    #~ test = SpikeGLXRecordingTest()
+    #~ test = OpenEphysBinaryRecordingTest()
+    #~ test = OpenEphysLegacyRecordingTest()
+    #~ test = ItanRecordingTest()
+    #~ test = NeuroScopeRecordingTest()
+    #~ test = PlexonRecordingTest()
+    #~ test = NeuralynxRecordingTest()
+    #~ test = BlackrockRecordingTest()
+    #~ test = MCSRawRecordingTest()
+    #~ test = KiloSortSortingTest()
+    
+    test.setUp()
+    test.test_open()
     
     
 

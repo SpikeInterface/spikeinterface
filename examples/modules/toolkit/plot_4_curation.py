@@ -7,43 +7,62 @@ quality metrics. This can be done with the :code:`toolkit.curation` submodule.
 
 """
 
+import spikeinterface as si
 import spikeinterface.extractors as se
-# import spikeinterface.toolkit as st
+import spikeinterface.toolkit as st
 import spikeinterface.sorters as ss
 
-#~ ##############################################################################
-#~ # First, let's create a toy example:
+##############################################################################
+# First, let's download a simulated dataset
+#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+#
+# Let's imagine that that sorting is in fact the output of a sorters.
+# 
 
-#~ recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=30, seed=0)
+local_path = si.download_dataset(distant_path='mearec/mearec_test_10s.h5')
+recording = se.MEArecRecordingExtractor(local_path)
+sorting = se.MEArecSortingExtractor(local_path)
+print(recording)
+print(sorting)
 
-#~ ##############################################################################
-#~ # and let's spike sort using klusta
+##############################################################################
+# Firt, we extractor waveforms and compute PC on it.
 
-#~ sorting_KL = ss.run_klusta(recording)
+folder = 'waveforms_mearec'
+we = si.extract_waveforms(recording, sorting, folder,
+    load_if_exists=True,
+    ms_before=1, ms_after=2., max_spikes_per_unit=500,
+    n_jobs=1, chunk_size=30000)
+print(we)
 
-#~ print('Units:', sorting_KL.get_unit_ids())
-#~ print('Number of units:', len(sorting_KL.get_unit_ids()))
+pc = st.compute_principal_components(we, load_if_exists=True,
+            n_components=3, mode='by_channel_local')
+print(pc)
 
-#~ ##############################################################################
-#~ # There are several available functions that enables to only retrieve units with respect to some rules. For example,
-#~ # let's automatically curate the sorting output so that only the units with SNR > 10 and mean firing rate > 2.3 Hz are
-#~ # kept:
+##############################################################################
+# Compute some metrics on it
 
-#~ sorting_fr = st.curation.threshold_firing_rates(sorting_KL, duration_in_frames=recording.get_num_frames(), threshold=2.3, threshold_sign='less')
+metrics = st.compute_quality_metrics(we, waveform_principal_component=pc,
+            metric_names=['snr', 'isi_violation', 'nearest_neighbor'])
+print(metrics)
 
-#~ print('Units after FR theshold:', sorting_fr.get_unit_ids())
-#~ print('Number of units after FR theshold:', len(sorting_fr.get_unit_ids()))
 
-#~ sorting_snr = st.curation.threshold_snrs(sorting_fr, recording, threshold=10, threshold_sign='less')
+##############################################################################
+#  Now we will keep only unit with restriction on theses metrics.
+# 
+# The easiest and more intuitive way is to use boolean masking with dataframe.
 
-#~ print('Units after SNR theshold:', sorting_snr.get_unit_ids())
-#~ print('Number of units after SNR theshold:', len(sorting_snr.get_unit_ids()))
+keep_mask = (metrics['snr']  > 7.5) & (metrics['isi_violations_rate'] < 0.05) & (metrics['nn_hit_rate'] > 0.90)
+print(keep_mask)
 
-#~ ##############################################################################
-#~ # Let's now check with the :code:`toolkit.validation` submodule that all units have a firing rate > 10 and snr > 0
+keep_unit_ids = keep_mask[keep_mask].index.values
+print(keep_unit_ids)
 
-#~ fr = st.validation.compute_firing_rates(sorting_snr, duration_in_frames=recording.get_num_frames())
-#~ snrs = st.validation.compute_snrs(sorting_snr, recording)
+##############################################################################
+# And now lets create a sorting that contains only curated units.
+# and save it
 
-#~ print('Firing rates:', fr)
-#~ print('SNR:', snrs)
+curated_sorting = sorting.select_units(keep_unit_ids)
+print(curated_sorting)
+se.NpzSortingExtractor.write_sorting(curated_sorting, 'curated_sorting.pnz')
+

@@ -97,8 +97,7 @@ class KlustaSorter(BaseSorter):
 
 
         # source file
-        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['offset'] ==0 \
-                    and recording._kwargs['time_axis'] == 0:
+        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['offset'] ==0:
             # no need to copy
             raw_filename = str(Path(recording._kwargs['files_path'][0]).resolve())
             dtype = recording._kwargs['dtype']
@@ -107,8 +106,8 @@ class KlustaSorter(BaseSorter):
             raw_filename = output_folder / 'recording.dat'
             dtype = 'int16'
             BinaryRecordingExtractor.write_recording(recording, files_path=[raw_filename],
-                                                                time_axis=0, dtype='int16',
-                                                                total_memory="500M", verbose=False)
+                                                                dtype='int16', total_memory="500M",
+                                                                n_jobs=-1, verbose=False, progress_bar=verbose)
                                                                 
 
         if p['detect_sign'] < 0:
