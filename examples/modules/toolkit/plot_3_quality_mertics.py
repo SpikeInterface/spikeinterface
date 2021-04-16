@@ -3,49 +3,74 @@ Validation Tutorial
 ======================
 
 After spike sorting, you might want to validate the goodness of the sorted units. This can be done using the
-:code:`toolkit.validation` submodule, which computes several quality metrics of the sorted units.
+:code:`toolkit.qualitymetrics` submodule, which computes several quality metrics of the sorted units.
 
 """
 
+import spikeinterface as si
 import spikeinterface.extractors as se
-# import spikeinterface.toolkit as st
+import spikeinterface.toolkit as st
 
-#~ ##############################################################################
-#~ # First, let's create a toy example:
+##############################################################################
+# First, let's download a simulated dataset
+#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+local_path = si.download_dataset(distant_path='mearec/mearec_test_10s.h5')
+recording = se.MEArecRecordingExtractor(local_path)
+sorting = se.MEArecSortingExtractor(local_path)
+print(recording)
+print(sorting)
 
-#~ recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=10, seed=0)
+##############################################################################
+# Extract spike waveforms
+# --------------------------
+# 
+# For convinience metris are computed on the WaveformExtractor object that gather recording/sorting and
+# extracted waveforms in a single object
 
-#~ ##############################################################################
-#~ # The :code:`toolkit.validation` submodule has a set of functions that allow users to compute metrics in a
-#~ # compact and easy way. To compute a single metric, the user can simply run one of the quality metric functions
-#~ # as shown below. Each function as a variety of adjustable parameters that can be tuned by the user to match their data.
+folder = 'waveforms_mearec'
+we = si.extract_waveforms(recording, sorting, folder,
+    load_if_exists=True,
+    ms_before=1, ms_after=2., max_spikes_per_unit=500,
+    n_jobs=1, chunk_size=30000)
+print(we)
 
-#~ firing_rates = st.validation.compute_firing_rates(sorting, duration_in_frames=recording.get_num_frames())
-#~ isi_violations = st.validation.compute_isi_violations(sorting, duration_in_frames=recording.get_num_frames(), isi_threshold=0.0015)
-#~ snrs = st.validation.compute_snrs(recording=recording, sorting=sorting, max_spikes_per_unit_for_snr=1000)
-#~ nn_hit_rate, nn_miss_rate = st.validation.compute_nn_metrics(recording=recording, sorting=sorting, num_channels_to_compare=13)
+##############################################################################
+# The :code:`spikeinterface.toolkit.qualitymetrics` submodule has a set of functions that allow users to compute
+# metrics in a compact and easy way. To compute a single metric, the user can simply run one of the
+# quality metric functions as shown below. Each function as a variety of adjustable parameters that can be tuned 
+# by the user to match their data.
 
-#~ ##############################################################################
-#~ # To compute more than one metric at once, a user can use the :code:`compute_quality_metrics` function and indicate
-#~ # which metrics they want to compute. This will return a dictionary of metrics or optionally a pandas dataframe.
-#~ metrics = st.validation.compute_quality_metrics(sorting=sorting, recording=recording,
-                                                #~ metric_names=['firing_rate', 'isi_violation', 'snr', 'nn_hit_rate', 'nn_miss_rate'],
-                                                #~ as_dataframe=True)
+firing_rates = st.compute_firing_rate(we)
+print(firing_rates)
+isi_violations_rate, isi_violations_count = st.compute_isi_violations(we)
+print(isi_violations_rate)
+snrs = st.compute_snrs(we)
+print(snrs)
 
-#~ ##############################################################################
-#~ # To compute metrics on only part of the recording, a user can specify specific epochs in the Recording and Sorting extractor
-#~ # using :code:`add_epoch` and then compute the metrics on the SubRecording and SubSorting extractor given by :code:`get_epoch`.
-#~ # In this example, we compute all the same metrics on the first half of the recording.
-#~ sorting.add_epoch(epoch_name="first_half", start_frame=0, end_frame=recording.get_num_frames()/2) #set
-#~ recording.add_epoch(epoch_name="first_half", start_frame=0, end_frame=recording.get_num_frames()/2)
-#~ subsorting = sorting.get_epoch("first_half")
-#~ subrecording = recording.get_epoch("first_half")
-#~ metrics_first_half = st.validation.compute_quality_metrics(sorting=subsorting, recording=subrecording,
-                                                           #~ metric_names=['firing_rate', 'isi_violation', 'snr', 'nn_hit_rate', 'nn_miss_rate'],
-                                                           #~ as_dataframe=True)
 
-#~ print("Metrics full recording")
-#~ print(metrics)
-#~ print('\n')
-#~ print("Metrics first half recording")
-#~ print(metrics_first_half)
+##############################################################################
+#  Some metrics are based on the principal component
+
+pc = st.compute_principal_components(we, load_if_exists=True,
+            n_components=3, mode='by_channel_local')
+print(pc)
+
+pc_metrics = st.calculate_pc_metrics(pc, metric_names=['nearest_neighbor'])
+print(pc_metrics)
+
+
+##############################################################################
+# To compute more than one metric at once, a user can use the :code:`compute_quality_metrics` function and indicate
+# which metrics they want to compute. This will return a pandas dataframe.
+
+metrics = st.compute_quality_metrics(we, waveform_principal_component=pc)
+print(metrics)
+
+
+
+##############################################################################
+# To compute metrics on only part of the recording, a user can specify specific
+#  TODO
+# Not implemented yet
+
+

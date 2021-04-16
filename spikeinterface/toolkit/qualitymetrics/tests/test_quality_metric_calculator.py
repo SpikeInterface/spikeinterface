@@ -8,7 +8,7 @@ from spikeinterface import WaveformExtractor
 from spikeinterface.extractors import toy_example
 
 from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent
-from spikeinterface.toolkit.qualitymetrics import compute_metrics
+from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics
 
 
 
@@ -26,12 +26,12 @@ def setup_module():
     we.run(n_jobs=1, chunk_size=30000)
 
 
-def test_compute_metrics():
+def test_compute_quality_metrics():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
     print(we)
     
     # without PC
-    metrics = compute_metrics(we, metric_names=['snr'])
+    metrics = compute_quality_metrics(we, metric_names=['snr'])
     print(metrics)
     print(metrics.columns)
     
@@ -39,7 +39,7 @@ def test_compute_metrics():
     pca = WaveformPrincipalComponent(we)
     pca.set_params(n_components=5, mode='by_channel_local')
     pca.run()    
-    metrics = compute_metrics(we, waveform_principal_component=pca)
+    metrics = compute_quality_metrics(we, waveform_principal_component=pca)
     print(metrics)
     print(metrics.columns)
 
@@ -48,5 +48,5 @@ def test_compute_metrics():
     
 if __name__ == '__main__':
     setup_module()
-    test_compute_metrics()
+    test_compute_quality_metrics()
 

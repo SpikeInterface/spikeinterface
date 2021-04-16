@@ -116,7 +116,6 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kargs):
     
     # make a dict to acces by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
-    print(noise_levels)
     
     snrs = {}
     for unit_id in unit_ids:
