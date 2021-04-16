@@ -42,7 +42,8 @@ print(pc)
 ##############################################################################
 # Compute some metrics on it
 
-metrics = st.compute_quality_metrics(we, waveform_principal_component=pc, metric_names=['snr', 'isi_violation', 'nearest_neighbor'])
+metrics = st.compute_quality_metrics(we, waveform_principal_component=pc,
+            metric_names=['snr', 'isi_violation', 'nearest_neighbor'])
 print(metrics)
 
 
