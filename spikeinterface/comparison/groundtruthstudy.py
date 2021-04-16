@@ -9,7 +9,7 @@ from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict, run_sorters
 
 from spikeinterface import WaveformExtractor
-from spikeinterface.toolkit import compute_metrics
+from spikeinterface.toolkit import compute_quality_metrics
 
 
 
@@ -227,7 +227,7 @@ class GroundTruthStudy:
         we.run(n_jobs=n_jobs, total_memory=total_memory)
         
         # metrics
-        metrics = compute_metrics(we, metric_names=metric_names)
+        metrics = compute_quality_metrics(we, metric_names=metric_names)
         filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
         metrics.to_csv(filename, sep='\t', index=True)
 

@@ -7,7 +7,7 @@ import pytest
 from spikeinterface import WaveformExtractor
 from spikeinterface.extractors import toy_example
 
-from spikeinterface.toolkit.qualitymetrics import compute_metrics, calculate_pc_metrics
+from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics, calculate_pc_metrics
 from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent
 
 
@@ -41,7 +41,7 @@ def test_calculate_pc_metrics():
 
 
 if __name__ == '__main__':
-    #~ setup_module()
+    setup_module()
     
     test_calculate_pc_metrics()
     
