@@ -29,16 +29,15 @@ import spikeinterface.extractors as se
 # to download a mearec dataset. It is a simulated dataset that contain "ground truth" sorting
 
 repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-distant_path = 'mearec'
-local_path = download_dataset(repo=repo, distant_path=distant_path, local_folder=None)
+remote_path = 'mearec/mearec_test_10s.h5'
+local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
 
 ##############################################################################
 # 
 
-local_file = local_path / 'mearec_test_10s.h5'
-recording = se.MEArecRecordingExtractor(local_file)
+recording = se.MEArecRecordingExtractor(local_path)
 print(recording)
-sorting = se.MEArecSortingExtractor(local_file)
+sorting = se.MEArecSortingExtractor(local_path)
 print(recording)
 
 ###############################################################################
