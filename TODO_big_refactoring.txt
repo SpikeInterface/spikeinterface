@@ -29,20 +29,18 @@ extractors:
     * NIXIOSortingExtractor
     * ALFSortingExtractor
 
-    * make tests with gin
-
 toolkit:
 
-  * curation:
-    * ALL
   * postprocessing: 
      * export to phy (pca + amplitudes)
-  * sorting components: all (sam)
-  * validation aka qualitymetrics:
+  * validation (= qualitymetrics):
      * "max_drift",
      * "cumulative_drift",
      * "silhouette_score",
      * "noise_overlap",
+
+sorting components:
+    all (sam)
 
 sorters:
 

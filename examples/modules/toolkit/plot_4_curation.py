@@ -19,7 +19,7 @@ import spikeinterface.sorters as ss
 # Let's imagine that that sorting is in fact the output of a sorters.
 # 
 
-local_path = si.download_dataset(distant_path='mearec/mearec_test_10s.h5')
+local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 recording = se.MEArecRecordingExtractor(local_path)
 sorting = se.MEArecSortingExtractor(local_path)
 print(recording)
