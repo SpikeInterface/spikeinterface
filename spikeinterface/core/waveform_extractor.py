@@ -220,7 +220,7 @@ class WaveformExtractor:
         Returns
         -------
         template: np.array
-            The returned template (num_channels, num_samples)
+            The returned template (num_samples, num_channels)
         """
         assert mode in ('median', 'average')
         assert unit_id in self.sorting.unit_ids
@@ -241,7 +241,33 @@ class WaveformExtractor:
                 template = np.average(wfs, axis=0)
                 self._template_average[unit_id] = template
                 return template
+    
+    def get_all_templates(self, unit_ids=None, mode='median'):
+        """
+        Return several templates (average waveform)
 
+        Parameters
+        ----------
+        unit_ids: list or None
+            Unit ids to retrieve waveforms for
+        mode: str
+            'mean' or 'median' (default)
+
+        Returns
+        -------
+        templates: np.array
+            The returned templates (num_units, num_samples, num_channels)
+        """
+        if unit_ids is None:
+            unit_ids = self.sorting.unit_ids
+        num_chans = self.recording.get_num_channels()
+        
+        dtype = self._params['dtype']
+        templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
+        for i, unit_id in enumerate(unit_ids):
+            templates[i, :, :] = self.get_template(unit_id, mode=mode)
+        return templates
+    
     def sample_spikes(self):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()

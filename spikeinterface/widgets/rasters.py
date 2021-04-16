@@ -4,7 +4,10 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
 
-def plot_rasters(sorting, segment_index=None, unit_ids=None, time_range=None, color='k', figure=None, ax=None):
+
+
+
+class RasterWidget(BaseWidget):
     """
     Plots spike train rasters.
 
@@ -29,22 +32,8 @@ def plot_rasters(sorting, segment_index=None, unit_ids=None, time_range=None, co
     -------
     W: RasterWidget
         The output widget
-    """
-    W = RasterWidget(
-        sorting=sorting,
-        
-        unit_ids=unit_ids,
-        time_range=time_range,
-        color=color,
-        figure=figure,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-class RasterWidget(BaseWidget):
-    def __init__(self, *, sorting, segment_index=None,  unit_ids=None,
+    """    
+    def __init__(self, sorting, segment_index=None,  unit_ids=None,
                                             time_range=None, color='k', figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
@@ -117,3 +106,12 @@ class RasterWidget(BaseWidget):
         # trange[0] = np.maximum(0, trange[0])
         # trange[1] = np.minimum(max_t, trange[1])
         return trange
+
+
+
+def plot_rasters(*args, **kwargs):
+    W = RasterWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_rasters.__doc__ = RasterWidget.__doc__
+
