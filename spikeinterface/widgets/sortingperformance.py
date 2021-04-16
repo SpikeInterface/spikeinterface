@@ -1,6 +1,7 @@
-from spikewidgets.widgets.basewidget import BaseWidget
-import spikecomparison as sc
+import numpy as np
+from matplotlib import pyplot as plt
 
+from .basewidget import BaseWidget
 
 def plot_sorting_performance(gt_sorting_comparison, property_name=None, metric='accuracy', markersize=10, marker='.',
                              figure=None, ax=None):

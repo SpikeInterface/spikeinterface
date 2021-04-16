@@ -5,10 +5,12 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+
+from spikeinterface import extract_waveforms
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
-
+import spikeinterface.toolkit as st
 
 if sys.platform == "win32":
     memmaps = [False]
@@ -19,7 +21,11 @@ else:
 class TestWidgets(unittest.TestCase):
     def setUp(self):
         self._rec, self._sorting = se.toy_example(num_channels=10, duration=10, num_segments=1)
+        self._rec = self._rec.save()
+        self._sorting = self._sorting.save()
         self.num_units = len(self._sorting.get_unit_ids())
+        self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
+
 
     def tearDown(self):
         pass
@@ -40,24 +46,15 @@ class TestWidgets(unittest.TestCase):
     #~ def test_spectrogram(self):
         #~ sw.plot_spectrogram(self._rec, channel=0)
 
-    #~ def test_geometry(self):
-        #~ sw.plot_electrode_geometry(self._rec)
-
     #~ def test_activitymap(self):
         #~ sw.plot_activity_map(self._rec, activity='rate')
         #~ sw.plot_activity_map(self._rec, activity='amplitude')
 
-    #~ def test_unitwaveforms(self):
-        #~ for m in memmaps:
-            #~ sw.plot_unit_waveforms(self._rec, self._sorting, memmap=m)
-            #~ fig, axes = plt.subplots(self.num_units, 1)
-            #~ sw.plot_unit_waveforms(self._rec, self._sorting, axes=axes, memmap=m)
+    def test_unitwaveforms(self):
+        sw.plot_unit_waveforms(self._we)
 
-    #~ def test_unittemplates(self):
-        #~ for m in memmaps:
-            #~ sw.plot_unit_templates(self._rec, self._sorting, memmap=m)
-            #~ fig, axes = plt.subplots(self.num_units, 1)
-            #~ sw.plot_unit_templates(self._rec, self._sorting, axes=axes, memmap=m)
+    def test_unittemplates(self):
+        sw.plot_unit_templates(self._we)
 
     #~ def test_unittemplatemaps(self):
         #~ for m in memmaps:
@@ -120,6 +117,16 @@ if __name__ == '__main__':
     
     mytest = TestWidgets()
     mytest.setUp()
-    mytest.test_plot_probe_map()
+
+    #~ mytest.test_timeseries()
+    #~ mytest.test_rasters()
+    #~ mytest.test_plot_probe_map()
+    mytest.test_unitwaveforms()
+    #~ mytest.test_unittemplates()
     
+    
+    #~ mytest.test_confusion()
+    #~ mytest.test_agreement()
+    #~ mytest.test_multicomp_graph()
+        
     plt.show()

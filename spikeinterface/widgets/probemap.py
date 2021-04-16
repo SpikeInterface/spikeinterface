@@ -6,9 +6,10 @@ from .basewidget import BaseWidget
 from probeinterface.plotting import plot_probe
 
 
-def plot_probe_map(recording, **kwargs):
+
+class ProbeMapWidget(BaseWidget):
     """
-    Plots spike rate (estimated using simple threshold detector) as 2D activity map.
+    Plot the probe of a recording.
 
     Parameters
     ----------
@@ -27,12 +28,6 @@ def plot_probe_map(recording, **kwargs):
     W: ProbeMapWidget
         The output widget
     """
-    W = ProbeMapWidget(recording=recording, **kwargs)
-    W.plot()
-    return W
-
-
-class ProbeMapWidget(BaseWidget):
     def __init__(self, recording, values=None, channel_ids=None, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         
@@ -46,4 +41,11 @@ class ProbeMapWidget(BaseWidget):
 
     def _do_plot(self):
         plot_probe(self._probe, ax=self.ax)
+
+
+def plot_probe_map(*args, **kwargs):
+    W = ProbeMapWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_probe_map.__doc__ = ProbeMapWidget.__doc__
 

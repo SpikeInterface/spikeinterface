@@ -2,6 +2,8 @@ from .timeseries import plot_timeseries, TimeseriesWidget
 from .rasters import plot_rasters, RasterWidget
 from .probemap import plot_probe_map, ProbeMapWidget
 
+from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
+
 from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget
 from .agreementmatrix import plot_agreement_matrix, AgreementMatrixWidget
 from .multicompgraph import (

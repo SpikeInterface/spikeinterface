@@ -4,8 +4,10 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
 
-def plot_agreement_matrix(sorting_comparison, ordered=True, count_text=True,
-                    unit_ticks=True, ax=None, figure=None):
+
+
+
+class AgreementMatrixWidget(BaseWidget):
     """
     Plots sorting comparison confusion matrix.
 
@@ -25,26 +27,8 @@ def plot_agreement_matrix(sorting_comparison, ordered=True, count_text=True,
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
-
-    Returns
-    -------
-    W: ConfusionMatrixWidget
-        The output widget
-    """
-    W = AgreementMatrixWidget(
-        sorting_comparison=sorting_comparison,
-        ordered=ordered,
-        count_text=count_text,
-        unit_ticks=unit_ticks,
-        figure=figure,
-        ax=ax,
-    )
-    W.plot()
-    return W
-
-
-class AgreementMatrixWidget(BaseWidget):
-    def __init__(self, *, sorting_comparison, ordered=True, count_text=True, unit_ticks=True,
+    """    
+    def __init__(self, sorting_comparison, ordered=True, count_text=True, unit_ticks=True,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._sc = sorting_comparison
@@ -99,6 +83,12 @@ class AgreementMatrixWidget(BaseWidget):
 
         self.ax.set_xlim(-0.5, N2-0.5)
         self.ax.set_ylim(N1-0.5, -0.5, )
-        
+
+
+def plot_agreement_matrix(*args, **kwargs):
+    W = AgreementMatrixWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_agreement_matrix.__doc__ = AgreementMatrixWidget.__doc__
         
 

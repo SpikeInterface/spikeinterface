@@ -8,7 +8,7 @@ from .basewidget import BaseWidget
 
 
 
-def plot_comparison_collision_pair_by_pair(comp, unit_ids=None, nbins=10, figure=None, ax=None):
+class ComparisonCollisionPairByPairWidget(BaseWidget):
     """
     Plots CollisionGTComparison pair by pair.
 
@@ -29,56 +29,7 @@ def plot_comparison_collision_pair_by_pair(comp, unit_ids=None, nbins=10, figure
     -------
     W: MultiCompGraphWidget
         The output widget
-    """
-    W = ComparisonCollisionPairByPairWidget(
-        comp=comp,
-        unit_ids=unit_ids,
-        nbins=nbins,
-        figure=figure,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-def plot_comparison_collision_by_similarity(comp, templates, metric='cosine_similarity', 
-        unit_ids=None, nbins=10, figure=None, ax=None):
-    """
-    Plots CollisionGTComparison pair by pair orderer by cosine_similarity
-
-    Parameters
-    ----------
-    comp: CollisionGTComparison
-        The collision ground truth comparison object
-    templates: array
-        template of units
-    metric: cosine_similarity',
-        metric for ordering
-    unit_ids: list
-        List of considered units
-    nbins: int
-        Number of bins
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
-    """
-    
-    W = ComparisonCollisionBySimilarityWidget(
-        comp=comp,
-        templates=templates,
-        metric=metric,
-        unit_ids=unit_ids,
-        nbins=nbins,
-        figure=figure,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-
-class ComparisonCollisionPairByPairWidget(BaseWidget):
+    """    
     def __init__(self, comp, unit_ids=None, nbins=10, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         if unit_ids is None:
@@ -149,6 +100,26 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
 
 
 class ComparisonCollisionBySimilarityWidget(BaseWidget):
+    """
+    Plots CollisionGTComparison pair by pair orderer by cosine_similarity
+
+    Parameters
+    ----------
+    comp: CollisionGTComparison
+        The collision ground truth comparison object
+    templates: array
+        template of units
+    metric: cosine_similarity',
+        metric for ordering
+    unit_ids: list
+        List of considered units
+    nbins: int
+        Number of bins
+    figure: matplotlib figure
+        The figure to be used. If not given a figure is created
+    ax: matplotlib axis
+        The axis to be used. If not given an axis is created
+    """
     def __init__(self, comp, templates, unit_ids=None, metric='cosine_similarity', nbins=10, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         if unit_ids is None:
@@ -253,8 +224,19 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         ax0.set_ylabel('pairs')
         
         ax1.set_xlabel('lag [ms]')
-        
-        
+
+
+def plot_comparison_collision_pair_by_pair(*args, **kwargs):
+    W = ComparisonCollisionPairByPairWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_comparison_collision_pair_by_pair.__doc__ = ComparisonCollisionPairByPairWidget.__doc__
+
+def plot_comparison_collision_by_similarity(*args, **kwargs):
+    W = ComparisonCollisionBySimilarityWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_comparison_collision_by_similarity.__doc__ = ComparisonCollisionBySimilarityWidget.__doc__
 
 
 
