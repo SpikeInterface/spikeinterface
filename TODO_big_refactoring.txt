@@ -55,7 +55,9 @@ comparison:
 
 
 widgets:
-  * many widget to port with probeinterface in mind
+  * plot_spectrum
+  * plot_spectrogram
+  * plot_activity_map
 
 
 examples:
