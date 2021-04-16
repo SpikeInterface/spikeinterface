@@ -42,7 +42,7 @@ class QualityMetricCalculator:
         if len(pc_metric_names):
             if self.waveform_principal_component is None:
                 raise ValueError('waveform_principal_component must be provied')
-            pc_metrics = calculate_pc_metrics(self.waveform_principal_component)
+            pc_metrics = calculate_pc_metrics(self.waveform_principal_component, metric_names=pc_metric_names)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 

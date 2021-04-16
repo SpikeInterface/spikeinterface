@@ -14,7 +14,7 @@ _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime', 'neares
 def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neighbors=4, ):
     if metric_names is None:
         metric_names = _possible_pc_metric_names
-    print('metric_names', metric_names)
+    # print('metric_names', metric_names)
 
     assert isinstance(pca, WaveformPrincipalComponent)
     we = pca.waveform_extractor
