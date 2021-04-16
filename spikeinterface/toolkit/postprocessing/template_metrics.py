@@ -8,7 +8,7 @@ import pandas as pd
 
 import scipy.stats
 
-from .template_tools import get_unit_extremum_channel
+from .template_tools import get_template_extremum_channel
 
 """
 @alessio @cole : you must totaly check tchis code!!!!!
@@ -29,7 +29,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         feature_names = list(_metric_name_to_func.keys())
     
     
-    extremum_channels_ids =  get_unit_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+    extremum_channels_ids =  get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
     
     features = pd.DataFrame(index=unit_ids, columns=feature_names)
     

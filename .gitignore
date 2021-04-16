@@ -27,6 +27,11 @@ spikeinterface/toolkit/*/tests/*/*/*.raw
 spikeinterface/toolkit/*/tests/*/*/*.npy
 spikeinterface/toolkit/*/tests/*/*/*.npz
 
+spikeinterface/toolkit/*/tests/*_output/*
+
+examples/getting_started/*_output/*
+examples/getting_started/waveforms/*
+
 
 
 .vscode/*

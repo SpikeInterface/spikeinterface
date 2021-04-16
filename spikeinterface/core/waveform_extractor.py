@@ -90,14 +90,19 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def create(cls, recording, sorting, folder):
+    def create(cls, recording, sorting, folder, remove_if_exists=False):
         folder = Path(folder)
         if folder.is_dir():
-            raise FileExistsError('Folder already exists')
+            if remove_if_exists:
+                shutil.rmtree(folder)
+            else:
+                raise FileExistsError('Folder already exists')
         folder.mkdir()
-
-        recording.dump(folder / 'recording.json')
-        sorting.dump(folder / 'sorting.json')
+        
+        if recording.is_dumpable:
+            recording.dump(folder / 'recording.json')
+        if sorting.is_dumpable:
+            sorting.dump(folder / 'sorting.json')
 
         return cls(recording, sorting, folder)
 
@@ -179,17 +184,19 @@ class WaveformExtractor:
 
         wfs = self._waveforms.get(unit_id, None)
         if wfs is None:
-            waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.raw'
+            waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
             if not waveform_file.is_file():
                 raise Exception('waveforms not extracted yet : please do WaveformExtractor.run() fisrt')
 
-            p = self._params
-            sampling_frequency = self.recording.get_sampling_frequency()
-            num_chans = self.recording.get_num_channels()
+            #~ p = self._params
+            #~ sampling_frequency = self.recording.get_sampling_frequency()
+            #~ num_chans = self.recording.get_num_channels()
 
-            wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, self.nsamples, num_chans)
-            # get a copy to have a memory faster access and avoid write back in file
-            wfs = wfs.copy()
+            #~ wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, self.nsamples, num_chans)
+            #~ # get a copy to have a memory faster access and avoid write back in file
+            #~ wfs = wfs.copy()
+
+            wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs
 
         if with_index:
@@ -283,10 +290,13 @@ class WaveformExtractor:
         # prepare memmap
         wfs_memmap = {}
         for unit_id in self.sorting.unit_ids:
-            file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.raw'
+            file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
             n_spikes = np.sum([e.size for e in selected_spike_times[unit_id]])
             shape = (n_spikes, self.nsamples, num_chans)
-            wfs = np.memmap(str(file_path), dtype=p['dtype'], mode='w+', shape=shape)
+            #~ wfs = np.memmap(str(file_path), dtype=p['dtype'], mode='w+', shape=shape)
+            wfs = np.zeros(shape, dtype=p['dtype'])
+            np.save(file_path, wfs)
+            wfs = np.load(file_path, mmap_mode='r+')
             wfs_memmap[unit_id] = wfs
 
         # and run
@@ -407,3 +417,27 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 st = int(st)
                 pos = unit_cum_sum[unit_id][segment_index] + i0 + i
                 wfs[pos, :, :] = traces[st - start - nbefore:st - start + nafter, :]
+
+
+
+def extract_waveforms(recording, sorting, folder, 
+        load_if_exists=False,
+        ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None,**job_kwargs):
+    """
+    
+    """
+
+    folder = Path(folder)
+    if load_if_exists and folder.is_dir():
+        we = WaveformExtractor.load_from_folder(folder)
+    else:
+        we = WaveformExtractor.create(recording, sorting, folder)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
+        print(job_kwargs)
+        we.run(**job_kwargs)
+    
+    return we
+
+    
+    
+    

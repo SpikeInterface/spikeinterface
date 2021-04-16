@@ -201,7 +201,6 @@ class NeoSortingSegment(BaseSortingSegment):
         spike_timestamps = self.neo_reader.get_spike_timestamps(block_index=0,
                                                                 seg_index=self.segment_index,
                                                                 spike_channel_index=unit_index)
-
         if self._t_start is None:
             # because handle_spike_frame_directly=True
             spike_frames = spike_timestamps
