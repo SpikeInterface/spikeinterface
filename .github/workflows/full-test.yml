@@ -30,8 +30,11 @@ jobs:
             ${{ runner.os }}-venv-
       - name: Install dependencies
         run: |
+          # this is for datalad and download testing datasets
           sudo apt install git git-annex
+          # this is for spyking circus
           sudo apt install mpich libmpich-dev
+          # create an environement (better for cahing)
           python -m venv test_env
           source ./test_env/bin/activate
           python -m pip install --upgrade pip

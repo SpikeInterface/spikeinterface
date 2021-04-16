@@ -98,9 +98,11 @@ class WaveformExtractor:
             else:
                 raise FileExistsError('Folder already exists')
         folder.mkdir()
-
-        recording.dump(folder / 'recording.json')
-        sorting.dump(folder / 'sorting.json')
+        
+        if recording.is_dumpable:
+            recording.dump(folder / 'recording.json')
+        if sorting.is_dumpable:
+            sorting.dump(folder / 'sorting.json')
 
         return cls(recording, sorting, folder)
 
@@ -419,10 +421,21 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
 
 def extract_waveforms(recording, sorting, folder, 
+        load_if_exists=False,
         ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None,**job_kwargs):
-    we = WaveformExtractor.create(recording, sorting, folder)
-    we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
-    we.run(**job_kwargs)
+    """
+    
+    """
+
+    folder = Path(folder)
+    if load_if_exists and folder.is_dir():
+        we = WaveformExtractor.load_from_folder(folder)
+    else:
+        we = WaveformExtractor.create(recording, sorting, folder)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
+        print(job_kwargs)
+        we.run(**job_kwargs)
+    
     return we
 
     

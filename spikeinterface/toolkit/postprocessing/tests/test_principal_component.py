@@ -9,7 +9,7 @@ import pytest
 from spikeinterface import extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import toy_example
 
-from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent
+from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent, compute_principal_components
 
 
 def setup_module():
@@ -26,18 +26,18 @@ def setup_module():
         n_jobs=1, chunk_size=30000)
 
 
-def test_PCA():
+def test_WaveformPrincipalComponent():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
     unit_ids = we.sorting.unit_ids
     num_channels = we.recording.get_num_channels()
-    pca = WaveformPrincipalComponent(we)
+    pc = WaveformPrincipalComponent(we)
     
     for mode in ('by_channel_local', 'by_channel_global'):
-        pca.set_params(n_components=5, mode=mode)
-        print(pca)
-        pca.run()
+        pc.set_params(n_components=5, mode=mode)
+        print(pc)
+        pc.run()
         for i, unit_id in enumerate(unit_ids):
-            comp = pca.get_components(unit_id)
+            comp = pc.get_components(unit_id)
             #~ print(comp.shape)
             assert comp.shape[1:] == (5, 4)
 
@@ -53,14 +53,16 @@ def test_PCA():
         #~ plt.show()
     
     for mode in ('concatenated', ):
-        pca.set_params(n_components=5, mode=mode)
-        print(pca)
-        pca.run()
+        pc.set_params(n_components=5, mode=mode)
+        print(pc)
+        pc.run()
         for i, unit_id in enumerate(unit_ids):
-            comp = pca.get_components(unit_id)
+            comp = pc.get_components(unit_id)
             assert comp.shape[1] == 5
             #~ print(comp.shape)
-
+    
+    all_labels, all_components = pc.get_all_components()
+    
         #~ import matplotlib.pyplot as plt
         #~ cmap = plt.get_cmap('jet', len(unit_ids))
         #~ fig, ax = plt.subplots()
@@ -69,10 +71,15 @@ def test_PCA():
             #~ print(comp.shape)
             #~ ax.scatter(comp[:, 0], comp[:, 1], color=cmap(i))
         #~ plt.show()
-    
+
+def test_compute_principal_components():
+    we = WaveformExtractor.load_from_folder('toy_waveforms')
+    pc = compute_principal_components(we, load_if_exists=True)
+    print(pc)
 
 
 if __name__ == '__main__':
     #~ setup_module()
     
-    test_PCA()
+    #~ test_WaveformPrincipalComponent()
+    test_compute_principal_components()
