@@ -240,9 +240,7 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)
         pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype)
-        print('ici')
         pc.run()
-        print('ici')
     
     return pc
 

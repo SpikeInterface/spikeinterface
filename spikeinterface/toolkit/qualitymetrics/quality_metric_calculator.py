@@ -49,7 +49,7 @@ class QualityMetricCalculator:
         return metrics
 
 
-def compute_metrics(waveform_extractor, metric_names=None, waveform_principal_component=None):
+def compute_quality_metrics(waveform_extractor, metric_names=None, waveform_principal_component=None):
     df = QualityMetricCalculator(waveform_extractor,
             waveform_principal_component=waveform_principal_component).compute_metrics(metric_names)
     return df
