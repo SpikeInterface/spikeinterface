@@ -88,19 +88,22 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
     
-    def get_all_spike_trains(self):
+    def get_all_spike_trains(self, outputs='unit_id'):
         """
         Return all spike trains concatenated
         """
-        
+        assert outputs in ('unit_id', 'unit_index')
         spikes =  []
         for segment_index in range(self.get_num_segments()):
             spike_times = []
             spike_labels = []
-            for unit_id in self.unit_ids:
+            for i, unit_id in enumerate(self.unit_ids):
                 st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 spike_times.append(st)
-                spike_labels.append(np.array([unit_id]*st.size))
+                if outputs =='unit_id':
+                    spike_labels.append(np.array([unit_id]*st.size))
+                elif outputs =='unit_index':
+                    spike_labels.append(np.zeros(st.size, dtype='int64') + i)
             spike_times = np.concatenate(spike_times)
             spike_labels = np.concatenate(spike_labels)
             order = np.argsort(spike_times)

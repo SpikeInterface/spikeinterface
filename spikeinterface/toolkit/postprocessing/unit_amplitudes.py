@@ -8,7 +8,7 @@ from .template_tools import (get_template_extremum_channel,
 
 
 
-def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', **job_kwargs):
+def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', outputs='concatenated',  **job_kwargs):
     """
     Computes the spike amplitudes from a WaveformExtractor.
     Amplitudes can be computed in absolute value (uV) or relative to the template amplitude.
@@ -23,6 +23,8 @@ def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', **job_kwargs):
     recording = we.recording
     sorting = we.sorting
 
+    all_spikes = sorting.get_all_spike_trains()
+
     extremum_channels_index = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, outputs='index')
     peak_shifts = get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg')
     
@@ -33,11 +35,27 @@ def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', **job_kwargs):
     init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True, **job_kwargs)
     out = processor.run()
-    amplitudes, segments = zip(*out)
-    amplitudes = np.concatenate(amplitudes)
+    amps, segments = zip(*out)
+    amps = np.concatenate(amps)
     segments = np.concatenate(segments)
     
-    return amplitudes, segments
+    amplitudes = []
+    for segment_index in range(recording.get_num_segments()):
+        mask = segments == segment_index
+        amplitudes.append(amps[mask])
+    
+    if outputs == 'concatenated':
+        return amplitudes
+    elif outputs == 'by_units':
+        amplitudes_by_units = []
+        for segment_index in range(recording.get_num_segments()):
+            amplitudes_by_units.append({})
+            for unit_id in sorting.unit_ids:
+                spike_times, spike_labels = all_spikes[segment_index]
+                mask = spike_labels == unit_id
+                amps = amplitudes[segment_index][mask]
+                amplitudes_by_units[segment_index][unit_id] = amps
+        return amplitudes_by_units
 
 
 def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, peak_shifts):

@@ -19,27 +19,12 @@ def test_get_unit_amplitudes():
         n_jobs=1, chunk_size=30000, load_if_exists=True)
     
 
-    amplitudes, segments = get_unit_amplitudes(we)
-    print(amplitudes)
-    print(segments)
+    amplitudes = get_unit_amplitudes(we,  peak_sign='neg', outputs='concatenated', chunk_size=10000, n_jobs=1)
+    # print(amplitudes)
     
+    amplitudes = get_unit_amplitudes(we,  peak_sign='neg', outputs='by_units', chunk_size=10000, n_jobs=1)
+    # print(amplitudes)
     
-    
-    
-    
-    # DEBUG
-    #~ import matplotlib.pyplot as plt
-    #~ import spikeinterface.widgets as sw
-    #~ chan_offset = 500
-    #~ traces = recording.get_traces()
-    #~ traces += np.arange(traces.shape[1])[None, :] * chan_offset
-    #~ print(traces.shape)
-    #~ fig, ax = plt.subplots()
-    #~ ax.plot(traces, color='k')
-    #~ ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
-    #~ plt.show()
-    
-
 
 
 if __name__ == '__main__':
