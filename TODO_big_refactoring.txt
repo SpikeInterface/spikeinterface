@@ -28,6 +28,8 @@ extractors:
     * SHYBRIDSortingExtractor
     * NIXIOSortingExtractor
     * ALFSortingExtractor
+    
+    * make function for all reader
 
 toolkit:
 
@@ -38,6 +40,12 @@ toolkit:
      * "cumulative_drift",
      * "silhouette_score",
      * "noise_overlap",
+
+
+  * get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0)
+     remove chunk and use duration instead.
+
+
 
 sorting components:
     all (sam)

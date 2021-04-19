@@ -8,7 +8,7 @@ except ImportError:
 
 
 
-from spikeinterface.core.job_tools import devide_recording_into_chunks, ChunkRecordingExecutor
+from spikeinterface.core.job_tools import ChunkRecordingExecutor
 from spikeinterface.toolkit import get_noise_levels, get_channel_distances
 
 
