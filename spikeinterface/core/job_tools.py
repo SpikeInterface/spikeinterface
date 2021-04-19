@@ -11,7 +11,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
 
 
-def divide_into_chunks(num_frames, chunk_size):
+def divide_segment_into_chunks(num_frames, chunk_size):
     if chunk_size is None:
         chunks = [(0, num_frames)]
     else:
@@ -31,6 +31,15 @@ def divide_into_chunks(num_frames, chunk_size):
 
     return chunks
 
+def devide_recording_into_chunks(recording, chunk_size):
+    all_chunks = []
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        chunks = divide_segment_into_chunks(num_frames, chunk_size)
+        all_chunks.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
+    return all_chunks
+    
+    
 
 _exponents = {'k': 1e3, 'M': 1e6, 'G': 1e9}
 
@@ -118,9 +127,9 @@ class ChunkRecordingExecutor:
     Handle initializer when needed to avoid heavy serialization of args.
     """
 
-    def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False,
-                 n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None,
-                 job_name=''):
+    def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
+                n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None,
+                job_name=''):
 
         self.recording = recording
         self.func = func
@@ -129,6 +138,8 @@ class ChunkRecordingExecutor:
 
         self.verbose = verbose
         self.progress_bar = progress_bar
+        
+        self.handle_returns = handle_returns
 
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
         self.chunk_size = ensure_chunk_size(recording,
@@ -140,20 +151,23 @@ class ChunkRecordingExecutor:
             print(self.job_name, 'with', 'n_jobs', self.n_jobs, ' chunk_size', self.chunk_size)
 
     def run(self):
-        all_chunks = []
-        for segment_index in range(self.recording.get_num_segments()):
-            num_frames = self.recording.get_num_samples(segment_index)
-            chunks = divide_into_chunks(num_frames, self.chunk_size)
-            all_chunks.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
-
+        all_chunks = devide_recording_into_chunks(self.recording, self.chunk_size)
+        
+        
+        if self.handle_returns:
+            returns = []
+        else:
+            returns = None
+        
         if self.n_jobs == 1:
             if self.progress_bar:
                 all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name)
 
             worker_ctx = self.init_func(*self.init_args)
             for segment_index, frame_start, frame_stop in all_chunks:
-                self.func(segment_index, frame_start, frame_stop, worker_ctx)
-
+                res = self.func(segment_index, frame_start, frame_stop, worker_ctx)
+                if self.handle_returns:
+                    returns.append(res)
         else:
             #  if self.verbose:
             #   print('num chunks to compute', len(all_chunks))
@@ -175,9 +189,16 @@ class ChunkRecordingExecutor:
 
             if self.progress_bar:
                 results = tqdm(results, desc=self.job_name, total=len(all_chunks))
-
-            for res in results:
-                pass
+            
+            if self.handle_returns:
+                for res in results:
+                    returns.append(res)
+            else:
+                for res in results:
+                    pass
+                
+        
+        return returns
 
 
 # see
