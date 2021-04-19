@@ -55,9 +55,7 @@ comparison:
 
 
 widgets:
-  * plot_spectrum
-  * plot_spectrogram
-  * plot_activity_map
+  * many of them
 
 
 examples:
