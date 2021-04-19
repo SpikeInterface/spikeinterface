@@ -167,11 +167,10 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
 
 
     if compute_amplitudes:
-        pass
-        # amplitudes = get_unit_amplitudes(waveform_extractor,  peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
-        # one segment only
-        # amplitudes = amplitudes[0]
-        # np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
+        amplitudes = get_unit_amplitudes(waveform_extractor,  peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
+        one segment only
+        amplitudes = amplitudes[0]
+        np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
 
     if compute_pc_features:
         raise NotImplementedError    
