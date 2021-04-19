@@ -6,15 +6,16 @@ import numpy as np
 
 from spikeinterface import BaseRecording, BaseSorting, write_binary_recording
 from .template_tools import get_template_extremum_channel
+from .unit_amplitudes import get_unit_amplitudes
 
 # @alessio: this is a basic phy export, still need to:
 #  * integrate PCA
-#  * integrate amplitudes
 #  * integrate "compute_template_similarity"
 
 
 def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute_pc_features=True,
                   compute_amplitudes=True, max_channels_per_template=16, copy_binary=True, remove_if_exists=False,
+                  peak_sign='neg',
                   dtype=None, verbose=True, **job_kwargs):
     '''
     Exports paired recording and sorting extractors to phy template-gui format.
@@ -41,6 +42,9 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         link to the file recording location is used. Otherwise, the recording is not copied and the
         recording path is set to 'None'. (default True)
     remove_if_exists: bool False
+    
+    peak_sign: 'neg', 'pos', 'both'
+        Used by get_unit_amplitudes
     
     
     verbose: bool
@@ -117,23 +121,12 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         f.write(f"hp_filtered = {recording.is_filtered()}")
 
     # export spike_times/spike_templates/spike_clusters
-    spike_times_unordered =[]
-    spike_clusters_unordered = []
-    for i, unit_id in enumerate(unit_ids):
-        # i == the remap_unit_id
-        st = sorting.get_unit_spike_train(unit_id)
-        spike_times_unordered.append(st)
-        spike_clusters_unordered.append(np.ones(st.size, dtype='int32') * i)
-    spike_times_unordered = np.concatenate(spike_times_unordered)
-    spike_clusters_unordered = np.concatenate(spike_clusters_unordered)
-    
-    order = np.argsort(spike_times_unordered)
-    spike_times = spike_times_unordered[order]
-    spike_clusters = spike_clusters_unordered[order]
-    spike_templates = spike_clusters.copy()
+    # here spike_labels is a remapping to unit_index
+    all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
+    spike_times, spike_labels = all_spikes[0]
     np.save(str(output_folder / 'spike_times.npy'), spike_times)
-    np.save(str(output_folder / 'spike_templates.npy'), spike_templates)
-    np.save(str(output_folder / 'spike_clusters.npy'), spike_clusters)
+    np.save(str(output_folder / 'spike_templates.npy'), spike_labels)
+    np.save(str(output_folder / 'spike_clusters.npy'), spike_labels)
     
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, num_channels)
@@ -148,17 +141,17 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
             inds = np.argsort(amps)[::-1]
             inds = inds[:max_channels_per_template]
             template = template[:, inds]
-
         templates.append(template.astype('float32'))
         templates_ind.append(inds)
     templates = np.array(templates)
     templates_ind = np.array(templates_ind)
     # TODO
     # similar_templates = compute_template_similarity(templates, templates_ind)
+    
+    # templates = templates.swapaxes(1,2).copy()
     np.save(str(output_folder / 'templates.npy'), templates)
     np.save(str(output_folder / 'templates_ind.npy'), templates_ind)
     # np.save(str(output_folder / 'similar_templates.npy'), similar_templates)
-    
     
     channel_maps = np.arange(num_chans, dtype='int32')
     channel_map_si = unit_ids
@@ -174,9 +167,12 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
 
 
     if compute_amplitudes:
-        raise NotImplementedError
-        #~ np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
-    
+        pass
+        # amplitudes = get_unit_amplitudes(waveform_extractor,  peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
+        # one segment only
+        # amplitudes = amplitudes[0]
+        # np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
+
     if compute_pc_features:
         raise NotImplementedError    
         #~ np.save(str(output_folder / 'pc_features.npy'), pc_features)
@@ -200,5 +196,5 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
             writer.writerow([i, unit_groups[i]])
 
     if verbose:
-        print('Run:\n\nphy template-gui ', str(output_folder / 'params.py'))
+        print('Run:\nphy template-gui ', str(output_folder / 'params.py'))
 
