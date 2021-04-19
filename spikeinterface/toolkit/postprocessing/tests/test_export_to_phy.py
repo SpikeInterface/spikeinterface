@@ -32,8 +32,8 @@ def test_export_to_phy():
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
 
     export_to_phy(recording, sorting, output_folder, waveform_extractor,
-            compute_pc_features=False,
-            compute_amplitudes=False)
+                  compute_pc_features=False,
+                  compute_amplitudes=False)
     
     
 

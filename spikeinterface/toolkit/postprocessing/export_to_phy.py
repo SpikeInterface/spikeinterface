@@ -2,7 +2,8 @@ from pathlib import Path
 import csv
 
 import numpy as np
-
+import shutil
+import spikeinterface.extractors as se
 
 from spikeinterface import BaseRecording, BaseSorting, write_binary_recording
 from .template_tools import get_template_extremum_channel
@@ -124,9 +125,9 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
     # here spike_labels is a remapping to unit_index
     all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
     spike_times, spike_labels = all_spikes[0]
-    np.save(str(output_folder / 'spike_times.npy'), spike_times)
-    np.save(str(output_folder / 'spike_templates.npy'), spike_labels)
-    np.save(str(output_folder / 'spike_clusters.npy'), spike_labels)
+    np.save(str(output_folder / 'spike_times.npy'), spike_times[:, np.newaxis])
+    np.save(str(output_folder / 'spike_templates.npy'), spike_labels[:, np.newaxis])
+    np.save(str(output_folder / 'spike_clusters.npy'), spike_labels[:, np.newaxis])
     
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, num_channels)
@@ -150,7 +151,7 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
     
     # templates = templates.swapaxes(1,2).copy()
     np.save(str(output_folder / 'templates.npy'), templates)
-    np.save(str(output_folder / 'templates_ind.npy'), templates_ind)
+    np.save(str(output_folder / 'template_ind.npy'), templates_ind)
     # np.save(str(output_folder / 'similar_templates.npy'), similar_templates)
     
     channel_maps = np.arange(num_chans, dtype='int32')
@@ -167,7 +168,7 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
     if compute_amplitudes:
         amplitudes = get_unit_amplitudes(waveform_extractor,  peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
         # one segment only
-        amplitudes = amplitudes[0]
+        amplitudes = amplitudes[0][:, np.newaxis]
         np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
 
     if compute_pc_features:
