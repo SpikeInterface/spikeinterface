@@ -35,6 +35,7 @@ toolkit:
 
   * postprocessing: 
      * export to phy (pca + amplitudes)
+     * integrate amplitudes
   * validation (= qualitymetrics):
      * "max_drift",
      * "cumulative_drift",
