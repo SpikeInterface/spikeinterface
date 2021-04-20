@@ -141,6 +141,11 @@ class BaseExtractor:
         then it is modified only on a subset of channels/units
         
         """
+        if values is None:
+            if key in self._properties:
+                self._properties.pop(key)
+            return
+
         size = self._main_ids.size
         values = np.asarray(values)
         if ids is None:

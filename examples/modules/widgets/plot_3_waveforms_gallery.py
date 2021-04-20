@@ -66,7 +66,7 @@ sw.plot_amplitudes_timeseries(we)
 # plot_pca_features()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 
-# TODO
-# w_feat = sw.plot_pca_features(recording, sorting, colormap='rainbow', nproj=3, max_spikes_per_unit=100)
+# TODO : @alessio : this is for you
+sw.plot_principal_component(we)
 
 plt.show()
