@@ -2,7 +2,7 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from ..utils import get_random_data_for_scaling
+from ..utils import get_random_data_chunks
 
 class WhitenRecording(BasePreprocessor):
     """
@@ -26,7 +26,7 @@ class WhitenRecording(BasePreprocessor):
     name = 'whiten'
     def __init__(self, recording, num_chunks_per_segment=50, chunk_size=500, seed=0):
         
-        random_data = get_random_data_for_scaling(recording, 
+        random_data = get_random_data_chunks(recording, 
                         num_chunks_per_segment=num_chunks_per_segment,
                         chunk_size=chunk_size, seed=seed)
 
