@@ -17,8 +17,10 @@ Version 0.90.0
 
 Major release:
 
-  * many API mofications
+  * many API mofications : no backward compatibility
   * contain all subpackages
+  * transpose get_trace() shape
+  * handle multi segment
 
 Version 0.11.0
 ---------------
