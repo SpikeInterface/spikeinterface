@@ -5,8 +5,8 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget, BaseMultiWidget
 
 
-def plot_multicomp_graph(multi_sorting_comparison, draw_labels=False, node_cmap='viridis',
-                         edge_cmap='hot_r', alpha_edges=0.7, colorbar=False, figure=None, ax=None):
+
+class MultiCompGraphWidget(BaseWidget):
     """
     Plots multi sorting comparison graph.
 
@@ -34,105 +34,11 @@ def plot_multicomp_graph(multi_sorting_comparison, draw_labels=False, node_cmap=
     W: MultiCompGraphWidget
         The output widget
     """
-    try:
-        import networkx as nx
-    except ImportError as e:
-        raise ImportError('Install networkx to use the multi comparison widget.')
-    W = MultiCompGraphWidget(
-        multi_sorting_comparison=multi_sorting_comparison,
-        node_cmap=node_cmap,
-        edge_cmap=edge_cmap,
-        drawlabels=draw_labels,
-        alpha_edges=alpha_edges,
-        colorbar=colorbar,
-        figure=figure,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-def plot_multicomp_agreement(multi_sorting_comparison, plot_type='pie',
-                             cmap='YlOrRd', figure=None, ax=None):
-    """
-    Plots multi sorting comparison agreement as pie or bar plot.
-
-    Parameters
-    ----------
-    multi_sorting_comparison: MultiSortingComparison
-        The multi sorting comparison object
-    plot_type: str
-        'pie' or 'bar'
-    cmap: matplotlib colormap
-        The colormap to be used for the nodes (default 'Reds')
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
-
-    Returns
-    -------
-    W: MultiCompGraphWidget
-        The output widget
-    """
-    W = MultiCompGlobalAgreementWidget(
-        multi_sorting_comparison=multi_sorting_comparison,
-        plot_type=plot_type,
-        cmap=cmap,
-        figure=figure,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-def plot_multicomp_agreement_by_sorter(multi_sorting_comparison, plot_type='pie',
-                                       cmap='YlOrRd', figure=None, ax=None, axes=None, show_legend=True):
-    """
-    Plots multi sorting comparison agreement as pie or bar plot.
-
-    Parameters
-    ----------
-    multi_sorting_comparison: MultiSortingComparison
-        The multi sorting comparison object
-    plot_type: str
-        'pie' or 'bar'
-    cmap: matplotlib colormap
-        The colormap to be used for the nodes (default 'Reds')
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        A single axis used to create a matplotlib gridspec for the individual plots. If None, an axis will be created. 
-    axes: list of matplotlib axes
-        The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
-        and figure parameters are ignored.
-    show_legend: bool
-        Show the legend in the last axes (default True).
-        
-    Returns
-    -------
-    W: MultiCompGraphWidget
-        The output widget
-    """
-    W = MultiCompAgreementBySorterWidget(
-        multi_sorting_comparison=multi_sorting_comparison,
-        plot_type=plot_type,
-        cmap=cmap,
-        figure=figure,
-        axes=axes,
-        ax=ax,
-        show_legend=show_legend
-    )
-    W.plot()
-    return W
-
-
-class MultiCompGraphWidget(BaseWidget):
-    def __init__(self, multi_sorting_comparison, drawlabels=False, node_cmap='viridis',
+    def __init__(self, multi_sorting_comparison, draw_labels=False, node_cmap='viridis',
                  edge_cmap='hot', alpha_edges=0.5, colorbar=False, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._msc = multi_sorting_comparison
-        self._drawlabels = drawlabels
+        self._draw_labels = draw_labels
         self._node_cmap = node_cmap
         self._edge_cmap = edge_cmap
         self._colorbar = colorbar
@@ -162,7 +68,7 @@ class MultiCompGraphWidget(BaseWidget):
                                    edge_color=edge_col, alpha=self._alpha_edges,
                                    edge_cmap=plt.cm.get_cmap(self._edge_cmap), edge_vmin=self._msc.match_score,
                                    edge_vmax=1, ax=self.ax)
-        if self._drawlabels:
+        if self._draw_labels:
             _ = nx.draw_networkx_labels(g, pos=nx.circular_layout((sorted(g))), nodelist=sorted(g.nodes), ax=self.ax)
         if self._colorbar:
             norm = matplotlib.colors.Normalize(vmin=self._msc.match_score, vmax=1)
@@ -174,6 +80,27 @@ class MultiCompGraphWidget(BaseWidget):
 
 
 class MultiCompGlobalAgreementWidget(BaseWidget):
+    """
+    Plots multi sorting comparison agreement as pie or bar plot.
+
+    Parameters
+    ----------
+    multi_sorting_comparison: MultiSortingComparison
+        The multi sorting comparison object
+    plot_type: str
+        'pie' or 'bar'
+    cmap: matplotlib colormap
+        The colormap to be used for the nodes (default 'Reds')
+    figure: matplotlib figure
+        The figure to be used. If not given a figure is created
+    ax: matplotlib axis
+        The axis to be used. If not given an axis is created
+
+    Returns
+    -------
+    W: MultiCompGraphWidget
+        The output widget
+    """    
     def __init__(self, multi_sorting_comparison, plot_type='pie', cmap='YlOrRd', fs=10,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
@@ -210,6 +137,32 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
 
 
 class MultiCompAgreementBySorterWidget(BaseMultiWidget):
+    """
+    Plots multi sorting comparison agreement as pie or bar plot.
+
+    Parameters
+    ----------
+    multi_sorting_comparison: MultiSortingComparison
+        The multi sorting comparison object
+    plot_type: str
+        'pie' or 'bar'
+    cmap: matplotlib colormap
+        The colormap to be used for the nodes (default 'Reds')
+    figure: matplotlib figure
+        The figure to be used. If not given a figure is created
+    ax: matplotlib axis
+        A single axis used to create a matplotlib gridspec for the individual plots. If None, an axis will be created. 
+    axes: list of matplotlib axes
+        The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
+        and figure parameters are ignored.
+    show_legend: bool
+        Show the legend in the last axes (default True).
+        
+    Returns
+    -------
+    W: MultiCompGraphWidget
+        The output widget
+    """    
     def __init__(self, multi_sorting_comparison, plot_type='pie', cmap='YlOrRd', fs=9,
                  figure=None, axes=None, ax=None, show_legend=True):
         BaseMultiWidget.__init__(self, figure, ax, axes)
@@ -260,3 +213,26 @@ class MultiCompAgreementBySorterWidget(BaseMultiWidget):
 def _getabs(pct, allvals):
     absolute = int(np.round(pct / 100. * np.sum(allvals)))
     return "{:d}".format(absolute)
+
+
+
+
+def plot_multicomp_graph(*args, **kwargs):
+    W = MultiCompGraphWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_multicomp_graph.__doc__ = MultiCompGraphWidget.__doc__
+
+
+def plot_multicomp_agreement(*args, **kwargs):
+    W = MultiCompGlobalAgreementWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_multicomp_agreement.__doc__ = MultiCompGlobalAgreementWidget.__doc__
+
+
+def plot_multicomp_agreement_by_sorter(*args, **kwargs):
+    W = MultiCompAgreementBySorterWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_multicomp_agreement_by_sorter.__doc__ = MultiCompAgreementBySorterWidget.__doc__

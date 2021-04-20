@@ -141,6 +141,11 @@ class BaseExtractor:
         then it is modified only on a subset of channels/units
         
         """
+        if values is None:
+            if key in self._properties:
+                self._properties.pop(key)
+            return
+
         size = self._main_ids.size
         values = np.asarray(values)
         if ids is None:
@@ -197,14 +202,16 @@ class BaseExtractor:
             # feat_keys = ExtractorBase._features.keys()
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
-        other._properties = deepcopy(
-            {k: self._properties[k][inds] for k in prop_keys if self._properties[k] is not None})
-        # other._features = deepcopy({k: self._features[k] for k in feat_keys})
+        for k in prop_keys:
+            values = self._properties[k]
+            if values is not None:
+                other.set_property(k, values[inds])
+        # TODO: copy features also
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False):
         '''
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
-        extractor with spikeextractors.load_extractor_from_dict(dump_dict)
+        extractor with load_extractor_from_dict(dump_dict)
 
         Returns
         -------
@@ -246,11 +253,6 @@ class BaseExtractor:
             dump_dict['properties'] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         # TODO include features
-        # ~ if include_features:
-        # ~ dump_dict['features'] = self._features
-        # ~ else:
-        # ~ # include only main features
-        # ~ dump_dict['features'] = {k:self._features[k] for k in self._main_features}
 
         return dump_dict
 
@@ -330,7 +332,7 @@ class BaseExtractor:
     def dump_to_json(self, file_path=None):
         '''
         Dump recording extractor to json file.
-        The extractor can be re-loaded with spikeextractors.load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor_from_json(json_file)
 
         Parameters
         ----------
@@ -348,7 +350,7 @@ class BaseExtractor:
     def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True):
         '''
         Dump recording extractor to a pickle file.
-        The extractor can be re-loaded with spikeextractors.load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor_from_json(json_file)
 
         Parameters
         ----------
@@ -585,7 +587,9 @@ def _load_extractor_from_dict(dic):
     extractor = cls(**kwargs)
 
     extractor._annotations.update(dic['annotations'])
-    extractor._properties.update(dic['properties'])
+    # extractor._properties.update(dic['properties'])
+    for k, v in dic['properties'].items():
+        extractor.set_property(k, v)
     # ~ extractor._features.update(dic['features'])
 
     return extractor

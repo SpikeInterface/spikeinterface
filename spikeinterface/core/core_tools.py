@@ -5,7 +5,7 @@ import datetime
 import numpy as np
 from tqdm import tqdm
 
-from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_into_chunks, ChunkRecordingExecutor
+from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor
 
 
 def check_json(d):
@@ -213,7 +213,7 @@ def write_binary_recording_file_handle(recording, file_handle=None,
     else:
 
         num_frames = recording.get_num_samples(segment_index=0)
-        chunks = divide_into_chunks(num_frames, chunk_size)
+        chunks = divide_segment_into_chunks(num_frames, chunk_size)
 
         for start_frame, end_frame in chunks:
             traces = recording.get_traces(segment_index=0,

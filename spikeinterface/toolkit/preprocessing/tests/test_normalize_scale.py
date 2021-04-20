@@ -23,12 +23,12 @@ def test_normalize_by_quantile():
     
     
     
-    #~ import matplotlib.pyplot as plt
-    #~ from spikeinterface.widgets import plot_timeseries
-    #~ fig, ax = plt.subplots()
-    #~ ax.plot(rec.get_traces(segment_index=0)[:, 0], color='g')
-    #~ ax.plot(rec2.get_traces(segment_index=0)[:, 0], color='r')
-    #~ plt.show()
+    # import matplotlib.pyplot as plt
+    # from spikeinterface.widgets import plot_timeseries
+    # fig, ax = plt.subplots()
+    # ax.plot(rec.get_traces(segment_index=0)[:, 0], color='g')
+    # ax.plot(rec2.get_traces(segment_index=0)[:, 0], color='r')
+    # plt.show()
 
 def test_scale():
     rec = generate_recording()

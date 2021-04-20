@@ -7,105 +7,85 @@ groups (for example tetrodes) or you might want to spike sort different brain re
 can spike sort by property.
 """
 
+import numpy as np
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
-import time
 
-#~ ##############################################################################
-#~ #  Sometimes, you might want to sort your data depending on a specific property of your recording channels.
-#~ #  
-#~ # For example, when using multiple tetrodes, a good idea is to sort each tetrode separately. In this case, channels
-#~ # belonging to the same tetrode will be in the same 'group'. Alternatively, for long silicon probes, such as
-#~ # Neuropixels, you could sort different areas separately, for example hippocampus and thalamus.
-#~ #  
-#~ # All this can be done by sorting by 'property'. Properties can be loaded to the recording channels either manually
-#~ # (using the :code:`set_channel_property` method), or by using a probe file. In this example we will create a 16 channel
-#~ # recording and split it in four channel groups (tetrodes).
-#~ #
-#~ # Let's create a toy example with 16 channels (the :code:`dumpable=True` dumps the extractors to a file, which is
-#~ # required for parallel sorting):
 
-#~ recording_tetrodes, sorting_true = se.example_datasets.toy_example(duration=10, num_channels=16, dumpable=True)
+##############################################################################
+#  Sometimes, you might want to sort your data depending on a specific property of your recording channels.
+#  
+# For example, when using multiple tetrodes, a good idea is to sort each tetrode separately. In this case, channels
+# belonging to the same tetrode will be in the same 'group'. Alternatively, for long silicon probes, such as
+# Neuropixels, you could sort different areas separately, for example hippocampus and thalamus.
+#  
+# All this can be done by sorting by 'property'. Properties can be loaded to the recording channels either manually
+# (using the :code:`set_channel_property` method), or by using a probe file. In this example we will create a 16 channel
+# recording and split it in four channel groups (tetrodes).
+#
+# Let's create a toy example with 16 channels (the :code:`dumpable=True` dumps the extractors to a file, which is
+# required for parallel sorting):
 
-#~ ##############################################################################
-#~ # Initially there is no group information ('location' is loaded automatically when creating toy data):
+recording, sorting_true = se.toy_example(duration=[10.], num_segments=1, num_channels=16)
+# make dumpable
+recording= recording.save()
 
-#~ print(recording_tetrodes.get_shared_channel_property_names())
+##############################################################################
+# Initially all channel are in the same group.
 
-#~ ##############################################################################
-#~ # The file tetrode_16.prb contain the channel group description
-#~ #
-#~ # .. parsed-literal::
-#~ #
-#~ #     channel_groups = {
-#~ #         0: {
-#~ #             'channels': [0,1,2,3],
-#~ #         },
-#~ #         1: {
-#~ #             'channels': [4,5,6,7],
-#~ #         },
-#~ #         2: {
-#~ #             'channels': [8,9,10,11],
-#~ #         },
-#~ #         3: {
-#~ #             'channels': [12,13,14,15],
-#~ #         }
-#~ #     }
+print(recording.get_channel_groups())
 
-#~ ##############################################################################
-#~ # We can load 'group' information using the '.prb' file:
+##############################################################################
+# Lets now change the probe mapping and assign a 4 tetrodes to this recording.
+# for this we will use the `probeinterface` module and create a `ProbeGroup` containing for dummy tetrode.
 
-#~ recording_tetrodes = recording_tetrodes.load_probe_file('tetrode_16.prb')
-#~ print(recording_tetrodes.get_shared_channel_property_names())
+from probeinterface import generate_tetrode, ProbeGroup
 
-#~ ##############################################################################
-#~ # We can now use the launcher to spike sort by the property 'group'.
-#~ # Internally, the recording is split into :code:`SubRecordingExtractor` objects, one for each group. Each of them is
-#~ # spike sorted separately, yielding as many :code:`SortingExtractor` objects as the number of groups. Finally, the
-#~ # sorting extractor objects are re-assembled into a single :code:`MultiSortingExtractor`.
-#~ #
-#~ # The different groups can also be sorted in
-#~ # parallel, and the output sorting extractor will have the same property used for sorting. Running in parallel
-#~ # (in separate threads) can speed up the computations.
-#~ #
-#~ # Let's first run the four channel groups sequentially:
+probegroup = ProbeGroup()
+for i in range(4):
+    tetrode = generate_tetrode()
+    tetrode.set_device_channel_indices(np.arange(4) + i * 4)
+    probegroup.add_probe(tetrode)
 
-#~ t_start = time.time()
-#~ sorting_tetrodes = ss.run_sorter('klusta', recording_tetrodes, output_folder='tmp_tetrodes',
-                                 #~ grouping_property='group', parallel=False, verbose=False)
-#~ print('Elapsed time: ', time.time() - t_start)
+##############################################################################
+#  now our new recording contain 4 groups
 
-#~ ##############################################################################
-#~ # then in parallel:
+recording_4_tetrodes = recording.set_probegroup(probegroup, group_mode='by_probe')
 
-#~ t_start = time.time()
-#~ sorting_tetrodes_p = ss.run_sorter('klusta', recording_tetrodes, output_folder='tmp_tetrodes_par',
-                                   #~ grouping_property='group', parallel=True, verbose=False)
-#~ print('Elapsed time parallel: ', time.time() - t_start)
+# get group
+print(recording_4_tetrodes.get_channel_groups())
+# similar to this
+print(recording_4_tetrodes.get_property('group'))
 
-#~ ##############################################################################
-#~ # The units of the sorted output will have the same property used for spike sorting:
+##############################################################################
+#  this "group" property can be use to split our new recording into 4 recording
+# we get a list of 4 ChannelSliceRecording (ex "sub-recording")
+# This is done without any copy, each ChannelSliceRecording is a view of the parent recording
+#  Note that here we use 'group' for splitting but it could be done on any property.
 
-#~ print(sorting_tetrodes.get_shared_unit_property_names())
+recordings = recording_4_tetrodes.split_by(property='group')
+print(recordings)
 
-#~ ##############################################################################
-#~ # Note that channels can be split by any property. Let's for example assume that half of the tetrodes are in hippocampus
-#~ # CA1 region, and the other half is in CA3. first we have to load this property (this can be done also from the '.prb'
-#~ # file):
+##############################################################################
+# We can also get a dict instead of the list wich is easier to handle group keys.
 
-#~ for ch in recording_tetrodes.get_channel_ids()[:int(recording_tetrodes.get_num_channels() / 2)]:
-    #~ recording_tetrodes.set_channel_property(ch, property_name='region', value='CA1')
+recordings = recording_4_tetrodes.split_by(property='group', outputs='dict')
+print(recordings)
 
-#~ for ch in recording_tetrodes.get_channel_ids()[int(recording_tetrodes.get_num_channels() / 2):]:
-    #~ recording_tetrodes.set_channel_property(ch, property_name='region', value='CA3')
 
-#~ for ch in recording_tetrodes.get_channel_ids():
-    #~ print(recording_tetrodes.get_channel_property(ch, property_name='region'))
+##############################################################################
+# We can now use the `run_sorters()` function instead of the `run_sorter()`.
+# This function can run several sorters on serveral recording with diffrents parralell engine.
+#  here we use imple 'loop' but we could use also  'joblib' or 'dask' for multi process or multi node computing.
+#  have a look to the documentation of this function that handle many cases.
 
-#~ ##############################################################################
-#~ # Now let's spike sort by 'region' and check that the units of the sorted output have this property:
+sorter_list = ['tridesclous']
+working_folder = 'sorter_outputs'
+results = ss.run_sorters(sorter_list, recordings, working_folder,
+            engine='loop', with_output=True, mode_if_folder_exists='overwrite')
 
-#~ sorting_regions = ss.run_sorter('klusta', recording_tetrodes, output_folder='tmp_regions',
-                                #~ grouping_property='region', parallel=True)
+##############################################################################
+#  the ouput is a dict with all combinason of (group, sorter_name)
 
-#~ print(sorting_regions.get_shared_unit_property_names())
+from pprint import pprint
+pprint(results)

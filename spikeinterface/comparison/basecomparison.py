@@ -29,23 +29,6 @@ class BaseComparison:
         if not np.all(s.get_num_segments() == 1 for s in sorting_list):
             raise Exception('Comparison module work with sorting having num_segments=1')
 
-        #~ if sampling_frequency is None:
-            #~ # take sampling frequency from sorting list and test that they are equivalent.
-            #~ sampling_freqs_not_none = np.array([s.get_sampling_frequency() for s in self.sorting_list
-                                                #~ if s.get_sampling_frequency() is not None], dtype='float64')
-            #~ assert len(sampling_freqs_not_none) > 0, ("Sampling frequency information "
-                                                      #~ "not found in sorting. Pass it with the 'sampling_frequency' "
-                                                      #~ "argument")
-
-            #~ # Some sorter round the sampling freq lets emit a warning
-            #~ sf0 = sampling_freqs_not_none[0]
-            #~ if not np.all([sf == sf0 for sf in sampling_freqs_not_none]):
-                #~ delta_freq_ratio = np.abs(sampling_freqs_not_none - sf0) / sf0
-                #~ # tolerence of 0.1%
-                #~ assert np.all(delta_freq_ratio < 0.001), "Inconsintent sampling frequency among sorting list"
-
-            #~ sampling_frequency = sampling_freqs_not_none[0]
-
         # take sampling frequency from sorting list and test that they are equivalent.
         sampling_freqs = np.array([s.get_sampling_frequency() for s in self.sorting_list], dtype='float64')
         

@@ -18,7 +18,6 @@ from probeinterface import write_prb
 
 try:
     import tridesclous as tdc
-
     HAVE_TDC = True
 except ImportError:
     HAVE_TDC = False
@@ -76,9 +75,6 @@ class TridesclousSorter(BaseSorter):
     # TODO make the TDC handle multi segment (should be easy)
     handle_multi_segment = False
 
-    #~ def __init__(self, **kargs):
-        #~ BaseSorter.__init__(self, **kargs)
-    
     @classmethod
     def is_installed(cls):
         return HAVE_TDC
@@ -93,11 +89,6 @@ class TridesclousSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        # reset the output folder
-        #~ if output_folder.is_dir():
-            #~ shutil.rmtree(str(output_folder))
-        #~ os.makedirs(str(output_folder))
-
         # save prb file
         probegroup = recording.get_probegroup()
         prb_file = output_folder / 'probe.prb'

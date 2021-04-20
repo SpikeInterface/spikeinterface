@@ -204,7 +204,7 @@ print(isi_violations_count)
 ##############################################################################
 # All theses quality mertics can be computed in one shot into a pandas.Dataframe
 
-metrics = st.compute_metrics(we_TDC, metric_names = ['snr', 'isi_violation', 'amplitude_cutoff'])
+metrics = st.compute_quality_metrics(we_TDC, metric_names = ['snr', 'isi_violation', 'amplitude_cutoff'])
 print(metrics)
 
 ##############################################################################

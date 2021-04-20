@@ -73,9 +73,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
     
     handle_multi_segment = False
 
-    #~ def __init__(self, **kargs):
-        #~ BaseSorter.__init__(self, **kargs)
-    
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.kilosort_path)
@@ -193,31 +190,3 @@ class KilosortSorter(KilosortBase, BaseSorter):
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
 
-    #~ @classmethod
-    #~ def _run_from_folder(cls, output_folder, params, verbose):
-        #~ sorter_name = cls.sorter_name
-        
-        #~ if 'win' in sys.platform and sys.platform != 'darwin':
-            #~ shell_cmd = '''
-                        #~ cd {tmpdir}
-                        #~ matlab -nosplash -wait -log -r kilosort_master
-                    #~ '''.format(tmpdir=output_folder)
-        #~ else:
-            #~ shell_cmd = '''
-                        #~ #!/bin/bash
-                        #~ cd "{tmpdir}"
-                        #~ matlab -nosplash -nodisplay -log -r kilosort_master
-                    #~ '''.format(tmpdir=output_folder)
-        #~ shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{sorter_name}',
-                                   #~ log_path=output_folder / f'{sorter_name}.log', verbose=verbose)
-        #~ shell_script.start()
-
-        #~ retcode = shell_script.wait()
-
-        #~ if retcode != 0:
-            #~ raise Exception('kilosort returned a non-zero exit code')
-
-    #~ @classmethod
-    #~ def _get_result_from_folder(cls, output_folder):
-        #~ sorting = KiloSortSortingExtractor(folder_path=output_folder)
-        #~ return sorting

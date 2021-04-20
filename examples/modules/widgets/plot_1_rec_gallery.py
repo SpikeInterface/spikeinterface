@@ -42,14 +42,14 @@ w_el = sw.plot_probe_map(recording)
 # plot_spectrum()
 # ~~~~~~~~~~~~~~~~
 
-#TODO
+#TODO : @alessio this is for you
 # w_sp = sw.plot_spectrum(recording)
 
 ##############################################################################
 # plot_spectrogram()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#TODO
+#TODO : @alessio this is for you
 #w_spg = sw.plot_spectrogram(recording, channel=0, nfft=2048)
 
 plt.show()

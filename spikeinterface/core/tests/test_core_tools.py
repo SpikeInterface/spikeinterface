@@ -33,10 +33,10 @@ def test_write_memory_recording():
     recording =recording.save()
 
     # write with loop
-    #~ write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
+    write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
 
-    #~ write_memory_recording(recording, dtype=None,
-            #~ verbose=True, n_jobs=1, chunk_memory='100k', progress_bar=True)
+    write_memory_recording(recording, dtype=None,
+            verbose=True, n_jobs=1, chunk_memory='100k', progress_bar=True)
 
     # write parrallel
     write_memory_recording(recording, dtype=None,
@@ -50,7 +50,5 @@ def test_write_memory_recording():
     
     
 if __name__ == '__main__':
-    #~ test_write_binary_recording()
-    
+    # test_write_binary_recording()
     test_write_memory_recording()
-    

@@ -8,11 +8,11 @@ from .comparisontools import (do_score_labels, make_possible_match,
 
 class GroundTruthComparison(BaseTwoSorterComparison):
     """
-    Class to compare a sorter to ground truth (GT)
-    
+    Compares a sorter to a ground truth.
+
     This class can:
       * compute a "macth between gt_sorting and tested_sorting
-      * compte th score label (TP, FN, CL, FP) for each spike
+      * compute optionally the score label (TP, FN, CL, FP) for each spike
       * count by unit of GT the total of each (TP, FN, CL, FP) into a Dataframe 
         GroundTruthComparison.count
       * compute the confusion matrix .get_confusion_matrix()
@@ -23,6 +23,50 @@ class GroundTruthComparison(BaseTwoSorterComparison):
       * count redundant units
       * count overmerged units
       * summary all this
+    
+
+    Parameters
+    ----------
+    gt_sorting: SortingExtractor
+        The first sorting for the comparison
+    tested_sorting: SortingExtractor
+        The second sorting for the comparison
+    gt_name: str
+        The name of sorter 1
+    tested_name: : str
+        The name of sorter 2
+    delta_time: float
+        Number of ms to consider coincident spikes (default 0.4 ms)    match_score: float
+        Minimum agreement score to match units (default 0.5)
+    chance_score: float
+        Minimum agreement score to for a possible match (default 0.1)
+    redundant_score: float
+        Agreement score above which units are redundant (default 0.2)
+    overmerged_score: float
+        Agreement score above which units can be overmerged (default 0.2)
+    well_detected_score: float
+        Agreement score above which units are well detected (default 0.8)
+    exhaustive_gt: bool (default True)
+        Tell if the ground true is "exhaustive" or not. In other world if the
+        GT have all possible units. It allows more performance measurement.
+        For instance, MEArec simulated dataset have exhaustive_gt=True
+    match_mode: 'hungarian', or 'best'
+        What is match used for counting : 'hugarian' or 'best match'.
+    n_jobs: int
+        Number of cores to use in parallel. Uses all available if -1
+    compute_labels: bool
+        If True, labels are computed at instantiation (default False)
+    compute_misclassifications: bool
+        If True, misclassifications are computed at instantiation (default False)
+    verbose: bool
+        If True, output is verbose
+    Returns
+    -------
+    sorting_comparison: SortingComparison
+        The SortingComparison object
+
+    
+
     """
 
     def __init__(self, gt_sorting, tested_sorting, gt_name=None, tested_name=None,
@@ -420,64 +464,6 @@ num_bad: {num_bad}
 """
 
 
-def compare_sorter_to_ground_truth(gt_sorting, tested_sorting, gt_name=None, tested_name=None,
-                                   delta_time=0.4, match_score=0.5, chance_score=0.1, # sampling_frequency=None, 
-                                   well_detected_score=0.8, redundant_score=0.2, overmerged_score=0.2,
-                                   exhaustive_gt=True, match_mode='hungarian', n_jobs=-1, compute_labels=False,
-                                   compute_misclassifications=False, verbose=False):
-    '''
-    Compares a sorter to a ground truth.
-
-    - Spike trains are matched based on their agreement scores
-    - Individual spikes are labelled as true positives (TP), false negatives (FN),
-      false positives 1 (FP), misclassifications (CL)
-
-    It also allows to compute_performance and confusion matrix.
-
-    Parameters
-    ----------
-    gt_sorting: SortingExtractor
-        The first sorting for the comparison
-    tested_sorting: SortingExtractor
-        The second sorting for the comparison
-    gt_name: str
-        The name of sorter 1
-    tested_name: : str
-        The name of sorter 2
-    delta_time: float
-        Number of ms to consider coincident spikes (default 0.4 ms)    match_score: float
-        Minimum agreement score to match units (default 0.5)
-    chance_score: float
-        Minimum agreement score to for a possible match (default 0.1)
-    redundant_score: float
-        Agreement score above which units are redundant (default 0.2)
-    overmerged_score: float
-        Agreement score above which units can be overmerged (default 0.2)
-    well_detected_score: float
-        Agreement score above which units are well detected (default 0.8)
-    exhaustive_gt: bool (default True)
-        Tell if the ground true is "exhaustive" or not. In other world if the
-        GT have all possible units. It allows more performance measurement.
-        For instance, MEArec simulated dataset have exhaustive_gt=True
-    match_mode: 'hungarian', or 'best'
-        What is match used for counting : 'hugarian' or 'best match'.
-    n_jobs: int
-        Number of cores to use in parallel. Uses all available if -1
-    compute_labels: bool
-        If True, labels are computed at instantiation (default False)
-    compute_misclassifications: bool
-        If True, misclassifications are computed at instantiation (default False)
-    verbose: bool
-        If True, output is verbose
-    Returns
-    -------
-    sorting_comparison: SortingComparison
-        The SortingComparison object
-    '''
-    return GroundTruthComparison(gt_sorting=gt_sorting, tested_sorting=tested_sorting, gt_name=gt_name,
-                                 tested_name=tested_name, delta_time=delta_time, # sampling_frequency=sampling_frequency,
-                                 match_score=match_score, redundant_score=redundant_score, chance_score=chance_score,
-                                 well_detected_score=well_detected_score, overmerged_score=overmerged_score,
-                                 exhaustive_gt=exhaustive_gt, n_jobs=n_jobs,
-                                 match_mode=match_mode, compute_labels=compute_labels,
-                                 compute_misclassifications=compute_misclassifications, verbose=verbose)
+def compare_sorter_to_ground_truth(*args, **kargs):
+    return GroundTruthComparison(*args, **kargs)
+compare_sorter_to_ground_truth.__doc__ = GroundTruthComparison.__doc__

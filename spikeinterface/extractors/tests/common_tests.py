@@ -14,8 +14,8 @@ class CommonTestSuite:
     entities = []
     
     def setUp(self):
-        for distant_path in self.downloads:
-            download_dataset(repo=gin_repo, distant_path=distant_path, local_folder=local_folder)
+        for remote_path in self.downloads:
+            download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder)
     
 
 class RecordingCommonTestSuite(CommonTestSuite):

@@ -131,7 +131,7 @@ class OpenCLFilterExecutor:
         # ctx = pyopencl.Context(dev)
 
         self.ctx = pyopencl.create_some_context(interactive=False)
-        #~ print(self.ctx)
+        # print(self.ctx)
         self.queue = pyopencl.CommandQueue(self.ctx)
         self.max_wg_size = self.ctx.devices[0].get_info(pyopencl.device_info.MAX_WORK_GROUP_SIZE)
         
@@ -180,7 +180,7 @@ class OpenCLFilterExecutor:
             num_channels=self.num_channels, 
         )
         kernel_formated = processor_kernel % variables
-        #~ print(kernel_formated)
+        # print(kernel_formated)
         
         prg = pyopencl.Program(self.ctx, kernel_formated)
         self.opencl_prg = prg.build()  # options='-cl-mad-enable'

@@ -13,7 +13,7 @@ except:
 
 
 
-def download_dataset(repo=None, distant_path=None, local_folder=None):
+def download_dataset(repo=None, remote_path=None, local_folder=None):
     if repo is None:
         print('Use gin NeuralEnsemble/ephy_testing_data')
         repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
@@ -30,13 +30,13 @@ def download_dataset(repo=None, distant_path=None, local_folder=None):
     else:
         dataset = datalad.api.install(path=local_folder, source='https://gin.g-node.org/NeuralEnsemble/ephy_testing_data')
     
-    if distant_path is None:
-        print('Bad boy: you have to provide "distant_path"')
+    if remote_path is None:
+        print('Bad boy: you have to provide "remote_path"')
         return
 
-    dataset.get(distant_path)
+    dataset.get(remote_path)
     
-    local_path = local_folder / distant_path
+    local_path = local_folder / remote_path
 
     return local_path
 

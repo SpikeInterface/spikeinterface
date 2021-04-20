@@ -67,7 +67,7 @@ class ShellScript():
             self._dirs_to_remove.append(tempdir)
 
         if self._log_path is None:
-            script_log_path = script_path.parent / 'spikesorters_log.txt'
+            script_log_path = script_path.parent / 'spike_sorters_log.txt'
         else:
             script_log_path = Path(self._log_path)
             if script_path.suffix == '':
