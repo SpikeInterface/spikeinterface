@@ -150,7 +150,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         # take index of temmplate (respect unit_ids order)
         all_unit_ids = list(self.comp.sorting1.get_unit_ids())
         template_inds = [all_unit_ids.index(u) for u in self.unit_ids] 
-        #~ print('template_inds', template_inds)
+        
         templates = self.templates[template_inds, :, :].copy()
         flat_templates = templates.reshape(templates.shape[0], -1)
         if self.metric == 'cosine_similarity':
@@ -218,7 +218,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         
         ax0.set_yticks(np.arange(n_pair))
         ax0.set_yticklabels(pair_names)
-        #~ ax0.set_xlim(0,1)
+        # ax0.set_xlim(0,1)
         
         ax0.set_xlabel(self.metric)
         ax0.set_ylabel('pairs')

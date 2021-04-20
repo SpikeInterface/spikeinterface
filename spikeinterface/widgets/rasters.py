@@ -34,7 +34,7 @@ class RasterWidget(BaseWidget):
         The output widget
     """    
     def __init__(self, sorting, segment_index=None,  unit_ids=None,
-                                            time_range=None, color='k', figure=None, ax=None):
+                 time_range=None, color='k', figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
         
@@ -64,11 +64,6 @@ class RasterWidget(BaseWidget):
             assert len(time_range) == 2, "'trange' should be a list with start and end time in seconds"
             self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
 
-        #~ if time_range is None:
-            #~ time_range=(0, 1.)
-        #~ time_range = np.array(time_range)
-
-            
         self._visible_trange = self._fix_trange(self._visible_trange)
         self.name = 'Raster'
 

@@ -206,9 +206,7 @@ class BaseExtractor:
             values = self._properties[k]
             if values is not None:
                 other.set_property(k, values[inds])
-        #~ other._properties = deepcopy(
-            #~ {k: self._properties[k][inds] for k in prop_keys if self._properties[k] is not None})
-        # other._features = deepcopy({k: self._features[k] for k in feat_keys})
+        # TODO: copy features also
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False):
         '''
@@ -255,11 +253,6 @@ class BaseExtractor:
             dump_dict['properties'] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         # TODO include features
-        # ~ if include_features:
-        # ~ dump_dict['features'] = self._features
-        # ~ else:
-        # ~ # include only main features
-        # ~ dump_dict['features'] = {k:self._features[k] for k in self._main_features}
 
         return dump_dict
 

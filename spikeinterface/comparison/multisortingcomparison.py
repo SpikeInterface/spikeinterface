@@ -310,24 +310,24 @@ class AgreementSortingExtractor(BaseSorting):
     def __init__(self, sampling_frequency, multisortingcomparison,
                     min_agreement_count=1, min_agreement_count_only=False):
 
-        #~ se.SortingExtractor.__init__(self)
         self._msc = multisortingcomparison
         self.is_dumpable = False
 
-        #~ if min_agreement_count_only:
-            #~ self._unit_ids = list(u for u in self._msc._new_units.keys()
-                                  #~ if self._msc._new_units[u]['agreement_number'] == min_agreement_count)
-        #~ else:
-            #~ self._unit_ids = list(u for u in self._msc._new_units.keys()
-                                  #~ if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
+        # TODO: @alessio I leav this for you
+        # if min_agreement_count_only:
+            # self._unit_ids = list(u for u in self._msc._new_units.keys()
+                                  # if self._msc._new_units[u]['agreement_number'] == min_agreement_count)
+        # else:
+            # self._unit_ids = list(u for u in self._msc._new_units.keys()
+                                  # if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
 
-        #~ for unit in self._unit_ids:
-            #~ self.set_unit_property(unit_id=unit, property_name='agreement_number',
-                                   #~ value=self._msc._new_units[unit]['agreement_number'])
-            #~ self.set_unit_property(unit_id=unit, property_name='avg_agreement',
-                                   #~ value=self._msc._new_units[unit]['avg_agreement'])
-            #~ self.set_unit_property(unit_id=unit, property_name='sorter_unit_ids',
-                                   #~ value=self._msc._new_units[unit]['sorter_unit_ids'])
+        # for unit in self._unit_ids:
+            # self.set_unit_property(unit_id=unit, property_name='agreement_number',
+                                   # value=self._msc._new_units[unit]['agreement_number'])
+            # self.set_unit_property(unit_id=unit, property_name='avg_agreement',
+                                   # value=self._msc._new_units[unit]['avg_agreement'])
+            # self.set_unit_property(unit_id=unit, property_name='sorter_unit_ids',
+                                   # value=self._msc._new_units[unit]['sorter_unit_ids'])
 
 
         if min_agreement_count_only:
@@ -345,16 +345,6 @@ class AgreementSortingExtractor(BaseSorting):
         sorting_segment = AgreementSortingSegment(multisortingcomparison)
         self.add_sorting_segment(sorting_segment)
 
-    #~ def get_unit_ids(self, unit_ids=None):
-        #~ if unit_ids is None:
-            #~ return self._unit_ids
-        #~ else:
-            #~ return self._unit_ids[unit_ids]
-
-    #~ def get_unit_spike_train(self, unit_id, start_frame=None, end_frame=None):
-        #~ if unit_id not in self.get_unit_ids():
-            #~ raise Exception("Unit id is invalid")
-        #~ return np.array(self._msc._spiketrains[list(self._msc._new_units.keys()).index(unit_id)])
 
 class AgreementSortingSegment(BaseSortingSegment):
     def __init__(self, multisortingcomparison):

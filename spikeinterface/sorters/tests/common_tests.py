@@ -15,7 +15,6 @@ class SorterCommonTestSuite:
     SorterClass = None
 
     def setUp(self):
-        #~ self.recording, self.sorting_gt = toy_example(num_channels=4, duration=10, seed=0, num_segments=1)
         recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
         self.recording =recording.save(verbose=False, format='binary')
         print(self.recording)
@@ -39,8 +38,8 @@ class SorterCommonTestSuite:
         SorterClass.run_from_folder(output_folder, raise_error, verbose)
         sorting = SorterClass.get_result_from_folder(output_folder)
 
-        #~ for unit_id in sorting.get_unit_ids():
-            #~ print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
+        # for unit_id in sorting.get_unit_ids():
+            # print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
 
         del sorting
 
@@ -57,15 +56,7 @@ class SorterCommonTestSuite:
         sorting = run_sorter(sorter_name, recording, output_folder=None,
             remove_existing_folder=True, delete_output_folder=False,
             verbose=False, raise_error=True,  **sorter_params)
-        
-        #~ params = self.SorterClass.default_params()
-        #~ sorter = self.SorterClass(recording=recording, output_folder=None)
-        #~ sorter.set_params(**params)
-        #~ sorter.run()
-        #~ sorting = sorter.get_result()
 
-        #~ for unit_id in sorting.get_unit_ids():
-            #~ print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
         del sorting
 
     def test_get_version(self):

@@ -49,19 +49,6 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
         ChannelSliceRecording.__init__(self, recording, channel_ids=channel_ids)
         BasePreprocessor.__init__(self, self)
 
-        #~ # copy annotation and properties
-        #~ recording.copy_metadata(self, only_main=False, ids=channel_ids)
-        
-        #~ # change the wiring of the probe
-        #~ contact_vector = self.get_property('contact_vector')
-        #~ if contact_vector is not None:
-            #~ contact_vector['device_channel_indices'] = np.arange(len(channel_ids), dtype='int64')
-            #~ self.set_property('contact_vector', contact_vector)
-        
-        #~ for parent_segment in self._parent_recording._recording_segments:
-            #~ sub_segment = ChannelSliceRecordingSegment(parent_segment, self._parent_channel_indices)
-            #~ self.add_recording_segment(sub_segment)
-
 
 # function for API
 def remove_bad_channels(*args, **kwargs):

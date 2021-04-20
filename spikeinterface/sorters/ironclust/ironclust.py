@@ -126,9 +126,6 @@ class IronClustSorter(BaseSorter):
     
     handle_multi_segment = False
 
-    #~ def __init__(self, **kargs):
-        #~ BaseSorter.__init__(self, **kargs)
-    
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.ironclust_path)
@@ -184,6 +181,7 @@ class IronClustSorter(BaseSorter):
         with (dataset_dir / 'argfile.txt').open('w') as f:
             f.write(txt)
 
+        # TODO remove this because recording.json contain the sample_rate natively
         tmpdir = output_folder / 'tmp'
         tmpdir.mkdir(parents=True, exist_ok=True)
         samplerate_fname = str(tmpdir / 'samplerate.txt')
@@ -192,17 +190,10 @@ class IronClustSorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        #~ recording = recover_recording(recording)
         dataset_dir = output_folder / 'ironclust_dataset'
         source_dir = Path(__file__).parent
         
-        #~ recording = load_extractor(output_folder / 'spikeinterface_recording.json')
-        #~ samplerate = recording.get_sampling_frequency()
-
-
-
         tmpdir = output_folder / 'tmp'
-        #~ tmpdir.mkdir(parents=True, exist_ok=True)
         
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
