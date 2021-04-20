@@ -12,23 +12,16 @@ class WhitenRecording(BasePreprocessor):
     ----------
     recording: RecordingExtractor
         The recording extractor to be whitened.
-    num_chunks_per_segment:  int
-        Num chunks per segment to extract.
-    chunk_size: int
-        The chunk size to be used for the filtering.
-    seed: int
-        Random seed for reproducibility
+    **random_chunk_kwargs
     Returns
     -------
     whitened_recording: WhitenRecording
         The whitened recording extractor
     """
     name = 'whiten'
-    def __init__(self, recording, num_chunks_per_segment=50, chunk_size=500, seed=0):
+    def __init__(self, recording,  **random_chunk_kwargs):
         
-        random_data = get_random_data_chunks(recording, 
-                        num_chunks_per_segment=num_chunks_per_segment,
-                        chunk_size=chunk_size, seed=seed)
+        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
         # compute whitening matrix
         M = np.mean(random_data, axis=0)
@@ -45,9 +38,8 @@ class WhitenRecording(BasePreprocessor):
             rec_segment = WhitenRecordingSegment(parent_segment,  W, M)
             self.add_recording_segment(rec_segment)
         
-        self._kwargs = dict(recording=recording.to_dict(), 
-            num_chunks_per_segment=num_chunks_per_segment,
-            chunk_size=chunk_size, seed=seed)
+        self._kwargs = dict(recording=recording.to_dict())
+        self._kwargs.update(random_chunk_kwargs)
 
 
 class WhitenRecordingSegment(BasePreprocessorSegment):
