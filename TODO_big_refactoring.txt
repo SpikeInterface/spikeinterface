@@ -77,9 +77,10 @@ examples:
 
 doc:
 
-  * re make the API
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
+  * make on example for extractor
+  * plot_4_sorting_concatenated_recordings.py
 
 
 Tests suite:
