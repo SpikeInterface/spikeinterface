@@ -54,15 +54,13 @@ sw.plot_unit_templates(we, unit_ids=unit_ids, ncols=5)
 # plot_amplitudes_distribution()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# TODO
-# w_ampd = sw.plot_amplitudes_distribution(recording, sorting, max_spikes_per_unit=300)
+sw.plot_amplitudes_distribution(we)
 
 ##############################################################################
 # plot_amplitudes_timeseres()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# TODO
-# w_ampt = sw.plot_amplitudes_timeseries(recording, sorting, max_spikes_per_unit=300)
+sw.plot_amplitudes_timeseries(we)
 
 ##############################################################################
 # plot_pca_features()
