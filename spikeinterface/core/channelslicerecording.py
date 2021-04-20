@@ -41,10 +41,13 @@ class ChannelSliceRecording(BaseRecording):
 
         # copy annotation and properties
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
-        # ~ self.annotate(**parent_recording._annotations)
-        # ~ for k in parent_recording._properties:
-        # ~ self._properties[k] = parent_recording._properties[k][self._parent_channel_indices]
-
+        
+        # change the wiring of the probe
+        contact_vector = self.get_property('contact_vector')
+        if contact_vector is not None:
+            contact_vector['device_channel_indices'] = np.arange(len(channel_ids), dtype='int64')
+            self.set_property('contact_vector', contact_vector)
+        
         # update dump dict
         self._kwargs = {'parent_recording': parent_recording.to_dict(), 'channel_ids': channel_ids,
                         'renamed_channel_ids': renamed_channel_ids}

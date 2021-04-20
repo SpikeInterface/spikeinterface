@@ -7,6 +7,7 @@ from ..utils import RecordingExtractorOldAPI
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import HerdingspikesSortingExtractor
+import spikeinterface.toolkit as st
 
 try:
     import herdingspikes as hs
@@ -125,9 +126,6 @@ class HerdingspikesSorter(BaseSorter):
     
     handle_multi_segment = False
     
-    #~ def __init__(self, **kargs):
-        #~ BaseSorter.__init__(self, **kargs)
-    
     @classmethod
     def is_installed(cls):
         return HAVE_HS
@@ -147,8 +145,6 @@ class HerdingspikesSorter(BaseSorter):
     
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        #~ raise NotImplementedError('Herdingspikes need to use the new get_traces() transpose + segment_index!!!')
-        
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         
@@ -157,19 +153,17 @@ class HerdingspikesSorter(BaseSorter):
 
         # TODO: umcommt this after toolkit preprocessing done!!!!!!!
         # Bandpass filter
-        """
         if p['filter'] and p['freq_min'] is not None and p['freq_max'] is not None:
-            recording = st.preprocessing.bandpass_filter(
+            recording = st.bandpass_filter(
                 recording=recording, freq_min=p['freq_min'], freq_max=p['freq_max'])
 
         if p['pre_scale']:
-            recording = st.preprocessing.normalize_by_quantile(
+            recording = st.normalize_by_quantile(
                 recording = recording, scale=p['pre_scale_value'],
                 median=0.0, q1=0.05, q2=0.95
             )
-        """
         
-        print('Herdingspikes use the OLD spikeextractors: use RecordingExtractorOldAPI')
+        print('Herdingspikes use the OLD spikeextractors with RecordingExtractorOldAPI')
         old_api_recording = RecordingExtractorOldAPI(recording)
         
         # this should have its name changed

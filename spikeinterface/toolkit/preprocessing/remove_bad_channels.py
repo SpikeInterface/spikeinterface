@@ -1,12 +1,13 @@
 import numpy as np
 
 
-from spikeinterface.core.channelslicerecording import ChannelSliceRecordingSegment
+from spikeinterface.core.channelslicerecording import (ChannelSliceRecording, 
+    ChannelSliceRecordingSegment)
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
 from ..utils import get_random_data_for_scaling
 
-class RemoveBadChannelsRecording(BasePreprocessor):
+class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
     """
     Remove bad channels from the recording extractor given a thershold 
     on standard deviation.
@@ -44,12 +45,9 @@ class RemoveBadChannelsRecording(BasePreprocessor):
         parents_chan_ids = recording.get_channel_ids()
         channel_ids = parents_chan_ids[keep_inds]
         self._parent_channel_indices = recording.ids_to_indices(channel_ids)
-
-        BasePreprocessor.__init__(self, recording, channel_ids=channel_ids)
         
-        for parent_segment in self._parent_recording._recording_segments:
-            sub_segment = ChannelSliceRecordingSegment(parent_segment, self._parent_channel_indices)
-            self.add_recording_segment(sub_segment)
+        ChannelSliceRecording.__init__(self, recording, channel_ids=channel_ids)
+        BasePreprocessor.__init__(self, self)
 
 
 # function for API

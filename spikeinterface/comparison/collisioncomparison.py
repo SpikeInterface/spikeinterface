@@ -1,9 +1,6 @@
 import pandas as pd
 import numpy as np
 from .groundtruthcomparison import GroundTruthComparison
-#~ from .comparisontools import (do_score_labels, make_possible_match,
-                              #~ make_best_match, make_hungarian_match, do_confusion_matrix, do_count_score,
-                              #~ compute_performance)
 from .comparisontools import make_collision_events
 
 

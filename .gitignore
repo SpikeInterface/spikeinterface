@@ -31,6 +31,10 @@ spikeinterface/toolkit/*/tests/*_output/*
 
 examples/getting_started/*_output/*
 examples/getting_started/waveforms/*
+examples/*/*/*/*.raw
+examples/*/*/*/*/*.npy
+examples/*/*/sorter_outputs
+examples/*/*/*_to_phy
 
 
 

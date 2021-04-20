@@ -40,7 +40,7 @@ def test_NumpySorting():
     # empty
     unit_ids = []
     sorting = NumpySorting(sampling_frequency, unit_ids)
-    #~ print(sorting)
+    # print(sorting)
     
     # 2 columns
     times = np.arange(0, 1000, 10)
@@ -53,7 +53,7 @@ def test_NumpySorting():
     assert sorting.get_num_segments() == 1
 
     sorting = NumpySorting.from_times_labels([times]*3, [labels]*3, sampling_frequency)
-    #~ print(sorting)
+    # print(sorting)
     assert sorting.get_num_segments() == 3
     
     # from other extracrtor
@@ -63,7 +63,7 @@ def test_NumpySorting():
     other_sorting = NpzSortingExtractor(file_path)
     
     sorting = NumpySorting.from_extractor(other_sorting)
-    #~ print(sorting)
+    # print(sorting)
     
     
     

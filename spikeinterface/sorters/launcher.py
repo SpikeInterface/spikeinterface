@@ -40,10 +40,6 @@ def _run_one(arg_list):
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
     
-    #~ run_sorter(sorter_name, recording, output_folder=output_folder,
-            #~ remove_existing_folder=False, delete_output_folder=False,
-            #~ verbose=verbose, raise_error=False,  **sorter_params):
-
     
 _implemented_engine = ('loop', 'joblib', 'dask')
 
@@ -155,7 +151,7 @@ def run_sorters(sorter_list,
     for rec_name, recording in recording_dict.items():
         for sorter_name in sorter_list:
 
-            output_folder = working_folder / rec_name / sorter_name
+            output_folder = working_folder / str(rec_name) / sorter_name
             
             if output_folder.is_dir():
                 # sorter folder exists

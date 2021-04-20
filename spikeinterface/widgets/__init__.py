@@ -2,6 +2,10 @@ from .timeseries import plot_timeseries, TimeseriesWidget
 from .rasters import plot_rasters, RasterWidget
 from .probemap import plot_probe_map, ProbeMapWidget
 
+from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
+from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
+from .principalcomponent import plot_principal_component
+
 from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget
 from .agreementmatrix import plot_agreement_matrix, AgreementMatrixWidget
 from .multicompgraph import (
@@ -11,3 +15,4 @@ from .multicompgraph import (
 from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
     plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget)
+from .sortingperformance import plot_sorting_performance

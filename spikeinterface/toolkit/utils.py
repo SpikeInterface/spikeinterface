@@ -1,5 +1,5 @@
 import numpy as np
-
+import scipy.spatial
 
 def get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0):
     """
@@ -18,6 +18,14 @@ def get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size
                                                                     segment_index=segment_index)
             chunk_list.append(chunk)
     return np.concatenate(chunk_list, axis=0)
+
+def get_channel_distances(recording):
+    """
+    Distance between channel pairs
+    """
+    locations = recording.get_channel_locations()
+    channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
+    return channel_distances
 
 
 def get_closest_channels(recording, channel_ids=None, num_channels=None):

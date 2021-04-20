@@ -39,8 +39,8 @@ preprocessers_full_list = [
     RemoveArtifactsRecording,
     RemoveBadChannelsRecording,
     
-    # this one  is for you Alessio
-    #~ ResampleRecording,
+    # TODO: @alessio this one  is for you
+    # ResampleRecording,
     
 
 ]

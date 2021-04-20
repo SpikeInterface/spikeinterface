@@ -113,14 +113,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         elif self.operator  == 'average' :
             self.operator_func = lambda x: np.average(x, axis=1)[:, None]
             
-        #~ if self.reference == 'global':
-            #~ pass
-        #~ elif self.reference  == 'single' :
-            #~ pass
-        #~ elif self.reference  == 'local':
-            #~ pass
-            
-
     def get_traces(self, start_frame, end_frame, channel_indices):
         # need input trace
         all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))

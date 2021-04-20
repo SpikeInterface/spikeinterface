@@ -188,14 +188,6 @@ class WaveformExtractor:
             if not waveform_file.is_file():
                 raise Exception('waveforms not extracted yet : please do WaveformExtractor.run() fisrt')
 
-            #~ p = self._params
-            #~ sampling_frequency = self.recording.get_sampling_frequency()
-            #~ num_chans = self.recording.get_num_channels()
-
-            #~ wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, self.nsamples, num_chans)
-            #~ # get a copy to have a memory faster access and avoid write back in file
-            #~ wfs = wfs.copy()
-
             wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs
 
@@ -220,7 +212,7 @@ class WaveformExtractor:
         Returns
         -------
         template: np.array
-            The returned template (num_channels, num_samples)
+            The returned template (num_samples, num_channels)
         """
         assert mode in ('median', 'average')
         assert unit_id in self.sorting.unit_ids
@@ -241,7 +233,33 @@ class WaveformExtractor:
                 template = np.average(wfs, axis=0)
                 self._template_average[unit_id] = template
                 return template
+    
+    def get_all_templates(self, unit_ids=None, mode='median'):
+        """
+        Return several templates (average waveform)
 
+        Parameters
+        ----------
+        unit_ids: list or None
+            Unit ids to retrieve waveforms for
+        mode: str
+            'mean' or 'median' (default)
+
+        Returns
+        -------
+        templates: np.array
+            The returned templates (num_units, num_samples, num_channels)
+        """
+        if unit_ids is None:
+            unit_ids = self.sorting.unit_ids
+        num_chans = self.recording.get_num_channels()
+        
+        dtype = self._params['dtype']
+        templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
+        for i, unit_id in enumerate(unit_ids):
+            templates[i, :, :] = self.get_template(unit_id, mode=mode)
+        return templates
+    
     def sample_spikes(self):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
@@ -293,7 +311,6 @@ class WaveformExtractor:
             file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
             n_spikes = np.sum([e.size for e in selected_spike_times[unit_id]])
             shape = (n_spikes, self.nsamples, num_chans)
-            #~ wfs = np.memmap(str(file_path), dtype=p['dtype'], mode='w+', shape=shape)
             wfs = np.zeros(shape, dtype=p['dtype'])
             np.save(file_path, wfs)
             wfs = np.load(file_path, mmap_mode='r+')

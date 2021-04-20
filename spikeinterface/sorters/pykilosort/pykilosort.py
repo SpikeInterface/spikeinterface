@@ -106,6 +106,6 @@ class PyKilosortSorter(BaseSorter):
     @classmethod
     def _get_result_from_folder(cls, output_folder):
         raise NotImplementedError
-        #~ return sorting
+        # return sorting
 
 

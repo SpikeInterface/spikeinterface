@@ -89,9 +89,6 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
     
     handle_multi_segment = False
     
-    #~ def __init__(self, **kargs):
-        #~ BaseSorter.__init__(self, **kargs)
-
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.kilosort2_path)
@@ -198,34 +195,3 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
 
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-
-    #~ @classmethod
-    #~ def _run_from_folder(cls, output_folder, params, verbose):
-        
-        #~ if 'win' in sys.platform and sys.platform != 'darwin':
-            #~ shell_cmd = '''
-                        #~ {disk_move}
-                        #~ cd {tmpdir}
-                        #~ matlab -nosplash -wait -log -r kilosort2_master
-                    #~ '''.format(disk_move=str(output_folder)[:2], tmpdir=output_folder)
-        #~ else:
-            #~ shell_cmd = '''
-                        #~ #!/bin/bash
-                        #~ cd "{tmpdir}"
-                        #~ matlab -nosplash -nodisplay -log -r kilosort2_master
-                    #~ '''.format(tmpdir=output_folder)
-        #~ shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   #~ log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
-        #~ shell_script.start()
-        #~ retcode = shell_script.wait()
-
-        #~ if retcode != 0:
-            #~ raise Exception('kilosort2 returned a non-zero exit code')
-
-    #~ @classmethod
-    #~ def get_result_from_folder(cls, output_folder):
-        #~ output_folder = Path(output_folder)
-        #~ with (output_folder / 'spikeinterface_params.json').open('r') as f:
-            #~ sorter_params = json.load(f)['sorter_params']
-        #~ sorting = KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=sorter_params['keep_good_only'])
-        #~ return sorting

@@ -4,11 +4,6 @@ from matplotlib.ticker import MaxNLocator
 from .basewidget import BaseWidget
 
 
-def plot_timeseries(*args, **kwargs):
-    __doc__ = TimeseriesWidget.__doc__
-    W = TimeseriesWidget(*args, **kwargs)
-    W.plot()
-    return W
 
 
 class TimeseriesWidget(BaseWidget):
@@ -134,3 +129,10 @@ class TimeseriesWidget(BaseWidget):
         
         self._mean_channel_std = np.mean(np.std(chunk0, axis=0))
         self._max_channel_amp = np.max(np.max(np.abs(chunk0), axis=0))
+
+
+def plot_timeseries(*args, **kwargs):
+    W = TimeseriesWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_timeseries.__doc__ = TimeseriesWidget.__doc__

@@ -2,14 +2,14 @@
 
 from spikeinterface.core.tests.testing_tools import generate_recording
 
-from spikeinterface.core.job_tools import divide_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor
+from spikeinterface.core.job_tools import divide_segment_into_chunks, ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor
 
 
 
-def test_divide_into_chunks():
-    chunks =  divide_into_chunks(10, 5)
+def test_divide_segment_into_chunks():
+    chunks =  divide_segment_into_chunks(10, 5)
     assert len(chunks) == 2
-    chunks =  divide_into_chunks(11, 5)
+    chunks =  divide_segment_into_chunks(11, 5)
     assert len(chunks) == 3
     assert chunks[0] == (0, 5)
     assert chunks[1] == (5, 10)
@@ -65,7 +65,7 @@ def test_ChunkRecordingExecutor():
         import os, time
         # print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
         time.sleep(0.010)
-        #~ time.sleep(1.0)
+        # time.sleep(1.0)
         return os.getpid()
         
     
@@ -100,7 +100,7 @@ def test_ChunkRecordingExecutor():
     
     
 if __name__ == '__main__':
-    test_divide_into_chunks()
+    test_divide_segment_into_chunks()
     test_ensure_n_jobs()
     test_ensure_chunk_size()
     test_ChunkRecordingExecutor()

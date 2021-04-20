@@ -29,13 +29,11 @@ def generate_erroneous_sorting():
     for u in [1, 2]:
         st = sorting_true.get_unit_spike_train(u)
         units_err[u] = st
-        #~ sorting_err.add_unit(u, st)
 
     # unit 3 4 (medium) 10 (low) have medium to low agreement
     for u, score in [(3, 0.8),  (4, 0.75), (10, 0.3)]:
         st = sorting_true.get_unit_spike_train(u)
         st = np.sort(np.random.choice(st, size=int(st.size*score), replace=False))
-        #~ sorting_err.add_unit(u, st)
         units_err[u] = st
     
     # unit 5 6 are over merge
@@ -43,17 +41,14 @@ def generate_erroneous_sorting():
     st6 = sorting_true.get_unit_spike_train(6)
     st = np.unique(np.concatenate([st5, st6]))
     st = np.sort(np.random.choice(st, size=int(st.size*0.7), replace=False))
-    #~ sorting_err.add_unit(56, st)
     units_err[56] = st
     
     # unit 7 is over split in 2 part
     st7 = sorting_true.get_unit_spike_train(7)
     st70 = st7[::2]
-    #~ sorting_err.add_unit(70, st70)
     units_err[70] = st70
     st71 = st7[1::2]
     st71 = np.sort(np.random.choice(st71, size=int(st71.size*0.9), replace=False))
-    #~ sorting_err.add_unit(71, st71)
     units_err[71] = st71
     
     # unit 8 is redundant 3 times
@@ -61,9 +56,6 @@ def generate_erroneous_sorting():
     st80 = np.sort(np.random.choice(st8, size=int(st8.size*0.65), replace=False))
     st81 = np.sort(np.random.choice(st8, size=int(st8.size*0.6), replace=False))
     st82 = np.sort(np.random.choice(st8, size=int(st8.size*0.55), replace=False))
-    #~ sorting_err.add_unit(80, st80)
-    #~ sorting_err.add_unit(81, st81)
-    #~ sorting_err.add_unit(82, st82)
     units_err[80] = st80
     units_err[81] = st81
     units_err[81] = st82
@@ -74,7 +66,6 @@ def generate_erroneous_sorting():
     nframes = rec.get_num_frames(segment_index=0)
     for u in [15,16,17]:
         st = np.random.randint(0, high=nframes, size=35)
-        #~ sorting_err.add_unit(u, st)
         units_err[u] = st
     sorting_err = se.NumpySorting.from_dict(units_err, sampling_frequency)
     

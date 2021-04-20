@@ -32,7 +32,6 @@ def _setup_comparison_study():
 
 def test_run_study_sorters():
     study = GroundTruthStudy(study_folder)
-    #~ sorter_list = ['tridesclous', 'spykingcircus']
     sorter_list = ['tridesclous', ]
     print(f"\n#################################\nINSTALLED SORTERS\n#################################\n"
           f"{installed_sorters()}")
@@ -41,7 +40,6 @@ def test_run_study_sorters():
 
 def test_extract_sortings():
     study = GroundTruthStudy(study_folder)
-    #~ print(study)
     
     study.copy_sortings()
     
@@ -49,23 +47,18 @@ def test_extract_sortings():
 
     for rec_name in study.rec_names:
         gt_sorting = study.get_ground_truth(rec_name)
-        #~ print(rec_name, gt_sorting)
     
 
     for rec_name in study.rec_names:
-        #~ print('rec_name', rec_name)
         metrics = study.get_metrics(rec_name=rec_name)
-        #~ print(metrics)
         
         snr = study.get_units_snr(rec_name=rec_name)
-        #~ print(snr)
 
     
 
     study.copy_sortings()
 
     run_times = study.aggregate_run_times()
-    #~ print(run_times)
     
 
     study.run_comparisons(exhaustive_gt=True)
@@ -78,6 +71,6 @@ def test_extract_sortings():
 
 
 if __name__ == '__main__':
-    #~ setup_module()
-    #~ test_run_study_sorters()
+    # setup_module()
+    # test_run_study_sorters()
     test_extract_sortings()

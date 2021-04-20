@@ -107,9 +107,6 @@ class WaveClusSorter(BaseSorter):
         https://github.com/csn-le/wave_clus/wiki
     """
 
-    #~ def __init__(self, **kargs):
-        #~ BaseSorter.__init__(self, **kargs)
-    
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.waveclus_path)

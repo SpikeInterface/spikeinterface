@@ -131,17 +131,6 @@ class YassSorter(BaseSorter):
 
                         """
 
-    def __init__(self, **kargs):
-        BaseSorter.__init__(self, **kargs)
-
-        #~ source_dir = Path(__file__).parent
-        #~ config_default_location = os.path.join(source_dir, 'config_default.yaml')
-
-        #~ with open(config_default_location) as file:
-            #~ self.yass_params = yaml.load(file, Loader=yaml.FullLoader)
-
-        #~ self.neural_nets_path = None
-
     @classmethod
     def is_installed(cls):
         return HAVE_YASS
@@ -202,7 +191,6 @@ class YassSorter(BaseSorter):
 
         if retrain:
             # retrain NNs
-            #~ self.train(recording, output_folder)
             YassSorter.train(recording, output_folder, verbose)
             
             # update NN folder location
@@ -292,15 +280,15 @@ class YassSorter(BaseSorter):
         sorting = YassSortingExtractor(folder_path=Path(output_folder))
         return sorting
 
-
-    #~ def neural_nets_default(self, output_folder):
-        #~ ''' Revert to default NNs
-        #~ '''
-        #~ self.merge_params['neuralnetwork']['denoise']['filename'] = 'denoise.pt'
-        #~ self.merge_params['neuralnetwork']['detect']['filename'] = 'detect.pt'
-        #~ fname_config = os.path.join(output_folder, 'config.yaml')
-        #~ with open(fname_config, 'w') as file:
-            #~ documents = yaml.dump(self.merge_params, file)
+    # TODO integrate this logic somewhere or remove ????
+    # def neural_nets_default(self, output_folder):
+        # ''' Revert to default NNs
+        # '''
+        # self.merge_params['neuralnetwork']['denoise']['filename'] = 'denoise.pt'
+        # self.merge_params['neuralnetwork']['detect']['filename'] = 'detect.pt'
+        # fname_config = os.path.join(output_folder, 'config.yaml')
+        # with open(fname_config, 'w') as file:
+            # documents = yaml.dump(self.merge_params, file)
 
 
 

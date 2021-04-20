@@ -32,6 +32,8 @@ def test_WaveformExtractor():
     we.run(n_jobs=4, chunk_size=30000, progress_bar=True)
     
     wfs = we.get_waveforms(0)
+    assert wfs.shape[0] <= 500
+    assert wfs.shape[1:] == (210, 2)
     
     wfs, sampled_index = we.get_waveforms(0, with_index=True)
     
@@ -41,6 +43,10 @@ def test_WaveformExtractor():
     wfs = we.get_waveforms(0)
     
     template = we.get_template(0)
+    assert template.shape == (210, 2)
+    templates = we.get_all_templates()
+    assert templates.shape == (5, 210, 2)
+    
 
 
 def test_extract_waveforms():

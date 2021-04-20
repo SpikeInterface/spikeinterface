@@ -28,9 +28,17 @@ spiekinterface.core irself have few dependencies:
   * neo>=0.9.0
   * joblib
   * probeinterface
+  * tqdm
 
 But some sub modules have more dependencies, you should install also:
 
+  * scipy
   * h5py
   * pandas
   * sklearn
+  * matplotlib
+  * networkx
+  * datalad
+  * MEArec
+
+All sorters must installed independantly.

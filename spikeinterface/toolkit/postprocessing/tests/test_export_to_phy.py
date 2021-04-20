@@ -6,15 +6,19 @@ import pytest
 
 
 
-from spikeinterface import extract_waveforms
-from spikeinterface.extractors import toy_example
+from spikeinterface import extract_waveforms, download_dataset
+import spikeinterface.extractors as se
 from spikeinterface.toolkit.postprocessing import export_to_phy
 
 
 def test_export_to_phy():
-    recording, sorting = toy_example(num_segments=1, num_units=10)
-    recording = recording.save()
-    sorting = sorting.save()
+
+    repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+    remote_path = 'mearec/mearec_test_10s.h5'
+    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    recording = se.MEArecRecordingExtractor(local_path)
+    sorting = se.MEArecSortingExtractor(local_path)
+
     
     
     waveform_folder = Path('waveforms')
@@ -26,10 +30,10 @@ def test_export_to_phy():
     
     
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-    print(waveform_extractor)
+
     export_to_phy(recording, sorting, output_folder, waveform_extractor,
-            compute_pc_features=False,
-            compute_amplitudes=False)
+                  compute_pc_features=False,
+                  compute_amplitudes=True)
     
     
 

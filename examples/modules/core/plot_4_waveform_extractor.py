@@ -29,16 +29,15 @@ import spikeinterface.extractors as se
 # to download a mearec dataset. It is a simulated dataset that contain "ground truth" sorting
 
 repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-distant_path = 'mearec'
-local_path = download_dataset(repo=repo, distant_path=distant_path, local_folder=None)
+remote_path = 'mearec/mearec_test_10s.h5'
+local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
 
 ##############################################################################
 # 
 
-local_file = local_path / 'mearec_test_10s.h5'
-recording = se.MEArecRecordingExtractor(local_file)
+recording = se.MEArecRecordingExtractor(local_path)
 print(recording)
-sorting = se.MEArecSortingExtractor(local_file)
+sorting = se.MEArecSortingExtractor(local_path)
 print(recording)
 
 ###############################################################################
@@ -55,7 +54,8 @@ plot_probe(probe)
 
 folder = 'waveform_folder'
 we = extract_waveforms(recording, sorting, folder,
-    ms_before=1.5, ms_after=2., max_spikes_per_unit=500)
+    ms_before=1.5, ms_after=2., max_spikes_per_unit=500,
+    load_if_exists=True)
 print(we)
 
 
@@ -64,7 +64,7 @@ print(we)
 #  note that the set_params() steps do a reset
 
 folder = 'waveform_folder2'
-we = WaveformExtractor.create(recording, sorting, folder)
+we = WaveformExtractor.create(recording, sorting, folder, remove_if_exists=True)
 we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=1000)
 we.run(n_jobs=1, chunk_size=30000, progress_bar=True)
 print(we)

@@ -5,18 +5,37 @@ SpikeInterface 0.90.0 release notes
 
 Major release.
 
-Many many API changes.
+  * many API mofications : no backward compatibility
+  * contain all subpackages
+  * transpose get_trace() shape
+  * handle multi segment
+  * handle docker for run_sorter with hither
+  * have "Event" object for trigger and epoch (period)
 
-TODO : make here the long mofification list.
+core:
 
+  * save() instead of CacheRecording
+  * multi segment
+  * no more RecordingExtractor.get_ttl_events() use Event instead
+  * no more SubRecordingExtractor use recording.channel_slice() instead
+  * no more SubSortingExtractor use sorting.select_units() instead
+  * more efficient parralel with job_tools sub-module
 
-
-spikesorters:
+sorters:
   * internal API change with classmethod only
+  * no more `grouping_property` use recording.split() instead
+  * can be run in docker locally (need hither)
+  * add pykilosort
 
 toolkit:
   * API change to handle multi segment
-  * FilterRecording nor more with FFT
-  * FilterRecording have 'sos' or 'ba' option
-  * BlankSaturationRecording: works with 2 thresh
+  * validation renamed in qualitymetrics
+  * no more dependancy on spikefeatures
+  * no more dependancy on spikemetrics
+  * total rewrite of compute_quality_metrics()
+  * total rewrite of export_to_phy()
+  * total rewrite of get_unit_amplitudes()
+  * total rewrite of calculate_pc_metrics()
 
+sortingcomponents (new module):
+  * total rewrite of detect_peaks()

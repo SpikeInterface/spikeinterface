@@ -17,7 +17,7 @@ import spikeinterface.toolkit as st
 ##############################################################################
 # First, let's download a simulated dataset
 #  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-local_path = si.download_dataset(distant_path='mearec/mearec_test_10s.h5')
+local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 recording = se.MEArecRecordingExtractor(local_path)
 sorting = se.MEArecSortingExtractor(local_path)
 print(recording)
@@ -137,8 +137,8 @@ for i, unit_id in enumerate(sorting.unit_ids):
 
 output_folder = 'mearec_exported_to_phy'
 st.export_to_phy(recording, sorting, output_folder, we,
-            compute_pc_features=False,
-            compute_amplitudes=False)
+            compute_pc_features=False, compute_amplitudes=True,
+            remove_if_exists=True)
 
 ##############################################################################
 #  To run phy you can then run (from terminal):

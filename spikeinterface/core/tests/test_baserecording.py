@@ -108,11 +108,11 @@ def test_BaseRecording():
     assert np.array_equal(positions2, positions3)
     
 
-    #~ from probeinterface.plotting import plot_probe_group, plot_probe
-    #~ import matplotlib.pyplot as plt
-    #~ plot_probe(probe)
-    #~ plot_probe(probe2)
-    #~ plt.show()    
+    # from probeinterface.plotting import plot_probe_group, plot_probe
+    # import matplotlib.pyplot as plt
+    # plot_probe(probe)
+    # plot_probe(probe2)
+    # plt.show()    
 
 
 if __name__ == '__main__':

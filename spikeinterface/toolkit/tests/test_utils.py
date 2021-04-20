@@ -31,6 +31,6 @@ def test_get_noise_levels():
     
     
 if __name__ == '__main__':
-    #~ test_get_random_data_for_scaling()
-    #~ test_get_closest_channels()
+    # test_get_random_data_for_scaling()
+    # test_get_closest_channels()
     test_get_noise_levels()

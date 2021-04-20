@@ -4,7 +4,10 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
 
-def plot_rasters(sorting, segment_index=None, unit_ids=None, time_range=None, color='k', figure=None, ax=None):
+
+
+
+class RasterWidget(BaseWidget):
     """
     Plots spike train rasters.
 
@@ -29,23 +32,9 @@ def plot_rasters(sorting, segment_index=None, unit_ids=None, time_range=None, co
     -------
     W: RasterWidget
         The output widget
-    """
-    W = RasterWidget(
-        sorting=sorting,
-        
-        unit_ids=unit_ids,
-        time_range=time_range,
-        color=color,
-        figure=figure,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-class RasterWidget(BaseWidget):
-    def __init__(self, *, sorting, segment_index=None,  unit_ids=None,
-                                            time_range=None, color='k', figure=None, ax=None):
+    """    
+    def __init__(self, sorting, segment_index=None,  unit_ids=None,
+                 time_range=None, color='k', figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
         
@@ -75,11 +64,6 @@ class RasterWidget(BaseWidget):
             assert len(time_range) == 2, "'trange' should be a list with start and end time in seconds"
             self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
 
-        #~ if time_range is None:
-            #~ time_range=(0, 1.)
-        #~ time_range = np.array(time_range)
-
-            
         self._visible_trange = self._fix_trange(self._visible_trange)
         self.name = 'Raster'
 
@@ -117,3 +101,12 @@ class RasterWidget(BaseWidget):
         # trange[0] = np.maximum(0, trange[0])
         # trange[1] = np.minimum(max_t, trange[1])
         return trange
+
+
+
+def plot_rasters(*args, **kwargs):
+    W = RasterWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_rasters.__doc__ = RasterWidget.__doc__
+

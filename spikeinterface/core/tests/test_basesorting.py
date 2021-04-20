@@ -68,6 +68,10 @@ def test_BaseSorting():
     sorting2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     sorting3 = BaseExtractor.load(folder)
+    
+    
+    spikes = sorting.get_all_spike_trains()
+    print(spikes)
 
 
 if __name__ == '__main__':

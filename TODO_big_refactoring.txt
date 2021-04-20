@@ -7,6 +7,7 @@ core:
     * segment concatenator (sam)
     * mono segment class (sam)
     * add hither (alessio, sam or jeremy) for launcher and/or container
+    * waveform_extractor improve cache option
 
     
 extractors:
@@ -28,21 +29,29 @@ extractors:
     * SHYBRIDSortingExtractor
     * NIXIOSortingExtractor
     * ALFSortingExtractor
-
-    * make tests with gin
+    
+    * make function for all reader
 
 toolkit:
-
-  * curation:
-    * ALL
+  * preprocessing:
+    * ResampleRecording
   * postprocessing: 
      * export to phy (pca + amplitudes)
-  * sorting components: all (sam)
-  * validation aka qualitymetrics:
+     * integrate amplitudes
+  * validation (= qualitymetrics):
      * "max_drift",
      * "cumulative_drift",
      * "silhouette_score",
      * "noise_overlap",
+
+
+  * get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0)
+     remove chunk and use duration instead.
+
+
+
+sorting components:
+    all (sam)
 
 sorters:
 
@@ -57,7 +66,7 @@ comparison:
 
 
 widgets:
-  * many widget to port with probeinterface in mind
+  * many of them
 
 
 examples:
@@ -68,9 +77,10 @@ examples:
 
 doc:
 
-  * re make the API
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
+  * make on example for extractor
+  * plot_4_sorting_concatenated_recordings.py
 
 
 Tests suite:

@@ -5,8 +5,8 @@ from .basewidget import BaseWidget
 
 
 
-def plot_confusion_matrix(gt_comparison, count_text=True, unit_ticks=True,
-                          ax=None, figure=None):
+
+class ConfusionMatrixWidget(BaseWidget):
     """
     Plots sorting comparison confusion matrix.
 
@@ -28,19 +28,7 @@ def plot_confusion_matrix(gt_comparison, count_text=True, unit_ticks=True,
     W: ConfusionMatrixWidget
         The output widget
     """
-    W = ConfusionMatrixWidget(
-        gt_comparison=gt_comparison,
-        count_text=count_text,
-        unit_ticks=unit_ticks,
-        figure=figure,
-        ax=ax,
-    )
-    W.plot()
-    return W
-
-
-class ConfusionMatrixWidget(BaseWidget):
-    def __init__(self, *, gt_comparison, count_text=True, unit_ticks=True,
+    def __init__(self, gt_comparison, count_text=True, unit_ticks=True,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._gtcomp = gt_comparison
@@ -90,6 +78,11 @@ class ConfusionMatrixWidget(BaseWidget):
         
         self.ax.set_xlim(-0.5, N2+0.5)
         self.ax.set_ylim(N1+0.5, -0.5, )
-        
-        
+
+
+def plot_confusion_matrix(*args, **kwargs):
+    W = ConfusionMatrixWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_confusion_matrix.__doc__ = ConfusionMatrixWidget.__doc__
 

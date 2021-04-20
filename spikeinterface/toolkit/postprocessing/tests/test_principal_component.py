@@ -38,19 +38,19 @@ def test_WaveformPrincipalComponent():
         pc.run()
         for i, unit_id in enumerate(unit_ids):
             comp = pc.get_components(unit_id)
-            #~ print(comp.shape)
+            # print(comp.shape)
             assert comp.shape[1:] == (5, 4)
 
-        #~ import matplotlib.pyplot as plt
-        #~ cmap = plt.get_cmap('jet', len(unit_ids))
-        #~ fig, axs = plt.subplots(ncols=num_channels)
-        #~ for i, unit_id in enumerate(unit_ids):
-            #~ comp = pca.get_components(unit_id)
-            #~ print(comp.shape)
-            #~ for chan_ind in range(num_channels):
-                #~ ax = axs[chan_ind]
-                #~ ax.scatter(comp[:, 0, chan_ind], comp[:, 1, chan_ind], color=cmap(i))
-        #~ plt.show()
+        # import matplotlib.pyplot as plt
+        # cmap = plt.get_cmap('jet', len(unit_ids))
+        # fig, axs = plt.subplots(ncols=num_channels)
+        # for i, unit_id in enumerate(unit_ids):
+            # comp = pca.get_components(unit_id)
+            # print(comp.shape)
+            # for chan_ind in range(num_channels):
+                # ax = axs[chan_ind]
+                # ax.scatter(comp[:, 0, chan_ind], comp[:, 1, chan_ind], color=cmap(i))
+        # plt.show()
     
     for mode in ('concatenated', ):
         pc.set_params(n_components=5, mode=mode)
@@ -59,18 +59,18 @@ def test_WaveformPrincipalComponent():
         for i, unit_id in enumerate(unit_ids):
             comp = pc.get_components(unit_id)
             assert comp.shape[1] == 5
-            #~ print(comp.shape)
+            # print(comp.shape)
     
     all_labels, all_components = pc.get_all_components()
     
-        #~ import matplotlib.pyplot as plt
-        #~ cmap = plt.get_cmap('jet', len(unit_ids))
-        #~ fig, ax = plt.subplots()
-        #~ for i, unit_id in enumerate(unit_ids):
-            #~ comp = pca.get_components(unit_id)
-            #~ print(comp.shape)
-            #~ ax.scatter(comp[:, 0], comp[:, 1], color=cmap(i))
-        #~ plt.show()
+        # import matplotlib.pyplot as plt
+        # cmap = plt.get_cmap('jet', len(unit_ids))
+        # fig, ax = plt.subplots()
+        # for i, unit_id in enumerate(unit_ids):
+            # comp = pca.get_components(unit_id)
+            # print(comp.shape)
+            # ax.scatter(comp[:, 0], comp[:, 1], color=cmap(i))
+        # plt.show()
 
 def test_compute_principal_components():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
@@ -79,7 +79,7 @@ def test_compute_principal_components():
 
 
 if __name__ == '__main__':
-    #~ setup_module()
+    # setup_module()
     
-    #~ test_WaveformPrincipalComponent()
+    # test_WaveformPrincipalComponent()
     test_compute_principal_components()

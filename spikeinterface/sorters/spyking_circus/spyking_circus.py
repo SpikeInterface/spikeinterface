@@ -68,9 +68,6 @@ class SpykingcircusSorter(BaseSorter):
     
     handle_multi_segment = False
     
-    #~ def __init__(self, **kargs):
-        #~ BaseSorter.__init__(self, **kargs)
-    
     @classmethod
     def is_installed(cls):
         return HAVE_SC
@@ -111,11 +108,6 @@ class SpykingcircusSorter(BaseSorter):
         # save prb file
         # note: only one group here, the split is done in basesorter
         prb_file = output_folder / 'probe.prb'
-        #~ recording.save_to_probe_file(probe_file, grouping_property=None,
-                                     #~ radius=p['adjacency_radius'])
-        #~ probes = recording.get_probes()
-        #~ print('probes')
-        #~ print(probes)
         probegroup = recording.get_probegroup()
         write_prb(prb_file, probegroup,
                         total_nb_channels=recording.get_num_channels(),

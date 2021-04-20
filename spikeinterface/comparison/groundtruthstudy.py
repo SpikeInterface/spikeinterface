@@ -19,8 +19,6 @@ from .groundtruthcomparison import compare_sorter_to_ground_truth
 from .studytools import (setup_comparison_study,  get_rec_names, get_recordings,
         iter_output_folders, iter_computed_names, iter_computed_sorting, collect_run_times)
 
-# import spikeinterface.toolkit as st
-
 
 class GroundTruthStudy:
     def __init__(self, study_folder=None):
@@ -57,9 +55,6 @@ class GroundTruthStudy:
         return cls(study_folder)
 
     def run_sorters(self, sorter_list, mode_if_folder_exists='keep', **kargs):
-        #~ run_study_sorters(self.study_folder, sorter_list, sorter_params=sorter_params,
-                          #~ mode=mode, engine=engine, engine_kwargs=engine_kwargs, verbose=verbose,
-                          #~ run_sorter_kwargs=run_sorter_kwargs)
 
         sorter_folders = self.study_folder / 'sorter_folders'
         recording_dict = get_recordings(self.study_folder)
@@ -88,15 +83,12 @@ class GroundTruthStudy:
 
     def get_ground_truth(self, rec_name=None):
         rec_name = self._check_rec_name(rec_name)
-        #~ sorting = se.NpzSortingExtractor(self.study_folder / 'ground_truth' / (rec_name + '.npz'))
         sorting = load_extractor(self.study_folder /  'ground_truth' / rec_name)
         return sorting
 
     def get_recording(self, rec_name=None):
         rec_name = self._check_rec_name(rec_name)
-        #~ rec = get_one_recording(self.study_folder, rec_name)
         rec = load_extractor(self.study_folder /  'raw_files' / rec_name)
-        
         return rec
 
     def get_sorting(self, sort_name, rec_name=None):
