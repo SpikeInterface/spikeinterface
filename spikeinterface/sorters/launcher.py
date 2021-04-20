@@ -155,7 +155,7 @@ def run_sorters(sorter_list,
     for rec_name, recording in recording_dict.items():
         for sorter_name in sorter_list:
 
-            output_folder = working_folder / rec_name / sorter_name
+            output_folder = working_folder / str(rec_name) / sorter_name
             
             if output_folder.is_dir():
                 # sorter folder exists
