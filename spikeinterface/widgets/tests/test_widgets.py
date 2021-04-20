@@ -66,16 +66,8 @@ class TestWidgets(unittest.TestCase):
         sw.plot_amplitudes_distribution(self._we)
         sw.plot_amplitudes_distribution(self._we, amplitudes=self._amplitudes)
         
-        
-        
-        #~ fig, axes = plt.subplots(self.num_units, 1)
-        #~ sw.plot_amplitudes_timeseries(self._rec, self._sorting, axes=axes)
-
-    #~ def test_features(self):
-        #~ for m in memmaps:
-            #~ sw.plot_pca_features(self._rec, self._sorting, memap=m)
-            #~ fig, axes = plt.subplots(self.num_units, 1)
-            #~ sw.plot_pca_features(self._rec, self._sorting, axes=axes, memap=m)
+    def test_principal_component(self):
+        sw.plot_principal_component(self._we)
 
     #~ def test_ach(self):
         #~ sw.plot_autocorrelograms(self._sorting, bin_size=1, window=10)
@@ -125,9 +117,8 @@ if __name__ == '__main__':
     #~ mytest.test_unitwaveforms()
     #~ mytest.test_unittemplates()
     #~ mytest.test_amplitudes_timeseries()
-    mytest.test_amplitudes_distribution()
-    
-    
+    #~ mytest.test_amplitudes_distribution()
+    mytest.test_principal_component()
     
     #~ mytest.test_confusion()
     #~ mytest.test_agreement()
