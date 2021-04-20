@@ -25,6 +25,8 @@ class TestWidgets(unittest.TestCase):
         self._sorting = self._sorting.save()
         self.num_units = len(self._sorting.get_unit_ids())
         self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
+        
+        self._amplitudes = st.get_unit_amplitudes(self._we,  peak_sign='neg', outputs='by_units')
 
 
     def tearDown(self):
@@ -56,17 +58,16 @@ class TestWidgets(unittest.TestCase):
     def test_unittemplates(self):
         sw.plot_unit_templates(self._we)
 
-    #~ def test_unittemplatemaps(self):
-        #~ for m in memmaps:
-            #~ sw.plot_unit_template_maps(self._rec, self._sorting, memmap=m)
+    def test_amplitudes_timeseries(self):
+        sw.plot_amplitudes_timeseries(self._we)
+        sw.plot_amplitudes_timeseries(self._we, amplitudes=self._amplitudes)
 
-    #~ def test_ampdist(self):
-        #~ sw.plot_amplitudes_distribution(self._rec, self._sorting)
-        #~ fig, axes = plt.subplots(self.num_units, 1)
-        #~ sw.plot_amplitudes_distribution(self._rec, self._sorting, axes=axes)
-
-    #~ def test_amptime(self):
-        #~ sw.plot_amplitudes_timeseries(self._rec, self._sorting)
+    def test_amplitudes_distribution(self):
+        sw.plot_amplitudes_distribution(self._we)
+        sw.plot_amplitudes_distribution(self._we, amplitudes=self._amplitudes)
+        
+        
+        
         #~ fig, axes = plt.subplots(self.num_units, 1)
         #~ sw.plot_amplitudes_timeseries(self._rec, self._sorting, axes=axes)
 
@@ -121,8 +122,11 @@ if __name__ == '__main__':
     #~ mytest.test_timeseries()
     #~ mytest.test_rasters()
     #~ mytest.test_plot_probe_map()
-    mytest.test_unitwaveforms()
+    #~ mytest.test_unitwaveforms()
     #~ mytest.test_unittemplates()
+    #~ mytest.test_amplitudes_timeseries()
+    mytest.test_amplitudes_distribution()
+    
     
     
     #~ mytest.test_confusion()
