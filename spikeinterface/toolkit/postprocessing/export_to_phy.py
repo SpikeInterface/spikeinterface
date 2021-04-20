@@ -67,15 +67,15 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
     remap_unit_ids = np.arange(unit_ids.size)
 
     # TODO remove empty units
-    #~ empty_flag = False
-    #~ for unit_id in sorting.get_unit_ids():
-        #~ spikes = sorting.get_unit_spike_train(unit_id)
-        #~ if spikes.shape[0] == 0:
-            #~ empty_flag = True
+    # empty_flag = False
+    # for unit_id in sorting.get_unit_ids():
+        # spikes = sorting.get_unit_spike_train(unit_id)
+        # if spikes.shape[0] == 0:
+            # empty_flag = True
 
-    #~ if empty_flag:
-        #~ print('Warning: empty units have been removed when being exported to Phy')
-        #~ sorting = st.curation.threshold_num_spikes(sorting, 1, "less")
+    # if empty_flag:
+        # print('Warning: empty units have been removed when being exported to Phy')
+        # sorting = st.curation.threshold_num_spikes(sorting, 1, "less")
 
     if not recording.is_filtered():
         print("Warning: recording is not filtered! It's recommended to filter the recording before exporting to phy.\n"
@@ -173,8 +173,8 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
 
     if compute_pc_features:
         raise NotImplementedError    
-        #~ np.save(str(output_folder / 'pc_features.npy'), pc_features)
-        #~ np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
+        # np.save(str(output_folder / 'pc_features.npy'), pc_features)
+        # np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
 
     # Save .tsv metadata
     with (output_folder / 'cluster_group.tsv').open('w') as tsvfile:

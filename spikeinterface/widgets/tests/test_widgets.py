@@ -41,17 +41,19 @@ class TestWidgets(unittest.TestCase):
     
     def test_plot_probe_map(self):
         sw.plot_probe_map(self._rec)
-        #~ plt.show()
 
-    #~ def test_spectrum(self):
-        #~ sw.plot_spectrum(self._rec)
+    # TODO
+    # def test_spectrum(self):
+        # sw.plot_spectrum(self._rec)
 
-    #~ def test_spectrogram(self):
-        #~ sw.plot_spectrogram(self._rec, channel=0)
+    # TODO
+    # def test_spectrogram(self):
+        # sw.plot_spectrogram(self._rec, channel=0)
 
-    #~ def test_activitymap(self):
-        #~ sw.plot_activity_map(self._rec, activity='rate')
-        #~ sw.plot_activity_map(self._rec, activity='amplitude')
+    # TODO
+    # def test_activitymap(self):
+        # sw.plot_activity_map(self._rec, activity='rate')
+        # sw.plot_activity_map(self._rec, activity='amplitude')
 
     def test_unitwaveforms(self):
         sw.plot_unit_waveforms(self._we)
@@ -70,20 +72,23 @@ class TestWidgets(unittest.TestCase):
     def test_principal_component(self):
         sw.plot_principal_component(self._we)
 
-    #~ def test_ach(self):
-        #~ sw.plot_autocorrelograms(self._sorting, bin_size=1, window=10)
-        #~ fig, axes = plt.subplots(self.num_units, 1)
-        #~ sw.plot_autocorrelograms(self._sorting, axes=axes)
+    # TODO
+    # def test_autocorrelograms(self):
+        # sw.plot_autocorrelograms(self._sorting, bin_size=1, window=10)
+        # fig, axes = plt.subplots(self.num_units, 1)
+        # sw.plot_autocorrelograms(self._sorting, axes=axes)
 
-    #~ def test_cch(self):
-        #~ sw.plot_crosscorrelograms(self._sorting, bin_size=1, window=10)
-        #~ fig, axes = plt.subplots(self.num_units, self.num_units)  # for cch need square matrix
-        #~ sw.plot_crosscorrelograms(self._sorting, axes=axes)
+    # TODO
+    # def test_crosscorrelogram(self):
+        # sw.plot_crosscorrelograms(self._sorting, bin_size=1, window=10)
+        # fig, axes = plt.subplots(self.num_units, self.num_units)  # for cch need square matrix
+        # sw.plot_crosscorrelograms(self._sorting, axes=axes)
 
-    #~ def test_isi(self):
-        #~ sw.plot_isi_distribution(self._sorting, bins=10, window=1)
-        #~ fig, axes = plt.subplots(self.num_units, 1)
-        #~ sw.plot_isi_distribution(self._sorting, axes=axes)
+    # TODO
+    # def test_isi_distribution(self):
+        # sw.plot_isi_distribution(self._sorting, bins=10, window=1)
+        # fig, axes = plt.subplots(self.num_units, 1)
+        # sw.plot_isi_distribution(self._sorting, axes=axes)
 
 
     def test_confusion(self):
@@ -111,23 +116,23 @@ class TestWidgets(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #~ unittest.main()
+    # unittest.main()
     
     mytest = TestWidgets()
     mytest.setUp()
 
-    #~ mytest.test_timeseries()
-    #~ mytest.test_rasters()
-    #~ mytest.test_plot_probe_map()
-    #~ mytest.test_unitwaveforms()
-    #~ mytest.test_unittemplates()
-    #~ mytest.test_amplitudes_timeseries()
-    #~ mytest.test_amplitudes_distribution()
-    #~ mytest.test_principal_component()
+    # mytest.test_timeseries()
+    # mytest.test_rasters()
+    # mytest.test_plot_probe_map()
+    # mytest.test_unitwaveforms()
+    # mytest.test_unittemplates()
+    # mytest.test_amplitudes_timeseries()
+    # mytest.test_amplitudes_distribution()
+    # mytest.test_principal_component()
     
-    #~ mytest.test_confusion()
-    #~ mytest.test_agreement()
-    #~ mytest.test_multicomp_graph()
+    # mytest.test_confusion()
+    # mytest.test_agreement()
+    # mytest.test_multicomp_graph()
     mytest.test_sorting_performance()
         
     plt.show()

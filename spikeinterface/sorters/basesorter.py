@@ -114,11 +114,8 @@ class BaseSorter:
             if not cls.handle_multi_segment:
                 raise ValueError(f'This sorter {cls.sorter_name} do not handle multi segment, use recording.split(by=...)')
         
-        #~ self.recording = recording
         
         rec_file = output_folder / 'spikeinterface_recording.json'
-        #~ assert recording.is_dumpable
-        #~ recording.dump_to_json(rec_file)
         if recording.is_dumpable:
             recording.dump_to_json(rec_file)
         else:
@@ -201,8 +198,6 @@ class BaseSorter:
             'runtime_trace': []
         }
         t0 = time.perf_counter()
-        
-        #~ SorterClass._run_from_folder(output_folder, sorter_params, verbose)
         
         try:
             SorterClass._run_from_folder(output_folder, sorter_params, verbose)

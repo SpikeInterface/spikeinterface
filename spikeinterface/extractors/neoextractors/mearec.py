@@ -26,24 +26,6 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename' : file_path}
         NeoBaseRecordingExtractor.__init__(self, **neo_kwargs)
         
-        # channel location 
-        # this will be handled with probeinterface (when Alessio will do his homework)
-        #~ recgen = self.neo_reader._recgen
-        #~ locations = np.array(recgen.channel_positions)
-        #~ if locs_2d:
-            #~ if 'electrodes' in recgen.info.keys():
-                #~ if 'plane' in recgen.info['electrodes'].keys():
-                    #~ probe_plane = recgen.info['electrodes']['plane']
-                    #~ if probe_plane == 'xy':
-                        #~ locations = locations[:, :2]
-                    #~ elif probe_plane == 'yz':
-                        #~ locations = locations[:, 1:]
-                    #~ elif probe_plane == 'xz':
-                        #~ locations = locations[:, [0, 2]]
-            #~ if locations.shape[1] == 3:
-                #~ locations = locations[:, 1:]
-        #~ self.set_channel_locations(locations)
-        
         probe = read_mearec(file_path)
         self.set_probe(probe, in_place=True)
         

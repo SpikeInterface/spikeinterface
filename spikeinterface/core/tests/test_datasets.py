@@ -8,14 +8,6 @@ from spikeinterface.core import download_dataset
 
 
 
-#~ def _clean_all():
-    #~ cache_folder = './my_cache_folder'
-    #~ if Path(cache_folder).exists():
-        #~ shutil.rmtree(cache_folder)
-    
-#~ def setup_module():
-    #~ _clean_all()
-
 
 def test_download_dataset():
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'

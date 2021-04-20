@@ -78,11 +78,11 @@ def test_compute_unit_centers_of_mass():
 
 
 if __name__ == '__main__':
-    #~ setup_module()
+    # setup_module()
     
-    #~ test_get_template_amplitudes()
-    #~ test_get_template_extremum_channel()
+    # test_get_template_amplitudes()
+    # test_get_template_extremum_channel()
     test_get_template_extremum_channel_peak_shift()
-    #~ test_get_template_best_channels()
-    #~ test_get_template_extremum_amplitude()
-    #~ test_compute_unit_centers_of_mass()
+    # test_get_template_best_channels()
+    # test_get_template_extremum_amplitude()
+    # test_compute_unit_centers_of_mass()

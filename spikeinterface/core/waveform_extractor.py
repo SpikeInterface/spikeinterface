@@ -188,14 +188,6 @@ class WaveformExtractor:
             if not waveform_file.is_file():
                 raise Exception('waveforms not extracted yet : please do WaveformExtractor.run() fisrt')
 
-            #~ p = self._params
-            #~ sampling_frequency = self.recording.get_sampling_frequency()
-            #~ num_chans = self.recording.get_num_channels()
-
-            #~ wfs = np.memmap(str(waveform_file), dtype=p['dtype']).reshape(-1, self.nsamples, num_chans)
-            #~ # get a copy to have a memory faster access and avoid write back in file
-            #~ wfs = wfs.copy()
-
             wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs
 
@@ -319,7 +311,6 @@ class WaveformExtractor:
             file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
             n_spikes = np.sum([e.size for e in selected_spike_times[unit_id]])
             shape = (n_spikes, self.nsamples, num_chans)
-            #~ wfs = np.memmap(str(file_path), dtype=p['dtype'], mode='w+', shape=shape)
             wfs = np.zeros(shape, dtype=p['dtype'])
             np.save(file_path, wfs)
             wfs = np.load(file_path, mmap_mode='r+')

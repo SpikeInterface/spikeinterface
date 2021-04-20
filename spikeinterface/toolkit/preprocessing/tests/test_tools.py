@@ -32,7 +32,7 @@ def test_get_chunk_with_margin():
     assert l == 10 and r == 10
     assert traces.shape[0] == 1020
     
-    #~ # add zeros
+    # add zeros
     traces, l, r = get_chunk_with_margin(rec_seg, 5, 1005, None, 10, add_zeros=True)
     assert traces.shape[0] == 1020
     assert l == 10
