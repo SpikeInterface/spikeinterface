@@ -4,6 +4,9 @@ import scipy.spatial
 def get_random_data_chunks(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0):
     """
     Take chunks across segments randomly
+    
+    This is used for instance in get_noise_levels() to estimate noise on traces.
+    
     """
     # TODO: if segment have differents length make another sampling that dependant on the lneght of the segment
     
@@ -62,7 +65,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dist)
 
 
-def get_noise_levels(recording, **random_kwargs):
+def get_noise_levels(recording, **random_chunk_kwargs):
     """
     Estimate noise for each channel using MAD methods.
     
@@ -70,7 +73,7 @@ def get_noise_levels(recording, **random_kwargs):
     And then, it use MAD estimator (more robust than STD)
     
     """
-    random_chunks = get_random_data_chunks(recording, **random_kwargs)
+    random_chunks = get_random_data_chunks(recording, **random_chunk_kwargs)
     med = np.median(random_chunks, axis=0, keepdims=True)
     noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6745
     return noise_levels
