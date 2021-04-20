@@ -2,7 +2,7 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from ..utils import get_random_data_for_scaling
+from ..utils import get_random_data_chunks
 
 class ClipRecording(BasePreprocessor):
     '''
@@ -75,7 +75,7 @@ class BlankSaturationRecording(BasePreprocessor):
         assert direction in ('upper', 'lower', 'both')
         
         if fill_value is None or quantile_threshold is not None:
-            random_data = get_random_data_for_scaling(recording, 
+            random_data = get_random_data_chunks(recording, 
                         num_chunks_per_segment=num_chunks_per_segment,
                         chunk_size=chunk_size, seed=seed)
         

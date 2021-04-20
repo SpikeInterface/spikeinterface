@@ -52,7 +52,7 @@ def detect_peaks(recording, method='by_channel',
     noise_levels: np.array
         noise_levels can be provide externally if already computed.
 
-    num_chunks_per_segment, chunk_size, seed are used for get_random_data_for_scaling
+    num_chunks_per_segment, chunk_size, seed are used for get_random_data_chunks
     
     """
     assert method in ('by_channel', 'locally_exclusive')

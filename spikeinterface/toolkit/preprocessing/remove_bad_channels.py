@@ -5,7 +5,7 @@ from spikeinterface.core.channelslicerecording import (ChannelSliceRecording,
     ChannelSliceRecordingSegment)
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from ..utils import get_random_data_for_scaling
+from ..utils import get_random_data_chunks
 
 class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
     """
@@ -34,7 +34,7 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
         self._kwargs = dict(recording=recording.to_dict(), bad_threshold=bad_threshold,
                 num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed)
 
-        random_data = get_random_data_for_scaling(recording, 
+        random_data = get_random_data_chunks(recording, 
                         num_chunks_per_segment=num_chunks_per_segment,
                         chunk_size=chunk_size, seed=seed)
         

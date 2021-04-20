@@ -2,7 +2,7 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from ..utils import get_random_data_for_scaling
+from ..utils import get_random_data_chunks
 
 
 class ScaleRecordingSegment(BasePreprocessorSegment):
@@ -52,7 +52,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         
         assert mode in ('pool_channel', 'by_channel')
         
-        random_data = get_random_data_for_scaling(recording, 
+        random_data = get_random_data_chunks(recording, 
                         num_chunks_per_segment=num_chunks_per_segment,
                         chunk_size=chunk_size, seed=seed)
 
@@ -149,7 +149,7 @@ class CenterRecording(BasePreprocessor):
                     num_chunks_per_segment=50, chunk_size=500, seed=0):
 
         assert mode in ('median', 'mean')
-        random_data = get_random_data_for_scaling(recording, 
+        random_data = get_random_data_chunks(recording, 
                         num_chunks_per_segment=num_chunks_per_segment,
                         chunk_size=chunk_size, seed=seed)
 

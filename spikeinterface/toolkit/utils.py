@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.spatial
 
-def get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0):
+def get_random_data_chunks(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0):
     """
     Take chunks across segments randomly
     """
@@ -70,7 +70,7 @@ def get_noise_levels(recording, **random_kwargs):
     And then, it use MAD estimator (more robust than STD)
     
     """
-    random_chunks = get_random_data_for_scaling(recording, **random_kwargs)
+    random_chunks = get_random_data_chunks(recording, **random_kwargs)
     med = np.median(random_chunks, axis=0, keepdims=True)
     noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6745
     return noise_levels
