@@ -15,3 +15,4 @@ from .multicompgraph import (
 from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
     plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget)
+from .sortingperformance import plot_sorting_performance

@@ -27,6 +27,7 @@ class TestWidgets(unittest.TestCase):
         self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
         
         self._amplitudes = st.get_unit_amplitudes(self._we,  peak_sign='neg', outputs='by_units')
+        self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
 
 
     def tearDown(self):
@@ -86,12 +87,12 @@ class TestWidgets(unittest.TestCase):
 
 
     def test_confusion(self):
-        gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
-        sw.plot_confusion_matrix(gt_comp, count_text=True)
+        
+        sw.plot_confusion_matrix(self._gt_comp, count_text=True)
 
     def test_agreement(self):
-        comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
-        sw.plot_agreement_matrix(comp, count_text=True)
+        
+        sw.plot_agreement_matrix(self._gt_comp, count_text=True)
         
         
     def test_multicomp_graph(self):
@@ -101,6 +102,10 @@ class TestWidgets(unittest.TestCase):
         sw.plot_multicomp_agreement_by_sorter(msc)
         fig, axes = plt.subplots(len(msc.sorting_list), 1)
         sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
+        
+    def test_sorting_performance(self):
+        metrics = st.compute_quality_metrics(self._we, metric_names=['snr'])
+        sw.plot_sorting_performance(self._gt_comp, metrics, performance_name='accuracy', metric_name='snr')
     
     
 
@@ -118,10 +123,11 @@ if __name__ == '__main__':
     #~ mytest.test_unittemplates()
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
-    mytest.test_principal_component()
+    #~ mytest.test_principal_component()
     
     #~ mytest.test_confusion()
     #~ mytest.test_agreement()
     #~ mytest.test_multicomp_graph()
+    mytest.test_sorting_performance()
         
     plt.show()

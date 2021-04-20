@@ -3,8 +3,10 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
-def plot_sorting_performance(gt_sorting_comparison, property_name=None, metric='accuracy', markersize=10, marker='.',
-                             figure=None, ax=None):
+from ..comparison import GroundTruthComparison
+
+
+class SortingPerformanceWidget(BaseWidget):
     """
     Plots sorting performance for each ground-truth unit.
 
@@ -30,49 +32,40 @@ def plot_sorting_performance(gt_sorting_comparison, property_name=None, metric='
     -------
     W: SortingPerformanceWidget
         The output widget
-    """
-    W = SortingPerformanceWidget(
-        sorting_comparison=gt_sorting_comparison,
-        property_name=property_name,
-        figure=figure,
-        markersize=markersize,
-        marker=marker,
-        metric=metric,
-        ax=ax
-    )
-    W.plot()
-    return W
-
-
-class SortingPerformanceWidget(BaseWidget):
-    def __init__(self, *, sorting_comparison, property_name=None, metric='accuracy', markersize=10,
-                 marker='.', figure=None, ax=None):
-        assert isinstance(sorting_comparison, sc.GroundTruthComparison), \
+    """    
+    def __init__(self, sorting_comparison, metrics, 
+            performance_name='accuracy', metric_name='snr',
+                markersize=10, marker='.', figure=None, ax=None):
+        assert isinstance(sorting_comparison, GroundTruthComparison), \
             "The 'sorting_comparison' object should be a GroundTruthComparison instance"
         BaseWidget.__init__(self, figure, ax)
-        self._SC = sorting_comparison
-        self._property_name = property_name
-        self._metric = metric
-        self._ms = markersize
-        self._mark = marker
-        self.name = 'SortingPerformance'
+        self.sorting_comparison = sorting_comparison
+        self.metrics = metrics
+        self.performance_name = performance_name
+        self.metric_name = metric_name
+        self.markersize = markersize
+        self.marker = marker
 
     def plot(self):
         self._do_plot()
 
     def _do_plot(self):
-        SC = self._SC
-        units = SC.sorting1.get_unit_ids()
-        perf = SC.get_performance()[self._metric]
-        if self._property_name is not None:
-            assert self._property_name in SC.sorting1.get_shared_unit_property_names(), "%s should be " \
-                                                                                 "a property of the ground truth " \
-                                                                                 "sorting extractor"
-            xvals = SC.sorting1.get_units_property(unit_ids=units, property_name=self._property_name)
-            self.ax.plot(xvals, perf, marker=self._mark, markersize=int(self._ms), ls='')
-            self.ax.set_xlabel(self._property_name)
-        else:
-            self.ax.plot(perf, '.')
-            self.ax.set_xticks([])
-        self.ax.set_ylabel(self._metric)
-        self.ax.set_ylim([-0.05, 1.05])
+        comp = self.sorting_comparison
+        unit_ids = comp.sorting1.get_unit_ids()
+        perf = comp.get_performance()[self.performance_name]
+        metric = self.metrics[self.metric_name]
+        
+        ax = self.ax
+        
+        ax.plot(metric, perf, marker=self.marker, markersize=int(self.markersize), ls='')
+        ax.set_xlabel(self.metric_name)
+        ax.set_ylabel(self.performance_name)
+        ax.set_ylim(0, 1.05)
+        
+
+def plot_sorting_performance(*args, **kwargs):
+    W = SortingPerformanceWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_sorting_performance.__doc__ = SortingPerformanceWidget.__doc__
+        
