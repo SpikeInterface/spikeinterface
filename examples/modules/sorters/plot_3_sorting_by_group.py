@@ -80,7 +80,7 @@ print(recordings)
 #  have a look to the documentation of this function that handle many cases.
 
 sorter_list = ['tridesclous']
-working_folder = 'sorter_outpouts'
+working_folder = 'sorter_outputs'
 results = ss.run_sorters(sorter_list, recordings, working_folder,
             engine='loop', with_output=True, mode_if_folder_exists='overwrite')
 
