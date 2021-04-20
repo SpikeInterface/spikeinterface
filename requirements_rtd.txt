@@ -6,6 +6,7 @@ sklearn
 # sphinx-gallery
 pillow
 sphinx-gallery
+numpydoc
 matplotlib==3.2.2
 
 

@@ -3,7 +3,7 @@
     "module": "spikeinterface",
     "kwargs": {
         "files_path": [
-            "/tmp/spikeinterface_cache/tmptkgf30vj/1O0H2S0X/traces_cached_seg0.raw"
+            "/tmp/spikeinterface_cache/tmptfmlabfq/QPE3ZVTO/traces_cached_seg0.raw"
         ],
         "sampling_frequency": 30000.0,
         "num_chan": 4,
