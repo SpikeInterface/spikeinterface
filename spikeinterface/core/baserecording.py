@@ -366,18 +366,26 @@ class BaseRecording(BaseExtractor):
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
-    def split_by(self, property='group'):
+    def split_by(self, property='group', outputs='list'):
+        assert outputs in ('list', 'dict')
         from .channelslicerecording import ChannelSliceRecording
         values = self.get_property(property)
         if values is None:
             raise ValueError(f'property {property} is not set')
-
-        rec_list = []
+        
+        if outputs == 'list':
+            recordings = []
+        elif outputs == 'dict':
+            recordings = {}
         for value in np.unique(values):
             inds, = np.nonzero(values == value)
             new_channel_ids = self.get_channel_ids()[inds]
-            rec_list.append(ChannelSliceRecording(self, new_channel_ids))
-        return rec_list
+            subrec = ChannelSliceRecording(self, new_channel_ids)
+            if outputs == 'list':
+                recordings.append(subrec)
+            elif outputs == 'dict':
+                recordings[value] = subrec
+        return recordings
 
 
 class BaseRecordingSegment(BaseSegment):

@@ -33,7 +33,7 @@ def test_export_to_phy():
 
     export_to_phy(recording, sorting, output_folder, waveform_extractor,
                   compute_pc_features=False,
-                  compute_amplitudes=False)
+                  compute_amplitudes=True)
     
     
 

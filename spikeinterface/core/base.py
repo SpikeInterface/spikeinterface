@@ -197,8 +197,12 @@ class BaseExtractor:
             # feat_keys = ExtractorBase._features.keys()
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
-        other._properties = deepcopy(
-            {k: self._properties[k][inds] for k in prop_keys if self._properties[k] is not None})
+        for k in prop_keys:
+            values = self._properties[k]
+            if values is not None:
+                other.set_property(k, values[inds])
+        #~ other._properties = deepcopy(
+            #~ {k: self._properties[k][inds] for k in prop_keys if self._properties[k] is not None})
         # other._features = deepcopy({k: self._features[k] for k in feat_keys})
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False):
@@ -585,7 +589,9 @@ def _load_extractor_from_dict(dic):
     extractor = cls(**kwargs)
 
     extractor._annotations.update(dic['annotations'])
-    extractor._properties.update(dic['properties'])
+    # extractor._properties.update(dic['properties'])
+    for k, v in dic['properties'].items():
+        extractor.set_property(k, v)
     # ~ extractor._features.update(dic['features'])
 
     return extractor
