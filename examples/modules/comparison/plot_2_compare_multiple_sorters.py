@@ -1,4 +1,4 @@
-s"""
+"""
 Compare multiple sorters and consensus based method
 ====================================================
 
@@ -24,7 +24,7 @@ import spikeinterface.widgets as sw
 # First, let's create a toy example:
 
 recording, sorting = se.toy_example(num_channels=4, duration=20, seed=0, num_segments=1)
-recording = recording.save('toy')
+recording = recording.save(name='toy')
 
 #############################################################################
 # Then run 3 spike sorters and compare their output.

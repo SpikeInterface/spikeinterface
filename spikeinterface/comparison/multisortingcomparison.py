@@ -13,6 +13,42 @@ import networkx as nx
 
 
 class MultiSortingComparison(BaseComparison):
+    '''
+    Compares multiple spike sorter outputs.
+
+    - Pair-wise comparisons are made
+    - An agreement graph is built based on the agreement score
+
+    It allows to return a consensus-based sorting extractor with the `get_agreement_sorting()` method.
+
+    Parameters
+    ----------
+    sorting_list: list
+        List of sorting extractor objects to be compared
+    name_list: list
+        List of spike sorter names. If not given, sorters are named as 'sorter0', 'sorter1', 'sorter2', etc.
+    delta_time: float
+        Number of ms to consider coincident spikes (default 0.4 ms)
+    match_score: float
+        Minimum agreement score to match units (default 0.5)
+    chance_score: float
+        Minimum agreement score to for a possible match (default 0.1)
+    n_jobs: int
+       Number of cores to use in parallel. Uses all availible if -1
+    spiketrain_mode: str
+        Mode to extract agreement spike trains:
+            - 'union': spike trains are the union between the spike trains of the best matching two sorters
+            - 'intersection': spike trains are the intersection between the spike trains of the
+               best matching two sorters
+    verbose: bool
+        if True, output is verbose
+
+    Returns
+    -------
+
+    multi_sorting_comparison: MultiSortingComparison
+        MultiSortingComparison object with the multiple sorter comparison
+    '''    
     def __init__(self, sorting_list, name_list=None, delta_time=0.4, #sampling_frequency=None,
                  match_score=0.5, chance_score=0.1, n_jobs=-1, spiketrain_mode='union', verbose=False,
                  do_matching=True):
@@ -331,45 +367,6 @@ class AgreementSortingSegment(BaseSortingSegment):
         return np.asarray(spiketrains)
 
 
-def compare_multiple_sorters(sorting_list, name_list=None, delta_time=0.4, match_score=0.5, chance_score=0.1,
-                             n_jobs=-1, spiketrain_mode='union', verbose=False):
-    '''
-    Compares multiple spike sorter outputs.
-
-    - Pair-wise comparisons are made
-    - An agreement graph is built based on the agreement score
-
-    It allows to return a consensus-based sorting extractor with the `get_agreement_sorting()` method.
-
-    Parameters
-    ----------
-    sorting_list: list
-        List of sorting extractor objects to be compared
-    name_list: list
-        List of spike sorter names. If not given, sorters are named as 'sorter0', 'sorter1', 'sorter2', etc.
-    delta_time: float
-        Number of ms to consider coincident spikes (default 0.4 ms)
-    match_score: float
-        Minimum agreement score to match units (default 0.5)
-    chance_score: float
-        Minimum agreement score to for a possible match (default 0.1)
-    n_jobs: int
-       Number of cores to use in parallel. Uses all availible if -1
-    spiketrain_mode: str
-        Mode to extract agreement spike trains:
-            - 'union': spike trains are the union between the spike trains of the best matching two sorters
-            - 'intersection': spike trains are the intersection between the spike trains of the
-               best matching two sorters
-    verbose: bool
-        if True, output is verbose
-
-    Returns
-    -------
-    multi_sorting_comparison: MultiSortingComparison
-        MultiSortingComparison object with the multiple sorter comparison
-    '''
-    return MultiSortingComparison(sorting_list=sorting_list, name_list=name_list, delta_time=delta_time,
-                                  match_score=match_score, chance_score=chance_score, n_jobs=n_jobs,
-                                  spiketrain_mode=spiketrain_mode, #sampling_frequency=sampling_frequency,
-                                  verbose=verbose)
-
+def compare_multiple_sorters(*args, **kwargs):
+    return MultiSortingComparison(*args, **kwargs)
+compare_multiple_sorters.__doc__ = MultiSortingComparison.__doc__

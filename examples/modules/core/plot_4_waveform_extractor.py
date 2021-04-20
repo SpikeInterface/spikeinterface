@@ -54,7 +54,8 @@ plot_probe(probe)
 
 folder = 'waveform_folder'
 we = extract_waveforms(recording, sorting, folder,
-    ms_before=1.5, ms_after=2., max_spikes_per_unit=500)
+    ms_before=1.5, ms_after=2., max_spikes_per_unit=500,
+    load_if_exists=True)
 print(we)
 
 

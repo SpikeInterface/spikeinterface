@@ -213,7 +213,7 @@ class BaseExtractor:
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False):
         '''
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
-        extractor with spikeextractors.load_extractor_from_dict(dump_dict)
+        extractor with load_extractor_from_dict(dump_dict)
 
         Returns
         -------
@@ -339,7 +339,7 @@ class BaseExtractor:
     def dump_to_json(self, file_path=None):
         '''
         Dump recording extractor to json file.
-        The extractor can be re-loaded with spikeextractors.load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor_from_json(json_file)
 
         Parameters
         ----------
@@ -357,7 +357,7 @@ class BaseExtractor:
     def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True):
         '''
         Dump recording extractor to a pickle file.
-        The extractor can be re-loaded with spikeextractors.load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor_from_json(json_file)
 
         Parameters
         ----------

@@ -11,9 +11,9 @@ import sys
 sys.path.append('../../examples/modules/comparison/')
 from generate_erroneous_sorting import generate_erroneous_sorting
 
-import spikeextractors as se
-import spikecomparison as sc
-import spikewidgets as sw
+import spikeinterface.extractors as se
+import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
 
 import numpy as np
 import matplotlib.pyplot as plt
