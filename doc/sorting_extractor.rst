@@ -20,13 +20,42 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 .. code-block:: python
 
     from spikeextractors import SortingExtractor
+    from spikeextractors.extraction_tools import check_get_unit_spike_train
+
+     try:
+        import mypackage
+        HAVE_MYPACKAGE = True
+    except ImportError:
+        HAVE_MYPACKAGE = False
 
     class MyFormatSortingExtractor(SortingExtractor):
-        def __init__(self, ex_parameter_1, ex_parameter_2):
+        """
+        Description of your sorting extractor
+
+        Parameters
+        ----------
+        file_path: str or Path
+            Path to myformat file
+        extra_parameter_1: (type)
+            What extra_parameter_1 does
+        extra_parameter_2: (type)
+            What extra_parameter_2 does
+        """
+        extractor_name = 'MyFormatSorting'
+        installed = HAVE_MYPACKAGE  # check at class level if installed or not
+        is_writable = True # set to True if extractor implements `write_sorting()` function
+        mode = 'file'  # 'file' if input is 'file_path', 'folder' if input 'folder_path', 'file_or_folder' if input is 'file_or_folder_path'
+        installation_mesg = "To use the MyFormatSortingExtractor extractors, install mypackage: \n\n pip install mypackage\n\n"
+
+        def __init__(self, file_path, extra_parameter_1, extra_parameter_2):
+            # check if installed
+            assert self.installed, self.installation_mesg
+
+            # instantiate base SortingExtractor
             SortingExtractor.__init__(self)
 
             ## All file specific initialization code can go here.
-            # If your format stores the sampling frequency, you can overweite the self._sampling_frequency. This way,
+            # If your format stores the sampling frequency, you can overwrite the self._sampling_frequency. This way,
             # the base method self.get_sampling_frequency() will return the correct sampling frequency
 
             self._sampling_frequency = my_sampling_frequency
@@ -37,6 +66,7 @@ The contributed extractors are in the **spikeextractors/extractors** folder. You
 
             return unit_ids
 
+        @check_get_unit_spike_train
         def get_unit_spike_train(self, unit_id, start_frame=None, end_frame=None):
 
             '''Code to extract spike frames from the specified unit.
