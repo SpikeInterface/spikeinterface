@@ -134,15 +134,17 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                 for chan_ind in _channel_indices])
         
         return out_traces
-    
+
     def _groups(self, channel_indices):
         selected_groups = []
         selected_channels = []
         if self.groups:
             for chan_inds in self.groups:
-                selected_groups.append(chan_inds)
                 sel_inds = [ind for ind in channel_indices if ind in chan_inds]
-                selected_channels.append(sel_inds)
+                # if no channels are in a group, do not return the group
+                if len(sel_inds) > 0:
+                    selected_groups.append(chan_inds)
+                    selected_channels.append(sel_inds)
         else:
             # no groups = all channels
             selected_groups = [slice(None)]
