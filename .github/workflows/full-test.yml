@@ -32,6 +32,9 @@ jobs:
         run: |
           # this is for datalad and download testing datasets
           sudo apt install git git-annex
+          # needed for correct operation of git/git-annex/DataLad
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
           # this is for spyking circus
           sudo apt install mpich libmpich-dev
           # create an environement (better for cahing)
