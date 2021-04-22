@@ -9,7 +9,9 @@ def get_random_data_chunks(recording, num_chunks_per_segment=20, chunk_size=1000
     
     """
     # TODO: if segment have differents length make another sampling that dependant on the lneght of the segment
-    
+    # Should be done by chnaging kwargs with total_num_chunks=XXX and total_duration=YYYY
+    # And randomize the number of chunk per segment wieighted by segment duration
+
     chunk_list = []
     for segment_index in range(recording.get_num_segments()):
         length = recording.get_num_frames(segment_index)
