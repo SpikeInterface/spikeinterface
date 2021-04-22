@@ -19,7 +19,13 @@ With SpikeInterface, users can:
 
 **NEWS**
 
-- New SpikeInterface release! Version 0.11.0 is now out (on 10/12/2020)!
+- New SpikeInterface major release! Version 0.90.0 is will be out soon!
+
+  * break backward compatility with 0.10/0.11/0.12 series
+  * will be release summer 2021
+  * is no more a metapackage
+  * no more depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets
+
 
 .. toctree::
    :maxdepth: 1

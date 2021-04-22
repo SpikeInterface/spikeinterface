@@ -13,7 +13,15 @@ import spikeinterface.sorters as ss
 ##############################################################################
 # First, let's create the usueal toy example:
 
-recording, sorting_true = se.example_datasets.toy_example(duration=10, seed=0)
+recording, sorting_true = se.toy_example(duration=10, seed=0, num_segments=1)
+print(recording)
+print(sorting_true)
+
+##############################################################################
+# Lets cache this recording to make it "dumpable"
+
+recording = recording.save(name='toy')
+print(recording)
 
 ##############################################################################
 # The launcher enables to call any spike sorter with the same functions:  :code:`run_sorter` and :code:`run_sorters`.
@@ -23,18 +31,17 @@ recording, sorting_true = se.example_datasets.toy_example(duration=10, seed=0)
 # Let's first see how to run a single sorter, for example, Klusta:
 
 # The sorter name can be now a parameter, e.g. chosen with a command line interface or a GUI
-sorter_name = 'klusta'
-sorting_KL = ss.run_sorter(sorter_name_or_class='klusta', recording=recording, output_folder='my_sorter_output')
-print(sorting_KL.get_unit_ids())
+sorter_name = 'herdingspikes'
+sorting_HS = ss.run_sorter(sorter_name='herdingspikes', recording=recording, output_folder='my_sorter_output')
+print(sorting_HS.get_unit_ids())
 
 ##############################################################################
-# This will launch the klusta sorter on the recording object.
 #
 # You can also run multiple sorters on the same recording:
 
-recording_list = [recording]
-sorter_list = ['klusta', 'mountainsort4', 'tridesclous']
-sorting_output = ss.run_sorters(sorter_list, recording_list, working_folder='tmp_some_sorters', mode='overwrite')
+recordings = {'toy' : recording }
+sorter_list = ['spykingcircus', 'herdingspikes', 'tridesclous']
+sorting_output = ss.run_sorters(sorter_list, recordings, working_folder='tmp_some_sorters', mode_if_folder_exists='overwrite')
 
 ##############################################################################
 # The 'mode' argument allows to 'overwrite' the 'working_folder' (if existing), 'raise' and Exception, or 'keep' the
@@ -43,9 +50,9 @@ sorting_output = ss.run_sorters(sorter_list, recording_list, working_folder='tmp
 # To 'sorting_output' is a dictionary that has (recording, sorter) pairs as keys and the correspondent
 # :code:`SortingExtractor` as values. It can be accessed as follows:
 
-for (rec, sorter), sort in sorting_output.items():
-    print(rec, sorter, ':', sort.get_unit_ids())
+for (rec_name, sorter_name), sorting in sorting_output.items():
+    print(rec_name, sorter_name, ':', sorting.get_unit_ids())
 
 ##############################################################################
-# With the same mechanism, you can run several spike sorters on many recordings, just by creating a list of
+# With the same mechanism, you can run several spike sorters on many recordings, just by creating a list/dict of
 # :code:`RecordingExtractor` objects (:code:`recording_list`).

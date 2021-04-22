@@ -99,6 +99,38 @@ Kilosort2.5
 
 * See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
+Kilosort3
+-----------
+
+* Matlab, requires CUDA
+* Url: https://github.com/MouseLand/Kilosort
+* Authors: Marius Pachitariu
+* Installation needs Matlab and cudatoolkit::
+
+      git clone https://github.com/MouseLand/Kilosort
+      # provide installation path by setting the KILOSORT2_5_PATH environment variable
+      # or using Kilosort3Sorter.set_kilosort2_path()
+
+* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+
+
+pykilosort
+----------
+
+* python, requires cuda
+* Url: https://github.com/MouseLand/pykilosort
+* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyril Rossant
+
+* Installation needs Matlab and cudatoolkit::
+    
+    pip install cupy  (or pip install cupy-cudaXXX)  >>> can be quite hard
+    pip install phylib, pypandic
+    git clone https://github.com/MouseLand/pykilosort
+    cd pykilosort
+    python setup.py install
+
+* See also https://github.com/MouseLand/pykilosort#installation
+
 
 Klusta
 ------
@@ -122,7 +154,7 @@ Mountainsort4
 * Authors: 	Jeremy Magland, Alex Barnett, Jason Chung, Loren Frank, Leslie Greengard
 * Installation::
 
-      pip install ml_ms4alg
+      pip install mountainsort4
 
 
 SpykingCircus
@@ -183,3 +215,12 @@ Combinato
       # provide installation path by setting the COMBINATO_PATH environment variable
       # or using CombinatoSorter.set_combinato_path()
 
+Yass
+----
+
+* Python, cuda, torch
+* Url: https://github.com/paninski-lab/yass
+* Authors: Liam Paninski
+* Installation::
+      
+      https://github.com/paninski-lab/yass/wiki/Installation-Local

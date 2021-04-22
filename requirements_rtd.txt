@@ -1,16 +1,21 @@
+# optional dependancy
+h5py
+pandas
+sklearn
+
 # sphinx-gallery
 pillow
 sphinx-gallery
+numpydoc
 matplotlib==3.2.2
 
 
 ## install sorters ##
 # ms4
-ml_ms4alg==0.3.2
+mountainsort4==1.0.0
 
 # klusta
 Cython
-h5py
 tqdm
 click
 klusta
