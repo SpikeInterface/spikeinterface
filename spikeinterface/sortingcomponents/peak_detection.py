@@ -17,9 +17,7 @@ def detect_peaks(recording, method='by_channel',
         peak_sign='neg', detect_threshold=5, n_shifts=2, 
         local_radius_um=100,
         noise_levels=None,
-        
-        num_chunks_per_segment=20, seed=0, #  chunk_size=10000, 
-        
+        random_chunk_kwargs={},
         **job_kwargs):
     """
     Peak detection ported from tridesclous into spikeinterface.
@@ -51,9 +49,10 @@ def detect_peaks(recording, method='by_channel',
         the sample are higher than the sample.
     noise_levels: np.array
         noise_levels can be provide externally if already computed.
+    random_chunk_kwargs: dict
+        A dict that contain option to randomize chunk for get_noise_levels()
+        Only used if noise_levels is None
 
-    num_chunks_per_segment, chunk_size, seed are used for get_random_data_for_scaling
-    
     """
     assert method in ('by_channel', 'locally_exclusive')
     assert peak_sign in ('both', 'neg', 'pos')
@@ -62,8 +61,7 @@ def detect_peaks(recording, method='by_channel',
         raise ModuleNotFoundError('"locally_exclusive" need numba which is not installed')
     
     if noise_levels is None:
-        # TODO remove chunk_size name collision between job_tools and get_noise_levels()
-        noise_levels = get_noise_levels(recording, num_chunks_per_segment=num_chunks_per_segment,  seed=seed) # chunk_size=chunk_size,
+        noise_levels = get_noise_levels(recording, **random_chunk_kwargs)
     
     abs_threholds = noise_levels * detect_threshold
     

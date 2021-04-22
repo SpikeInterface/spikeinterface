@@ -5,7 +5,7 @@ from spikeinterface.core.channelslicerecording import (ChannelSliceRecording,
     ChannelSliceRecordingSegment)
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from ..utils import get_random_data_for_scaling
+from ..utils import get_random_data_chunks
 
 class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
     """
@@ -18,9 +18,8 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
         The recording extractor object
     bad_threshold: float
         If automatic is used, the threshold for the standard deviation over which channels are removed
-    seconds: float
-        If automatic is used, the number of seconds used to compute standard deviations
-
+    **random_chunk_kwargs
+    
     Returns
     -------
     remove_bad_channels_recording: RemoveBadChannelsRecording
@@ -28,15 +27,10 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
     """
     name = 'remove_bad_channels'
 
-    def __init__(self, recording, bad_threshold=5,
-            num_chunks_per_segment=50, chunk_size=500, seed=0):
+    def __init__(self, recording, bad_threshold=5, **random_chunk_kwargs):
             
-        self._kwargs = dict(recording=recording.to_dict(), bad_threshold=bad_threshold,
-                num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed)
 
-        random_data = get_random_data_for_scaling(recording, 
-                        num_chunks_per_segment=num_chunks_per_segment,
-                        chunk_size=chunk_size, seed=seed)
+        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
         
         stds = np.std(random_data, axis=0)
         thresh = bad_threshold * np.median(stds)
@@ -48,6 +42,9 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
         
         ChannelSliceRecording.__init__(self, recording, channel_ids=channel_ids)
         BasePreprocessor.__init__(self, self)
+
+        self._kwargs = dict(recording=recording.to_dict(), bad_threshold=bad_threshold)
+        self._kwargs.update(random_chunk_kwargs)
 
 
 # function for API

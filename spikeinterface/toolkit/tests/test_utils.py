@@ -7,13 +7,13 @@ import numpy as np
 from spikeinterface.core.tests.testing_tools import generate_recording
 
 
-from spikeinterface.toolkit.utils import (get_random_data_for_scaling,
+from spikeinterface.toolkit.utils import (get_random_data_chunks,
     get_closest_channels, get_noise_levels)
 
 
-def test_get_random_data_for_scaling():
+def test_get_random_data_chunks():
     rec = generate_recording(num_channels=1, sampling_frequency = 1000., durations = [10., 20.])
-    chunks = get_random_data_for_scaling(rec, num_chunks_per_segment=50, chunk_size=500, seed=0)
+    chunks = get_random_data_chunks(rec, num_chunks_per_segment=50, chunk_size=500, seed=0)
     assert chunks.shape == (50000, 1)
 
 
@@ -31,6 +31,6 @@ def test_get_noise_levels():
     
     
 if __name__ == '__main__':
-    # test_get_random_data_for_scaling()
+    test_get_random_data_chunks()
     # test_get_closest_channels()
-    test_get_noise_levels()
+    # test_get_noise_levels()
