@@ -17,7 +17,7 @@ You can start by importing the base class:
 
 .. code-block:: python
 
-    import spikeextractors as se
+    import spikeinterface.extractors as se
     from ..basesorter import BaseSorter
 
 In order to check if your spike sorter is installed, a :code:`try` - :code:`except` block is used. For example, if your
@@ -68,8 +68,8 @@ Now you can start filling out the required methods:
         BaseSorter.__init__(self, **kargs)
 
     # optional
-    @staticmethod
-    def get_sorter_version():
+    @classmethod
+    def get_sorter_version(cls):
         return myspikesorter.__version__
 
     @classmethod
@@ -78,19 +78,37 @@ Now you can start filling out the required methods:
         # Fill code to check sorter installation. It returns a boolean
         return HAVE_MSS
 
-    def _setup_recording(self, recording, output_folder):
+    @classmethod
+    def _setup_recording(cls, recording, output_folder, params, verbose):
+
 
         # Fill code to set up the recording: convert to required file, parse config files, etc.
         # The files should be placed in the 'output_folder'
 
-    def _run(self, recording, output_folder):
+    @classmethod
+    def _check_params(cls, recording, output_folder, params):
+        # optional
+        # can be implemented in subclass for custum checks
+        return params
+
+
+    @classmethod
+    def _check_apply_filter_in_params(cls, params):
+        return False
+
+        #  optional
+        # can be implemented in subclass to check if the filter will be apllied
+
+
+    @classmethod
+    def _run_from_folder(cls, output_folder, params, verbose):
 
         # Fill code to run your spike sorter based on the files created in the _setup_recording()
         # You can run CLI commands (e.g. klusta, spykingcircus, tridescous), pure Python code (e.g. Mountainsort4,
         # Herding Spikes), or even MATLAB code (e.g. Kilosort, Kilosort2, Ironclust)
 
-    @staticmethod
-    def get_result_from_folder(output_folder):
+    @classmethod
+    def _get_result_from_folder(cls, output_folder):
 
         # If your spike sorter has a specific file format, you should implement a SortingExtractor in spikeextractors.
         # Let's assume you have done so, and the extractor is called MySpikeSorterSortingExtractor
@@ -99,8 +117,8 @@ Now you can start filling out the required methods:
         return sorting
 
 When your spike sorter class is implemented, you have to add it to the list of available spike sorters in the
-`sorterlist.py <https://github.com/SpikeInterface/spikesorters/blob/master/spikesorters/sorterlist.py#L12-L21>`_.
-Moreover, you have to add a `launcher function <https://github.com/SpikeInterface/spikesorters/blob/master/spikesorters/sorterlist.py#L92-L114>`_:
+`sorterlist.py`
+Moreover, you have to add a launcher function like `run_XXXX()`.
 
 .. code-block:: python
 
@@ -108,8 +126,10 @@ Moreover, you have to add a `launcher function <https://github.com/SpikeInterfac
         return run_sorter('myspikesorter', *args, **kargs)
 
 
-When you are done you can optionally write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
+When you are done you need to write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
 install the required packages by changing the **.travis.yml**. Note that MATLAB based tests cannot be run at the moment,
 but we recommend testing the implementation locally.
+
+After this you need to add a block in doc/sorters_info.rst
 
 Finally, make a pull request to the spikesorters repo, so we can review the code and merge it to the spikesorters!

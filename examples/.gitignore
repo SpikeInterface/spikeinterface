@@ -1,0 +1,12 @@
+tmp_*/*
+modules/*/*_output/*
+
+modules/*/*.raw
+modules/*/*.json
+modules/*/*.npz
+
+modules/*/*/*.json
+modules/*/*/*.raw
+modules/*/*/*.npz
+
+getting_started/*_output/*

@@ -5,10 +5,10 @@ Supported File Formats
 ======================
 
 Currently, we support many popular file formats for both raw and sorted extracellular datasets.
-Given the standardized, modular design of our recording and sorting extractors, adding new file formats is
-straightforward so we expect this list to grow in future versions.
+Given the standardized, modular design of our recording and sorting extractors,
+adding new file formats is straightforward so we expect this list to grow in future versions.
 
-We are also integrating extractors based on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
+Most of format are supported on top on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 
 Raw Data Formats
 ----------------
@@ -16,10 +16,9 @@ Raw Data Formats
 For raw data formats, we currently support:
 
 * **BlackRock** - BlackRockRecordingExtractor
-* **Binary** - BinDatRecordingExtractor
+* **Binary** - BinaryRecordingExtractor
 * **Biocam HDF5** - BiocamRecordingExtractor
 * **CED** - CEDRecordingExtractor
-* **Experimental Directory Structure (Exdir)** - ExdirRecordingExtractor
 * **Intan** - IntanRecordingExtractor
 * **Klusta** - KlustaRecordingExtractor
 * **MaxOne** - MaxOneRecordingExtractor
@@ -30,7 +29,8 @@ For raw data formats, we currently support:
 * **Neuroscope** - NeuroscopeRecordingExtractor
 * **NIX** - NIXIORecordingExtractor
 * **Neuralynx** - NeuralynxRecordingExtractor
-* **Open Ephys** - OpenEphysRecordingExtractor
+* **Open Ephys Leagacy** - OpenEphysLegacyRecordingExtractor
+* **Open Ephys Binary** - OpenEphysBinaryRecordingExtractor
 * **Phy/Kilosort** - PhyRecordingExtractor/KilosortRecordingExtractor
 * **Plexon** - PlexonRecordingExtractor
 * **Shybrid** - SHYBRIDRecordingExtractor
@@ -71,7 +71,7 @@ First, import the spikeextractors package,
 
 .. code:: python
 
-  import spikeextractors as se
+  import spikeinterface.extractors as se
 
 Then you can check the installed RecordingExtractor list,
 
@@ -82,12 +82,10 @@ Then you can check the installed RecordingExtractor list,
 which outputs,
 
 .. parsed-literal::
-  [spikeextractors.extractors.mdaextractors.mdaextractors.MdaRecordingExtractor,
-   spikeextractors.extractors.biocamrecordingextractor.biocamrecordingextractor.BiocamRecordingExtractor,
-   spikeextractors.extractors.bindatrecordingextractor.bindatrecordingextractor.BinDatRecordingExtractor,
-   spikeextractors.extractors.spikeglxrecordingextractor.spikeglxrecordingextractor.SpikeGLXRecordingExtractor,
-   spikeextractors.extractors.phyextractors.phyextractors.PhyRecordingExtractor,
-   spikeextractors.extractors.maxonerecordingextractor.maxonerecordingextractor.MaxOneRecordingExtractor]
+  [spikeinterface.extractors.MdaRecordingExtractor,
+   spikeinterface.extractorsBiocamRecordingExtractor,
+   spikeinterface.core..BinaryRecordingExtractor,
+   ...
    
 and the installed SortingExtractors list,
 
@@ -98,42 +96,26 @@ and the installed SortingExtractors list,
 which outputs,
 
 .. parsed-literal::
-  [spikeextractors.extractors.mdaextractors.mdaextractors.MdaSortingExtractor,
-   spikeextractors.extractors.hs2sortingextractor.hs2sortingextractor.HS2SortingExtractor,
-   spikeextractors.extractors.klustasortingextractor.klustasortingextractor.KlustaSortingExtractor,
-   spikeextractors.extractors.kilosortsortingextractor.kilosortsortingextractor.KiloSortSortingExtractor,
-   spikeextractors.extractors.phyextractors.phyextractors.PhySortingExtractor,
-   spikeextractors.extractors.spykingcircussortingextractor.spykingcircussortingextractor.SpykingCircusSortingExtractor,
-   spikeextractors.extractors.npzsortingextractor.npzsortingextractor.NpzSortingExtractor]
-
+  [spikeinterface.extractors.SpykingCircusSortingExtractor,
+   spikeinterface.extractors.HerdingspikesSortingExtractor,
+   ...
  
 When trying to use an extractor that has not been installed in your environment, an installation message will appear indicating which python packages must be installed as a prerequisite to using the extractor,
 
 .. code:: python
 
-  exdir_file = 'path_to_exdir_file'
-  recording = se.ExdirRecordingExtractor(exdir_file)
+  mearec_file = 'path_to_exdir_file.h5'
+  recording = se.MEArecRecordingExtractor(mearec_file)
 
 throws the error,
 
 .. parsed-literal::
-  ----> 1 se.ExdirRecordingExtractor(exdir_file)
+  ----> 1 se.MEArecRecordingExtractor(mearec_file)
 
-  ~/spikeextractors/spikeextractors/extractors/exdirextractors/exdirextractors.py in __init__(self, exdir_file)
-       22 
-       23     def __init__(self, exdir_file):
-  ---> 24         assert HAVE_EXDIR, "To use the ExdirExtractors run:\n\n pip install exdir\n\n"
-       25         RecordingExtractor.__init__(self)
-       26         self._exdir_file = exdir_file
+  AssertionError: To use the MEArecRecordingExtractor run:
 
-  AssertionError: To use the ExdirExtractors run:
+  pip install MEARec
 
-  pip install exdir
-
-So to use either of the Exdir extractors, you must install the python package exdir. The python packages that are required to use of all the extractors can be installed as below,
-
-.. parsed-literal::
-  pip install exdir h5py pyintan MEArec pyopenephys tridesclous
   
 Dealing with Non-Supported File Formats
 =======================================
@@ -160,11 +142,17 @@ Currently, we support many popular semi-automatic spike sorters.  Given the stan
 * **IronClust** - IronClustSorter
 * **Kilosort** - KilosortSorter
 * **Kilosort2** - Kilosort2Sorter
+* **Kilosort2.5** - Kilosort2_5Sorter
+* **Kilosort3** - Kilosort3Sorter
+* **PyKilosort** - PyKilosortSorter
 * **Klusta** - KlustaSorter
 * **Mountainsort4** - Mountainsort4Sorter
 * **SpyKING Circus** - SpykingcircusSorter
 * **Tridesclous** - TridesclousSorter
 * **Wave clus** - WaveClusSorter
+* **Combinato** - CombinatoSorter
+* **HDSort** - HDSortSorter
+* **yass** - YassSorter
 
 
 Installed Sorters
@@ -176,7 +164,7 @@ First, import the spikesorters package,
 
 .. code:: python
 
-  import spikesorters as ss
+  import spikeinterface.sorters as ss
 
 Then you can check the installed Sorter list,
 
@@ -198,7 +186,7 @@ When trying to use an sorter that has not been installed in your environment, an
 
 .. code:: python
 
-  recording = sorters.run_ironclust(recording)
+  recording = ss.run_ironclust(recording)
 
 throws the error,
 
