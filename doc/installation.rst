@@ -7,7 +7,7 @@ The actual "new API" (v0.90.0) is not release on pypi yet.
 It will release
  in July 2021
 
-You have to do this to install `spikeinterface` afrom source:
+To use it now, you have to install `spikeinterface` from source:
 
 .. code-block:: bash
 
