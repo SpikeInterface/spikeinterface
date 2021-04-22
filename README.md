@@ -1,5 +1,3 @@
-<img src="doc/images/logo.png" class="center" />
-
 # SpikeInterface: a unified framework for spike sorting
 
 <table>
@@ -49,7 +47,7 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 
 
-`spikeinterface` version 0.90:
+`spikeinterface` version 0.90.0:
 
   * break backward compatility with 0.10/0.11/0.12 series.
   * will be release summer 2021
@@ -63,6 +61,7 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 All documentation for SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
 
+Documentation of current API release 0.12.0 is [here](https://spikeinterface.readthedocs.io/en/stable/).
 
 ## Citation
 
