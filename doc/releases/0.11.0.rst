@@ -1,0 +1,14 @@
+SpikeInterface 0.11.0 release notes
+-----------------------------------
+
+10th Dec 2020
+
+- spikeextractors: https://github.com/SpikeInterface/spikeextractors/releases/tag/0.9.3
+
+- spiketoolkit: https://github.com/SpikeInterface/spiketoolkit/releases/tag/0.7.2
+
+- spikesorters: https://github.com/SpikeInterface/spikesorters/releases/tag/0.4.3
+
+- spikecomparison: https://github.com/SpikeInterface/spikecomparison/releases/tag/0.3.1
+
+- spikewidgets: https://github.com/SpikeInterface/spikewidgets/releases/tag/0.5.1

@@ -1,6 +1,49 @@
-[![PyPI version](https://badge.fury.io/py/spikeinterface.svg)](https://badge.fury.io/py/spikeinterface)
+<img src="doc/images/logo.png" class="center" />
 
-# SpikeInterface
+# SpikeInterface: a unified framework for spike sorting
+
+<table>
+<tr>
+  <td>Latest Release</td>
+  <td>
+    <a href="https://pypi.org/project/spikeinterface/">
+    <img src="https://img.shields.io/pypi/v/spikeinterface.svg" alt="latest release" />
+    </a>
+  </td>
+</tr>
+<tr>
+  <td>Documentation</td>
+  <td>
+    <a href="https://spikeinterface.readthedocs.io/">
+    <img src="https://readthedocs.org/projects/spikeinterface/badge/?version=latest" alt="latest documentation" />
+    </a>
+  </td>
+</tr>
+<tr>
+  <td>License</td>
+  <td>
+    <a href="https://github.com/SpikeInterface/spikeinterface/blob/master/LICENSE">
+    <img src="https://img.shields.io/pypi/l/spikeinterface.svg" alt="license" />
+    </a>
+</td>
+</tr>
+<tr>
+  <td>Build Status</td>
+  <td>
+    <a href="https://travis-ci.org/SpikeInterface/spikeinterface">
+    <img src="https://travis-ci.org/SpikeInterface/spikeinterface.svg?branch=master" alt="travis build status" />
+    </a>
+  </td>
+</tr>
+<tr>
+	<td>Gitter</td>
+	<td>
+		<a href="https://gitter.im/SpikeInterface/community">
+		<img src="https://badges.gitter.im/SpikeInterface.svg" />
+	</a>
+	</td>
+</tr>
+</table>
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
@@ -13,9 +56,9 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 - [spikewidgets](https://github.com/SpikeInterface/spikewidgets): Data visualization widgets. [![Build Status](https://travis-ci.org/SpikeInterface/spikewidgets.svg?branch=master)](https://travis-ci.org/SpikeInterface/spikewidgets) 
 
 
-**On October 8, 2019, we have released the very first beta version of spikeinterface (0.9.1)**
+**On March 13th, 2021, a new version of `spikeinterface` has been released (0.12.0). Check out the [release notes](https://spikeinterface.readthedocs.io/en/latest/whatisnew.html)**
 
-**Please have a look at the [preprint](https://www.biorxiv.org/content/10.1101/796599v1) that describes in detail this project**
+**Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
 
 
@@ -25,70 +68,95 @@ You can install SpikeInterface from pip:
 
 `pip install spikeinterface` 
 
-Alternatively, you can clone the repository and install from sources the development version:
+The pip installation will install a specific and fixed version of the spikeinterface packages. 
+
+To use the latest updates, install `spikeinterface` and the related packages from source:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git
 cd spikeinterface
-python setup.py develop
+python setup.py install (or develop)
 ```
 
-**Important**: installing with `python setup.py develop` DOES NOT install the latest version of the different modules.
-In order to get the latest updates, clone the above-mentioned repositories and install them from source.
+Then you can install the latest releases of the spikeinterface packages:
 
-## Examples
+```bash
+pip install --upgrade spikeextractors spiketoolkit spikesorters spikecomparison spikewidgets
+```
 
-For using SpikeInterface, please checkout these [examples](https://github.com/SpikeInterface/spikeinterface/tree/master/examples).
+You can also install the five packages from sources (e.g. for `spikeextractors`): 
 
-Also, you can checkout this [tutorial](https://github.com/SpikeInterface/spiketutorials/tree/master/Spike_sorting_workshop_2019) for getting started with SpikeInterface.
+```bash
+git clone https://github.com/SpikeInterface/spikeextractors.git
+cd spikeextractors
+python setup.py install (or develop)
+```
 
 ## Documentation
 
-All documentation for SpikeInterface can be found here: https://spikeinterface.readthedocs.io/en/latest/.
+All documentation for SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
+
+You can also check out this [1-hour video tutorial](https://www.youtube.com/watch?v=fvKG_-xQ4D8&t=3364s&ab_channel=NeurodataWithoutBorders) for the NWB User Days 2020:
+
+
 
 ## Citation
 
 If you find SpikeInterface useful in your research, please cite:
 
 ```bibtex
-@article{buccino2019spikeinterface,
+@article{buccino2020spikeinterface,
   title={SpikeInterface, a unified framework for spike sorting},
-  author={Buccino, Alessio P and Hurwitz, Cole L and Magland, Jeremy and Garcia, Samuel and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
-  journal={BioRxiv},
-  pages={796599},
-  year={2019},
-  publisher={Cold Spring Harbor Laboratory}
+  author={Buccino, Alessio Paolo and Hurwitz, Cole Lincoln and Garcia, Samuel and Magland, Jeremy and Siegle, Joshua H and Hurwitz, Roger and Hennig, Matthias H},
+  journal={Elife},
+  volume={9},
+  pages={e61834},
+  year={2020},
+  publisher={eLife Sciences Publications Limited}
 }
 ```
 
 ## SpikeInterface contributors
 For any correspondence, contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (colehurwitz@gmail.com), Samuel Garcia (samuel.garcia@cnrs.fr), Jeremy Magland (jmagland@flatironinstitute.org) or Matthias Hennig (m.hennig@ed.ac.uk), or just write an issue!
 
-The following people have contributed code to the project as of 24 August 2020:
-* <img src="https://avatars0.githubusercontent.com/u/2369197?v=4" width="16"/> [Achilleas Koutsou](https://github.com/achilleas-k), @G-Node
-* <img src="https://avatars3.githubusercontent.com/u/844464?v=4" width="16"/> [Alan Liddell](https://github.com/aliddell), Vidrio Technologies
-* <img src="https://avatars0.githubusercontent.com/u/17097257?v=4" width="16"/> [Alessio Buccino](https://github.com/alejoe91), ETH
-* <img src="https://avatars2.githubusercontent.com/u/13655521?v=4" width="16"/> [Alexander Morley](https://github.com/alexmorley), MRC BNDU (University of Oxford)
-* <img src="https://avatars0.githubusercontent.com/u/844306?v=4" width="16"/> [Ben Dichter](https://github.com/bendichter), CatalystNeuro
-* <img src="https://avatars1.githubusercontent.com/u/51133164?v=4" width="16"/> [Cody Baker](https://github.com/CodyCBakerPhD)
-* <img src="https://avatars3.githubusercontent.com/u/31068646?v=4" width="16"/> [Cole Hurwitz](https://github.com/colehurwitz), University of Edinburgh
-* <img src="https://avatars1.githubusercontent.com/u/5598671?v=4" width="16"/> [Fernando J. Chaure](https://github.com/ferchaure), University of Buenos Aires
-* <img src="https://avatars1.githubusercontent.com/u/815627?v=4" width="16"/> [Garcia Samuel](https://github.com/samuelgarcia), CNRS, Centre de recherche en neuroscience de Lyon
-* <img src="https://avatars3.githubusercontent.com/u/8941752?v=4" width="16"/> [James Jun](https://github.com/jamesjun), Facebook, Agios-CTRL
-* <img src="https://avatars2.githubusercontent.com/u/46056408?v=4" width="16"/> [Jasper Wouters](https://github.com/jwouters91)
-* <img src="https://avatars2.githubusercontent.com/u/3679296?v=4" width="16"/> [Jeremy Magland](https://github.com/magland)
-* <img src="https://avatars3.githubusercontent.com/u/6409964?v=4" width="16"/> [Jose Guzman](https://github.com/JoseGuzman), Austrian Academy of Sciences - OEAW
-* <img src="https://avatars2.githubusercontent.com/u/200366?v=4" width="16"/> [Josh Siegle](https://github.com/jsiegle), Allen Institute for Brain Science
-* <img src="https://avatars3.githubusercontent.com/u/24541631?v=4" width="16"/> [Luiz Tauffer](https://github.com/luiztauffer), @kth
-* <img src="https://avatars3.githubusercontent.com/u/7804376?v=4" width="16"/> [Manish Mohapatra](https://github.com/manimoh)
-* <img src="https://avatars2.githubusercontent.com/u/11293950?v=4" width="16"/> [Martino Sorbaro](https://github.com/martinosorb), Neuroinformatics, UZH & SynSense.ai
-* <img src="https://avatars0.githubusercontent.com/u/5928956?v=4" width="16"/> [Matthias H. Hennig](https://github.com/mhhennig), University of Edinburgh
-* <img src="https://avatars2.githubusercontent.com/u/3418096?v=4" width="16"/> [Mikkel Elle Lepperød](https://github.com/lepmik)
-* <img src="https://avatars2.githubusercontent.com/u/38734201?v=4" width="16"/> [NMI Biomedical Micro and Nano Engineering](https://github.com/NMI-MSNT)
-* <img src="https://avatars1.githubusercontent.com/u/1672447?v=4" width="16"/> [Pierre Yger](https://github.com/yger), Institut de la Vision
-* <img src="https://avatars0.githubusercontent.com/u/10051773?v=4" width="16"/> [Roger Hurwitz](https://github.com/rogerhurwitz)
-* <img src="https://avatars2.githubusercontent.com/u/11883463?v=4" width="16"/> [Roland Diggelmann](https://github.com/rdiggelmann), ETH Zurich
-* <img src="https://avatars2.githubusercontent.com/u/15884111?v=4" width="16"/> [Shawn Guo](https://github.com/Shawn-Guo-CN), Computer Laboratory, University of Cambridge
-* <img src="https://avatars1.githubusercontent.com/u/56535869?v=4" width="16"/> [TRRuikes](https://github.com/TRRuikes)
-* <img src="https://avatars3.githubusercontent.com/u/39889?v=4" width="16"/> [Yaroslav Halchenko](https://github.com/yarikoptic), Dartmouth College, @Debian, @DataLad, @PyMVPA, @fail2ban
-* <img src="https://avatars3.githubusercontent.com/u/41306197?v=4" width="16"/> [Michael Scudder](https://github.com/mikeyale)
+The following people have contributed code to the project as of 11 March 2021 (according to the GitHub API):
+
+* <img src="https://avatars.githubusercontent.com/u/68457885?v=4" width="16"/> [Abhijith Krishnan](https://github.com/abhijithkrishnan93)
+* <img src="https://avatars.githubusercontent.com/u/2369197?v=4" width="16"/> [Achilleas Koutsou](https://github.com/achilleas-k), Red Hat
+* <img src="https://avatars.githubusercontent.com/u/33499753?v=4" width="16"/> [Adam Lowet](https://github.com/alowet)
+* <img src="https://avatars.githubusercontent.com/u/844464?v=4" width="16"/> [Alan Liddell](https://github.com/aliddell), Path Robotics
+* <img src="https://avatars.githubusercontent.com/u/17097257?v=4" width="16"/> [Alessio Buccino](https://github.com/alejoe91), ETH
+* <img src="https://avatars.githubusercontent.com/u/844306?v=4" width="16"/> [Ben Dichter](https://github.com/bendichter), CatalystNeuro
+* <img src="https://avatars.githubusercontent.com/u/51133164?v=4" width="16"/> [Cody Baker](https://github.com/CodyCBakerPhD)
+* <img src="https://avatars.githubusercontent.com/u/31068646?v=4" width="16"/> [Cole Hurwitz](https://github.com/colehurwitz), University of Edinburgh
+* <img src="https://avatars.githubusercontent.com/u/24684018?v=4" width="16"/> [Emily Aery Jones](https://github.com/emilyasterjones), Stanford University
+* <img src="https://avatars.githubusercontent.com/u/5598671?v=4" width="16"/> [Fernando J. Chaure](https://github.com/ferchaure), University of Buenos Aires
+* <img src="https://avatars.githubusercontent.com/u/815627?v=4" width="16"/> [Garcia Samuel](https://github.com/samuelgarcia), CNRS, Centre de recherche en neuroscience de Lyon
+* <img src="https://avatars.githubusercontent.com/u/11243913?v=4" width="16"/> [Giuliano Maggi](https://github.com/gmaggi)
+* <img src="https://avatars.githubusercontent.com/u/8941752?v=4" width="16"/> [James Jun](https://github.com/jamesjun), Facebook, Agios-CTRL
+* <img src="https://avatars.githubusercontent.com/u/46056408?v=4" width="16"/> [Jasper Wouters](https://github.com/jwouters91)
+* <img src="https://avatars.githubusercontent.com/u/3679296?v=4" width="16"/> [Jeremy Magland](https://github.com/magland)
+* <img src="https://avatars.githubusercontent.com/u/5800317?v=4" width="16"/> [John Hermiz](https://github.com/jthermiz)
+* <img src="https://avatars.githubusercontent.com/u/13217618?v=4" width="16"/> [Joram van Rheede](https://github.com/joramvanrheede), University of Oxford
+* <img src="https://avatars.githubusercontent.com/u/6409964?v=4" width="16"/> [Jose Guzman](https://github.com/JoseGuzman), Austrian Academy of Sciences - OEAW
+* <img src="https://avatars.githubusercontent.com/u/200366?v=4" width="16"/> [Josh Siegle](https://github.com/jsiegle), Allen Institute for Brain Science
+* <img src="https://avatars.githubusercontent.com/u/8088860?v=4" width="16"/> [Julia Sprenger](https://github.com/JuliaSprenger), Institut de Neurosciences de la Timone (INT)
+* <img src="https://avatars.githubusercontent.com/u/9277197?v=4" width="16"/> [Kyu Hyun Lee](https://github.com/khl02007)
+* <img src="https://avatars.githubusercontent.com/u/24541631?v=4" width="16"/> [Luiz Tauffer](https://github.com/luiztauffer), @kth
+* <img src="https://avatars.githubusercontent.com/u/7804376?v=4" width="16"/> [Manish Mohapatra](https://github.com/manimoh)
+* <img src="https://avatars.githubusercontent.com/u/5928956?v=4" width="16"/> [Matthias H. Hennig](https://github.com/mhhennig), University of Edinburgh
+* <img src="https://avatars.githubusercontent.com/u/3418096?v=4" width="16"/> [Mikkel Elle Lepperød](https://github.com/lepmik)
+* <img src="https://avatars.githubusercontent.com/u/12814536?v=4" width="16"/> [Peter Jones](https://github.com/p2jones), NMI
+* <img src="https://avatars.githubusercontent.com/u/1672447?v=4" width="16"/> [Pierre Yger](https://github.com/yger), Institut de la Vision
+* <img src="https://avatars.githubusercontent.com/u/10051773?v=4" width="16"/> [Roger Hurwitz](https://github.com/rogerhurwitz)
+* <img src="https://avatars.githubusercontent.com/u/11883463?v=4" width="16"/> [Roland Diggelmann](https://github.com/rdiggelmann), ETH Zurich
+* <img src="https://avatars.githubusercontent.com/u/11567561?v=4" width="16"/> [Saksham Sharda](https://github.com/Saksham20)
+* <img src="https://avatars.githubusercontent.com/u/15884111?v=4" width="16"/> [Shawn Guo](https://github.com/Shawn-Guo-CN), School of Informatics, University of Edinburgh
+* <img src="https://avatars.githubusercontent.com/u/1872756?v=4" width="16"/> [Vincent Prevosto](https://github.com/vncntprvst)
+* <img src="https://avatars.githubusercontent.com/u/39889?v=4" width="16"/> [Yaroslav Halchenko](https://github.com/yarikoptic), Dartmouth College, @Debian, @DataLad, @PyMVPA, @fail2ban
+* <img src="https://avatars.githubusercontent.com/u/4267452?v=4" width="16"/> [catubc](https://github.com/catubc)
+* <img src="https://avatars.githubusercontent.com/u/2758427?v=4" width="16"/> [wuffi](https://github.com/wuffi)
+* <img src="https://avatars.githubusercontent.com/u/22896067?v=4" width="16"/> [llobetv](https://github.com/llobetv)
+* <img src="https://avatars.githubusercontent.com/u/3465310?v=4" width="16"/> [Dradeliomecus](https://github.com/Dradeliomecus)
+* <img src="https://avatars.githubusercontent.com/u/41306197?v=4" width="16"/> [Michael Scudder](https://github.com/mikeyale)
+* <img src="https://avatars.githubusercontent.com/u/44536113?v=4" width="16"/> [m-col](https://github.com/m-col), @DuguidLab

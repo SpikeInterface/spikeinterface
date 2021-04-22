@@ -17,6 +17,10 @@ With SpikeInterface, users can:
 - validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs.
 
+**NEWS**
+
+- New SpikeInterface release! Version 0.11.0 is now out (on 10/12/2020)!
+
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
@@ -33,9 +37,13 @@ With SpikeInterface, users can:
    whatisnew
    authors
 
+For more information, please have a look at:
+
+- The `eLife paper <https://elifesciences.org/articles/61834>`_
+
+- 1-hour `video tutorial <https://www.youtube.com/watch?v=fvKG_-xQ4D8&t=3364s&ab_channel=NeurodataWithoutBorders>`_, recorded for the NWB User Days (Sep 2020)
    
-Please have a look at the `preprint paper <https://www.biorxiv.org/content/10.1101/796599v1>`_  for more info.
-   
+- A collection of analysis notebook `SpikeInterface Reports <https://spikeinterface.github.io/>`_
 
 .. Indices and tables
 .. ==================

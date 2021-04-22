@@ -39,8 +39,14 @@ Related projects
 
 - `spikeforest <https://spikeforest.flatironinstitute.org>`_ is a reproducible, continuously updating platform which
   benchmarks the performance of some spike sorting software (kilosort, herdingspike, ironcliust, jrclust, klusta,
-  moutainsort4, spykingcircus, tridesclous, waveclus) using many ground-truth datasets. Its processing is based on
-  SpikeInterface.
+  moutainsort4, spykingcircus, tridesclous, waveclus) using many ground-truth datasets. The processing engine is based
+  on SpikeInterface.
+- `probeinterface <https://github.com/SpikeInterface/probeinterface>`_ is a python package to define and handle neural
+   probes and the wiring to recording devices.
 - `spikely <https://github.com/SpikeInterface/spikely>`_ is a graphical user interface (GUI) that allows users to build
   and run SpikeInterface spike sorting pipelines on extracellular datasets.
-- `MEArec <https://mearec.readthedocs.io>`_ is a fast customzable biophysical simulation of extracellular recording.
+- `spikemetrics <https://github.com/SpikeInterface/spikemetrics>`_ external python package wrapped by SpikeInterface to
+  compute quality metrics related to spike sorting output.
+- `spikefeatures <https://github.com/SpikeInterface/spikefeatures>`_ external python package wrapped by SpikeInterface
+  to compute different features from extracellular action potentials.
+- `MEArec <https://mearec.readthedocs.io>`_ is a fast customizable biophysical simulation of extracellular recording.
