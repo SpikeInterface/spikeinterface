@@ -1,14 +1,25 @@
-# optional dependancy
-h5py
-pandas
-sklearn
+# main dependancy
+numpy
+neo
+joblib
+tqdm
+probeinterface
 
 # sphinx-gallery
 pillow
 sphinx-gallery
 numpydoc
-matplotlib==3.2.2
+matplotlib
 
+
+# optional dependancy for sub modules
+h5py
+pandas
+sklearn
+matplotlib
+networkx
+datalad
+MEArec
 
 ## install sorters ##
 # ms4
