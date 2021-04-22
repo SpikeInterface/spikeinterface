@@ -67,6 +67,8 @@ comparison:
 
 widgets:
   * many of them
+  * plot_activity_map
+  * in probeinterface click and get channel!!
 
 
 examples:

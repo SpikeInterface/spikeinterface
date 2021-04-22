@@ -2,7 +2,7 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
 
-from ..utils import get_random_data_for_scaling
+from ..utils import get_random_data_chunks
 
 
 class ScaleRecordingSegment(BasePreprocessorSegment):
@@ -47,14 +47,11 @@ class NormalizeByQuantileRecording(BasePreprocessor):
     """
     name = 'normalize_by_quantile'
     def __init__(self, recording, scale=1.0, median=0.0, q1=0.01, q2=0.99, 
-                mode='by_channel', 
-                num_chunks_per_segment=50, chunk_size=500, seed=0):
+                mode='by_channel', **random_chunk_kwargs):
         
         assert mode in ('pool_channel', 'by_channel')
         
-        random_data = get_random_data_for_scaling(recording, 
-                        num_chunks_per_segment=num_chunks_per_segment,
-                        chunk_size=chunk_size, seed=seed)
+        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
         if mode == 'pool_channel':
             num_chans = recording.get_num_channels()
@@ -86,8 +83,8 @@ class NormalizeByQuantileRecording(BasePreprocessor):
             self.add_recording_segment(rec_segment)
         
         self._kwargs = dict(recording=recording.to_dict(), scale=scale, median=median,
-            q1=q1, q2=q2, mode=mode, num_chunks_per_segment=num_chunks_per_segment, 
-            chunk_size=chunk_size, seed=seed)
+            q1=q1, q2=q2, mode=mode)
+        self._kwargs.update(random_chunk_kwargs)
 
 
 class ScaleRecording(BasePreprocessor):
@@ -149,7 +146,7 @@ class CenterRecording(BasePreprocessor):
                     num_chunks_per_segment=50, chunk_size=500, seed=0):
 
         assert mode in ('median', 'mean')
-        random_data = get_random_data_for_scaling(recording, 
+        random_data = get_random_data_chunks(recording, 
                         num_chunks_per_segment=num_chunks_per_segment,
                         chunk_size=chunk_size, seed=seed)
 
