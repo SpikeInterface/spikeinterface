@@ -7,6 +7,7 @@ Release notes
   :maxdepth: 1
 
   releases/0.90.0.rst
+  releases/0.12.0.rst
   releases/0.11.0.rst
   releases/0.10.0.rst
   releases/0.9.9.rst
@@ -21,6 +22,11 @@ Major release:
   * contain all subpackages
   * transpose get_trace() shape
   * handle multi segment
+
+Version 0.12.0
+---------------
+
+  * Major update: API change for get_traces to enable return_scaled
 
 Version 0.11.0
 ---------------
