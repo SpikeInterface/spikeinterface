@@ -57,16 +57,11 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
   * no more depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets
 
 
-
-
-
 **Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
 ## Documentation
 
 All documentation for SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
-
-You can also check out this [1-hour video tutorial](https://www.youtube.com/watch?v=fvKG_-xQ4D8&t=3364s&ab_channel=NeurodataWithoutBorders) for the NWB User Days 2020:
 
 
 ## Citation
@@ -84,4 +79,3 @@ If you find SpikeInterface useful in your research, please cite:
   publisher={eLife Sciences Publications Limited}
 }
 ```
-

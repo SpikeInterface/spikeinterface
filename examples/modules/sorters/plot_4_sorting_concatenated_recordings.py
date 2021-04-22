@@ -52,12 +52,3 @@ import time
 
 #~ sortings = []
 
-#~ sortings = []
-#~ for epoch in multirecording.get_epoch_names():
-    #~ info = multirecording.get_epoch_info(epoch)
-    #~ sorting_single = se.SubSortingExtractor(multisorting, start_frame=info['start_frame'], end_frame=info['end_frame'])
-    #~ sortings.append(sorting_single)
-
-#~ ##############################################################################
-#~ # The :code:`SortingExtractor` objects in  the :code:`sortings` list contain now split spike trains. The nice thing of
-#~ # this approach is that the unit_ids for the different epochs are the same unit!
