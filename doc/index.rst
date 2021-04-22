@@ -9,7 +9,7 @@ Welcome to SpikeInterface's documentation!
     
     To see reelased documention this is here https://spikeinterface.readthedocs.io/en/stable
     
-    Actual OLD API release is 0.12.0.
+    Actual  API released is 0.12.0.
 
 .. image:: images/logo.png
   :scale: 100 %
