@@ -53,8 +53,8 @@ multisorting = ss.run_klusta(multirecording)
 sortings = []
 
 sortings = []
-for epoch in multirecording.get_epoch_names():
-    info = multirecording.get_epoch_info(epoch)
+for epoch in multisorting.get_epoch_names():
+    info = multisorting.get_epoch_info(epoch)
     sorting_single = se.SubSortingExtractor(multisorting, start_frame=info['start_frame'], end_frame=info['end_frame'])
     sortings.append(sorting_single)
 
