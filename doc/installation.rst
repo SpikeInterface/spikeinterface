@@ -1,15 +1,13 @@
 Installation
 ============
 
-:code:`spikeinterface` is a Python package. It can be installed using pip:
+:code:`spikeinterface` is a Python package.
 
-.. code-block:: bash
+The actual "new API" (v0.90.0) is not release on pypi yet.
+It will release
+ in July 2021
 
-    pip install spikeinterface
-
-The pip installation will install a specific and fixed version of the spikeinterface packages.
-
-To use the latest updates, install `spikeinterface` and the related packages from source:
+To use it now, you have to install `spikeinterface` from source:
 
 .. code-block:: bash
 
