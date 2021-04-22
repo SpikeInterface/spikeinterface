@@ -25,9 +25,9 @@ jobs:
         id: cache-venv
         with:
           path: ./test_env
-          key: $venv-{{ runner.os }}-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_test.txt') }}
+          key: {{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_test.txt') }}
           restore-keys: |
-            ${{ runner.os }}-venv-
+            ${{ runner.os }}-venv
       - name: Install dependencies
         run: |
           # this is for datalad and download testing datasets
@@ -57,7 +57,7 @@ jobs:
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
           path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${HASH_EPHY_DATASET}
+          key: ${{ runner.os }}-datasets-${{env.HASH_EPHY_DATASET}}
           restore-keys: |
             ${{ runner.os }}-datasets
       - name: Test with pytest
