@@ -1,11 +1,24 @@
 Welcome to SpikeInterface's documentation!
 ==========================================
 
+
+
+.. warning::
+
+    This is the not yet released documentation of spikeinterface (0.90.0)
+    
+    To see reelased documention this is here https://spikeinterface.readthedocs.io/en/stable
+    
+    Actual OLD API release is 0.12.0.
+
 .. image:: images/logo.png
   :scale: 100 %
-  :align: right
+  :align: center
+
 
 Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility of spike sorting and all its associated computations.
+
+
 
 With SpikeInterface, users can:
 
