@@ -15,6 +15,7 @@ matplotlib
 # optional dependancy for sub modules
 h5py
 pandas
+scipy
 sklearn
 matplotlib
 networkx
