@@ -360,10 +360,20 @@ class BaseRecording(BaseExtractor):
         self.set_property('group', groups, ids=channel_ids)
 
     def set_channel_gains(self, gains, channel_ids=None):
-        self.set_property('gain', gains, ids=channel_ids)
+        if np.isscalar(gains):
+            gains = [gains] * self.get_num_channels()
+        self.set_property('magnitude_gain', gains, ids=channel_ids)
 
     def get_channel_gains(self, channel_ids=None):
-        return self.get_property('gain', ids=channel_ids)
+        return self.get_property('magnitude_gain', ids=channel_ids)
+
+    def set_channel_offsets(self, offsets, channel_ids=None):
+        if np.isscalar(offsets):
+            offsets = [offsets] * self.get_num_channels()
+        self.set_property('magnitude_offset', offsets, ids=channel_ids)
+
+    def get_channel_offsets(self, channel_ids=None):
+        return self.get_property('magnitude_offset', ids=channel_ids)
 
     def get_channel_property(self, channel_id, key):
         values = self.get_property(key)
