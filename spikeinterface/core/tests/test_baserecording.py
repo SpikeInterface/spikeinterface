@@ -10,7 +10,7 @@ import numpy as np
 
 from probeinterface import Probe
 
-from spikeinterface.core import BinaryRecordingExtractor, load_extractor
+from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
 # file and folder created
@@ -112,8 +112,24 @@ def test_BaseRecording():
     # import matplotlib.pyplot as plt
     # plot_probe(probe)
     # plot_probe(probe2)
-    # plt.show()    
-
+    # plt.show()
+    
+    # test return_scale
+    sampling_frequency = 30000
+    traces = np.zeros((1000, 5), dtype='int16')
+    rec_int16 = NumpyRecording([traces], sampling_frequency)
+    assert rec_int16.get_dtype() == 'int16'
+    print(rec_int16)
+    traces_int16 = rec_int16.get_traces()
+    assert traces_int16.dtype == 'int16'
+    # return_scaled raise error when no magnitude_gains/magnitude_offsets properties
+    with pytest.raises(ValueError):
+        traces_float32 = rec_int16.get_traces(return_scaled=True)
+    rec_int16.set_property('magnitude_gain', [.195e-6]*5)
+    rec_int16.set_property('magnitude_offset', [0.]*5)
+    traces_float32 = rec_int16.get_traces(return_scaled=True)
+    assert traces_float32.dtype == 'float32'
+    
 
 if __name__ == '__main__':
     _clean_all()

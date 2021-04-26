@@ -52,35 +52,42 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         raw_dtypes = signal_channels['dtype']
 
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
-        # TODO propose a mechanism to select scaled/raw dtype
-        scaled_dtype = 'float32'
-        BaseRecording.__init__(self, sampling_frequency, chan_ids, scaled_dtype)
+        dtype = signal_channels['dtype'][0]
+        BaseRecording.__init__(self, sampling_frequency, chan_ids, dtype)
 
-        # spikeinterface for units to be uV implicitly
+        # find the gain to uV
+        gains = signal_channels['gain']
+        offsets = signal_channels['offset']
+
         units = signal_channels['units']
         if not np.all(np.isin(units, ['V', 'mV', 'uV'])):
             # check that units are V, mV or uV
             error = f'This extractor based on  neo.{self.NeoRawIOClass} have strange units not in (V, mV, uV) {units}'
             print(error)
-        self.additional_gain = np.ones(units.size, dtype='float')
-        self.additional_gain[units == 'V'] = 1e6
-        self.additional_gain[units == 'mV'] = 1e3
-        self.additional_gain[units == 'uV'] = 1.
-        self.additional_gain = self.additional_gain.reshape(1, -1)
+        additional_gain = np.ones(units.size, dtype='float')
+        additional_gain[units == 'V'] = 1e6
+        additional_gain[units == 'mV'] = 1e3
+        additional_gain[units == 'uV'] = 1.
+        additional_gain = additional_gain
 
+        final_gains = gains * additional_gain
+        final_offsets = offsets * additional_gain
+        
+        self.set_property('magnitude_gain', final_gains)
+        self.set_property('magnitude_offset', final_offsets)
+        
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
-            rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index, self.additional_gain)
+            rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index)
             self.add_recording_segment(rec_segment)
 
 
 class NeoRecordingSegment(BaseRecordingSegment):
-    def __init__(self, neo_reader, segment_index, stream_index, additional_gain):
+    def __init__(self, neo_reader, segment_index, stream_index):
         BaseRecordingSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.stream_index = stream_index
-        self.additional_gain = additional_gain
 
     def get_num_samples(self):
         n = self.neo_reader.get_signal_size(block_index=0,
@@ -88,9 +95,7 @@ class NeoRecordingSegment(BaseRecordingSegment):
                                             stream_index=self.stream_index)
         return n
 
-    def get_traces(self, start_frame, end_frame, channel_indices, return_scaled=True):
-        # in neo rawio channel can acces by names/ids/indexes
-        # there is no garranty that ids/names are unique on some formats
+    def get_traces(self, start_frame, end_frame, channel_indices):
         raw_traces = self.neo_reader.get_analogsignal_chunk(
             block_index=0,
             seg_index=self.segment_index,
@@ -99,19 +104,7 @@ class NeoRecordingSegment(BaseRecordingSegment):
             stream_index=self.stream_index,
             channel_indexes=channel_indices,
         )
-
-        if return_scaled:
-            # rescale traces to natural units (can be anything)
-            scaled_traces = self.neo_reader.rescale_signal_raw_to_float(raw_traces,
-                                                                        dtype='float32', stream_index=self.stream_index,
-                                                                        channel_indexes=channel_indices)
-            # and then to uV
-            if channel_indices is None:
-                channel_indices = slice(None)
-            scaled_traces *= self.additional_gain[:, channel_indices]
-            return scaled_traces
-        else:
-            return raw_traces
+        return raw_traces
 
 
 class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
