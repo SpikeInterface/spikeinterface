@@ -109,10 +109,10 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # test = MearecRecordingTest()
-    test = MearecSortingTest()
-    # test = SpikeGLXRecordingTest()
-    # test = OpenEphysBinaryRecordingTest()
+    #~ test = MearecRecordingTest()
+    #~ test = MearecSortingTest()
+    test = SpikeGLXRecordingTest()
+    #~ test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
