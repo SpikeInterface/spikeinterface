@@ -73,8 +73,8 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         final_gains = gains * additional_gain
         final_offsets = offsets * additional_gain
         
-        self.set_property('magnitude_gain', final_gains)
-        self.set_property('magnitude_offset', final_offsets)
+        self.set_property('gain_to_uV', final_gains)
+        self.set_property('offset_to_uV', final_offsets)
         
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):

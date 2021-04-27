@@ -51,8 +51,8 @@ recording.set_channel_offsets(offset)
 # Internally this gains and offsets are handle with properties
 # So the gain could be "by channel".
 
-print(recording.get_property('magnitude_gain'))
-print(recording.get_property('magnitude_offset'))
+print(recording.get_property('gain_to_uV'))
+print(recording.get_property('offset_to_uV'))
 
 
 ###############################################################################
