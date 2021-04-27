@@ -150,7 +150,7 @@ sorting_TDC = ss.run_tridesclous(recording=recording_preprocessed)
 # objects. We can print the units found using:
 
 print('Units found by spykingcircus:', sorting_SC.get_unit_ids())
-print('Units found by Klusta:', sorting_TDC.get_unit_ids())
+print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 
 
 ##############################################################################
@@ -227,7 +227,7 @@ print(metrics)
 comp_gt_TDC = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
 comp_TDC_SC = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC)
 comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_SC],
-                                         name_list=['klusta', 'circus'])
+                                         name_list=['tdc', 'circus'])
 
 
 ##############################################################################
