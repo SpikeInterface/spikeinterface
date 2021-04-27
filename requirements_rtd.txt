@@ -1,14 +1,26 @@
-# optional dependancy
-h5py
-pandas
-sklearn
+# main dependancy
+numpy
+neo
+joblib
+tqdm
+probeinterface
 
 # sphinx-gallery
 pillow
 sphinx-gallery
 numpydoc
-matplotlib==3.2.2
+matplotlib
 
+
+# optional dependancy for sub modules
+h5py
+pandas
+scipy
+sklearn
+matplotlib
+networkx
+datalad
+MEArec
 
 ## install sorters ##
 # ms4
@@ -24,4 +36,4 @@ klustakwik2==0.2.7
 # tridesclous
 pyqt5
 hdbscan
-tridesclous==1.6.0
+tridesclous
