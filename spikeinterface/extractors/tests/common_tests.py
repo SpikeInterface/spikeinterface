@@ -55,10 +55,10 @@ class RecordingCommonTestSuite(CommonTestSuite):
             
             # try return_scaled
             if isinstance(rec, NeoBaseRecordingExtractor):
-                assert rec.get_property('magnitude_gain') is not None
-                assert rec.get_property('magnitude_offset') is not None
+                assert rec.get_property('gain_to_uV') is not None
+                assert rec.get_property('offset_to_uV') is not None
                 
-            if rec.get_property('magnitude_gain') is not None and rec.get_property('magnitude_offset') is not None:
+            if rec.get_property('gain_to_uV') is not None and rec.get_property('offset_to_uV') is not None:
                 trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True)
                 assert trace_scaled.dtype == 'float32'
 

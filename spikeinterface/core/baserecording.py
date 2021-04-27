@@ -90,10 +90,10 @@ class BaseRecording(BaseExtractor):
         if order is not None:
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
-            gains = self.get_property('magnitude_gain')
-            offsets = self.get_property('magnitude_offset')
+            gains = self.get_property('gain_to_uV')
+            offsets = self.get_property('offset_to_uV')
             if gains is None or offsets is None:
-                raise ValueError('This recording do not support return_scaled=True (need magnitude_gains and magnitude_offsets properties)')
+                raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_to_uV properties)')
             gains = gains[channel_indices].astype('float32')
             offsets = offsets[channel_indices].astype('float32')
             traces = traces.astype('float32') * gains + offsets
@@ -362,18 +362,18 @@ class BaseRecording(BaseExtractor):
     def set_channel_gains(self, gains, channel_ids=None):
         if np.isscalar(gains):
             gains = [gains] * self.get_num_channels()
-        self.set_property('magnitude_gain', gains, ids=channel_ids)
+        self.set_property('gain_to_uV', gains, ids=channel_ids)
 
     def get_channel_gains(self, channel_ids=None):
-        return self.get_property('magnitude_gain', ids=channel_ids)
+        return self.get_property('gain_to_uV', ids=channel_ids)
 
     def set_channel_offsets(self, offsets, channel_ids=None):
         if np.isscalar(offsets):
             offsets = [offsets] * self.get_num_channels()
-        self.set_property('magnitude_offset', offsets, ids=channel_ids)
+        self.set_property('offset_to_uV', offsets, ids=channel_ids)
 
     def get_channel_offsets(self, channel_ids=None):
-        return self.get_property('magnitude_offset', ids=channel_ids)
+        return self.get_property('offset_to_uV', ids=channel_ids)
 
     def get_channel_property(self, channel_id, key):
         values = self.get_property(key)

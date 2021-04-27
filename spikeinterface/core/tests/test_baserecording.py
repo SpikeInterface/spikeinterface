@@ -122,11 +122,11 @@ def test_BaseRecording():
     print(rec_int16)
     traces_int16 = rec_int16.get_traces()
     assert traces_int16.dtype == 'int16'
-    # return_scaled raise error when no magnitude_gains/magnitude_offsets properties
+    # return_scaled raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
         traces_float32 = rec_int16.get_traces(return_scaled=True)
-    rec_int16.set_property('magnitude_gain', [.195e-6]*5)
-    rec_int16.set_property('magnitude_offset', [0.]*5)
+    rec_int16.set_property('gain_to_uV', [.195]*5)
+    rec_int16.set_property('offset_to_uV', [0.]*5)
     traces_float32 = rec_int16.get_traces(return_scaled=True)
     assert traces_float32.dtype == 'float32'
     
