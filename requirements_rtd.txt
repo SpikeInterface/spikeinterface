@@ -27,13 +27,17 @@ MEArec
 mountainsort4==1.0.0
 
 # klusta
-Cython
-tqdm
-click
-klusta
-klustakwik2==0.2.7
+# Cython
+# tqdm
+# click
+# klusta
+# klustakwik2==0.2.7
 
 # tridesclous
 pyqt5
 hdbscan
 tridesclous
+
+# spyking-circus
+spyking-circus
+
