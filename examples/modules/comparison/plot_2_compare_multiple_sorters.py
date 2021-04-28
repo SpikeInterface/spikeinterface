@@ -15,21 +15,26 @@ trains and spikes in agreement with multiple sorters.
 import numpy as np
 import matplotlib.pyplot as plt
 
+import spikeinterface as si
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
 ##############################################################################
-# First, let's create a toy example:
+# First, let's download a simulated dataset
+#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
-recording, sorting = se.toy_example(num_channels=4, duration=20, seed=0, num_segments=1)
-recording = recording.save()
+local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+recording = se.MEArecRecordingExtractor(local_path)
+sorting = se.MEArecSortingExtractor(local_path)
+print(recording)
+print(sorting)
 
 #############################################################################
 # Then run 3 spike sorters and compare their output.
 
-sorting_SC = ss.run_spykingcircus(recording)
+sorting_MS4 = ss.run_mountainsort4(recording)
 sorting_HS = ss.run_herdingspikes(recording)
 sorting_TDC = ss.run_tridesclous(recording)
 
@@ -37,8 +42,8 @@ sorting_TDC = ss.run_tridesclous(recording)
 # Compare multiple spike sorter outputs
 # -------------------------------------------
 
-mcmp = sc.compare_multiple_sorters(sorting_list=[sorting_SC, sorting_HS, sorting_TDC],
-                                   name_list=['SC', 'HS', 'TDC'], verbose=True)
+mcmp = sc.compare_multiple_sorters(sorting_list=[sorting_MS4, sorting_HS, sorting_TDC],
+                                   name_list=['MS4', 'HS', 'TDC'], verbose=True)
 
 #############################################################################
 # The multiple sorters comparison internally computes pairwise comparison,
@@ -113,7 +118,7 @@ print(unit_id0, ':', sorter_unit_ids)
 # and the agreement sorter:
 
 
-st0 = sorting_SC.get_unit_spike_train(sorter_unit_ids['SC'])
+st0 = sorting_MS4.get_unit_spike_train(sorter_unit_ids['MS4'])
 st1 = sorting_HS.get_unit_spike_train(sorter_unit_ids['HS'])
 st2 = sorting_TDC.get_unit_spike_train(sorter_unit_ids['TDC'])
 st3 = agr_3.get_unit_spike_train(unit_id0)
@@ -125,7 +130,7 @@ ax.plot(st1, 1 * np.ones(st1.size), '|')
 ax.plot(st2, 2 * np.ones(st2.size), '|')
 ax.plot(st3, 3 * np.ones(st3.size), '|')
 
-print('Spykingcircus spike train length', st0.size)
+print('mountainsort4 spike train length', st0.size)
 print('herdingsspieks spike train length', st1.size)
 print('Tridesclous spike train length', st2.size)
 print('Agreement spike train length', st3.size)

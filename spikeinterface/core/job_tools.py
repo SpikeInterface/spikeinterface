@@ -158,7 +158,7 @@ class ChunkRecordingExecutor:
             returns = []
         else:
             returns = None
-        
+
         if self.n_jobs == 1:
             if self.progress_bar:
                 all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name)
@@ -171,9 +171,10 @@ class ChunkRecordingExecutor:
         else:
             #  if self.verbose:
             #   print('num chunks to compute', len(all_chunks))
-
+            
+            n_jobs = min(self.n_jobs, len(all_chunks))
             # parallel
-            executor = ProcessPoolExecutor(max_workers=self.n_jobs,
+            executor = ProcessPoolExecutor(max_workers=n_jobs,
                                            initializer=worker_initializer,
                                            initargs=(self.func, self.init_func, self.init_args))
 
@@ -184,8 +185,9 @@ class ChunkRecordingExecutor:
             # context="loky", timeout=10.,
             # reuse=False,
             # kill_workers=True)
-
+            
             results = executor.map(function_wrapper, all_chunks)
+            
 
             if self.progress_bar:
                 results = tqdm(results, desc=self.job_name, total=len(all_chunks))

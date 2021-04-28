@@ -23,21 +23,27 @@ datalad
 MEArec
 
 ## install sorters ##
-# ms4
-mountainsort4==1.0.0
+
+## mountainsort4
+mountainsort4>=1.0.0
 
 # klusta
-# Cython
-# tqdm
-# click
-# klusta
-# klustakwik2==0.2.7
+# Do not work anymore on python3.8
+# Cython
+# tqdm
+# click
+# klusta
+# klustakwik2==0.2.7
 
-# tridesclous
+
+## tridesclous
 pyqt5
 hdbscan
+loky
 tridesclous
 
+## spyking-circus impossible to run RTD because need mpich
 # spyking-circus
-spyking-circus
 
+## herdingspikes
+herdingspikes

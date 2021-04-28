@@ -36,7 +36,8 @@ class Mountainsort4Sorter(BaseSorter):
         'filter': True,
         'whiten': True,  # Whether to do channel whitening as part of preprocessing
         'curation': False,
-        'num_workers': None,
+        #'num_workers': None,
+        'num_workers': 1,
         'clip_size': 50,
         'detect_threshold': 3,
         'detect_interval': 10,  # Minimum number of timepoints between events detected on the same channel
