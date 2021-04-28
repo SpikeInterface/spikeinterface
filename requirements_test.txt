@@ -12,25 +12,33 @@ MEArec
 
 
 ## install sorters ##
+# python based only
+# no GPU (no pykilosort, no yass)
 
-# MS4: do not work
-# Do not work anumore
-# ml_ms4alg==0.3.2
+## mountainsort4
+# have some problems with dask
+# temporary removed from tests
+# pybind11
+# isosplit5
+# mountainsort4
 
-# klusta
-# Do not work anumore
+## klusta
+# is removed from test
+# do not work anymore on python3.8
 # Cython
 # tqdm
 # click
 # klusta
 # klustakwik2==0.2.7
 
-# tridesclous
+## tridesclous
 pyqt5
 hdbscan
 loky
 tridesclous
 
-# spyking-circus
+## spyking-circus
 spyking-circus
 
+## herdingspikes
+herdingspikes

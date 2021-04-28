@@ -13,21 +13,28 @@ This example show how to compare the result of two sorters.
 import numpy as np
 import matplotlib.pyplot as plt
 
+import spikeinterface as si
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
 ##############################################################################
-# First, let's create a toy example:
+# First, let's download a simulated dataset
+#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
-recording, sorting = se.toy_example(num_channels=4, duration=10, seed=0, num_segments=1)
+local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+recording = se.MEArecRecordingExtractor(local_path)
+sorting = se.MEArecSortingExtractor(local_path)
+print(recording)
+print(sorting)
+
 
 
 #############################################################################
 # Then run two spike sorters and compare their ouput.
 
-sorting_SC = ss.run_spykingcircus(recording)
+sorting_HS = ss.run_herdingspikes(recording)
 sorting_TDC = ss.run_tridesclous(recording)
 
 
@@ -39,30 +46,30 @@ sorting_TDC = ss.run_tridesclous(recording)
 # 
 # Let’s see how to inspect and access this matching.
 
-cmp_SC_TDC = sc.compare_two_sorters(sorting1=sorting_SC, sorting2=sorting_TDC, 
-                                               sorting1_name='SC', sorting2_name='TDC')
+cmp_HS_TDC = sc.compare_two_sorters(sorting1=sorting_HS, sorting2=sorting_TDC, 
+                                               sorting1_name='HS', sorting2_name='TDC')
 
 #############################################################################
 # We can check the agreement matrix to inspect the matching.
 
-sw.plot_agreement_matrix(cmp_SC_TDC)
+sw.plot_agreement_matrix(cmp_HS_TDC)
 
 #############################################################################
 # Some useful internal dataframes help to check the match and count
 #  like **match_event_count** or **agreement_scores**
 
-print(cmp_SC_TDC.match_event_count)
-print(cmp_SC_TDC.agreement_scores)
+print(cmp_HS_TDC.match_event_count)
+print(cmp_HS_TDC.agreement_scores)
 
 #############################################################################
 # In order to check which units were matched, the :code:`get_matching`
 # methods can be used. If units are not matched they are listed as -1.
 
-sc_to_tdc, tdc_to_sc = cmp_SC_TDC.get_matching()
+sc_to_tdc, tdc_to_sc = cmp_HS_TDC.get_matching()
 
-print('matching SC to TDC')
+print('matching HS to TDC')
 print(sc_to_tdc)
-print('matching TDC to SC')
+print('matching TDC to HS')
 print(tdc_to_sc)
 
 
@@ -72,13 +79,13 @@ print(tdc_to_sc)
 
 matched_ids = sc_to_tdc[sc_to_tdc != -1]
 
-unit_id_SC = matched_ids.index[0]
-unit_id_TDC = matched_ids[unit_id_SC]
+unit_id_HS = matched_ids.index[0]
+unit_id_TDC = matched_ids[unit_id_HS]
 
 
 
 # check that matched spike trains correspond
-st1 = sorting_SC.get_unit_spike_train(unit_id_SC)
+st1 = sorting_HS.get_unit_spike_train(unit_id_HS)
 st2 = sorting_TDC.get_unit_spike_train(unit_id_TDC)
 fig, ax = plt.subplots()
 ax.plot(st1, np.zeros(st1.size), '|')

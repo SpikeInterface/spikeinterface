@@ -33,12 +33,25 @@ import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
-##############################################################################
-# First, let's create a toy example with the :code:`extractors` module:
 
-recording, sorting_true = se.toy_example(duration=10, num_channels=4, seed=0, num_segments=1)
+##############################################################################
+#~ # First, let's create a toy example with the :code:`extractors` module:
+
+#~ recording, sorting_true = se.toy_example(duration=10, num_channels=4, seed=0, num_segments=1)
+#~ print(recording)
+#~ print(sorting_true)
+
+
+##############################################################################
+# First, let's download a simulated dataset
+#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+
+local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+recording = se.MEArecRecordingExtractor(local_path)
+sorting_true = se.MEArecSortingExtractor(local_path)
 print(recording)
 print(sorting_true)
+
 
 ##############################################################################
 # :code:`recording` is a :code:`RecordingExtractor` object, which extracts information about channel ids, channel locations
@@ -121,24 +134,24 @@ print('Installed sorters', ss.installed_sorters())
 # Spike sorters come with a set of parameters that users can change.
 #  The available parameters are dictionaries and can be accessed with:
 
-print(ss.get_default_params('spykingcircus'))
-print(ss.get_default_params('klusta'))
+print(ss.get_default_params('herdingspikes'))
+print(ss.get_default_params('tridesclous'))
 
 ##############################################################################
-# Let's run spkykingcircus and change one of the parameter, the detection_threshold:
+# Let's run herdingspikes and change one of the parameter, the detection_threshold:
 
-sorting_SC = ss.run_spykingcircus(recording=recording_preprocessed, detect_threshold=6)
-print(sorting_SC)
+sorting_HS = ss.run_herdingspikes(recording=recording_preprocessed, detect_threshold=4)
+print(sorting_HS)
 
 ##############################################################################
 # Alternatively we can pass full dictionary containing the parameters:
 
-sc_params = ss.get_default_params('spykingcircus')
-sc_params['detect_threshold'] = 4
+other_params = ss.get_default_params('herdingspikes')
+other_params['detect_threshold'] = 5
 
 # parameters set by params dictionary
-sorting_SC_2 = ss.run_spykingcircus(recording=recording_preprocessed, **sc_params)
-print(sorting_SC_2)
+sorting_HS_2 = ss.run_herdingspikes(recording=recording_preprocessed, **other_params)
+print(sorting_HS_2)
 
 ##############################################################################
 # Let's run tridesclous as well, with default parameters:
@@ -149,7 +162,7 @@ sorting_TDC = ss.run_tridesclous(recording=recording_preprocessed)
 # The :code:`sorting_MS4` and :code:`sorting_MS4` are :code:`SortingExtractor`
 # objects. We can print the units found using:
 
-print('Units found by spykingcircus:', sorting_SC.get_unit_ids())
+print('Units found by herdingspikes:', sorting_HS.get_unit_ids())
 print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 
 
@@ -225,9 +238,9 @@ print(metrics)
 # and Mountainsor4), or (3) compare the output of multiple sorters:
 
 comp_gt_TDC = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
-comp_TDC_SC = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC)
-comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_SC],
-                                         name_list=['tdc', 'circus'])
+comp_TDC_HS = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_HS)
+comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_HS],
+                                         name_list=['tdc', 'hs'])
 
 
 ##############################################################################
@@ -243,12 +256,12 @@ w_conf = sw.plot_agreement_matrix(comp_gt_TDC)
 # When comparing two sorters (2), we can see the matching of units between sorters.
 #  Units which are not mapped has -1 as unit id.
 
-comp_TDC_SC.hungarian_match_12
+comp_TDC_HS.hungarian_match_12
 
 ##############################################################################
 # or reverse
 
-comp_TDC_SC.hungarian_match_21
+comp_TDC_HS.hungarian_match_21
 
 
 ##############################################################################
