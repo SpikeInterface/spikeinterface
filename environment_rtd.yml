@@ -16,16 +16,18 @@ dependencies:
   - scikit-learn
   - networkx
   - git-annex
+  - datalad
   - pybind11
   - pyqt=5
   - loky
   - pip:
-    - neo
+    - git+https://github.com/NeuralEnsemble/python-neo.git
     - probeinterface
-    - datalad
     - MEArec
     - isosplit5
     - mountainsort4>=1.0.0
     - hdbscan
     - tridesclous
     - herdingspikes
+
+# Notes need to be modified when neo 0.10.0 is out
