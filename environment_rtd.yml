@@ -16,13 +16,13 @@ dependencies:
   - scikit-learn
   - networkx
   - git-annex
+  - datalad
   - pybind11
   - pyqt=5
   - loky
   - pip:
     - neo
     - probeinterface
-    - datalad
     - MEArec
     - isosplit5
     - mountainsort4>=1.0.0
