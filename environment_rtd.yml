@@ -1,0 +1,32 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - pip>=21.0
+  - numpy
+  - joblib
+  - tqdm
+  - pillow
+  - sphinx-gallery
+  - numpydoc
+  - matplotlib
+  - h5py
+  - pandas
+  - sklearn
+  - networkx
+  - git-annex
+  - datalad
+  - pybind11
+  - ptqt=5
+  - loky
+  - pip:
+    - neo
+    - probeinterface
+    - datalad
+    - MEArec
+    - isosplit5
+    - mountainsort4>=1.0.0
+    - hdbscan
+    - tridesclous
+    - herdingspikes
