@@ -40,7 +40,7 @@ print(sorting_HS.get_unit_ids())
 # You can also run multiple sorters on the same recording:
 
 recordings = {'toy' : recording }
-sorter_list = ['spykingcircus', 'herdingspikes', 'tridesclous']
+sorter_list = ['herdingspikes', 'tridesclous']
 sorting_output = ss.run_sorters(sorter_list, recordings, working_folder='tmp_some_sorters', mode_if_folder_exists='overwrite')
 
 ##############################################################################

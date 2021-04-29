@@ -16,7 +16,6 @@ dependencies:
   - scikit-learn
   - networkx
   - git-annex
-  - datalad
   - pybind11
   - pyqt=5
   - loky
