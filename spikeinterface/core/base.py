@@ -387,7 +387,7 @@ class BaseExtractor:
                 with open(str(file_path), 'rb') as f:
                     d = pickle.load(f)
             else:
-                raise ValueError('Impossible to load {file_path}')
+                raise ValueError(f'Impossible to load {file_path}')
             extractor = BaseExtractor.from_dict(d)
             return extractor
 
@@ -548,7 +548,7 @@ def _load_extractor_from_dict(dic):
     class_name = None
 
     if 'kwargs' not in dic:
-        raise Exception(f'This dict cannot be load into extractor {d}')
+        raise Exception(f'This dict cannot be load into extractor {dic}')
     kwargs = deepcopy(dic['kwargs'])
 
     if any(isinstance(v, dict) for v in kwargs.values()):

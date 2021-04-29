@@ -151,7 +151,6 @@ class HerdingspikesSorter(BaseSorter):
         
         p = params
 
-        # TODO: umcommt this after toolkit preprocessing done!!!!!!!
         # Bandpass filter
         if p['filter'] and p['freq_min'] is not None and p['freq_max'] is not None:
             recording = st.bandpass_filter(
