@@ -16,6 +16,12 @@ import shutil
 from pathlib import Path
 # sys.path.insert(0, os.path.abspath('.'))
 
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if on_rtd:
+    # need a git config
+    os.system('git config --global user.email "rtd@example.com"')
+    os.system('git config --global user.name "RTD Almighty"')
+
 
 if not os.path.isdir('sources'):
     os.mkdir('sources')
