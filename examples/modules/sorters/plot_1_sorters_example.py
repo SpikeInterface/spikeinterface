@@ -35,29 +35,29 @@ pprint(ss.installed_sorters())
 # -----------------------------------
 # 
 
-default_SC_params = ss.SpykingcircusSorter.default_params()
-pprint(default_SC_params)
+default_TDC_params = ss.TridesclousSorter.default_params()
+pprint(default_TDC_params)
 
 ##############################################################################
 #  Parameters can be changed either by passing a full dictionary, or by
 # passing single arguments.
 
-# spykingcircus spike sorting
-default_SC_params['detect_threshold'] = 4
+# tridesclous spike sorting
+default_TDC_params['detect_threshold'] = 4
 
 # parameters set by params dictionary
-sorting_SC = ss.run_spykingcircus(recording=recording, **default_SC_params,
-                                   output_folder='tmp_SC')
+sorting_TDC = ss.run_tridesclous(recording=recording, **default_TDC_params,
+                                   output_folder='tmp_TDC')
 ##############################################################################
 
 # parameters set by params dictionary
-sorting_SC_8 = ss.run_spykingcircus(recording=recording, detect_threshold=8.,
-                                      output_folder='tmp_SC_8')
+sorting_TDC_8 = ss.run_tridesclous(recording=recording, detect_threshold=8.,
+                                      output_folder='tmp_TDC_8')
 
 ##############################################################################
 
-print('Units found with threshold = 4:', sorting_SC.get_unit_ids())
-print('Units found with threshold = 10:', sorting_SC_8.get_unit_ids())
+print('Units found with threshold = 4:', sorting_TDC.get_unit_ids())
+print('Units found with threshold = 10:', sorting_TDC_8.get_unit_ids())
 
 ##############################################################################
 # Run other sorters

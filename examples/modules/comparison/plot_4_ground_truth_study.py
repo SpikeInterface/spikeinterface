@@ -55,7 +55,7 @@ study = GroundTruthStudy.create(study_folder, gt_dict)
 # Then just run all sorters on all recordings in one functions.
 
 # sorter_list = st.sorters.available_sorters() # this get all sorters.
-sorter_list = ['herdingspikes', 'tridesclous', 'spykingcircus']
+sorter_list = ['herdingspikes', 'tridesclous', ]
 study.run_sorters(sorter_list, mode_if_folder_exists="keep")
 
 ##############################################################################
