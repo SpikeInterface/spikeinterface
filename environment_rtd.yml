@@ -21,7 +21,7 @@ dependencies:
   - pyqt=5
   - loky
   - pip:
-    - neo
+    - git+https://github.com/NeuralEnsemble/python-neo.git
     - probeinterface
     - MEArec
     - isosplit5
@@ -29,3 +29,5 @@ dependencies:
     - hdbscan
     - tridesclous
     - herdingspikes
+
+# Notes need to be modified when neo 0.10.0 is out
