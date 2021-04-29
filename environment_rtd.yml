@@ -13,12 +13,12 @@ dependencies:
   - matplotlib
   - h5py
   - pandas
-  - sklearn
+  - scikit-learn
   - networkx
   - git-annex
   - datalad
   - pybind11
-  - ptqt=5
+  - pyqt=5
   - loky
   - pip:
     - neo
