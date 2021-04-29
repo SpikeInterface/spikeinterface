@@ -4,7 +4,7 @@ pytest
 h5py
 pandas
 scipy
-sklearn
+scikit-learn
 matplotlib
 networkx
 datalad
