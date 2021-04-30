@@ -35,7 +35,7 @@ MEArec
 pyqt5
 hdbscan
 loky
-tridesclous
+tridesclous>=1.6.2
 
 ## spyking-circus
 spyking-circus
