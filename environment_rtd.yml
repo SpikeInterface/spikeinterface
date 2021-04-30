@@ -27,7 +27,7 @@ dependencies:
     - isosplit5
     - mountainsort4>=1.0.0
     - hdbscan
-    - tridesclous
+    - tridesclous>=1.6.2
     - herdingspikes
 
 # Notes need to be modified when neo 0.10.0 is out
