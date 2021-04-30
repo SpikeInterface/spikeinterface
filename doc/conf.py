@@ -96,6 +96,7 @@ from sphinx_gallery.sorting import FileNameSortKey
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
+    'only_warn_on_example_error': True,
     'examples_dirs': ['../examples/getting_started', '../examples/modules'],   # path to your example scripts
     'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
