@@ -25,7 +25,8 @@ from .unitsselectionsorting import UnitsSelectionSorting
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
 from .segmentutils import (
     append_recordings, AppendSegmentRecording,
-    concatenate_recordings, ConcatenateSegmentRecording)
+    concatenate_recordings, ConcatenateSegmentRecording,
+    append_sortings, AppendSegmentSorting)
 
 
 # default folder

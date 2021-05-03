@@ -3,7 +3,8 @@ import numpy as np
 
 from spikeinterface.core import(
     append_recordings, AppendSegmentRecording,
-    concatenate_recordings, ConcatenateSegmentRecording)
+    concatenate_recordings, ConcatenateSegmentRecording,
+    append_sortings, AppendSegmentSorting)
 
 from spikeinterface.core import NumpyRecording, NumpySorting
 
@@ -52,10 +53,26 @@ def test_append_concatenate_recordings():
     assert traces[0, 0] == 50
     assert traces[-1, 0] == 499
     
+
+def test_append_sortings():
+    sampling_frequency = 30000.
+    times = np.arange(0, 1000, 10)
+    labels = np.zeros(times.size, dtype='int64')
+    labels[0::3] = 0
+    labels[1::3] = 1
+    labels[2::3] = 2
+    sorting0 = NumpySorting.from_times_labels([times]*3, [labels]*3, sampling_frequency)
+    sorting1 = NumpySorting.from_times_labels([times]*2, [labels]*2, sampling_frequency)
     
+    sorting = append_sortings([sorting0, sorting1])
+    # print(sorting)
+    assert sorting.get_num_segments() == 5
+
     
     
 if __name__ == '__main__':
-    test_append_concatenate_recordings()
+    #~ test_append_concatenate_recordings()
+    test_append_sortings()
+
 
     
