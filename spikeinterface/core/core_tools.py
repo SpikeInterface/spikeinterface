@@ -347,7 +347,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
 
 
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
-                               time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory=500, verbose=False):
+                               time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M', verbose=False):
     '''
     Save the traces of a recording extractor in an h5 dataset.
 
@@ -412,13 +412,6 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
 
     dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
 
-    # set chunk size
-    if chunk_size is not None:
-        chunk_size = int(chunk_size)
-    elif chunk_memory is not None:
-        n_bytes = np.dtype(recording.get_dtype()).itemsize
-        max_size = int(chunk_memory * 1e6)  # set Mb per chunk
-        chunk_size = max_size // (num_channels * n_bytes)
     chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
