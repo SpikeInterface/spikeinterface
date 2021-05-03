@@ -155,10 +155,54 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
             traces = np.concatenate(all_traces, axis=0)
         
         return traces
-        
 
 
 def concatenate_recordings(*args, **kargs):
     return ConcatenateSegmentRecording(*args, **kargs)
 concatenate_recordings.__doc__ == ConcatenateSegmentRecording.__doc__
 
+
+class AppendSegmentSorting(BaseSorting):
+    """
+    Return a sorting that "append" all segments from all sorting
+    into one sorting multi segment.
+    
+    Parameters
+    ----------
+    sorting_list : list of BaseSorting
+        A list of sortings
+    """
+    def __init__(self, sorting_list):
+        
+        sorting0 = sorting_list[0]
+        sampling_frequency = sorting0.get_sampling_frequency()
+        unit_ids = sorting0.unit_ids
+        
+        # check same carracteristics
+        ok1 = all(sampling_frequency == sorting.get_sampling_frequency() for sorting in sorting_list)
+        ok2 = all(np.array_equal(unit_ids, sorting.unit_ids) for sorting in sorting_list)
+        if not (ok1 and  ok2):
+            raise ValueError("Sorting don't have the same sampling_frequency/unit_ids")
+        
+        BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        self.copy_metadata(sorting0)
+        
+        for sorting in sorting_list:
+            for parent_segment in sorting._sorting_segments:
+                sorting_seg = ProxyAppendSortingSegment(parent_segment)
+                self.add_sorting_segment(sorting_seg)
+
+        self._kwargs = {'sorting_list': [sorting.to_dict() for sorting in sorting_list]}
+
+
+class ProxyAppendSortingSegment(BaseSortingSegment):
+    def __init__(self, parent_segment):
+        BaseSortingSegment.__init__(self)
+        self.parent_segment = parent_segment
+
+    def get_unit_spike_train(self, *args, **kwargs):
+        return self.parent_segment.get_unit_spike_train(*args, **kwargs)
+
+def append_sortings(*args, **kargs):
+    return AppendSegmentSorting(*args, **kargs)
+append_sortings.__doc__ == AppendSegmentSorting.__doc__

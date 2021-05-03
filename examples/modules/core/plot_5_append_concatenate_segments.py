@@ -27,7 +27,7 @@ from spikeinterface import NumpyRecording, NumpySorting
 from spikeinterface import append_recordings, concatenate_recordings
 
 ##############################################################################
-# First let's 2 recordings
+# First let's generate 2 recordings with 2 and 3 segments respectively.
 # 
 
 sampling_frequency = 1000.
