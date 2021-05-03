@@ -16,7 +16,6 @@ extractors:
     * all event reader (get_ttl()) (alessio)
     * MdaRecordingExtractor  : need to be done in neo ??
     * BiocamRecordingExtractor  : need to be done in neo
-    * MaxOneRecordingExtractor  : need to be done in neo
     * MCSH5RecordingExtractor  : need to be done in neo ???
     * SHYBRIDRecordingExtractor:  need to be done in neo ???
     * NIXIORecordingExtractor: wrappe neo
