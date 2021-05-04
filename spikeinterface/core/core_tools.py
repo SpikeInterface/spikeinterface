@@ -347,7 +347,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
 
 
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
-                               time_axis=0, dtype=None, chunk_size=None, chunk_memory='500M', verbose=False):
+                               time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M', verbose=False):
     '''
     Save the traces of a recording extractor in an h5 dataset.
 
@@ -367,6 +367,8 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     time_axis: 0 (default) or 1
         If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
+    single_axis: bool, default False
+        If True, a single-channel recording is saved as a one dimensional array.
     dtype: dtype
         Type of the saved data. Default float32.
     chunk_size: None or int
@@ -400,19 +402,16 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     else:
         dtype_file = dtype
 
-    if time_axis == 0:
-        shape = (num_frames, num_channels)
+    if single_axis:
+        shape = (num_frames, )
     else:
-        shape = (num_channels, num_frames)
+        if time_axis == 0:
+            shape = (num_frames, num_channels)
+        else:
+            shape = (num_channels, num_frames)
+
     dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
 
-    # set chunk size
-    if chunk_size is not None:
-        chunk_size = int(chunk_size)
-    elif chunk_memory is not None:
-        n_bytes = np.dtype(recording.get_dtype()).itemsize
-        max_size = int(chunk_memory * 1e6)  # set Mb per chunk
-        chunk_size = max_size // (num_channels * n_bytes)
     chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
@@ -421,7 +420,10 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
             traces = traces.astype(dtype_file)
         if time_axis == 1:
             traces = traces.T
-        dset[:] = traces
+        if single_axis:
+            dset[:] = traces[:, 0]
+        else:
+            dset[:] = traces
     else:
         chunk_start = 0
         # chunk size is not None
@@ -439,10 +441,14 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
             chunk_frames = traces.shape[0]
             if dtype is not None:
                 traces = traces.astype(dtype_file)
-            if time_axis == 0:
-                dset[chunk_start:chunk_start + chunk_frames, :] = traces
+            if single_axis:
+                dset[chunk_start:chunk_start + chunk_frames] = traces[:, 0]
             else:
-                dset[:, chunk_start:chunk_start + chunk_frames] = traces.T
+                if time_axis == 0:
+                    dset[chunk_start:chunk_start + chunk_frames, :] = traces
+                else:
+                    dset[:, chunk_start:chunk_start + chunk_frames] = traces.T
+
             chunk_start += chunk_frames
 
     if save_path is not None:
