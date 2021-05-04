@@ -46,7 +46,9 @@ recording_extractor_full_list = [
     NeuralynxRecordingExtractor,
     BlackrockRecordingExtractor,
     MCSRawRecordingExtractor,
-    MaxwellRecordingExtractor,
+    
+    # not in python-neo master yet
+    # MaxwellRecordingExtractor,
 
     ##OLD
     # ~ MdaRecordingExtractor,
