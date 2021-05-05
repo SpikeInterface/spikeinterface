@@ -23,7 +23,7 @@ dependencies:
   - pip:
     - git+https://github.com/NeuralEnsemble/python-neo.git
     - probeinterface
-    - MEArec
+    - MEArec>=1.7.1
     - isosplit5
     - mountainsort4>=1.0.0
     - hdbscan
