@@ -22,6 +22,13 @@ from .numpyextractors import NumpyRecording , NumpySorting
 from .channelslicerecording import ChannelSliceRecording
 from .unitsselectionsorting import UnitsSelectionSorting
 
+# utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
+from .segmentutils import (
+    append_recordings, AppendSegmentRecording,
+    concatenate_recordings, ConcatenateSegmentRecording,
+    append_sortings, AppendSegmentSorting)
+
+
 # default folder
 from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
     is_set_global_tmp_folder, reset_global_tmp_folder, 

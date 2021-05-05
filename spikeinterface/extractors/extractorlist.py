@@ -24,6 +24,9 @@ from .neoextractors import (
     BlackrockRecordingExtractor,
     MCSRawRecordingExtractor,
     KiloSortSortingExtractor,
+    
+    # not in python-neo master yet
+    # MaxwellRecordingExtractor,  
 )
 
 recording_extractor_full_list = [
@@ -43,6 +46,9 @@ recording_extractor_full_list = [
     NeuralynxRecordingExtractor,
     BlackrockRecordingExtractor,
     MCSRawRecordingExtractor,
+    
+    # not in python-neo master yet
+    # MaxwellRecordingExtractor,
 
     ##OLD
     # ~ MdaRecordingExtractor,
