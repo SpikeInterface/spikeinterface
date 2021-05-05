@@ -2,8 +2,13 @@ from setuptools import setup, find_packages
 
 with open("requirements.txt", mode='r') as f:
     install_requires = f.read().split('\n')
-
 install_requires = [e for e in install_requires if len(e) > 0]
+
+with open("complete_requirements.txt", mode='r') as f:
+    complete_requires = f.read().split('\n')
+complete_requires = [e for e in complete_requires if len(e) > 0]
+
+extras_require = {"complete": complete_requires}
 
 d = {}
 exec(open("spikeinterface/version.py").read(), None, d)
@@ -24,6 +29,7 @@ setup(
     packages=find_packages(),
     package_data={},
     install_requires=install_requires,
+    extras_require=extras_require,
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
