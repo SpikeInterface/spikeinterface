@@ -575,7 +575,15 @@ def _make_paths_relative(d, relative):
         for k in d.keys():
             # in SI, all input paths have the "path" keyword
             if "path" in k:
-                d[k] = str(Path(d[k]).relative_to(relative))
+                # paths can be str or list of str
+                if isinstance(d[k], str):
+                    d[k] = str(Path(d[k]).relative_to(relative))
+                else:
+                    assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
+                    relative_paths = []
+                    for path in d[k]:
+                        relative_paths.append(str(Path(path).relative_to(relative)))
+                    d[k] = relative_paths
         return d
 
 
