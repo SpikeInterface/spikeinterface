@@ -21,7 +21,7 @@ class BaseExtractor:
     """
     Base class for Recording/Sorting
     
-    Handle serilization save/load to/from a folder.
+    Handle serialization save/load to/from a folder.
     
     """
 
@@ -208,10 +208,22 @@ class BaseExtractor:
                 other.set_property(k, values[inds])
         # TODO: copy features also
 
-    def to_dict(self, include_annotations=False, include_properties=False, include_features=False):
+    def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
+                relative_to=None):
         '''
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
         extractor with load_extractor_from_dict(dump_dict)
+
+        Parameters
+        ----------
+        include_annotations: bool
+            If True, all annotations are added to the dict
+        include_properties: bool
+            If True, all properties are added to the dict
+        include_features: bool
+            If True, all features are added to the dict
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
 
         Returns
         -------
@@ -253,6 +265,12 @@ class BaseExtractor:
             dump_dict['properties'] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         # TODO include features
+
+        if relative_to is not None:
+            relative_to = Path(relative_to).absolute()
+            assert relative_to.is_dir(), "'relative_to' must be an existing directory"
+
+            dump_dict = _make_paths_relative(dump_dict, relative_to)
 
         return dump_dict
 
@@ -321,15 +339,25 @@ class BaseExtractor:
             " %s" % (', '.join(extensions))
         return file_path
 
-    def dump(self, file_path):
+    def dump(self, file_path, relative_to=None):
+        """
+        Dumps extractor to json or pickle
+
+        Parameters
+        ----------
+        file_path: str or Path
+            The output file (either .json or .pkl/.pickle)
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
+        """
         if str(file_path).endswith('.json'):
-            self.dump_to_json(file_path)
+            self.dump_to_json(file_path, relative_to)
         elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
-            self.dump_to_pickle(file_path)
+            self.dump_to_pickle(file_path, relative_to)
         else:
             raise ValueError('Dump: file must .json or .pkl')
 
-    def dump_to_json(self, file_path=None):
+    def dump_to_json(self, file_path=None, relative_to=None):
         '''
         Dump recording extractor to json file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -338,16 +366,19 @@ class BaseExtractor:
         ----------
         file_path: str
             Path of the json file
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=False, include_features=False)
+        dump_dict = self.to_dict(include_properties=False, include_features=False, relative_to=relative_to)
         file_path = self._get_file_path(file_path, ['.json'])
         file_path.write_text(
             json.dumps(check_json(dump_dict), indent=4),
             encoding='utf8'
         )
 
-    def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True):
+    def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True,
+                       relative_to=None):
         '''
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -360,9 +391,12 @@ class BaseExtractor:
             If True, all properties are dumped
         include_features: bool
             If True, all features are dumped
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=include_properties, include_features=include_features)
+        dump_dict = self.to_dict(include_properties=include_properties, include_features=include_features,
+                                 relative_to=relative_to)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
@@ -526,10 +560,23 @@ class BaseExtractor:
         self.copy_metadata(cached)
 
         # dump
-        cached.dump(folder / f'cached.{dump_ext}')
+        cached.dump(folder / f'cached.{dump_ext}', relative_to=folder)
 
         return cached
-    
+
+
+def _make_paths_relative(d, relative):
+    dcopy = deepcopy(d)
+    if "kwargs" in dcopy.keys():
+        relative_kwargs = _make_paths_relative(dcopy["kwargs"], relative)
+        dcopy["kwargs"] = relative_kwargs
+        return dcopy
+    else:
+        for k in d.keys():
+            # in SI, all input paths have the "path" keyword
+            if "path" in k:
+                d[k] = str(Path(d[k]).relative_to(relative))
+        return d
 
 
 def _check_if_dumpable(d):
