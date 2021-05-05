@@ -18,7 +18,7 @@ from .baseevent import BaseEvent, BaseEventSegment
 
 class AppendSegmentRecording(BaseRecording):
     """
-    Return a recording that "append" all segments from all recording
+    Return a recording that "appends" all segments from all recording
     into one recording multi segment.
     
     For instance, given one recording with 2 segments and one recording with
@@ -72,8 +72,8 @@ append_recordings.__doc__ == AppendSegmentRecording.__doc__
 
 class ConcatenateSegmentRecording(BaseRecording):
     """
-    Return a recording that "concatenate" all segments from all recording
-    into one recording mono segment. Operation is lazy.
+    Return a recording that "concatenates" all segments from all recording
+    into one recording mono segment. The operation is lazy.
     
     For instance, given one recording with 2 segments and one recording with
     3 segments, this class will give one recording with 1 segment
