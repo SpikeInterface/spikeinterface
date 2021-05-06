@@ -1,5 +1,7 @@
 pytest
 
+datalad
+
 ## install sorters ##
 # python based only
 # no GPU (no pykilosort, no yass)
