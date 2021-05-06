@@ -178,6 +178,7 @@ def detect_peaks_by_channel(traces, peak_sign, abs_threholds, n_shifts):
 
 
 def detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, n_shifts, neighbours_mask):
+    assert HAVE_NUMBA, 'You need to install numba'
     traces_center = traces[n_shifts:-n_shifts, :]
     length = traces_center.shape[0]
     

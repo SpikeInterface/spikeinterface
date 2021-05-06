@@ -56,11 +56,6 @@ class TestWidgets(unittest.TestCase):
     # def test_spectrogram(self):
         # sw.plot_spectrogram(self._rec, channel=0)
 
-    # TODO
-    # def test_activitymap(self):
-        # sw.plot_activity_map(self._rec, activity='rate')
-        # sw.plot_activity_map(self._rec, activity='amplitude')
-
     def test_unitwaveforms(self):
         sw.plot_unit_waveforms(self._we)
 
@@ -149,7 +144,7 @@ if __name__ == '__main__':
     
     # mytest.test_confusion()
     # mytest.test_agreement()
-    # mytest.test_multicomp_graph()
+    # mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
         
     plt.show()
