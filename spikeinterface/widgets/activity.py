@@ -88,7 +88,7 @@ class ActivityMapWidget(BaseWidget):
                         probe_shape_kwargs={'facecolor':'w', 'alpha' : .1},
                         contacts_kargs= {'alpha' : 1.}
                         )
-        
+
         if self.with_interpolated_map:
             image, xlims, ylims = probe.to_image(rates, pixel_size=0.5,
                 num_pixel=None, method='linear',
