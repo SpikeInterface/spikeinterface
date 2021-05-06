@@ -6,7 +6,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-from spikeinterface import extract_waveforms
+from spikeinterface import extract_waveforms, download_dataset
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
@@ -20,11 +20,17 @@ else:
 
 class TestWidgets(unittest.TestCase):
     def setUp(self):
-        self._rec, self._sorting = se.toy_example(num_channels=10, duration=10, num_segments=1)
-        self._rec = self._rec.save()
-        self._sorting = self._sorting.save()
+        #~ self._rec, self._sorting = se.toy_example(num_channels=10, duration=10, num_segments=1)
+        #~ self._rec = self._rec.save()
+        #~ self._sorting = self._sorting.save()
+        local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
+        self._rec = se.MEArecRecordingExtractor(local_path)
+        
+        self._sorting = se.MEArecSortingExtractor(local_path)
+        
         self.num_units = len(self._sorting.get_unit_ids())
-        self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
+        # self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
+        self._we = extract_waveforms(self._rec, self._sorting, './mearec_test', load_if_exists=True)
         
         self._amplitudes = st.get_unit_amplitudes(self._we,  peak_sign='neg', outputs='by_units')
         self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
@@ -89,7 +95,11 @@ class TestWidgets(unittest.TestCase):
         # sw.plot_isi_distribution(self._sorting, bins=10, window=1)
         # fig, axes = plt.subplots(self.num_units, 1)
         # sw.plot_isi_distribution(self._sorting, axes=axes)
-
+    
+    def test_plot_drift_over_time(self):
+        sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=True)
+        sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=False)
+        
 
     def test_confusion(self):
         
@@ -124,15 +134,17 @@ if __name__ == '__main__':
     # mytest.test_timeseries()
     # mytest.test_rasters()
     # mytest.test_plot_probe_map()
-    # mytest.test_unitwaveforms()
+    # mytest.test_unitwaveforms()
     # mytest.test_unittemplates()
-    # mytest.test_amplitudes_timeseries()
-    # mytest.test_amplitudes_distribution()
-    # mytest.test_principal_component()
+    # mytest.test_amplitudes_timeseries()
+    # mytest.test_amplitudes_distribution()
+    # mytest.test_principal_component()
+    
+    mytest.test_plot_drift_over_time()
     
     # mytest.test_confusion()
     # mytest.test_agreement()
     # mytest.test_multicomp_graph()
-    mytest.test_sorting_performance()
+    # mytest.test_sorting_performance()
         
     plt.show()
