@@ -5,6 +5,7 @@ from .probemap import plot_probe_map, ProbeMapWidget
 
 # peak activity
 from .drift import plot_drift_over_time, DriftOverTimeWidget
+from .activity import plot_activity_map
 
 # waveform/PC related
 from .unitwaveforms import plot_unit_waveforms, plot_unit_templates

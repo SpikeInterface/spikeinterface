@@ -99,7 +99,9 @@ class TestWidgets(unittest.TestCase):
     def test_plot_drift_over_time(self):
         sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=True)
         sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=False)
-        
+    
+    def test_plot_activity_map(self):
+        sw.plot_activity_map(self._rec)
 
     def test_confusion(self):
         
@@ -140,7 +142,10 @@ if __name__ == '__main__':
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
     
-    mytest.test_plot_drift_over_time()
+    # mytest.test_plot_drift_over_time()
+    mytest.test_plot_activity_map()
+    
+    
     
     # mytest.test_confusion()
     # mytest.test_agreement()
