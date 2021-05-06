@@ -18,6 +18,7 @@ def detect_peaks(recording, method='by_channel',
         local_radius_um=100,
         noise_levels=None,
         random_chunk_kwargs={},
+        outputs='numpy',
         **job_kwargs):
     """
     Peak detection ported from tridesclous into spikeinterface.
@@ -52,7 +53,9 @@ def detect_peaks(recording, method='by_channel',
     random_chunk_kwargs: dict
         A dict that contain option to randomize chunk for get_noise_levels()
         Only used if noise_levels is None
-
+    numpy_compact: str numpy_compact/numpy_split/sorting
+        The type of the output. By default "numpy_compact"
+        give a vector with complex dtype.
     """
     assert method in ('by_channel', 'locally_exclusive')
     assert peak_sign in ('both', 'neg', 'pos')
@@ -79,13 +82,26 @@ def detect_peaks(recording, method='by_channel',
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True, **job_kwargs)
     peaks = processor.run()
     
-    peak_sample_inds, peak_chan_inds, peak_amplitudes = zip(*peaks)
+    peak_sample_inds, peak_chan_inds, peak_amplitudes, peak_segments = zip(*peaks)
     peak_sample_inds = np.concatenate(peak_sample_inds)
     peak_chan_inds = np.concatenate(peak_chan_inds)
     peak_amplitudes = np.concatenate(peak_amplitudes)
+    peak_segments = np.concatenate(peak_segments)
     
-    return peak_sample_inds, peak_chan_inds, peak_amplitudes
-    
+    if outputs == 'numpy_compact':
+        dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('amplitude', 'float64'), ('segment_ind', 'int64')]
+        peaks = np.zeros(peak_sample_inds.size, dtype=dtype)
+        peaks['sample_ind'] = peak_sample_inds
+        peaks['channel_ind'] = peak_chan_inds
+        peaks['amplitude'] = peak_amplitudes
+        peaks['segment_ind'] = peak_segments
+        return peaks
+    elif outputs == 'numpy_split':
+        return peak_sample_inds, peak_chan_inds, peak_amplitudes, peak_segments
+    elif outputs == 'sorting':
+        #@alessio : here we can do what you did in old API
+        # the output is a sorting where unit_id is in fact one channel
+        raise NotImplementedError
     
 
 def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, n_shifts, neighbours_mask):
@@ -119,10 +135,14 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     elif method == 'locally_exclusive':
         peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, n_shifts, worker_ctx['neighbours_mask'])
 
-    peak_amplitudes = traces[peak_sample_ind, peak_chan_ind]
+    peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+    
+    peak_segment = np.zeros(peak_amplitude.size, dtype='int64')
+    peak_segment[:] = segment_index
+    
     peak_sample_ind += start_frame
     
-    return peak_sample_ind, peak_chan_ind, peak_amplitudes
+    return peak_sample_ind, peak_chan_ind, peak_amplitude, peak_segment
     
 
 
