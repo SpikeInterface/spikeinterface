@@ -16,7 +16,7 @@ def test_remove_bad_channels():
     sampling_frequency = 30000.
     durations = [10.325, 3.5]
 
-    num_segments = len(durations)j
+    num_segments = len(durations)
     num_timepoints = [int(sampling_frequency * d) for d in durations]
 
     traces_list = []
