@@ -1,16 +1,5 @@
 pytest
 
-# optional dependancy for sub modules
-h5py
-pandas
-scipy
-scikit-learn
-matplotlib
-networkx
-datalad
-MEArec>=1.7.1
-
-
 ## install sorters ##
 # python based only
 # no GPU (no pykilosort, no yass)
