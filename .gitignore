@@ -36,9 +36,16 @@ examples/*/*/*/*/*.npy
 examples/*/*/sorter_outputs
 examples/*/*/*_to_phy
 
-
-
 .vscode/*
+
+# MauroToro: My absolute mess of envs
+bin/
+DATA/
+etc/
+include/
+share/
+dist_metrics.pxd
+pyvenv.cfg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -162,4 +169,3 @@ examples/modules/comparison/tmp_*
 examples/modules/comparison/a_study_folder/*
 examples/modules/toolkit/phy/*
 examples/modules/toolkit/tmp_*
-
