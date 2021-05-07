@@ -40,6 +40,7 @@ class TridesclousSorter(BaseSorter):
         'detect_sign': -1,
         'detect_threshold': 5,
         'common_ref_removal': False,
+        'nested_params': None,
     }
 
     _params_description = {
@@ -188,5 +189,13 @@ def make_nested_tdc_params(tdc_dataio, chan_grp, **new_params):
     
     if 'detect_threshold' in new_params:
         params['peak_detector']['relative_threshold'] = new_params['detect_threshold']
+    
+    nested_params = new_params.get('nested_params', None)
+    if nested_params is not None:
+        for k, v in nested_params.items():
+            if isinstance(v, dict):
+                params[k].update(v)
+            else:
+                params[k] = v
 
     return params
