@@ -53,46 +53,17 @@ class CombinatoSortingExtractor(BaseSorting):
 
                 times_css = fdet[sign]['times'][()]
                 for gr, cls in groups.items():
-                    if group_type[gr] == -1:  # artifacts
-                        continue
-                    elif group_type[gr] == 0:  # unsorted
-                        unsorted.append(
-                            np.rint(times_css[sp_index[np.isin(sp_class, cls)]] * (sampling_frequency / 1000)))
-                        continue
 
-                    unit_counter = unit_counter + 1
                     spiketrains[unit_counter] = np.rint(
                         times_css[sp_index[np.isin(sp_class, cls)]] * (sampling_frequency / 1000))
-                    metadata[unit_counter] = {'det_sign': sign,
-                                              'group_type': 'single-unit' if group_type[gr] else 'multi-unit'}
-
-        self._unsorted_train = np.array([])
-        if len(unsorted) == 1:
-            self._unsorted_train = unsorted[0]
-        elif len(unsorted) == 2:  # unsorted in both signs
-            self._unsorted_train = np.sort(np.concatenate(unsorted), kind='mergesort')
-
-        unit_ids = np.arange(unit_counter, dtype='int64') + 1
+                    metadata[unit_counter] = {'group_type': group_type[gr]}
+                    unit_counter = unit_counter + 1
+        unit_ids = np.arange(unit_counter, dtype='int64')
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(CombinatoSortingSegment(spiketrains))
-
-        # TODO metadata as property 'det_sign'/ 'group_type' / 
-        # ~ for u in unit_ids:
-        # ~ for prop,value in metadata[u].items():
-        # ~ self.set_unit_property(u, prop, value)
-
+        self._properties['unsorted'] = np.array([metadata[u]['group_type'] == 0 for u in range(unit_counter)])
+        self._properties['artifact'] = np.array([metadata[u]['group_type']  == -1 for u in range(unit_counter)])
         self._kwargs = {'folder_path': str(folder_path), 'user': user, 'det_sign': det_sign}
-
-    """
-    def get_unsorted_spike_train(self, start_frame=None, end_frame=None):
-        start_frame, end_frame = self._cast_start_end_frame(start_frame, end_frame)
-
-        start_frame = start_frame or 0
-        end_frame = end_frame or np.infty
-        u = self._unsorted_train
-        return u[(u >= start_frame) & (u < end_frame)]
-    """
-
 
 class CombinatoSortingSegment(BaseSortingSegment):
     def __init__(self, spiketrains):
