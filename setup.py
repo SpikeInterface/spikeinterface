@@ -4,11 +4,11 @@ with open("requirements.txt", mode='r') as f:
     install_requires = f.read().split('\n')
 install_requires = [e for e in install_requires if len(e) > 0]
 
-with open("complete_requirements.txt", mode='r') as f:
-    complete_requires = f.read().split('\n')
-complete_requires = [e for e in complete_requires if len(e) > 0]
+with open("full_requirements.txt", mode='r') as f:
+    full_requires = f.read().split('\n')
+full_requires = [e for e in full_requires if len(e) > 0]
 
-extras_require = {"complete": complete_requires}
+extras_require = {"full": full_requires}
 
 d = {}
 exec(open("spikeinterface/version.py").read(), None, d)
@@ -20,7 +20,7 @@ pkg_name = "spikeinterface"
 setup(
     name=pkg_name,
     version=version,
-    author="Cole Hurwitz, Jeremy Magland, Alessio Paolo Buccino, Matthias Hennig, Samuel Garcia",
+    author="Alessio Paolo Buccino, Cole Hurwitz, Samuel Garcia, Jeremy Magland, Matthias Hennig",
     author_email="alessiop.buccino@gmail.com",
     description="Python toolkit for analysis, visualization, and comparison of spike sorting output",
     long_description=long_description,
