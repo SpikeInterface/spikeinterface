@@ -61,8 +61,8 @@ class CombinatoSortingExtractor(BaseSorting):
         unit_ids = np.arange(unit_counter, dtype='int64')
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(CombinatoSortingSegment(spiketrains))
-        self._properties['unsorted'] = np.array([metadata[u]['group_type'] == 0 for u in range(unit_counter)])
-        self._properties['artifact'] = np.array([metadata[u]['group_type']  == -1 for u in range(unit_counter)])
+        self.set_property('unsorted',np.array([metadata[u]['group_type'] == 0 for u in range(unit_counter)]))
+        self.set_property('artifact',np.array([metadata[u]['group_type']  == -1 for u in range(unit_counter)]))
         self._kwargs = {'folder_path': str(folder_path), 'user': user, 'det_sign': det_sign}
 
 class CombinatoSortingSegment(BaseSortingSegment):
