@@ -39,12 +39,8 @@ class TridesclousSorter(BaseSorter):
         'freq_max': 5000.,
         'detect_sign': -1,
         'detect_threshold': 5,
-        'peak_span_ms': 0.7,
-        'wf_left_ms': -2.0,
-        'wf_right_ms': 3.0,
-        'feature_method': 'auto',  # peak_max/global_pca/by_channel_pca
-        'cluster_method': 'auto',  # pruningshears/dbscan/kmeans
-        'clean_catalogue_gui': False,
+        'common_ref_removal': False,
+        'nested_params': None,
     }
 
     _params_description = {
@@ -53,12 +49,7 @@ class TridesclousSorter(BaseSorter):
         'detect_threshold': "Threshold for spike detection",
         'detect_sign': "Use -1 (negative) or 1 (positive) depending "
                        "on the sign of the spikes in the recording",
-        'peak_span_ms': "Span of the peak in ms",
-        'wf_left_ms': "Cut out before peak in ms",
-        'wf_right_ms': " Cut out after peak in ms",
-        'feature_method': "Feature method to use",  # peak_max/global_pca/by_channel_pca
-        'cluster_method': "Feature method to use",  # pruningshears/dbscan/kmeans
-        'clean_catalogue_gui': "Enable or disable interactive GUI for cleaning templates before peeler",
+        'common_ref_removal': 'remove common reference with median',
     }
 
     sorter_description = """Tridesclous is a template-matching spike sorter with a real-time engine. 
@@ -73,7 +64,7 @@ class TridesclousSorter(BaseSorter):
     """
     
     # TODO make the TDC handle multi segment (should be easy)
-    handle_multi_segment = False
+    handle_multi_segment = True
 
     @classmethod
     def is_installed(cls):
@@ -93,40 +84,38 @@ class TridesclousSorter(BaseSorter):
         probegroup = recording.get_probegroup()
         prb_file = output_folder / 'probe.prb'
         write_prb(prb_file, probegroup)
-
+        
+        num_seg = recording.get_num_segments()
+        sr = recording.get_sampling_frequency()
+        
         # source file
-        # TODO wrap BinaryRecordingExtractor into neo source
-        #~ if isinstance(recording, se.BinDatRecordingExtractor) and recording._time_axis == 0:
-            #~ # no need to copy
-            #~ raw_filename = recording._datfile
-            #~ dtype = recording._timeseries.dtype.str
-            #~ nb_chan = len(recording._channels)
-            #~ offset = recording._timeseries.offset
-        #~ else:
-            #~ if self.verbose:
-                #~ print('Local copy of recording')
-            #~ # save binary file (chunk by hcunk) into a new file
-            #~ raw_filename = output_folder / 'raw_signals.raw'
-            #~ recording.write_to_binary_dat_format(raw_filename, time_axis=0, dtype='float32', chunk_mb=500)
-            #~ dtype = 'float32'
-            #~ offset = 0
-        if verbose:
-            print('Local copy of recording')
-        # save binary file (chunk by hcunk) into a new file
-        raw_filename = output_folder / 'raw_signals.raw'
-        #~ recording.write_to_binary_dat_format(raw_filename, time_axis=0, dtype='float32', chunk_mb=500)
-        dtype = recording.get_dtype().str
-        BinaryRecordingExtractor.write_recording(recording, files_path=[raw_filename],
-                                                                dtype=dtype, total_memory="500M", n_jobs=-1, verbose=False, progress_bar=verbose)
-        offset = 0
+        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['time_axis'] == 0:
+            # no need to copy
+            kwargs = recording._kwargs
+            files_path = kwargs['files_path']
+            dtype = kwargs['dtype']
+            num_chan = kwargs['num_chan']
+            offset = kwargs['offset']
+        else:
+            if verbose:
+                print('Local copy of recording')
+            # save binary file (chunk by hcunk) into a new file
+            num_chan = recording.get_num_channels()
+            dtype = recording.get_dtype().str
+            files_path = [str(output_folder / f'raw_signals_{i}.raw') for i in num_seg]
+            BinaryRecordingExtractor.write_recording(recording, files_path=files_path,
+                                                                    dtype=dtype, total_memory="500M", n_jobs=-1,
+                                                                    verbose=False, progress_bar=verbose)
+            offset = 0
+            
 
         # initialize source and probe file
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
-        nb_chan = recording.get_num_channels()
+        
 
-        tdc_dataio.set_data_source(type='RawData', filenames=[str(raw_filename)],
-                                   dtype=dtype, sample_rate=recording.get_sampling_frequency(),
-                                   total_channel=nb_chan, offset=offset)
+        tdc_dataio.set_data_source(type='RawData', filenames=files_path,
+                                   dtype=dtype, sample_rate=sr,
+                                   total_channel=num_chan, offset=offset)
         tdc_dataio.set_probe_file(str(prb_file))
         if verbose:
             print(tdc_dataio)
@@ -138,7 +127,6 @@ class TridesclousSorter(BaseSorter):
 
         params = params.copy()
 
-        clean_catalogue_gui = params.pop('clean_catalogue_gui')
         # make catalogue
         chan_grps = list(tdc_dataio.channel_groups.keys())
         for chan_grp in chan_grps:
@@ -158,24 +146,10 @@ class TridesclousSorter(BaseSorter):
             cc = tdc.CatalogueConstructor(dataio=tdc_dataio, chan_grp=chan_grp)
             tdc.apply_all_catalogue_steps(cc, catalogue_nested_params, verbose=verbose)
 
-            if clean_catalogue_gui:
-                import pyqtgraph as pg
-                app = pg.mkQApp()
-                win = tdc.CatalogueWindow(cc)
-                win.show()
-                app.exec_()
 
             if verbose:
                 print(cc)
             
-            #~ if distutils.version.LooseVersion(tdc.__version__) < '1.6.0':
-                #~ print('You should upgrade tridesclous')
-                #~ t0 = time.perf_counter()
-                #~ cc.make_catalogue_for_peeler()
-                #~ if self.verbose:
-                    #~ t1 = time.perf_counter()
-                    #~ print('make_catalogue_for_peeler', t1-t0)
-
             # apply Peeler (template matching)
             initial_catalogue = tdc_dataio.load_catalogue(chan_grp=chan_grp)
             peeler = tdc.Peeler(tdc_dataio)
@@ -193,38 +167,35 @@ class TridesclousSorter(BaseSorter):
         return sorting
 
 
-def make_nested_tdc_params(tdc_dataio, chan_grp,
-                           freq_min=400.,
-                           freq_max=5000.,
-                           detect_sign='-',
-                           detect_threshold=5,
-                           peak_span_ms=0.7,
-                           wf_left_ms=-2.0,
-                           wf_right_ms=3.0,
-                           feature_method='auto',
-                           cluster_method='auto'):
+def make_nested_tdc_params(tdc_dataio, chan_grp, **new_params):
+    
     params = tdc.get_auto_params_for_catalogue(tdc_dataio, chan_grp=chan_grp)
+    
+    if 'freq_min' in new_params:
+        params['preprocessor']['highpass_freq'] = new_params['freq_min']
 
-    params['preprocessor']['highpass_freq'] = freq_min
-    params['preprocessor']['lowpass_freq'] = freq_max
+    if 'freq_max' in new_params:
+        params['preprocessor']['highpass_freq'] = new_params['freq_max']
 
-    if detect_sign == -1:
-        params['peak_detector']['peak_sign'] = '-'
-    elif detect_sign == 1:
-        params['peak_detector']['peak_sign'] = '+'
-
-    params['peak_detector']['relative_threshold'] = detect_threshold
-    params['peak_detector']['peak_span_ms'] = peak_span_ms
-
-    params['extract_waveforms']['wf_left_ms'] = wf_left_ms
-    params['extract_waveforms']['wf_right_ms'] = wf_right_ms
-
-    if feature_method != 'auto':
-        params['feature_method'] = feature_method
-        params['feature_kargs'] = {}
-
-    if cluster_method != 'auto':
-        params['cluster_method'] = cluster_method
-        params['cluster_kargs'] = {}
+    if 'common_ref_removal' in new_params:
+        params['preprocessor']['common_ref_removal'] = new_params['common_ref_removal']
+    
+    if 'detect_sign' in new_params:
+        detect_sign = new_params['detect_sign']
+        if detect_sign == -1:
+            params['peak_detector']['peak_sign'] = '-'
+        elif detect_sign == 1:
+            params['peak_detector']['peak_sign'] = '+'
+    
+    if 'detect_threshold' in new_params:
+        params['peak_detector']['relative_threshold'] = new_params['detect_threshold']
+    
+    nested_params = new_params.get('nested_params', None)
+    if nested_params is not None:
+        for k, v in nested_params.items():
+            if isinstance(v, dict):
+                params[k].update(v)
+            else:
+                params[k] = v
 
     return params

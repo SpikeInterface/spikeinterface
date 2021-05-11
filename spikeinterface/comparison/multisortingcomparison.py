@@ -109,8 +109,8 @@ class MultiSortingComparison(BaseComparison):
             sorter_names = []
             sorter_units = []
             for node in sg.nodes:
-                sorter_names.append(node.split('_')[0])
-                sorter_units.append(int(node.split('_')[1]))
+                sorter_names.append(node[0])
+                sorter_units.append(node[1])
             sg_sorter_names.append(sorter_names)
             sg_units.append(sorter_units)
         return sg_sorter_names, sg_units
@@ -178,18 +178,20 @@ class MultiSortingComparison(BaseComparison):
         # nodes
         for i, sorting in enumerate(self.sorting_list):
             sorter_name = self.name_list[i]
-            for unit in sorting.get_unit_ids():
-                node_name = str(sorter_name) + '_' + str(unit)
-                self.graph.add_node(node_name)
+            for unit_id in sorting.get_unit_ids():
+                node = sorter_name, unit_id
+                self.graph.add_node(node)
+
         # edges
         for comp in self.comparisons:
             for u1 in comp.sorting1.get_unit_ids():
                 u2 = comp.hungarian_match_12[u1]
                 if u2 != -1:
-                    node1_name = str(comp.sorting1_name) + '_' + str(u1)
-                    node2_name = str(comp.sorting2_name) + '_' + str(u2)
+                    node1 = comp.sorting1_name, u1
+                    node2 = comp.sorting2_name, u2
                     score = comp.agreement_scores.loc[u1, u2]
-                    self.graph.add_edge(node1_name, node2_name, weight=score)
+                    self.graph.add_edge(node1, node2, weight=score)
+
 
         # the graph is symmetrical
         self.graph = self.graph.to_undirected()
@@ -213,8 +215,8 @@ class MultiSortingComparison(BaseComparison):
                 avg_agr = 0
             sorter_unit_ids = {}
             for node in sg.nodes:
-                sorter_name = node.split('_')[0]
-                sorter_unit = int(node.split('_')[1])
+                sorter_name = node[0]
+                sorter_unit = node[1]
                 sorter_unit_ids[sorter_name] = sorter_unit
             self._new_units[unit_id] = {'avg_agreement': avg_agr, 'sorter_unit_ids': sorter_unit_ids,
                                         'agreement_number': len(sg.nodes)}
@@ -225,10 +227,8 @@ class MultiSortingComparison(BaseComparison):
             else:
                 max_edge = edges[int(np.argmax([d['weight'] for u, v, d in edges]))]
                 node1, node2, weight = max_edge
-                sorter1, unit1 = node1.split('_')
-                sorter2, unit2 = node2.split('_')
-                unit1 = int(unit1)
-                unit2 = int(unit2)
+                sorter1, unit1 = node1
+                sorter2, unit2 = node2
                 sp1 = self.sorting_list[self.name_list.index(sorter1)].get_unit_spike_train(unit1)
                 sp2 = self.sorting_list[self.name_list.index(sorter2)].get_unit_spike_train(unit2)
 
@@ -273,7 +273,7 @@ class MultiSortingComparison(BaseComparison):
         for i, sg in enumerate(subgraphs):
             sorter_names = []
             for node in sg.nodes:
-                sorter_names.append(node.split('_')[0])
+                sorter_names.append(node[0])
             sorters, counts = np.unique(sorter_names, return_counts=True)
 
             if np.any(counts > 1):
