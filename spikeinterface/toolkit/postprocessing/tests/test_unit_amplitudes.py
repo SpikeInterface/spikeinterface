@@ -14,7 +14,7 @@ def test_get_unit_amplitudes():
     sorting = se.MEArecSortingExtractor(local_path)
     
     
-    we = extract_waveforms(recording, sorting, 'toy_waveforms',
+    we = extract_waveforms(recording, sorting, 'mearec_waveforms',
         ms_before=1., ms_after=2., max_spikes_per_unit=500,
         n_jobs=1, chunk_size=30000, load_if_exists=True)
     
