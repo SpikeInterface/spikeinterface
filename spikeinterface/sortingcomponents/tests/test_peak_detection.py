@@ -13,16 +13,18 @@ def test_detect_peaks():
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     
-    sample_inds, chan_inds, amplitudes = detect_peaks(recording,
+    peaks = detect_peaks(recording,
         method='by_channel', 
         peak_sign='neg', detect_threshold=5, n_shifts=2,
         chunk_size=10000, verbose = 1, progress_bar=False,
+        outputs='numpy_compact'
         )
 
-    sample_inds, chan_inds, amplitudes = detect_peaks(recording,
+    sample_inds, chan_inds, amplitudes, seg_inds = detect_peaks(recording,
         method='locally_exclusive', 
         peak_sign='neg', detect_threshold=5, n_shifts=2,
         chunk_size=10000, verbose = 1, progress_bar=False,
+        outputs='numpy_split'
         )
     
     
