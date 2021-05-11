@@ -18,7 +18,7 @@ def detect_peaks(recording, method='by_channel',
         local_radius_um=100,
         noise_levels=None,
         random_chunk_kwargs={},
-        outputs='numpy',
+        outputs='numpy_compact',
         **job_kwargs):
     """
     Peak detection ported from tridesclous into spikeinterface.
@@ -59,6 +59,7 @@ def detect_peaks(recording, method='by_channel',
     """
     assert method in ('by_channel', 'locally_exclusive')
     assert peak_sign in ('both', 'neg', 'pos')
+    assert outputs in ('numpy_compact', 'numpy_split', 'sorting')
     
     if method == 'locally_exclusive' and not HAVE_NUMBA:
         raise ModuleNotFoundError('"locally_exclusive" need numba which is not installed')
