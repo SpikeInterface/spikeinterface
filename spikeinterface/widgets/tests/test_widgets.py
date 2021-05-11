@@ -1,8 +1,9 @@
 import unittest
 import sys
 
-import matplotlib
-matplotlib.use('Agg')
+if __name__ != '__main__':
+    import matplotlib
+    matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
@@ -138,13 +139,13 @@ if __name__ == '__main__':
     # mytest.test_principal_component()
     
     # mytest.test_plot_drift_over_time()
-    mytest.test_plot_activity_map()
+    #~ mytest.test_plot_activity_map()
     
     
     
     # mytest.test_confusion()
     # mytest.test_agreement()
-    # mytest.test_multicomp_graph()
+    mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
         
     plt.show()

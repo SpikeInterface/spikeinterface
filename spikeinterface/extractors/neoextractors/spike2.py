@@ -3,11 +3,12 @@ import neo
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
-class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
+class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading plexon plx files.
+    Class for reading spike2 smr files.
+    smrx are not supported with this, prefer CedRecordingExtractor instead.
     
-    Based on neo.rawio.PlexonRawIO
+    Based on neo.rawio.Spike2RawIO
     
     Parameters
     ----------
@@ -16,7 +17,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
     stream_id: str or None
     """ 
     mode = 'file'
-    NeoRawIOClass = 'PlexonRawIO'
+    NeoRawIOClass = 'Spike2RawIO'
 
     def __init__(self, file_path, stream_id=None):
         neo_kwargs = {'filename' : file_path}
