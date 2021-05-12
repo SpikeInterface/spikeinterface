@@ -21,6 +21,7 @@ from .numpyextractors import NumpyRecording , NumpySorting
 # utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslicerecording import ChannelSliceRecording
 from .unitsselectionsorting import UnitsSelectionSorting
+from .frameslicerecording import FrameSliceRecording
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
 from .segmentutils import (
