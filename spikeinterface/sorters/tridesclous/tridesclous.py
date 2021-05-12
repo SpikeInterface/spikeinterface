@@ -175,7 +175,7 @@ def make_nested_tdc_params(tdc_dataio, chan_grp, **new_params):
         params['preprocessor']['highpass_freq'] = new_params['freq_min']
 
     if 'freq_max' in new_params:
-        params['preprocessor']['highpass_freq'] = new_params['freq_max']
+        params['preprocessor']['lowpass_freq'] = new_params['freq_max']
 
     if 'common_ref_removal' in new_params:
         params['preprocessor']['common_ref_removal'] = new_params['common_ref_removal']
