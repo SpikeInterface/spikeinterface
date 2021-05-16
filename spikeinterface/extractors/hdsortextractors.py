@@ -65,8 +65,6 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         self._units = units
         self._multi_electrode = multi_electrode
 
-        self._kwargs = {'file_path': str(file_path), 'keep_good_only': keep_good_only}
-
         unit_ids = []
         spiketrains = []
         for uc, unit in enumerate(units):
@@ -91,6 +89,8 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
             templates_frames_cut_before.append(unit["cutLeft"].flatten())
         self.set_property("template", np.array(templates))
         self.set_property("template_frames_cut_before", np.array(templates_frames_cut_before))
+
+        self._kwargs = {'file_path': str(file_path), 'keep_good_only': keep_good_only}
 
         # TODO features
         # ~ for uc, unit in enumerate(units):
