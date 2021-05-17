@@ -3,8 +3,6 @@ import os
 from typing import Union
 import sys
 import copy
-from scipy.io import savemat
-
 
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
@@ -12,8 +10,14 @@ from ..utils import ShellScript
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import WaveClusSortingExtractor
 
-
 PathType = Union[str, Path]
+
+try:
+    import h5py
+
+    HAVE_H5PY = True
+except ImportError:
+    HAVE_H5PY = False
 
 
 def check_if_installed(waveclus_path: Union[str, None]):
@@ -110,7 +114,7 @@ class WaveClusSorter(BaseSorter):
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.waveclus_path)
-    
+
     @classmethod
     def get_sorter_version(cls):
         p = os.getenv('WAVECLUS_PATH', None)
@@ -139,11 +143,10 @@ class WaveClusSorter(BaseSorter):
     def _setup_recording(cls, recording, output_folder, params, verbose):
         # Generate mat files in the dataset directory
         for nch, id in enumerate(recording.get_channel_ids()):
-            vcFile_mat = str(output_folder / ('raw' + str(nch + 1) + '.mat'))
-            d = { 'data': recording.get_traces(channel_ids=[id]),
-                     'sr': recording.get_sampling_frequency(),
-                    }
-            savemat(vcFile_mat, d)
+            vcFile_h5 = str(output_folder / ('raw' + str(nch + 1) + '.h5'))
+            with h5py.File(vcFile_h5, mode='w') as f:
+                f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
+                f.create_dataset("data", data=recording.get_traces(channel_ids=[id]).flatten())
 
         if verbose:
             samplerate = recording.get_sampling_frequency()
@@ -177,21 +180,15 @@ class WaveClusSorter(BaseSorter):
             p['interpolation'] = 'y'
         else:
             p['interpolation'] = 'n'
-        
 
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
-        samplerate = recording.get_sampling_frequency()
-        p['sr'] = samplerate
-
-        num_channels = recording.get_num_channels()
         tmpdir = output_folder
 
         par_str = ''
-        par_renames = {'detect_sign':'detection','detect_threshold':'stdmin',
-                       'feature_type':'features','detect_filter_fmin':'detect_fmin',
-                       'detect_filter_fmax':'detect_fmax','detect_filter_order':'detect_order',
-                       'sort_filter_fmin':'sort_fmin','sort_filter_fmax':'sort_fmax',
-                       'sort_filter_order':'sort_order'}
+        par_renames = {'detect_sign': 'detection', 'detect_threshold': 'stdmin',
+                       'feature_type': 'features', 'detect_filter_fmin': 'detect_fmin',
+                       'detect_filter_fmax': 'detect_fmax', 'detect_filter_order': 'detect_order',
+                       'sort_filter_fmin': 'sort_fmin', 'sort_filter_fmax': 'sort_fmax',
+                       'sort_filter_order': 'sort_order'}
         for key, value in p.items():
             if type(value) == str:
                 value = '\'{}\''.format(value)
@@ -203,22 +200,20 @@ class WaveClusSorter(BaseSorter):
 
         if verbose:
             print('Running waveclus in {tmpdir}...'.format(tmpdir=tmpdir))
-
-        matlab_code = _matlab_code.format(waveclus_path=WaveClusSorter.waveclus_path, 
-                    source_path=source_dir,
-                    tmpdir=tmpdir.absolute(),
-                    nChans=num_channels,
-                    parameters=par_str)
+        matlab_code = _matlab_code.format(waveclus_path=WaveClusSorter.waveclus_path,
+                                          source_path=source_dir,
+                                          tmpdir=tmpdir.absolute(),
+                                          parameters=par_str)
 
         with (output_folder / 'run_waveclus.m').open('w') as f:
-            f.write(matlab_code)        
+            f.write(matlab_code)
 
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
                 {disk_move}
                 cd {tmpdir}
                 matlab -nosplash -wait -log -r run_waveclus
-            '''.format(disk_move=str(tmpdir)[:2], tmpdir=tmpdir)
+            '''.format(disk_move=str(tmpdir.absolute())[:2], tmpdir=tmpdir)
         else:
             shell_cmd = '''
                 #!/bin/bash
@@ -228,9 +223,6 @@ class WaveClusSorter(BaseSorter):
         shell_cmd = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                 log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_cmd.start()
-
-        
-
         retcode = shell_cmd.wait()
 
         if retcode != 0:
@@ -253,7 +245,7 @@ addpath(genpath('{waveclus_path}'));
 addpath(genpath('{source_path}'));
 {parameters}
 try
-    p_waveclus('{tmpdir}', {nChans}, par);
+    p_waveclus('{tmpdir}', par);
 catch
     fprintf('----------------------------------------');
     fprintf(lasterr());
