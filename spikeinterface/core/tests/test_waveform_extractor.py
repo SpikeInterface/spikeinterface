@@ -16,8 +16,7 @@ def test_WaveformExtractor():
 
     recording = recording.save()
     sorting = sorting.save()
-    
-    
+ 
     folder = Path('test_waveform_extractor')
     if folder.is_dir():
         shutil.rmtree(folder)
