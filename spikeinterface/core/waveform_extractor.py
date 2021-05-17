@@ -98,9 +98,9 @@ class WaveformExtractor:
         folder.mkdir()
         
         if recording.is_dumpable:
-            recording.dump(folder / 'recording.json', relative_to=folder)
+            recording.dump(folder / 'recording.json', relative_to=None)
         if sorting.is_dumpable:
-            sorting.dump(folder / 'sorting.json', relative_to=folder)
+            sorting.dump(folder / 'sorting.json', relative_to=None)
 
         return cls(recording, sorting, folder)
 
