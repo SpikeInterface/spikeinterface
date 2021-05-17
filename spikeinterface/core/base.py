@@ -275,7 +275,7 @@ class BaseExtractor:
         return dump_dict
 
     @staticmethod
-    def from_dict(d):
+    def from_dict(d, base_folder=None):
         '''
         Instantiate extractor from dictionary
 
@@ -283,12 +283,16 @@ class BaseExtractor:
         ----------
         d: dictionary
             Python dictionary
+        base_folder: str, Path, or None
+            If given, the parent folder of the file and folder paths
 
         Returns
         -------
         extractor: RecordingExtractor or SortingExtractor
             The loaded extractor object
         '''
+        if base_folder is not None:
+            d = _make_paths_absolute(d, base_folder)
         extractor = _load_extractor_from_dict(d)
         return extractor
 
@@ -422,7 +426,7 @@ class BaseExtractor:
                     d = pickle.load(f)
             else:
                 raise ValueError(f'Impossible to load {file_path}')
-            extractor = BaseExtractor.from_dict(d)
+            extractor = BaseExtractor.from_dict(d, file_path.parent)
             return extractor
 
         elif file_path.is_dir():
@@ -435,7 +439,7 @@ class BaseExtractor:
                     file = f
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
-            extractor = BaseExtractor.load(file)
+            extractor = BaseExtractor.load(file, file.parent)
             
             # load properties
             prop_folder = folder / 'properties'
@@ -584,6 +588,31 @@ def _make_paths_relative(d, relative):
                     for path in d[k]:
                         relative_paths.append(str(Path(path).relative_to(relative)))
                     d[k] = relative_paths
+        return d
+
+
+def _make_paths_absolute(d, base):
+    base = Path(base)
+    dcopy = deepcopy(d)
+    if "kwargs" in dcopy.keys():
+        base_kwargs = _make_paths_absolute(dcopy["kwargs"], base)
+        dcopy["kwargs"] = base_kwargs
+        return dcopy
+    else:
+        for k in d.keys():
+            # in SI, all input paths have the "path" keyword
+            if "path" in k:
+                # paths can be str or list of str
+                if isinstance(d[k], str):
+                    if not Path(d[k]).exists():
+                        d[k] = str(base / d[k])
+                else:
+                    assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
+                    absolute_paths = []
+                    for path in d[k]:
+                        if not Path(path).exists():
+                            absolute_paths.append(str(base / path))
+                    d[k] = absolute_paths
         return d
 
 

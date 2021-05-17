@@ -12,8 +12,8 @@ def test_WaveformExtractor():
     
     # 2 segments
     recording = generate_recording(num_channels = 2, durations=durations, sampling_frequency=sampling_frequency)
-    sorting =generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
-    
+    sorting = generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
+
     recording = recording.save()
     sorting = sorting.save()
     
