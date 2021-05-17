@@ -406,7 +406,7 @@ class BaseExtractor:
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(file_path):
+    def load(file_path, base_folder=None):
         """
         Load extractor from file path (.json or .pkl)
 
@@ -426,7 +426,7 @@ class BaseExtractor:
                     d = pickle.load(f)
             else:
                 raise ValueError(f'Impossible to load {file_path}')
-            extractor = BaseExtractor.from_dict(d, file_path.parent)
+            extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
 
         elif file_path.is_dir():
@@ -439,7 +439,7 @@ class BaseExtractor:
                     file = f
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
-            extractor = BaseExtractor.load(file)
+            extractor = BaseExtractor.load(file, base_folder=folder)
             
             # load properties
             prop_folder = folder / 'properties'
