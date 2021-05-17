@@ -439,7 +439,7 @@ class BaseExtractor:
                     file = f
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
-            extractor = BaseExtractor.load(file, file.parent)
+            extractor = BaseExtractor.load(file)
             
             # load properties
             prop_folder = folder / 'properties'
@@ -610,6 +610,7 @@ def _make_paths_absolute(d, base):
                     assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
                     absolute_paths = []
                     for path in d[k]:
+                        
                         if not Path(path).exists():
                             absolute_paths.append(str(base / path))
                     d[k] = absolute_paths
