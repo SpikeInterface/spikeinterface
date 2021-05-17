@@ -9,3 +9,7 @@ from .neuralynx import NeuralynxRecordingExtractor
 from .blackrock import BlackrockRecordingExtractor
 from .mscraw import MCSRawRecordingExtractor
 from .kilosort import KiloSortSortingExtractor
+from .spike2 import Spike2RecordingExtractor
+
+# not in python-neo master yet
+# from .maxwell import MaxwellRecordingExtractor

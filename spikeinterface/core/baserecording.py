@@ -38,7 +38,8 @@ class BaseRecording(BaseExtractor):
         nseg = self.get_num_segments()
         nchan = self.get_num_channels()
         sf_khz = self.get_sampling_frequency() / 1000.
-        txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz'
+        duration = self.get_total_duration()
+        txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s'
         if 'files_path' in self._kwargs:
             txt += '\n  files_path: {}'.format(self._kwargs['files_path'])
         if 'file_path' in self._kwargs:
@@ -74,6 +75,16 @@ class BaseRecording(BaseExtractor):
         return self._recording_segments[segment_index].get_num_samples()
 
     get_num_frames = get_num_samples
+    
+    def get_total_samples(self):
+        s = 0
+        for segment_index in range(self.get_num_segments()):
+            s += self.get_num_samples(segment_index)
+        return s
+    
+    def get_total_duration(self):
+        duration = self.get_total_samples() / self.get_sampling_frequency()
+        return duration
 
     def get_traces(self,
                    segment_index: Union[int, None] = None,
@@ -383,6 +394,11 @@ class BaseRecording(BaseExtractor):
     def channel_slice(self, channel_ids, renamed_channel_ids=None):
         from spikeinterface import ChannelSliceRecording
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
+        return sub_recording
+    
+    def frame_slice(self, start_frame, end_frame):
+        from spikeinterface import FrameSliceRecording
+        sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
     def split_by(self, property='group', outputs='list'):
