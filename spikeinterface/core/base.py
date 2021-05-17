@@ -549,7 +549,7 @@ def is_dict_extractor(d):
     """
     if not isinstance(d, dict):
         return False
-    is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and 'annotations' in d
+    is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
     return is_extractor
     
 
