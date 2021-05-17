@@ -4,9 +4,9 @@ from typing import Union
 import sys
 
 from ..utils import ShellScript
-
+from spikeinterface.core import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
-from spikeinterface.core import BinaryRecordingExtractor
+from spikeinterface.extractors import CombinatoSortingExtractor
 
 
 try:
@@ -60,7 +60,7 @@ class CombinatoSorter(BaseSorter):
     }
 
     _params_description = {
-        'detect_sign': "Use -1 (negative), 1 (positive), or 0 (both) depending "
+        'detect_sign': "Use -1 (negative) or 1 (positive) depending "
                        "on the sign of the spikes in the recording",
         'MaxClustersPerTemp': 'How many clusters can be selected at one temperature',
         'MinSpikesPerClusterMultiSelect': 'How many spikes does a cluster need to be selected',
@@ -125,14 +125,12 @@ class CombinatoSorter(BaseSorter):
         assert HAVE_H5PY, 'You must install h5py for combinato'
         # Generate h5 files in the dataset directory
         chan_ids = recording.get_channel_ids()
-        if len(chan_ids) != 1:
-            print('warning : combinato use only one channel for sorting')
+        assert len(chan_ids) == 1, 'combinato is a single-channel recording'
         chid = chan_ids[0]
         vcFile_h5 = str(output_folder / ('recording.h5'))
-        f = h5py.File(vcFile_h5, mode='w')
-        f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
-        f.create_dataset("data", data=recording.get_traces(channel_ids=[chid]).flatten())
-        f.close()
+        with h5py.File(vcFile_h5, mode='w') as f:
+            f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
+            write_to_h5_dataset_format(recording, dataset_path='/data', segment_index=0,  file_handle=f, time_axis=0, single_axis=True)
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
@@ -140,12 +138,10 @@ class CombinatoSorter(BaseSorter):
         p = params.copy()
         p['threshold_factor'] = p.pop('detect_threshold')
         sign_thr = p.pop('detect_sign')
-        if sign_thr == 0:
-            sign_thr = ''
-        elif sign_thr == -1:
+        if sign_thr == -1:
             sign_thr = '--neg'
         elif sign_thr == 1:
-            sign_thr = '--pos'
+            sign_thr = ''
 
         tmpdir = output_folder
 
@@ -174,7 +170,6 @@ class CombinatoSorter(BaseSorter):
             css_folder=CombinatoSorter.combinato_path,
             sign_thr=sign_thr)
 
-        
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                 log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
@@ -187,5 +182,5 @@ class CombinatoSorter(BaseSorter):
     def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         result_fname = str(output_folder / 'recording')
-        sorting = se.CombinatoSortingExtractor(datapath=result_fname)
+        sorting = CombinatoSortingExtractor(folder_path=result_fname)
         return sorting
