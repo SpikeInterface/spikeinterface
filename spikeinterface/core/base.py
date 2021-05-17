@@ -543,40 +543,38 @@ def _check_if_dumpable(d):
         return d['dumpable']
 
 
+def is_dict_extractor(d):
+    """
+    Check if a dict describe an extractor.
+    """
+    if not isinstance(d, dict):
+        return False
+    is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
+    return is_extractor
+    
+
 def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
-
+    
     if 'kwargs' not in dic:
         raise Exception(f'This dict cannot be load into extractor {dic}')
     kwargs = deepcopy(dic['kwargs'])
+    
+    # handle nested
+    for k, v in kwargs.items():
+        
+        if isinstance(v, dict) and is_dict_extractor(v):
+            kwargs[k] = _load_extractor_from_dict(v) 
+    
+    # handle list of extractors list
+    for k, v in kwargs.items():
+        if isinstance(v, list):
+            if all(is_dict_extractor(e) for e in v):
+                kwargs[k] = [_load_extractor_from_dict(e) for e in v]
 
-    if any(isinstance(v, dict) for v in kwargs.values()):
-        # nested
-        for k in kwargs.keys():
-            if isinstance(kwargs[k], dict):
-                if 'module' in kwargs[k].keys() and 'class' in kwargs[k].keys() and 'version' in kwargs[k].keys():
-                    extractor = _load_extractor_from_dict(kwargs[k])
-                    class_name = dic['class']
-                    cls = _get_class_from_string(class_name)
-                    kwargs[k] = extractor
-                    break
-    elif any(isinstance(v, list) and isinstance(v[0], dict) for v in kwargs.values()):
-        # multi
-        for k in kwargs.keys():
-            if isinstance(kwargs[k], list) and isinstance(kwargs[k][0], dict):
-                extractors = []
-                for kw in kwargs[k]:
-                    if 'module' in kw.keys() and 'class' in kw.keys() and 'version' in kw.keys():
-                        extr = _load_extractor_from_dict(kw)
-                        extractors.append(extr)
-                # ~ class_name = dic['class']
-                # ~ cls = _get_class_from_string(class_name)
-                kwargs[k] = extractors
-                break
-    else:
-        class_name = dic['class']
-        cls = _get_class_from_string(class_name)
+    class_name = dic['class']
+    cls = _get_class_from_string(class_name)
 
     assert cls is not None and class_name is not None, "Could not load spikeinterface class"
     if not _check_same_version(class_name, dic['version']):
@@ -587,10 +585,9 @@ def _load_extractor_from_dict(dic):
     extractor = cls(**kwargs)
 
     extractor._annotations.update(dic['annotations'])
-    # extractor._properties.update(dic['properties'])
     for k, v in dic['properties'].items():
         extractor.set_property(k, v)
-    # ~ extractor._features.update(dic['features'])
+    # TODO features
 
     return extractor
 
