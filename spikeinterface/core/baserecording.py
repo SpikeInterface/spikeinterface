@@ -395,6 +395,11 @@ class BaseRecording(BaseExtractor):
         from spikeinterface import ChannelSliceRecording
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
+    
+    def frame_slice(self, start_frame, end_frame):
+        from spikeinterface import FrameSliceRecording
+        sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
+        return sub_recording
 
     def split_by(self, property='group', outputs='list'):
         assert outputs in ('list', 'dict')

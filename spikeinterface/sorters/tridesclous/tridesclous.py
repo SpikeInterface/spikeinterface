@@ -102,7 +102,7 @@ class TridesclousSorter(BaseSorter):
             # save binary file (chunk by hcunk) into a new file
             num_chan = recording.get_num_channels()
             dtype = recording.get_dtype().str
-            files_path = [str(output_folder / f'raw_signals_{i}.raw') for i in num_seg]
+            files_path = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
             BinaryRecordingExtractor.write_recording(recording, files_path=files_path,
                                                                     dtype=dtype, total_memory="500M", n_jobs=-1,
                                                                     verbose=False, progress_bar=verbose)
@@ -175,7 +175,7 @@ def make_nested_tdc_params(tdc_dataio, chan_grp, **new_params):
         params['preprocessor']['highpass_freq'] = new_params['freq_min']
 
     if 'freq_max' in new_params:
-        params['preprocessor']['highpass_freq'] = new_params['freq_max']
+        params['preprocessor']['lowpass_freq'] = new_params['freq_max']
 
     if 'common_ref_removal' in new_params:
         params['preprocessor']['common_ref_removal'] = new_params['common_ref_removal']
