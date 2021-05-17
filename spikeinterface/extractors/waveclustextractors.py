@@ -18,30 +18,18 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         spike_times = cluster_classes[:, 1]
         par = self._getfield("par")
         sampling_frequency = par[0, 0][np.where(np.array(par.dtype.names) == 'sr')[0][0]][0][0]
-        unit_ids = np.unique(classes[classes > 0]).astype('int')
+        unit_ids = np.unique(classes).astype('int')
 
         spiketrains = {}
         for unit_id in unit_ids:
             mask = (classes == unit_id)
             spiketrains[unit_id] = np.rint(spike_times[mask] * (sampling_frequency / 1000))
-        self._unsorted_train = np.rint(spike_times[classes == 0] * (sampling_frequency / 1000))
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         self.add_sorting_segment(WaveClustSortingSegment(unit_ids, spiketrains))
-
+        self.set_property('unsorted', np.array([c == 0 for c in unit_ids]))
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
-
-
-    """
-    def get_unsorted_spike_train(self, start_frame=None, end_frame=None):
-        start_frame, end_frame = self._cast_start_end_frame(start_frame, end_frame)
-
-        start_frame = start_frame or 0
-        end_frame = end_frame or np.infty
-        u = self._unsorted_train
-        return u[(u >= start_frame) & (u < end_frame)]
-    """
 
 
 class WaveClustSortingSegment(BaseSortingSegment):
