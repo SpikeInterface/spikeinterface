@@ -107,11 +107,27 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
         'phy/phy_example_0',
     ]
 
+#~ @pytest.mark.skip(reason="Maxwell HDF5 compression need a manual installable plugin!!!")
+#~ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    #~ ExtractorClass = MaxwellRecordingExtractor
+    #~ downloads = ['maxwell']
+    #~ entities = [
+        #~ 'maxwell/MaxOne_data/Record/000011/data.raw.h5',
+        #~ ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id':'well0000', 'rec_name': 'rec0000'})
+    #~ ]
+
+
+class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Spike2RecordingExtractor
+    downloads = ['spike2']
+    spike2 = [
+        'rawmcs/130322-1LY.smr',
+    ]
 
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
     #~ test = MearecSortingTest()
-    test = SpikeGLXRecordingTest()
+    #~ test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = ItanRecordingTest()
@@ -121,6 +137,9 @@ if __name__ == '__main__':
     # test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
+    #test = MaxwellRecordingTest()
+    
+    test = Spike2RecordingTest()
     
     test.setUp()
     test.test_open()

@@ -21,6 +21,14 @@ from .numpyextractors import NumpyRecording , NumpySorting
 # utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslicerecording import ChannelSliceRecording
 from .unitsselectionsorting import UnitsSelectionSorting
+from .frameslicerecording import FrameSliceRecording
+
+# utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
+from .segmentutils import (
+    append_recordings, AppendSegmentRecording,
+    concatenate_recordings, ConcatenateSegmentRecording,
+    append_sortings, AppendSegmentSorting)
+
 
 # default folder
 from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,

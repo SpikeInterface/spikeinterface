@@ -30,6 +30,9 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
 
         self.add_sorting_segment(WaveClustSortingSegment(unit_ids, spiketrains))
 
+        self._kwargs = {'file_path': str(Path(file_path).absolute())}
+
+
     """
     def get_unsorted_spike_train(self, start_frame=None, end_frame=None):
         start_frame, end_frame = self._cast_start_end_frame(start_frame, end_frame)
