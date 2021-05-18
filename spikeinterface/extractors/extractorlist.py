@@ -25,6 +25,8 @@ from .neoextractors import (
     MCSRawRecordingExtractor,
     KiloSortSortingExtractor,
     Spike2RecordingExtractor,
+    AxonaRecordingExtractor,
+    AxonaUnitRecordingExtractor
     
     # not in python-neo master yet
     # MaxwellRecordingExtractor,  
