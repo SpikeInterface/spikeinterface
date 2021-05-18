@@ -82,6 +82,7 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
         timebase_sr = int(self.neo_reader.file_parameters['unit']['timebase'].split(' ')[0])
         samples_pre = int(self.neo_reader.file_parameters['set']['file_header']['pretrigSamps'])
         samples_post = int(self.neo_reader.file_parameters['set']['file_header']['spikeLockout'])
+        sampling_rate = self.get_sampling_frequency()
 
         tcmap = self._get_tetrode_channel_table(channel_ids)
 
@@ -96,8 +97,8 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
             waveforms = self.neo_reader._get_spike_raw_waveforms(
                 block_index=0, seg_index=0,
                 unit_index=tetrode_id - 1,  # Tetrodes IDs are 1-indexed
-                t_start=start_frame / timebase_sr,
-                t_stop=end_frame / timebase_sr
+                t_start=start_frame / sampling_rate,
+                t_stop=end_frame / sampling_rate
             )
             waveforms = waveforms[:, channels_oi, :]
             nch = len(channels_oi)
@@ -105,13 +106,14 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
             spike_train = self.neo_reader._get_spike_timestamps(
                 block_index=0, seg_index=0,
                 unit_index=tetrode_id - 1,
-                t_start=start_frame / timebase_sr,
-                t_stop=end_frame / timebase_sr
+                t_start=start_frame / sampling_rate,
+                t_stop=end_frame / sampling_rate
             )
 
             # Fill waveforms into traces timestamp by timestamp
             for t, wf in zip(spike_train, waveforms):
 
+                t = int(t // (timebase_sr / sampling_rate))  # timestamps are sampled at higher frequency
                 t = t - start_frame
                 if t - samples_pre < 0:
                     traces[itrc:itrc + nch, :t + samples_post] = wf[:, samples_pre - t:]
@@ -131,8 +133,7 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
         return n
 
     def get_sampling_frequency(self):
-        return int(self.neo_reader.file_parameters[
-            'unit']['sample_rate'].split(' ')[0])
+        return int(self.neo_reader.file_parameters['unit']['sample_rate'].split(' ')[0])
 
     def get_channel_ids(self):
         return self._channel_ids
