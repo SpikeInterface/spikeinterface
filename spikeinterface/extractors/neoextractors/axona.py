@@ -18,7 +18,7 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    filename: str or Path
+    file_path: str or Path
         Full filename of the .set or .bin file.
     """
     # TODO: Ultimately we can probably use only one AxonaRecordingExtractor, rather
@@ -27,6 +27,10 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     extractor_name = 'AxonaRecording'
     mode = 'file'
     NeoRawIOClass = 'AxonaRawIO'
+
+    def __init__(self, file_path, stream_id=None):
+        neo_kwargs = {'filename': str(file_path)}
+        super().__init__(**neo_kwargs)
 
     # Overwrite bc prefer_slice=True breaks AxonaRawIO._get_analogsignal_chunk()
     # TODO: A better solution would be to allow selecting `prefer_slice=False` in
@@ -64,6 +68,8 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
+    file_path: str or Path
+        Full filename of the .set or .bin file.
     noise_std: float
         Standard deviation of the Gaussian background noise
     """
@@ -71,8 +77,9 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
     mode = 'file'
     NeoRawIOClass = 'AxonaRawIO'
 
-    def __init__(self, noise_std: float = 3, **kargs):
-        super().__init__(**kargs)
+    def __init__(self, file_path, noise_std: float = 3, **kargs):
+        neo_kwargs = {'filename': str(file_path)}
+        super().__init__(**neo_kwargs)
         self._noise_std = noise_std
 
     def get_traces(self, segment_index=0, channel_ids=None, start_frame=None, end_frame=None, return_scaled=True):
