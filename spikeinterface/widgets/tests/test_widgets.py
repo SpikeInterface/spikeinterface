@@ -73,6 +73,9 @@ class TestWidgets(unittest.TestCase):
         
     def test_principal_component(self):
         sw.plot_principal_component(self._we)
+        
+    def test_plot_unit_localisation(self):
+        sw.plot_unit_localisation(self._we)
 
     # TODO
     # def test_autocorrelograms(self):
@@ -137,15 +140,18 @@ if __name__ == '__main__':
     # mytest.test_amplitudes_timeseries()
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
+    mytest.test_plot_unit_localisation()
+    
+    
     
     # mytest.test_plot_drift_over_time()
-    #~ mytest.test_plot_activity_map()
+    # mytest.test_plot_activity_map()
     
     
     
     # mytest.test_confusion()
     # mytest.test_agreement()
-    mytest.test_multicomp_graph()
+    #~ mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
         
     plt.show()
