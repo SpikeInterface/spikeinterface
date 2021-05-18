@@ -72,12 +72,12 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
         super().__init__(**kargs)
         self._noise_std = noise_std
 
-    def get_traces(self, channel_ids=None, start_frame=None, end_frame=None, return_scaled=True):
+    def get_traces(self, segment_index=0, channel_ids=None, start_frame=None, end_frame=None, return_scaled=True):
 
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
-            end_frame = self.get_num_samples()
+            end_frame = self.get_num_samples(segment_index)
 
         timebase_sr = int(self.neo_reader.file_parameters['unit']['timebase'].split(' ')[0])
         samples_pre = int(self.neo_reader.file_parameters['set']['file_header']['pretrigSamps'])
