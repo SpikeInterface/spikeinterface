@@ -97,7 +97,7 @@ class WaveformExtractor:
                 shutil.rmtree(folder)
             else:
                 raise FileExistsError('Folder already exists')
-        folder.mkdir()
+        folder.mkdir(parents=True)
         
         if recording.is_dumpable:
             recording.dump(folder / 'recording.json')
@@ -450,7 +450,6 @@ def extract_waveforms(recording, sorting, folder,
     else:
         we = WaveformExtractor.create(recording, sorting, folder)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
-        print(job_kwargs)
         we.run(**job_kwargs)
     
     return we

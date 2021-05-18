@@ -68,7 +68,7 @@ class UnitLocalisationWidget(BaseWidget):
         probe = we.recording.get_probe()
         plot_probe(probe, ax=ax)
         ax.set_title('')
-        
+
         ax.scatter(localisation[:, 0], localisation[:, 1], marker='1', color='r')
         
         
