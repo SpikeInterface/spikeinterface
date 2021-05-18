@@ -2,8 +2,13 @@ from setuptools import setup, find_packages
 
 with open("requirements.txt", mode='r') as f:
     install_requires = f.read().split('\n')
-
 install_requires = [e for e in install_requires if len(e) > 0]
+
+with open("full_requirements.txt", mode='r') as f:
+    full_requires = f.read().split('\n')
+full_requires = [e for e in full_requires if len(e) > 0]
+
+extras_require = {"full": full_requires}
 
 d = {}
 exec(open("spikeinterface/version.py").read(), None, d)
@@ -15,7 +20,7 @@ pkg_name = "spikeinterface"
 setup(
     name=pkg_name,
     version=version,
-    author="Cole Hurwitz, Jeremy Magland, Alessio Paolo Buccino, Matthias Hennig, Samuel Garcia",
+    author="Alessio Paolo Buccino, Cole Hurwitz, Samuel Garcia, Jeremy Magland, Matthias Hennig",
     author_email="alessiop.buccino@gmail.com",
     description="Python toolkit for analysis, visualization, and comparison of spike sorting output",
     long_description=long_description,
@@ -24,6 +29,7 @@ setup(
     packages=find_packages(),
     package_data={},
     install_requires=install_requires,
+    extras_require=extras_require,
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",

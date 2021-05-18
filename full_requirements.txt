@@ -1,0 +1,13 @@
+h5py>=3.2.1
+scipy>=1.6.3
+pyintan>=0.3.0
+pyopenephys>=1.1.4
+neo>=0.9.0
+MEArec>=1.7
+pynwb>=1.4
+lxml>=4.6.3
+nixio>=1.5.0
+shybrid>=0.4.2
+pyyaml>=5.4.1
+mtscomp>=1.0.1
+sonpy;python_version>'3.7'
