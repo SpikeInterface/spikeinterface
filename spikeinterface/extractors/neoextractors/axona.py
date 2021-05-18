@@ -21,6 +21,9 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     filename: str or Path
         Full filename of the .set or .bin file.
     """
+    # TODO: Ultimately we can probably use only one AxonaRecordingExtractor, rather
+    # than AxonaRecordingExtractor and AxonaUnitRecordingExtractor, since unit data
+    # was incorporated into the same axonarawio in neo by Julia.
     extractor_name = 'AxonaRecording'
     mode = 'file'
     NeoRawIOClass = 'AxonaRawIO'
