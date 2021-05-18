@@ -9,6 +9,24 @@ from spikeinterface.extractors import *
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
 
+class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonaRecordingExtractor
+    downloads = ['axona']
+    entities = [
+        'axona/axona_raw.bin',
+        'axona/axona_raw.set',
+    ]
+
+class AxonaUnitRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonaUnitRecordingExtractor
+    downloads = ['axona']
+    entities = [
+        'axona/data_multi_modal/axona_sample.1',
+        'axona/data_multi_modal/axona_sample.2',
+        'axona/data_multi_modal/axona_sample.set',
+        'axona/data_multi_modal/axona_sample.bin'
+    ]
+
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ['mearec']
