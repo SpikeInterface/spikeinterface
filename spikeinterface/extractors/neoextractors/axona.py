@@ -68,11 +68,16 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
     mode = 'file'
     NeoRawIOClass = 'AxonaRawIO'
 
-    def __init__(self, noise_std: float = 3, block_index=None, seg_index=None, **kargs):
-        super().__init__(block_index=block_index, seg_index=seg_index, **kargs)
+    def __init__(self, noise_std: float = 3, **kargs):
+        super().__init__(**kargs)
         self._noise_std = noise_std
 
     def get_traces(self, channel_ids=None, start_frame=None, end_frame=None, return_scaled=True):
+
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
 
         timebase_sr = int(self.neo_reader.file_parameters['unit']['timebase'].split(' ')[0])
         samples_pre = int(self.neo_reader.file_parameters['set']['file_header']['pretrigSamps'])
@@ -146,6 +151,7 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
             Rows = channels,
             columns = TetrodeID, ChannelID, ChannelID within Tetrode
         '''
+        channel_ids = [int(el) for el in channel_ids]
         active_tetrodes = self.neo_reader.get_active_tetrode()
 
         tcmap = np.zeros((len(active_tetrodes) * 4, 3), dtype=int)
