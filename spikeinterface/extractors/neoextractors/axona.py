@@ -21,9 +21,6 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     file_path: str or Path
         Full filename of the .set or .bin file.
     """
-    # TODO: Ultimately we can probably use only one AxonaRecordingExtractor, rather
-    # than AxonaRecordingExtractor and AxonaUnitRecordingExtractor, since unit data
-    # was incorporated into the same axonarawio in neo by Julia.
     extractor_name = 'AxonaRecording'
     mode = 'file'
     NeoRawIOClass = 'AxonaRawIO'
@@ -33,8 +30,6 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
         super().__init__(**neo_kwargs)
 
     # Overwrite bc prefer_slice=True breaks AxonaRawIO._get_analogsignal_chunk()
-    # TODO: A better solution would be to allow selecting `prefer_slice=False` in
-    # `baserecording.get_traces`
     def get_traces(self,
                    segment_index: Union[int, None] = None,
                    start_frame: Union[SampleIndex, None] = None,
