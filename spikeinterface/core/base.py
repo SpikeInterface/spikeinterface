@@ -244,7 +244,8 @@ class BaseExtractor:
             'module': module,
             'kwargs': self._kwargs,
             'dumpable': self.is_dumpable,
-            'version': version
+            'version': version,
+            'relative_paths': (relative_to is not None),
         }
 
         try:
@@ -291,7 +292,8 @@ class BaseExtractor:
         extractor: RecordingExtractor or SortingExtractor
             The loaded extractor object
         '''
-        if base_folder is not None:
+        if d['relative_paths']:
+            assert base_folder is not None, 'When  relative_paths=True, need to provide base_folder'
             d = _make_paths_absolute(d, base_folder)
         extractor = _load_extractor_from_dict(d)
         return extractor
@@ -479,7 +481,6 @@ class BaseExtractor:
             return self.save_to_folder(**kargs)
 
     def save_to_memory(self, **kargs):
-        print('save_to_memory')
         # used only by recording at the moment
         cached = self._save(**kargs)
         self.copy_metadata(cached)
@@ -700,7 +701,7 @@ def _check_same_version(class_string, version):
         return 'unknown'
 
 
-def load_extractor(file_or_folder_or_dict):
+def load_extractor(file_or_folder_or_dict, base_folder=None):
     """
     Instantiate extractor from:
       * a dict
@@ -719,24 +720,24 @@ def load_extractor(file_or_folder_or_dict):
         The loaded extractor object
     """
     if isinstance(file_or_folder_or_dict, dict):
-        return BaseExtractor.from_dict(file_or_folder_or_dict)
+        return BaseExtractor.from_dict(file_or_folder_or_dict, base_folder=base_folder)
     else:
-        return BaseExtractor.load(file_or_folder_or_dict)
+        return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)
 
 
-def load_extractor_from_dict(d):
+def load_extractor_from_dict(d, base_folder=None):
     print('Use load_extractor(..) instead')
-    return BaseExtractor.from_dict(d)
+    return BaseExtractor.from_dict(d, base_folder=base_folder)
 
 
-def load_extractor_from_json(json_file):
+def load_extractor_from_json(json_file, base_folder=None):
     print('Use load_extractor(..) instead')
-    return BaseExtractor.load(json_file)
+    return BaseExtractor.load(json_file, base_folder=base_folder)
 
 
-def load_extractor_from_pickle(pkl_file):
+def load_extractor_from_pickle(pkl_file, base_folder=None):
     print('Use load_extractor(..) instead')
-    return BaseExtractor.load(pkl_file)
+    return BaseExtractor.load(pkl_file, base_folder=base_folder)
 
 
 class BaseSegment:
