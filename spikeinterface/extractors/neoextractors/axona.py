@@ -28,6 +28,7 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(self, file_path, stream_id=None):
         neo_kwargs = {'filename': str(file_path)}
         super().__init__(**neo_kwargs)
+        self._main_ids = [int(el) for el in self._main_ids]
 
     # Overwrite bc prefer_slice=True breaks AxonaRawIO._get_analogsignal_chunk()
     def get_traces(self,
