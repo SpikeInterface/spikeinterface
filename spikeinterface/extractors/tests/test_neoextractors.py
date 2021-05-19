@@ -21,10 +21,10 @@ class AxonaUnitRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = AxonaUnitRecordingExtractor
     downloads = ['axona']
     entities = [
-        'axona/dataset_unit_spikes/20140815-180secs.1',
-        'axona/dataset_unit_spikes/20140815-180secs.2',
-        'axona/dataset_unit_spikes/20140815-180secs.set',
-        'axona/dataset_unit_spikes/20140815-180secs.bin'
+        'axona/dataset_multi_modal/axona_sample.1',
+        'axona/dataset_multi_modal/axona_sample.2',
+        'axona/dataset_multi_modal/axona_sample.set',
+        'axona/dataset_multi_modal/axona_sample.bin'
     ]
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
