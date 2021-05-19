@@ -71,7 +71,17 @@ def test_BaseRecording():
     rec.dump_to_pickle('test_BaseRecording.pkl')
     rec2 = BaseExtractor.load('test_BaseRecording.pkl')
     rec3 = load_extractor('test_BaseRecording.pkl')
-    
+
+    # dump/load dict - relative
+    d = rec.to_dict(relative_to=".")
+    rec2 = BaseExtractor.from_dict(d, base_folder=".")
+    rec3 = load_extractor(d,  base_folder=".")
+
+    # dump/load json
+    rec.dump_to_json('test_BaseRecording_rel.json', relative_to=".")
+    rec2 = BaseExtractor.load('test_BaseRecording_rel.json', base_folder=".")
+    rec3 = load_extractor('test_BaseRecording_rel.json', base_folder=".")
+
     # cache to binary
     cache_folder = Path('./my_cache_folder')
     folder = cache_folder / 'simple_recording'
