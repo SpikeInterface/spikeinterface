@@ -101,6 +101,10 @@ class TestWidgets(unittest.TestCase):
     
     def test_plot_activity_map(self):
         sw.plot_activity_map(self._rec)
+        sw.plot_activity_map(self._rec, bin_duration_s=1., with_contact_color=False)
+        sw.plot_activity_map(self._rec, bin_duration_s=1., with_interpolated_map=False)
+        
+        
 
     def test_confusion(self):
         
@@ -140,12 +144,12 @@ if __name__ == '__main__':
     # mytest.test_amplitudes_timeseries()
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
-    mytest.test_plot_unit_localisation()
+    # mytest.test_plot_unit_localisation()
     
     
     
     # mytest.test_plot_drift_over_time()
-    # mytest.test_plot_activity_map()
+    mytest.test_plot_activity_map()
     
     
     
@@ -154,4 +158,4 @@ if __name__ == '__main__':
     #~ mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
         
-    plt.show()
+    #~ plt.show()
