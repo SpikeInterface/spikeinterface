@@ -58,6 +58,9 @@ def detect_peaks(recording, method='by_channel',
     numpy_compact: str numpy_compact/numpy_split/sorting
         The type of the output. By default "numpy_compact"
         give a vector with complex dtype.
+    
+    job_kwargs: dict
+        Parameters for ChunkRecordingExecutor
     """
     assert method in ('by_channel', 'locally_exclusive')
     assert peak_sign in ('both', 'neg', 'pos')
