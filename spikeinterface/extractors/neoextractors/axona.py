@@ -84,6 +84,8 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
 
     def get_traces(self, segment_index=0, channel_ids=None, start_frame=None, end_frame=None, return_scaled=True):
 
+        if channel_ids is None:
+            channel_ids = self.get_channel_ids()
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
@@ -144,9 +146,6 @@ class AxonaUnitRecordingExtractor(NeoBaseRecordingExtractor):
 
     def get_sampling_frequency(self):
         return int(self.neo_reader.file_parameters['unit']['sample_rate'].split(' ')[0])
-
-    def get_channel_ids(self):
-        return self._channel_ids
 
     def _get_tetrode_channel_table(self, channel_ids):
         '''Create auxiliary np.array with the following columns:
