@@ -126,7 +126,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     rec_memmap[start_frame:end_frame, :] = traces
 
 
-def write_binary_recording(recording, files_path=None, dtype=None,
+def write_binary_recording(recording, files_path=None, dtype=None, add_suffix=True,
                            verbose=False, byte_offset=0, **job_kwargs):
     '''
     Save the trace of a recording extractor in several binary .dat format.
@@ -159,7 +159,8 @@ def write_binary_recording(recording, files_path=None, dtype=None,
     if not isinstance(files_path, list):
         files_path = [files_path]
     files_path = [Path(e) for e in files_path]
-    files_path = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in files_path]
+    if add_suffix:
+        files_path = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in files_path]
 
     if dtype is None:
         dtype = recording.get_dtype()
