@@ -184,6 +184,15 @@ class SHYBRIDSortingSegment(BaseSortingSegment):
         return train[idxs]
 
 
+def read_shybrid_recording(file_path):
+    recording = SHYBRIDRecordingExtractor(file_path)
+    return recording
+
+def read_shybrid_sorting(file_path, sampling_frequency, delimiter=','):
+    sorting = SHYBRIDSortingExtractor(file_path, sampling_frequency, delimiter=',')
+    return sorting
+
+
 class GeometryNotLoadedError(Exception):
     """ Raised when the recording extractor has no associated channel locations
     """

@@ -134,3 +134,7 @@ class ALFSortingSegment(BaseSortingSegment):
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
 
 
+def read_alf_sorting(folder_path, sampling_frequency=30000):
+    sorting = ALFSortingExtractor(folder_path, sampling_frequency=sampling_frequency)
+    return sorting
+
