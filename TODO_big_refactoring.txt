@@ -64,8 +64,9 @@ comparison:
 
 widgets:
   * many of them
-  * plot_activity_map
-  * in probeinterface click and get channel!!
+  * plot_activity_map with peaks DONE
+  * plot_activity_map with time series
+  
 
 
 examples:
