@@ -209,6 +209,15 @@ class MdaSortingSegment(BaseSortingSegment):
             (self._labels == unit_id) & (start_frame <= self._spike_times) & (self._spike_times < end_frame))
         return np.rint(self._spike_times[inds]).astype(int)
 
+def read_mda_recording(folder_path, **kwargs):
+    recording = MdaRecordingExtractor(folder_path, **kwargs)
+    return recording
+
+def read_mda_sorting(file_path, **kwargs):
+    sorting = MdaSortingExtractor(file_path, **kwargs)
+    return sorting
+
+
 
 def _concatenate(list):
     if len(list) == 0:
