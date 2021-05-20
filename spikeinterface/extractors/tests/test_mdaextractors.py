@@ -5,7 +5,6 @@ from spikeinterface.core.testing import check_recordings_equal, check_sortings_e
 from spikeinterface.extractors import toy_example, MdaRecordingExtractor, MdaSortingExtractor
 
 
-
 def test_mda_extractors():
     rec, sort = toy_example(num_segments=1, num_units=10)
 

@@ -8,8 +8,7 @@ import sys
 from ..utils import ShellScript
 from ..basesorter import BaseSorter
 
-# TODO
-# from spiekinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
+from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
 
 
 PathType = Union[str, Path]
@@ -190,10 +189,10 @@ class IronClustSorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        dataset_dir = output_folder / 'ironclust_dataset'
-        source_dir = Path(__file__).parent
+        dataset_dir = (output_folder / 'ironclust_dataset').absolute()
+        source_dir = (Path(__file__).parent).absolute()
         
-        tmpdir = output_folder / 'tmp'
+        tmpdir = (output_folder / 'tmp').absolute()
         
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
