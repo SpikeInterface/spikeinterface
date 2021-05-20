@@ -6,6 +6,11 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 import neo
 
 class KiloSortSortingExtractor(NeoBaseSortingExtractor):
+    """
+    Class for reading the sorting from kilosort folder
+    
+    Based on neo.rawio.PhyRawIO
+    """
     mode = 'folder'
     NeoRawIOClass = 'PhyRawIO'
     handle_spike_frame_directly = True
@@ -31,3 +36,9 @@ class KiloSortSortingExtractor(NeoBaseSortingExtractor):
 
         self._kwargs = dict(folder_path=folder_path, keep_good_only=keep_good_only,
             use_natural_unit_ids=use_natural_unit_ids)
+
+
+def read_kilosort(*args, **kargs):
+    sorting = KiloSortSortingExtractor(*args, **kargs)
+    return sorting
+read_kilosort.__doc__ = KiloSortSortingExtractor.__doc__

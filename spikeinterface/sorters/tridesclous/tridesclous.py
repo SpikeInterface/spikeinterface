@@ -80,6 +80,7 @@ class TridesclousSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
+        
         # save prb file
         probegroup = recording.get_probegroup()
         prb_file = output_folder / 'probe.prb'
