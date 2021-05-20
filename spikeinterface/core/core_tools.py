@@ -126,7 +126,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     rec_memmap[start_frame:end_frame, :] = traces
 
 
-def write_binary_recording(recording, files_path=None, dtype=None, add_suffix=True,
+def write_binary_recording(recording, files_path=None, dtype=None, add_file_extension=True,
                            verbose=False, byte_offset=0, **job_kwargs):
     '''
     Save the trace of a recording extractor in several binary .dat format.
@@ -143,6 +143,8 @@ def write_binary_recording(recording, files_path=None, dtype=None, add_suffix=Tr
         The path to the file.
     dtype: dtype
         Type of the saved data. Default float32.
+    add_file_extension: bool
+        If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
     verbose: bool
         If True, output is verbose (when chunks are used)
     byte_offset: int
@@ -159,7 +161,7 @@ def write_binary_recording(recording, files_path=None, dtype=None, add_suffix=Tr
     if not isinstance(files_path, list):
         files_path = [files_path]
     files_path = [Path(e) for e in files_path]
-    if add_suffix:
+    if add_file_extension:
         files_path = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in files_path]
 
     if dtype is None:
