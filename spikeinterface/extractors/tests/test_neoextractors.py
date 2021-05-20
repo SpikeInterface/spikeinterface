@@ -119,9 +119,9 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
 
 class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Spike2RecordingExtractor
-    downloads = ['spike2']
-    spike2 = [
-        'rawmcs/130322-1LY.smr',
+    downloads = ['spike2/130322-1LY.smr']
+    entities = [
+        ('spike2/130322-1LY.smr', {'stream_id': '1'}),
     ]
 
 if __name__ == '__main__':
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     #~ test = MearecSortingTest()
     #~ test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
-    test = OpenEphysLegacyRecordingTest()
+    #~ test = OpenEphysLegacyRecordingTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
@@ -138,8 +138,7 @@ if __name__ == '__main__':
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     #test = MaxwellRecordingTest()
-    
-    #~ test = Spike2RecordingTest()
+    test = Spike2RecordingTest()
     
     test.setUp()
     test.test_open()
