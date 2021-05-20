@@ -1,6 +1,6 @@
 from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import write_binary_recording
-from probeinterface import read_prb
+from probeinterface import read_prb, write_prb
 
 import json
 import numpy as np
@@ -36,7 +36,6 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         nb_channels = probe.total_nb_channels
 
         # translate the byte ordering
-        # TODO still ambiguous, shybrid should assume time_axis=1, since spike interface makes an assumption on the byte ordering
         byte_order = params['order']
         if byte_order == 'C':
             time_axis = 1
@@ -75,6 +74,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
         """
         assert HAVE_SBEX, SHYBRIDRecordingExtractor.installation_mesg
+        assert recording.get_num_segments() == 1, "SHYBRID can only write single segment recordings"
         save_path = Path(save_path)
         recording_name = 'recording.bin'
         probe_name = 'probe.prb'
@@ -88,13 +88,11 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         # write recording
         recording_fn = save_path / recording_name
         write_binary_recording(recording, files_path=recording_fn, dtype=dtype, verbose=verbose, **job_kwargs)
-        recording.write_to_binary_dat_format(save_path=recording_fn,
-                                             time_axis=0, dtype=dtype,
-                                             **write_binary_kwargs)
 
         # write probe file
-        probe_fn = os.path.join(save_path, PROBE_NAME)
-        save_to_probe_file(recording, probe_fn)
+        probe_fn = save_path / probe_name
+        probe = recording.get_probe()
+        write_prb(probe, probe_fn)
 
         # create parameters file
         parameters = dict(clusters=initial_sorting_fn,
@@ -104,101 +102,64 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
                                     probe=probe_fn))
 
         # write parameters file
-        parameters_fn = os.path.join(save_path, PARAMETERS_NAME)
-        with open(parameters_fn, 'w') as fp:
+        parameters_fn = save_path / params_name
+        with parameters_fn.open('w') as fp:
             yaml.dump(parameters, fp)
 
 
-class SHYBRIDRecordingSegment(BaseRecordingSegment):
-    def __init__(self, diskreadmda):
-        self._diskreadmda = diskreadmda
-        BaseRecordingSegment.__init__(self)
-        self._num_samples = self._diskreadmda.N2()
-
-    def get_num_samples(self):
-        """Returns the number of samples in this signal block
-
-        Returns:
-            SampleIndex: Number of samples in the signal block
-        """
-        return self._num_samples
-
-    def get_traces(self,
-                   start_frame=None,
-                   end_frame=None,
-                   channel_indices=None,
-                   ) -> np.ndarray:
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-        recordings = self._diskreadmda.readChunk(i1=0, i2=start_frame, N1=self._diskreadmda.N1(),
-                                                 N2=end_frame - start_frame)
-        recordings = recordings[channel_indices, :].T
-        return recordings
-
-
 class SHYBRIDSortingExtractor(BaseSorting):
-    extractor_name = 'MdaSorting'
-    installed = True  # check at class level if installed or not
+    extractor_name = 'SHYBRIDSorting'
+    installed = HAVE_SBEX
     is_writable = True
-    mode = 'file'
-    installation_mesg = ""  # error message when not installed
+    installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
 
-    def __init__(self, file_path, sampling_frequency):
-        firings = readmda(str(file_path))
-        labels = firings[2, :]
-        unit_ids = np.unique(labels).astype(int)
-        BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
+    def __init__(self, file_path, sampling_frequency, delimiter=','):
+        assert self.installed, self.installation_mesg
 
-        sorting_segment = MdaSortingSegment(firings)
+        if Path(file_path).is_file():
+            spike_clusters = sbio.SpikeClusters()
+            spike_clusters.fromCSV(str(file_path), None, delimiter=delimiter)
+        else:
+            raise FileNotFoundError(f'The ground truth file {file_path} could not be found')
+
+        BaseSorting.__init__(self, unit_ids=self._spike_clusters.keys(), sampling_frequency=sampling_frequency)
+
+        sorting_segment = SHYBRIDSortingSegment(spike_clusters)
         self.add_sorting_segment(sorting_segment)
 
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'sampling_frequency': sampling_frequency}
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'sampling_frequency': sampling_frequency,
+                        'delimiter': delimiter}
 
     @staticmethod
-    def write_sorting(sorting, save_path, write_primary_channels=False):
-        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " \
-                                                "sorting"
-        unit_ids = sorting.get_unit_ids()
-        times_list = []
-        labels_list = []
-        primary_channels_list = []
-        for unit_id in unit_ids:
-            times = sorting.get_unit_spike_train(unit_id=unit_id)
-            times_list.append(times)
-            labels_list.append(np.ones(times.shape) * unit_id)
-            if write_primary_channels:
-                if 'max_channel' in sorting.get_unit_property_names(unit_id):
-                    primary_channels_list.append([sorting.get_unit_property(unit_id, 'max_channel')] * times.shape[0])
-                else:
-                    raise ValueError(
-                        "Unable to write primary channels because 'max_channel' spike feature not set in unit " + str(
-                            unit_id))
-            else:
-                primary_channels_list.append(np.zeros(times.shape))
-        all_times = _concatenate(times_list)
-        all_labels = _concatenate(labels_list)
-        all_primary_channels = _concatenate(primary_channels_list)
-        sort_inds = np.argsort(all_times)
-        all_times = all_times[sort_inds]
-        all_labels = all_labels[sort_inds]
-        all_primary_channels = all_primary_channels[sort_inds]
-        L = len(all_times)
-        firings = np.zeros((3, L))
-        firings[0, :] = all_primary_channels
-        firings[1, :] = all_times
-        firings[2, :] = all_labels
+    def write_sorting(sorting, save_path):
+        """ Convert and save the sorting extractor to SHYBRID CSV format
 
-        writemda64(firings, save_path)
+        parameters
+        ----------
+        sorting : SortingExtractor
+            The sorting extractor to be converted and saved
+        save_path : str
+            Full path to the desired target folder
+        """
+        assert HAVE_SBEX, SHYBRIDSortingExtractor.installation_mesg
+        assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"
+
+        dump = np.empty((0, 2))
+
+        for unit_id in sorting.get_unit_ids():
+            spikes = sorting.get_unit_spike_train(unit_id)[:, np.newaxis]
+            expanded_id = (np.ones(spikes.size) * unit_id)[:, np.newaxis]
+            tmp_concat = np.concatenate((expanded_id, spikes), axis=1)
+
+            dump = np.concatenate((dump, tmp_concat), axis=0)
+
+        sorting_fn = Path(save_path) / 'initial_sorting.csv'
+        np.savetxt(sorting_fn, dump, delimiter=',', fmt='%i')
 
 
 class SHYBRIDSortingSegment(BaseSortingSegment):
-    def __init__(self, firings):
-        self._firings = firings
-        self._max_channels = self._firings[0, :]
-        self._spike_times = self._firings[1, :]
-        self._labels = self._firings[2, :]
+    def __init__(self, spike_clusters):
+        self._spike_clusters = spike_clusters
         BaseSortingSegment.__init__(self)
 
     def get_unit_spike_train(self,
@@ -211,9 +172,9 @@ class SHYBRIDSortingSegment(BaseSortingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = np.inf
-        inds = np.where(
-            (self._labels == unit_id) & (start_frame <= self._spike_times) & (self._spike_times < end_frame))
-        return np.rint(self._spike_times[inds]).astype(int)
+        train = self._spike_clusters[unit_id].get_actual_spike_train().spikes
+        idxs = np.where((start_frame <= train) & (train < end_frame))
+        return train[idxs]
 
 
 class GeometryNotLoadedError(Exception):
