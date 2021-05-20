@@ -2,6 +2,8 @@
 from spikeinterface.core import (BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
+from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor
+
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
@@ -35,6 +37,7 @@ recording_extractor_full_list = [
 
     # natively implemented in spikeinterface.extractors
     NumpyRecording,
+    MdaRecordingExtractor,
 
     # neo based
     MEArecRecordingExtractor,
@@ -90,6 +93,7 @@ sorting_extractor_full_list = [
 
     # natively implemented in spikeinterface.extractors
     NumpySorting,
+    MdaSortingExtractor,
     KlustaSortingExtractor,
     HDSortSortingExtractor,
     WaveClusSortingExtractor,
