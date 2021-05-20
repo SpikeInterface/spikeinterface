@@ -34,7 +34,7 @@ class MdaRecording(BaseRecording):
                                channel_ids=np.arange(num_channels), dtype=dtype)
         rec_segment = MdaRecordingSegment(self._diskreadmda)
         self.add_recording_segment(rec_segment)
-        self.set_channel_locations(geom)
+        self.set_dummy_probe_from_locations(geom)
         self._kwargs = {'folder_path': str(Path(folder_path).absolute()),
                         'raw_fname': raw_fname, 'params_fname': params_fname,
                         'geom_fname': geom_fname}
