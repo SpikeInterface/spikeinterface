@@ -1,6 +1,7 @@
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import write_binary_recording
 
+from typing import Union, List
 import json
 import numpy as np
 from pathlib import Path
@@ -118,9 +119,9 @@ class MdaRecordingSegment(BaseRecordingSegment):
         return self._num_samples
 
     def get_traces(self,
-                   start_frame=None,
-                   end_frame=None,
-                   channel_indices=None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
                    ) -> np.ndarray:
         if start_frame is None:
             start_frame = 0
@@ -197,8 +198,8 @@ class MdaSortingSegment(BaseSortingSegment):
 
     def get_unit_spike_train(self,
                              unit_id,
-                             start_frame,
-                             end_frame,
+                             start_frame: Union[int, None] = None,
+                             end_frame: Union[int, None] = None,
                              ) -> np.ndarray:
         # must be implemented in subclass
         if start_frame is None:
