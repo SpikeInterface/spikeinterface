@@ -163,7 +163,7 @@ class IronClustSorter(BaseSorter):
         dataset_dir = output_folder / 'ironclust_dataset'
         # Generate three files in the dataset directory: raw.mda, geom.csv, params.json
         MdaRecordingExtractor.write_recording(recording=recording, save_path=str(dataset_dir),
-                                                 n_jobs=p["n_jobs_bin"], total_memory=p["total_memory"], verbose=verbose)
+                                              n_jobs=p["n_jobs_bin"], total_memory=p["total_memory"], verbose=verbose)
         
         samplerate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()

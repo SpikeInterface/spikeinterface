@@ -127,7 +127,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def write_binary_recording(recording, files_path=None, dtype=None,
-                           verbose=False, **job_kwargs):
+                           verbose=False, byte_offset=0, **job_kwargs):
     '''
     Save the trace of a recording extractor in several binary .dat format.
 
@@ -145,6 +145,8 @@ def write_binary_recording(recording, files_path=None, dtype=None,
         Type of the saved data. Default float32.
     verbose: bool
         If True, output is verbose (when chunks are used)
+    byte_offset: int
+        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
 
     **job_kwargs: 
         Use by job_tools modules to set:
@@ -169,7 +171,7 @@ def write_binary_recording(recording, files_path=None, dtype=None,
         num_channels = recording.get_num_channels()
         file_path = files_path[segment_index]
         shape = (num_frames, num_channels)
-        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', shape=shape)
+        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', offset=byte_offset, shape=shape)
         rec_memmaps.append(rec_memmap)
 
     # use executor (loop or workers)
@@ -182,7 +184,7 @@ def write_binary_recording(recording, files_path=None, dtype=None,
 
 
 def write_binary_recording_file_handle(recording, file_handle=None,
-                                       time_axis=0, dtype=None, verbose=False, **job_kwargs):
+                                       time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs):
     """
     Old variant version of write_binary_recording with one file handle.
     Can be usefull in some case ???
