@@ -170,7 +170,6 @@ def compute_unit_centers_of_mass(waveform_extractor, peak_sign='neg', num_channe
         
         amps = amplitudes[unit_id][chan_inds]
         amps = np.abs(amps)
-        
         com = np.sum(amps[:, np.newaxis] * locations[chan_inds, :], axis=0) / np.sum(amps)
         coms.append(com)
     
