@@ -2,7 +2,7 @@
 from spikeinterface.core import (BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
-from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor
+
 
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor, read_klusta
@@ -13,6 +13,7 @@ from .combinatoextractors import CombinatoSortingExtractor, read_combinato
 from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
 from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
+from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor,read_mda_recording, read_mda_sorting
 
 # sorting/recording/event from neo
 from .neoextractors import (
