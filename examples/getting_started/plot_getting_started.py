@@ -26,12 +26,21 @@ import spikeinterface
 # - :code:`comparison` : comparison of spike sorting output
 # - :code:`widgets` : visualization
 
-import spikeinterface as si
+import spikeinterface as si # import core only
 import spikeinterface.extractors as se
 import spikeinterface.toolkit as st
 import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
+
+##############################################################################
+#  We can also import all submodules at once with this
+#  this internally import core+extractors+toolkit+sorters+comparison+widgets
+#
+# This is usefull for notbooks but this is a more heavy import because internally many more dependency
+# are imported (scipy/sklearn/networkx/matplotlib/h5py...)
+
+import spikeinterface.full as si
 
 
 ##############################################################################
@@ -45,10 +54,11 @@ import spikeinterface.widgets as sw
 ##############################################################################
 # First, let's download a simulated dataset
 #  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+#
+# Then we can open it. Note that mearec contain both "recording" and a "sorting" object.
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
-recording = se.MEArecRecordingExtractor(local_path)
-sorting_true = se.MEArecSortingExtractor(local_path)
+recording, sorting_true = se.read_mearec(local_path)
 print(recording)
 print(sorting_true)
 
