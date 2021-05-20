@@ -12,7 +12,7 @@ from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
 from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
 
-from .unitlocalisation import plot_unit_localisation, UnitLocalisationWidget
+from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
 
 # comparison related
