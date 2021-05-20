@@ -59,3 +59,9 @@ class TridesclousSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             spike_times = spike_times[spike_times < end_frame]
         return spike_times.copy()
+
+
+def read_tridesclous(*args, **kargs):
+    sorting = TridesclousSortingExtractor(*args, **kargs)
+    return sorting
+read_tridesclous.__doc__ = TridesclousSortingExtractor.__doc__

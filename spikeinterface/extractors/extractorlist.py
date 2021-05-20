@@ -3,28 +3,28 @@ from spikeinterface.core import (BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
 # sorting extractors in relation with a sorter
-from .klustaextractors import KlustaSortingExtractor
-from .hdsortextractors import HDSortSortingExtractor
-from .waveclustextractors import WaveClusSortingExtractor
-from .yassextractors import YassSortingExtractor
-from .combinatoextractors import CombinatoSortingExtractor
-from .tridesclousextractors import TridesclousSortingExtractor
-from .spykingcircusextractors import SpykingCircusSortingExtractor
-from .herdingspikesextractors import HerdingspikesSortingExtractor
+from .klustaextractors import KlustaSortingExtractor, read_klusta
+from .hdsortextractors import HDSortSortingExtractor, read_hdsort
+from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
+from .yassextractors import YassSortingExtractor, read_yass
+from .combinatoextractors import CombinatoSortingExtractor, read_combinato
+from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
+from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
+from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
 
 # sorting/recording/event from neo
 from .neoextractors import (
-    MEArecRecordingExtractor, MEArecSortingExtractor,
-    SpikeGLXRecordingExtractor,
-    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor,
-    IntanRecordingExtractor,
-    NeuroScopeRecordingExtractor,
-    PlexonRecordingExtractor,
-    NeuralynxRecordingExtractor,
-    BlackrockRecordingExtractor,
-    MCSRawRecordingExtractor,
-    KiloSortSortingExtractor,
-    Spike2RecordingExtractor,
+    MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec,
+    SpikeGLXRecordingExtractor, read_spikeglx,
+    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys,
+    IntanRecordingExtractor, read_intan,
+    NeuroScopeRecordingExtractor, read_neuroscope,
+    PlexonRecordingExtractor, read_plexon,
+    NeuralynxRecordingExtractor, read_neuralynx, 
+    BlackrockRecordingExtractor, read_blackrock,
+    MCSRawRecordingExtractor, read_mcsraw,
+    KiloSortSortingExtractor, read_kilosort,
+    Spike2RecordingExtractor, read_spike2,
     
     # not in python-neo master yet
     # MaxwellRecordingExtractor,  

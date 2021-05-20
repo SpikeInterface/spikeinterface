@@ -129,7 +129,7 @@ if __name__ == '__main__':
     #~ test = MearecSortingTest()
     #~ test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
-    # test = OpenEphysLegacyRecordingTest()
+    test = OpenEphysLegacyRecordingTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     # test = KiloSortSortingTest()
     #test = MaxwellRecordingTest()
     
-    test = Spike2RecordingTest()
+    #~ test = Spike2RecordingTest()
     
     test.setUp()
     test.test_open()
