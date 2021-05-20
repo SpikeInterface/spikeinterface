@@ -74,8 +74,8 @@ class TestWidgets(unittest.TestCase):
     def test_principal_component(self):
         sw.plot_principal_component(self._we)
         
-    def test_plot_unit_localisation(self):
-        sw.plot_unit_localisation(self._we)
+    def test_plot_unit_localization(self):
+        sw.plot_unit_localization(self._we)
 
     # TODO
     # def test_autocorrelograms(self):
@@ -101,10 +101,7 @@ class TestWidgets(unittest.TestCase):
     
     def test_plot_activity_map(self):
         sw.plot_activity_map(self._rec)
-        sw.plot_activity_map(self._rec, bin_duration_s=1., with_contact_color=False)
-        sw.plot_activity_map(self._rec, bin_duration_s=1., with_interpolated_map=False)
-        
-        
+        sw.plot_activity_map(self._rec, bin_duration_s=1.)
 
     def test_confusion(self):
         
@@ -144,7 +141,7 @@ if __name__ == '__main__':
     # mytest.test_amplitudes_timeseries()
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
-    # mytest.test_plot_unit_localisation()
+    # mytest.test_plot_unit_localization()
     
     
     
@@ -158,4 +155,4 @@ if __name__ == '__main__':
     #~ mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
         
-    #~ plt.show()
+    plt.show()
