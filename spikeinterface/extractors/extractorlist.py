@@ -2,6 +2,9 @@
 from spikeinterface.core import (BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
+from .shybridextractors import (
+    SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor, read_shybrid_recording, read_shybrid_sorting
+)
 
 
 # sorting extractors in relation with a sorter
@@ -13,7 +16,10 @@ from .combinatoextractors import CombinatoSortingExtractor, read_combinato
 from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
 from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
-from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor,read_mda_recording, read_mda_sorting
+from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
+from .shybridextractors import SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor, read_shybrid_recording, \
+    read_shybrid_sorting
+from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 
 # sorting/recording/event from neo
 from .neoextractors import (
@@ -38,6 +44,7 @@ recording_extractor_full_list = [
 
     # natively implemented in spikeinterface.extractors
     NumpyRecording,
+    SHYBRIDRecordingExtractor,
     MdaRecordingExtractor,
 
     # neo based
@@ -95,6 +102,9 @@ sorting_extractor_full_list = [
     # natively implemented in spikeinterface.extractors
     NumpySorting,
     MdaSortingExtractor,
+    SHYBRIDSortingExtractor,
+    ALFSortingExtractor,
+
     KlustaSortingExtractor,
     HDSortSortingExtractor,
     WaveClusSortingExtractor,
