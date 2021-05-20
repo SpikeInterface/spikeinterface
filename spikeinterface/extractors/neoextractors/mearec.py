@@ -4,7 +4,7 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 import neo
 
-from probeinterface import read_mearec
+import probeinterface as pi
 
 class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     """
@@ -26,7 +26,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename' : file_path}
         NeoBaseRecordingExtractor.__init__(self, **neo_kwargs)
         
-        probe = read_mearec(file_path)
+        probe = pi.read_mearec(file_path)
         self.set_probe(probe, in_place=True)
         
         self._kwargs = {'file_path' : str(file_path)}
@@ -46,3 +46,9 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
                     **neo_kwargs)
         
         self._kwargs = {'file_path' : str(file_path), 'use_natural_unit_ids': use_natural_unit_ids}
+
+
+def read_mearec(file_path, locs_2d=True, use_natural_unit_ids=True):
+    recording = MEArecRecordingExtractor(file_path, locs_2d=locs_2d)
+    sorting = MEArecSortingExtractor(file_path, use_natural_unit_ids=use_natural_unit_ids)
+    return recording, sorting

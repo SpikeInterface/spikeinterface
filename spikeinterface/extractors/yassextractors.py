@@ -59,3 +59,9 @@ class YassSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
+
+
+def read_yass(*args, **kargs):
+    sorting = YassSortingExtractor(*args, **kargs)
+    return sorting
+read_yass.__doc__ = YassSortingExtractor.__doc__

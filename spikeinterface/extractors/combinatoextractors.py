@@ -79,3 +79,9 @@ class CombinatoSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
+
+
+def read_combinato(*args, **kargs):
+    sorting = CombinatoSortingExtractor(*args, **kargs)
+    return sorting
+read_combinato.__doc__ = CombinatoSortingExtractor.__doc__
