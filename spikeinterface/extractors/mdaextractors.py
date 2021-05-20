@@ -10,7 +10,7 @@ import tempfile
 import traceback
 
 
-class MdaRecording(BaseRecording):
+class MdaRecordingExtractor(BaseRecording):
     extractor_name = 'MdaRecording'
     has_default_locations = True
     has_unscaled = False
@@ -132,11 +132,7 @@ class MdaRecordingSegment(BaseRecordingSegment):
         return recordings
 
 
-# For backward compatibity (old good time)
-MdaRecordingExtractor = MdaRecording
-
-
-class MdaSorting(BaseSorting):
+class MdaSortingExtractor(BaseSorting):
     extractor_name = 'MdaSorting'
     installed = True  # check at class level if installed or not
     is_writable = True
@@ -212,12 +208,6 @@ class MdaSortingSegment(BaseSortingSegment):
         inds = np.where(
             (self._labels == unit_id) & (start_frame <= self._spike_times) & (self._spike_times < end_frame))
         return np.rint(self._spike_times[inds]).astype(int)
-
-
-
-
-# For backward compatibity (old good time)
-MdaSortingExtractor = MdaSorting
 
 
 def _concatenate(list):
