@@ -10,13 +10,12 @@ def compute_correlograms(sorting,
     from sevral cluster.
     
     This very elegant implementation is copy from phy package written by Cyril Rossant.
+    https://github.com/cortex-lab/phylib/blob/master/phylib/stats/ccg.py
     
     Some sligh modification have been made to fit spikeinterface
-    datamodel because there are several segment handling in spikeinterface.
+    data model because there are several segments handling in spikeinterface.
     
-    Note that this function is more or less a copy/paste from trideclous.
-    
-    Author: Samuel Garcia
+    Adaptation: Samuel Garcia
     """
     num_seg = sorting.get_num_segments()
     num_units = len(sorting.unit_ids)
