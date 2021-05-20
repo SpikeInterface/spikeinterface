@@ -1,6 +1,7 @@
 # basics
 from .timeseries import plot_timeseries, TimeseriesWidget
 from .rasters import plot_rasters, RasterWidget
+from .isidistribution import plot_isi_distribution, ISIDistributionWidget
 from .probemap import plot_probe_map, ProbeMapWidget
 
 # peak activity
