@@ -24,3 +24,9 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(self, file_path, stream_id=None):
         neo_kwargs = {'filename' : file_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
+
+
+def read_mcsraw(*args, **kargs):
+    recording = MCSRawRecordingExtractor(*args, **kargs)
+    return recording
+read_mcsraw.__doc__ = MCSRawRecordingExtractor.__doc__

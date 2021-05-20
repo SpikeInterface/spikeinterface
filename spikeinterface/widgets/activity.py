@@ -90,7 +90,7 @@ class ActivityMapWidget(BaseWidget):
                 local_peaks = peaks[i0:i1]
                 artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
                 return artists
-            self.anim = FuncAnimation(self.figure, animate_func, frames=num_frames,
+            self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
                         interval=100, blit=True)
 
     def _plot_one_bin(self, rec, probe, peaks, duration):

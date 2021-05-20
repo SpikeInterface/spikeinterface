@@ -135,3 +135,9 @@ class KlustSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
+
+
+def read_klusta(*args, **kargs):
+    sorting = KlustaSortingExtractor(*args, **kargs)
+    return sorting
+read_klusta.__doc__ = KlustaSortingExtractor.__doc__
