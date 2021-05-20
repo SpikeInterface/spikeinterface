@@ -7,7 +7,7 @@ from probeinterface.plotting import plot_probe
 from spikeinterface.toolkit import compute_unit_centers_of_mass
 
 
-class UnitLocalisationWidget(BaseWidget):
+class UnitLocalizationWidget(BaseWidget):
     """
     Plot unit localisation on probe.
 
@@ -62,7 +62,7 @@ class UnitLocalisationWidget(BaseWidget):
                 coms = compute_unit_centers_of_mass(we, **self.method_kwargs)
                 localisation = np.array([e for e in coms.values()])
             else:
-                raise ValueError('UnitLocalisationWidget: method not implemenetd')
+                raise ValueError('UnitLocalizationWidget: method not implemenetd')
         
         ax = self.ax
         probe = we.recording.get_probe()
@@ -76,9 +76,9 @@ class UnitLocalisationWidget(BaseWidget):
         
 
 
-def plot_unit_localisation(*args, **kwargs):
-    W = UnitLocalisationWidget(*args, **kwargs)
+def plot_unit_localization(*args, **kwargs):
+    W = UnitLocalizationWidget(*args, **kwargs)
     W.plot()
     return W
-plot_unit_localisation.__doc__ = UnitLocalisationWidget.__doc__
+plot_unit_localization.__doc__ = UnitLocalizationWidget.__doc__
 
