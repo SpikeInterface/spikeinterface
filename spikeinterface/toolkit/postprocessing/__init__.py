@@ -13,3 +13,5 @@ from .principal_component import (WaveformPrincipalComponent,
     compute_principal_components)
     
 from .unit_amplitudes import get_unit_amplitudes
+
+from .correlograms import compute_correlograms

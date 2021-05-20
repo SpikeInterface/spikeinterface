@@ -125,9 +125,11 @@ class NumpySorting(BaseSorting):
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for i in range(nseg):
             units_dict = {}
+            times, labels = times_list[i], labels_list[i]
             for unit_id in unit_ids:
-                times, labels = times_list[i], labels_list[i]
-                units_dict[unit_id] = times[labels == unit_id]
+                mask = labels == unit_id
+                print('unit_id', unit_id, np.sum(mask))
+                units_dict[unit_id] = times[mask]
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
 
         return sorting
@@ -160,6 +162,7 @@ class NumpySortingSegment(BaseSortingSegment):
         BaseSortingSegment.__init__(self)
         for unit_id, times in units_dict.items():
             assert times.dtype.kind == 'i', 'numpy array of spike times must be integer'
+            assert np.all(np.diff(times)), 'unsorted times'
         self._units_dict = units_dict
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):

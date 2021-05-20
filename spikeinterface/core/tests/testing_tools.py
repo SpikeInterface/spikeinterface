@@ -44,7 +44,8 @@ def generate_sorting(
             for unit_id in unit_ids:
                 #  15 Hz for all units
                 n_spike = int(15. * durations[seg_index])
-                units_dict[unit_id] = np.random.randint(0, num_timepoints[seg_index], n_spike)
+                spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n_spike)))
+                units_dict[unit_id] = spike_times
             units_dict_list.append(units_dict)
     sorting = NumpySorting. from_dict(units_dict_list, sampling_frequency)
     
