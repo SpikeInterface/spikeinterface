@@ -49,10 +49,8 @@ class WaveformExtractor:
     """
 
     def __init__(self, recording, sorting, folder):
-
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             "The recording and sorting objects must have the same number of segments!"
-
         np.testing.assert_almost_equal(recording.get_sampling_frequency(),
                                        sorting.get_sampling_frequency(), decimal=2)
 
@@ -100,9 +98,9 @@ class WaveformExtractor:
         folder.mkdir(parents=True)
         
         if recording.is_dumpable:
-            recording.dump(folder / 'recording.json')
+            recording.dump(folder / 'recording.json', relative_to=None)
         if sorting.is_dumpable:
-            sorting.dump(folder / 'sorting.json')
+            sorting.dump(folder / 'sorting.json', relative_to=None)
 
         return cls(recording, sorting, folder)
 
