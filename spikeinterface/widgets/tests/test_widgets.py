@@ -89,11 +89,10 @@ class TestWidgets(unittest.TestCase):
         # fig, axes = plt.subplots(self.num_units, self.num_units)  # for cch need square matrix
         # sw.plot_crosscorrelograms(self._sorting, axes=axes)
 
-    # TODO
-    # def test_isi_distribution(self):
-        # sw.plot_isi_distribution(self._sorting, bins=10, window=1)
-        # fig, axes = plt.subplots(self.num_units, 1)
-        # sw.plot_isi_distribution(self._sorting, axes=axes)
+    def test_isi_distribution(self):
+        sw.plot_isi_distribution(self._sorting, bins=10, window=1)
+        fig, axes = plt.subplots(self.num_units, 1)
+        sw.plot_isi_distribution(self._sorting, axes=axes)
     
     def test_plot_drift_over_time(self):
         sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=True)
