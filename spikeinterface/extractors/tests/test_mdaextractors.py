@@ -11,6 +11,7 @@ def test_mda_extractors():
 
     MdaRecordingExtractor.write_recording(rec, "mdatest")
     rec_mda = MdaRecordingExtractor("mdatest")
+    probe = rec_mda.get_probe()
 
     check_recordings_equal(rec, rec_mda, return_scaled=False)
 

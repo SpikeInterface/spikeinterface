@@ -325,6 +325,12 @@ class BaseRecording(BaseExtractor):
                     probe.set_planar_contour(contour)
         return probegroup
 
+    def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}):
+        probe = Probe()
+        probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
+        probe.set_device_channel_indices(np.arange(self.get_num_channels()))
+        self.set_probe(probe, in_place=True)
+
     def set_channel_locations(self, locations, channel_ids=None):
         if self.get_property('contact_vector') is not None:
             raise ValueError('set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
