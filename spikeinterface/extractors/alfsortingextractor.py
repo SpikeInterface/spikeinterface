@@ -125,7 +125,7 @@ class ALFSortingSegment(BaseSortingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = np.inf
-        
+
         cluster_sp_times = self._get_clusters_spike_times(unit_idx)
         if cluster_sp_times is None:
             return np.array([])
