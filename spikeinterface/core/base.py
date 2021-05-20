@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import ChannelId, ChannelIndex, Order, SamplingFrequencyHz
 
 from pathlib import Path
 import importlib
