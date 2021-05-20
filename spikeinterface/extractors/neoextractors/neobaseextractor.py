@@ -1,7 +1,7 @@
 import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
-
+from typing import Union, List
 import neo
 
 
@@ -96,7 +96,11 @@ class NeoRecordingSegment(BaseRecordingSegment):
                                             stream_index=self.stream_index)
         return n
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def get_traces(self,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
+                   ) -> np.ndarray:
         raw_traces = self.neo_reader.get_analogsignal_chunk(
             block_index=0,
             seg_index=self.segment_index,
