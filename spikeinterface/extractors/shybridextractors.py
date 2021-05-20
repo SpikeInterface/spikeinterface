@@ -29,7 +29,9 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     def __init__(self, file_path):
         # load params file related to the given shybrid recording
         assert self.installed, self.installation_mesg
+        assert Path(file_path).suffix in [".yml", ".yaml"], "The 'file_path' should be a yaml file!"
         params = sbio.get_params(file_path)['data']
+        file_path = Path(file_path)
 
         # create a shybrid probe object
         probe = sbprb.Probe(params['probe'])
@@ -42,17 +44,19 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         elif byte_order == 'F':
             time_axis = 0
 
+        bin_file = file_path.parent / f"{file_path.stem}.bin"
+
         # piggyback on binary data recording extractor
         BinaryRecordingExtractor.__init__(self,
-                                          files_path=file_path,
-                                          sampling_frequency=params['fs'],
+                                          files_path=bin_file,
+                                          sampling_frequency=float(params['fs']),
                                           num_chan=nb_channels,
                                           dtype=params['dtype'],
                                           time_axis=time_axis)
 
         # load probe file
-        probe = read_prb(params['probe'])
-        self.set_probe(probe, in_place=True)
+        probegroup = read_prb(params['probe'])
+        self.set_probegroup(probegroup, in_place=True)
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
 
     @staticmethod
@@ -82,27 +86,27 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # location information has to be present in order for shybrid to
         # be able to operate on the recording
-        if 'location' not in recording.get_shared_channel_property_names():
+        if recording.get_channel_locations() is None:
             raise GeometryNotLoadedError("Channel locations were not found")
 
         # write recording
-        recording_fn = save_path / recording_name
+        recording_fn = (save_path / recording_name).absolute()
         write_binary_recording(recording, files_path=recording_fn, dtype=dtype, verbose=verbose, **job_kwargs)
 
         # write probe file
-        probe_fn = save_path / probe_name
-        probe = recording.get_probe()
-        write_prb(probe, probe_fn)
+        probe_fn = (save_path / probe_name).absolute()
+        probegroup = recording.get_probegroup()
+        write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
 
         # create parameters file
         parameters = dict(clusters=initial_sorting_fn,
                           data=dict(dtype=dtype,
                                     fs=str(recording.get_sampling_frequency()),
                                     order='F',
-                                    probe=probe_fn))
+                                    probe=str(probe_fn)))
 
         # write parameters file
-        parameters_fn = save_path / params_name
+        parameters_fn = (save_path / params_name).absolute()
         with parameters_fn.open('w') as fp:
             yaml.dump(parameters, fp)
 
@@ -115,6 +119,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
 
     def __init__(self, file_path, sampling_frequency, delimiter=','):
         assert self.installed, self.installation_mesg
+        assert Path(file_path).suffix == ".csv", "The 'file_path' should be a csv file!"
 
         if Path(file_path).is_file():
             spike_clusters = sbio.SpikeClusters()
@@ -122,7 +127,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
         else:
             raise FileNotFoundError(f'The ground truth file {file_path} could not be found')
 
-        BaseSorting.__init__(self, unit_ids=self._spike_clusters.keys(), sampling_frequency=sampling_frequency)
+        BaseSorting.__init__(self, unit_ids=spike_clusters.keys(), sampling_frequency=sampling_frequency)
 
         sorting_segment = SHYBRIDSortingSegment(spike_clusters)
         self.add_sorting_segment(sorting_segment)
@@ -143,6 +148,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
         """
         assert HAVE_SBEX, SHYBRIDSortingExtractor.installation_mesg
         assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"
+        save_path = Path(save_path)
 
         dump = np.empty((0, 2))
 
@@ -153,7 +159,8 @@ class SHYBRIDSortingExtractor(BaseSorting):
 
             dump = np.concatenate((dump, tmp_concat), axis=0)
 
-        sorting_fn = Path(save_path) / 'initial_sorting.csv'
+        save_path.mkdir(exist_ok=True, parents=True)
+        sorting_fn = save_path / 'initial_sorting.csv'
         np.savetxt(sorting_fn, dump, delimiter=',', fmt='%i')
 
 

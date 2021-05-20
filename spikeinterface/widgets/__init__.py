@@ -12,6 +12,8 @@ from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
 from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
 
+from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
+
 
 # comparison related
 from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget

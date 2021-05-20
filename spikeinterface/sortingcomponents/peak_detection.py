@@ -13,6 +13,8 @@ from spikeinterface.toolkit import get_noise_levels, get_channel_distances
 
 
 
+peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('amplitude', 'float64'), ('segment_ind', 'int64')]
+
 def detect_peaks(recording, method='by_channel', 
         peak_sign='neg', detect_threshold=5, n_shifts=2, 
         local_radius_um=100,
@@ -56,6 +58,9 @@ def detect_peaks(recording, method='by_channel',
     numpy_compact: str numpy_compact/numpy_split/sorting
         The type of the output. By default "numpy_compact"
         give a vector with complex dtype.
+    
+    job_kwargs: dict
+        Parameters for ChunkRecordingExecutor
     """
     assert method in ('by_channel', 'locally_exclusive')
     assert peak_sign in ('both', 'neg', 'pos')
@@ -90,8 +95,7 @@ def detect_peaks(recording, method='by_channel',
     peak_segments = np.concatenate(peak_segments)
     
     if outputs == 'numpy_compact':
-        dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('amplitude', 'float64'), ('segment_ind', 'int64')]
-        peaks = np.zeros(peak_sample_inds.size, dtype=dtype)
+        peaks = np.zeros(peak_sample_inds.size, dtype=peak_dtype)
         peaks['sample_ind'] = peak_sample_inds
         peaks['channel_ind'] = peak_chan_inds
         peaks['amplitude'] = peak_amplitudes
