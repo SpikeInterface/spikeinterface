@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
@@ -20,7 +19,7 @@ class BaseRecording(BaseExtractor):
     _main_properties = ['group', 'location']
     _main_features = []  # recording do not handle features
 
-    def __init__(self, sampling_frequency: SamplingFrequencyHz, channel_ids: List[ChannelId], dtype):
+    def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
 
         self.is_dumpable = True
@@ -88,10 +87,10 @@ class BaseRecording(BaseExtractor):
 
     def get_traces(self,
                    segment_index: Union[int, None] = None,
-                   start_frame: Union[SampleIndex, None] = None,
-                   end_frame: Union[SampleIndex, None] = None,
-                   channel_ids: Union[List[ChannelId], None] = None,
-                   order: Union[Order, None] = None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_ids: Union[List, None] = None,
+                   order: Union[str, None] = None,
                    return_scaled=False,
                    ):
         segment_index = self._check_segment_index(segment_index)
@@ -99,12 +98,14 @@ class BaseRecording(BaseExtractor):
         rs = self._recording_segments[segment_index]
         traces = rs.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=channel_indices)
         if order is not None:
+            assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
             gains = self.get_property('gain_to_uV')
             offsets = self.get_property('offset_to_uV')
             if gains is None or offsets is None:
-                raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_to_uV properties)')
+                raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_'
+                                 'to_uV properties)')
             gains = gains[channel_indices].astype('float32')
             offsets = offsets[channel_indices].astype('float32')
             traces = traces.astype('float32') * gains + offsets
@@ -437,7 +438,7 @@ class BaseRecordingSegment(BaseSegment):
     def __init__(self):
         BaseSegment.__init__(self)
 
-    def get_num_samples(self) -> SampleIndex:
+    def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment
 
         Returns:
@@ -447,20 +448,20 @@ class BaseRecordingSegment(BaseSegment):
         raise NotImplementedError
 
     def get_traces(self,
-                   start_frame: Union[SampleIndex, None] = None,
-                   end_frame: Union[SampleIndex, None] = None,
-                   channel_indices: Union[List[ChannelIndex], None] = None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
                    ) -> np.ndarray:
         """
         Return the raw traces, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        start_frame: (Union[SampleIndex, None], optional)
+        start_frame: (Union[int, None], optional)
             start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[SampleIndex, None], optional)
+        end_frame: (Union[int, None], optional)
             end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List[ChannelIndex], None], optional)
+        channel_indices: (Union[List, None], optional)
             Indices of channels to return, or all channels if None. Defaults to None.
         order: (Order, optional)
             The memory order of the returned array.

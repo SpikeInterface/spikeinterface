@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
@@ -63,13 +62,13 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
         self._parent_recording_segment = parent_recording_segment
         self._parent_channel_indices = parent_channel_indices
 
-    def get_num_samples(self) -> SampleIndex:
+    def get_num_samples(self) -> int:
         return self._parent_recording_segment.get_num_samples()
 
     def get_traces(self,
-                   start_frame: Union[SampleIndex, None] = None,
-                   end_frame: Union[SampleIndex, None] = None,
-                   channel_indices: Union[List[ChannelIndex], None] = None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
                    ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
         traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)

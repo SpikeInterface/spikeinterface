@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import UnitId, ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
