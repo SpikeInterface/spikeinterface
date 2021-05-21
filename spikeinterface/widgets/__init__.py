@@ -1,8 +1,13 @@
 # basics
 from .timeseries import plot_timeseries, TimeseriesWidget
 from .rasters import plot_rasters, RasterWidget
-from .isidistribution import plot_isi_distribution, ISIDistributionWidget
 from .probemap import plot_probe_map, ProbeMapWidget
+
+# isi/ccg/acg
+from .isidistribution import plot_isi_distribution, ISIDistributionWidget
+from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
+    plot_autocorrelograms, AutoCorrelogramsWidget)
+
 
 # peak activity
 from .drift import plot_drift_over_time, DriftOverTimeWidget
