@@ -30,7 +30,7 @@ class BaseSorting(BaseExtractor):
     def unit_ids(self):
         return self._main_ids
 
-    def get_unit_ids(self) -> List[int]:
+    def get_unit_ids(self) -> List:
         return self._main_ids
 
     def get_num_units(self) -> int:
