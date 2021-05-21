@@ -1,6 +1,7 @@
 import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting,
-                                 BaseRecordingSegment, BaseSortingSegment)
+    BaseRecordingSegment, BaseSortingSegment,
+    BaseEvent, BaseEventSegment)
 
 
 class NumpyRecording(BaseRecording):
@@ -64,8 +65,6 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 
         return traces
 
-
-# TODO
 
 class NumpySorting(BaseSorting):
     is_writable = False
@@ -171,3 +170,57 @@ class NumpySortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times <= end_frame]
         return times
+
+
+class NumpyEvent(BaseEvent):
+    def __init__(self, channel_ids, structured_dtype):
+        BaseEvent.__init__(self, channel_ids, structured_dtype)
+    
+    
+    def from_dict(event_dict_list):
+        if isinstance(event_dict_list, dict):
+            event_dict_list = [event_dict_list]
+
+        channel_ids = list(event_dict_list[0].keys())
+        
+        structured_dtype = {}
+        for chan_id in channel_ids:
+            values = event_dict_list[0][chan_id]
+            structured_dtype[chan_id] = values.dtype.fields is not None
+        
+        event = NumpyEvent(channel_ids, structured_dtype)
+        for i, event_dict in enumerate(event_dict_list):
+            event.add_event_segment(NumpyEventSegment(event_dict))
+
+        return event
+
+
+
+    
+class NumpyEventSegment(BaseEventSegment):
+    def __init__(self, event_dict):
+        BaseEventSegment.__init__(self)
+        
+        #~ for channel_id, event_array in event_dict.items():
+            
+            
+        self._event_dict = event_dict
+    
+    def get_event_times(self, channel_id, start_time, end_time):
+        times = self._event_dict[channel_id]
+        if times.dtype.fields is None:
+            # no structured dtype
+            if start_time is not None:
+                times = times[times >= start_time]
+            if end_time is not None:
+                times = times[times <= end_time]
+        else:
+            filed0 = list(times.dtype.fields)[0]
+            if start_time is not None:
+                times = times[times[filed0] >= start_time]
+            if end_time is not None:
+                times = times[times[filed0] <= end_time]
+
+        return times
+
+
