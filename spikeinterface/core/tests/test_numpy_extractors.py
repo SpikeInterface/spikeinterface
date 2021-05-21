@@ -101,7 +101,8 @@ def test_NumpyEvent():
     assert times['times'][2] == 150
     assert times['duration'][2] == 60
     
-    
+    times = event.get_event_times('trig3', segment_index=1, end_time=100)
+    assert times.size == 2
     
 
 if __name__ == '__main__':
