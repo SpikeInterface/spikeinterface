@@ -54,7 +54,6 @@ sorters:
 
   * almost done : needs tests
   * is_installed() on run time
-  * some sorter do not have yet the extractor
   * unify parameters for copy to binary > common methods
   * make something to not copy binary when not needed
 
@@ -63,7 +62,6 @@ comparison:
 
 
 widgets:
-  * many of them
   * plot_activity_map with peaks DONE
   * plot_activity_map with time series
   * fix plot_multicomp_graph()
