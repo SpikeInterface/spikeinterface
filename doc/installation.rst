@@ -3,12 +3,12 @@ Installation
 
 :code:`spikeinterface` is a Python package.
 
-The actual "new API" (v0.90.0) is not release on pypi yet.
-It will be released in July 2021. Maybe.
+The actual "new API" (v0.90.0) is not released on pypi yet.
+It will be released in July 2021.
 
 
-To use it now, you have to install `spikeinterface` work-in-progress
-from source but also neo and probeinterface:
+To use it now, you have to install :code:`spikeinterface` work-in-progress
+from source. You also need :code:`neo` and :code:`probeinterface`:
 
 
 .. code-block:: bash
@@ -34,7 +34,7 @@ from source but also neo and probeinterface:
 Requirements
 ------------
 
-spiekinterface.core irself have few dependencies:
+spiekinterface.core itself has only a few dependencies:
 
   * numpy
   * neo>=0.9.0
@@ -42,7 +42,7 @@ spiekinterface.core irself have few dependencies:
   * probeinterface
   * tqdm
 
-But some sub modules have more dependencies, you should install also:
+Some sub-modules have more dependencies, so you should also install:
 
   * scipy
   * h5py
@@ -53,4 +53,4 @@ But some sub modules have more dependencies, you should install also:
   * datalad
   * MEArec
 
-All sorters must installed independantly.
+All sorters must installed independently.
