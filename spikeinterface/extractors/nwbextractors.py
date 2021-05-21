@@ -1,11 +1,6 @@
-import uuid
-from datetime import datetime
-from collections import abc
 from pathlib import Path
 import numpy as np
-import distutils.version
-from typing import Union, List, Optional
-import warnings
+from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 
@@ -25,6 +20,7 @@ except ModuleNotFoundError:
     HAVE_NWB = False
 
 PathType = Union[str, Path, None]
+
 
 def check_nwb_install():
     assert HAVE_NWB, NwbRecordingExtractor.installation_mesg
@@ -173,17 +169,19 @@ class NwbRecordingSegment(BaseRecordingSegment):
         with NWBHDF5IO(self._path, 'r') as io:
             nwbfile = io.read()
             es = nwbfile.acquisition[self._electrical_series_name]
-            es_channel_ids = np.array(es.electrodes.table.id[:])[es.electrodes.data[:]].tolist()
-            channel_inds = [es_channel_ids.index(id) for id in channel_indices]
-            if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
-                # get around h5py constraint that it does not allow datasets
-                # to be indexed out of order
-                sorted_channel_ids = np.sort(channel_indices)
-                sorted_idx = np.array([list(sorted_channel_ids).index(ch) for ch in channel_indices])
-                recordings = es.data[start_frame:end_frame, sorted_channel_ids]
-                traces = recordings[:, sorted_idx]
+
+            if not isinstance(channel_indices, slice):
+                if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
+                    # get around h5py constraint that it does not allow datasets
+                    # to be indexed out of order
+                    sorted_channel_indices = np.sort(channel_indices)
+                    resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
+                    recordings = es.data[start_frame:end_frame, sorted_channel_indices]
+                    traces = recordings[:, resorted_indices]
+                else:
+                    traces = es.data[start_frame:end_frame, channel_indices]
             else:
-                traces = es.data[start_frame:end_frame, channel_inds]
+                traces = es.data[start_frame:end_frame, channel_indices]
         return traces
 
 
