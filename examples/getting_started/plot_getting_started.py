@@ -180,8 +180,7 @@ print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 # to Phy. `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
-# TODO
-# st.postprocessing.export_to_phy(recording, sorting_TDC, output_folder='phy')
+st.export_to_phy(recording, sorting_TDC, output_folder='phy')
 
 ##############################################################################
 # Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
@@ -232,23 +231,25 @@ print(metrics)
 # output. For example, you can select sorted units with a SNR above a 
 # certain threshold:
 
-# TODO
-# sorting_curated_snr = st.curation.threshold_snrs(sorting_TDC, recording_cmr, threshold=5, threshold_sign='less')
-# snrs_above = st.validation.compute_snrs(sorting_curated_snr, recording_cmr)
+keep_mask = (metrics['snr'] > 7.5) & (metrics['isi_violations_rate'] < 0.01)
+print(keep_mask)
 
-# print('Curated SNR', snrs_above)
+keep_unit_ids = keep_mask[keep_mask].index.values
+print(keep_unit_ids)
+
+curated_sorting = sorting_TDC.select_units(keep_unit_ids)
+print(curated_sorting)
 
 ##############################################################################
 # The final part of this tutorial deals with comparing spike sorting outputs.
 # We can either (1) compare the spike sorting results with the ground-truth 
-# sorting :code:`sorting_true`, (2) compare the output of two (Klusta 
-# and Mountainsor4), or (3) compare the output of multiple sorters:
+# sorting :code:`sorting_true`, (2) compare the output of two (HerdingSpikes
+# and Tridesclous), or (3) compare the output of multiple sorters:
 
 comp_gt_TDC = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
 comp_TDC_HS = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_HS)
 comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_HS],
                                          name_list=['tdc', 'hs'])
-
 
 ##############################################################################
 # When comparing with a ground-truth sorting extractor (1), you can get the sorting performance and plot a confusion
@@ -256,17 +257,17 @@ comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_HS],
 
 comp_gt_TDC.get_performance()
 w_conf = sw.plot_confusion_matrix(comp_gt_TDC)
-w_conf = sw.plot_agreement_matrix(comp_gt_TDC)
+w_agr = sw.plot_agreement_matrix(comp_gt_TDC)
 
 
 ##############################################################################
 # When comparing two sorters (2), we can see the matching of units between sorters.
-#  Units which are not mapped has -1 as unit id.
+# Units which are not matched has -1 as unit id:
 
 comp_TDC_HS.hungarian_match_12
 
 ##############################################################################
-# or reverse
+# or the reverse:
 
 comp_TDC_HS.hungarian_match_21
 

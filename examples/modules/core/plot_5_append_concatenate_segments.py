@@ -2,21 +2,22 @@
 Append and/or concatenate segments
 ===================================
 
-Sometimes a recording can be splitted in several sequence, for instance because baseline/intervention/pauses.
+Sometimes a recording can be split in several subparts, for instance a baseline and an intervention.
 
-The terminology in spikeniterface is "segment" (like in neo).
+Similarly to `NEO <>`_ we define each subpart as a "segment".
 
-spikeinterface have tools to manipulate theses segments. There are two ways:
+:code:`spikeinterface` has tools to manipulate these segments. There are two ways:
 
   1. append_recordings()/append_sortings()/append_events()
   2. concatenate_recordings()/ concatenate_sortings()/ concatenate_events()
 
-Imagine we have 2 recordings with respectively 2 and 3 segments:
+Here is the differemce. Imagine we have 2 recordings with 2 and 3 segments respectively:
 
-  1. In case 1 we will have one recording with 5 segments
-  2. In case 2 we will have one recording with 1 "big" segment that virtually concatenate all segments.
+  1. In case 1. (append) we will end up with one recording with 5 segments.
+  2. In case 2. (concatenate) we will end up with one recording with 1 "big" segment
+  that virtually concatenates all segments.
 
-Here a short example.
+Here is a short example.
 """
 
 import matplotlib.pyplot as plt
@@ -27,8 +28,7 @@ from spikeinterface import NumpyRecording, NumpySorting
 from spikeinterface import append_recordings, concatenate_recordings
 
 ##############################################################################
-# First let's generate 2 recordings with 2 and 3 segments respectively.
-# 
+# First let's generate 2 recordings with 2 and 3 segments respectively:
 
 sampling_frequency = 1000.
 
@@ -45,7 +45,7 @@ print(rec1)
 
 
 ##############################################################################
-# lets use `append_recordings()`
+# Let's use the `append_recordings()`:
 
 recording_list = [rec0, rec1]
 rec = append_recordings(recording_list)
@@ -55,7 +55,7 @@ for i in range(rec.get_num_segments()):
     print(f'segment {i} num_samples {s}')
 
 ##############################################################################
-# lets use `concatenate_recordings()`
+# Let's use the `concatenate_recordings()`:
 
 recording_list = [rec0, rec1]
 rec = concatenate_recordings(recording_list)
