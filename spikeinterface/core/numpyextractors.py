@@ -161,7 +161,7 @@ class NumpySortingSegment(BaseSortingSegment):
         BaseSortingSegment.__init__(self)
         for unit_id, times in units_dict.items():
             assert times.dtype.kind == 'i', 'numpy array of spike times must be integer'
-            assert np.all(np.diff(times)), 'unsorted times'
+            assert np.all(np.diff(times) >= 0), 'unsorted times'
         self._units_dict = units_dict
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
