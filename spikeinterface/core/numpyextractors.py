@@ -128,7 +128,6 @@ class NumpySorting(BaseSorting):
             times, labels = times_list[i], labels_list[i]
             for unit_id in unit_ids:
                 mask = labels == unit_id
-                print('unit_id', unit_id, np.sum(mask))
                 units_dict[unit_id] = times[mask]
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
 

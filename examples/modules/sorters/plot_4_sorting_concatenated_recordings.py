@@ -6,49 +6,65 @@ In several experiments, several recordings are performed in sequence, for exampl
 In these cases, since the underlying spiking activity can be assumed to be the same (or at least very similar), the
 recordings can be concatenated. This notebook shows how to concatenate the recordings before spike sorting and how to
 split the sorted output based on the concatenation.
+
+Note that some sorters (tridesclous, ...) handle directly multi segment paradigm, in that case we will use the `append_recordings()` function.
+Many sorters do not handle multi segment, in that case we will use the `concatenate_recordings()` function.
+
+
+See also "Append and/or concatenate segments" in core tutorials.
+
 """
 
-import spikeinterface.extractors as se
-import spikeinterface.sorters as ss
-import time
+import spikeinterface.full as si
 
-#~ ##############################################################################
-#~ #  When performing an experiment with multiple consecutive recordings, it can be a good idea to concatenate the single
-#~ # recordings, as this can improve the spike sorting performance and it doesn't require to track the neurons over the
-#~ # different recordings.
-#~ #  
-#~ # This can be done very easily in SpikeInterface using a combination of the :code:`MultiRecordingTimeExtractor` and the
-#~ # :code:`SubSortingExtractor` objects.
-#~ #
-#~ # Let's create a toy example with 4 channels (the :code:`dumpable=True` dumps the extractors to a file, which is
-#~ # required for parallel sorting):
+##############################################################################
+#  When performing an experiment with multiple consecutive recordings, it can be a good idea to concatenate the single
+# recordings, as this can improve the spike sorting performance and it doesn't require to track the neurons over the
+# different recordings.
+#  
+# This can be done very easily in SpikeInterface using a combination of the :code:`MultiRecordingTimeExtractor` and the
+# :code:`SubSortingExtractor` objects.
+#
+# Let's create a toy example with 4 channels (the :code:`dumpable=True` dumps the extractors to a file, which is
+# required for parallel sorting):
 
-#~ recording_single, _ = se.example_datasets.toy_example(duration=10, num_channels=4, dumpable=True)
+recording_single, _ = si.toy_example(duration=10, num_channels=4, dumpable=True, num_segments=1)
+print(recording_single)
 
-#~ ##############################################################################
-#~ # Let's now assume that we have 4 recordings. In our case we will concatenate the :code:`recording_single` 4 times. We
-#~ # first need to build a list of :code:`RecordingExtractor` objects:
+# make dimpable
+recording_single = recording_single.save()
 
-#~ recordings_list = []
-#~ for i in range(4):
-    #~ recordings_list.append(recording_single)
+##############################################################################
+# Let's now assume that we have 4 recordings. In our case we will concatenate the :code:`recording_single` 4 times. We
+# first need to build a list of :code:`RecordingExtractor` objects:
+
+recordings_list = []
+for i in range(4):
+    recordings_list.append(recording_single)
 
 
-#~ ##############################################################################
-#~ # We can now use the :code:`recordings_list` to instantiate a :code:`MultiRecordingTimeExtractor`, which concatenates
-#~ # the traces in time:
+##############################################################################
+# Case 1. : the sorter handle multi segment
 
-#~ multirecording = se.MultiRecordingTimeExtractor(recordings=recordings_list)
+multirecording = si.append_recordings(recordings_list)
+# lets put a probe
+multirecording = multirecording.set_probe(recording_single.get_probe())
+print(multirecording)
 
-#~ ##############################################################################
-#~ # Since the :code:`MultiRecordingTimeExtractor` is a :code:`RecordingExtractor`, we can run spike sorting "normally"
+# run tridesclous in multi segment mode
+multisorting = si.run_tridesclous(multirecording)
+print(multisorting)
 
-#~ multisorting = ss.run_klusta(multirecording)
+##############################################################################
+# Case 2. : the sorter DO NOT handle multi segment
+# In that case the `concatenate_recordings()` mimic a mono segment that concatenate all segment
 
-#~ ##############################################################################
-#~ # The returned :code:`multisorting` object is a normal :code:`SortingExtractor`, but we now that its spike trains are
-#~ # concatenated similarly to the recording concatenation. So we have to split them back. We can do that using the `epoch`
-#~ # information in the :code:`MultiRecordingTimeExtractor`:
+multirecording = si.concatenate_recordings(recordings_list)
+# lets put a probe
+multirecording = multirecording.set_probe(recording_single.get_probe())
+print(multirecording)
 
-#~ sortings = []
+# run klusta in mono segment mode
+# multisorting = si.run_klusta(multirecording)
+
 
