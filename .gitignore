@@ -29,6 +29,8 @@ spikeinterface/toolkit/*/tests/*/*/*.npz
 
 spikeinterface/toolkit/*/tests/*_output/*
 
+spikeinterface/widgets/tests/mearec_test/*
+
 examples/getting_started/*_output/*
 examples/getting_started/waveforms/*
 examples/*/*/*/*.raw
