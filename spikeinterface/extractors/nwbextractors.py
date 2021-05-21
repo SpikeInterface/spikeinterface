@@ -141,7 +141,6 @@ class NwbRecordingExtractor(BaseRecording):
             self._kwargs = {'file_path': str(Path(file_path).absolute()),
                             'electrical_series_name': electrical_series_name}
 
-
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, path: PathType, electrical_series_name, num_frames):
         BaseRecordingSegment.__init__(self)
@@ -157,20 +156,20 @@ class NwbRecordingSegment(BaseRecordingSegment):
         """
         return self._num_samples
 
-    def get_traces(self,
-                   start_frame: Union[int, None] = None,
-                   end_frame: Union[int, None] = None,
-                   channel_indices: Union[List, None] = None,
-                   ) -> np.ndarray:
+    def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
+
         with NWBHDF5IO(self._path, 'r') as io:
             nwbfile = io.read()
             es = nwbfile.acquisition[self._electrical_series_name]
 
-            if not isinstance(channel_indices, slice):
+            if isinstance(channel_indices, slice):
+                traces = es.data[start_frame:end_frame, channel_indices]
+            else:
+                # channel_indices is np.ndarray
                 if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
                     # get around h5py constraint that it does not allow datasets
                     # to be indexed out of order
@@ -180,8 +179,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
                     traces = recordings[:, resorted_indices]
                 else:
                     traces = es.data[start_frame:end_frame, channel_indices]
-            else:
-                traces = es.data[start_frame:end_frame, channel_indices]
+                
         return traces
 
 
@@ -285,5 +283,28 @@ class NwbSortingSegment(BaseSortingSegment):
             # TODO if present, use times from file
             frames = np.round(times * self._sampling_frequency()).astype('int64')
         return frames[(frames > start_frame) & (frames < end_frame)]
+
+
+
+def read_nwb_recording(*args, **kwargs):
+    recording = NwbRecordingExtractor(*args, **kwargs)
+    return  recording
+
+def read_nwb_sorting(*args, **kwargs):
+    sorting = NwbSortingExtractor(*args, **kwargs)
+    return  sorting
+
+# TODO : improve this with kargws mapping
+def read_nwb(file_path, load_recording=True, load_sorting=False):
+    outputs = ()
+    if load_recording:
+        rec = read_nwb_recording(file_path)
+        outputs = outputs + (rec, )
+    if load_sorting:
+        sorting = read_nwb_sorting(file_path)
+        outputs = outputs + (sorting, )
+    return outputs
+
+
 
 # TODO class NwbEvents - class NwbEventsSegment

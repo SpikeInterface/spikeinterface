@@ -2,25 +2,6 @@
 from spikeinterface.core import (BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
-from .shybridextractors import (
-    SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor, read_shybrid_recording, read_shybrid_sorting
-)
-
-
-# sorting extractors in relation with a sorter
-from .klustaextractors import KlustaSortingExtractor, read_klusta
-from .hdsortextractors import HDSortSortingExtractor, read_hdsort
-from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
-from .yassextractors import YassSortingExtractor, read_yass
-from .combinatoextractors import CombinatoSortingExtractor, read_combinato
-from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
-from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
-from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
-from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
-from .shybridextractors import SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor, read_shybrid_recording, \
-    read_shybrid_sorting
-from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
-
 # sorting/recording/event from neo
 from .neoextractors import (
     MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec,
@@ -37,7 +18,34 @@ from .neoextractors import (
     
     # not in python-neo master yet
     # MaxwellRecordingExtractor,  
+    # CedRecordingExtractor,  
 )
+
+# NWB sorting/recording/event
+from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor
+    read_nwb, read_nwb_recording, read_nwb_sorting)
+
+
+# sorting extractors in relation with a sorter
+from .klustaextractors import KlustaSortingExtractor, read_klusta
+from .hdsortextractors import HDSortSortingExtractor, read_hdsort
+from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
+from .yassextractors import YassSortingExtractor, read_yass
+from .combinatoextractors import CombinatoSortingExtractor, read_combinato
+from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
+from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
+from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
+from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
+
+# sorting in relation with simulator
+from .shybridextractors import (  SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
+   read_shybrid_recording, read_shybrid_sorting)
+
+# misc
+from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
+
+
+########################################
 
 recording_extractor_full_list = [
     BinaryRecordingExtractor,
