@@ -20,7 +20,7 @@ class QualityMetricCalculator:
             metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
         
         unit_ids = self.sorting.unit_ids
-        metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
+        metrics = pd.DataFrame(index=unit_ids)
         
         # simple metrics not based on PCs
         for name in metric_names:
