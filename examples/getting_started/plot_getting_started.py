@@ -44,18 +44,11 @@ import spikeinterface.full as si
 
 
 ##############################################################################
-#~ # First, let's create a toy example with the :code:`extractors` module:
-
-#~ recording, sorting_true = se.toy_example(duration=10, num_channels=4, seed=0, num_segments=1)
-#~ print(recording)
-#~ print(sorting_true)
-
-
-##############################################################################
-# First, let's download a simulated dataset
-#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+# First, let's download a simulated dataset from the
+# 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data' repo
 #
-# Then we can open it. Note that mearec contain both "recording" and a "sorting" object.
+# Then we can open it. Note that `MEArec <https://mearec.readthedocs.io>`_ simulated file
+# contains both "recording" and a "sorting" object.
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 recording, sorting_true = se.read_mearec(local_path)
@@ -90,6 +83,7 @@ print('Number of segments:', num_seg)
 
 ##############################################################################
 # ...and a :code:`SortingExtractor`
+
 num_seg = recording.get_num_segments()
 unit_ids = sorting_true.get_unit_ids()
 spike_train = sorting_true.get_unit_spike_train(unit_id=unit_ids[0])
@@ -100,10 +94,11 @@ print('Unit ids:', unit_ids)
 print('Spike train of first unit:', spike_train)
 
 ##################################################################
-# spikeinterface use internally probeinterface to handle Probe and ProbeGroup.
-# So any probe in the probeinterface collections can be download and set
-#  to a Recording
-# Here the toy_example already handle a Probe. no need to download one.
+# :code:`spikeinterface` internally uses the :code:`probeinterface`
+# to handle Probe and ProbeGroup.
+# So any probe in the probeinterface collections can be download
+# and set to a Recording object.
+# In this case, the MEArec dataset already handles a Probe and we don't need to set it.
 
 probe = recording.get_probe()
 print(probe)
@@ -113,12 +108,12 @@ plot_probe(probe)
 
 
 ##############################################################################
-# Using the :code:`toolkit`, you can perform pre-processing on the recordings. 
+# Using the :code:`toolkit`, you can perform preprocessing on the recordings.
 # Each pre-processing function also returns a :code:`RecordingExtractor`, 
 # which makes it easy to build pipelines. Here, we filter the recording and 
-# apply common median reference (CMR)
-# All theses preprocessing steps are "lazy". The computation is done on demand with
-# `recording.get_traces(...)` or when we save it to disk.
+# apply common median reference (CMR).
+# All theses preprocessing steps are "lazy". The computation is done on demand when we call
+# `recording.get_traces(...)` or when we save the object to disk.
 
 recording_cmr = recording
 recording_f = st.bandpass_filter(recording, freq_min=300, freq_max=6000)
@@ -126,13 +121,13 @@ print(recording_f)
 recording_cmr = st.common_reference(recording_f, reference='global', operator='median')
 print(recording_cmr)
 
-# this compute and save the preprocessing chain
+# this computes and saves the recording after applying the preprocessing chain
 recording_preprocessed = recording_cmr.save(format='binary')
 print(recording_preprocessed)
 
 
 ##############################################################################
-# Now you are ready to spikesort using the :code:`sorters` module!
+# Now you are ready to spike sort using the :code:`sorters` module!
 # Let's first check which sorters are implemented and which are installed
 
 print('Available sorters', ss.available_sorters())
@@ -140,15 +135,15 @@ print('Installed sorters', ss.installed_sorters())
 
 ##############################################################################
 # The :code:`ss.installed_sorters()` will list the sorters installed in the machine.
-# We can see we have Klusta and Mountainsort4 installed.
+# We can see we have HerdingSpikes and Tridesclous installed.
 # Spike sorters come with a set of parameters that users can change.
-#  The available parameters are dictionaries and can be accessed with:
+# The available parameters are dictionaries and can be accessed with:
 
 print(ss.get_default_params('herdingspikes'))
 print(ss.get_default_params('tridesclous'))
 
 ##############################################################################
-# Let's run herdingspikes and change one of the parameter, the detection_threshold:
+# Let's run herdingspikes and change one of the parameter, say, the detect_threshold:
 
 sorting_HS = ss.run_herdingspikes(recording=recording_preprocessed, detect_threshold=4)
 print(sorting_HS)
@@ -160,7 +155,8 @@ other_params = ss.get_default_params('herdingspikes')
 other_params['detect_threshold'] = 5
 
 # parameters set by params dictionary
-sorting_HS_2 = ss.run_herdingspikes(recording=recording_preprocessed, **other_params)
+sorting_HS_2 = ss.run_herdingspikes(recording=recording_preprocessed, output_folder="redringspikes_output2",
+                                    **other_params)
 print(sorting_HS_2)
 
 ##############################################################################
@@ -169,7 +165,7 @@ print(sorting_HS_2)
 sorting_TDC = ss.run_tridesclous(recording=recording_preprocessed)
 
 ##############################################################################
-# The :code:`sorting_MS4` and :code:`sorting_MS4` are :code:`SortingExtractor`
+# The :code:`sorting_HS` and :code:`sorting_TDC` are :code:`SortingExtractor`
 # objects. We can print the units found using:
 
 print('Units found by herdingspikes:', sorting_HS.get_unit_ids())
@@ -184,8 +180,7 @@ print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 # to Phy. `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
-# TODO
-# st.postprocessing.export_to_phy(recording, sorting_TDC, output_folder='phy')
+st.export_to_phy(recording, sorting_TDC, output_folder='phy')
 
 ##############################################################################
 # Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
@@ -193,10 +188,10 @@ print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 
 
 ##############################################################################
-# spikeinterface provide a efficient way to extractor waveform snippets from a sorting given
-# a recording. This class sample some spikes (`max_spikes_per_unit=500`) for each cluster and store
-# then on disk. Theses waveforms per cluster are helpfull to compute the average "template" for each
-# and then compute quality metrics.
+# :code:`spikeinterface` provides a efficient way to extractor waveform snippets from paired recording/sorting objects.
+# The :code:`WaveformExtractor` class samples some spikes (:code:`max_spikes_per_unit=500`) for each cluster and stores
+# them on disk. These waveforms per cluster are helpful to compute the average waveform, or "template", for each unit
+# and then to compute, for example, quality metrics.
 
 we_TDC = si.WaveformExtractor.create(recording_preprocessed, sorting_TDC, 'waveforms', remove_if_exists=True)
 we_TDC.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
@@ -211,11 +206,11 @@ template = we_TDC.get_template(unit_id0)
 print(template.shape)
 
 ##############################################################################
-# Quality metric of spike sorting output is very important.
+# Quality metrics for the spike sorting output are very important to asses the spike sorting performance.
 # The :code:`spikeinterface.toolkit.qualitymetrics` module implements several quality metrics
-#  to assess the goodness of sorted units. Among those, for example, 
+# to assess the goodness of sorted units. Among those, for example,
 # are signal-to-noise ratio, ISI violation ratio, isolation distance, and many more.
-# Theses metrics are built on top of WaveformExtractor class and render a dict (key=unit_id)
+# Theses metrics are built on top of WaveformExtractor class and return a dictionary with the unit ids as keys:
 
 snrs = st.compute_snrs(we_TDC)
 print(snrs)
@@ -225,9 +220,10 @@ print(isi_violations_count)
 
 
 ##############################################################################
-# All theses quality mertics can be computed in one shot into a pandas.Dataframe
+# All theses quality mertics can be computed in one shot and returned as
+# a :code:`pandas.Dataframe`
 
-metrics = st.compute_quality_metrics(we_TDC, metric_names = ['snr', 'isi_violation', 'amplitude_cutoff'])
+metrics = st.compute_quality_metrics(we_TDC, metric_names=['snr', 'isi_violation', 'amplitude_cutoff'])
 print(metrics)
 
 ##############################################################################
@@ -235,23 +231,25 @@ print(metrics)
 # output. For example, you can select sorted units with a SNR above a 
 # certain threshold:
 
-# TODO
-# sorting_curated_snr = st.curation.threshold_snrs(sorting_TDC, recording_cmr, threshold=5, threshold_sign='less')
-# snrs_above = st.validation.compute_snrs(sorting_curated_snr, recording_cmr)
+keep_mask = (metrics['snr'] > 7.5) & (metrics['isi_violations_rate'] < 0.01)
+print(keep_mask)
 
-# print('Curated SNR', snrs_above)
+keep_unit_ids = keep_mask[keep_mask].index.values
+print(keep_unit_ids)
+
+curated_sorting = sorting_TDC.select_units(keep_unit_ids)
+print(curated_sorting)
 
 ##############################################################################
 # The final part of this tutorial deals with comparing spike sorting outputs.
 # We can either (1) compare the spike sorting results with the ground-truth 
-# sorting :code:`sorting_true`, (2) compare the output of two (Klusta 
-# and Mountainsor4), or (3) compare the output of multiple sorters:
+# sorting :code:`sorting_true`, (2) compare the output of two (HerdingSpikes
+# and Tridesclous), or (3) compare the output of multiple sorters:
 
 comp_gt_TDC = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
 comp_TDC_HS = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_HS)
 comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_HS],
                                          name_list=['tdc', 'hs'])
-
 
 ##############################################################################
 # When comparing with a ground-truth sorting extractor (1), you can get the sorting performance and plot a confusion
@@ -259,17 +257,17 @@ comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_HS],
 
 comp_gt_TDC.get_performance()
 w_conf = sw.plot_confusion_matrix(comp_gt_TDC)
-w_conf = sw.plot_agreement_matrix(comp_gt_TDC)
+w_agr = sw.plot_agreement_matrix(comp_gt_TDC)
 
 
 ##############################################################################
 # When comparing two sorters (2), we can see the matching of units between sorters.
-#  Units which are not mapped has -1 as unit id.
+# Units which are not matched has -1 as unit id:
 
 comp_TDC_HS.hungarian_match_12
 
 ##############################################################################
-# or reverse
+# or the reverse:
 
 comp_TDC_HS.hungarian_match_21
 
