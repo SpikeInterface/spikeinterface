@@ -22,7 +22,7 @@ from .neoextractors import (
 )
 
 # NWB sorting/recording/event
-from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor
+from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
     read_nwb, read_nwb_recording, read_nwb_sorting)
 
 
