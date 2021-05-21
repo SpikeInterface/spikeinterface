@@ -66,6 +66,7 @@ widgets:
   * many of them
   * plot_activity_map with peaks DONE
   * plot_activity_map with time series
+  * fix plot_multicomp_graph()
   
 
 
