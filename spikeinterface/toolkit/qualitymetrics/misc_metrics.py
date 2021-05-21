@@ -116,12 +116,15 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kargs):
     
     # make a dict to acces by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
+
+    print(noise_levels)
     
     snrs = {}
     for unit_id in unit_ids:
         chan_id = extremum_channels_ids[unit_id]
         noise = noise_levels[chan_id]
         amplitude = unit_amplitudes[unit_id]
+        print(unit_id, amplitude)
         snrs[unit_id] = np.abs(amplitude) / noise
     
     return snrs
