@@ -39,8 +39,7 @@ plot_probe(probe)
 from probeinterface import get_probe
 
 other_probe = get_probe('cambridgeneurotech', 'ASSY-37-E-1')
-
-plot_probe(other_probe)
+print(other_probe)
 
 other_probe.set_device_channel_indices(np.arange(32))
 recording_2_shanks = recording.set_probe(other_probe, group_mode='by_shank')
