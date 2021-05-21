@@ -4,7 +4,7 @@ Append and/or concatenate segments
 
 Sometimes a recording can be split in several subparts, for instance a baseline and an intervention.
 
-Similarly to `NEO <>`_ we define each subpart as a "segment".
+Similarly to `NEO <https://github.com/NeuralEnsemble/python-neo>`_ we define each subpart as a "segment".
 
 :code:`spikeinterface` has tools to manipulate these segments. There are two ways:
 
