@@ -10,7 +10,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
     extractor_name = "WaveClusSortingExtractor"
     installation_mesg = ""  # error message when not installed
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, keep_good_only=True):
         MatlabHelper.__init__(self, file_path)
 
         cluster_classes = self._getfield("cluster_class")
@@ -19,7 +19,8 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         par = self._getfield("par")
         sampling_frequency = par[0, 0][np.where(np.array(par.dtype.names) == 'sr')[0][0]][0][0]
         unit_ids = np.unique(classes).astype('int')
-
+        if keep_good_only:
+            unit_ids = unit_ids[unit_ids>0]
         spiketrains = {}
         for unit_id in unit_ids:
             mask = (classes == unit_id)

@@ -3,6 +3,7 @@ import os
 from typing import Union
 import sys
 import copy
+import json
 
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
@@ -66,7 +67,8 @@ class WaveClusSorter(BaseSorter):
         'stdmax': 50,
         'max_spk': 40000,
         'ref_ms': 1.5,
-        'interpolation': True
+        'interpolation': True,
+        'keep_good_only': True
     }
 
     _params_description = {
@@ -95,7 +97,8 @@ class WaveClusSorter(BaseSorter):
         'max_spk': "Maximum number of spikes used by the SPC algorithm",
         'ref_ms': "Refractory time in milliseconds, all the threshold crossing inside this period are detected as the "
                   "same spike",
-        'interpolation': "Enable or disable interpolation to improve the alignments of the spikes"
+        'interpolation': "Enable or disable interpolation to improve the alignments of the spikes",
+        'keep_good_only': "If True only 'good' units are returned"
     }
 
     sorter_description = """Wave Clus combines a wavelet-based feature extraction and paramagnetic clustering with a 
@@ -236,7 +239,12 @@ class WaveClusSorter(BaseSorter):
     def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         result_fname = str(output_folder / 'times_results.mat')
-        sorting = WaveClusSortingExtractor(file_path=result_fname)
+
+        output_folder = Path(output_folder)
+        with (output_folder / 'spikeinterface_params.json').open('r') as f:
+            sorter_params = json.load(f)['sorter_params']
+        keep_good_only = sorter_params.get('keep_good_only', True)
+        sorting = WaveClusSortingExtractor(file_path=result_fname, keep_good_only=keep_good_only)
         return sorting
 
 
