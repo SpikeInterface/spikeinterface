@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import shutil
 from pathlib import Path
@@ -42,7 +41,7 @@ class BinaryRecordingExtractor(BaseRecording):
             rec_segment = BinaryRecordingSegment(datfile, num_chan, dtype, time_axis, offset, gain)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = {'files_path': [ str(e.absolute()) for e in datfiles],
+        self._kwargs = {'files_path': [str(e.absolute()) for e in datfiles],
                         'sampling_frequency': sampling_frequency,
                         'num_chan': num_chan, 'dtype': dtype.str,
                         'time_axis': time_axis, 'offset': offset, 'gain': gain,
@@ -75,7 +74,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self._timeseries = read_binary_recording(datfile, num_chan, dtype, time_axis, offset)
         self._gain = gain
 
-    def get_num_samples(self) -> SampleIndex:
+    def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
 
         Returns:
@@ -84,9 +83,9 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         return self._timeseries.shape[0]
 
     def get_traces(self,
-                   start_frame: Union[SampleIndex, None] = None,
-                   end_frame: Union[SampleIndex, None] = None,
-                   channel_indices: Union[List[ChannelIndex], None] = None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
                    ) -> np.ndarray:
         traces = self._timeseries[start_frame:end_frame]
         if channel_indices is not None:

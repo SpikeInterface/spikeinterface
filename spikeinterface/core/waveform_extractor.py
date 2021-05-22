@@ -7,7 +7,7 @@ import numpy as np
 from .base import load_extractor
 
 from .core_tools import check_json
-from .job_tools import ChunkRecordingExecutor
+from .job_tools import ChunkRecordingExecutor, ensure_n_jobs
 
 
 class WaveformExtractor:
@@ -49,10 +49,8 @@ class WaveformExtractor:
     """
 
     def __init__(self, recording, sorting, folder):
-
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             "The recording and sorting objects must have the same number of segments!"
-
         np.testing.assert_almost_equal(recording.get_sampling_frequency(),
                                        sorting.get_sampling_frequency(), decimal=2)
 
@@ -97,12 +95,12 @@ class WaveformExtractor:
                 shutil.rmtree(folder)
             else:
                 raise FileExistsError('Folder already exists')
-        folder.mkdir()
+        folder.mkdir(parents=True)
         
         if recording.is_dumpable:
-            recording.dump(folder / 'recording.json')
+            recording.dump(folder / 'recording.json', relative_to=None)
         if sorting.is_dumpable:
-            sorting.dump(folder / 'sorting.json')
+            sorting.dump(folder / 'sorting.json', relative_to=None)
 
         return cls(recording, sorting, folder)
 
@@ -292,7 +290,8 @@ class WaveformExtractor:
         num_chans = self.recording.get_num_channels()
         nbefore = self.nbefore
         nafter = self.nafter
-
+        
+        n_jobs = ensure_n_jobs(self.recording, job_kwargs.get('n_jobs', None))
 
         selected_spikes = self.sample_spikes()
 
@@ -315,12 +314,15 @@ class WaveformExtractor:
             np.save(file_path, wfs)
             wfs = np.load(file_path, mmap_mode='r+')
             wfs_memmap[unit_id] = wfs
-
+        
         # and run
         func = _waveform_extractor_chunk
         init_func = _init_worker_waveform_extractor
-        init_args = (self.recording.to_dict(), self.sorting.to_dict(), wfs_memmap,
-                     selected_spikes, selected_spike_times, nbefore, nafter)
+        if n_jobs == 1:
+            init_args = (self.recording, self.sorting, )
+        else:
+            init_args = (self.recording.to_dict(), self.sorting.to_dict(), )
+        init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter)
         processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, **job_kwargs)
         processor.run()
 
@@ -361,7 +363,6 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
 
             sel_spikes.append(inds)
         selected_spikes[unit_id] = sel_spikes
-
     return selected_spikes
 
 
@@ -427,10 +428,10 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
         # load trace in memory
         traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
 
-        for unit_id, (i0, i1, spike_times) in to_extract.items():
+        for unit_id, (i0, i1, local_spike_times) in to_extract.items():
             wfs = wfs_memmap[unit_id]
-            for i in range(spike_times.size):
-                st = spike_times[i]
+            for i in range(local_spike_times.size):
+                st = local_spike_times[i]
                 st = int(st)
                 pos = unit_cum_sum[unit_id][segment_index] + i0 + i
                 wfs[pos, :, :] = traces[st - start - nbefore:st - start + nafter, :]
@@ -450,7 +451,6 @@ def extract_waveforms(recording, sorting, folder,
     else:
         we = WaveformExtractor.create(recording, sorting, folder)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
-        print(job_kwargs)
         we.run(**job_kwargs)
     
     return we

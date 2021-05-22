@@ -3,6 +3,12 @@ from .timeseries import plot_timeseries, TimeseriesWidget
 from .rasters import plot_rasters, RasterWidget
 from .probemap import plot_probe_map, ProbeMapWidget
 
+# isi/ccg/acg
+from .isidistribution import plot_isi_distribution, ISIDistributionWidget
+from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
+    plot_autocorrelograms, AutoCorrelogramsWidget)
+
+
 # peak activity
 from .drift import plot_drift_over_time, DriftOverTimeWidget
 from .activity import plot_activity_map
@@ -11,6 +17,8 @@ from .activity import plot_activity_map
 from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
 from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
+
+from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
 
 # comparison related

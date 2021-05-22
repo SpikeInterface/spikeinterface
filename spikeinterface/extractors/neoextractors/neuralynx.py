@@ -21,3 +21,9 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(self, folder_path, stream_id=None):
         neo_kwargs = {'dirname' : folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
+
+
+def read_neuralynx(*args, **kargs):
+    recording = NeuralynxRecordingExtractor(*args, **kargs)
+    return recording
+read_neuralynx.__doc__ = NeuralynxRecordingExtractor.__doc__

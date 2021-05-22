@@ -6,6 +6,7 @@ There are 2 openephys reader:
 https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 """
 import neo
+from pathlib import Path
 
 from .neobaseextractor import (NeoBaseRecordingExtractor,
     NeoBaseSortingExtractor, 
@@ -81,4 +82,19 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     def __init__(self, folder_path):
         neo_kwargs = {'dirname' : folder_path}
         NeoBaseEventExtractor.__init__(self, **neo_kwargs)
+
+
+def read_openephys(folder_path, **kwargs):
+    # auto guess format
+    files = [str(f) for f in Path(folder_path).iterdir()]
+    if np.any([f.startswith('Continuous') for f in files]):
+        # format = 'legacy'
+        recording = OpenEphysLegacyRecordingExtractor(folder_path,  **kwargs)
+    else:
+        # format = 'binary'
+        recording = OpenEphysBinaryRecordingExtractor(folder_path,  **kwargs)
+    return recording
     
+    
+
+

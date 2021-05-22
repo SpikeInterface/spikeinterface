@@ -102,7 +102,7 @@ class DriftOverTimeWidget(BaseWidget):
         extent = (0, self.bin_duration_s*nchunk, depth_bins[0], depth_bins[-1])
         
         im = self.ax.imshow(peak_density, interpolation='nearest', 
-                        origin ='upper', aspect = 'auto', extent = extent)
+                        origin ='lower', aspect = 'auto', extent = extent)
         
         self.ax.set_xlabel('time (s)')
         txt_axis = ['x', 'y'][self.probe_axis]

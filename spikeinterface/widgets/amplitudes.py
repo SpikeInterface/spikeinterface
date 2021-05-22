@@ -10,7 +10,7 @@ from ..toolkit import get_unit_amplitudes
 
 
 class AmplitudeBaseWidget(BaseMultiWidget):
-    def __init__(self,waveform_extractor, amplitudes=None, peak_sign='neg',
+    def __init__(self, waveform_extractor, amplitudes=None, peak_sign='neg',
             figure=None, ax=None, axes=None, **job_kwargs):
         BaseMultiWidget.__init__(self, figure, ax, axes)
         
@@ -54,8 +54,8 @@ class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
         
         nrows, ncols = len(unit_ids), num_seg
         num_ax = 0
-        for segment_index in range(num_seg):
-            for i, unit_id in enumerate(unit_ids):
+        for i, unit_id in enumerate(unit_ids):
+            for segment_index in range(num_seg):
                 ax = self.get_tiled_ax(num_ax, nrows, ncols)
                 times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
                 times = times / fs

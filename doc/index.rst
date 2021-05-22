@@ -34,10 +34,10 @@ With SpikeInterface, users can:
 
 - New SpikeInterface major release! Version 0.90.0 is will be out soon!
 
-  * break backward compatility with 0.10/0.11/0.12 series
-  * will be release summer 2021
-  * is no more a metapackage
-  * no more depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets
+  * breaks backward compatility with 0.10/0.11/0.12 series
+  * will be released in summer 2021
+  * is not a metapackage anymore
+  * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
 
 
 .. toctree::

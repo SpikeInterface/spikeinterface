@@ -12,12 +12,12 @@ def test_WaveformExtractor():
     
     # 2 segments
     recording = generate_recording(num_channels = 2, durations=durations, sampling_frequency=sampling_frequency)
-    sorting =generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
+    sorting = generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
     
+    # test with dump !!!!
     recording = recording.save()
     sorting = sorting.save()
-    
-    
+ 
     folder = Path('test_waveform_extractor')
     if folder.is_dir():
         shutil.rmtree(folder)
@@ -51,13 +51,15 @@ def test_WaveformExtractor():
 
 def test_extract_waveforms():
     # 2 segments
+    
     durations = [30, 40]
     sampling_frequency = 30000.
     
     recording = generate_recording(num_channels = 2, durations=durations, sampling_frequency=sampling_frequency)
     sorting =generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
-    recording = recording.save()
-    sorting = sorting.save()
+    # test without dump !!!!
+    # recording = recording.save()
+    # sorting = sorting.save()
 
     folder = Path('test_extract_waveforms')
     if folder.is_dir():
@@ -69,6 +71,6 @@ def test_extract_waveforms():
 
 
 if __name__ == '__main__':
-    test_WaveformExtractor()
+    #~ test_WaveformExtractor()
     test_extract_waveforms()
 

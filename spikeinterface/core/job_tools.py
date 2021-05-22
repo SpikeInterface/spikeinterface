@@ -128,8 +128,8 @@ class ChunkRecordingExecutor:
     """
 
     def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
-                n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None,
-                job_name=''):
+                 n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None,
+                 job_name=''):
 
         self.recording = recording
         self.func = func
