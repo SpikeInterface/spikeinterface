@@ -1,21 +1,18 @@
 '''
-Extactor waveform
-===========================
+Waveform Extractor
+==================
 
-spikeinterface provide mechanisim to extratract waveform snippet.
+:code:`spikeinterface` provides an efficient mechanism to extract waveform snippets.
 
-The `WaveformExtractor` class :
+The `WaveformExtractor` class:
 
-  * sample randomly some spike with max_spikes_per_unit
-  * extract all waveforms snipet per units
-  * save this persitently  then in a local folder
-  * can be load in a futur session
-  * retrieve waveforms per unit
-  * retrieve template (average or median) per unit
+  * randomly samples a subset spikes with max_spikes_per_unit
+  * extracts all waveforms snippets for each unit
+  * saves waveforms in a local folder
+  * can load stored waforms
+  * retrieves template (average or median waveform) for each unit
 
-Here the howto.
-
-
+Here the how!
 '''
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,14 +23,15 @@ import spikeinterface.extractors as se
 
 ##############################################################################
 # First let's use the repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
-# to download a mearec dataset. It is a simulated dataset that contain "ground truth" sorting
+# to download a MEArec dataset. It is a simulated dataset that contains "ground truth"
+# sorting information:
 
 repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 remote_path = 'mearec/mearec_test_10s.h5'
 local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
 
 ##############################################################################
-# 
+# Let's now instantiate the recording and sorting objects:
 
 recording = se.MEArecRecordingExtractor(local_path)
 print(recording)
@@ -41,27 +39,29 @@ sorting = se.MEArecSortingExtractor(local_path)
 print(recording)
 
 ###############################################################################
-# This mearec already contain a probe object you can retreive directly an plot
-#  lets plot it
+# The MEArec dataset already contains a probe object that you can retreive
+# an plot:
 
 probe = recording.get_probe()
 print(probe)
 from probeinterface.plotting import plot_probe
+
 plot_probe(probe)
 
 ###############################################################################
-# Create `WaveformExtractor` with high level function
+# A :code:`WaveformExtractor` object can be created with the :code:`extract_waveforms`
+# function:
 
 folder = 'waveform_folder'
 we = extract_waveforms(recording, sorting, folder,
-    ms_before=1.5, ms_after=2., max_spikes_per_unit=500,
-    load_if_exists=True)
+                       ms_before=1.5, ms_after=2., max_spikes_per_unit=500,
+                       load_if_exists=True)
 print(we)
 
-
 ###############################################################################
-# Create `WaveformExtractor` at lower API
-#  note that the set_params() steps do a reset
+# Alternativelt, the :code:`WaveformExtractor` object can be instantiated
+# directly. In this case, we need to :code:`set_params()` to set the desired
+# parameters:
 
 folder = 'waveform_folder2'
 we = WaveformExtractor.create(recording, sorting, folder, remove_if_exists=True)
@@ -70,19 +70,20 @@ we.run(n_jobs=1, chunk_size=30000, progress_bar=True)
 print(we)
 
 ###############################################################################
-# the folder contain:
-#  * dump of recording (json)
-#  * dump of sorting (json)
-#  * parameters (json)
-#  * subfolder with "waveforms_XXX.npy" and sampled_index_XXX.npy
+# The :code:`'waveform_folder'` folder contains:
+#  * the dumped recording (json)
+#  * the dumped sorting (json)
+#  * the parameters (json)
+#  * a subfolder with "waveforms_XXX.npy" and "sampled_index_XXX.npy"
 
 import os
+
 print(os.listdir(folder))
-print(os.listdir(folder+'/waveforms'))
+print(os.listdir(folder + '/waveforms'))
 
 ###############################################################################
-# Now we can retrieve on the fly waveforms per unit
-# the shape is (num_spikes, num_sample, num_channel)
+# Now we can retrieve waveforms per unit on-the-fly. The waveforms shape
+# is (num_spikes, num_sample, num_channel):
 
 unit_ids = sorting.unit_ids
 
@@ -91,7 +92,8 @@ for unit_id in unit_ids:
     print(unit_id, ':', wfs.shape)
 
 ###############################################################################
-# We can also get the template for each units either with median or average 
+# We can also get the template for each units either using the median or the
+# average:
 
 
 for unit_id in unit_ids[:3]:
@@ -100,6 +102,5 @@ for unit_id in unit_ids[:3]:
     print(template.shape)
     ax.plot(template)
     ax.set_title(f'{unit_id}')
-
 
 plt.show()

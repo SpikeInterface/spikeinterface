@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import ChannelId, ChannelIndex, Order, SamplingFrequencyHz
 
 from pathlib import Path
 import importlib
@@ -21,7 +20,7 @@ class BaseExtractor:
     """
     Base class for Recording/Sorting
     
-    Handle serilization save/load to/from a folder.
+    Handle serialization save/load to/from a folder.
     
     """
 
@@ -208,10 +207,22 @@ class BaseExtractor:
                 other.set_property(k, values[inds])
         # TODO: copy features also
 
-    def to_dict(self, include_annotations=False, include_properties=False, include_features=False):
+    def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
+                relative_to=None):
         '''
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
         extractor with load_extractor_from_dict(dump_dict)
+
+        Parameters
+        ----------
+        include_annotations: bool
+            If True, all annotations are added to the dict
+        include_properties: bool
+            If True, all properties are added to the dict
+        include_features: bool
+            If True, all features are added to the dict
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
 
         Returns
         -------
@@ -232,7 +243,8 @@ class BaseExtractor:
             'module': module,
             'kwargs': self._kwargs,
             'dumpable': self.is_dumpable,
-            'version': version
+            'version': version,
+            'relative_paths': (relative_to is not None),
         }
 
         try:
@@ -254,10 +266,16 @@ class BaseExtractor:
 
         # TODO include features
 
+        if relative_to is not None:
+            relative_to = Path(relative_to).absolute()
+            assert relative_to.is_dir(), "'relative_to' must be an existing directory"
+
+            dump_dict = _make_paths_relative(dump_dict, relative_to)
+
         return dump_dict
 
     @staticmethod
-    def from_dict(d):
+    def from_dict(d, base_folder=None):
         '''
         Instantiate extractor from dictionary
 
@@ -265,12 +283,17 @@ class BaseExtractor:
         ----------
         d: dictionary
             Python dictionary
+        base_folder: str, Path, or None
+            If given, the parent folder of the file and folder paths
 
         Returns
         -------
         extractor: RecordingExtractor or SortingExtractor
             The loaded extractor object
         '''
+        if d['relative_paths']:
+            assert base_folder is not None, 'When  relative_paths=True, need to provide base_folder'
+            d = _make_paths_absolute(d, base_folder)
         extractor = _load_extractor_from_dict(d)
         return extractor
 
@@ -321,15 +344,25 @@ class BaseExtractor:
             " %s" % (', '.join(extensions))
         return file_path
 
-    def dump(self, file_path):
+    def dump(self, file_path, relative_to=None):
+        """
+        Dumps extractor to json or pickle
+
+        Parameters
+        ----------
+        file_path: str or Path
+            The output file (either .json or .pkl/.pickle)
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
+        """
         if str(file_path).endswith('.json'):
-            self.dump_to_json(file_path)
+            self.dump_to_json(file_path, relative_to)
         elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
-            self.dump_to_pickle(file_path)
+            self.dump_to_pickle(file_path, relative_to)
         else:
             raise ValueError('Dump: file must .json or .pkl')
 
-    def dump_to_json(self, file_path=None):
+    def dump_to_json(self, file_path=None, relative_to=None):
         '''
         Dump recording extractor to json file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -338,16 +371,19 @@ class BaseExtractor:
         ----------
         file_path: str
             Path of the json file
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=False, include_features=False)
+        dump_dict = self.to_dict(include_properties=False, include_features=False, relative_to=relative_to)
         file_path = self._get_file_path(file_path, ['.json'])
         file_path.write_text(
             json.dumps(check_json(dump_dict), indent=4),
             encoding='utf8'
         )
 
-    def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True):
+    def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True,
+                       relative_to=None):
         '''
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -360,15 +396,18 @@ class BaseExtractor:
             If True, all properties are dumped
         include_features: bool
             If True, all features are dumped
+        relative_to: str, Path, or None
+            If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=include_properties, include_features=include_features)
+        dump_dict = self.to_dict(include_properties=include_properties, include_features=include_features,
+                                 relative_to=relative_to)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(file_path):
+    def load(file_path, base_folder=None):
         """
         Load extractor from file path (.json or .pkl)
 
@@ -388,7 +427,7 @@ class BaseExtractor:
                     d = pickle.load(f)
             else:
                 raise ValueError(f'Impossible to load {file_path}')
-            extractor = BaseExtractor.from_dict(d)
+            extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
 
         elif file_path.is_dir():
@@ -401,7 +440,7 @@ class BaseExtractor:
                     file = f
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
-            extractor = BaseExtractor.load(file)
+            extractor = BaseExtractor.load(file, base_folder=folder)
             
             # load properties
             prop_folder = folder / 'properties'
@@ -441,7 +480,6 @@ class BaseExtractor:
             return self.save_to_folder(**kargs)
 
     def save_to_memory(self, **kargs):
-        print('save_to_memory')
         # used only by recording at the moment
         cached = self._save(**kargs)
         self.copy_metadata(cached)
@@ -526,10 +564,57 @@ class BaseExtractor:
         self.copy_metadata(cached)
 
         # dump
-        cached.dump(folder / f'cached.{dump_ext}')
+        cached.dump(folder / f'cached.{dump_ext}', relative_to=folder)
 
         return cached
-    
+
+
+def _make_paths_relative(d, relative):
+    dcopy = deepcopy(d)
+    if "kwargs" in dcopy.keys():
+        relative_kwargs = _make_paths_relative(dcopy["kwargs"], relative)
+        dcopy["kwargs"] = relative_kwargs
+        return dcopy
+    else:
+        for k in d.keys():
+            # in SI, all input paths have the "path" keyword
+            if "path" in k:
+                # paths can be str or list of str
+                if isinstance(d[k], str):
+                    d[k] = str(Path(d[k]).relative_to(relative))
+                else:
+                    assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
+                    relative_paths = []
+                    for path in d[k]:
+                        relative_paths.append(str(Path(path).relative_to(relative)))
+                    d[k] = relative_paths
+        return d
+
+
+def _make_paths_absolute(d, base):
+    base = Path(base)
+    dcopy = deepcopy(d)
+    if "kwargs" in dcopy.keys():
+        base_kwargs = _make_paths_absolute(dcopy["kwargs"], base)
+        dcopy["kwargs"] = base_kwargs
+        return dcopy
+    else:
+        for k in d.keys():
+            # in SI, all input paths have the "path" keyword
+            if "path" in k:
+                # paths can be str or list of str
+                if isinstance(d[k], str):
+                    if not Path(d[k]).exists():
+                        d[k] = str(base / d[k])
+                else:
+                    assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
+                    absolute_paths = []
+                    for path in d[k]:
+                        
+                        if not Path(path).exists():
+                            absolute_paths.append(str(base / path))
+                    d[k] = absolute_paths
+        return d
 
 
 def _check_if_dumpable(d):
@@ -615,7 +700,7 @@ def _check_same_version(class_string, version):
         return 'unknown'
 
 
-def load_extractor(file_or_folder_or_dict):
+def load_extractor(file_or_folder_or_dict, base_folder=None):
     """
     Instantiate extractor from:
       * a dict
@@ -634,24 +719,24 @@ def load_extractor(file_or_folder_or_dict):
         The loaded extractor object
     """
     if isinstance(file_or_folder_or_dict, dict):
-        return BaseExtractor.from_dict(file_or_folder_or_dict)
+        return BaseExtractor.from_dict(file_or_folder_or_dict, base_folder=base_folder)
     else:
-        return BaseExtractor.load(file_or_folder_or_dict)
+        return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)
 
 
-def load_extractor_from_dict(d):
+def load_extractor_from_dict(d, base_folder=None):
     print('Use load_extractor(..) instead')
-    return BaseExtractor.from_dict(d)
+    return BaseExtractor.from_dict(d, base_folder=base_folder)
 
 
-def load_extractor_from_json(json_file):
+def load_extractor_from_json(json_file, base_folder=None):
     print('Use load_extractor(..) instead')
-    return BaseExtractor.load(json_file)
+    return BaseExtractor.load(json_file, base_folder=base_folder)
 
 
-def load_extractor_from_pickle(pkl_file):
+def load_extractor_from_pickle(pkl_file, base_folder=None):
     print('Use load_extractor(..) instead')
-    return BaseExtractor.load(pkl_file)
+    return BaseExtractor.load(pkl_file, base_folder=base_folder)
 
 
 class BaseSegment:

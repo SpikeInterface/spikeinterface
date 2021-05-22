@@ -28,6 +28,9 @@ hdbscan
 loky
 tridesclous>=1.6.2
 
+# shybrid
+shybrid
+
 ## spyking-circus
 spyking-circus
 

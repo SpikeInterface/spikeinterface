@@ -1,15 +1,16 @@
-from .mearec import MEArecRecordingExtractor, MEArecSortingExtractor
-from .spikeglx import SpikeGLXRecordingExtractor
+from .mearec import MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec
+from .spikeglx import SpikeGLXRecordingExtractor, read_spikeglx
 from .openephys import (OpenEphysLegacyRecordingExtractor,
-    OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor)
-from .intan import IntanRecordingExtractor
-from .neuroscope import NeuroScopeRecordingExtractor
-from .plexon import PlexonRecordingExtractor
-from .neuralynx import NeuralynxRecordingExtractor
-from .blackrock import BlackrockRecordingExtractor
-from .mscraw import MCSRawRecordingExtractor
-from .kilosort import KiloSortSortingExtractor
-from .spike2 import Spike2RecordingExtractor
+    OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys)
+from .intan import IntanRecordingExtractor, read_intan
+from .neuroscope import NeuroScopeRecordingExtractor, read_neuroscope
+from .plexon import PlexonRecordingExtractor, read_plexon
+from .neuralynx import NeuralynxRecordingExtractor, read_neuralynx
+from .blackrock import BlackrockRecordingExtractor, read_blackrock
+from .mscraw import MCSRawRecordingExtractor, read_mcsraw
+from .kilosort import KiloSortSortingExtractor, read_kilosort
+from .spike2 import Spike2RecordingExtractor, read_spike2
 
 # not in python-neo master yet
 # from .maxwell import MaxwellRecordingExtractor
+# from .ced import CedRecordingExtractor

@@ -45,3 +45,10 @@ class WaveClustSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
+
+
+def read_waveclust(*args, **kargs):
+    sorting = WaveClusSortingExtractor(*args, **kargs)
+    return sorting
+read_waveclust.__doc__ = WaveClusSortingExtractor.__doc__
+

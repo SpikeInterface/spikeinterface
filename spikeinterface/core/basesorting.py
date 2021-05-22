@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import UnitId, ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
@@ -11,7 +10,7 @@ class BaseSorting(BaseExtractor):
     Abstract class representing several segment several units and relative spiketrains.
     """
 
-    def __init__(self, sampling_frequency: SamplingFrequencyHz, unit_ids: List[UnitId]):
+    def __init__(self, sampling_frequency: float, unit_ids: List[int]):
 
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
@@ -31,7 +30,7 @@ class BaseSorting(BaseExtractor):
     def unit_ids(self):
         return self._main_ids
 
-    def get_unit_ids(self) -> List[UnitId]:
+    def get_unit_ids(self) -> List[int]:
         return self._main_ids
 
     def get_num_units(self) -> int:
@@ -49,10 +48,10 @@ class BaseSorting(BaseExtractor):
         return len(self._sorting_segments)
 
     def get_unit_spike_train(self,
-                             unit_id: UnitId,
+                             unit_id,
                              segment_index: Union[int, None] = None,
-                             start_frame: Union[SampleIndex, None] = None,
-                             end_frame: Union[SampleIndex, None] = None,
+                             start_frame: Union[int, None] = None,
+                             end_frame: Union[int, None] = None,
                              ):
         segment_index = self._check_segment_index(segment_index)
         S = self._sorting_segments[segment_index]
@@ -122,9 +121,9 @@ class BaseSortingSegment(BaseSegment):
         BaseSegment.__init__(self)
 
     def get_unit_spike_train(self,
-                             unit_id: UnitId,
-                             start_frame: Union[SampleIndex, None] = None,
-                             end_frame: Union[SampleIndex, None] = None,
+                             unit_id,
+                             start_frame: Union[int, None] = None,
+                             end_frame: Union[int, None] = None,
                              ) -> np.ndarray:
         # must be implemented in subclass
         raise NotImplementedError

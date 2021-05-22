@@ -73,24 +73,23 @@ class TestWidgets(unittest.TestCase):
         
     def test_principal_component(self):
         sw.plot_principal_component(self._we)
+        
+    def test_plot_unit_localization(self):
+        sw.plot_unit_localization(self._we)
 
-    # TODO
-    # def test_autocorrelograms(self):
-        # sw.plot_autocorrelograms(self._sorting, bin_size=1, window=10)
-        # fig, axes = plt.subplots(self.num_units, 1)
-        # sw.plot_autocorrelograms(self._sorting, axes=axes)
+    def test_autocorrelograms(self):
+        unit_ids = self._sorting.unit_ids[:4]
+        sw.plot_autocorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, symmetrize=True)
+        
+    def test_crosscorrelogram(self):
+        unit_ids = self._sorting.unit_ids[:4]
+        sw.plot_crosscorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, symmetrize=True)
 
-    # TODO
-    # def test_crosscorrelogram(self):
-        # sw.plot_crosscorrelograms(self._sorting, bin_size=1, window=10)
-        # fig, axes = plt.subplots(self.num_units, self.num_units)  # for cch need square matrix
-        # sw.plot_crosscorrelograms(self._sorting, axes=axes)
 
-    # TODO
-    # def test_isi_distribution(self):
-        # sw.plot_isi_distribution(self._sorting, bins=10, window=1)
-        # fig, axes = plt.subplots(self.num_units, 1)
-        # sw.plot_isi_distribution(self._sorting, axes=axes)
+    def test_isi_distribution(self):
+        sw.plot_isi_distribution(self._sorting, bins=10, window=1)
+        fig, axes = plt.subplots(self.num_units, 1)
+        sw.plot_isi_distribution(self._sorting, axes=axes)
     
     def test_plot_drift_over_time(self):
         sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=True)
@@ -98,6 +97,7 @@ class TestWidgets(unittest.TestCase):
     
     def test_plot_activity_map(self):
         sw.plot_activity_map(self._rec)
+        sw.plot_activity_map(self._rec, bin_duration_s=1.)
 
     def test_confusion(self):
         
@@ -137,15 +137,21 @@ if __name__ == '__main__':
     # mytest.test_amplitudes_timeseries()
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
+    # mytest.test_plot_unit_localization()
+    
+    mytest.test_autocorrelograms()
+    mytest.test_crosscorrelogram()
+    # mytest.test_isi_distribution()
+    
     
     # mytest.test_plot_drift_over_time()
-    #~ mytest.test_plot_activity_map()
+    # mytest.test_plot_activity_map()
     
     
     
     # mytest.test_confusion()
     # mytest.test_agreement()
-    mytest.test_multicomp_graph()
+    #~ mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
         
     plt.show()

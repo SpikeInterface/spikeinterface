@@ -241,3 +241,9 @@ def _squeeze(arr):
         elif shape[1] == 1:
             arr = arr[:, 0]
     return arr
+
+
+def read_hdsort(*args, **kargs):
+    sorting = HDSortSortingExtractor(*args, **kargs)
+    return sorting
+read_hdsort.__doc__ = HDSortSortingExtractor.__doc__

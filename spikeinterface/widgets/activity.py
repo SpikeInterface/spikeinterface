@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pylab as plt
 from .basewidget import BaseWidget
 
+from matplotlib.animation import FuncAnimation
+
 from probeinterface.plotting import plot_probe
 
 
@@ -25,6 +27,11 @@ class ActivityMapWidget(BaseWidget):
     weight_with_amplitudes: bool False by default
         Peak are weighted by amplitude
     
+    
+    bin_duration_s: None or float
+        If None then static image
+        If not None then it is an animation per bin.
+    
     with_contact_color: bool (defaul True)
         Plot rates with contact colors
     
@@ -43,7 +50,7 @@ class ActivityMapWidget(BaseWidget):
         The output widget
     """
     def __init__(self, recording, peaks=None, detect_peaks_kwargs={},
-                weight_with_amplitudes=True,
+                weight_with_amplitudes=True, bin_duration_s=None,
                 with_contact_color=True, with_interpolated_map=True,
                 figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
@@ -54,15 +61,12 @@ class ActivityMapWidget(BaseWidget):
         self.peaks= peaks
         self.detect_peaks_kwargs= detect_peaks_kwargs
         self.weight_with_amplitudes = weight_with_amplitudes
+        self.bin_duration_s = bin_duration_s
         self.with_contact_color = with_contact_color
         self.with_interpolated_map = with_interpolated_map
 
     def plot(self):
-        self._do_plot()
-
-    def _do_plot(self):
         rec = self.recording
-        
         peaks = self.peaks
         if peaks is None:
             from spikeinterface.sortingcomponents import detect_peaks
@@ -73,8 +77,24 @@ class ActivityMapWidget(BaseWidget):
         duration = rec.get_total_duration()
         
         probe = rec.get_probe()
-        positions = probe.contact_positions
         
+        
+        if self.bin_duration_s is None:
+            self._plot_one_bin(rec, probe, peaks, duration)
+        else:
+            bin_size = int(self.bin_duration_s * fs)
+            num_frames = int(duration / self.bin_duration_s)
+            def animate_func(i):
+                i0 = np.searchsorted(peaks['sample_ind'], bin_size * i)
+                i1 = np.searchsorted(peaks['sample_ind'], bin_size * (i +1))
+                local_peaks = peaks[i0:i1]
+                artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
+                return artists
+            self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
+                        interval=100, blit=True)
+
+    def _plot_one_bin(self, rec, probe, peaks, duration):
+    
         # TODO: @alessio weight_with_amplitudes is not implemented yet
         rates = np.zeros(rec.get_num_channels(), dtype='float64')
         for chan_ind, chan_id in  enumerate(rec.channel_ids):
@@ -82,19 +102,22 @@ class ActivityMapWidget(BaseWidget):
             num_spike = np.sum(mask)
             rates[chan_ind] = num_spike / duration
         
-
+        artists = ()
         if self.with_contact_color:
-            plot_probe(probe, ax=self.ax, contacts_values=rates,
+            poly, poly_contour = plot_probe(probe, ax=self.ax, contacts_values=rates,
                         probe_shape_kwargs={'facecolor':'w', 'alpha' : .1},
                         contacts_kargs= {'alpha' : 1.}
                         )
+            artists = artists + (poly, poly_contour)
 
         if self.with_interpolated_map:
             image, xlims, ylims = probe.to_image(rates, pixel_size=0.5,
                 num_pixel=None, method='linear',
                 xlims=None, ylims=None)
-            self.ax.imshow(image, extent=xlims+ylims, origin='lower', alpha=0.5)
+            im = self.ax.imshow(image, extent=xlims+ylims, origin='lower', alpha=0.5)
+            artists = artists + (im, )
 
+        return artists
 
 def plot_activity_map(*args, **kwargs):
     W = ActivityMapWidget(*args, **kwargs)

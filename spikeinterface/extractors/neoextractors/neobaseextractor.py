@@ -1,7 +1,7 @@
 import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
-
+from typing import Union, List
 import neo
 
 
@@ -60,12 +60,13 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         offsets = signal_channels['offset']
 
         units = signal_channels['units']
-        if not np.all(np.isin(units, ['V', 'mV', 'uV'])):
+        if not np.all(np.isin(units, ['V', 'Volt', 'mV', 'uV'])):
             # check that units are V, mV or uV
             error = f'This extractor based on  neo.{self.NeoRawIOClass} have strange units not in (V, mV, uV) {units}'
             print(error)
         additional_gain = np.ones(units.size, dtype='float')
         additional_gain[units == 'V'] = 1e6
+        additional_gain[units == 'Volt'] = 1e6
         additional_gain[units == 'mV'] = 1e3
         additional_gain[units == 'uV'] = 1.
         additional_gain = additional_gain
@@ -95,7 +96,11 @@ class NeoRecordingSegment(BaseRecordingSegment):
                                             stream_index=self.stream_index)
         return n
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def get_traces(self,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
+                   ) -> np.ndarray:
         raw_traces = self.neo_reader.get_analogsignal_chunk(
             block_index=0,
             seg_index=self.segment_index,
