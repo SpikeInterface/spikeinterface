@@ -8,8 +8,9 @@ import json
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load_extractor, write_to_h5_dataset_format
 from spikeinterface.extractors import WaveClusSortingExtractor
+from spikeinterface.core.channelslicerecording import ChannelSliceRecording
 
 PathType = Union[str, Path]
 
@@ -149,7 +150,10 @@ class WaveClusSorter(BaseSorter):
             vcFile_h5 = str(output_folder / ('raw' + str(nch + 1) + '.h5'))
             with h5py.File(vcFile_h5, mode='w') as f:
                 f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
-                f.create_dataset("data", data=recording.get_traces(channel_ids=[id]).flatten())
+                rec_sliced = ChannelSliceRecording(recording, channel_ids=[id])
+                write_to_h5_dataset_format(rec_sliced, dataset_path='/data', segment_index=0,  file_handle=f, time_axis=0, single_axis=True)
+
+
 
         if verbose:
             samplerate = recording.get_sampling_frequency()
