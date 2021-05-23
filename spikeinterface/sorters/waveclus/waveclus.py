@@ -69,7 +69,8 @@ class WaveClusSorter(BaseSorter):
         'max_spk': 40000,
         'ref_ms': 1.5,
         'interpolation': True,
-        'keep_good_only': True
+        'keep_good_only': True,
+        'chunk_memory': '500M'
     }
 
     _params_description = {
@@ -99,7 +100,8 @@ class WaveClusSorter(BaseSorter):
         'ref_ms': "Refractory time in milliseconds, all the threshold crossing inside this period are detected as the "
                   "same spike",
         'interpolation': "Enable or disable interpolation to improve the alignments of the spikes",
-        'keep_good_only': "If True only 'good' units are returned"
+        'keep_good_only': "If True only 'good' units are returned",
+        'chunk_memory': 'Chunk size in Mb to write h5 file (default 500Mb)'
     }
 
     sorter_description = """Wave Clus combines a wavelet-based feature extraction and paramagnetic clustering with a 
@@ -149,11 +151,11 @@ class WaveClusSorter(BaseSorter):
         for nch, id in enumerate(recording.get_channel_ids()):
             vcFile_h5 = str(output_folder / ('raw' + str(nch + 1) + '.h5'))
             with h5py.File(vcFile_h5, mode='w') as f:
-                f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
+                f.create_dataset(
+                    "sr", data=[recording.get_sampling_frequency()], dtype='float32')
                 rec_sliced = ChannelSliceRecording(recording, channel_ids=[id])
-                write_to_h5_dataset_format(rec_sliced, dataset_path='/data', segment_index=0,  file_handle=f, time_axis=0, single_axis=True)
-
-
+                write_to_h5_dataset_format(rec_sliced, dataset_path='/data', segment_index=0,
+                                           file_handle=f, time_axis=0, single_axis=True, chunk_memory=params['chunk_memory'])
 
         if verbose:
             samplerate = recording.get_sampling_frequency()
@@ -248,7 +250,8 @@ class WaveClusSorter(BaseSorter):
         with (output_folder / 'spikeinterface_params.json').open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', True)
-        sorting = WaveClusSortingExtractor(file_path=result_fname, keep_good_only=keep_good_only)
+        sorting = WaveClusSortingExtractor(
+            file_path=result_fname, keep_good_only=keep_good_only)
         return sorting
 
 
