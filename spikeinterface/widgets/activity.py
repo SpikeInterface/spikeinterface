@@ -8,9 +8,11 @@ from probeinterface.plotting import plot_probe
 
 
 
-class ActivityMapWidget(BaseWidget):
+class PeakActivityMapWidget(BaseWidget):
     """
     Plots spike rate (estimated estimated with detect_peaks()) as 2D activity map.
+    
+    Can be static (bin_duration_s=None) or animated (bin_duration_s=60.)
 
     Parameters
     ----------
@@ -119,9 +121,9 @@ class ActivityMapWidget(BaseWidget):
 
         return artists
 
-def plot_activity_map(*args, **kwargs):
-    W = ActivityMapWidget(*args, **kwargs)
+def plot_peak_activity_map(*args, **kwargs):
+    W = PeakActivityMapWidget(*args, **kwargs)
     W.plot()
     return W
-plot_activity_map.__doc__ = ActivityMapWidget.__doc__
+plot_peak_activity_map.__doc__ = PeakActivityMapWidget.__doc__
 

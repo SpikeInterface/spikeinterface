@@ -62,6 +62,10 @@ class TestWidgets(unittest.TestCase):
 
     def test_unittemplates(self):
         sw.plot_unit_templates(self._we)
+    
+    def test_plot_unit_map(self):
+        sw.plot_unit_map(self._we)
+        sw.plot_unit_map(self._we, animated=True)
 
     def test_amplitudes_timeseries(self):
         sw.plot_amplitudes_timeseries(self._we)
@@ -95,9 +99,9 @@ class TestWidgets(unittest.TestCase):
         sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=True)
         sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=False)
     
-    def test_plot_activity_map(self):
-        sw.plot_activity_map(self._rec)
-        sw.plot_activity_map(self._rec, bin_duration_s=1.)
+    def test_plot_peak_activity_map(self):
+        sw.plot_peak_activity_map(self._rec)
+        sw.plot_peak_activity_map(self._rec, bin_duration_s=1.)
 
     def test_confusion(self):
         
@@ -134,18 +138,19 @@ if __name__ == '__main__':
     # mytest.test_plot_probe_map()
     # mytest.test_unitwaveforms()
     # mytest.test_unittemplates()
+    mytest.test_plot_unit_map()
     # mytest.test_amplitudes_timeseries()
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
     # mytest.test_plot_unit_localization()
     
-    mytest.test_autocorrelograms()
-    mytest.test_crosscorrelogram()
+    # mytest.test_autocorrelograms()
+    # mytest.test_crosscorrelogram()
     # mytest.test_isi_distribution()
     
     
     # mytest.test_plot_drift_over_time()
-    # mytest.test_plot_activity_map()
+    # mytest.test_plot_peak_activity_map()
     
     
     
