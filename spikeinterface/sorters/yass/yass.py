@@ -9,7 +9,7 @@ from ..utils import ShellScript
 from spikeinterface.core import load_extractor
 
 from spikeinterface.core import BinaryRecordingExtractor
-# from spikeinterface.extractors import YassSortingExtractor
+from spikeinterface.extractors import YassSortingExtractor
 
 try:
     import yaml
@@ -204,21 +204,16 @@ class YassSorter(BaseSorter):
         
         merge_params['neuralnetwork']['denoise']['filename'] = str(neural_nets_path.absolute() / 'denoise.pt')
         merge_params['neuralnetwork']['detect']['filename'] = str(neural_nets_path.absolute() / 'detect.pt')
-        from pprint import pprint
-        pprint(merge_params)
-        exit()
 
         # to yaml again (for NNs update)
         fname_config = output_folder / 'config.yaml'
         with open(fname_config, 'w') as file:
-            documents = yaml.dump(merge_params, file)
+            yaml.dump(merge_params, file)
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         '''
         '''
-        recording = recover_recording(recording)  # allows this to run on multiple jobs (not just multi-core)
-        
         config_file = output_folder.absolute() / 'config.yaml'
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = f'''yass sort {config_file}'''
@@ -230,8 +225,8 @@ class YassSorter(BaseSorter):
         shell_script = ShellScript(shell_cmd,
                                    # script_path=os.path.join(output_folder, self.sorter_name),
                                    script_path=output_folder / 'run_yass',
-                                   log_path= output_folder / (self.sorter_name + '.log'),
-                                   verbose=self.verbose)
+                                   log_path= output_folder / (cls.sorter_name + '.log'),
+                                   verbose=verbose)
         shell_script.start()
 
         retcode = shell_script.wait()
