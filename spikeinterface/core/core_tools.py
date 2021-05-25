@@ -378,9 +378,9 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         Type of the saved data. Default float32.
     chunk_size: None or int
         Number of chunks to save the file in. This avoid to much memory consumption for big files.
-        If None and 'chunk_mb' is given, the file is saved in chunks of 'chunk_mb' Mb (default 500Mb)
-    chunk_memory: None or int
-        Chunk size in Mb (default 500Mb)
+        If None and 'chunk_memory' is given, the file is saved in chunks of 'chunk_memory' MB (default 500MB)
+    chunk_memory: None or str
+        Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M') 
     verbose: bool
         If True, output is verbose (when chunks are used)
     '''
