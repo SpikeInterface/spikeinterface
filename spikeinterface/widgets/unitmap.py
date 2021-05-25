@@ -65,8 +65,10 @@ class UnitMapWidget(BaseMultiWidget):
                 contacts_values = np.max(np.abs(template), axis=0)
             poly_contact, poly_contour = plot_probe(probe, contacts_values=contacts_values, 
                     ax=ax, probe_shape_kwargs=probe_shape_kwargs)
+
             poly_contact.set_zorder(2)
-            poly_contour.set_zorder(1)
+            if poly_contour is not None:
+                poly_contour.set_zorder(1)
             
             self.figure.colorbar(poly_contact, ax=ax)
             
