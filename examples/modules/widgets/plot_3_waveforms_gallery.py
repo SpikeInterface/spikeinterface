@@ -51,6 +51,13 @@ unit_ids = sorting.unit_ids
 sw.plot_unit_templates(we, unit_ids=unit_ids, ncols=5)
 
 ##############################################################################
+# plot_unit_templates()
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+
+unit_ids = sorting.unit_ids[:4]
+sw.plot_unit_map(we, unit_ids=unit_ids)
+
+##############################################################################
 # plot_amplitudes_distribution()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
