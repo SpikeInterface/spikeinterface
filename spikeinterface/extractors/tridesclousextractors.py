@@ -2,22 +2,21 @@ from pathlib import Path
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 
-try:
-    import tridesclous as tdc
-
-    HAVE_TDC = True
-except ImportError:
-    HAVE_TDC = False
 
 
 class TridesclousSortingExtractor(BaseSorting):
     extractor_name = 'TridesclousSortingExtractor'
-    installed = HAVE_TDC  # check at class level if installed or not
+    installed = False
     is_writable = False
     mode = 'folder'
     installation_mesg = "To use the TridesclousSortingExtractor install tridesclous: \n\n pip install tridesclous\n\n"  # error message when not installed
 
     def __init__(self, folder_path, chan_grp=None):
+        try:
+            import tridesclous as tdc
+            HAVE_TDC = True
+        except ImportError:
+            HAVE_TDC = False
         assert HAVE_TDC, self.installation_mesg
         tdc_folder = Path(folder_path)
 

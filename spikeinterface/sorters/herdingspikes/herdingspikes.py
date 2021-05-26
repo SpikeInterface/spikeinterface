@@ -9,12 +9,6 @@ from spikeinterface.core import load_extractor
 from spikeinterface.extractors import HerdingspikesSortingExtractor
 import spikeinterface.toolkit as st
 
-try:
-    import herdingspikes as hs
-    HAVE_HS = True
-except ImportError:
-    HAVE_HS = False
-
 
 class HerdingspikesSorter(BaseSorter):
 
@@ -130,10 +124,16 @@ class HerdingspikesSorter(BaseSorter):
     
     @classmethod
     def is_installed(cls):
+        try:
+            import herdingspikes as hs
+            HAVE_HS = True
+        except ImportError:
+            HAVE_HS = False
         return HAVE_HS
     
     @classmethod
     def get_sorter_version(cls):
+        import herdingspikes as hs
         return hs.__version__
 
     @classmethod
@@ -147,6 +147,7 @@ class HerdingspikesSorter(BaseSorter):
     
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
+        import herdingspikes as hs
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         

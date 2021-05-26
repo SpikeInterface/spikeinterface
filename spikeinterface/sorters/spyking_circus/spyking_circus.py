@@ -12,12 +12,6 @@ from ..utils import ShellScript
 
 from probeinterface import write_prb
 
-try:
-    import circus
-    HAVE_SC = True
-except ImportError:
-    HAVE_SC = False
-
 
 class SpykingcircusSorter(BaseSorter):
     """
@@ -70,10 +64,16 @@ class SpykingcircusSorter(BaseSorter):
     
     @classmethod
     def is_installed(cls):
+        try:
+            import circus
+            HAVE_SC = True
+        except ImportError:
+            HAVE_SC = False        
         return HAVE_SC
     
     @staticmethod
     def get_sorter_version():
+        import circus
         return circus.__version__
 
     @classmethod
