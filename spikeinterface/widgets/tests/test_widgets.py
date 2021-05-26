@@ -140,7 +140,7 @@ if __name__ == '__main__':
     # mytest.test_unittemplates()
     # mytest.test_plot_unit_map()
     mytest.test_amplitudes_timeseries()
-    # mytest.test_amplitudes_distribution()
+    mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
     # mytest.test_plot_unit_localization()
     
