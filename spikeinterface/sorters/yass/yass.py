@@ -42,7 +42,7 @@ class YassSorter(BaseSorter):
         'n_sec_chunk_gpu_detect': 0.5,  # n_sec_chunk for gpu detection (lower if you get memory error during detection)
         'n_sec_chunk_gpu_deconv': 5,  # n_sec_chunk for gpu deconvolution (lower if you get memory error during deconv)
         'gpu_id': 0,  # which gpu to use, default is 0, i.e. first gpu;
-        'generate_phy': 1,  # generate phy visualization files; 0 - do not run; 1: generate phy files
+        'generate_phy': 0,  # generate phy visualization files; 0 - do not run; 1: generate phy files
         'phy_percent_spikes': 0.05,
         # generate phy visualization files; ratio of spikes that are processed for phy visualization
         # decrease if memory issues are present
