@@ -172,19 +172,6 @@ print('Units found by herdingspikes:', sorting_HS.get_unit_ids())
 print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 
 
-##############################################################################
-# Once we have paired :code:`RecordingExtractor` and :code:`SortingExtractor` 
-# objects we can post-process, validate, and curate the results. With
-# the :code:`toolkit.postprocessing` submodule, one can, for example,
-# get waveforms, templates, maximum channels, PCA scores, or export the data
-# to Phy. `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
-# curation of the spike sorting output. To export to phy you can run:
-
-st.export_to_phy(recording, sorting_TDC, output_folder='phy')
-
-##############################################################################
-# Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
-# and manually curate the results.
 
 
 ##############################################################################
@@ -204,6 +191,22 @@ print(wavefroms.shape)
 
 template = we_TDC.get_template(unit_id0)
 print(template.shape)
+
+##############################################################################
+# Once we have the  `WaveformExtractor` object
+# we can post-process, validate, and curate the results. With
+# the :code:`toolkit.postprocessing` submodule, one can, for example,
+# get waveforms, templates, maximum channels, PCA scores, or export the data
+# to Phy. `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
+# curation of the spike sorting output. To export to phy you can run:
+
+st.export_to_phy(recording_preprocessed, sorting_TDC, './phy_folder_for_TDC', we_TDC,
+    compute_pc_features=False, compute_amplitudes=True)
+
+##############################################################################
+# Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
+# and manually curate the results.
+
 
 ##############################################################################
 # Quality metrics for the spike sorting output are very important to asses the spike sorting performance.
