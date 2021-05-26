@@ -13,42 +13,30 @@ core:
 extractors:
 
     * nwb: reader/writer (with multi segment) (ben?)
-    * all event reader (get_ttl()) (alessio)
-    * MdaRecordingExtractor  : need to be done in neo ??
     * BiocamRecordingExtractor  : need to be done in neo
-    * MCSH5RecordingExtractor  : need to be done in neo ???
-    * SHYBRIDRecordingExtractor:  need to be done in neo ???
-    * NIXIORecordingExtractor: wrappe neo
-    * CEDRecordingExtractor : need to be ported in neo
-    * MdaSortingExtractor
+    * CEDRecordingExtractor : need merge from neo
     * OpenEphysSortingExtractor : need to be done in neo
     * MaxOneSortingExtractor  : need to be done in neo
-    * SHYBRIDSortingExtractor
-    * NIXIOSortingExtractor
-    * ALFSortingExtractor
-    
-    * make function for all reader
 
 toolkit:
   * preprocessing:
     * ResampleRecording
+
   * postprocessing: 
      * export to phy (pca + amplitudes)
      * integrate amplitudes
+
   * validation (= qualitymetrics):
      * "max_drift",
      * "cumulative_drift",
      * "silhouette_score",
      * "noise_overlap",
 
-
   * get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0)
      remove chunk and use duration instead.
 
 
 
-sorting components:
-    all (sam)
 
 sorters:
 
@@ -57,21 +45,17 @@ sorters:
   * unify parameters for copy to binary > common methods
   * make something to not copy binary when not needed
 
-comparison:
-  * done: need tests
-
 
 widgets:
-  * plot_activity_map with peaks DONE
-  * plot_activity_map with time series
   * fix plot_multicomp_graph()
-  
 
 
 examples:
 
   * check and read everything
   * toolkit examples
+  * make more example with widgets
+  
 
 
 doc:
@@ -79,16 +63,8 @@ doc:
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
   * make on example for extractor
- * plot_4_sorting_concatenated_recordings.py
- 
-New tutorial
 
 
-Tests suite:
-
-  * make several workflow:
-    * multi os for : core and extractors
-    * unbuntu for all modules
 
 
 Linked projects:
