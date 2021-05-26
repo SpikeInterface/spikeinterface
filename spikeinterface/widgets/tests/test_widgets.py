@@ -96,8 +96,13 @@ class TestWidgets(unittest.TestCase):
         sw.plot_isi_distribution(self._sorting, axes=axes)
     
     def test_plot_drift_over_time(self):
-        sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=True)
-        sw.plot_drift_over_time(self._rec, bin_duration_s=1., weight_with_amplitudes=False)
+        from spikeinterface.sortingcomponents import detect_peaks
+        peaks = detect_peaks(self._rec, method='locally_exclusive')
+        sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.,
+            weight_with_amplitudes=True, mode='heatmap')
+        sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.,
+                weight_with_amplitudes=False, mode='heatmap')
+        sw.plot_drift_over_time(self._rec, peaks=peaks, weight_with_amplitudes=False, mode='scatter')
     
     def test_plot_peak_activity_map(self):
         sw.plot_peak_activity_map(self._rec)
@@ -138,7 +143,7 @@ if __name__ == '__main__':
     # mytest.test_plot_probe_map()
     # mytest.test_unitwaveforms()
     # mytest.test_unittemplates()
-    mytest.test_plot_unit_map()
+    # mytest.test_plot_unit_map()
     # mytest.test_amplitudes_timeseries()
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
@@ -149,7 +154,7 @@ if __name__ == '__main__':
     # mytest.test_isi_distribution()
     
     
-    # mytest.test_plot_drift_over_time()
+    mytest.test_plot_drift_over_time()
     # mytest.test_plot_peak_activity_map()
     
     
