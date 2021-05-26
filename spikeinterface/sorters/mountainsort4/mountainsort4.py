@@ -11,12 +11,6 @@ from spikeinterface.core import load_extractor
 
 from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
 
-try:
-    import mountainsort4
-
-    HAVE_MS4 = True
-except ImportError:
-    HAVE_MS4 = False
 
 
 class Mountainsort4Sorter(BaseSorter):
@@ -73,10 +67,16 @@ class Mountainsort4Sorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        try:
+            import mountainsort4
+            HAVE_MS4 = True
+        except ImportError:
+            HAVE_MS4 = False
         return HAVE_MS4
     
     @staticmethod
     def get_sorter_version():
+        import mountainsort4
         if hasattr(mountainsort4, '__version__'):
             return mountainsort4.__version__
         return 'unknown'
@@ -91,6 +91,8 @@ class Mountainsort4Sorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
+        import mountainsort4
+
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
         # alias to params

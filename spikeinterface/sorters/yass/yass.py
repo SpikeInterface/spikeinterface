@@ -11,13 +11,6 @@ from spikeinterface.core import load_extractor
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.extractors import YassSortingExtractor
 
-try:
-    import yaml
-    import yass
-    HAVE_YASS = True
-except ImportError:
-    HAVE_YASS = False
-
 
 class YassSorter(BaseSorter):
     """
@@ -133,14 +126,23 @@ class YassSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        try:
+            import yaml
+            import yass
+            HAVE_YASS = True
+        except ImportError:
+            HAVE_YASS = False        
         return HAVE_YASS
 
     @classmethod
     def get_sorter_version(cls):
+        import yass
         return yass.__version__
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
+        import yaml
+
         p = params
 
         source_dir = Path(__file__).parent
