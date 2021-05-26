@@ -13,11 +13,6 @@ import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
 import spikeinterface.toolkit as st
 
-if sys.platform == "win32":
-    memmaps = [False]
-else:
-    memmaps = [False, True]
-
 
 class TestWidgets(unittest.TestCase):
     def setUp(self):
@@ -144,7 +139,7 @@ if __name__ == '__main__':
     # mytest.test_unitwaveforms()
     # mytest.test_unittemplates()
     # mytest.test_plot_unit_map()
-    # mytest.test_amplitudes_timeseries()
+    mytest.test_amplitudes_timeseries()
     # mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
     # mytest.test_plot_unit_localization()
@@ -154,7 +149,7 @@ if __name__ == '__main__':
     # mytest.test_isi_distribution()
     
     
-    mytest.test_plot_drift_over_time()
+    # mytest.test_plot_drift_over_time()
     # mytest.test_plot_peak_activity_map()
     
     
