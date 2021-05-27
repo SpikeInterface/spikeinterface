@@ -16,11 +16,6 @@ from spikeinterface.core import BinaryRecordingExtractor
 
 from probeinterface import write_prb
 
-try:
-    import tridesclous as tdc
-    HAVE_TDC = True
-except ImportError:
-    HAVE_TDC = False
 
 
 class TridesclousSorter(BaseSorter):
@@ -68,10 +63,16 @@ class TridesclousSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        try:
+            import tridesclous as tdc
+            HAVE_TDC = True
+        except ImportError:
+            HAVE_TDC = False        
         return HAVE_TDC
         
     @classmethod
     def get_sorter_version(cls):
+        import tridesclous as tdc
         return tdc.__version__
 
     @classmethod
@@ -80,6 +81,7 @@ class TridesclousSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
+        import tridesclous as tdc
         
         # save prb file
         probegroup = recording.get_probegroup()
@@ -123,6 +125,7 @@ class TridesclousSorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
+        import tridesclous as tdc
 
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
 
@@ -169,7 +172,8 @@ class TridesclousSorter(BaseSorter):
 
 
 def make_nested_tdc_params(tdc_dataio, chan_grp, **new_params):
-    
+    import tridesclous as tdc
+
     params = tdc.get_auto_params_for_catalogue(tdc_dataio, chan_grp=chan_grp)
     
     if 'freq_min' in new_params:

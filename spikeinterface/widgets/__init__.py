@@ -1,3 +1,5 @@
+from .utils import get_unit_colors
+
 # basics
 from .timeseries import plot_timeseries, TimeseriesWidget
 from .rasters import plot_rasters, RasterWidget
@@ -11,14 +13,16 @@ from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
 
 # peak activity
 from .drift import plot_drift_over_time, DriftOverTimeWidget
-from .activity import plot_activity_map
+from .activity import plot_peak_activity_map, PeakActivityMapWidget
+
 
 # waveform/PC related
 from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
 from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
-
 from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
+
+from .unitmap import plot_unit_map, UnitMapWidget
 
 
 # comparison related

@@ -6,23 +6,22 @@ from spikeinterface.core import (BaseRecording, BaseSorting,
 
 try:
     import yaml
-
-    HAVE_YASS = True
+    HAVE_YAML = True
 except:
-    HAVE_YASS = False
+    HAVE_YAML = False
 
 
 class YassSortingExtractor(BaseSorting):
     extractor_name = 'YassExtractor'
     mode = 'folder'
-    installed = HAVE_YASS  # check at class level if installed or not
+    installed = HAVE_YAML  # check at class level if installed or not
 
     has_default_locations = False
     is_writable = False
     installation_mesg = "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"  # error message when not installed
 
     def __init__(self, folder_path):
-        assert HAVE_YASS, self.installation_mesg
+        assert HAVE_YAML, self.installation_mesg
 
         folder_path = Path(folder_path)
 

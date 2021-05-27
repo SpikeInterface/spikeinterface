@@ -115,7 +115,7 @@ class WaveformExtractor:
             shutil.rmtree(waveform_folder)
         waveform_folder.mkdir()
 
-    def set_params(self, ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None):
+    def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, dtype=None):
         """
         Set parameters for waveform extraction
 

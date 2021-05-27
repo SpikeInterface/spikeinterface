@@ -7,6 +7,8 @@ from .template_tools import (get_template_amplitudes,
 
 from .template_metrics import (calculate_template_metrics)
 
+from .template_similarity import compute_template_similarity
+
 from .export_to_phy import export_to_phy
 
 from .principal_component import (WaveformPrincipalComponent,

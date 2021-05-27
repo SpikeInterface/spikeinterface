@@ -33,8 +33,8 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=symmetrize)
         
         if axes is None:
-            fig, axes = plt.subplots(nrows=len(unit_ids), ncols=len(unit_ids), sharex=True, sharey=True)
-        BaseMultiWidget.__init__(self, fig, None, axes)
+            figure, axes = plt.subplots(nrows=len(unit_ids), ncols=len(unit_ids), sharex=True, sharey=True)
+        BaseMultiWidget.__init__(self, figure, None, axes)
     
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)
@@ -95,8 +95,8 @@ class AutoCorrelogramsWidget(BaseMultiWidget):
         nrows = int(np.ceil(n / ncols))
         
         if axes is None:
-            fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True, sharey=True)
-        BaseMultiWidget.__init__(self, fig, None, axes)
+            figure, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True, sharey=True)
+        BaseMultiWidget.__init__(self, figure, None, axes)
 
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)
