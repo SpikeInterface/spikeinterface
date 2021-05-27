@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, NumpySorting
+from spikeinterface.core import NumpyRecording, NumpySorting, NumpyEvent
 from spikeinterface.core.tests.testing_tools import create_sorting_npz
 from spikeinterface.core import NpzSortingExtractor
 
@@ -64,11 +64,49 @@ def test_NumpySorting():
     
     sorting = NumpySorting.from_extractor(other_sorting)
     # print(sorting)
+
+
+def test_NumpyEvent():
     
+    # one segment - dtype simple
+    d = {
+        'trig0' : np.array([1,10,100]),
+        'trig1' : np.array([1, 50, 150]),
+    }
+    event = NumpyEvent.from_dict(d)
     
+    times = event.get_event_times('trig0')
+    assert times[2] == 100
+
+    times = event.get_event_times('trig1')
+    assert times[2] == 150
+    
+    # 2 segments - dtype simple
+    event = NumpyEvent.from_dict([d, d])
+    times = event.get_event_times('trig1', segment_index=1)
+    assert times[2] == 150
+    
+    # 2 segments - dtype structured for one trig
+    d = {
+        'trig0' : np.array([1,10,100]),
+        'trig1' : np.array([1, 50, 150]),
+        'trig3' : np.array([(1, 20), (50, 30), (150, 60)], dtype=[('times', 'int64'), ('duration', 'int64')]),
+    }
+    event = NumpyEvent.from_dict([d, d])
+    times = event.get_event_times('trig1', segment_index=1)
+    assert times[2] == 150
+
+    times = event.get_event_times('trig3', segment_index=1)
+    assert times.dtype.fields is not None
+    assert times['times'][2] == 150
+    assert times['duration'][2] == 60
+    
+    times = event.get_event_times('trig3', segment_index=1, end_time=100)
+    assert times.size == 2
     
 
 if __name__ == '__main__':
     _clean_all()
-    test_NumpyRecording()
-    test_NumpySorting()
+    #~ test_NumpyRecording()
+    #~ test_NumpySorting()
+    test_NumpyEvent()

@@ -25,6 +25,9 @@ class DriftOverTimeWidget(BaseWidget):
     
     detect_peaks_kwargs: None or dict
         If peaks is None here the kwargs for detect_peak function.
+    
+    mode: str 'heatmap' or 'scatter'
+        plot mode
 
     probe_axis: 0 or 1
         Axis of the probe 0=x 1=y
@@ -46,14 +49,20 @@ class DriftOverTimeWidget(BaseWidget):
         The output widget
     """
     def __init__(self, recording, peaks=None, detect_peaks_kwargs={},
+                mode='heatmap',
                 probe_axis=1, weight_with_amplitudes=True, bin_duration_s=60.,
                 figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
-        
+
+        possible_modes = ('heatmap', 'scatter')
+        assert mode in possible_modes, f'mode mus be in {possible_modes}'
+        if mode == 'scatter':
+            assert not weight_with_amplitudes, 'with scatter mode, weight_with_amplitudes must be False'
         assert recording.get_num_segments() == 1, 'Handle only one segment'
         
         self.recording = recording
         self.peaks= peaks
+        self.mode = mode
         self.detect_peaks_kwargs= detect_peaks_kwargs
         self.probe_axis = probe_axis
         self.weight_with_amplitudes = weight_with_amplitudes
@@ -79,30 +88,39 @@ class DriftOverTimeWidget(BaseWidget):
         
         probe = rec.get_probe()
         positions = probe.contact_positions
-
-        all_depth = np.unique(positions[:, self.probe_axis])
-        ndepth = all_depth.size
-        step = np.min(np.diff(all_depth))
-        depth_bins = np.arange(np.min(all_depth), np.max(all_depth)+step, step)
-
-        nchunk = total_size // bin_size
-
-        peak_density = np.zeros((depth_bins.size -1, nchunk), dtype='float32')
-        for i in range(nchunk):
-            mask = (peaks['sample_ind'] >= (i*bin_size)) & (peaks['sample_ind'] < ((i + 1) * bin_size))
-            depths = positions[peaks['channel_ind'][mask], 1]
-            
-            if self.weight_with_amplitudes:
-                count, bins = np.histogram(depths, bins=depth_bins, weights=np.abs(peaks['channel_ind'][mask]))
-            else:
-                count, bins = np.histogram(depths, bins=depth_bins)
-            peak_density[:, i] = count
-
-
-        extent = (0, self.bin_duration_s*nchunk, depth_bins[0], depth_bins[-1])
         
-        im = self.ax.imshow(peak_density, interpolation='nearest', 
-                        origin ='lower', aspect = 'auto', extent = extent)
+        all_depth = np.unique(positions[:, self.probe_axis])
+        
+        if self.mode == 'heatmap':
+            ndepth = all_depth.size
+            step = np.min(np.diff(all_depth))
+            depth_bins = np.arange(np.min(all_depth), np.max(all_depth)+step, step)
+
+            nchunk = total_size // bin_size
+
+            peak_density = np.zeros((depth_bins.size -1, nchunk), dtype='float32')
+            for i in range(nchunk):
+                mask = (peaks['sample_ind'] >= (i*bin_size)) & (peaks['sample_ind'] < ((i + 1) * bin_size))
+                depths = positions[peaks['channel_ind'][mask], self.probe_axis]
+                
+                if self.weight_with_amplitudes:
+                    count, bins = np.histogram(depths, bins=depth_bins, weights=np.abs(peaks['channel_ind'][mask]))
+                else:
+                    count, bins = np.histogram(depths, bins=depth_bins)
+                peak_density[:, i] = count
+
+
+            extent = (0, self.bin_duration_s*nchunk, depth_bins[0], depth_bins[-1])
+            
+            im = self.ax.imshow(peak_density, interpolation='nearest', 
+                            origin ='lower', aspect = 'auto', extent = extent)
+        elif self.mode == 'scatter':
+            times = peaks['sample_ind'] / fs
+            depths = positions[peaks['channel_ind'], self.probe_axis]
+            # add fake depth jitter
+            factor = np.min(np.diff(all_depth))
+            depths += np.random.randn(depths.size) * factor * 0.15
+            self.ax.scatter(times, depths, alpha=0.4, s=1, color='k')
         
         self.ax.set_xlabel('time (s)')
         txt_axis = ['x', 'y'][self.probe_axis]

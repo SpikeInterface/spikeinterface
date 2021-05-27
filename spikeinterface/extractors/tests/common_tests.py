@@ -85,3 +85,25 @@ class SortingCommonTestSuite(CommonTestSuite):
                 for unit_id in unit_ids:
                     st = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
 
+
+class EventCommonTestSuite(CommonTestSuite):
+    
+    def test_open(self):
+        for entity in self.entities:
+            
+            if isinstance(entity, tuple):
+                path, kwargs = entity
+            elif isinstance(entity, str):
+                path = entity
+                kwargs = {}
+                
+            event = self.ExtractorClass(local_folder / path, **kwargs)
+            num_seg = event.get_num_segments()
+            channel_ids = event.channel_ids
+            
+            for segment_index in range(num_seg):
+                for channel_id in channel_ids:
+                    times = event.get_event_times(segment_index=segment_index, channel_id=channel_id)
+                    # print(channel_id)
+                    # print(times)
+

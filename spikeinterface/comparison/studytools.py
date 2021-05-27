@@ -29,7 +29,7 @@ from .comparisontools import _perf_keys
 from .groundtruthcomparison import compare_sorter_to_ground_truth
 
 
-def setup_comparison_study(study_folder, gt_dict):
+def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
     """
     Based on a dict of (recording, sorting) create the study folder.
 
@@ -59,7 +59,7 @@ def setup_comparison_study(study_folder, gt_dict):
         folder = study_folder / 'ground_truth' / rec_name
         sorting_gt.save(folder=folder, format='npz')
         folder = study_folder / 'raw_files' / rec_name
-        recording.save(folder=folder, format='binary')#, n_jobs=-1, total_memory='1G')
+        recording.save(folder=folder, format='binary', **job_kwargs)
 
     # make an index of recording names
     with open(study_folder / 'names.txt', mode='w', encoding='utf8') as f:

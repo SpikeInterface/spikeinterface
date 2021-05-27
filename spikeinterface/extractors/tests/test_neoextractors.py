@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface import download_dataset
 from spikeinterface.extractors import *
 
-from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
+from spikeinterface.extractors.tests.common_tests import (RecordingCommonTestSuite,
+    SortingCommonTestSuite, EventCommonTestSuite)
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
@@ -38,6 +39,13 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('openephysbinary/v0.5.3_two_neuropixels_stream', {'stream_id': '1'}),
         ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '0'}),
         ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '1'}),
+    ]
+
+class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
+    ExtractorClass = OpenEphysBinaryEventExtractor
+    downloads = ['openephysbinary']
+    entities = [
+        'openephysbinary/v0.4.4.1_with_video_tracking',
     ]
 
 class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -130,6 +138,7 @@ if __name__ == '__main__':
     #~ test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     #~ test = OpenEphysLegacyRecordingTest()
+    test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
@@ -138,10 +147,9 @@ if __name__ == '__main__':
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     #test = MaxwellRecordingTest()
-    test = Spike2RecordingTest()
+    # test = Spike2RecordingTest()
     
     test.setUp()
     test.test_open()
     
     
-

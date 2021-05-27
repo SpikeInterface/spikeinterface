@@ -230,7 +230,8 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
 
         channel_ids = event_channels['id']
 
-        BaseEvent.__init__(self, channel_ids)
+       
+        BaseEvent.__init__(self, channel_ids,  structured_dtype=False)
 
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):

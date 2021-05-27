@@ -2,4 +2,4 @@ numpy
 neo
 joblib
 tqdm
-probeinterface
+probeinterface>=0.2.3

@@ -26,7 +26,7 @@ datalad
 pyqt5
 hdbscan
 loky
-tridesclous>=1.6.2
+tridesclous>=1.6.3
 
 # shybrid
 shybrid

@@ -16,7 +16,7 @@ from .baseevent import BaseEvent, BaseEventSegment
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor
 from .npzsortingextractor import NpzSortingExtractor
-from .numpyextractors import NumpyRecording , NumpySorting
+from .numpyextractors import NumpyRecording , NumpySorting, NumpyEvent
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslicerecording import ChannelSliceRecording
