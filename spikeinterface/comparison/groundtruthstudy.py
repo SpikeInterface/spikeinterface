@@ -50,8 +50,8 @@ class GroundTruthStudy:
         self._is_scanned = True
 
     @classmethod
-    def create(cls, study_folder, gt_dict):
-        setup_comparison_study(study_folder, gt_dict)
+    def create(cls, study_folder, gt_dict, **job_kwargs):
+        setup_comparison_study(study_folder, gt_dict,  **job_kwargs)
         return cls(study_folder)
 
     def run_sorters(self, sorter_list, mode_if_folder_exists='keep', **kargs):
