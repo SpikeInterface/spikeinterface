@@ -64,73 +64,75 @@ _common_run_doc =     """
 
 
 def run_hdsort(*args, **kwargs):
-    __doc__ = _common_run_doc.format('hdsort')
     return run_sorter('hdsort', *args, **kwargs)
+run_hdsort.__doc__ = _common_run_doc.format('hdsort')
 
 
 def run_klusta(*args, **kwargs):
-    __doc__ = _common_run_doc.format('klusta')
     return run_sorter('klusta', *args, **kwargs)
+run_klusta.__doc__ = _common_run_doc.format('klusta')
 
 
 def run_tridesclous(*args, **kwargs):
-    __doc__ = _common_run_doc.format('tridesclous')
     return run_sorter('tridesclous', *args, **kwargs)
+run_tridesclous.__doc__ = _common_run_doc.format('tridesclous')
 
 
 def run_mountainsort4(*args, **kwargs):
-    __doc__ = _common_run_doc.format('mountainsort4')
     return run_sorter('mountainsort4', *args, **kwargs)
+run_mountainsort4.__doc__ = _common_run_doc.format('mountainsort4')
 
 
 def run_ironclust(*args, **kwargs):
-    __doc__ = _common_run_doc.format('ironclust')
     return run_sorter('ironclust', *args, **kwargs)
+run_ironclust.__doc__ = _common_run_doc.format('ironclust')
 
 
 def run_kilosort(*args, **kwargs):
-    __doc__ = _common_run_doc.format('kilosort')
     return run_sorter('kilosort', *args, **kwargs)
+run_kilosort.__doc__ = _common_run_doc.format('kilosort')
 
 
 def run_kilosort2(*args, **kwargs):
-    __doc__ = _common_run_doc.format('kilosort2')
     return run_sorter('kilosort2', *args, **kwargs)
+run_kilosort2.__doc__ = _common_run_doc.format('kilosort2')
+
 
 def run_kilosort2_5(*args, **kwargs):
-    __doc__ = _common_run_doc.format('kilosort2_5')
     return run_sorter('kilosort2_5', *args, **kwargs)
+run_kilosort2_5.__doc__ = _common_run_doc.format('kilosort2_5')
 
 
 def run_kilosort3(*args, **kwargs):
-    __doc__ = _common_run_doc.format('kilosort3')
     return run_sorter('kilosort3', *args, **kwargs)
+run_kilosort3.__doc__ = _common_run_doc.format('kilosort3')
 
 
 def run_spykingcircus(*args, **kwargs):
-    __doc__ = _common_run_doc.format('spykingcircus')
     return run_sorter('spykingcircus', *args, **kwargs)
+run_spykingcircus.__doc__ = _common_run_doc.format('spykingcircus')
 
 
 def run_herdingspikes(*args, **kwargs):
-    __doc__ = _common_run_doc.format('herdingspikes')
     return run_sorter('herdingspikes', *args, **kwargs)
+run_herdingspikes.__doc__ = _common_run_doc.format('herdingspikes')
 
 
 def run_waveclus(*args, **kwargs):
-    __doc__ = _common_run_doc.format('waveclus')
     return run_sorter('waveclus', *args, **kwargs)
+run_waveclus.__doc__ = _common_run_doc.format('waveclus')
 
 
 def run_combinato(*args, **kwargs):
-    __doc__ = _common_run_doc.format('combinato')
     return run_sorter('combinato', *args, **kwargs)
+run_combinato.__doc__ = _common_run_doc.format('combinato')
 
 
 def run_yass(*args, **kwargs):
-    __doc__ = _common_run_doc.format('yass')
     return run_sorter('yass', *args, **kwargs)
+run_yass.__doc__ = _common_run_doc.format('yass')
+
 
 def run_pykilosort(*args, **kwargs):
-    __doc__ = _common_run_doc.format('pykilosort')
     return run_sorter('pykilosort', *args, **kwargs)
+run_pykilosort.__doc__ = _common_run_doc.format('pykilosort')
