@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from typing import Union
 import sys
+import json
 
 from ..utils import ShellScript
 from spikeinterface.core import write_to_h5_dataset_format
@@ -56,7 +57,9 @@ class CombinatoSorter(BaseSorter):
         'index_maximum': 19,
         'upsampling_factor': 3,
         'denoise': True,
-        'do_filter': True
+        'do_filter': True,
+        'keep_good_only': True,
+        'chunk_memory': '500M'
     }
 
     _params_description = {
@@ -76,7 +79,9 @@ class CombinatoSorter(BaseSorter):
         'index_maximum': "Number of samples from the beginning of the spike waveform up to (not including) the peak",
         'upsampling_factor': 'upsampling factor',
         'denoise': 'Use denoise filter',
-        'do_filter': 'Use bandpass filter'
+        'do_filter': 'Use bandpass filter',
+        'keep_good_only': "If True only 'good' units are returned",
+        'chunk_memory': 'Chunk size in Mb to write h5 file (default 500Mb)'
     }
 
     sorter_description = """Combinato is a complete data-analysis framework for spike sorting in noisy recordings 
@@ -130,7 +135,8 @@ class CombinatoSorter(BaseSorter):
         vcFile_h5 = str(output_folder / ('recording.h5'))
         with h5py.File(vcFile_h5, mode='w') as f:
             f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
-            write_to_h5_dataset_format(recording, dataset_path='/data', segment_index=0,  file_handle=f, time_axis=0, single_axis=True)
+            write_to_h5_dataset_format(recording, dataset_path='/data', segment_index=0,  
+                file_handle=f, time_axis=0, single_axis=True, chunk_memory=params['chunk_memory'])
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
@@ -182,5 +188,9 @@ class CombinatoSorter(BaseSorter):
     def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         result_fname = str(output_folder / 'recording')
-        sorting = CombinatoSortingExtractor(folder_path=result_fname)
+
+        with (output_folder / 'spikeinterface_params.json').open('r') as f:
+            sorter_params = json.load(f)['sorter_params']
+        keep_good_only = sorter_params.get('keep_good_only', True)
+        sorting = CombinatoSortingExtractor(folder_path=result_fname, keep_good_only=keep_good_only)
         return sorting
