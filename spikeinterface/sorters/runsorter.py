@@ -1,4 +1,10 @@
+import shutil
+import os
+from pathlib import Path
+import json
+
 from spikeinterface.core import BaseRecording
+from spikeinterface.core.core_tools import check_json
 from .sorterlist import sorter_dict
 
 
@@ -20,6 +26,8 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default). If False, the process continues and the error is
         logged in the log file.
+    use_container: bool  default False
+        Run the sorter inside a container (docker) using the hither package.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -32,13 +40,29 @@ _common_param_doc = """
 
 def run_sorter(sorter_name, recording, output_folder=None,
             remove_existing_folder=True, delete_output_folder=False,
-            verbose=False, raise_error=True,  **sorter_params):
+            verbose=False, raise_error=True,  docker_image=None, 
+            **sorter_params):
     """
     Generic function to run a sorter via function approach.
 
     >>> sorting = run_sorter('tridesclous', recording)
     """ + _common_param_doc
     
+    if docker_image is None:
+        sorting = run_sorter_local(sorter_name, recording, output_folder=output_folder,
+            remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+            verbose=verbose, raise_error=raise_error, **sorter_params)
+    else:
+        sorting = run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
+                remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+                verbose=verbose, raise_error=raise_error, **sorter_params)
+    return sorting
+    
+
+def run_sorter_local(sorter_name, recording, output_folder=None,
+            remove_existing_folder=True, delete_output_folder=False,
+            verbose=False, raise_error=True, **sorter_params):
+
     if isinstance(recording, list):
         raise Exception('You you want to run several sorters/recordings use run_sorters(...)')
 
@@ -52,10 +76,91 @@ def run_sorter(sorter_name, recording, output_folder=None,
     sorting = SorterClass.get_result_from_folder(output_folder)
     
     if delete_output_folder:
-        raise NotImplementedError
-        # TODO : delete_output_folder
+        shutil.rmtree(output_folder)
     
     return sorting
+
+
+def modify_input_folder(rec_dict, input_folder):
+    if "kwargs" in rec_dict.keys():
+        dcopy_kwargs, folder_to_mount = modify_input_folder(rec_dict["kwargs"], input_folder)
+        rec_dict["kwargs"] = dcopy_kwargs
+        return rec_dict, folder_to_mount
+    else:
+        if "file_path" in rec_dict:
+            file_path = Path(rec_dict["file_path"])
+            folder_to_mount = file_path.parent
+            file_relative = file_path.relative_to(folder_to_mount)
+            rec_dict["file_path"] = f"{input_folder}/{str(file_relative)}"
+            return rec_dict, folder_to_mount
+        elif "folder_path" in rec_dict:
+            folder_path = Path(rec_dict["folder_path"])
+            folder_to_mount = folder_path.parent
+            folder_relative = folder_path.relative_to(folder_to_mount)
+            rec_dict["folder_path"] = f"{input_folder}/{str(folder_relative)}"
+            return rec_dict, folder_to_mount
+        elif "file_or_folder_path" in rec_dict:
+            file_or_folder_path = Path(rec_dict["file_or_folder_path"])
+            folder_to_mount = file_or_folder_path.parent
+            file_or_folder_relative = file_or_folder_path.relative_to(folder_to_mount)
+            rec_dict["file_or_folder_path"] = f"{input_folder}/{str(file_or_folder_relative)}"
+            return rec_dict, folder_to_mount
+        else:
+            raise Exception
+
+
+def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
+            remove_existing_folder=True, delete_output_folder=False,
+            verbose=False, raise_error=True, **sorter_params):
+    
+    import docker
+    
+    rec_dict = recording.to_dict()
+    
+    # TODO check if None
+    output_folder = Path(output_folder).absolute()
+    output_folder.mkdir(parents=True, exist_ok=True)
+    
+    # find input folder of recording for folder bind
+    rec_dict, recording_input_folder = modify_input_folder(rec_dict,  '/recording_input_folder')
+    #~ print(recording_input_folder)
+    (output_folder / 'in_docker_recording.json').write_text(
+            json.dumps(check_json(rec_dict), indent=4),
+            encoding='utf8')
+    
+    # TODO sorter_params
+    
+    # run sorter on folder
+    py_script = f"""
+    
+from spikeinterface import load_extractor
+recording = load_extractor('/sorting_output_folder/in_docker_recording.json')
+
+output_folder = '/sorting_output_folder'
+sorter_params = dict() 
+from spikeinterface.sorters import sorter_dict
+SorterClass = sorter_dict['{sorter_name}']
+output_folder = SorterClass.initialize_folder(recording, output_folder, {verbose}, {remove_existing_folder})
+SorterClass.set_params_to_folder(recording, output_folder, sorter_params, {verbose})
+SorterClass.setup_recording(recording, output_folder, verbose={verbose})
+SorterClass.run_from_folder(output_folder, {raise_error}, {verbose})
+"""
+    cmd1 = f'python -c "{py_script}"'
+    
+    # put file permission to user (because docker is root...)
+    uid = os.getuid()
+    cmd2 = f'chown {uid}:{uid} -R /data_sorting'
+    
+    client = docker.from_env()
+
+    volumes = {
+        str(output_folder) : {'bind': '/sorting_output_folder', 'mode': 'rw'},
+        str(recording_input_folder): {'bind': '/recording_input_folder', 'mode': 'ro'},
+    }
+    
+    res = client.containers.run(docker_image, cmd1, volumes=volumes)
+    res = client.containers.run(docker_image, cmd2, volumes=volumes)
+
 
 
 _common_run_doc =     """
