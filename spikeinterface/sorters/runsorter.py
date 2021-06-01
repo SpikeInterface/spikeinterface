@@ -26,8 +26,8 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default). If False, the process continues and the error is
         logged in the log file.
-    use_container: bool  default False
-        Run the sorter inside a container (docker) using the hither package.
+    docker_image: None or str
+        If str run the sorter inside a container (docker) using the docker package.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -115,51 +115,65 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
     
     import docker
     
-    rec_dict = recording.to_dict()
-    
-    # TODO check if None
+    assert output_folder is not None, 'with run in docker output_folder must be specify'
     output_folder = Path(output_folder).absolute()
-    output_folder.mkdir(parents=True, exist_ok=True)
+    parent_folder = output_folder.parent
+    folder_name = output_folder.stem
     
     # find input folder of recording for folder bind
+    rec_dict = recording.to_dict()
     rec_dict, recording_input_folder = modify_input_folder(rec_dict,  '/recording_input_folder')
-    #~ print(recording_input_folder)
-    (output_folder / 'in_docker_recording.json').write_text(
-            json.dumps(check_json(rec_dict), indent=4),
-            encoding='utf8')
-    
-    # TODO sorter_params
+    (parent_folder / 'in_docker_recording.json').write_text(
+            json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
+    # need to share specific parameters
+    (parent_folder / 'in_docker_params.json').write_text(
+            json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
     
     # run sorter on folder
     py_script = f"""
-    
+import json
 from spikeinterface import load_extractor
+from spikeinterface.sorters import run_sorter_local
+
+# load recorsding in docker
 recording = load_extractor('/sorting_output_folder/in_docker_recording.json')
 
-output_folder = '/sorting_output_folder'
-sorter_params = dict() 
-from spikeinterface.sorters import sorter_dict
-SorterClass = sorter_dict['{sorter_name}']
-output_folder = SorterClass.initialize_folder(recording, output_folder, {verbose}, {remove_existing_folder})
-SorterClass.set_params_to_folder(recording, output_folder, sorter_params, {verbose})
-SorterClass.setup_recording(recording, output_folder, verbose={verbose})
-SorterClass.run_from_folder(output_folder, {raise_error}, {verbose})
+# load params in docker
+with open('/sorting_output_folder/in_docker_params.json', encoding='utf8', mode='r') as f:
+    sorter_params = json.load(f)
+
+# run in docker
+output_folder = '/sorting_output_folder/{folder_name}'
+run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
+            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+            verbose={verbose}, raise_error={raise_error}, **sorter_params)
 """
     cmd1 = f'python -c "{py_script}"'
     
     # put file permission to user (because docker is root...)
     uid = os.getuid()
-    cmd2 = f'chown {uid}:{uid} -R /data_sorting'
+    cmd2 = f'chown {uid}:{uid} -R /sorting_output_folder/{folder_name}'
     
     client = docker.from_env()
 
     volumes = {
-        str(output_folder) : {'bind': '/sorting_output_folder', 'mode': 'rw'},
+        str(parent_folder) : {'bind': '/sorting_output_folder', 'mode': 'rw'},
         str(recording_input_folder): {'bind': '/recording_input_folder', 'mode': 'ro'},
     }
-    
+
     res = client.containers.run(docker_image, cmd1, volumes=volumes)
     res = client.containers.run(docker_image, cmd2, volumes=volumes)
+
+    os.remove(parent_folder / 'in_docker_recording.json')
+    os.remove(parent_folder / 'in_docker_params.json')
+    
+    SorterClass = sorter_dict[sorter_name]
+    sorting = SorterClass.get_result_from_folder(output_folder)
+    
+    if delete_output_folder:
+        shutil.rmtree(output_folder)
+    
+    return sorting
 
 
 
