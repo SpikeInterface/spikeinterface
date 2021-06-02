@@ -323,7 +323,7 @@ class WaveformExtractor:
         else:
             init_args = (self.recording.to_dict(), self.sorting.to_dict(), )
         init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter)
-        processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, **job_kwargs)
+        processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, job_name='extract waveforms', **job_kwargs)
         processor.run()
 
 
