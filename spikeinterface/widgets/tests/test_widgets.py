@@ -54,6 +54,8 @@ class TestWidgets(unittest.TestCase):
 
     def test_unitwaveforms(self):
         sw.plot_unit_waveforms(self._we)
+        sw.plot_unit_waveforms(self._we, max_channels=5)
+        sw.plot_unit_waveforms(self._we, radius_um=60)
 
     def test_unittemplates(self):
         sw.plot_unit_templates(self._we)
@@ -136,11 +138,11 @@ if __name__ == '__main__':
     # mytest.test_timeseries()
     # mytest.test_rasters()
     # mytest.test_plot_probe_map()
-    # mytest.test_unitwaveforms()
+    mytest.test_unitwaveforms()
     # mytest.test_unittemplates()
     # mytest.test_plot_unit_map()
-    mytest.test_amplitudes_timeseries()
-    mytest.test_amplitudes_distribution()
+    #~ mytest.test_amplitudes_timeseries()
+    #~ mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
     # mytest.test_plot_unit_localization()
     
