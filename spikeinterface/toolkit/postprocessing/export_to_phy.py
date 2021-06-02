@@ -177,6 +177,7 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         pc.run_for_all_spikes(output_folder / 'pc_features.npy',
                 max_channels_per_template=max_channels_per_template, peak_sign=peak_sign,
                 **job_kwargs)
+        
         max_channels_per_template = min(max_channels_per_template, len(channel_ids))
         pc_feature_ind = np.zeros((len(unit_ids), max_channels_per_template), dtype='int64')
         best_channels_index = get_template_best_channels(waveform_extractor, max_channels_per_template,

@@ -91,7 +91,8 @@ def test_compute_principal_components_for_all_spikes():
     pc.run_for_all_spikes(pc_file, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
     
     all_pc = np.load(pc_file)
-    print(all_pc.shape)
+    # print(all_pc.shape)
+    # print(all_pc)
     
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
