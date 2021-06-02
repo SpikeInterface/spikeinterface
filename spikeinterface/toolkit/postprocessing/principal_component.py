@@ -7,8 +7,10 @@ import numpy as np
 from sklearn.decomposition import IncrementalPCA 
 
 from spikeinterface.core.core_tools import check_json
-
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
 from spikeinterface.core import WaveformExtractor
+from .template_tools import get_template_best_channels
+
 
 
 _possible_modes = [ 'by_channel_local', 'by_channel_global', 'concatenated']
@@ -112,7 +114,15 @@ class WaveformPrincipalComponent:
         return all_labels, all_components
     
     def run(self):
+        """
+        This compute the PCs on waveforms extacted within
+        the WaveformExtarctor.
+        It is only for some sampled spikes defined in WaveformExtarctor
         
+        The index of spikes come from the WaveformExtarctor.
+        This will be cached in the same folder than WaveformExtarctor
+        in 'PCA' subfolder.
+        """
         p = self._params
         we = self.waveform_extractor
         num_chans = we.recording.get_num_channels()
@@ -140,11 +150,62 @@ class WaveformPrincipalComponent:
         elif p['mode'] == 'concatenated':
             self._run_concatenated(component_memmap)
     
-    def _run_by_channel_local(self, component_memmap):
+    def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg', **job_kwargs):
         """
-        In this mode each PCA is "fit" and "transform" by channel.
-        The output is then (n_spike, n_components, n_channels)
+        This run the PCs on all spike from the sorting.
+        This is a long computation because waveform need to be extracted from each spikes.
+        
+        Used mainly for `export_to_phy()`
+        
+        PCs are exported to a .npy single file.
+        
         """
+        p = self._params
+        we = self.waveform_extractor
+        sorting = we.sorting
+        recording = we.recording
+
+        
+        assert sorting.get_num_segments() == 1
+        assert p['mode'] in ('by_channel_local', 'by_channel_global')
+        
+        file_path = Path(file_path)
+
+        all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
+        spike_times, spike_labels = all_spikes[0]        
+        
+        max_channels_per_template = min(max_channels_per_template, we.recording.get_num_channels())
+        
+        best_channels_index = get_template_best_channels(we, max_channels_per_template,
+                                    peak_sign=peak_sign, outputs='index')
+        unit_channels = [best_channels_index[unit_id] for unit_id in sorting.unit_ids]
+        
+        if  p['mode'] == 'by_channel_local':
+            all_pca = self._fit_by_channel_local()
+        elif p['mode'] == 'by_channel_global':
+            one_pca = self._fit_by_channel_global()
+            all_pca = [one_pca] * recording.get_num_channels()
+        
+        # nSpikes, nFeaturesPerChannel, nPCFeatures
+        # this come from  phy template-gui
+        # https://github.com/kwikteam/phy-contrib/blob/master/docs/template-gui.md#datasets
+        shape = (spike_times.size, p['n_components'], max_channels_per_template)
+        all_pcs = np.lib.format.open_memmap(file_path, mode='w+', dtype='float32', shape=shape)
+        
+        # and run
+        func = _all_pc_extractor_chunk
+        init_func = _init_work_all_pc_extractor
+        n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
+        if n_jobs == 1:
+            init_args = (recording, )
+        else:
+            init_args = (recording.to_dict(), )
+        init_args = init_args + (all_pcs, spike_times, spike_labels, we.nbefore, we.nafter, unit_channels, all_pca)
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
+        processor.run()
+
+    
+    def _fit_by_channel_local(self):
         we = self.waveform_extractor
         p = self._params
         
@@ -161,6 +222,21 @@ class WaveformPrincipalComponent:
                 pca = all_pca[chan_ind]
                 pca.partial_fit(wfs[:, :, chan_ind])
         
+        return all_pca
+    
+    def _run_by_channel_local(self, component_memmap):
+        """
+        In this mode each PCA is "fit" and "transform" by channel.
+        The output is then (n_spike, n_components, n_channels)
+        """
+        we = self.waveform_extractor
+        p = self._params
+        
+        unit_ids = we.sorting.unit_ids
+        channel_ids  = we.recording.channel_ids
+        
+        all_pca = self._fit_by_channel_local()
+        
         # transform
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
@@ -168,7 +244,25 @@ class WaveformPrincipalComponent:
                 pca = all_pca[chan_ind]
                 comp = pca.transform(wfs[:, :, chan_ind])
                 component_memmap[unit_id][:, :, chan_ind] = comp
-
+    
+    def _fit_by_channel_global(self):
+        we = self.waveform_extractor
+        p = self._params
+        
+        unit_ids = we.sorting.unit_ids
+        channel_ids  = we.recording.channel_ids
+        
+        # there is one unique PCA accross channels
+        one_pca = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
+        
+        # fit
+        for unit_id in unit_ids:
+            wfs = we.get_waveforms(unit_id)
+            for chan_ind, chan_id in enumerate(channel_ids):
+                one_pca.partial_fit(wfs[:, :, chan_ind])
+        
+        return one_pca
+    
     def _run_by_channel_global(self, component_memmap):
         """
         In this mode there is one "fit" for all channels.
@@ -181,20 +275,13 @@ class WaveformPrincipalComponent:
         unit_ids = we.sorting.unit_ids
         channel_ids  = we.recording.channel_ids
         
-        # there is one unique PCA accross channels
-        pca = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
-        
-        # fit
-        for unit_id in unit_ids:
-            wfs = we.get_waveforms(unit_id)
-            for chan_ind, chan_id in enumerate(channel_ids):
-                pca.partial_fit(wfs[:, :, chan_ind])
+        one_pca = self._fit_by_channel_global()
         
         # transform
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
             for chan_ind, chan_id in enumerate(channel_ids):
-                comp = pca.transform(wfs[:, :, chan_ind])
+                comp = one_pca.transform(wfs[:, :, chan_ind])
                 component_memmap[unit_id][:, :, chan_ind] = comp
 
 
@@ -226,6 +313,62 @@ class WaveformPrincipalComponent:
             component_memmap[unit_id][:, :] = comp
 
 
+def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    recording = worker_ctx['recording']
+    all_pcs = worker_ctx['all_pcs']
+    spike_times = worker_ctx['spike_times']
+    spike_labels = worker_ctx['spike_labels']
+    nbefore = worker_ctx['nbefore']
+    nafter = worker_ctx['nafter']
+    unit_channels = worker_ctx['unit_channels']
+    all_pca = worker_ctx['all_pca']
+    
+    i0 = np.searchsorted(spike_times, start_frame)
+    i1 = np.searchsorted(spike_times, end_frame)
+    
+    if i0 == i1:
+        return
+
+    start = int(spike_times[i0] - nbefore)
+    end = int(spike_times[i1-1] + nafter)
+    traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)    
+
+    for i in range(i0, i1):
+        st = spike_times[i]
+        if st - start - nbefore < 0:
+            continue
+        if st - start + nafter > traces.shape[0]:
+            continue
+        
+        wf = traces[st - start - nbefore:st - start + nafter, :]
+        
+        unit_index = spike_labels[i]
+        chan_inds = unit_channels[unit_index]
+        
+        for c, chan_ind in enumerate(chan_inds):
+            w = wf[:, chan_ind]
+            if w.size > 0:
+                w = w[None, :]
+                all_pcs[i, :, c] = all_pca[chan_ind].transform(w)
+
+    
+def _init_work_all_pc_extractor(recording, all_pcs, spike_times, spike_labels, nbefore, nafter, unit_channels, all_pca):
+    worker_ctx = {}
+    if isinstance(recording, dict):
+        from spikeinterface.core import load_extractor
+        recording = load_extractor(recording)
+    worker_ctx['recording'] = recording
+    worker_ctx['all_pcs'] = all_pcs
+    worker_ctx['spike_times'] = spike_times
+    worker_ctx['spike_labels'] = spike_labels
+    worker_ctx['nbefore'] = nbefore
+    worker_ctx['nafter'] = nafter
+    worker_ctx['unit_channels'] = unit_channels
+    worker_ctx['all_pca'] = all_pca
+    
+    return worker_ctx
+
+
 
 def compute_principal_components(waveform_extractor, load_if_exists=False, 
             n_components=5, mode='by_channel_local',  whiten=True, dtype='float32'):
@@ -244,5 +387,3 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
     
     return pc
 
-    
-    

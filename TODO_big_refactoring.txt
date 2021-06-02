@@ -3,12 +3,11 @@ Here the TODO list for the NEW spikeinterface API
 core:
     * add kachery extractor (jeremy)
     * save features as np (sam)
-    * event object (sam and alessio)
     * waveform_extractor improve cache option
     * time vector
     * binary_interface()
 
-    
+
 extractors:
 
     * nwb: reader/writer (with multi segment) (ben?)
@@ -20,10 +19,6 @@ extractors:
 toolkit:
   * preprocessing:
     * ResampleRecording
-
-  * postprocessing: 
-     * export to phy (pca + amplitudes)
-     * integrate amplitudes
 
   * validation (= qualitymetrics):
      * "max_drift",

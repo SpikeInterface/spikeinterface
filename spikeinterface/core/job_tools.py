@@ -205,8 +205,8 @@ class ChunkRecordingExecutor:
 
 # see
 # https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool 
-# theses 2 global are global per worker
-# so they are not share
+# the tricks is : theses 2 variables are global per worker
+# so they are not share in the same process
 global _worker_ctx
 global _func
 

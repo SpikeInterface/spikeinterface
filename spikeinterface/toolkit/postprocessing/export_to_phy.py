@@ -6,12 +6,13 @@ import shutil
 import spikeinterface.extractors as se
 
 from spikeinterface import BaseRecording, BaseSorting, write_binary_recording
-from .template_tools import get_template_extremum_channel
+from .template_tools import get_template_extremum_channel, get_template_best_channels
 from .unit_amplitudes import get_unit_amplitudes
+from .template_similarity import compute_template_similarity
+from .principal_component import WaveformPrincipalComponent
 
 # @alessio: this is a basic phy export, still need to:
 #  * integrate PCA
-#  * integrate "compute_template_similarity"
 
 
 def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute_pc_features=True,
@@ -146,13 +147,12 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         templates_ind.append(inds)
     templates = np.array(templates)
     templates_ind = np.array(templates_ind)
-    # TODO
-    # similar_templates = compute_template_similarity(templates, templates_ind)
+
+    template_similarity = compute_template_similarity(waveform_extractor, method='cosine_similarity')
     
-    # templates = templates.swapaxes(1,2).copy()
     np.save(str(output_folder / 'templates.npy'), templates)
     np.save(str(output_folder / 'template_ind.npy'), templates_ind)
-    # np.save(str(output_folder / 'similar_templates.npy'), similar_templates)
+    np.save(str(output_folder / 'similar_templates.npy'), template_similarity)
     
     channel_maps = np.arange(num_chans, dtype='int32')
     channel_map_si = unit_ids
@@ -172,9 +172,18 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
 
     if compute_pc_features:
-        raise NotImplementedError    
-        # np.save(str(output_folder / 'pc_features.npy'), pc_features)
-        # np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
+        pc = WaveformPrincipalComponent(waveform_extractor)
+        pc.set_params(n_components=5, mode='by_channel_local')
+        pc.run_for_all_spikes(output_folder / 'pc_features.npy',
+                max_channels_per_template=max_channels_per_template, peak_sign=peak_sign,
+                **job_kwargs)
+        max_channels_per_template = min(max_channels_per_template, len(channel_ids))
+        pc_feature_ind = np.zeros((len(unit_ids), max_channels_per_template), dtype='int64')
+        best_channels_index = get_template_best_channels(waveform_extractor, max_channels_per_template,
+                                    peak_sign=peak_sign, outputs='index')
+        for u, unit_id in enumerate(sorting.unit_ids):
+            pc_feature_ind[u, :] = best_channels_index[unit_id]
+        np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
 
     # Save .tsv metadata
     with (output_folder / 'cluster_group.tsv').open('w') as tsvfile:
