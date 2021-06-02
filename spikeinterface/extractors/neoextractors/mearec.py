@@ -29,7 +29,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         probe = pi.read_mearec(file_path)
         self.set_probe(probe, in_place=True)
         
-        self._kwargs = {'file_path' : str(file_path)}
+        self._kwargs = {'file_path' : str(file_path), 'locs_2d': locs_2d}
         
     
 
