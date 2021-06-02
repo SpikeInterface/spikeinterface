@@ -201,7 +201,7 @@ class WaveformPrincipalComponent:
         else:
             init_args = (recording.to_dict(), )
         init_args = init_args + (all_pcs, spike_times, spike_labels, we.nbefore, we.nafter, unit_channels, all_pca)
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name='extract PCs', **job_kwargs)
         processor.run()
 
     

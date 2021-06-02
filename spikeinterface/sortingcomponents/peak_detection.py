@@ -85,7 +85,8 @@ def detect_peaks(recording, method='by_channel',
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
     init_args = (recording.to_dict(),  method, peak_sign, abs_threholds, n_shifts, neighbours_mask)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True, **job_kwargs)
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
+                handle_returns=True, job_name='detect peaks', **job_kwargs)
     peaks = processor.run()
     
     peak_sample_inds, peak_chan_inds, peak_amplitudes, peak_segments = zip(*peaks)

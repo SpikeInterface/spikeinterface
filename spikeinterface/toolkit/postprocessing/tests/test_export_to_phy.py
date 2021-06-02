@@ -35,7 +35,7 @@ def test_export_to_phy():
                 compute_pc_features=True,
                 compute_amplitudes=True,
                 max_channels_per_template=8,
-                n_jobs=1, chunk_size=10000)
+                n_jobs=1, chunk_size=10000, progress_bar=True)
 
 
 
