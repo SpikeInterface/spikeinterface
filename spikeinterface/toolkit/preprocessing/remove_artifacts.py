@@ -57,8 +57,6 @@ class RemoveArtifactsRecording(BasePreprocessor):
     name = 'remove_artifacts'
 
     def __init__(self, recording,  list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1.):
-        self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers, 
-                ms_before=ms_before, ms_after=ms_after, mode=mode, fit_sample_spacing=fit_sample_spacing)
 
         num_seg = recording.get_num_segments()
         if num_seg ==1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
@@ -83,6 +81,10 @@ class RemoveArtifactsRecording(BasePreprocessor):
             triggers = list_triggers[seg_index]
             rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad,  mode, fit_samples)
             self.add_recording_segment(rec_segment)
+
+        self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers, 
+                ms_before=ms_before, ms_after=ms_after, mode=mode, fit_sample_spacing=fit_sample_spacing)
+
 
 
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
