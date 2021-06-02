@@ -4,7 +4,6 @@ core:
     * add kachery extractor (jeremy)
     * save features as np (sam)
     * event object (sam and alessio)
-    * add hither (alessio, sam or jeremy) for launcher and/or container
     * waveform_extractor improve cache option
     * time vector
     * binary_interface()
@@ -62,7 +61,6 @@ doc:
 
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
-  * make on example for extractor
 
 
 

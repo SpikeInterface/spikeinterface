@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-def get_unit_colors(sorting, map_name='jet', format='RGBA'):
+def get_unit_colors(sorting, map_name='Dark2', format='RGBA'):
     """
     Return a dict colors per units.
     """

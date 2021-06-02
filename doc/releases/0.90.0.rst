@@ -24,7 +24,7 @@ core:
 sorters:
   * internal API change with classmethod only
   * no more `grouping_property` use recording.split() instead
-  * can be run in docker locally (need hither)
+  * can be run in docker locally (need docker installed)
   * add pykilosort
 
 toolkit:

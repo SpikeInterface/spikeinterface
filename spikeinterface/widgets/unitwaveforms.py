@@ -2,6 +2,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget, BaseMultiWidget
+from .utils import get_unit_colors
+from ..toolkit import (get_template_extremum_channel, get_template_best_channels, get_channel_distances)
 
 
 class UnitWaveformsWidget(BaseMultiWidget):
@@ -20,9 +22,14 @@ class UnitWaveformsWidget(BaseMultiWidget):
         If False, waveforms are displayed in vertical order (default)
     plot_templates: bool
         If True, templates are plotted over the waveforms
-    radius: float
+    radius_um: None or float
         If not None, all channels within a circle around the peak waveform will be displayed
-        Ignores max_spikes_per_unit
+        Incompatible with with `max_channels`
+    max_channels : None or int
+        If not None only max_channels are displayed per units.
+        Incompatible with with `radius_um`
+        
+    
     set_title: bool
         Create a plot title with the unit number if True.
     plot_channels: bool
@@ -45,12 +52,8 @@ class UnitWaveformsWidget(BaseMultiWidget):
     """
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
             plot_waveforms=True,  plot_templates=True, plot_channels=False,
-            unit_colors=None,
-               
-               # TODO handle this
-                max_channels=None, radius=None,
-                show_all_channels=True,
-                 
+            unit_colors=None, max_channels=None, radius_um=None,
+
                 ncols=5, 
                 figure=None, ax=None, axes=None, color='k', lw=2, axis_equal=False,
                 set_title=True
@@ -69,18 +72,23 @@ class UnitWaveformsWidget(BaseMultiWidget):
             channel_ids = self._recording.get_channel_ids()
         self._channel_ids = channel_ids
         
-        if max_channels is None:
-            max_channels = self._recording.get_num_channels()
-        self._max_channels = max_channels
-        
+        if unit_colors is None :
+            unit_colors = get_unit_colors(self._sorting)
         self.unit_colors = unit_colors
+        
         self.ncols = ncols
         self._plot_waveforms = plot_waveforms
         self._plot_templates = plot_templates
         self._plot_channels = plot_channels
         
-        self._radius = radius
-        self._show_all_channels = show_all_channels
+        if radius_um is not None:
+            assert max_channels is None, 'radius_um and max_channels are mutually exclussive'
+        if max_channels is not None:
+            assert radius_um is None, 'radius_um and max_channels are mutually exclussive'
+        
+        self.radius_um = radius_um
+        self.max_channels = max_channels
+        
         self._color = color
         self._lw = lw
         self._axis_equal = axis_equal
@@ -95,36 +103,54 @@ class UnitWaveformsWidget(BaseMultiWidget):
         unit_ids = self._unit_ids
         channel_ids = self._channel_ids
         
-        colors = self.unit_colors
-        if colors is None:
-            cmap = plt.get_cmap('Dark2', len(unit_ids))
-            colors = {unit_id: cmap(i) for i, unit_id in enumerate(unit_ids)}
-            
-
         channel_locations = self._recording.get_channel_locations(channel_ids=channel_ids)
         templates = we.get_all_templates(unit_ids=unit_ids)
         
         xvectors, y_scale, y_offset = get_waveforms_scales(we, templates, channel_locations)
-        xvectors_flat = xvectors.T.flatten()
         
         ncols = min(self.ncols, len(unit_ids))
         nrows = int(np.ceil(len(unit_ids) / ncols))
         
+        channel_inds = {}
+        if self.radius_um is not None:
+            best_chan = get_template_extremum_channel(we,  outputs='index')
+            distances = get_channel_distances(we.recording)
+            for unit_id in unit_ids:
+                chan_ind = best_chan[unit_id]
+                chan_inds, = np.nonzero(distances[chan_ind, :] <= self.radius_um)
+                channel_inds[unit_id] = chan_inds
+
+        elif self.max_channels is not None:
+            best_chan_ids = get_template_best_channels(we, self.max_channels, peak_sign='neg')
+            for unit_id in unit_ids:
+                chan_inds = we.recording.ids_to_indices(best_chan_ids[unit_id])
+                channel_inds[unit_id] = chan_inds
+
+        else:
+            # all channels
+            for unit_id in unit_ids:
+                channel_inds[unit_id] = slice(None)
+
+        
         for i, unit_id in enumerate(unit_ids):
             
             ax = self.get_tiled_ax(i, nrows, ncols)
-            color = colors[unit_id]
+            color = self.unit_colors[unit_id]
+            
+            chan_inds = channel_inds[unit_id]
+            xvectors_flat = xvectors[:, chan_inds].T.flatten()
             
             # plot waveforms
             if self._plot_waveforms:
                 wfs = we.get_waveforms(unit_id)
-                wfs = wfs * y_scale + y_offset[None, :, :]
+                wfs = wfs[:, :, chan_inds]
+                wfs = wfs * y_scale + y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1,2).reshape(wfs.shape[0], -1).T
                 ax.plot(xvectors_flat, wfs_flat, lw=1, alpha=0.3, color=color)
             
             # plot template
             if self._plot_templates:
-                template = templates[i, :, :] * y_scale + y_offset
+                template = templates[i, :, :][:, chan_inds] * y_scale + y_offset[:, chan_inds]
                 if self._plot_waveforms and self._plot_templates:
                     color = 'k'
                 ax.plot(xvectors_flat, template.T.flatten(), lw=1, color=color)
