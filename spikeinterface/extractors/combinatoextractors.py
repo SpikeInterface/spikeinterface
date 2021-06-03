@@ -19,7 +19,7 @@ class CombinatoSortingExtractor(BaseSorting):
     is_writable = False
     installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
 
-    def __init__(self, folder_path, sampling_frequency=None, user='simple', det_sign='both'):
+    def __init__(self, folder_path, sampling_frequency=None, user='simple', det_sign='both', keep_good_only=True):
 
         folder_path = Path(folder_path)
         assert folder_path.is_dir(), 'Folder {} doesn\'t exist'.format(folder_path)
@@ -53,7 +53,8 @@ class CombinatoSortingExtractor(BaseSorting):
 
                 times_css = fdet[sign]['times'][()]
                 for gr, cls in groups.items():
-
+                    if keep_good_only and (group_type[gr]<1): #artifact or unsorted
+                        continue
                     spiketrains[unit_counter] = np.rint(
                         times_css[sp_index[np.isin(sp_class, cls)]] * (sampling_frequency / 1000))
                     metadata[unit_counter] = {'group_type': group_type[gr]}
