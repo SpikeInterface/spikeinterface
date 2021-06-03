@@ -39,6 +39,8 @@ sorters:
   * is_installed() on run time
   * unify parameters for copy to binary > common methods
   * make something to not copy binary when not needed
+  
+  * install all files *.m, *.prm
 
 
 widgets:
