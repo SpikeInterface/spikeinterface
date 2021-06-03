@@ -19,7 +19,6 @@ class NwbSortingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = []
     entities = []
 
-# TODO : NwbEventTest
 
 if __name__ == '__main__':
     test = NwbRecordingTest()
