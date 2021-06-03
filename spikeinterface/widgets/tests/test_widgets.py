@@ -64,6 +64,9 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_map(self._we)
         sw.plot_unit_map(self._we, animated=True)
 
+    def test_plot_units_depth_vs_amplitude(self):
+        sw.plot_units_depth_vs_amplitude(self._we)
+
     def test_amplitudes_timeseries(self):
         sw.plot_amplitudes_timeseries(self._we)
         sw.plot_amplitudes_timeseries(self._we, amplitudes=self._amplitudes)
@@ -138,9 +141,10 @@ if __name__ == '__main__':
     # mytest.test_timeseries()
     # mytest.test_rasters()
     # mytest.test_plot_probe_map()
-    mytest.test_unitwaveforms()
+    # mytest.test_unitwaveforms()
     # mytest.test_unittemplates()
     # mytest.test_plot_unit_map()
+    mytest.test_plot_units_depth_vs_amplitude()
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
