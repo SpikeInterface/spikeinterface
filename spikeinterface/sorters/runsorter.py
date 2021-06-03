@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import json
 
+from ..version import version as si_version
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.core_tools import check_json
 from .sorterlist import sorter_dict
@@ -123,13 +124,15 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
     rec_dict, recording_input_folder = modify_input_folder(rec_dict,  '/recording_input_folder')
+    
+    # create 3 files for communication with docker
+    # recordonc dict inside
     (parent_folder / 'in_docker_recording.json').write_text(
             json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
     # need to share specific parameters
     (parent_folder / 'in_docker_params.json').write_text(
             json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
-    
-    # run sorter on folder
+    # the py script
     py_script = f"""
 import json
 from spikeinterface import load_extractor
@@ -148,24 +151,66 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
             verbose={verbose}, raise_error={raise_error}, **sorter_params)
 """
-    cmd1 = f'python -c "{py_script}"'
+    (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
+    
+    # docker bind (mount)
+    volumes = {
+            str(parent_folder) : {'bind': '/sorting_output_folder', 'mode': 'rw'},
+            str(recording_input_folder): {'bind': '/recording_input_folder', 'mode': 'ro'},
+        }
+     
+    client = docker.from_env()
+    
+    # check if docker contains spikeinertace already
+    cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
+    try:
+        res = client.containers.run(docker_image, cmd)
+        need_si_install = False
+    except docker.errors.ContainerError:
+        need_si_install = True
+
+    # create a comman shell list
+    commands = []
+    
+    if need_si_install:
+        if 'dev' in si_version:
+            # install from github source several stuff
+            cmd = 'pip install --upgrade --force MEArec'
+            commands.append(cmd)
+
+            cmd = 'pip install --upgrade --force https://github.com/samuelgarcia/spikeinterface/archive/big_refactoring.zip'
+            commands.append(cmd)
+            
+            cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
+            commands.append(cmd)
+        else:
+            # install from pypi with same version as host
+            cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
+            res = client.containers.run(docker_image, cmd)
+            commands.append(cmd)
+
+    # run sorter on folder
+    cmd = 'python /sorting_output_folder/in_docker_sorter_script.py'
+    commands.append(cmd)
     
     # put file permission to user (because docker is root...)
     uid = os.getuid()
-    cmd2 = f'chown {uid}:{uid} -R /sorting_output_folder/{folder_name}'
+    cmd = f'chown {uid}:{uid} -R /sorting_output_folder/{folder_name}'
+    commands.append(cmd)
     
-    client = docker.from_env()
+    
+    #~ commands = commands[0:4]
+    #~ commands = ' ; '.join(commands)
+    commands = ' && '.join(commands)
+    command = f'sh -c "{commands}"'
+    # print(command)
 
-    volumes = {
-        str(parent_folder) : {'bind': '/sorting_output_folder', 'mode': 'rw'},
-        str(recording_input_folder): {'bind': '/recording_input_folder', 'mode': 'ro'},
-    }
+    res = client.containers.run(docker_image, command=command, volumes=volumes)
 
-    res = client.containers.run(docker_image, cmd1, volumes=volumes)
-    res = client.containers.run(docker_image, cmd2, volumes=volumes)
-
+    # clean useless files
     os.remove(parent_folder / 'in_docker_recording.json')
     os.remove(parent_folder / 'in_docker_params.json')
+    os.remove(parent_folder / 'in_docker_sorter_script.py')
     
     SorterClass = sorter_dict[sorter_name]
     sorting = SorterClass.get_result_from_folder(output_folder)
