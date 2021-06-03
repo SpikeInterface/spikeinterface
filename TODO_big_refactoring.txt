@@ -21,6 +21,7 @@ toolkit:
     * ResampleRecording
 
   * validation (= qualitymetrics):
+     * decide good channel selection in PCA metrics
      * "max_drift",
      * "cumulative_drift",
      * "silhouette_score",
