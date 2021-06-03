@@ -82,7 +82,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
             rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad,  mode, fit_samples)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers, 
+        self._kwargs = dict(recording=recording.to_dict(), list_triggers=[int(trig) for trig in list_triggers], 
                 ms_before=ms_before, ms_after=ms_after, mode=mode, fit_sample_spacing=fit_sample_spacing)
 
 
