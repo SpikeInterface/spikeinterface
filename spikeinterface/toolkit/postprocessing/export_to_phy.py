@@ -5,7 +5,7 @@ import numpy as np
 import shutil
 import spikeinterface.extractors as se
 
-from spikeinterface import BaseRecording, BaseSorting, write_binary_recording
+from spikeinterface import BaseRecording, BaseSorting, write_binary_recording, BinaryRecordingExtractor
 from .template_tools import get_template_extremum_channel, get_template_best_channels
 from .unit_amplitudes import get_unit_amplitudes
 from .template_similarity import compute_template_similarity
@@ -39,11 +39,7 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
     max_channels_per_template: int or None
         Maximum channels per unit to return. If None, all channels are returned
     copy_binary: bool
-        If True, the recording is copied and saved in the phy 'output_folder'. If False and the
-        'recording' is a CacheRecordingExtractor or a BinDatRecordingExtractor, then a relative
-        link to the file recording location is used. Otherwise, the recording is not copied and the
-        recording path is set to 'None'. (default True)
-    remove_if_exists: bool False
+        If True, the recording is copied and saved in the phy 'output_folder'.
     
     peak_sign: 'neg', 'pos', 'both'
         Used by get_unit_amplitudes
@@ -102,11 +98,8 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
     if copy_binary:
         rec_path = output_folder / 'recording.dat'
         write_binary_recording(recording, files_path=rec_path, verbose=verbose, dtype=dtype, **job_kwargs)
-    elif isinstance(recording, se.CacheRecordingExtractor):
-        rec_path = str(Path(recording.filename).absolute())
-        dtype = recording.get_dtype()
-    elif isinstance(recording, se.BinDatRecordingExtractor):
-        rec_path = str(Path(recording._datfile).absolute())
+    elif isinstance(recording, BinaryRecordingExtractor):
+        rec_path = recording._kwargs['files_path'][0]
         dtype = recording.get_dtype()
     else:  # don't save recording.dat
         rec_path = 'None'
