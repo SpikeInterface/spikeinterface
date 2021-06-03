@@ -10,7 +10,7 @@ class BaseSorting(BaseExtractor):
     Abstract class representing several segment several units and relative spiketrains.
     """
 
-    def __init__(self, sampling_frequency: float, unit_ids: List[int]):
+    def __init__(self, sampling_frequency: float, unit_ids: List):
 
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
@@ -30,7 +30,7 @@ class BaseSorting(BaseExtractor):
     def unit_ids(self):
         return self._main_ids
 
-    def get_unit_ids(self) -> List[int]:
+    def get_unit_ids(self) -> List:
         return self._main_ids
 
     def get_num_units(self) -> int:
