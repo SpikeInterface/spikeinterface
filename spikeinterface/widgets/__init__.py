@@ -22,7 +22,9 @@ from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
 from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
+# units on probe
 from .unitmap import plot_unit_map, UnitMapWidget
+from .depthamplitude import plot_units_depth_vs_amplitude
 
 
 # comparison related

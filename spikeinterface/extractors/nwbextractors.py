@@ -190,12 +190,12 @@ class NwbSortingExtractor(BaseSorting):
     mode = 'file'
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
-    def __init__(self, file_path, electrical_series: str = None, sampling_frequency: float = None):
+    def __init__(self, file_path, electrical_series_name: str = None, sampling_frequency: float = None):
         """
         Parameters
         ----------
         file_path: path to NWB file
-        electrical_series: str with pynwb.ecephys.ElectricalSeries object name
+        electrical_series_name: str with pynwb.ecephys.ElectricalSeries object name
         sampling_frequency: float
         """
         assert self.installed, self.installation_mesg
@@ -205,15 +205,15 @@ class NwbSortingExtractor(BaseSorting):
             if sampling_frequency is None:
                 # defines the electrical series from where the sorting came from
                 # important to know the sampling_frequency
-                if electrical_series is None:
+                if electrical_series_name is None:
                     if len(nwbfile.acquisition) > 1:
-                        raise Exception('More than one acquisition found. You must specify electrical_series.')
+                        raise Exception('More than one acquisition found. You must specify electrical_series_name.')
                     if len(nwbfile.acquisition) == 0:
                         raise Exception("No acquisitions found in the .nwb file from which to read sampling frequency. \
                                          Please, specify 'sampling_frequency' parameter.")
                     es = list(nwbfile.acquisition.values())[0]
                 else:
-                    es = electrical_series
+                    es = electrical_series_name
                 # get rate
                 if es.rate is not None:
                     sampling_frequency = es.rate
@@ -254,7 +254,7 @@ class NwbSortingExtractor(BaseSorting):
         for prop_name, values in properties.items():
             self.set_property(prop_name, values)
 
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'electrical_series': electrical_series,
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'electrical_series_name': electrical_series_name,
                         'sampling_frequency': sampling_frequency}
 
 
@@ -294,17 +294,13 @@ def read_nwb_sorting(*args, **kwargs):
     sorting = NwbSortingExtractor(*args, **kwargs)
     return  sorting
 
-# TODO : improve this with kargws mapping
-def read_nwb(file_path, load_recording=True, load_sorting=False):
+def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None):
     outputs = ()
     if load_recording:
-        rec = read_nwb_recording(file_path)
+        rec = read_nwb_recording(file_path, electrical_series_name=electrical_series_name)
         outputs = outputs + (rec, )
     if load_sorting:
-        sorting = read_nwb_sorting(file_path)
+        sorting = read_nwb_sorting(file_path, electrical_series_name=electrical_series_name)
         outputs = outputs + (sorting, )
     return outputs
 
-
-
-# TODO class NwbEvents - class NwbEventsSegment

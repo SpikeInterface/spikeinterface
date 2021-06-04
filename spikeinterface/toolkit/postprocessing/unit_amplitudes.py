@@ -33,7 +33,8 @@ def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', outputs='concatena
     func = _unit_amplitudes_chunk
     init_func = _init_worker_unit_amplitudes
     init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True, **job_kwargs)
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
+                        handle_returns=True, job_name='extract amplitudes',  **job_kwargs)
     out = processor.run()
     amps, segments = zip(*out)
     amps = np.concatenate(amps)

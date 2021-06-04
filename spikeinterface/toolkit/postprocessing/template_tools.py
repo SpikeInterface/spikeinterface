@@ -64,6 +64,28 @@ def  get_template_extremum_channel(waveform_extractor, peak_sign='neg', outputs=
     elif outputs == 'index':
         return extremum_channels_index
 
+def get_template_best_channels(waveform_extractor, num_channels, peak_sign='neg',  outputs='id'):
+    """
+    Get N best channels for each unit.
+    """
+    unit_ids = waveform_extractor.sorting.unit_ids
+    channel_ids = waveform_extractor.recording.channel_ids
+
+    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
+    best_channels_ids = {}
+    best_channels_index = {}
+    for unit_id in unit_ids:
+        chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
+        chan_inds = chan_inds[:num_channels]
+        best_channels_index[unit_id] = chan_inds
+        best_channels_ids[unit_id] = channel_ids[chan_inds]
+
+    if outputs == 'id':
+        return best_channels_ids
+    elif outputs == 'index':
+        return best_channels_index
+
+
 def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'):
     """
     In some situtaion some sorters, return spike index with a smal shift related to the extremum peak
@@ -99,21 +121,6 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
     
 
 
-def get_template_best_channels(waveform_extractor, num_channels, peak_sign='neg'):
-    """
-    Get channels with hiher amplitudes for each unit.
-    """
-    unit_ids = waveform_extractor.sorting.unit_ids
-    channel_ids = waveform_extractor.recording.channel_ids
-
-    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
-    best_channels_ids = {}
-    for unit_id in unit_ids:
-        chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
-        chan_inds = chan_inds[:num_channels]
-        best_channels_ids[unit_id] = channel_ids[chan_inds]
-    
-    return best_channels_ids
 
 
 def get_template_extremum_amplitude(waveform_extractor, peak_sign='neg'):
