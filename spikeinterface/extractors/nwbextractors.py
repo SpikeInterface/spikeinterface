@@ -88,13 +88,9 @@ class NwbRecordingExtractor(BaseRecording):
             dtype = es.data.dtype
 
             BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency,dtype=dtype)
-            print(self._main_ids)
             recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=electrical_series_name,
                                                     num_frames=num_frames)
             self.add_recording_segment(recording_segment)
-            
-            print(len(gains))
-            print(len(self._main_ids))
             
             # If gains are not 1, set has_scaled to True
             if np.any(gains != 1):
