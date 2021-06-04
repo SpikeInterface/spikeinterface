@@ -82,33 +82,37 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     return sorting
 
 
-def modify_input_folder(rec_dict, input_folder):
-    if "kwargs" in rec_dict.keys():
-        dcopy_kwargs, folder_to_mount = modify_input_folder(rec_dict["kwargs"], input_folder)
-        rec_dict["kwargs"] = dcopy_kwargs
-        return rec_dict, folder_to_mount
+def modify_input_folder(d, input_folder):
+    if "kwargs" in d.keys():
+        dcopy_kwargs, folder_to_mount = modify_input_folder(d["kwargs"], input_folder)
+        d["kwargs"] = dcopy_kwargs
+        return d, folder_to_mount
     else:
-        if "file_path" in rec_dict:
-            file_path = Path(rec_dict["file_path"])
-            folder_to_mount = file_path.parent
-            file_relative = file_path.relative_to(folder_to_mount)
-            rec_dict["file_path"] = f"{input_folder}/{str(file_relative)}"
-            return rec_dict, folder_to_mount
-        elif "folder_path" in rec_dict:
-            folder_path = Path(rec_dict["folder_path"])
-            folder_to_mount = folder_path.parent
-            folder_relative = folder_path.relative_to(folder_to_mount)
-            rec_dict["folder_path"] = f"{input_folder}/{str(folder_relative)}"
-            return rec_dict, folder_to_mount
-        elif "file_or_folder_path" in rec_dict:
-            file_or_folder_path = Path(rec_dict["file_or_folder_path"])
-            folder_to_mount = file_or_folder_path.parent
-            file_or_folder_relative = file_or_folder_path.relative_to(folder_to_mount)
-            rec_dict["file_or_folder_path"] = f"{input_folder}/{str(file_or_folder_relative)}"
-            return rec_dict, folder_to_mount
-        else:
-            raise Exception
-
+        for k in d.keys():
+            if "path" in k:
+                # paths can be str or list of str
+                if isinstance(d[k], str):
+                    # one path
+                    abs_path = Path(d[k])
+                    folder_to_mount = abs_path.parent
+                    relative_path = str(Path(d[k]).relative_to(folder_to_mount))
+                    d[k] = f"{input_folder}/{relative_path}"
+                elif isinstance(d[k], list):
+                    # list of path
+                    relative_paths = []
+                    folder_to_mount = None
+                    for abs_path in d[k]:
+                        abs_path = Path(abs_path)
+                        if folder_to_mount is None:
+                            folder_to_mount = abs_path.parent
+                        else:
+                            assert folder_to_mount == abs_path.parent
+                        relative_path = str(abs_path.relative_to(folder_to_mount))
+                        relative_paths.append( f"{input_folder}/{relative_path}")
+                    d[k] = relative_paths
+                else:
+                    raise valueError(f'{k} key for path  must be str or list[str]')
+            return d, folder_to_mount
 
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
             remove_existing_folder=True, delete_output_folder=False,
@@ -116,7 +120,9 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
     
     import docker
     
-    assert output_folder is not None, 'with run in docker output_folder must be specify'
+    if output_folder is None:
+        output_folder = sorter_name + '_output'
+    
     output_folder = Path(output_folder).absolute()
     parent_folder = output_folder.parent
     folder_name = output_folder.stem
