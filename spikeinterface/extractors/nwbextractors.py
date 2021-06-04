@@ -46,7 +46,7 @@ class NwbRecordingExtractor(BaseRecording):
         file_path: path to NWB file
         electrical_series_name: str, optional
         """
-        assert self.HAVE_NWB, self.installation_mesg
+        assert HAVE_NWB, self.installation_mesg
         self._file_path = str(file_path)
         with NWBHDF5IO(self._file_path, 'r') as io:
             nwbfile = io.read()
@@ -85,14 +85,20 @@ class NwbRecordingExtractor(BaseRecording):
             # Fill channel properties dictionary from electrodes table
             channel_ids = [es.electrodes.table.id[x] for x in es.electrodes.data]
 
-            # If gains are not 1, set has_scaled to True
-            if np.any(gains != 1):
-                self.set_channel_gains(gains)
+            dtype = es.data.dtype
 
-            BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency)
+            BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency,dtype=dtype)
+            print(self._main_ids)
             recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=electrical_series_name,
                                                     num_frames=num_frames)
             self.add_recording_segment(recording_segment)
+            
+            print(len(gains))
+            print(len(self._main_ids))
+            
+            # If gains are not 1, set has_scaled to True
+            if np.any(gains != 1):
+                self.set_channel_gains(gains)
 
             # Add properties
             properties = dict()
@@ -134,7 +140,11 @@ class NwbRecordingExtractor(BaseRecording):
                 if prop_name == "location":
                     self.set_dummy_probe_from_locations(values)
                 elif prop_name == "group":
-                    self.set_channel_groups(val)
+                    if np.isscalar(val):
+                        groups = [val] * len(channel_ids)
+                    else :
+                        groups = val
+                    self.set_channel_groups(groups)
                 else:
                     self.set_property(prop_name, values)
 
