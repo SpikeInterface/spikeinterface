@@ -70,6 +70,12 @@ sw.plot_amplitudes_distribution(we)
 sw.plot_amplitudes_timeseries(we)
 
 ##############################################################################
+# plot_units_depth_vs_amplitude()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+sw.plot_units_depth_vs_amplitude(we)
+
+##############################################################################
 # plot_pca_features()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -3,13 +3,11 @@ Here the TODO list for the NEW spikeinterface API
 core:
     * add kachery extractor (jeremy)
     * save features as np (sam)
-    * event object (sam and alessio)
-    * add hither (alessio, sam or jeremy) for launcher and/or container
     * waveform_extractor improve cache option
     * time vector
     * binary_interface()
 
-    
+
 extractors:
 
     * nwb: reader/writer (with multi segment) (ben?)
@@ -22,11 +20,8 @@ toolkit:
   * preprocessing:
     * ResampleRecording
 
-  * postprocessing: 
-     * export to phy (pca + amplitudes)
-     * integrate amplitudes
-
   * validation (= qualitymetrics):
+     * decide good channel selection in PCA metrics
      * "max_drift",
      * "cumulative_drift",
      * "silhouette_score",
@@ -44,6 +39,8 @@ sorters:
   * is_installed() on run time
   * unify parameters for copy to binary > common methods
   * make something to not copy binary when not needed
+  
+  * install all files *.m, *.prm
 
 
 widgets:
@@ -62,7 +59,6 @@ doc:
 
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
-  * make on example for extractor
 
 
 

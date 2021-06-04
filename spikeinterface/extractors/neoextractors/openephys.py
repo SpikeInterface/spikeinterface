@@ -35,6 +35,8 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(self, folder_path, stream_id=None):
         neo_kwargs = {'dirname' : folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
+        
+        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
 
 
 class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
@@ -59,6 +61,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(self, folder_path, stream_id=None):
         neo_kwargs = {'dirname' : folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
+        
+        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
 
 
 

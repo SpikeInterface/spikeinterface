@@ -50,7 +50,8 @@ def localize_peaks(recording, peaks, method='center_of_mass',
     func = _localize_peaks_chunk
     init_func = _init_worker_localize_peaks
     init_args = (recording.to_dict(), peaks, method, nbefore, nafter, neighbours_mask, contact_locations)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True, **job_kwargs)
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True,
+                    job_name='localize peaks',  **job_kwargs)
     peak_locations = processor.run()
     
     peak_locations = np.concatenate(peak_locations)

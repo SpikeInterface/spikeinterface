@@ -159,7 +159,7 @@ class WaveClusSorter(BaseSorter):
 
         if verbose:
             samplerate = recording.get_sampling_frequency()
-            num_timepoints = recording.get_num_frames()
+            num_timepoints = recording.get_num_frames(segment_index=0)
             num_channels = recording.get_num_channels()
             duration_minutes = num_timepoints / samplerate / 60
             print('Num. channels = {}, Num. timepoints = {}, duration = {} minutes'.format(
