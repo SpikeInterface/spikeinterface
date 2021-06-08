@@ -741,9 +741,9 @@ def make_collision_events(sorting, delta):
             matching_event = make_matching_events(times1, times2, delta)
             ce = np.zeros(matching_event.size, dtype=dtype)
             ce['index1'] = matching_event['index1']
-            ce['unit_id1'] = u1
+            ce['unit_id1'] = u1.replace('#', '')
             ce['index2'] = matching_event['index2']
-            ce['unit_id2'] = u2
+            ce['unit_id2'] = u2.replace('#', '')
             ce['delta_frame'] = matching_event['delta_frame']
             
             collision_events.append(ce)
