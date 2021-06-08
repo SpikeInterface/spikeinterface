@@ -36,7 +36,10 @@ class TestWidgets(unittest.TestCase):
         pass
 
     def test_timeseries(self):
-        sw.plot_timeseries(self._rec)
+        sw.plot_timeseries(self._rec, mode='auto')
+        sw.plot_timeseries(self._rec, mode='line', show_channel_ids=True)
+        sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True)
+        sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True, order_channel_by_depth=True)
 
     def test_rasters(self):
         sw.plot_rasters(self._sorting)
@@ -138,13 +141,13 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
 
-    # mytest.test_timeseries()
+    mytest.test_timeseries()
     # mytest.test_rasters()
     # mytest.test_plot_probe_map()
     # mytest.test_unitwaveforms()
     # mytest.test_unittemplates()
     # mytest.test_plot_unit_map()
-    mytest.test_plot_units_depth_vs_amplitude()
+    # mytest.test_plot_units_depth_vs_amplitude()
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
