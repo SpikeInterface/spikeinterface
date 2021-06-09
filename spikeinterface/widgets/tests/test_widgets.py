@@ -59,13 +59,17 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_waveforms(self._we)
         sw.plot_unit_waveforms(self._we, max_channels=5)
         sw.plot_unit_waveforms(self._we, radius_um=60)
+    
+    def test_plot_unit_waveform_density_map(self):
+        unit_ids = self._sorting.unit_ids[:3]
+        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, max_channels=4)
 
     def test_unittemplates(self):
         sw.plot_unit_templates(self._we)
     
-    def test_plot_unit_map(self):
-        sw.plot_unit_map(self._we)
-        sw.plot_unit_map(self._we, animated=True)
+    def test_plot_unit_probe_map(self):
+        sw.plot_unit_probe_map(self._we)
+        sw.plot_unit_probe_map(self._we, animated=True)
 
     def test_plot_units_depth_vs_amplitude(self):
         sw.plot_units_depth_vs_amplitude(self._we)
@@ -141,12 +145,13 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
 
-    mytest.test_timeseries()
+    # mytest.test_timeseries()
     # mytest.test_rasters()
     # mytest.test_plot_probe_map()
     # mytest.test_unitwaveforms()
+    mytest.test_plot_unit_waveform_density_map()
     # mytest.test_unittemplates()
-    # mytest.test_plot_unit_map()
+    # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_units_depth_vs_amplitude()
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()

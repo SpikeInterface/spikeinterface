@@ -51,11 +51,21 @@ unit_ids = sorting.unit_ids
 sw.plot_unit_templates(we, unit_ids=unit_ids, ncols=5)
 
 ##############################################################################
-# plot_unit_templates()
+# plot_unit_probe_map()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 
 unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_map(we, unit_ids=unit_ids)
+sw.plot_unit_probe_map(we, unit_ids=unit_ids)
+
+
+##############################################################################
+# plot_unit_waveform_density_map()
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+# 
+# This is your best friend to check over merge
+
+unit_ids = sorting.unit_ids[:4]
+sw.plot_unit_waveform_density_map(we, unit_ids=unit_ids, max_channels=5)
 
 ##############################################################################
 # plot_amplitudes_distribution()
