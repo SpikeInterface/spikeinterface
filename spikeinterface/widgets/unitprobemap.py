@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation
 from probeinterface.plotting import plot_probe
 
 
-class UnitMapWidget(BaseMultiWidget):
+class UnitProbeMapWidget(BaseMultiWidget):
     """
     Plots unit map. Amplitude is color coded on probe contact.
     
@@ -90,8 +90,8 @@ class UnitMapWidget(BaseMultiWidget):
                         interval=20, blit=True)
 
 
-def plot_unit_map(*args, **kwargs):
-    W = UnitMapWidget(*args, **kwargs)
+def plot_unit_probe_map(*args, **kwargs):
+    W = UnitProbeMapWidget(*args, **kwargs)
     W.plot()
     return W
-plot_unit_map.__doc__ = UnitMapWidget.__doc__
+plot_unit_probe_map.__doc__ = UnitProbeMapWidget.__doc__

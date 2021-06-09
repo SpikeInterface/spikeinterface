@@ -1,5 +1,6 @@
 import numpy as np
 
+from ..utils import get_channel_distances
 
 def get_template_amplitudes(waveform_extractor, peak_sign='neg', mode='extremum'):
     """
@@ -64,26 +65,64 @@ def  get_template_extremum_channel(waveform_extractor, peak_sign='neg', outputs=
     elif outputs == 'index':
         return extremum_channels_index
 
+def get_template_channel_sparsity(waveform_extractor, method='best_channels', 
+        peak_sign='neg', num_channels=None, radius_um=None, outputs='id'):
+    """
+    Get channel sparsity for each template with several methods:
+      * "best_channels": get N best channel, channels are orderer in that case
+      * "radius": radius un um around the best channel, channels are not ordered
+      * "threshold" : TODO
+      
+    """
+    assert method in ('best_channels', 'radius', 'threshold')
+    assert outputs in ('id', 'index')
+    we = waveform_extractor
+
+    unit_ids = we.sorting.unit_ids
+    channel_ids = we.recording.channel_ids
+    
+    sparsity_with_index = {}
+    if method == 'best_channels':
+        assert num_channels is not None
+        # take 
+        peak_values = get_template_amplitudes(we, peak_sign=peak_sign)
+        for unit_id in unit_ids:
+            chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
+            chan_inds = chan_inds[:num_channels]
+            sparsity_with_index[unit_id] = chan_inds
+
+    elif method == 'radius':
+        assert radius_um is not None
+        best_chan = get_template_extremum_channel(we,  outputs='index')
+        distances = get_channel_distances(we.recording)
+        for unit_id in unit_ids:
+            chan_ind = best_chan[unit_id]
+            chan_inds, = np.nonzero(distances[chan_ind, :] <= radius_um)
+            sparsity_with_index[unit_id] = chan_inds
+
+    elif method == 'threshold':
+        raise NotImplemetedError
+    
+    # handle output ids or indexes
+    if outputs == 'id':
+        sparsity_with_id = {}
+        for unit_id in unit_ids:
+            chan_inds = sparsity_with_index[unit_id]
+            sparsity_with_id[unit_id] = channel_ids[chan_inds]
+        return sparsity_with_id
+    elif outputs == 'index':
+        return sparsity_with_index
+
+
+
 def get_template_best_channels(waveform_extractor, num_channels, peak_sign='neg',  outputs='id'):
     """
     Get N best channels for each unit.
     """
-    unit_ids = waveform_extractor.sorting.unit_ids
-    channel_ids = waveform_extractor.recording.channel_ids
+    print('get_template_best_channels() is depreciated use get_channel_sparsity() instead')
+    return get_template_channel_sparsity(waveform_extractor, method='best_channels', 
+        peak_sign=peak_sign, num_channels=num_channels, radius_um=None, outputs=outputs)
 
-    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
-    best_channels_ids = {}
-    best_channels_index = {}
-    for unit_id in unit_ids:
-        chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
-        chan_inds = chan_inds[:num_channels]
-        best_channels_index[unit_id] = chan_inds
-        best_channels_ids[unit_id] = channel_ids[chan_inds]
-
-    if outputs == 'id':
-        return best_channels_ids
-    elif outputs == 'index':
-        return best_channels_index
 
 
 def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'):
