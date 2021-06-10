@@ -103,7 +103,7 @@ class TestWidgets(unittest.TestCase):
 
 
     def test_isi_distribution(self):
-        sw.plot_isi_distribution(self._sorting, bins=10, window=1)
+        sw.plot_isi_distribution(self._sorting, bin_ms=5., window_ms=500.)
         fig, axes = plt.subplots(self.num_units, 1)
         sw.plot_isi_distribution(self._sorting, axes=axes)
     
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     # mytest.test_rasters()
     # mytest.test_plot_probe_map()
     # mytest.test_unitwaveforms()
-    mytest.test_plot_unit_waveform_density_map()
+    # mytest.test_plot_unit_waveform_density_map()
     # mytest.test_unittemplates()
     # mytest.test_plot_unit_probe_map()
     # mytest.test_plot_units_depth_vs_amplitude()
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     
     # mytest.test_autocorrelograms()
     # mytest.test_crosscorrelogram()
-    # mytest.test_isi_distribution()
+    mytest.test_isi_distribution()
     
     
     # mytest.test_plot_drift_over_time()

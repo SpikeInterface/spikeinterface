@@ -67,13 +67,16 @@ class UnitWaveformDensityMapWidget(BaseMultiWidget):
         self.max_channels = max_channels
         self.same_axis = same_axis
         
-        if same_axis:
-            fig, ax = plt.subplots()
-            BaseMultiWidget.__init__(self, figure=None, ax=ax, axes=None)
-        else:
-            nrows = len(unit_ids)
-            fig, axes = plt.subplots(nrows=nrows)
-            BaseMultiWidget.__init__(self, figure=None, ax=None, axes=axes)
+        if axes is None and ax is None:
+            if same_axis:
+                fig, ax = plt.subplots()
+                axes = None
+            else:
+                nrows = len(unit_ids)
+                fig, axes = plt.subplots(nrows=nrows, squeeze=False)
+                axes =axes[:, 0]
+                ax = None
+        BaseMultiWidget.__init__(self, figure=None, ax=ax, axes=axes)
 
     def plot(self):
         we = self.waveform_extractor
@@ -86,6 +89,7 @@ class UnitWaveformDensityMapWidget(BaseMultiWidget):
         else:
             # all channels
             channel_inds = {unit_id: np.arange(len(self.channel_ids)) for unit_id in self.unit_ids}
+        channel_inds = {unit_id:inds for unit_id, inds in channel_inds.items() if unit_id in self.unit_ids}
         
         if self.same_axis:
             # channel union
