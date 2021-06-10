@@ -39,3 +39,7 @@ from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
     plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget)
 from .sortingperformance import plot_sorting_performance
+
+
+# unit summary
+from .unitsummary import plot_unit_summary, UnitSummaryWidget

@@ -24,8 +24,10 @@ def test_export_report():
             shutil.rmtree(f)
     
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
+    
+    job_wargs = dict(n_jobs=1, chunk_size=30000, progress_bar=True)
 
-    export_report(waveform_extractor, output_folder)
+    export_report(waveform_extractor, output_folder, **job_wargs)
 
 
 
