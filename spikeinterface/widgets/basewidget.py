@@ -41,7 +41,7 @@ class BaseMultiWidget:
             self.figure = ax.get_figure()
             self.ax = ax
         if axes is not None:
-            assert len(axes) > 1, "'axes' should be a list with more than one axis"
+            # assert len(axes) > 1, "'axes' should be a list with more than one axis"
             self.axes = axes
             self.axes = np.array(self.axes)
             assert self.axes.ndim == 2 or self.axes.ndim == 1, "'axes' can be a 1-d array or list or a 2d array of axis"
