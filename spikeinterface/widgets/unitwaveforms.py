@@ -35,8 +35,9 @@ class UnitWaveformsWidget(BaseMultiWidget):
         Equal aspext ratio for x and y axis, to visualise the array geometry to scale
     lw: float
         Line width for the traces.
-    color: matplotlib color or list of colors
-        Color(s) of traces.
+    unit_colors: None or dict
+        A dict key is unit_id and value is any color format handled by matplotlib.
+        If None, then the get_unit_colors() is internally used.
     show_all_channels: bool
         Show the whole probe if True, or only selected channels if False
     figure: matplotlib figure
