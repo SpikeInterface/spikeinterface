@@ -8,7 +8,7 @@ import pytest
 
 from spikeinterface import extract_waveforms, download_dataset
 import spikeinterface.extractors as se
-from spikeinterface.toolkit.postprocessing import export_to_phy
+from spikeinterface.exporters import export_to_phy
 
 
 def test_export_to_phy():
