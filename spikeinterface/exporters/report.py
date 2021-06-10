@@ -1,16 +1,19 @@
 from pathlib import Path
 
+import pandas as pd
 
 import spikeinterface.widgets as sw
 import spikeinterface.toolkit as st
 
 import matplotlib.pyplot as plt
 
-def export_report(waveform_extractor, output_folder, remove_if_exists=False):
+def export_report(waveform_extractor, output_folder, remove_if_exists=False, **job_wargs):
     we = waveform_extractor
     sorting = we.sorting
     unit_ids = sorting.unit_ids
     
+    # some computation
+    amplitudes = st.get_unit_amplitudes(we,  peak_sign='neg', outputs='by_units', **job_wargs)
     
     output_folder = Path(output_folder).absolute()
     if output_folder.is_dir():
@@ -20,15 +23,21 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False):
             raise FileExistsError(f'{output_folder} already exists')
     output_folder.mkdir()
     
-    print(we)
-    print(output_folder)
+    # unit list
+    units = pd.DataFrame(index=unit_ids)# , columns=['max_on_channel_id', 'amplitude'])
+    units.index.name = 'unit_id'
+    units['max_on_channel_id'] = pd.Series(st.get_template_extremum_channel(we, peak_sign='neg', outputs='id'))
+    units['amplitude'] = pd.Series(st.get_template_extremum_amplitude(we, peak_sign='neg'))
+    units.to_csv(output_folder / 'unit list.csv', sep='\t')
     
+    # metrics
     pca = st.WaveformPrincipalComponent(we)
     pca.set_params(n_components=5, mode='by_channel_local')
     pca.run()    
     metrics = st.compute_quality_metrics(we, waveform_principal_component=pca)
-    metrics.to_excel(output_folder / 'quality metrics.xlsx')
+    metrics.to_csv(output_folder / 'quality metrics.csv')
     
+    # global figures
     fig = plt.figure(figsize=(20, 10))
     w = sw.plot_unit_localization(we, figure=fig)
     fig.savefig(output_folder / 'unit_localization.png')
@@ -44,20 +53,10 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False):
     # units
     units_folder = output_folder / 'units'
     units_folder.mkdir()
-    
-    for unit_id in unit_ids[:2]:
-        print(unit_id)
-        
-        fig, axs = plt.subplots(figsize=(20, 10), nrows=2, ncols=2)
-        
-        sw.plot_unit_probe_map(we, unit_ids=[unit_id],  axes=[axs[0,0]])
-        sw.plot_unit_waveforms(we, unit_ids=[unit_id], radius_um=60, ax=axs[0,1])
-        sw.plot_unit_waveform_density_map(we, unit_ids=[unit_id], max_channels=1, ax=axs[1,1], same_axis=True)
-        sw.plot_isi_distribution(sorting, unit_ids=[unit_id],  window_ms=500.0, bin_ms=5.0,  ax=axs[1,0])
-        
-        # TODO
-        # plot_amplitudes_timeseries
-        
+
+    for unit_id in unit_ids:
+        fig = plt.figure(constrained_layout=False, figsize=(15, 7),)
+        sw.plot_unit_summary(we, unit_id, amplitudes, figure=fig)
         fig.suptitle(f'unit {unit_id}')
         fig.savefig(units_folder / f'{unit_id}.png')
     

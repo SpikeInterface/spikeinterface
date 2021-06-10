@@ -81,7 +81,8 @@ class TestWidgets(unittest.TestCase):
 
     def test_amplitudes_timeseries(self):
         sw.plot_amplitudes_timeseries(self._we)
-        sw.plot_amplitudes_timeseries(self._we, amplitudes=self._amplitudes)
+        unit_ids = self._sorting.unit_ids[:4]
+        sw.plot_amplitudes_timeseries(self._we, amplitudes=self._amplitudes, unit_ids=unit_ids)
 
     def test_amplitudes_distribution(self):
         sw.plot_amplitudes_distribution(self._we)
@@ -141,6 +142,9 @@ class TestWidgets(unittest.TestCase):
         metrics = st.compute_quality_metrics(self._we, metric_names=['snr'])
         sw.plot_sorting_performance(self._gt_comp, metrics, performance_name='accuracy', metric_name='snr')
     
+    def test_plot_unit_summary(self):
+        unit_id = self._sorting.unit_ids[4]
+        sw.plot_unit_summary(self._we, unit_id, self._amplitudes)
     
 
 
@@ -165,17 +169,19 @@ if __name__ == '__main__':
     
     # mytest.test_autocorrelograms()
     # mytest.test_crosscorrelogram()
-    mytest.test_isi_distribution()
+    # mytest.test_isi_distribution()
     
     
     # mytest.test_plot_drift_over_time()
     # mytest.test_plot_peak_activity_map()
     
-    
-    
     # mytest.test_confusion()
     # mytest.test_agreement()
     #~ mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
+    
+    
+    mytest.test_plot_unit_summary()
+    
         
     plt.show()

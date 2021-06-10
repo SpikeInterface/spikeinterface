@@ -3,6 +3,7 @@ from matplotlib import gridspec
 import numpy as np
 
 
+
 class BaseWidget:
     def __init__(self, figure=None, ax=None):
         if figure is None and ax is None:

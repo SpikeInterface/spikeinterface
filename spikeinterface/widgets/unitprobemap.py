@@ -25,7 +25,7 @@ class UnitProbeMapWidget(BaseMultiWidget):
         
     """
     def __init__(self, waveform_extractor,  unit_ids=None, channel_ids=None,
-        animated=None,
+        animated=None, colorbar=True,
         ncols=5, figure=None, ax=None, axes=None):
         
         self.waveform_extractor = waveform_extractor
@@ -37,6 +37,7 @@ class UnitProbeMapWidget(BaseMultiWidget):
         self.channel_ids = channel_ids
         
         self.animated = animated
+        self.colorbar = colorbar
         
         # layout
         n = len(unit_ids)
@@ -70,7 +71,8 @@ class UnitProbeMapWidget(BaseMultiWidget):
             if poly_contour is not None:
                 poly_contour.set_zorder(1)
             
-            self.figure.colorbar(poly_contact, ax=ax)
+            if self.colorbar:
+                self.figure.colorbar(poly_contact, ax=ax)
             
             poly_contact.set_clim(0, np.max(np.abs(template)))
             all_poly_contact.append(poly_contact)
