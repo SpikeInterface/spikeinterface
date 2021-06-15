@@ -10,7 +10,7 @@ from spikeinterface import WaveformExtractor
 from spikeinterface.extractors import toy_example
 from spikeinterface.toolkit.postprocessing import (get_template_amplitudes,
     get_template_extremum_channel, get_template_extremum_channel_peak_shift,
-    get_template_best_channels, get_template_extremum_amplitude,
+    get_template_extremum_amplitude,
     compute_unit_centers_of_mass, get_template_channel_sparsity)
 
 
@@ -71,10 +71,6 @@ def test_get_template_channel_sparsity():
     # sparsity = get_template_channel_sparsity(we, method='threshold', outputs='index', threshold=..)
     
 
-def test_get_template_best_channels():
-    we = WaveformExtractor.load_from_folder('toy_waveforms')
-    best_channels = get_template_best_channels(we, num_channels=2)
-   # print(best_channels)
 
 def test_get_template_extremum_amplitude():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
@@ -90,12 +86,11 @@ def test_compute_unit_centers_of_mass():
 
 
 if __name__ == '__main__':
-    # setup_module()
+    #~ setup_module()
     
-    # test_get_template_amplitudes()
-    # test_get_template_extremum_channel()
+    #~ test_get_template_amplitudes()
+    #~ test_get_template_extremum_channel()
     #~ test_get_template_extremum_channel_peak_shift()
     test_get_template_channel_sparsity()
-    test_get_template_best_channels()
-    # test_get_template_extremum_amplitude()
-    # test_compute_unit_centers_of_mass()
+    #~ test_get_template_extremum_amplitude()
+    #~ test_compute_unit_centers_of_mass()
