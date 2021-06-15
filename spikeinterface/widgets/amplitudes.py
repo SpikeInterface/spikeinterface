@@ -76,7 +76,15 @@ class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
                     ax.set_xlabel('Times [s]')
                 if segment_index == 0:
                     ax.set_ylabel(f'{unit_id}')
+        
+        ylims = ax.get_ylim()
+        if np.max(ylims) < 0:
+            ax.set_ylim(min(ylims), 0)
+        if np.min(ylims) > 0:
+            ax.set_ylim(0, max(ylims))
 
+            
+        
 
 class AmplitudeDistributionWidget(AmplitudeBaseWidget):
     """
@@ -120,6 +128,13 @@ class AmplitudeDistributionWidget(AmplitudeBaseWidget):
         
         ax.set_xticks(np.arange(len(unit_ids)) + 1)
         ax.set_xticklabels([str(unit_id) for unit_id in unit_ids])
+
+        ylims = ax.get_ylim()
+        if np.max(ylims) < 0:
+            ax.set_ylim(min(ylims), 0)
+        if np.min(ylims) > 0:
+            ax.set_ylim(0, max(ylims))
+        
 
 
 def plot_amplitudes_timeseries(*args, **kwargs):

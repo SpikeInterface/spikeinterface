@@ -165,7 +165,7 @@ if __name__ == '__main__':
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
     # mytest.test_principal_component()
-    # mytest.test_plot_unit_localization()
+    #~ mytest.test_plot_unit_localization()
     
     # mytest.test_autocorrelograms()
     # mytest.test_crosscorrelogram()

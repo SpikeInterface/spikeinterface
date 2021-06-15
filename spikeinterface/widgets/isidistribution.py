@@ -74,7 +74,7 @@ class ISIDistributionWidget(BaseMultiWidget):
                 if i == 0:
                     ax.set_title(f'segment {segment_index}')
                 if i == len(unit_ids) - 1:
-                    ax.set_xlabel('Times [s]')
+                    ax.set_xlabel('Times [ms]')
                 if segment_index == 0:
                     ax.set_ylabel(f'{unit_id}')
                 # ax.set_title(f"AXES {num_ax}")
