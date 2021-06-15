@@ -115,16 +115,6 @@ def get_template_channel_sparsity(waveform_extractor, method='best_channels',
 
 
 
-def get_template_best_channels(waveform_extractor, num_channels, peak_sign='neg',  outputs='id'):
-    """
-    Get N best channels for each unit.
-    """
-    print('get_template_best_channels() is depreciated use get_channel_sparsity() instead')
-    return get_template_channel_sparsity(waveform_extractor, method='best_channels', 
-        peak_sign=peak_sign, num_channels=num_channels, radius_um=None, outputs=outputs)
-
-
-
 def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'):
     """
     In some situtaion some sorters, return spike index with a smal shift related to the extremum peak
@@ -203,7 +193,10 @@ def compute_unit_centers_of_mass(waveform_extractor, peak_sign='neg', num_channe
         num_channels = recording.get_num_channels()
     locations = recording.get_channel_locations()
 
-    best_channel_ids = get_template_best_channels(waveform_extractor, num_channels, peak_sign=peak_sign)
+    best_channel_ids = get_template_channel_sparsity(waveform_extractor, method='best_channels', 
+                        peak_sign=peak_sign, num_channels=num_channels, outputs='id')
+    
+    
     amplitudes = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
     
 
