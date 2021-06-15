@@ -37,19 +37,21 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, **j
     metrics = st.compute_quality_metrics(we, waveform_principal_component=pca)
     metrics.to_csv(output_folder / 'quality metrics.csv')
     
+    unit_colors = sw.get_unit_colors(sorting)
+    
     # global figures
     fig = plt.figure(figsize=(20, 10))
-    w = sw.plot_unit_localization(we, figure=fig)
+    w = sw.plot_unit_localization(we, figure=fig, unit_colors=unit_colors)
     fig.savefig(output_folder / 'unit_localization.png')
     
     fig, ax = plt.subplots(figsize=(20, 10))
-    sw.plot_units_depth_vs_amplitude(we,ax=ax)
+    sw.plot_units_depth_vs_amplitude(we, ax=ax, unit_colors=unit_colors)
     fig.savefig(output_folder / 'units_depth_vs_amplitude.png')
     
     fig = plt.figure(figsize=(20, 10))
-    sw.plot_amplitudes_distribution(we, figure=fig)
+    sw.plot_amplitudes_distribution(we, figure=fig, unit_colors=unit_colors)
     fig.savefig(output_folder / 'amplitudes_distribution.png')
-    
+
     # units
     units_folder = output_folder / 'units'
     units_folder.mkdir()
