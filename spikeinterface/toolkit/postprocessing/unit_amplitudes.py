@@ -24,10 +24,9 @@ def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', outputs='concatena
     sorting = we.sorting
 
     all_spikes = sorting.get_all_spike_trains()
-
+    
     extremum_channels_index = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, outputs='index')
     peak_shifts = get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg')
-    
 
     # and run
     func = _unit_amplitudes_chunk
@@ -71,14 +70,14 @@ def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, pe
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
     all_spikes = sorting.get_all_spike_trains()
-    # apply peak shift
-    for unit_id in sorting.unit_ids:
-        if peak_shifts[unit_id] != 0:
-            for segment_index in range(recording.get_num_segments()):
-                spike_times, spike_labels = all_spikes[segment_index]
-                mask = spike_labels == unit_id
-                spike_times[mask] += peak_shifts[unit_id]
-                all_spikes[segment_index] = spike_times, spike_labels
+    # TODO apply peak shift before get_all_spike_trains because it change the internal order!!!!
+    #~ for unit_id in sorting.unit_ids:
+        #~ if peak_shifts[unit_id] != 0:
+            #~ for segment_index in range(recording.get_num_segments()):
+                #~ spike_times, spike_labels = all_spikes[segment_index]
+                #~ mask = spike_labels == unit_id
+                #~ spike_times[mask] += peak_shifts[unit_id]
+                #~ all_spikes[segment_index] = spike_times, spike_labels
     worker_ctx['all_spikes'] = all_spikes
     worker_ctx['extremum_channels_index'] = extremum_channels_index
     return worker_ctx
@@ -90,6 +89,9 @@ def _unit_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     
     spike_times, spike_labels = all_spikes[segment_index]
+    d = np.diff(spike_times)
+    assert np.all(d >= 0)
+    
 
     i0 = np.searchsorted(spike_times, start_frame)
     i1 = np.searchsorted(spike_times, end_frame)
@@ -110,5 +112,6 @@ def _unit_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     else:
         amplitudes = np.array([], dtype=recording.get_dtype())
     segments = np.zeros(amplitudes.size, dtype='int64') + segment_index
+
     return amplitudes, segments
 

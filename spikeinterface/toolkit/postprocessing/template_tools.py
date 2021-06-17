@@ -145,7 +145,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
             peak_pos = np.argmax(template[:, chan_ind])
         shift = peak_pos - waveform_extractor.nbefore
         shifts[unit_id] = shift
-    
+
     return shifts
     
 
