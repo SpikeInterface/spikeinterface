@@ -21,7 +21,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, **j
             shutil.rmtree(output_folder)
         else:
             raise FileExistsError(f'{output_folder} already exists')
-    output_folder.mkdir()
+    output_folder.mkdir(parents=True, exist_ok=True)
     
     # unit list
     units = pd.DataFrame(index=unit_ids)# , columns=['max_on_channel_id', 'amplitude'])
@@ -45,11 +45,11 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, **j
     fig.savefig(output_folder / 'unit_localization.png')
     
     fig, ax = plt.subplots(figsize=(20, 10))
-    sw.plot_units_depth_vs_amplitude(we, ax=ax, unit_colors=unit_colors)
+    sw.plot_units_depth_vs_amplitude(we, ax=ax,  unit_colors=unit_colors)
     fig.savefig(output_folder / 'units_depth_vs_amplitude.png')
     
     fig = plt.figure(figsize=(20, 10))
-    sw.plot_amplitudes_distribution(we, figure=fig, unit_colors=unit_colors)
+    sw.plot_amplitudes_distribution(we,  amplitudes=amplitudes, figure=fig, unit_colors=unit_colors)
     fig.savefig(output_folder / 'amplitudes_distribution.png')
 
     # units
