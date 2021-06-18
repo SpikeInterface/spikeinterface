@@ -44,6 +44,7 @@ class FilterRecording(BasePreprocessor):
         coeff = scipy.signal.iirfilter(N,Wn, analog=False, btype=btype, ftype=ftype, output =filter_mode)
         
         BasePreprocessor.__init__(self, recording)
+        self.annotate(is_filtered=True)
         
         margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
@@ -111,8 +112,10 @@ class NotchFilterRecording(BasePreprocessor):
         # coeef is 'ba' type
         fn = 0.5 * float(recording.get_sampling_frequency())
         coeff = scipy.signal.iirnotch(freq / fn, q)
+
         BasePreprocessor.__init__(self, recording)
-        
+        self.annotate(is_filtered=True)
+
         sf = recording.get_sampling_frequency()
         margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
