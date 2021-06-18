@@ -12,6 +12,7 @@ def test_WaveformExtractor():
     
     # 2 segments
     recording = generate_recording(num_channels = 2, durations=durations, sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=True)
     sorting = generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
     
     # test with dump !!!!
@@ -56,6 +57,7 @@ def test_extract_waveforms():
     sampling_frequency = 30000.
     
     recording = generate_recording(num_channels = 2, durations=durations, sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=True)
     sorting =generate_sorting(num_units=5, sampling_frequency = sampling_frequency, durations=durations)
     # test without dump !!!!
     # recording = recording.save()
@@ -71,6 +73,6 @@ def test_extract_waveforms():
 
 
 if __name__ == '__main__':
-    #~ test_WaveformExtractor()
+    test_WaveformExtractor()
     test_extract_waveforms()
 
