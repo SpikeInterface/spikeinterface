@@ -13,7 +13,7 @@ except:
 
 
 
-def download_dataset(repo=None, remote_path=None, local_folder=None):
+def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=True):
     if repo is None:
         # print('Use gin NeuralEnsemble/ephy_testing_data')
         repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
@@ -27,6 +27,8 @@ def download_dataset(repo=None, remote_path=None, local_folder=None):
     
     if local_folder.exists():
         dataset = datalad.api.Dataset(path=local_folder)
+        if update_if_exists:
+            dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder, source='https://gin.g-node.org/NeuralEnsemble/ephy_testing_data')
     
