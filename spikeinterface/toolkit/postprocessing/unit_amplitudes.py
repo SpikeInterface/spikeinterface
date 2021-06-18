@@ -70,14 +70,15 @@ def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, pe
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
     all_spikes = sorting.get_all_spike_trains()
-    # TODO apply peak shift before get_all_spike_trains because it change the internal order!!!!
-    #~ for unit_id in sorting.unit_ids:
-        #~ if peak_shifts[unit_id] != 0:
-            #~ for segment_index in range(recording.get_num_segments()):
-                #~ spike_times, spike_labels = all_spikes[segment_index]
-                #~ mask = spike_labels == unit_id
-                #~ spike_times[mask] += peak_shifts[unit_id]
-                #~ all_spikes[segment_index] = spike_times, spike_labels
+    for segment_index in range(recording.get_num_segments()):
+        spike_times, spike_labels = all_spikes[segment_index]
+        for unit_id in sorting.unit_ids:
+            if peak_shifts[unit_id] != 0:
+                mask = spike_labels == unit_id
+                spike_times[mask] += peak_shifts[unit_id]
+        # reorder otherwise the chunk processing and searchsorted will not work
+        order = np.argsort(spike_times)
+        all_spikes[segment_index] = spike_times[order], spike_labels[order]
     worker_ctx['all_spikes'] = all_spikes
     worker_ctx['extremum_channels_index'] = extremum_channels_index
     return worker_ctx
