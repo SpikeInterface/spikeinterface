@@ -124,6 +124,7 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
     ]
 
+@pytest.mark.skip(reason='Ced extractor depend on sonpy and next neo version')
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
     downloads = [
