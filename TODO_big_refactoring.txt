@@ -30,7 +30,7 @@ toolkit:
   * get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0)
      remove chunk and use duration instead.
 
-
+  * make shift to max sorting extractor
 
 
 sorters:
@@ -59,6 +59,7 @@ doc:
 
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
+  * make API
 
 
 

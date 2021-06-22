@@ -1,0 +1,11 @@
+include spikeinterface/sorters/kilosort/*.m
+include spikeinterface/sorters/kilosort2/*.m
+include spikeinterface/sorters/kilosort2_5/*.m
+include spikeinterface/sorters/kilosort3/*.m
+include spikeinterface/sorters/hdsort/*.m
+include spikeinterface/sorters/waveclus/*.m
+include spikeinterface/sorters/utils/*.m
+include spikeinterface/sorters/utils/mdaio/*.m
+include spikeinterface/sorters/klusta/config_default.prm
+include spikeinterface/sorters/spyking_circus/config_default.params
+include spikeinterface/sorters/yass/config_default.yaml

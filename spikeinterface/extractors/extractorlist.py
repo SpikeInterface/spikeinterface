@@ -15,10 +15,9 @@ from .neoextractors import (
     MCSRawRecordingExtractor, read_mcsraw,
     KiloSortSortingExtractor, read_kilosort,
     Spike2RecordingExtractor, read_spike2,
+    CedRecordingExtractor, read_ced,
+    MaxwellRecordingExtractor,  read_maxwell,
     
-    # not in python-neo master yet
-    # MaxwellRecordingExtractor,  
-    # CedRecordingExtractor,  
 )
 
 # NWB sorting/recording/event
@@ -67,10 +66,10 @@ recording_extractor_full_list = [
     BlackrockRecordingExtractor,
     MCSRawRecordingExtractor,
     Spike2RecordingExtractor,
+    CedRecordingExtractor,
+    MaxwellRecordingExtractor,
     
-    # not in python-neo master yet
-    # MaxwellRecordingExtractor,
-
+    
     ##OLD
     # ~ MdaRecordingExtractor,
     # ~ MEArecRecordingExtractor,          OK

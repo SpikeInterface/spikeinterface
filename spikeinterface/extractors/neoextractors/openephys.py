@@ -8,6 +8,8 @@ https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 import neo
 from pathlib import Path
 
+import numpy as np
+
 from .neobaseextractor import (NeoBaseRecordingExtractor,
     NeoBaseSortingExtractor, 
     NeoBaseEventExtractor)

@@ -18,12 +18,13 @@ from .activity import plot_peak_activity_map, PeakActivityMapWidget
 
 # waveform/PC related
 from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
+from .unitwaveformdensitymap import  plot_unit_waveform_density_map, UnitWaveformDensityMapWidget
 from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
 from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
 # units on probe
-from .unitmap import plot_unit_map, UnitMapWidget
+from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
 from .depthamplitude import plot_units_depth_vs_amplitude
 
 
@@ -38,3 +39,7 @@ from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
     plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget)
 from .sortingperformance import plot_sorting_performance
+
+
+# unit summary
+from .unitsummary import plot_unit_summary, UnitSummaryWidget

@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget, BaseMultiWidget
 from .utils import get_unit_colors
-from ..toolkit import (get_template_extremum_channel, get_template_best_channels, get_channel_distances)
+from ..toolkit import get_template_channel_sparsity
 
 
 class UnitWaveformsWidget(BaseMultiWidget):
@@ -17,9 +17,6 @@ class UnitWaveformsWidget(BaseMultiWidget):
         The channel ids to display
     unit_ids: list
         List of unit ids.
-    channel_locs: bool
-        If True, channel locations are used to display the waveforms.
-        If False, waveforms are displayed in vertical order (default)
     plot_templates: bool
         If True, templates are plotted over the waveforms
     radius_um: None or float
@@ -33,13 +30,14 @@ class UnitWaveformsWidget(BaseMultiWidget):
     set_title: bool
         Create a plot title with the unit number if True.
     plot_channels: bool
-        Plot channel locations below traces, only used if channel_locs is True
+        Plot channel locations below traces.
     axis_equal: bool
         Equal aspext ratio for x and y axis, to visualise the array geometry to scale
     lw: float
         Line width for the traces.
-    color: matplotlib color or list of colors
-        Color(s) of traces.
+    unit_colors: None or dict
+        A dict key is unit_id and value is any color format handled by matplotlib.
+        If None, then the get_unit_colors() is internally used.
     show_all_channels: bool
         Show the whole probe if True, or only selected channels if False
     figure: matplotlib figure
@@ -55,7 +53,7 @@ class UnitWaveformsWidget(BaseMultiWidget):
             unit_colors=None, max_channels=None, radius_um=None,
 
                 ncols=5, 
-                figure=None, ax=None, axes=None, color='k', lw=2, axis_equal=False,
+                figure=None, ax=None, axes=None, lw=2, axis_equal=False,
                 set_title=True
                 ):
         
@@ -89,7 +87,7 @@ class UnitWaveformsWidget(BaseMultiWidget):
         self.radius_um = radius_um
         self.max_channels = max_channels
         
-        self._color = color
+        #TODO
         self._lw = lw
         self._axis_equal = axis_equal
         
@@ -111,26 +109,13 @@ class UnitWaveformsWidget(BaseMultiWidget):
         ncols = min(self.ncols, len(unit_ids))
         nrows = int(np.ceil(len(unit_ids) / ncols))
         
-        channel_inds = {}
         if self.radius_um is not None:
-            best_chan = get_template_extremum_channel(we,  outputs='index')
-            distances = get_channel_distances(we.recording)
-            for unit_id in unit_ids:
-                chan_ind = best_chan[unit_id]
-                chan_inds, = np.nonzero(distances[chan_ind, :] <= self.radius_um)
-                channel_inds[unit_id] = chan_inds
-
+            channel_inds = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=self.radius_um)
         elif self.max_channels is not None:
-            best_chan_ids = get_template_best_channels(we, self.max_channels, peak_sign='neg')
-            for unit_id in unit_ids:
-                chan_inds = we.recording.ids_to_indices(best_chan_ids[unit_id])
-                channel_inds[unit_id] = chan_inds
-
+            channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index', num_channels=self.max_channels)
         else:
             # all channels
-            for unit_id in unit_ids:
-                channel_inds[unit_id] = slice(None)
-
+            channel_inds = {unit_id: slice(None) for unit_id in unit_ids}
         
         for i, unit_id in enumerate(unit_ids):
             
