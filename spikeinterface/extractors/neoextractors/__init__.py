@@ -10,7 +10,5 @@ from .blackrock import BlackrockRecordingExtractor, read_blackrock
 from .mscraw import MCSRawRecordingExtractor, read_mcsraw
 from .kilosort import KiloSortSortingExtractor, read_kilosort
 from .spike2 import Spike2RecordingExtractor, read_spike2
-
-# not in python-neo master yet
-# from .maxwell import MaxwellRecordingExtractor
-# from .ced import CedRecordingExtractor
+from .ced import CedRecordingExtractor, read_ced
+from .maxwell import MaxwellRecordingExtractor, read_maxwell

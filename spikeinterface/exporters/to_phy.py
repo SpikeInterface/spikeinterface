@@ -6,13 +6,11 @@ import shutil
 import spikeinterface.extractors as se
 
 from spikeinterface import BaseRecording, BaseSorting, write_binary_recording, BinaryRecordingExtractor
-from .template_tools import get_template_extremum_channel, get_template_best_channels
-from .unit_amplitudes import get_unit_amplitudes
-from .template_similarity import compute_template_similarity
-from .principal_component import WaveformPrincipalComponent
+from spikeinterface.toolkit import (
+    get_template_extremum_channel, get_template_channel_sparsity,
+    get_unit_amplitudes, compute_template_similarity,
+    WaveformPrincipalComponent)
 
-# @alessio: this is a basic phy export, still need to:
-#  * integrate PCA
 
 
 def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute_pc_features=True,
@@ -173,8 +171,9 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         
         max_channels_per_template = min(max_channels_per_template, len(channel_ids))
         pc_feature_ind = np.zeros((len(unit_ids), max_channels_per_template), dtype='int64')
-        best_channels_index = get_template_best_channels(waveform_extractor, max_channels_per_template,
-                                    peak_sign=peak_sign, outputs='index')
+        best_channels_index = get_template_channel_sparsity(waveform_extractor, method='best_channels', 
+                            peak_sign=peak_sign, num_channels=max_channels_per_template, outputs='index')
+        
         for u, unit_id in enumerate(sorting.unit_ids):
             pc_feature_ind[u, :] = best_channels_index[unit_id]
         np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)

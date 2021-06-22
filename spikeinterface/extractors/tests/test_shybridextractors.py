@@ -3,8 +3,9 @@ import numpy as np
 
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors import toy_example, SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor
+from spikeinterface.extractors .shybridextractors import HAVE_SBEX
 
-
+@pytest.mark.skipif(not HAVE_SBEX, reason='shybrid not installed')
 def test_shybrid_extractors():
     rec, sort = toy_example(num_segments=1, num_units=10)
 
