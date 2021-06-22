@@ -86,7 +86,7 @@ class TimeseriesWidget(BaseWidget):
         
         assert mode in ('auto', 'line', 'map'), 'Mode must be in auto/line/map'
         if mode == 'auto':
-            if recording.get_num_channels():
+            if recording.get_num_channels() <= 64:
                 mode = 'line'
             else: 
                 mode = 'map'
