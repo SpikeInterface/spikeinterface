@@ -154,21 +154,21 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
 
-    # mytest.test_timeseries()
-    # mytest.test_rasters()
-    # mytest.test_plot_probe_map()
-    # mytest.test_unitwaveforms()
-    # mytest.test_plot_unit_waveform_density_map()
+    #~ mytest.test_timeseries()
+    #~ mytest.test_rasters()
+    #~ mytest.test_plot_probe_map()
+    #~ mytest.test_unitwaveforms()
+    #~ mytest.test_plot_unit_waveform_density_map()
     # mytest.test_unittemplates()
-    # mytest.test_plot_unit_probe_map()
+    #~ mytest.test_plot_unit_probe_map()
     # mytest.test_plot_units_depth_vs_amplitude()
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
-    # mytest.test_principal_component()
+    #~ mytest.test_principal_component()
     #~ mytest.test_plot_unit_localization()
     
     # mytest.test_autocorrelograms()
-    # mytest.test_crosscorrelogram()
+    mytest.test_crosscorrelogram()
     # mytest.test_isi_distribution()
     
     
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     # mytest.test_sorting_performance()
     
     
-    mytest.test_plot_unit_summary()
+    #~ mytest.test_plot_unit_summary()
     
         
     plt.show()

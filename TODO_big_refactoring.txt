@@ -6,15 +6,15 @@ core:
     * waveform_extractor improve cache option
     * time vector
     * binary_interface()
+    * rescaler / dtype
 
 
 extractors:
 
     * nwb: reader/writer (with multi segment) (ben?)
     * BiocamRecordingExtractor  : need to be done in neo
-    * CEDRecordingExtractor : need merge from neo
     * OpenEphysSortingExtractor : need to be done in neo
-    * MaxOneSortingExtractor  : need to be done in neo
+
 
 toolkit:
   * preprocessing:
