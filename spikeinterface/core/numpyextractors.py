@@ -153,6 +153,44 @@ class NumpySorting(BaseSorting):
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
 
         return sorting
+    
+    @staticmethod
+    def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None):
+        """
+        Construct a sorting with a neo spiketrain list.
+        
+        If this is a list of list, it is multi segment.
+        
+        Parameters
+        ----------
+        
+        """
+        import neo
+
+        assert isinstance(neo_spiketrains,  list)
+        
+        if isinstance(neo_spiketrains[0], list):
+            # multi segment
+            assert isinstance(neo_spiketrains[0][0], neo.SpikeTrain)
+        elif isinstance(neo_spiketrains[0], neo.SpikeTrain):
+            # unique segment
+            neo_spiketrains = [neo_spiketrains]
+        
+        nseg = len(neo_spiketrains)
+        
+        if unit_ids is None:
+            unit_ids = np.arange(len(neo_spiketrains[0]), dtype='int64')
+        
+        sorting = NumpySorting(sampling_frequency, unit_ids)
+        for seg_index in range(nseg):
+            
+            units_dict = {}
+            for u, unit_id in enumerate(unit_ids):
+                st = neo_spiketrains[seg_index][u]
+                units_dict[unit_id] = (st.rescale('s').magnitude * sampling_frequency).astype('int64')
+            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
+
+        return sorting
 
 
 class NumpySortingSegment(BaseSortingSegment):

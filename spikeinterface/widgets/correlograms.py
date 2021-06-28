@@ -33,7 +33,8 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=symmetrize)
         
         if axes is None:
-            figure, axes = plt.subplots(nrows=len(unit_ids), ncols=len(unit_ids), sharex=True, sharey=True)
+            n = len(sorting.unit_ids)
+            figure, axes = plt.subplots(nrows=n, ncols=n, sharex=True, sharey=True)
         BaseMultiWidget.__init__(self, figure, None, axes)
     
     def plot(self):
