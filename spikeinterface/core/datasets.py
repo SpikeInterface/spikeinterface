@@ -13,7 +13,7 @@ except:
 
 
 
-def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=True):
+def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False):
     if repo is None:
         # print('Use gin NeuralEnsemble/ephy_testing_data')
         repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
