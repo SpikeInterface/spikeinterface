@@ -43,3 +43,6 @@ from .sortingperformance import plot_sorting_performance
 
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
+
+# connectivity comparison
+from .connectivitycomp import ConnectivityComparisonWidget

@@ -1,0 +1,69 @@
+import numpy as np
+from matplotlib import pyplot as plt
+
+from .basewidget import BaseWidget
+from spikeinterface.toolkit import compute_correlograms
+
+
+
+class ConnectivityComparisonWidget(BaseWidget):
+    """
+    Plots sorting comparison confusion matrix.
+
+    Parameters
+    ----------
+    gt_comparison: GroundTruthComparison
+        The ground truth sorting comparison object
+    count_text: bool
+        If True counts are displayed as text
+    unit_ticks: bool
+        If True unit tick labels are displayed
+    figure: matplotlib figure
+        The figure to be used. If not given a figure is created
+    ax: matplotlib axis
+        The axis to be used. If not given an axis is created
+
+    Returns
+    -------
+    W: ConfusionMatrixWidget
+        The output widget
+    """
+    def __init__(self, gt_comparison, window_ms=100.0, bin_ms=1.0, figure=None, ax=None):
+        BaseWidget.__init__(self, figure, ax)
+        self._gtcomp = gt_comparison
+        self._window_ms = window_ms
+        self._bin_ms = bin_ms
+        self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=True)
+        self.name = 'ConnectivityComparison'
+        self._compute()
+
+    def _compute(self):
+        correlograms_1, bins = compute_correlograms(self._gtcomp.sorting1, **self.compute_kwargs)        
+        correlograms_2, bins = compute_correlograms(self._gtcomp.sorting2, **self.compute_kwargs)        
+
+        best_matches = self._gtcomp.best_match_12.values
+
+        valid_idx = best_matches[best_matches > -1]
+
+        self.correlograms_1 = correlograms_1[best_matches > -1, :, :]
+        self.correlograms_1 = self.correlograms_1[:, best_matches > -1, :]
+
+        self.correlograms_2 = correlograms_2[valid_idx, :, :]
+        self.correlograms_2 = self.correlograms_2[:, valid_idx, :]
+
+
+    def error(self):
+        return np.linalg.norm(self.correlograms_1 - self.correlograms_2)
+
+
+    def plot(self):
+        self._do_plot()
+
+    def _do_plot(self):
+
+        fig = self.figure
+        self.ax = fig.subplots(1, 2)
+
+        center = self.correlograms_1.shape[2] // 2
+        self.ax[0].matshow(self.correlograms_1[:,:,center], cmap='viridis')
+        self.ax[1].matshow(self.correlograms_2[:,:,center], cmap='viridis')

@@ -42,8 +42,8 @@ class CollisionGTComparison(GroundTruthComparison):
         mask = (self.collision_events['unit_id1'] == gt_unit_id1) & (self.collision_events['unit_id2'] == gt_unit_id2)
         event = self.collision_events[mask]
         
-        score_label1 = self._labels_st1['#%d' %gt_unit_id1][event['index1']]
-        score_label2 = self._labels_st1['#%d' %gt_unit_id2][event['index2']]
+        score_label1 = self._labels_st1[self.unit1_ids[gt_index1]][event['index1']]
+        score_label2 = self._labels_st1[self.unit1_ids[gt_index2]][event['index2']]
         delta = event['delta_frame']
         
         if reversed:
@@ -54,7 +54,7 @@ class CollisionGTComparison(GroundTruthComparison):
     
     def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, nbins=11):
         d = int(self.collision_lag / 1000 * self.sampling_frequency)
-        bins = np.arange(-d, d, d/10.)
+        bins = np.linspace(-d, d, nbins)
         
         score_label1, score_label2, delta = self.get_label_for_collision(gt_unit_id1, gt_unit_id2)
         

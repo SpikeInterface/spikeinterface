@@ -39,7 +39,41 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
         self.comp = comp
         self.unit_ids = unit_ids
         self.nbins = nbins
-    
+        fs = self.comp.sorting1.get_sampling_frequency()
+        self.width = (2*comp.collision_lag) / fs * 1000.
+
+        self._compute()
+
+    def _compute(self):
+        
+        fs = self.comp.sorting1.get_sampling_frequency()
+        all_tp_count1 = []
+        all_fn_count1 = []
+        all_tp_count2 = []
+        all_fn_count2 = []
+
+        n = len(self.unit_ids)
+
+        for r in range(n):
+            for c in range(r+1, n):
+                
+                u1 = self.unit_ids[r]
+                u2 = self.unit_ids[c]
+                
+                bins, tp_count1, fn_count1, tp_count2, fn_count2 = self.comp.get_label_count_per_collision_bins(u1, u2, nbins=self.nbins)
+                self.lags = bins / fs * 1000
+                all_tp_count1 += [tp_count1]
+                all_tp_count2 += [tp_count2]
+                all_fn_count1 += [fn_count1]
+                all_fn_count2 += [fn_count2]
+
+
+        self.all_fn_count1 = np.array(all_fn_count1)
+        self.all_fn_count2 = np.array(all_fn_count2)
+        self.all_tp_count1 = np.array(all_tp_count1)
+        self.all_tp_count2 = np.array(all_tp_count2)
+
+
     def plot(self):
         self._do_plot()
 
@@ -64,25 +98,19 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
                 axs[r, c] = ax
         
         fs = self.comp.sorting1.get_sampling_frequency()
-        
+        count = 0
+
         for r in range(n):
             for c in range(r+1, n):
-                
-                u1 = self.unit_ids[r]
-                u2 = self.unit_ids[c]
-                
-                bins, tp_count1, fn_count1, tp_count2, fn_count2 = self.comp.get_label_count_per_collision_bins(u1, u2, nbins=self.nbins)
-                
-                width = (bins[1] - bins[0]) / fs * 1000.
-                lags = bins[:-1] / fs * 1000
-                
+                                
                 ax = axs[r, c]
-                ax.bar(lags, tp_count1, width=width,  color='g')
-                ax.bar(lags, fn_count1, width=width, bottom=tp_count1, color='r')
+                ax.bar(self.lags, self.all_tp_count1[count], width=self.width,  color='g')
+                ax.bar(self.lags, self.all_fn_count1[count], width=self.width, bottom=self.all_tp_count1[count], color='r')
                 
                 ax = axs[c, r]
-                ax.bar(lags, tp_count2, width=width,  color='g')
-                ax.bar(lags, fn_count2, width=width, bottom=tp_count2, color='r')
+                ax.bar(self.lags, self.all_tp_count2[count], width=self.width,  color='g')
+                ax.bar(self.lags, self.all_fn_count2[count], width=self.width, bottom=self.all_tp_count2[count], color='r')
+                count =+ 1
         
         for r in range(n):
             ax = axs[r, 0]
@@ -131,21 +159,10 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         self.unit_ids = unit_ids
         self.nbins = nbins
         self.metric = metric
-    
-    def plot(self):
-        self._do_plot()
+        self._compute()
 
-    def _do_plot(self):
+    def _compute(self):
         import sklearn
-        
-        fig = self.figure
-
-        for ax in fig.axes:
-            ax.remove()
-            
-        
-        
-        
         # compute similarity
         # take index of temmplate (respect unit_ids order)
         all_unit_ids = list(self.comp.sorting1.get_unit_ids())
@@ -174,9 +191,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
                 u2 = self.unit_ids[c]
                 
                 bins, tp_count1, fn_count1, tp_count2, fn_count2 = self.comp.get_label_count_per_collision_bins(u1, u2, nbins=self.nbins)
-                
-                width = (bins[1] - bins[0]) / fs * 1000.
-                lags = bins[:-1] / fs * 1000
+                self.lags = bins / fs * 1000
                 
                 accuracy1 = tp_count1 / (tp_count1 + fn_count1)
                 recall_scores.append(accuracy1)
@@ -188,36 +203,55 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
                 similarities.append(similarity_matrix[r, c])
                 pair_names.append(f'{u2} {u1}')
 
-        recall_scores = np.array(recall_scores)
-        similarities = np.array(similarities)
-        pair_names = np.array(pair_names)
+        self.recall_scores = np.array(recall_scores)
+        self.similarities = np.array(similarities)
+        self.pair_names = np.array(pair_names)
         
-        order = np.argsort(similarities)
-        similarities = similarities[order]
-        recall_scores = recall_scores[order, :]
-        pair_names = pair_names[order]
+        order = np.argsort(self.similarities)
+        self.similarities = self.similarities[order]
+        self.recall_scores = self.recall_scores[order, :]
+        self.pair_names = self.pair_names[order]
+
+
+    def get_good_only(self):
+        valid_indices = np.where(self.recall_scores.sum(1) > 0)[0]
+        return self.similarities[valid_indices], self.recall_scores[valid_indices], self.pair_names[valid_indices]
+
+    def plot(self, good_only=False):
+        self._do_plot(good_only)
+
+    def _do_plot(self, good_only):
         
+        fig = self.figure
+
+        if good_only:
+            similarities, scores, names = self.get_good_only()
+        else:
+            similarities, scores, names = self.similarities, self.recall_scores, self.pair_names
+
+        for ax in fig.axes:
+            ax.remove()
         
         # plot
-        n_pair = len(similarities)
+        n_pair = len(self.similarities)
         
         ax0 = fig.add_axes([0.1 , 0.1 , .25 , 0.8 ] )
         ax1 = fig.add_axes([0.4 , 0.1 , .5 , 0.8 ] , sharey=ax0)
         
         plt.setp(ax1.get_yticklabels(), visible=False)
         
-        im = ax1.imshow(recall_scores[::-1, :],
+        im = ax1.imshow(self.recall_scores[::-1, :],
                     cmap='viridis',
                     aspect='auto',
                     interpolation='none',
-                    extent=(lags[0], lags[-1], -0.5, n_pair-0.5),
+                    extent=(self.lags[0], self.lags[-1], -0.5, n_pair-0.5),
                     )
         im.set_clim(0,1)
         
-        ax0.plot(similarities, np.arange(n_pair), color='k')
+        ax0.plot(self.similarities, np.arange(n_pair), color='k')
         
         ax0.set_yticks(np.arange(n_pair))
-        ax0.set_yticklabels(pair_names)
+        ax0.set_yticklabels(self.pair_names)
         # ax0.set_xlim(0,1)
         
         ax0.set_xlabel(self.metric)
