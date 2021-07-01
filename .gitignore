@@ -29,6 +29,11 @@ spikeinterface/toolkit/*/tests/*/*/*.npz
 
 spikeinterface/toolkit/*/tests/*_output/*
 
+spikeinterface/exporters/tests/*/*
+
+spikeinterface/sorters/tests/*/*
+
+
 spikeinterface/widgets/tests/mearec_test/*
 
 examples/getting_started/*_output/*

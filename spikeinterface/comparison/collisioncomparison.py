@@ -30,7 +30,9 @@ class CollisionGTComparison(GroundTruthComparison):
         self.collision_events = make_collision_events(self.sorting1, delta)
     
     def get_label_for_collision(self, gt_unit_id1, gt_unit_id2):
-        if gt_unit_id1 > gt_unit_id2:
+        gt_index1 = self.sorting1.id_to_index(gt_unit_id1)
+        gt_index2 = self.sorting1.id_to_index(gt_unit_id2)
+        if gt_index1 > gt_index2:
             gt_unit_id1, gt_unit_id2 = gt_unit_id2, gt_unit_id1
             reversed = True
         else:

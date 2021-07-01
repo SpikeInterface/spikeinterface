@@ -9,7 +9,7 @@ from sklearn.decomposition import IncrementalPCA
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
 from spikeinterface.core import WaveformExtractor
-from .template_tools import get_template_best_channels
+from .template_tools import get_template_channel_sparsity
 
 
 
@@ -176,8 +176,10 @@ class WaveformPrincipalComponent:
         
         max_channels_per_template = min(max_channels_per_template, we.recording.get_num_channels())
         
-        best_channels_index = get_template_best_channels(we, max_channels_per_template,
-                                    peak_sign=peak_sign, outputs='index')
+        best_channels_index = get_template_channel_sparsity(we, method='best_channels', 
+                    peak_sign=peak_sign, num_channels=max_channels_per_template,outputs='index')
+
+
         unit_channels = [best_channels_index[unit_id] for unit_id in sorting.unit_ids]
         
         if  p['mode'] == 'by_channel_local':

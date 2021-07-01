@@ -338,9 +338,10 @@ class AgreementSortingExtractor(BaseSorting):
                                   if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
         
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
-        for k in ('agreement_number', 'avg_agreement', 'sorter_unit_ids'):
-            values = [self._msc._new_units[unit_id][k] for unit_id in unit_ids]
-            self.set_property(k, values, ids=unit_ids)
+        if len(unit_ids) > 0:
+            for k in ('agreement_number', 'avg_agreement', 'sorter_unit_ids'):
+                values = [self._msc._new_units[unit_id][k] for unit_id in unit_ids]
+                self.set_property(k, values, ids=unit_ids)
         
         sorting_segment = AgreementSortingSegment(multisortingcomparison)
         self.add_sorting_segment(sorting_segment)

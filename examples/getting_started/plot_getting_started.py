@@ -35,7 +35,7 @@ import spikeinterface.widgets as sw
 
 ##############################################################################
 #  We can also import all submodules at once with this
-#  this internally import core+extractors+toolkit+sorters+comparison+widgets
+#  this internally import core+extractors+toolkit+sorters+comparison+widgets+exporters
 #
 # This is usefull for notbooks but this is a more heavy import because internally many more dependency
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
@@ -200,7 +200,9 @@ print(template.shape)
 # to Phy. `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
-st.export_to_phy(recording_preprocessed, sorting_TDC, './phy_folder_for_TDC', we_TDC,
+from spikeinterface.exporters import export_to_phy
+
+export_to_phy(recording_preprocessed, sorting_TDC, './phy_folder_for_TDC', we_TDC,
     compute_pc_features=False, compute_amplitudes=True)
 
 ##############################################################################

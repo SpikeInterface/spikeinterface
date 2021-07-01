@@ -32,6 +32,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/SpikeInterface/spikeinterface",
     packages=find_packages(),
+    include_package_data=True,
     package_data={},
     install_requires=install_requires,
     extras_require=extras_require,

@@ -115,14 +115,6 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
         'phy/phy_example_0',
     ]
 
-#~ @pytest.mark.skip(reason="Maxwell HDF5 compression need a manual installable plugin!!!")
-#~ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-    #~ ExtractorClass = MaxwellRecordingExtractor
-    #~ downloads = ['maxwell']
-    #~ entities = [
-        #~ 'maxwell/MaxOne_data/Record/000011/data.raw.h5',
-        #~ ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id':'well0000', 'rec_name': 'rec0000'})
-    #~ ]
 
 
 class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -132,13 +124,35 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
     ]
 
+@pytest.mark.skip(reason='Ced extractor depend on sonpy and next neo version')
+class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = CedRecordingExtractor
+    downloads = [
+        'spike2/130322-1LY.smr',
+        'spike2/m365_1sec.smrx',
+        ]
+    entities = [
+        ('spike2/130322-1LY.smr', {'stream_id': '1'}),
+        'spike2/m365_1sec.smrx',
+    ]
+
+@pytest.mark.skip(reason="Maxwell HDF5 compression need a manual installable plugin!!!")
+class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = MaxwellRecordingExtractor
+    downloads = ['maxwell']
+    entities = [
+        'maxwell/MaxOne_data/Record/000011/data.raw.h5',
+        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id':'well0000', 'rec_name': 'rec0000'})
+    ]
+
+
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
     #~ test = MearecSortingTest()
     #~ test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     #~ test = OpenEphysLegacyRecordingTest()
-    test = OpenEphysBinaryEventTest()
+    #~ test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
@@ -146,8 +160,9 @@ if __name__ == '__main__':
     # test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
-    #test = MaxwellRecordingTest()
-    # test = Spike2RecordingTest()
+    #~ test = Spike2RecordingTest()
+    #~ test = CedRecordingTest()
+    test = MaxwellRecordingTest()
     
     test.setUp()
     test.test_open()

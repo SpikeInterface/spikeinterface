@@ -723,14 +723,13 @@ def make_collision_events(sorting, delta):
         1d of all collision
 
     """
-    dtype = [
-            ('index1', 'int64'), ('unit_id1', 'int64'),
-            ('index2', 'int64'), ('unit_id2', 'int64'),
-            ('delta_frame', 'int64')
-        ]
-    
     unit_ids = np.array(sorting.get_unit_ids())
-    
+    dtype = [
+                ('index1', 'int64'), ('unit_id1', unit_ids.dtype),
+                ('index2', 'int64'), ('unit_id2', unit_ids.dtype),
+                ('delta_frame', 'int64')
+            ]
+
     collision_events = []
     for i, u1 in enumerate(unit_ids):
         times1 = sorting.get_unit_spike_train(u1)

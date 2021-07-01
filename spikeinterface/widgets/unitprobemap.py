@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation
 from probeinterface.plotting import plot_probe
 
 
-class UnitMapWidget(BaseMultiWidget):
+class UnitProbeMapWidget(BaseMultiWidget):
     """
     Plots unit map. Amplitude is color coded on probe contact.
     
@@ -25,7 +25,7 @@ class UnitMapWidget(BaseMultiWidget):
         
     """
     def __init__(self, waveform_extractor,  unit_ids=None, channel_ids=None,
-        animated=None,
+        animated=None, colorbar=True,
         ncols=5, figure=None, ax=None, axes=None):
         
         self.waveform_extractor = waveform_extractor
@@ -37,6 +37,7 @@ class UnitMapWidget(BaseMultiWidget):
         self.channel_ids = channel_ids
         
         self.animated = animated
+        self.colorbar = colorbar
         
         # layout
         n = len(unit_ids)
@@ -70,7 +71,8 @@ class UnitMapWidget(BaseMultiWidget):
             if poly_contour is not None:
                 poly_contour.set_zorder(1)
             
-            self.figure.colorbar(poly_contact, ax=ax)
+            if self.colorbar:
+                self.figure.colorbar(poly_contact, ax=ax)
             
             poly_contact.set_clim(0, np.max(np.abs(template)))
             all_poly_contact.append(poly_contact)
@@ -90,8 +92,8 @@ class UnitMapWidget(BaseMultiWidget):
                         interval=20, blit=True)
 
 
-def plot_unit_map(*args, **kwargs):
-    W = UnitMapWidget(*args, **kwargs)
+def plot_unit_probe_map(*args, **kwargs):
+    W = UnitProbeMapWidget(*args, **kwargs)
     W.plot()
     return W
-plot_unit_map.__doc__ = UnitMapWidget.__doc__
+plot_unit_probe_map.__doc__ = UnitProbeMapWidget.__doc__

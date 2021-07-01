@@ -36,7 +36,10 @@ class TestWidgets(unittest.TestCase):
         pass
 
     def test_timeseries(self):
-        sw.plot_timeseries(self._rec)
+        sw.plot_timeseries(self._rec, mode='auto')
+        sw.plot_timeseries(self._rec, mode='line', show_channel_ids=True)
+        sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True)
+        sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True, order_channel_by_depth=True)
 
     def test_rasters(self):
         sw.plot_rasters(self._sorting)
@@ -56,20 +59,30 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_waveforms(self._we)
         sw.plot_unit_waveforms(self._we, max_channels=5)
         sw.plot_unit_waveforms(self._we, radius_um=60)
+    
+    def test_plot_unit_waveform_density_map(self):
+        unit_ids = self._sorting.unit_ids[:3]
+        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, max_channels=4)
+        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, radius_um=50)
+        
+        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, radius_um=25, same_axis=True)
+        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, max_channels=2, same_axis=True)
+
 
     def test_unittemplates(self):
         sw.plot_unit_templates(self._we)
     
-    def test_plot_unit_map(self):
-        sw.plot_unit_map(self._we)
-        sw.plot_unit_map(self._we, animated=True)
+    def test_plot_unit_probe_map(self):
+        sw.plot_unit_probe_map(self._we)
+        sw.plot_unit_probe_map(self._we, animated=True)
 
     def test_plot_units_depth_vs_amplitude(self):
         sw.plot_units_depth_vs_amplitude(self._we)
 
     def test_amplitudes_timeseries(self):
         sw.plot_amplitudes_timeseries(self._we)
-        sw.plot_amplitudes_timeseries(self._we, amplitudes=self._amplitudes)
+        unit_ids = self._sorting.unit_ids[:4]
+        sw.plot_amplitudes_timeseries(self._we, amplitudes=self._amplitudes, unit_ids=unit_ids)
 
     def test_amplitudes_distribution(self):
         sw.plot_amplitudes_distribution(self._we)
@@ -91,7 +104,7 @@ class TestWidgets(unittest.TestCase):
 
 
     def test_isi_distribution(self):
-        sw.plot_isi_distribution(self._sorting, bins=10, window=1)
+        sw.plot_isi_distribution(self._sorting, bin_ms=5., window_ms=500.)
         fig, axes = plt.subplots(self.num_units, 1)
         sw.plot_isi_distribution(self._sorting, axes=axes)
     
@@ -129,6 +142,9 @@ class TestWidgets(unittest.TestCase):
         metrics = st.compute_quality_metrics(self._we, metric_names=['snr'])
         sw.plot_sorting_performance(self._gt_comp, metrics, performance_name='accuracy', metric_name='snr')
     
+    def test_plot_unit_summary(self):
+        unit_id = self._sorting.unit_ids[4]
+        sw.plot_unit_summary(self._we, unit_id, self._amplitudes)
     
 
 
@@ -138,31 +154,34 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
 
-    # mytest.test_timeseries()
-    # mytest.test_rasters()
-    # mytest.test_plot_probe_map()
-    # mytest.test_unitwaveforms()
+    #~ mytest.test_timeseries()
+    #~ mytest.test_rasters()
+    #~ mytest.test_plot_probe_map()
+    #~ mytest.test_unitwaveforms()
+    #~ mytest.test_plot_unit_waveform_density_map()
     # mytest.test_unittemplates()
-    # mytest.test_plot_unit_map()
-    mytest.test_plot_units_depth_vs_amplitude()
+    #~ mytest.test_plot_unit_probe_map()
+    # mytest.test_plot_units_depth_vs_amplitude()
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
-    # mytest.test_principal_component()
-    # mytest.test_plot_unit_localization()
+    #~ mytest.test_principal_component()
+    #~ mytest.test_plot_unit_localization()
     
     # mytest.test_autocorrelograms()
-    # mytest.test_crosscorrelogram()
+    mytest.test_crosscorrelogram()
     # mytest.test_isi_distribution()
     
     
     # mytest.test_plot_drift_over_time()
     # mytest.test_plot_peak_activity_map()
     
-    
-    
     # mytest.test_confusion()
     # mytest.test_agreement()
     #~ mytest.test_multicomp_graph()
     # mytest.test_sorting_performance()
+    
+    
+    #~ mytest.test_plot_unit_summary()
+    
         
     plt.show()
