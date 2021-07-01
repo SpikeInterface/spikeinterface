@@ -17,6 +17,7 @@ from .neoextractors import (
     Spike2RecordingExtractor, read_spike2,
     CedRecordingExtractor, read_ced,
     MaxwellRecordingExtractor,  read_maxwell,
+    NixRecordingExtractor, read_nix,
     
 )
 
