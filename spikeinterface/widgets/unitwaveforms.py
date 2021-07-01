@@ -139,6 +139,7 @@ class UnitWaveformsWidget(BaseMultiWidget):
                 if self._plot_waveforms and self._plot_templates:
                     color = 'k'
                 ax.plot(xvectors_flat, template.T.flatten(), lw=1, color=color)
+                ax.set_title('template %s' %unit_ids[i])
             
             # plot channels
             if self._plot_channels:

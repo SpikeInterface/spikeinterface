@@ -32,10 +32,9 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
         self.sorting = sorting
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=symmetrize)
         
-        if axes is None:
-            n = len(sorting.unit_ids)
-            figure, axes = plt.subplots(nrows=n, ncols=n, sharex=True, sharey=True)
-        BaseMultiWidget.__init__(self, figure, None, axes)
+        if axes is None and ax is None:
+            figure, axes = plt.subplots(nrows=len(unit_ids), ncols=len(unit_ids), sharex=True, sharey=True)
+        BaseMultiWidget.__init__(self, figure, ax, axes)
     
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)
@@ -44,7 +43,8 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
         for i, unit_id1 in enumerate(unit_ids):
             for j, unit_id2 in enumerate(unit_ids):
                 ccg = correlograms[i, j]
-                ax = self.axes[i, j]
+                ax = self.get_tiled_ax(i+j*len(unit_ids), len(unit_ids), len(unit_ids))
+                #ax = self.axes[i, j]
                 if i == j:
                     color = 'g'
                 else:
@@ -52,8 +52,9 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
                 ax.bar(x=bins[:-1], height=ccg,width=bin_width, color=color, align='edge')
         
         for i, unit_id in enumerate(unit_ids):
-            self.axes[0, i].set_title(str(unit_id))
-            self.axes[-1, i].set_xlabel('CCG (ms)')
+            self.get_tiled_ax(i, len(unit_ids), len(unit_ids)).set_title(str(unit_id))
+            self.get_tiled_ax(i + len(unit_ids)*(len(unit_ids)-1), len(unit_ids), len(unit_ids)).set_xlabel('time (ms)')
+            #self.get_tiled_ax(i + len(unit_ids)*(len(unit_ids)-1), len(unit_ids), len(unit_ids)).set_xlabel('time (ms)')
 
 
 def plot_crosscorrelograms(*args, **kwargs):
@@ -95,9 +96,9 @@ class AutoCorrelogramsWidget(BaseMultiWidget):
             ncols = n
         nrows = int(np.ceil(n / ncols))
         
-        if axes is None:
+        if axes is None and ax is None:
             figure, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True, sharey=True)
-        BaseMultiWidget.__init__(self, figure, None, axes)
+        BaseMultiWidget.__init__(self, figure, ax, axes)
 
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)
