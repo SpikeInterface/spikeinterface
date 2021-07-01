@@ -233,14 +233,14 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
             ax.remove()
         
         # plot
-        n_pair = len(self.similarities)
+        n_pair = len(similarities)
         
         ax0 = fig.add_axes([0.1 , 0.1 , .25 , 0.8 ] )
         ax1 = fig.add_axes([0.4 , 0.1 , .5 , 0.8 ] , sharey=ax0)
         
         plt.setp(ax1.get_yticklabels(), visible=False)
         
-        im = ax1.imshow(self.recall_scores[::-1, :],
+        im = ax1.imshow(scores[::-1, :],
                     cmap='viridis',
                     aspect='auto',
                     interpolation='none',
@@ -248,10 +248,10 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
                     )
         im.set_clim(0,1)
         
-        ax0.plot(self.similarities, np.arange(n_pair), color='k')
+        ax0.plot(similarities, np.arange(n_pair), color='k')
         
         ax0.set_yticks(np.arange(n_pair))
-        ax0.set_yticklabels(self.pair_names)
+        ax0.set_yticklabels(names)
         # ax0.set_xlim(0,1)
         
         ax0.set_xlabel(self.metric)
