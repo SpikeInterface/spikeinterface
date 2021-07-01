@@ -30,7 +30,7 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
     W: MultiCompGraphWidget
         The output widget
     """    
-    def __init__(self, comp, unit_ids=None, nbins=10, figure=None, ax=None):
+    def __init__(self, comp, unit_ids=None, nbins=11, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         if unit_ids is None:
             # take all units
@@ -61,7 +61,7 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
                 u2 = self.unit_ids[c]
                 
                 bins, tp_count1, fn_count1, tp_count2, fn_count2 = self.comp.get_label_count_per_collision_bins(u1, u2, nbins=self.nbins)
-                self.lags = bins / fs * 1000
+                self.lags = bins[:-1] / fs * 1000
                 all_tp_count1 += [tp_count1]
                 all_tp_count2 += [tp_count2]
                 all_fn_count1 += [fn_count1]
@@ -191,7 +191,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
                 u2 = self.unit_ids[c]
                 
                 bins, tp_count1, fn_count1, tp_count2, fn_count2 = self.comp.get_label_count_per_collision_bins(u1, u2, nbins=self.nbins)
-                self.lags = bins / fs * 1000
+                self.lags = bins[:-1] / fs * 1000
                 
                 accuracy1 = tp_count1 / (tp_count1 + fn_count1)
                 recall_scores.append(accuracy1)

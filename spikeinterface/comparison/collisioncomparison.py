@@ -54,14 +54,14 @@ class CollisionGTComparison(GroundTruthComparison):
     
     def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, nbins=11):
         d = int(self.collision_lag / 1000 * self.sampling_frequency)
-        bins = np.linspace(-d, d, nbins)
+        bins = np.arange(-d, d, d/nbins)
         
         score_label1, score_label2, delta = self.get_label_for_collision(gt_unit_id1, gt_unit_id2)
         
-        tp_count1 = np.zeros(bins.size-1)
-        fn_count1 = np.zeros(bins.size-1)
-        tp_count2 = np.zeros(bins.size-1)
-        fn_count2 = np.zeros(bins.size-1)
+        tp_count1 = np.zeros(bins.size - 1)
+        fn_count1 = np.zeros(bins.size - 1)
+        tp_count2 = np.zeros(bins.size - 1)
+        fn_count2 = np.zeros(bins.size - 1)
         
         for i in range(tp_count1.size):
             l0, l1 = bins[i], bins[i+1]
