@@ -8,16 +8,16 @@ from spikeinterface.toolkit import compute_correlograms
 
 class ConnectivityComparisonWidget(BaseWidget):
     """
-    Plots sorting comparison confusion matrix.
+    Plots difference between real CC matrix, and reconstructed one
 
     Parameters
     ----------
     gt_comparison: GroundTruthComparison
         The ground truth sorting comparison object
-    count_text: bool
-        If True counts are displayed as text
-    unit_ticks: bool
-        If True unit tick labels are displayed
+    in_ms:  float
+        bins duration in ms
+    window_ms: float
+        Window duration in ms
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
@@ -35,6 +35,7 @@ class ConnectivityComparisonWidget(BaseWidget):
         self._bin_ms = bin_ms
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=True)
         self.name = 'ConnectivityComparison'
+        self.correlograms = {}
         self._compute()
 
     def _compute(self):
@@ -45,16 +46,42 @@ class ConnectivityComparisonWidget(BaseWidget):
 
         valid_idx = best_matches[best_matches > -1]
 
-        self.correlograms_1 = correlograms_1[best_matches > -1, :, :]
-        self.correlograms_1 = self.correlograms_1[:, best_matches > -1, :]
+        correlograms_1 = correlograms_1[best_matches > -1, :, :]
+        self.correlograms['true'] = correlograms_1[:, best_matches > -1, :]
 
-        self.correlograms_2 = correlograms_2[valid_idx, :, :]
-        self.correlograms_2 = self.correlograms_2[:, valid_idx, :]
+        correlograms_2 = correlograms_2[valid_idx, :, :]
+        self.correlograms['estimated'] = correlograms_2[:, valid_idx, :]
+
+        self.nb_cells = self.correlograms['true'].shape[0]
+        self.nb_timesteps = self.correlograms['true'].shape[2]
 
 
     def error(self):
         return np.linalg.norm(self.correlograms_1 - self.correlograms_2)
 
+    def autocorr(self):
+        res = {}
+        for key, value in self.correlograms.items():
+            ccs = value.reshape(self.nb_cells**2, self.nb_timesteps)
+            mask = np.zeros(self.nb_cells**2).astype(np.bool)
+            mask[np.arange(0, self.nb_cells**2, self.nb_cells) + np.arange(self.nb_cells)] = True
+
+            res[key] = {}
+            res[key]['mean'] = np.mean(ccs[mask], 0)
+            res[key]['std'] = np.std(ccs[mask], 0)
+        return res
+
+    def crosscorr(self):
+        res = {}
+        for key, value in self.correlograms.items():
+            ccs = value.reshape(self.nb_cells**2, self.nb_timesteps)
+            mask = np.ones(self.nb_cells**2).astype(np.bool)
+            mask[np.arange(0, self.nb_cells**2, self.nb_cells) + np.arange(self.nb_cells)] = False
+
+            res[key] = {}
+            res[key]['mean'] = np.mean(ccs[mask], 0)
+            res[key]['std'] = np.std(ccs[mask], 0)
+        return res
 
     def plot(self):
         self._do_plot()
@@ -65,5 +92,5 @@ class ConnectivityComparisonWidget(BaseWidget):
         self.ax = fig.subplots(1, 2)
 
         center = self.correlograms_1.shape[2] // 2
-        self.ax[0].matshow(self.correlograms_1[:,:,center], cmap='viridis')
-        self.ax[1].matshow(self.correlograms_2[:,:,center], cmap='viridis')
+        self.ax[0].matshow(self.correlograms['true'][:,:,center], cmap='viridis')
+        self.ax[1].matshow(self.correlograms['estimated'][:,:,center], cmap='viridis')
