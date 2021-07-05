@@ -13,3 +13,4 @@ from .spike2 import Spike2RecordingExtractor, read_spike2
 from .ced import CedRecordingExtractor, read_ced
 from .maxwell import MaxwellRecordingExtractor, read_maxwell
 from .nix import NixRecordingExtractor, read_nix
+from .spikegadgets import SpikeGadgetsRecordingExtractor, read_spikegadgets

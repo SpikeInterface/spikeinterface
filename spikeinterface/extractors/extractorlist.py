@@ -18,6 +18,7 @@ from .neoextractors import (
     CedRecordingExtractor, read_ced,
     MaxwellRecordingExtractor,  read_maxwell,
     NixRecordingExtractor, read_nix,
+    SpikeGadgetsRecordingExtractor, read_spikegadgets,
     
 )
 
@@ -69,6 +70,8 @@ recording_extractor_full_list = [
     Spike2RecordingExtractor,
     CedRecordingExtractor,
     MaxwellRecordingExtractor,
+    NixRecordingExtractor,
+    SpikeGadgetsRecordingExtractor,
     
     
     ##OLD
