@@ -37,7 +37,8 @@ from .multicompgraph import (
     plot_multicomp_agreement_by_sorter, MultiCompAgreementBySorterWidget)
 from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
-    plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget)
+    plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget,
+    StudyComparisonCollisionBySimilarityWidget)
 from .sortingperformance import plot_sorting_performance
 
 
@@ -46,3 +47,6 @@ from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
 # connectivity comparison
 from .connectivitycomp import ConnectivityComparisonWidget
+
+# study comparison
+from .studycompstats import StudyComparisonStatisticsWidget

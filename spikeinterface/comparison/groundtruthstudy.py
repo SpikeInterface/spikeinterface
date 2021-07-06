@@ -199,28 +199,39 @@ class GroundTruthStudy:
 
         return dataframes
 
-    def compute_metrics(self, rec_name, metric_names=['snr'],
+    def compute_metrics(self, rec_name, sorter_name=None, metric_names=['snr'],
                 ms_before=3., ms_after=4., max_spikes_per_unit=500, 
-                n_jobs=-1, total_memory='1G', **snr_kargs):
+                n_jobs=-1, total_memory='1G', templates_only=False, **snr_kargs):
 
         rec = self.get_recording(rec_name)
-        gt_sorting = self.get_ground_truth(rec_name)
-        
+        if sorter_name is None:
+            sorting = self.get_ground_truth(rec_name)
+            sorter_name = 'gt'
+        else:
+            assert sorter_name in self.sorter_names
+            sorting = self.get_sorting(sorter_name, rec_name)
+
         # waveform extractor
-        waveform_folder = self.study_folder / 'metrics' / f'waveforms_{rec_name}'
+        waveform_folder = self.study_folder / 'metrics' / f'waveforms_{sorter_name}_{rec_name}'
+
         if waveform_folder.is_dir():
             shutil.rmtree(waveform_folder)
-        we = WaveformExtractor.create(rec, gt_sorting, waveform_folder)
+        we = WaveformExtractor.create(rec, sorting, waveform_folder)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run(n_jobs=n_jobs, total_memory=total_memory)
         
         # metrics
-        metrics = compute_quality_metrics(we, metric_names=metric_names)
-        filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
-        metrics.to_csv(filename, sep='\t', index=True)
+        if templates_only:
+            filename = self.study_folder / 'metrics' / f'templates_{sorter_name}_{rec_name}.npy'
+            metrics = we.get_all_templates()
+            np.save(filename, metrics)
+        else:
+            metrics = compute_quality_metrics(we, metric_names=metric_names)
+            filename = self.study_folder / 'metrics' / f'metrics_{sorter_name}_{rec_name}.txt'
+            metrics.to_csv(filename, sep='\t', index=True)
 
         return metrics
-    
+
     def get_metrics(self, rec_name=None, **metric_kargs):
         """
         Load or compute units metrics  for a given recording.
@@ -242,6 +253,13 @@ class GroundTruthStudy:
         metrics['rec_name'] = rec_name
 
         return metrics
+
+    def get_templates(self, rec_name=None, sorter_name=None, **metric_kargs):
+        """
+        Load or compute units metrics  for a given recording.
+        """
+        
+        return self.compute_metrics(rec_name, sorter_name, templates_only=True, **metric_kargs)
         
 
     def get_units_snr(self, rec_name=None, **metric_kargs):

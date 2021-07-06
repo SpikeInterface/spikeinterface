@@ -55,9 +55,8 @@ class ConnectivityComparisonWidget(BaseWidget):
         self.nb_cells = self.correlograms['true'].shape[0]
         self.nb_timesteps = self.correlograms['true'].shape[2]
 
-
     def error(self):
-        return np.linalg.norm(self.correlograms_1 - self.correlograms_2)
+        return np.linalg.norm(self.correlograms['true'] - self.correlograms['estimated'])
 
     def autocorr(self):
         res = {}
@@ -91,6 +90,6 @@ class ConnectivityComparisonWidget(BaseWidget):
         fig = self.figure
         self.ax = fig.subplots(1, 2)
 
-        center = self.correlograms_1.shape[2] // 2
-        self.ax[0].matshow(self.correlograms['true'][:,:,center], cmap='viridis')
-        self.ax[1].matshow(self.correlograms['estimated'][:,:,center], cmap='viridis')
+        center = self.correlograms['true'].shape[2] // 2
+        self.ax[0].imshow(self.correlograms['true'][:,:,center], cmap='viridis', aspect='auto')
+        self.ax[1].imshow(self.correlograms['estimated'][:,:,center], cmap='viridis', aspect='auto')

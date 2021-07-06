@@ -4,8 +4,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from .basewidget import BaseWidget
-
+from .basewidget import BaseWidget, BaseMultiWidget
+from spikeinterface.comparison.collisioncomparison import CollisionGTComparison
 
 
 class ComparisonCollisionPairByPairWidget(BaseWidget):
@@ -261,73 +261,72 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
 
-# class ComparisonCollisionBySimilarityWidgetStudy(BaseWidget):
+class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
 
 
-#     """
-#     Plots CollisionGTComparison pair by pair orderer by cosine_similarity
-#     and averagin over multiple recordings within the study
-
-#     Parameters
-#     ----------
-#     comp: CollisionGTComparison
-#         The collision ground truth comparison object
-#     templates: array
-#         template of units
-#     metric: cosine_similarity',
-#         metric for ordering
-#     unit_ids: list
-#         List of considered units
-#     nbins: int
-#         Number of bins
-#     figure: matplotlib figure
-#         The figure to be used. If not given a figure is created
-#     ax: matplotlib axis
-#         The axis to be used. If not given an axis is created
-#     """
-#     def __init__(self, study, templates, unit_ids=None, metric='cosine_similarity', nbins=10, figure=None, ax=None):
-#         BaseWidget.__init__(self, figure, ax)
-#         if unit_ids is None:
-#             # take all units
-#             unit_ids = comp.sorting1.get_unit_ids()
-
-#         self.study = study
-#         self.templates = templates
-#         self.unit_ids = unit_ids
-#         self.nbins = nbins
-#         self.metric = metric
-#         self._compute()
-#         self.all_results = {}
-
-#     def _compute(self):
-
-#         for rec_name in self.study.rec_names:
-
-#             gt_sorting = self.study.get_ground_truth(rec_name)
-#             tested_sorting = self.study.get_sorting(sort_name, rec_name)
-
-#             self.comp = si.CollisionGTComparison(gt_sorting, tested_sorting, collision_lag=2, exhaustive_gt=True)
-#             self.widget = si.ComparisonCollisionBySimilarityWidget(comp, self.templates[rec_name])
-
-#             similarities, data, _ = widget_1.get_good_only()
-
-#             if 'similarity' in all_results[sort_name]:
-#                 self.all_results[sort_name]['similarity'] = np.concatenate((all_results[sort_name]['similarity'],similarities))
-#                 self.all_results[sort_name]['data'] = np.vstack((all_results[sort_name]['data'], data))
-#             else:   
-#                 self.all_results[sort_name]['similarity'] = similarities
-#                 self.all_results[sort_name]['data'] = data
-
-#     def plot()
+    def __init__(self, study, templates, metric='cosine_similarity', collision_lag=2, exhaustive_gt=False, nbins=10, figure=None, ax=None, axes=None):
         
-#         xaxis = widget_1.lags
+        self._ncols = 3
+        self._nrows = len(study.sorter_names) % self._ncols
+        
+        if axes is None and ax is None:
+            figure, axes = plt.subplots(nrows=self._nrows, ncols=self._ncols, sharex=True, sharey=True)
 
-#         for count, i in enumerate(range(len(cc_similarity) - 1)):
-#             cmin, cmax = cc_similarity[i], cc_similarity[i + 1]
-#             amin, amax = np.searchsorted(all_results[sort_name]['similarity'], [cmin, cmax])
-#             r = all_results[sort_name]['data'][amin:amax]
-#             colorVal = scalarMap.to_rgba((cmin+cmax)/2)
-#             axes[letter].plot(xaxis, np.nan_to_num(r.mean(0)), label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
+        BaseMultiWidget.__init__(self, figure, ax, axes)
+
+        self.study = study
+        self.collision_lag = collision_lag
+        self.exhaustive_gt = exhaustive_gt
+        self.templates = templates
+        self.nbins = nbins
+        self.metric = metric
+        self.all_results = {}
+        self._compute()
+        
+
+    def _compute(self):
+
+        for sort_name in self.study.sorter_names:
+            self.all_results[sort_name] = {}
+            for rec_name in self.study.rec_names:        
+                gt_sorting = self.study.get_ground_truth(rec_name)
+                tested_sorting = self.study.get_sorting(sort_name, rec_name)
+
+                comp = CollisionGTComparison(gt_sorting, tested_sorting, collision_lag=self.collision_lag, exhaustive_gt=self.exhaustive_gt)
+                widget = ComparisonCollisionBySimilarityWidget(comp, self.templates[rec_name])
+                self.lags = widget.lags
+
+                similarities, data, _ = widget.get_good_only()
+
+                if 'similarity' in self.all_results[sort_name]:
+                    self.all_results[sort_name]['similarity'] = np.concatenate((self.all_results[sort_name]['similarity'], similarities))
+                    self.all_results[sort_name]['data'] = np.vstack((self.all_results[sort_name]['data'], data))
+                else:   
+                    self.all_results[sort_name]['similarity'] = similarities
+                    self.all_results[sort_name]['data'] = data
+
+    def plot(self, cc_similarity=np.arange(0, 1, 0.1)):
+
+        import matplotlib.colors as colors
+
+        my_cmap = plt.get_cmap('winter')
+        cNorm  = colors.Normalize(vmin=cc_similarity.min(), vmax=cc_similarity.max())
+        scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
+
+        for scount, sort_name in enumerate(self.study.sorter_names):
+
+            ax = self.get_tiled_ax(scount, self._nrows, self._ncols)
+
+            for count, i in enumerate(range(len(cc_similarity) - 1)):
+                cmin, cmax = cc_similarity[i], cc_similarity[i + 1]
+                amin, amax = np.searchsorted(self.all_results[sort_name]['similarity'], [cmin, cmax])
+                r = self.all_results[sort_name]['data'][amin:amax]
+                colorVal = scalarMap.to_rgba((cmin+cmax)/2)
+                ax.plot(self.lags, np.nan_to_num(r.mean(0)), label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
+                ax.set_title(sort_name)
+                ax.legend()
+                ax.set_ylabel('collision accuracy')
+                ax.set_xlabel('lag (ms)')
 
 
 
