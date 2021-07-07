@@ -267,7 +267,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
     def __init__(self, study, metric='cosine_similarity', collision_lag=2, exhaustive_gt=False, nbins=10, figure=None, ax=None, axes=None):
         
         self._ncols = 3
-        self._nrows = len(study.sorter_names) % self._ncols
+        self._nrows = int(np.ceil(len(study.sorter_names) / self._ncols))
 
         if axes is None and ax is None:
             figure, axes = plt.subplots(nrows=self._nrows, ncols=self._ncols, sharex=True, sharey=True)

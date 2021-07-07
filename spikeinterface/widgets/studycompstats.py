@@ -42,11 +42,10 @@ class StudyComparisonStatisticsWidget(BaseMultiWidget):
         
         BaseMultiWidget.__init__(self, figure, ax, axes)
         self._study = study
-        self.sorter_names = study.sorter_names
+        self.sorter_names = self._study.sorter_names
         self.rec_names = study.rec_names
         self._exhaustive_gt = exhaustive_gt
         self.name = 'StudyComparisonStatistics'
-        self._sorters = study.sorter_names
         self._compute()
 
     def _compute(self):
@@ -63,7 +62,7 @@ class StudyComparisonStatisticsWidget(BaseMultiWidget):
                 res[sorter][key] = {}
                 res[sorter][key]['mean'] = data.loc[:, sorter, :][key].mean()
                 res[sorter][key]['std'] = data.loc[:, sorter, :][key].std()
-            return res
+        return res
 
     def performance_by_units(self):
         res = {}
@@ -75,7 +74,7 @@ class StudyComparisonStatisticsWidget(BaseMultiWidget):
                 res[sorter][key] = {}
                 res[sorter][key]['mean'] = data.loc[:, sorter, :][key].mean()
                 res[sorter][key]['std'] = data.loc[:, sorter, :][key].std()
-            return res
+        return res
 
     def run_times(self):
         res = {}
@@ -87,11 +86,11 @@ class StudyComparisonStatisticsWidget(BaseMultiWidget):
                 res[sorter][key] = {}
                 res[sorter][key]['mean'] = data.loc[:, sorter, :][key].mean()
                 res[sorter][key]['std'] = data.loc[:, sorter, :][key].std()
-            return res
+        return res
 
     def get_all(self):
         res = self.run_times()
-        for sorter in self._study.sorter_names:
+        for sorter in self.sorter_names:
             res[sorter].update(self.performance_by_units()[sorter])
             res[sorter].update(self.count_units()[sorter])
         return res
@@ -115,7 +114,7 @@ class StudyComparisonStatisticsWidget(BaseMultiWidget):
             to_display = ['run_time', 'num_well_detected', 'num_redundant', 'num_overmerged',
                         'accuracy']
 
-        nb_sorters = len(self._study.sorter_names)
+        nb_sorters = len(self.sorter_names)
 
         colors = ['C%d' %i for i in range(nb_sorters)]
 
@@ -123,13 +122,13 @@ class StudyComparisonStatisticsWidget(BaseMultiWidget):
 
             ax = self.get_tiled_ax(scount, self._nrows, self._ncols)
 
-            means = [data[sorter][key]['mean'] for sorter in self._study.sorter_names]
-            stds = [data[sorter][key]['std'] for sorter in self._study.sorter_names]
+            means = [data[sorter][key]['mean'] for sorter in self.sorter_names]
+            stds = [data[sorter][key]['std'] for sorter in self.sorter_names]
             ax.bar(np.arange(nb_sorters), np.nan_to_num(means), yerr=np.nan_to_num(stds), color=colors)
             ax.set_ylabel(key)
 
             if (scount // self._ncols) == (self._nrows - 1):
                 ax.set_xticks(np.arange(nb_sorters))
-                ax.set_xticklabels(self._study.sorter_names, rotation=45)
+                ax.set_xticklabels(self.sorter_names, rotation=45)
             else:
                 ax.tick_params(labelbottom=False)
