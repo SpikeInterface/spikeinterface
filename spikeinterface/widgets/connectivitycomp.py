@@ -38,6 +38,16 @@ class ConnectivityComparisonWidget(BaseWidget):
         self.correlograms = {}
         self._compute()
 
+    def get_traces(self, data='true', mode='auto'):
+        ccs = self.correlograms[data].reshape(self.nb_cells**2, self.nb_timesteps)
+        if mode == 'auto':
+            mask = np.zeros(self.nb_cells**2).astype(np.bool)
+            mask[np.arange(0, self.nb_cells**2, self.nb_cells) + np.arange(self.nb_cells)] = True
+        else:
+            mask = np.ones(self.nb_cells**2).astype(np.bool)
+            mask[np.arange(0, self.nb_cells**2, self.nb_cells) + np.arange(self.nb_cells)] = False
+        return ccs[mask]
+
     def _compute(self):
         correlograms_1, bins = compute_correlograms(self._gtcomp.sorting1, **self.compute_kwargs)        
         correlograms_2, bins = compute_correlograms(self._gtcomp.sorting2, **self.compute_kwargs)        
@@ -60,26 +70,20 @@ class ConnectivityComparisonWidget(BaseWidget):
 
     def autocorr(self):
         res = {}
-        for key, value in self.correlograms.items():
-            ccs = value.reshape(self.nb_cells**2, self.nb_timesteps)
-            mask = np.zeros(self.nb_cells**2).astype(np.bool)
-            mask[np.arange(0, self.nb_cells**2, self.nb_cells) + np.arange(self.nb_cells)] = True
-
+        for key in self.correlograms.keys():
+            ccs = self.get_traces(key, 'auto')
             res[key] = {}
-            res[key]['mean'] = np.mean(ccs[mask], 0)
-            res[key]['std'] = np.std(ccs[mask], 0)
+            res[key]['mean'] = np.mean(ccs, 0)
+            res[key]['std'] = np.std(ccs, 0)
         return res
 
     def crosscorr(self):
         res = {}
-        for key, value in self.correlograms.items():
-            ccs = value.reshape(self.nb_cells**2, self.nb_timesteps)
-            mask = np.ones(self.nb_cells**2).astype(np.bool)
-            mask[np.arange(0, self.nb_cells**2, self.nb_cells) + np.arange(self.nb_cells)] = False
-
+        for key in self.correlograms.keys():
+            ccs = self.get_traces(key, 'cross')
             res[key] = {}
-            res[key]['mean'] = np.mean(ccs[mask], 0)
-            res[key]['std'] = np.std(ccs[mask], 0)
+            res[key]['mean'] = np.mean(ccs, 0)
+            res[key]['std'] = np.std(ccs, 0)
         return res
 
     def plot(self):
@@ -88,8 +92,25 @@ class ConnectivityComparisonWidget(BaseWidget):
     def _do_plot(self):
 
         fig = self.figure
-        self.ax = fig.subplots(1, 2)
+        self.ax = fig.subplots(2, 2)
 
         center = self.correlograms['true'].shape[2] // 2
-        self.ax[0].imshow(self.correlograms['true'][:,:,center], cmap='viridis', aspect='auto')
-        self.ax[1].imshow(self.correlograms['estimated'][:,:,center], cmap='viridis', aspect='auto')
+        self.ax[0, 0].imshow(self.correlograms['true'][:,:,center], cmap='viridis', aspect='auto')
+        self.ax[0, 1].imshow(self.correlograms['estimated'][:,:,center], cmap='viridis', aspect='auto')
+
+        x1 = self.get_traces('true', 'auto')
+        x2 = self.get_traces('estimated', 'auto')
+        self.ax[1, 0].plot(np.abs(x2 - x1).T, '0.5')
+        self.ax[1, 0].plot(np.mean(np.abs(x2 - x1), 0), 'r', lw=2)
+        self.ax[1, 0].set_ylabel('CC')
+        self.ax[1, 0].set_xlabel('time')
+        self.ax[1, 0].set_title('auto corr')
+
+        x1 = self.get_traces('true', 'cross')
+        x2 = self.get_traces('estimated', 'cross')
+        self.ax[1, 1].plot(np.abs(x2 - x1).T, '0.5')
+        self.ax[1, 1].plot(np.mean(np.abs(x2 - x1), 0), 'r', lw=2)
+        self.ax[1, 1].set_ylabel('CC')
+        self.ax[1, 1].set_xlabel('time')
+        self.ax[1, 1].set_title('cross corr')
+
