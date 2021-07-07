@@ -60,7 +60,7 @@ def ensure_n_jobs(recording, n_jobs=1):
         n_jobs = 1
 
     try:
-        test_executor = ProcessPoolExecutor(max_workers=1, initializer=True)
+        test_executor = ProcessPoolExecutor(max_workers=1, initializer=list)
     except Exception:
         import sys
         version = sys.version

@@ -268,10 +268,10 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
         
         self._ncols = 3
         self._nrows = len(study.sorter_names) % self._ncols
-        
+
         if axes is None and ax is None:
             figure, axes = plt.subplots(nrows=self._nrows, ncols=self._ncols, sharex=True, sharey=True)
-
+        
         BaseMultiWidget.__init__(self, figure, ax, axes)
 
         self.study = study
@@ -285,16 +285,21 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
 
     def _compute(self):
 
-        for sort_name in self.study.sorter_names:
-            self.all_results[sort_name] = {}
-            for rec_name in self.study.rec_names:        
-                gt_sorting = self.study.get_ground_truth(rec_name)
+        for rec_name in self.study.rec_names:
+            
+            gt_sorting = self.study.get_ground_truth(rec_name)
+            templates = self.study.get_templates(rec_name)
+
+            for sort_name in self.study.sorter_names:        
+                if sort_name not in self.all_results:
+                    self.all_results[sort_name] = {}
+
                 tested_sorting = self.study.get_sorting(sort_name, rec_name)
 
                 comp = CollisionGTComparison(gt_sorting, tested_sorting, collision_lag=self.collision_lag, exhaustive_gt=self.exhaustive_gt)
-                templates = self.study.get_templates(rec_name)
                 widget = ComparisonCollisionBySimilarityWidget(comp, templates)
-                self.lags = widget.lags
+                plt.close()
+                self.lags = np.linspace(-self.collision_lag, self.collision_lag, len(widget.lags))
 
                 similarities, data, pair_names = widget.get_good_only()
 
@@ -306,9 +311,15 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
                     self.all_results[sort_name]['similarity'] = similarities
                     self.all_results[sort_name]['data'] = data
                     self.all_results[sort_name]['pair'] = pair_names
-                
+            
+        for sort_name in self.study.sorter_names:
+            idx = np.argsort(self.all_results[sort_name]['similarity'])
+            self.all_results[sort_name]['similarity'] = self.all_results[sort_name]['similarity'][idx]
+            self.all_results[sort_name]['data'] = self.all_results[sort_name]['data'][idx]
+            self.all_results[sort_name]['pair'] = self.all_results[sort_name]['pair'][idx]
+            
 
-    def plot(self, cc_similarity=np.arange(0, 1, 0.1), show_legend=False, ylim=None):
+    def plot(self, cc_similarity=np.arange(0, 1, 0.1), show_legend=False, ylim=(0.5, 1)):
 
         import matplotlib.colors as colors
 
@@ -329,12 +340,12 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
                 ax.set_title(sort_name)
                 if show_legend:
                     ax.legend()
-                if np.mod(scount, 3) == 0:
+                if np.mod(scount, self._ncols) == 0:
                     ax.set_ylabel('collision accuracy')
                 else:
                     ax.tick_params(labelleft=False)
 
-                if self._nrows > 1 and (scount < self._nrows*self._ncols):
+                if (scount // self._ncols) == (self._nrows - 1):
                     ax.set_xlabel('lag (ms)')
                 else:
                     ax.tick_params(labelbottom=False)
