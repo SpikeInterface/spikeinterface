@@ -18,7 +18,7 @@ temp_folder_set = False
 
 def get_global_tmp_folder():
     """
-    Get the global path o folder.
+    Get the global path temporary folder.
     """
     global temp_folder
     global temp_folder_set
