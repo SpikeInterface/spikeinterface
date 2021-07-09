@@ -11,24 +11,26 @@ from pathlib import Path
 ########################################
 
 global temp_folder
-base = Path(tempfile.gettempdir()) / 'spikeinterface_cache'
-base.mkdir(exist_ok=True)
-temp_folder = Path(tempfile.mkdtemp(dir=base))
-
 global temp_folder_set
+base = Path(tempfile.gettempdir()) / 'spikeinterface_cache'
 temp_folder_set = False
+
 
 def get_global_tmp_folder():
     """
-    Get the global path temprary folder.
+    Get the global path o folder.
     """
     global temp_folder
+    global temp_folder_set
+    if not temp_folder_set:
+        base.mkdir(exist_ok=True)
+        temp_folder = Path(tempfile.mkdtemp(dir=base))
     return temp_folder
 
 
 def set_global_tmp_folder(folder):
     """
-    Set the global path temprary folder.
+    Set the global path temporary folder.
     """
     global temp_folder
     temp_folder = Path(folder)
@@ -38,7 +40,7 @@ def set_global_tmp_folder(folder):
 
 def is_set_global_tmp_folder():
     """
-    Check is the global path temprary folder have been manually set.
+    Check is the global path temporary folder have been manually set.
     """
     global temp_folder_set
     return temp_folder_set
@@ -46,7 +48,7 @@ def is_set_global_tmp_folder():
 
 def reset_global_tmp_folder():
     """
-    Generate a new global path temprary folder.
+    Generate a new global path temporary folder.
     """
     global temp_folder
     temp_folder = Path(tempfile.mkdtemp(dir=base))
@@ -58,16 +60,18 @@ def reset_global_tmp_folder():
 
 global dataset_folder
 dataset_folder = Path.home() / 'spikeinterface_datasets'
-dataset_folder.mkdir(exist_ok=True)
-
 global dataset_folder_set
 dataset_folder_set = False
+
 
 def get_global_dataset_folder():
     """
     Get the global dataset folder.
     """
     global dataset_folder
+    global dataset_folder_set
+    if not dataset_folder_set:
+        dataset_folder.mkdir(exist_ok=True)
     return dataset_folder
 
 
@@ -80,16 +84,10 @@ def set_global_dataset_folder(folder):
     global temp_folder_set
     dataset_folder_set = True
 
+
 def is_set_global_dataset_folder():
     """
     Check is the global path dataset folder have been manually set.
     """
     global dataset_folder_set
     return dataset_folder_set
-
-
-
-
-
-
-
