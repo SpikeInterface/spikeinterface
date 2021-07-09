@@ -11,11 +11,31 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
 from spikeinterface.core import WaveformExtractor
 from .template_tools import get_template_channel_sparsity
 
+_possible_modes = ['by_channel_local', 'by_channel_global', 'concatenated']
 
-
-_possible_modes = [ 'by_channel_local', 'by_channel_global', 'concatenated']
 
 class WaveformPrincipalComponent:
+    """
+    Class to extract principal components from a WaveformExtractor object.
+
+    Parameters
+    ----------
+    waveformextractor: WaveformExtractor
+        The WaveformExtractor object
+
+    Returns
+    -------
+    pc: WaveformPrincipalComponent
+        The WaveformPrincipalComponent object
+
+    Examples
+    --------
+    >>> we = si.extract_waveforms(recording, sorting, folder='waveforms_mearec')
+    >>> pc = st.compute_principal_components(we, load_if_exists=True, n_components=3, mode='by_channel_local')
+    >>> components = pc.get_components(unit_id=1)
+    >>> all_components = pc.get_all_components()
+
+    """
     def __init__(self, waveform_extractor):
         self.waveform_extractor = waveform_extractor
         
@@ -369,7 +389,6 @@ def _init_work_all_pc_extractor(recording, all_pcs, spike_times, spike_labels, n
     worker_ctx['all_pca'] = all_pca
     
     return worker_ctx
-
 
 
 def compute_principal_components(waveform_extractor, load_if_exists=False, 

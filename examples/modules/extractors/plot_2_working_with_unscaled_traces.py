@@ -8,8 +8,6 @@ module.
 
 '''
 
-#TODO
-
 import numpy as np
 import matplotlib.pyplot as plt
 import spikeinterface.extractors as se
@@ -20,7 +18,7 @@ import spikeinterface.extractors as se
 # of 50 bits
 
 sampling_frequency = 30000
-traces = 512 + 50 * np.random.randn(10*sampling_frequency, 4)
+traces = 512 + 50 * np.random.randn(10 * sampling_frequency, 4)
 traces = traces.astype("uint16")
 
 ###############################################################################
@@ -38,7 +36,7 @@ print(f"Traces dtype: {recording.get_dtype()}")
 # (where 10 is the number of bits of our ADC)
 
 gain = 0.1
-offset = -2**(10 - 1) * gain
+offset = -2 ** (10 - 1) * gain
 
 ###############################################################################
 # We are now ready to set gains and offsets to our extractor. We also have to set the :code:`has_unscaled` field to
@@ -48,12 +46,11 @@ recording.set_channel_gains(gain)
 recording.set_channel_offsets(offset)
 
 ###############################################################################
-# Internally this gains and offsets are handle with properties
+#  Internally this gains and offsets are handle with properties
 # So the gain could be "by channel".
 
 print(recording.get_property('gain_to_uV'))
 print(recording.get_property('offset_to_uV'))
-
 
 ###############################################################################
 # With gains and offset information, we can retrieve traces both in their unscaled (raw) type, and in their scaled

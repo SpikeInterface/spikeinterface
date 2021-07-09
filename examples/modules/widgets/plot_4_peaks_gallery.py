@@ -2,10 +2,10 @@
 Peaks Widgets Gallery
 =====================
 
-Some wodgets are usefull before sorting and works with "peaks" given by detect_peaks()
+Some widgets are useful before sorting and works with "peaks" given by detect_peaks()
 function.
 
-They are usefull to check drift before running sorters.
+They are useful to check drift before running sorters.
 
 '''
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ import spikeinterface.full as si
 
 ##############################################################################
 # First, let's download a simulated dataset
-#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+# from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 rec, sorting = si.read_mearec(local_path)
