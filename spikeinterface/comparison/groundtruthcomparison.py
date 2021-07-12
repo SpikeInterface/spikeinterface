@@ -271,7 +271,7 @@ class GroundTruthComparison(BaseTwoSorterComparison):
         """
         Return units list of "well detected units" from tested_sorting.
 
-        "well detected units" ara defined as units in tested that
+        "well detected units" are defined as units in tested that
         are well matched to GT units.
 
         Parameters
@@ -293,6 +293,33 @@ class GroundTruthComparison(BaseTwoSorterComparison):
                     well_detected_ids.append(u2)
 
         return well_detected_ids
+
+    def get_well_matched_units(self, well_detected_score=None):
+        """
+        Return units list of "well matched units" from gt_sorting.
+
+        "well matched units" are defined as units in gt that
+        are well matched to units in the tested sorting
+
+        Parameters
+        ----------
+        well_detected_score: float (default 0.8)
+            The agreement score above which tested units
+            are counted as "well detected".
+        """
+        if well_detected_score is not None:
+            self.well_detected_score = well_detected_score
+
+        matched_units1 = self.hungarian_match_21
+        well_matched_ids = []
+        for u1 in self.unit1_ids:
+            if u1 in list(matched_units1.values):
+                u2 = self.hungarian_match_12[u1]
+                score = self.agreement_scores.at[u1, u2]
+                if score >= self.well_detected_score:
+                    well_matched_ids.append(u1)
+
+        return well_matched_ids
 
     def count_well_detected_units(self, well_detected_score):
         """

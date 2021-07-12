@@ -28,11 +28,12 @@ class ConnectivityComparisonWidget(BaseWidget):
     W: ConfusionMatrixWidget
         The output widget
     """
-    def __init__(self, gt_comparison, window_ms=100.0, bin_ms=1.0, figure=None, ax=None):
+    def __init__(self, gt_comparison, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._gtcomp = gt_comparison
         self._window_ms = window_ms
         self._bin_ms = bin_ms
+        self._well_detected_score = well_detected_score
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=True)
         self.name = 'ConnectivityComparison'
         self.correlograms = {}
@@ -52,21 +53,25 @@ class ConnectivityComparisonWidget(BaseWidget):
         correlograms_1, bins = compute_correlograms(self._gtcomp.sorting1, **self.compute_kwargs)        
         correlograms_2, bins = compute_correlograms(self._gtcomp.sorting2, **self.compute_kwargs)        
 
-        best_matches = self._gtcomp.best_match_12.values
+        matched_units = self._gtcomp.get_well_matched_units(self._well_detected_score)
+        best_matches = self._gtcomp.best_match_12[matched_units].values
 
-        valid_idx = best_matches[best_matches > -1]
+        good_idx = np.where(np.in1d(self._gtcomp.unit1_ids, matched_units))[0]
+        correlograms_1 = correlograms_1[good_idx, :, :]
+        self.correlograms['true'] = correlograms_1[:, good_idx, :]
 
-        correlograms_1 = correlograms_1[best_matches > -1, :, :]
-        self.correlograms['true'] = correlograms_1[:, best_matches > -1, :]
-
-        correlograms_2 = correlograms_2[valid_idx, :, :]
-        self.correlograms['estimated'] = correlograms_2[:, valid_idx, :]
+        good_idx = best_matches
+        correlograms_2 = correlograms_2[good_idx, :, :]
+        self.correlograms['estimated'] = correlograms_2[:, good_idx, :]
 
         self.nb_cells = self.correlograms['true'].shape[0]
         self.nb_timesteps = self.correlograms['true'].shape[2]
 
-    def error(self):
-        return np.linalg.norm(self.correlograms['true'] - self.correlograms['estimated'])
+    def error(self, window_ms=None):
+        if window_ms is None:
+            return np.linalg.norm(self.correlograms['true'] - self.correlograms['estimated'])        
+        else:   
+            return np.linalg.norm(self.correlograms['true'] - self.correlograms['estimated'])
 
     def autocorr(self):
         res = {}
