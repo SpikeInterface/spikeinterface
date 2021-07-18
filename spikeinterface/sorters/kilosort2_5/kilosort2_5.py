@@ -38,6 +38,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     sorter_name: str = 'kilosort2_5'
     kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
     requires_locations = False
+    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,

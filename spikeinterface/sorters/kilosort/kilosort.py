@@ -36,6 +36,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
     
     requires_locations = False
+    docker_requires_gpu = True
     
     _default_params = {
         'detect_threshold': 6,
