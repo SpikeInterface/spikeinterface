@@ -186,7 +186,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             cmd = 'pip install --upgrade --force MEArec'
             commands.append(cmd)
 
-            cmd = 'pip install --upgrade --force https://github.com/samuelgarcia/spikeinterface/archive/master.zip'
+            cmd = 'pip install --upgrade --force https://github.com/SpikeInterface/spikeinterface/archive/master.zip'
             commands.append(cmd)
 
             cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
