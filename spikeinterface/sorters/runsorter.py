@@ -215,9 +215,9 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     extra_kwargs = {}
     if SorterClass.docker_requires_gpu:
         extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
-    if SorterClass.docker_requires_gpu:
-        extra_kwargs["entrypoint"] = "bin/bash"
 
+    if verbose:
+        print(f"Running sorter in {docker_image}")
     res = client.containers.run(docker_image, command=command, volumes=volumes, **extra_kwargs)
 
     # clean useless files
