@@ -108,8 +108,8 @@ Kilosort3
 * Installation needs Matlab and cudatoolkit::
 
       git clone https://github.com/MouseLand/Kilosort
-      # provide installation path by setting the KILOSORT2_5_PATH environment variable
-      # or using Kilosort3Sorter.set_kilosort2_path()
+      # provide installation path by setting the KILOSORT3_PATH environment variable
+      # or using Kilosort3Sorter.set_kilosort3_path()
 
 * See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
