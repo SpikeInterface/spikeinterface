@@ -46,7 +46,7 @@ from .sortingperformance import plot_sorting_performance
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
 # connectivity comparison
-from .connectivitycomp import ConnectivityComparisonWidget
+from .connectivitycomp import ConnectivityComparisonWidget, StudyConnectivityComparisonWidget
 
 # study comparison
 from .studycompstats import StudyComparisonStatisticsWidget

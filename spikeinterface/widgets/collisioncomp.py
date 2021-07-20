@@ -213,21 +213,22 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         self.pair_names = self.pair_names[order]
 
 
-    def get_good_only(self, well_detected_score=0.8):
+    def get_good_only(self, well_detected_score=0.9):
 
-        matched_units = self.comp.get_well_matched_units(well_detected_score)
-        valid_indices = []
-        for count, pair in enumerate(self.pair_names):
-            u1, u2 = pair.split(' ')
-            if u1 in matched_units and u2 in matched_units:
-                valid_indices += [count]
-        valid_indices = np.array(valid_indices)
+        # matched_units = self.comp.get_well_matched_units(well_detected_score)
+        # valid_indices = []
+        # for count, pair in enumerate(self.pair_names):
+        #    u1, u2 = pair.split(' ')
+        #    if u1 in matched_units and u2 in matched_units:
+        #        valid_indices += [count]
+        # valid_indices = np.array(valid_indices)
 
-        #valid_indices = np.where(self.recall_scores.sum(1) > 0)[0]
+        valid_indices = np.where(self.recall_scores.sum(1) > 0)[0]
         return self.similarities[valid_indices], self.recall_scores[valid_indices], self.pair_names[valid_indices]
 
     def plot(self, good_only=False):
         self._do_plot(good_only)
+
 
     def _do_plot(self, good_only):
         
