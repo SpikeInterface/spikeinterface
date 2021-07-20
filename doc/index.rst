@@ -42,26 +42,27 @@ With SpikeInterface, users can:
 
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
    
-   overview
-   installation
-   getting_started/plot_getting_started.rst
-   module_core
-   module_extractors
-   module_sorter
-   module_toolkit
-   module_comparison
-   module_exporters
-   module_sorting_components
-   modules/index.rst
-   supported_formats_and_sorters
-   install_sorters
-   contribute
-   api
-   whatisnew
-   authors
+    overview
+    installation
+    getting_started/plot_getting_started.rst
+    module_core
+    module_extractors
+    module_sorter
+    module_toolkit
+    module_comparison
+    module_exporters
+    module_sorting_components
+    modules/index.rst
+    supported_formats_and_sorters
+    install_sorters
+    contribute
+    api
+    whatisnew
+    authors
+
 
 For more information, please have a look at:
 

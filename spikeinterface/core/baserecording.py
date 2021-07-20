@@ -167,10 +167,8 @@ class BaseRecording(BaseExtractor):
         # load probe
         if (folder / 'probe.json').is_file():
             probegroup = read_probeinterface(folder / 'probe.json')
-            other = self.set_probegroup(probegroup)
-            return other
-        else:
-            return self
+            self.set_probegroup(probegroup, inplace=True)
+        return self
 
     def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """
