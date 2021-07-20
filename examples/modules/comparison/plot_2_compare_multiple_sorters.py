@@ -39,7 +39,7 @@ sorting_TDC = ss.run_tridesclous(recording)
 
 #############################################################################
 # Compare multiple spike sorter outputs
-# -------------------------------------------
+# -------------------------------------
 
 mcmp = sc.compare_multiple_sorters(sorting_list=[sorting_MS4, sorting_HS, sorting_TDC],
                                    name_list=['MS4', 'HS', 'TDC'], verbose=True)
@@ -70,7 +70,7 @@ sw.plot_multicomp_graph(mcmp)
 
 #############################################################################
 # Consensus-based method
-# ---------------------------
+# ----------------------
 #  
 # We can pull the units in agreement with different sorters using the
 # :code:`get_agreement_sorting` method. This allows to make spike sorting more

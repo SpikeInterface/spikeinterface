@@ -1,5 +1,5 @@
-Run any sorter
-==============
+sorter module
+=============
 
 
 `spikeinterface.sorters` is the module ....

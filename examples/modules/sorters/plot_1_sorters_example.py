@@ -19,8 +19,8 @@ print(sorting_true)
 
 ##############################################################################
 # Check available sorters
-# --------------------------
-# 
+# -----------------------
+#
 
 pprint(ss.available_sorters())
 
@@ -62,7 +62,7 @@ print('Units found with threshold = 8:', sorting_TDC_8.get_unit_ids())
 
 ##############################################################################
 # Run other sorters
-# ------------------
+# -----------------
 # 
 # Some sorters (kilosort, ironclust, hdsort, ...) need to manually set the path to the source folder
 

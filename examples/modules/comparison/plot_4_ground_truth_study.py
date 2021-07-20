@@ -36,7 +36,7 @@ from spikeinterface.comparison import GroundTruthStudy
 
 ##############################################################################
 # Setup study folder and run all sorters
-# ------------------------------------------------------
+# --------------------------------------
 # 
 # We first generate the folder.
 # this can take some time because recordings are copied inside the folder.
@@ -71,7 +71,7 @@ study.copy_sortings()
 
 ##############################################################################
 # Collect comparisons
-# --------------------------------
+# -------------------
 #  
 # You can collect in one shot all results and run the
 # GroundTruthComparison on it.
@@ -95,7 +95,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
 
 ##############################################################################
 # Collect synthetic dataframes and display
-# -------------------------------------------------------------
+# ----------------------------------------
 # 
 # As shown previously, the performance is returned as a pandas dataframe.
 # The :code:`aggregate_performances_table` function, gathers all the outputs in
@@ -114,7 +114,7 @@ print(dataframes['run_times'])
 
 ##############################################################################
 # Easy plot with seaborn
-# ------------------------
+# ----------------------
 #  
 # Seaborn allows to easily plot pandas dataframes. Let’s see some
 # examples.

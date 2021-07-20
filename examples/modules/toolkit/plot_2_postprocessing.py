@@ -32,7 +32,7 @@ print(sorting)
 
 ##############################################################################
 # Compute spike waveforms
-# --------------------------
+# -----------------------
 # 
 # Waveforms are extracted with the WaveformExtractor or directly with the
 # :code:`extract_waveforms` function (which returns a
@@ -58,7 +58,7 @@ for i, unit_id in enumerate(sorting.unit_ids[:3]):
 
 ##############################################################################
 # Compute unit templates
-# --------------------------
+# ----------------------
 #  
 # Similarly to waveforms, templates - average waveforms - can be easily retrieved
 # from the :code:`WaveformExtractor` object:
@@ -71,7 +71,7 @@ for i, unit_id in enumerate(sorting.unit_ids[:3]):
 
 ##############################################################################
 # Compute unit maximum channel
-# -------------------------------
+# ----------------------------
 #  
 # In a similar way, one can get the recording channel with the 'extremum' signal
 # (minimum or maximum). The code:`get_template_extremum_channel` outputs a
