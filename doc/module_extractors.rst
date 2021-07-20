@@ -1,5 +1,6 @@
-Extractors : read many formats
-==============================
+extractors module
+=================
+
 
 overview
 --------

@@ -50,7 +50,7 @@ With SpikeInterface, users can:
     getting_started/plot_getting_started.rst
     module_core
     module_extractors
-    module_sorter
+    module_sorters
     module_toolkit
     module_comparison
     module_exporters
