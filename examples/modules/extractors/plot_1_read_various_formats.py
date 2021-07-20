@@ -1,65 +1,63 @@
 '''
-Read various format
+Read various format into SI
 ============================
 
-spikeinterface can read various format of "recording" (traces) and "sorting" (spiketrain)
+:code:`spikeinterface` can read various format of "recording" (traces) and "sorting" (spike train) data.
 
-Internally, to read diffrents format, spikeinterface either use:
-  * `neo <https://github.com/NeuralEnsemble/python-neo>`_ 
+Internally, to read differents formats, :code:`spikeinterface` either uses:
+  * a wrapper to the `neo <https://github.com/NeuralEnsemble/python-neo>`_ rawio classes
   * or a direct implementation
 
 Note that:
 
-  * some format contain "recording" or "sorting " or "both"
-  * some format are file based (mearec, nwb ...) some other are folder based (spikeglx, openephys, ...)
+  * file formats contain a "recording", a "sorting",  or "both"
+  * file formats can be file-based (NWB, ...)  or folder based (SpikeGLX, OpenEphys, ...)
 
+In this example we demonstrate how to read different file formats into SI
 '''
 
-
-import numpy as np
 import matplotlib.pyplot as plt
-import spikeinterface.extractors as se
 
 import spikeinterface as si
 import spikeinterface.extractors as se
 
-
 ##############################################################################
-# Lets download some dataset in diferents formats:
-#   * mearec : a simulator format is hdf5 based. contain recording and sorting. file based
-#   * spike2: file from spike2 device. contain recording only. file based
+# Let's download some datasets in differents formats from the
+# `ephy_testing_data <https://gin.g-node.org/NeuralEnsemble/ephy_testing_data>`_ repo:
+#   * MEArec: an simulator format which is hdf5-based. It contains both a "recording" and a "sorting" in the same file.
+#   * Spike2: file from spike2 devices. It contains "recording" information only.
 
 
 spike2_file_path = si.download_dataset(remote_path='spike2/130322-1LY.smr')
 print(spike2_file_path)
 
-
 mearec_folder_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 print(mearec_folder_path)
 
-
 ##############################################################################
-# Read spike2 give one object
+# Now that we have downloaded the files ww need let's load them into SI.
 #
-#  Note that internally this file contain 2 stream ('0' and '1') so we need to specify which stream.
+# The :code:`read_spike2` function returns one object, a :code:`RecordingExtractor`.
+#
+# Note that internally this file contains 2 data streams ('0' and '1'), so we need to specify which one we
+# want to retrieve ('0' in our case):
 
 recording = se.read_spike2(spike2_file_path, stream_id='0')
 print(recording)
 print(type(recording))
 print(isinstance(recording, si.BaseRecording))
 
-
 ##############################################################################
-# This equivalent to do this
+# The :code:`read_spike2` function is equivalent to instantiating a
+# :code:`Spike2RecordingExtractor` object:
 #
-# The "old" (<=0.12) spikeinterface API use to have this "class approach reading"
 
 recording = se.Spike2RecordingExtractor(spike2_file_path, stream_id='0')
 print(recording)
 
-
 ##############################################################################
-# Read MEArec give 2 object
+# The :code:`read_mearec` function returns two objects,
+# a :code:`RecordingExtractor` and a :code:`SortingExtractor`:
 
 recording, sorting = se.read_mearec(mearec_folder_path)
 print(recording)
@@ -68,15 +66,15 @@ print()
 print(sorting)
 print(type(sorting))
 
-
 ##############################################################################
-# This equivalent to do this
+#  The :code:`read_mearec` function is equivalent to:
 
 recording = se.MEArecRecordingExtractor(mearec_folder_path)
 sorting = se.MEArecSortingExtractor(mearec_folder_path)
 
 ##############################################################################
-# recording and sorting object can be plot quickly with the widgets submodule
+# SI objects (:code:`RecordingExtractor` and :code:`SortingExtractor`) object
+# can be plotted quickly with the :code:`widgets` submodule:
 
 import spikeinterface.widgets as sw
 
@@ -84,8 +82,3 @@ w_ts = sw.plot_timeseries(recording, time_range=(0, 5))
 w_rs = sw.plot_rasters(sorting, time_range=(0, 5))
 
 plt.show()
-
-
-
-
-

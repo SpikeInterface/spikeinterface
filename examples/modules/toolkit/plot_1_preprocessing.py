@@ -71,7 +71,7 @@ recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max
 
 ##############################################################################
 # Change reference
-# -------------------
+# -----------------
 # 
 # In many cases, before spike sorting, it is wise to re-reference the
 # signals to reduce the common-mode noise from the recordings.
@@ -106,12 +106,12 @@ ax2.plot(trace0_groups)
 
 
 ##############################################################################
-# Remove stimulation artifacts
-# -------------------------------
+# Remove stimulation artifacts
+# ----------------------------
 #  
-# In some applications, electrodes are used to electrically stimulate the
-# tissue, generating a large artifact. In :code:`spiketoolkit`, the artifact
-# can be zeroed-out using the :code:`remove_artifact` function.
+# In some applications, electrodes are used to electrically stimulate the
+# tissue, generating a large artifact. In :code:`spiketoolkit`, the artifact
+# can be zeroed-out using the :code:`remove_artifact` function.
 
 
 # create dummy stimulation triggers per segment
@@ -132,7 +132,7 @@ ax3.plot(trace0)
 ax3.plot(trace0_rm)
 
 ##############################################################################
-# You can list the available preprocessors with:
+# You can list the available preprocessors with:
 
 from pprint import pprint
 pprint(st.preprocesser_dict)
