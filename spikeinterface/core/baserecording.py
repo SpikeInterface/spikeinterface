@@ -69,7 +69,7 @@ class BaseRecording(BaseExtractor):
     def get_dtype(self):
         return self._dtype
 
-    def get_num_samples(self, segment_index: Union[int, None]):
+    def get_num_samples(self, segment_index=None):
         segment_index = self._check_segment_index(segment_index)
         return self._recording_segments[segment_index].get_num_samples()
 
@@ -251,6 +251,7 @@ class BaseRecording(BaseExtractor):
             raise ValueError('The given Probe have "device_channel_indices" that do not match channel count')
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
+        arr['device_channel_indices'] = np.arange(arr.size, dtype='int64')
 
         # create recording : channel slice or clone or self
         if in_place:
