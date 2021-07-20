@@ -1,7 +1,17 @@
+import shutil
+from pathlib import Path
+
 import pytest
 import numpy as np
 
+import probeinterface as pi
+
 from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
+
+def _clean_all():
+    cache_folder = './my_cache_folder'
+    if Path(cache_folder).exists():
+        shutil.rmtree(cache_folder)
 
 
 def test_ChannelSliceRecording():
@@ -40,7 +50,25 @@ def test_ChannelSliceRecording():
     assert np.all(traces[:, 0] == 2)
     assert np.all(traces[:, 1] == 0)
     
+    # with probe and after save()
+    probe = pi.generate_linear_probe(num_elec=num_chan)
+    probe.set_device_channel_indices(np.arange(num_chan))
+    rec_p = rec.set_probe(probe)
+    rec_sliced3 = ChannelSliceRecording(rec_p, channel_ids=[0, 2], renamed_channel_ids=[3,4])
+    probe3 = rec_sliced3.get_probe()
+    locations3 = probe3.contact_positions
+    cache_folder = Path('./my_cache_folder')
+    folder = cache_folder / 'sliced_recording'
+    rec_saved = rec_sliced3.save(folder=folder, chunk_size=10, n_jobs=2)
+    probe = rec_saved.get_probe()
+    assert np.array_equal(locations3, rec_saved.get_channel_locations())
+    traces3 = rec_saved.get_traces(segment_index=0)
+    assert np.all(traces3[:, 0] == 0)
+    assert np.all(traces3[:, 1] == 2)
+
+    
 
 if __name__ == '__main__':
+    _clean_all()
     test_ChannelSliceRecording()
 

@@ -39,9 +39,7 @@ def test_BaseRecording():
     for i in range(num_seg):
         a = np.memmap(files_path[i], dtype=dtype, mode='w+', shape=(num_samples, num_chan))
         a[:] = np.random.randn(*a.shape).astype(dtype)
-
     rec = BinaryRecordingExtractor(files_path, sampling_frequency, num_chan, dtype)
-    print(rec)
     
     assert rec.get_num_segments() == 2
     assert rec.get_num_channels() == 3
@@ -52,6 +50,8 @@ def test_BaseRecording():
     # annotations / properties
     rec.annotate(yep='yop')
     assert rec.get_annotation('yep') == 'yop'
+    
+    rec.set_channel_groups([0,0,1])
     
     rec.set_property('quality', [1., 3.3, np.nan])
     values = rec.get_property('quality')
@@ -88,6 +88,14 @@ def test_BaseRecording():
     rec.save(format='binary', folder=folder)
     rec2 = BaseExtractor.load_from_folder(folder)
     assert 'quality' in rec2.get_property_keys()
+    values = rec2.get_property('quality')
+    assert values[0] == 1.
+    assert values[1] == 3.3
+    assert np.isnan(values[2])
+    
+    groups = rec2.get_channel_groups()
+    assert np.array_equal(groups, [0,0,1])
+    
     # but also possible
     rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
     
@@ -99,7 +107,9 @@ def test_BaseRecording():
     assert np.array_equal(traces4, traces)
     
     # cache joblib several jobs
-    rec.save(name='simple_recording_2', chunk_size=10, n_jobs=4)
+    folder = cache_folder / 'simple_recording2' 
+    rec2 = rec.save(folder=folder, chunk_size=10, n_jobs=4)
+    traces2 = rec2.get_traces(segment_index=0)
     
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
@@ -108,14 +118,25 @@ def test_BaseRecording():
     probe.set_device_channel_indices([2, -1, 0])
     probe.create_auto_shape()
     
-    rec2 = rec.set_probe(probe, group_mode='by_shank')
-    rec2 = rec.set_probe(probe, group_mode='by_probe')
-    positions2 = rec2.get_channel_locations()
+    rec_p = rec.set_probe(probe, group_mode='by_shank')
+    rec_p = rec.set_probe(probe, group_mode='by_probe')
+    positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.], [0., 0.]])
     
-    probe2 = rec2.get_probe()
+    probe2 = rec_p.get_probe()
     positions3 = probe2.contact_positions
     assert np.array_equal(positions2, positions3)
+    
+    assert np.array_equal(probe2.device_channel_indices, [0,1])
+
+    # test save with probe
+    folder = cache_folder / 'simple_recording3' 
+    rec2 = rec_p.save(folder=folder, chunk_size=10, n_jobs=4)
+    traces2 = rec2.get_traces(segment_index=0)
+    probe2 = rec2.get_probe()
+    assert np.array_equal(probe2.contact_positions, [[0, 30.], [0., 0.]])
+    positions2 = rec_p.get_channel_locations()
+    assert np.array_equal(positions2, [[0, 30.], [0., 0.]])
     
 
     # from probeinterface.plotting import plot_probe_group, plot_probe
@@ -129,7 +150,7 @@ def test_BaseRecording():
     traces = np.zeros((1000, 5), dtype='int16')
     rec_int16 = NumpyRecording([traces], sampling_frequency)
     assert rec_int16.get_dtype() == 'int16'
-    print(rec_int16)
+
     traces_int16 = rec_int16.get_traces()
     assert traces_int16.dtype == 'int16'
     # return_scaled raise error when no gain_to_uV/offset_to_uV properties
