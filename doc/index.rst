@@ -25,10 +25,11 @@ With SpikeInterface, users can:
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
 - run many popular, semi-automatic spike sorters.
-- post-process sorted datasets.
+- post-process sorted datasets
 - compare and benchmark spike sorting outputs.
-- validate and curate spike sorting outputs.
+- compute quliy metrics to validate and curate spike sorting outputs
 - visualize recordings and spike sorting outputs.
+- export report and export to phy with one line
 
 **NEWS**
 
@@ -41,16 +42,20 @@ With SpikeInterface, users can:
 
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
    
    overview
    installation
-   supported
-   sortersinfo
+   module_core
+   module_sorter
+   module_toolkit
+   module_comparison
+   module_sorting_components
    getting_started/plot_getting_started.rst
    modules/index.rst
-   sorters_comparison
+   supported_formats_and_sorters
+   install_sorters
    contribute
    api
    whatisnew
