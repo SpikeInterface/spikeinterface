@@ -1,6 +1,8 @@
 pytest
 
-datalad
+# recent datalad need a too recent version for git-annex
+# so we use an old one here
+datalad==0.14.4
 
 ## install sorters ##
 # python based only

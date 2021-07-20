@@ -22,6 +22,8 @@ Major release:
   * contain all subpackages
   * transpose get_trace() shape
   * handle multi segment
+  * have WaveformExtractor object
+  * have Event object
 
 Version 0.12.0
 ---------------
