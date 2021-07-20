@@ -129,17 +129,21 @@ for i, unit_id in enumerate(sorting.unit_ids):
 ##############################################################################
 # Export sorted data to Phy for manual curation
 # ---------------------------------------------
-#  
+# 
+# @alessio : please remove this cell when you read it
+#  export_to_phy is not anymore in toolkit but in exporter
+# We won't make a tutorial for it because it is super slow. Only statics docs.
 # Finally, it is common to visualize and manually curate the data after
 # spike sorting. In order to do so, we interface with the Phy GUI
 # (https://phy-contrib.readthedocs.io/en/latest/template-gui/).
 #  
 # First, we need to export the data to the phy format:
 
-output_folder = 'mearec_exported_to_phy'
-st.export_to_phy(recording, sorting, output_folder, we,
-                 compute_pc_features=False, compute_amplitudes=True,
-                 remove_if_exists=True)
+
+# output_folder = 'mearec_exported_to_phy'
+# st.export_to_phy(recording, sorting, output_folder, we,
+#                  compute_pc_features=False, compute_amplitudes=True,
+#                  remove_if_exists=True)
 
 ##############################################################################
 # To run phy you can then run (from terminal):

@@ -148,7 +148,7 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = SpikeGadgetsRecordingExtractor
-    downloads = ['spike2/130322-1LY.smr']
+    downloads = ['spikegadgets']
     entities = [
         ('spikegadgets/20210225_em8_minirec2_ac.rec',{'stream_id' : 'ECU'} ),
         ('spikegadgets/20210225_em8_minirec2_ac.rec',{'stream_id' : 'trodes'} ),
