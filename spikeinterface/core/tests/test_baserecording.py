@@ -99,13 +99,14 @@ def test_BaseRecording():
     # but also possible
     rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
     
+    
     # cache to memory
     rec4 = rec3.save(format='memory')
     
     traces4 = rec4.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces4, traces)
-    
+
     # cache joblib several jobs
     folder = cache_folder / 'simple_recording2' 
     rec2 = rec.save(folder=folder, chunk_size=10, n_jobs=4)
