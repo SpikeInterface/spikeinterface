@@ -276,7 +276,6 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype)
     arr[start_frame:end_frame, :] = traces
-    # ~ print('yep')
 
 
 def make_shared_array(shape, dtype):
@@ -345,7 +344,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
     # use executor (loop or workers)
     func = _write_memory_chunk
     init_func = _init_memory_worker
-    if n_jobs > 1:
+    if n_jobs >1:
         init_args = (recording.to_dict(), None, shm_names, shapes, dtype)
     else:
         init_args = (recording.to_dict(), arrays, None, None, dtype)
