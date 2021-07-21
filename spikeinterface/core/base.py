@@ -458,7 +458,7 @@ class BaseExtractor:
                     key = prop_file.stem
                     extractor.set_property(key, values)
 
-            #extractor = extractor._after_load(folder)
+            extractor = extractor._after_load(folder)
             return extractor
 
         else:
