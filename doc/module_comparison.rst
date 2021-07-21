@@ -1,5 +1,5 @@
-Spike sorting comparison methods
-================================
+comparison module
+=================
 
 
 SpikeInterface has a comparison module that can be used for three distinct use cases:

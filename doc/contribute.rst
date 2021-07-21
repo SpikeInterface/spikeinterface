@@ -7,6 +7,6 @@ format, a new sorted file format, or a new spike sorting algorithm.
 .. toctree::
    :maxdepth: 1
 
-   recording_extractor
-   sorting_extractor
-   spike_sorter
+   implement_recording_extractor
+   implement_sorting_extractor
+   implement_spike_sorter

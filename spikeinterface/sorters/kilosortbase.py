@@ -27,7 +27,7 @@ class KilosortBase:
             shell_cmd = f'''
                         {disk_move}
                         cd {output_folder}
-                        matlab -nosplash -wait -log -r {cls.sorter_name}2_master
+                        matlab -nosplash -wait -log -r {cls.sorter_name}_master
                     '''
         else:
             shell_cmd = f'''

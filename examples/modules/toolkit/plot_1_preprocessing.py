@@ -21,7 +21,7 @@ recording, sorting = se.toy_example(num_channels=4, duration=10, seed=0)
 
 ##############################################################################
 # Apply filters
-# -----------------
+# -------------
 #  
 # Now apply a bandpass filter and a notch filter (separately) to the
 # recording extractor. Filters are also RecordingExtractor objects.
