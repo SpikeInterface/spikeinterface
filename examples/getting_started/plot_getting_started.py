@@ -1,6 +1,6 @@
 """
-Getting started with SpikeInterface
-===================================
+Getting started tutorial
+========================
 
 In this introductory example, you will see how to use the :code:`spikeinterface` to perform a full electrophysiology analysis.
 We will first create some simulated data, and we will then perform some pre-processing, run a couple of spike sorting

@@ -146,6 +146,16 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = SpikeGadgetsRecordingExtractor
+    downloads = ['spikegadgets']
+    entities = [
+        ('spikegadgets/20210225_em8_minirec2_ac.rec',{'stream_id' : 'ECU'} ),
+        ('spikegadgets/20210225_em8_minirec2_ac.rec',{'stream_id' : 'trodes'} ),
+        'spikegadgets/W122_06_09_2019_1_fromSD.rec'
+    ]
+
+
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
     #~ test = MearecSortingTest()
@@ -162,7 +172,8 @@ if __name__ == '__main__':
     # test = KiloSortSortingTest()
     #~ test = Spike2RecordingTest()
     #~ test = CedRecordingTest()
-    test = MaxwellRecordingTest()
+    #~ test = MaxwellRecordingTest()
+    test = SpikeGadgetsRecordingTest()
     
     test.setUp()
     test.test_open()
