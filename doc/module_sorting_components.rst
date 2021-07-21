@@ -1,5 +1,5 @@
-Sorting components
-==================
+sorting_components module
+=========================
 
 Overview and ideas.
 

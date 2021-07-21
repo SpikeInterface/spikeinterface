@@ -48,13 +48,7 @@ With SpikeInterface, users can:
     overview
     installation
     getting_started/plot_getting_started.rst
-    module_core
-    module_extractors
-    module_sorter
-    module_toolkit
-    module_comparison
-    module_exporters
-    module_sorting_components
+    modules_doc
     modules/index.rst
     supported_formats_and_sorters
     install_sorters
