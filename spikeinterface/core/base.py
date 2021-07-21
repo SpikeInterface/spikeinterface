@@ -57,7 +57,7 @@ class BaseExtractor:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
 
-    def _check_segment_index(self, segment_index: Union[int, None]) -> int:
+    def _check_segment_index(self, segment_index: Union[int, None] = None) -> int:
         if segment_index is None:
             if self.get_num_segments() == 1:
                 return 0
@@ -130,6 +130,9 @@ class BaseExtractor:
             v = deepcopy(v)
         return v
 
+    def get_annotation_keys(self):
+        return self._annotations.keys()
+
     def set_property(self, key, values, ids=None):
         """
         Set property vector:
@@ -193,7 +196,7 @@ class BaseExtractor:
         if only_main:
             ann_keys = BaseExtractor._main_annotations
             prop_keys = BaseExtractor._main_properties
-            feat_keys = BaseExtractor._main_features
+            # feat_keys = BaseExtractor._main_features
         else:
             ann_keys = self._annotations.keys()
             prop_keys = self._properties.keys()
@@ -375,7 +378,10 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=False, include_features=False, relative_to=relative_to)
+        dump_dict = self.to_dict(include_annotations=True,
+                                 include_properties=False,
+                                 include_features=False,
+                                 relative_to=relative_to)
         file_path = self._get_file_path(file_path, ['.json'])
         file_path.write_text(
             json.dumps(check_json(dump_dict), indent=4),
@@ -400,7 +406,9 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=include_properties, include_features=include_features,
+        dump_dict = self.to_dict(include_annotations=True,
+                                 include_properties=False,
+                                 include_features=False,
                                  relative_to=relative_to)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
 
@@ -450,7 +458,7 @@ class BaseExtractor:
                     key = prop_file.stem
                     extractor.set_property(key, values)
 
-            extractor = extractor._after_load(folder)
+            #extractor = extractor._after_load(folder)
             return extractor
 
         else:
@@ -671,6 +679,7 @@ def _load_extractor_from_dict(dic):
 
     extractor._annotations.update(dic['annotations'])
     for k, v in dic['properties'].items():
+        # print(k, v)
         extractor.set_property(k, v)
     # TODO features
 

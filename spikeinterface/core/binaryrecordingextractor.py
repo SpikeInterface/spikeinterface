@@ -11,6 +11,37 @@ from .core_tools import read_binary_recording, write_binary_recording
 
 
 class BinaryRecordingExtractor(BaseRecording):
+    """
+    RecordingExtractor for a binary format
+
+    Parameters
+    ----------
+    files_path: str or Path or list
+        Path to the binary file
+    sampling_frequency: float
+        The sampling frequncy
+    num_chan: int
+        Number of channels
+    dtype: str or dtype
+        The dtype of the binary file
+    time_axis: int
+        The axis of the time dimension (default 0: F order)
+    channel_ids: list (optional)
+        A list of channel ids
+    file_offset: int (optional)
+        Number of bytes in the file to offset by during memmap instantiation.
+    gain_to_uV: float or array-like (optional)
+        The gain to apply to the traces
+    offset_to_uV: float or array-like
+        The offset to apply to the traces
+    is_filtered: bool
+        If True, the recording is assumed to be filtered
+
+    Returns
+    -------
+    recording: BinaryRecordingExtractor
+        The recording Extractor
+    """
     extractor_name = 'BinaryRecordingExtractor'
     has_default_locations = False
     installed = True  # check at class level if installed or not
@@ -19,7 +50,7 @@ class BinaryRecordingExtractor(BaseRecording):
     installation_mesg = ""  # error message when not installed
 
     def __init__(self, files_path, sampling_frequency, num_chan, dtype, channel_ids=None,
-                 time_axis=0, offset=0, gain=None):
+                 time_axis=0, file_offset=0, gain_to_uV=None, offset_to_uV=None, is_filtered=False):
 
         if channel_ids is None:
             channel_ids = list(range(num_chan))
@@ -38,13 +69,23 @@ class BinaryRecordingExtractor(BaseRecording):
         dtype = np.dtype(dtype)
         
         for datfile in datfiles:
-            rec_segment = BinaryRecordingSegment(datfile, num_chan, dtype, time_axis, offset, gain)
+            rec_segment = BinaryRecordingSegment(datfile, num_chan, dtype, time_axis, file_offset)
             self.add_recording_segment(rec_segment)
+
+        self.annotate(is_filtered=is_filtered)
+
+        if gain_to_uV is not None:
+            self.set_channel_gains(gain_to_uV)
+
+        if offset_to_uV is not None:
+            self.set_channel_offsets(offset_to_uV)
 
         self._kwargs = {'files_path': [str(e.absolute()) for e in datfiles],
                         'sampling_frequency': sampling_frequency,
                         'num_chan': num_chan, 'dtype': dtype.str,
-                        'time_axis': time_axis, 'offset': offset, 'gain': gain,
+                        'time_axis': time_axis, 'file_offset': file_offset,
+                        'gain_to_uV': gain_to_uV, 'offset_to_uV': offset_to_uV,
+                        'is_filtered': is_filtered
                         }
 
     @staticmethod
@@ -56,7 +97,7 @@ class BinaryRecordingExtractor(BaseRecording):
         ----------
         recording: RecordingExtractor
             The recording extractor object to be saved in .dat format
-        save_path: str
+        files_path: str
             The path to the file.
         dtype: dtype
             Type of the saved data. Default float32.
@@ -65,14 +106,13 @@ class BinaryRecordingExtractor(BaseRecording):
             * n_jobs
             * progress_bar
         '''
-        write_binary_recording(recording, files_path=files_path,  dtype=dtype, **job_kwargs)
+        write_binary_recording(recording, files_path=files_path, dtype=dtype, **job_kwargs)
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
-    def __init__(self, datfile, num_chan, dtype, time_axis, offset, gain):
+    def __init__(self, datfile, num_chan, dtype, time_axis, file_offset):
         BaseRecordingSegment.__init__(self)
-        self._timeseries = read_binary_recording(datfile, num_chan, dtype, time_axis, offset)
-        self._gain = gain
+        self._timeseries = read_binary_recording(datfile, num_chan, dtype, time_axis, file_offset)
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -98,5 +138,14 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             
         return traces
 
+
 # For backward compatibity (old good time)
 BinDatRecordingExtractor = BinaryRecordingExtractor
+
+
+def read_binary(*args, **kargs):
+    recording = BinaryRecordingExtractor(*args, **kargs)
+    return recording
+
+
+read_binary.__doc__ = BinaryRecordingExtractor.__doc__

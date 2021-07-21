@@ -13,13 +13,13 @@ class BasePreprocessor(BaseRecording):
         if sampling_frequency is None:
             sampling_frequency = recording.get_sampling_frequency()
         if channel_ids is None:
-            channel_ids =  recording.channel_ids
+            channel_ids = recording.channel_ids
         if dtype is None:
             dtype = recording.get_dtype()
         
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         recording.copy_metadata(self, only_main=False, ids=None)
-        
+
         # self._kwargs have to handle in subclass
 
 

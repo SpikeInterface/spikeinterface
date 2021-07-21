@@ -16,7 +16,7 @@ class BaseRecording(BaseExtractor):
     Internally handle list of RecordingSegment
     """
     _main_annotations = ['is_filtered']
-    _main_properties = ['group', 'location']
+    _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []  # recording do not handle features
 
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
@@ -134,9 +134,15 @@ class BaseRecording(BaseExtractor):
             write_binary_recording(self, files_path=files_path, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
-            cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
-                                              self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(),
-                                              time_axis=0)
+            is_filtered = False
+            if 'is_filtered' in self.get_annotation_keys():
+                is_filtered = self.get_annotation("is_filtered")
+            cached = BinaryRecordingExtractor(files_path=files_path, sampling_frequency=self.get_sampling_frequency(),
+                                              num_chan=self.get_num_channels(), dtype=dtype,
+                                              channel_ids=self.get_channel_ids(), time_axis=0,
+                                              file_offset=0, gain_to_uV=self.get_channel_gains(),
+                                              offset_to_uV=self.get_channel_offsets(),
+                                              is_filtered=is_filtered)
 
         elif format == 'memory':
             job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
@@ -164,11 +170,12 @@ class BaseRecording(BaseExtractor):
         return cached
 
     def _after_load(self, folder):
-        # load probe
+        print(self._properties)
         if (folder / 'probe.json').is_file():
             probegroup = read_probeinterface(folder / 'probe.json')
-            other = self.set_probegroup(probegroup)
-            return other
+            self.set_probegroup(probegroup, in_place=True)
+            print(self._properties)
+            return self
         else:
             return self
 
@@ -408,7 +415,7 @@ class BaseRecording(BaseExtractor):
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
-    def split_by(self, property='group', outputs='list'):
+    def split_by(self, property='group', outputs='dict'):
         assert outputs in ('list', 'dict')
         from .channelslicerecording import ChannelSliceRecording
         values = self.get_property(property)
