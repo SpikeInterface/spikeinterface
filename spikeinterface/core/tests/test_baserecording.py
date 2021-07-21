@@ -99,13 +99,14 @@ def test_BaseRecording():
     # but also possible
     rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
     
+    
     # cache to memory
     rec4 = rec3.save(format='memory')
     
     traces4 = rec4.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces4, traces)
-    
+
     # cache joblib several jobs
     folder = cache_folder / 'simple_recording2' 
     rec2 = rec.save(folder=folder, chunk_size=10, n_jobs=4)
@@ -131,12 +132,13 @@ def test_BaseRecording():
 
     # test save with probe
     folder = cache_folder / 'simple_recording3' 
-    rec2 = rec_p.save(folder=folder, chunk_size=10, n_jobs=4)
-    traces2 = rec2.get_traces(segment_index=0)
+    rec2 = rec_p.save(folder=folder, chunk_size=10, n_jobs=2)
     probe2 = rec2.get_probe()
     assert np.array_equal(probe2.contact_positions, [[0, 30.], [0., 0.]])
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.], [0., 0.]])
+    traces2 = rec2.get_traces(segment_index=0)
+    assert np.array_equal(traces2, rec_p.get_traces(segment_index=0))
     
 
     # from probeinterface.plotting import plot_probe_group, plot_probe
