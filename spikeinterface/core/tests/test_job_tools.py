@@ -55,26 +55,28 @@ def test_ensure_chunk_size():
 
     chunk_size = ensure_chunk_size(recording, chunk_memory="1G")
     assert chunk_size == 125000000
+
+
+def func(segment_index, start_frame, end_frame, worker_ctx):
+    import os, time
+    # print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
+    time.sleep(0.010)
+    # time.sleep(1.0)
+    return os.getpid()
     
+
+def init_func(arg1, arg2, arg3):
+    worker_ctx = {}
+    worker_ctx['arg1'] = arg1
+    worker_ctx['arg2'] = arg2
+    worker_ctx['arg3'] = arg3
+    return worker_ctx
+
 def test_ChunkRecordingExecutor():
     recording = generate_recording(num_channels = 2)
     # make dumpable
     recording =recording.save()
     
-    def func(segment_index, start_frame, end_frame, worker_ctx):
-        import os, time
-        # print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
-        time.sleep(0.010)
-        # time.sleep(1.0)
-        return os.getpid()
-        
-    
-    def init_func(arg1, arg2, arg3):
-        worker_ctx = {}
-        worker_ctx['arg1'] = arg1
-        worker_ctx['arg2'] = arg2
-        worker_ctx['arg3'] = arg3
-        return worker_ctx
     
     init_args = 'a', 120, 'yep'
     
