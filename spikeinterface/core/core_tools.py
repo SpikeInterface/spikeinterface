@@ -98,7 +98,7 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
 
 
 # used by write_binary_recording + ChunkRecordingExecutor
-def _init_binary_worker(recording, rec_memmaps, dtype):
+def _init_binary_worker(recording, rec_memmaps_dict, dtype):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -106,7 +106,11 @@ def _init_binary_worker(recording, rec_memmaps, dtype):
         worker_ctx['recording'] = load_extractor(recording)
     else:
         worker_ctx['recording'] = recording
-
+    
+    rec_memmaps = []
+    for d in rec_memmaps_dict:
+        rec_memmaps.append(np.memmap(**d))
+        
     worker_ctx['rec_memmaps'] = rec_memmaps
     worker_ctx['dtype'] = np.dtype(dtype)
 
@@ -169,6 +173,7 @@ def write_binary_recording(recording, files_path=None, dtype=None, add_file_exte
 
     # create memmap files
     rec_memmaps = []
+    rec_memmaps_dict = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         num_channels = recording.get_num_channels()
@@ -176,11 +181,12 @@ def write_binary_recording(recording, files_path=None, dtype=None, add_file_exte
         shape = (num_frames, num_channels)
         rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', offset=byte_offset, shape=shape)
         rec_memmaps.append(rec_memmap)
+        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode='r+',  offset=byte_offset, shape=shape))
 
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (recording.to_dict(), rec_memmaps, dtype)
+    init_args = (recording.to_dict(), rec_memmaps_dict, dtype)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
