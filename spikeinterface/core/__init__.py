@@ -14,7 +14,7 @@ from .basesorting import BaseSorting, BaseSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
 
 # main extractor from dump and cache
-from .binaryrecordingextractor import BinaryRecordingExtractor
+from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor
 from .numpyextractors import NumpyRecording , NumpySorting, NumpyEvent
 
