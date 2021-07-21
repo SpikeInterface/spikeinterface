@@ -37,7 +37,7 @@ Module :mod:`spikeinterface.extractors`
 
 
 Module :mod:`spikeinterface.toolkit`
---------------------------------------
+------------------------------------
 
 Preprocessing
 ~~~~~~~~~~~~~
@@ -84,7 +84,7 @@ Quality metrics
 
 
 Module :mod:`spikeinterface.sorters`
---------------------------------------
+------------------------------------
 .. automodule:: spikeinterface.sorters
 
     .. autofunction:: available_sorters
@@ -117,7 +117,7 @@ Module :mod:`spikeinterface.comparison`
 
 
 Module :mod:`spikeinterface.widgets`
---------------------------------------
+------------------------------------
 .. automodule:: spikeinterface.widgets
 
     .. autofunction:: plot_timeseries
@@ -147,7 +147,7 @@ Module :mod:`spikeinterface.exporters`
 
 
 Module :mod:`spikeinterface.sortingcomponents`
---------------------------------------
+----------------------------------------------
 .. automodule:: spikeinterface.sortingcomponents
 
     .. autofunction:: detect_peaks
