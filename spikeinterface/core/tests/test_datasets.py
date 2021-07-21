@@ -4,7 +4,8 @@ import pytest
 import numpy as np
 
 
-from spikeinterface.core import download_dataset, HAVE_DATALAD
+from spikeinterface.core.datasets import HAVE_DATALAD
+from spikeinterface.core import download_dataset
 
 
 
