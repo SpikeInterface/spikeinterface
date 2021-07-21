@@ -171,12 +171,7 @@ class ChunkRecordingExecutor:
         else:
             #  if self.verbose:
             #   print('num chunks to compute', len(all_chunks))
-            
-            n_jobs = min(self.n_jobs, len(all_chunks))
-            # parallel
-            executor = ProcessPoolExecutor(max_workers=n_jobs,
-                                           initializer=worker_initializer,
-                                           initargs=(self.func, self.init_func, self.init_args))
+
 
             # loky : this bug!!!
             # executor = loky.get_reusable_executor(max_workers=self.n_jobs,
@@ -185,19 +180,24 @@ class ChunkRecordingExecutor:
             # context="loky", timeout=10.,
             # reuse=False,
             # kill_workers=True)
-            
-            results = executor.map(function_wrapper, all_chunks)
-            
+                        
+            n_jobs = min(self.n_jobs, len(all_chunks))
+            # parallel
+            with ProcessPoolExecutor(max_workers=n_jobs,
+                                           initializer=worker_initializer,
+                                           initargs=(self.func, self.init_func, self.init_args)) as executor :
 
-            if self.progress_bar:
-                results = tqdm(results, desc=self.job_name, total=len(all_chunks))
+                results = executor.map(function_wrapper, all_chunks)
+                
+                if self.progress_bar:
+                    results = tqdm(results, desc=self.job_name, total=len(all_chunks))
             
-            if self.handle_returns:
-                for res in results:
-                    returns.append(res)
-            else:
-                for res in results:
-                    pass
+                if self.handle_returns:
+                    for res in results:
+                        returns.append(res)
+                else:
+                    for res in results:
+                        pass
                 
         
         return returns
