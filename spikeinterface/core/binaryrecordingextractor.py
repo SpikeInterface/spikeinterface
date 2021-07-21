@@ -83,7 +83,7 @@ class BinaryRecordingExtractor(BaseRecording):
         self._kwargs = {'files_path': [str(e.absolute()) for e in datfiles],
                         'sampling_frequency': sampling_frequency,
                         'num_chan': num_chan, 'dtype': dtype.str,
-                        'time_axis': time_axis, 'file_offset': file_offset,
+                        'channel_ids': channel_ids, 'time_axis': time_axis, 'file_offset': file_offset,
                         'gain_to_uV': gain_to_uV, 'offset_to_uV': offset_to_uV,
                         'is_filtered': is_filtered
                         }
