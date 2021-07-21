@@ -1,4 +1,4 @@
-name: Core Package using Conda (all OS)
+name: spikeinterface.core with conda
 
 on:
   pull_request:
