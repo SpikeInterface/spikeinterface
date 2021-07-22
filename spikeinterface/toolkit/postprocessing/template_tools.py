@@ -123,7 +123,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
     
     Here a function to estimtate this shift.
     
-    This function is internally used by `get_unit_amplitudes()` to accuratly retrieve the min/max amplitudes
+    This function is internally used by `get_spike_amplitudes()` to accuratly retrieve the min/max amplitudes
     """
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting

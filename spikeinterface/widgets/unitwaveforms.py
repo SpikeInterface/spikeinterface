@@ -178,19 +178,21 @@ def get_waveforms_scales(we, templates, channel_locations):
     
     return xvectors, y_scale, y_offset
 
-    
 
 def plot_unit_waveforms(*args, **kwargs):
     W = UnitWaveformsWidget(*args, **kwargs)
     W.plot()
     return W
+
+
 plot_unit_waveforms.__doc__ = UnitWaveformsWidget.__doc__
+
 
 def plot_unit_templates(*args, **kwargs):
     kwargs['plot_waveforms'] = False
     W = UnitWaveformsWidget(*args, **kwargs)
     W.plot()
     return W
+
+
 plot_unit_templates.__doc__ = UnitWaveformsWidget.__doc__
-
-

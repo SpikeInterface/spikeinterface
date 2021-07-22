@@ -92,7 +92,7 @@ class BaseSorting(BaseExtractor):
         Return all spike trains concatenated
         """
         assert outputs in ('unit_id', 'unit_index')
-        spikes =  []
+        spikes = []
         for segment_index in range(self.get_num_segments()):
             spike_times = []
             spike_labels = []

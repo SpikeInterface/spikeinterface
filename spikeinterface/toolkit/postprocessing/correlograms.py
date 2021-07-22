@@ -3,8 +3,8 @@ import numpy as np
 
 
 def compute_correlograms(sorting, 
-                    window_ms=100.0, bin_ms=1.0,
-                    symmetrize=False):
+                         window_ms=100.0, bin_ms=1.0,
+                         symmetrize=False):
     """
     Compute several cross-correlogram in one course
     from sevral cluster.
@@ -95,4 +95,3 @@ def compute_correlograms(sorting,
         bins = np.arange(correlograms.shape[2]+1) * real_bin_duration_ms
     
     return correlograms, bins
-    

@@ -21,6 +21,7 @@ class PyKilosortSorter(BaseSorter):
 
     sorter_name = 'pykilosort'
     requires_locations = False
+    docker_requires_gpu = True
     compatible_with_parallel = {'loky': True, 'multiprocessing': False, 'threading': False}
 
     _default_params = {
@@ -73,7 +74,7 @@ class PyKilosortSorter(BaseSorter):
         
         assert isinstance(recording, BinaryRecordingExtractor)
         assert recording.get_num_segments() ==1
-        dat_path = recording._kwargs['files_path'][0]
+        dat_path = recording._kwargs['file_paths'][0]
         print('dat_path', dat_path)
         
         

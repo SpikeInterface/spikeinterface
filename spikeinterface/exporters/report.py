@@ -13,7 +13,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, **j
     unit_ids = sorting.unit_ids
     
     # some computation
-    amplitudes = st.get_unit_amplitudes(we,  peak_sign='neg', outputs='by_units', **job_wargs)
+    amplitudes = st.get_spike_amplitudes(we,  peak_sign='neg', outputs='by_unit', **job_wargs)
     
     output_folder = Path(output_folder).absolute()
     if output_folder.is_dir():

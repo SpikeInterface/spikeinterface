@@ -38,6 +38,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     sorter_name: str = 'kilosort2_5'
     kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
     requires_locations = False
+    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
@@ -146,7 +147,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
 
         # save binary file
         input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
                                                  dtype='int16', total_memory=p["total_memory"],
                                                  n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 

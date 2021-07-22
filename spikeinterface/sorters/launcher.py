@@ -43,11 +43,10 @@ def _run_one(arg_list):
     
 _implemented_engine = ('loop', 'joblib', 'dask')
 
+
 def run_sorters(sorter_list,
                 recording_dict_or_list,
                 working_folder,
-                remove_existing_folder=False,
-                raise_error=True,
                 sorter_params={},
                 mode_if_folder_exists='raise',
                 engine='loop',
@@ -99,7 +98,7 @@ def run_sorters(sorter_list,
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
             * 'loop' : no kargs
-            * 'multiprocessing' : {'processes' : } number of processes
+            * 'joblib' : {'n_jobs' : } number of processes
             * 'dask' : {'client':} the dask client for submiting task
             
     verbose: bool
@@ -129,7 +128,7 @@ def run_sorters(sorter_list,
     if mode_if_folder_exists == 'raise' and working_folder.is_dir():
         raise Exception('working_folder already exists, please remove it')
     
-    assert engine in _implemented_engine, f'egine must be in {_implemented_engine}'
+    assert engine in _implemented_engine, f'engine must be in {_implemented_engine}'
     
     if isinstance(sorter_list, str):
         sorter_list = [sorter_list]
@@ -146,7 +145,6 @@ def run_sorters(sorter_list,
         raise ValueError('bad recording dict')
 
     need_dump = engine != 'loop'
-    
     task_args_list = []
     for rec_name, recording in recording_dict.items():
         for sorter_name in sorter_list:
@@ -169,10 +167,10 @@ def run_sorters(sorter_list,
             if need_dump:
                 if not recording.is_dumpable:
                     raise Exception('recording not dumpable call recording.save() before')
-                recording = recording.to_dict()
+                recording_arg = recording.to_dict()
             else:
-                recording = recording
-            task_args = (sorter_name, recording, output_folder, verbose, params)
+                recording_arg = recording
+            task_args = (sorter_name, recording_arg, output_folder, verbose, params)
             task_args_list.append(task_args)
     
     if engine == 'loop':

@@ -71,15 +71,15 @@ plot_probe(probe)
 ##############################################################################
 # Some extractors also implement a :code:`write` function. 
 
-files_path = ['traces0.raw', 'traces1.raw']
-se.BinaryRecordingExtractor.write_recording(recording, files_path)
+file_paths = ['traces0.raw', 'traces1.raw']
+se.BinaryRecordingExtractor.write_recording(recording, file_paths)
 
 ##############################################################################
 # We can read the written recording back with the proper extractor.
 # Note that this new recording is now "on disk" and not "in memory" as the Numpy recording.
 # This meand that the loading is "lazy" and the data are not loaded in memory.
 
-recording2 = se.BinaryRecordingExtractor(files_path, sampling_frequency, num_channels, traces0.dtype)
+recording2 = se.BinaryRecordingExtractor(file_paths, sampling_frequency, num_channels, traces0.dtype)
 print(recording2)
 
 ##############################################################################
