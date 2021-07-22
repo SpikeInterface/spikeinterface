@@ -137,10 +137,10 @@ class GroundTruthStudy:
     def aggregate_run_times(self):
         return collect_run_times(self.study_folder)
 
-    def aggregate_performance_by_units(self):
+    def aggregate_performance_by_unit(self):
         assert self.comparisons is not None, 'run_comparisons first'
 
-        perf_by_units = []
+        perf_by_unit = []
         for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
             comp = self.comparisons[(rec_name, sorter_name)]
             
@@ -148,12 +148,12 @@ class GroundTruthStudy:
             perf['rec_name'] = rec_name
             perf['sorter_name'] = sorter_name
             perf = perf.reset_index()
-            perf_by_units.append(perf)
+            perf_by_unit.append(perf)
 
-        perf_by_units = pd.concat(perf_by_units)
-        perf_by_units = perf_by_units.set_index(['rec_name', 'sorter_name', 'gt_unit_id'])
+        perf_by_unit = pd.concat(perf_by_unit)
+        perf_by_unit = perf_by_unit.set_index(['rec_name', 'sorter_name', 'gt_unit_id'])
 
-        return perf_by_units
+        return perf_by_unit
 
     def aggregate_count_units(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
         assert self.comparisons is not None, 'run_comparisons first'
@@ -189,9 +189,9 @@ class GroundTruthStudy:
     def aggregate_dataframes(self, copy_into_folder=True, **karg_thresh):
         dataframes = {}
         dataframes['run_times'] = self.aggregate_run_times().reset_index()
-        perfs = self.aggregate_performance_by_units()
+        perfs = self.aggregate_performance_by_unit()
 
-        dataframes['perf_by_units'] = perfs.reset_index()
+        dataframes['perf_by_unit'] = perfs.reset_index()
         dataframes['count_units'] = self.aggregate_count_units(**karg_thresh).reset_index()
 
         if copy_into_folder:

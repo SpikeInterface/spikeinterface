@@ -63,7 +63,7 @@ def test_extract_sortings():
 
     study.run_comparisons(exhaustive_gt=True)
 
-    perf = study.aggregate_performance_by_units()
+    perf = study.aggregate_performance_by_unit()
     
     count_units = study.aggregate_count_units()
     dataframes = study.aggregate_dataframes()

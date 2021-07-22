@@ -5,19 +5,29 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 """
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 
 import scipy.stats
 
 from .template_tools import get_template_extremum_channel
 
 """
-@alessio @cole : you must totaly check tchis code!!!!!
+@alessio: you must totaly check tchis code!!!!!
 
 This replace : spikefeatures.features + spiketoolkit.postprocessing.features but in the same place.
 
 """
 
-def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign='neg', **kargs):
+
+def get_template_metric_names():
+    return deepcopy(list(_metric_name_to_func.keys()))
+
+
+# TODO input can eb WaveformExtractor or templates
+# TODO compute on more than one channel
+# TODO improve documentation of each function (maybe on readthedocs)
+# TODO add upsampling factor
+def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign='neg', **kwargs):
     """
     Compute template features like: peak_to_valley/peak_trough_ratio/half_width/repolarization_slope/recovery_slope
     
@@ -27,11 +37,11 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     
     if feature_names is None:
         feature_names = list(_metric_name_to_func.keys())
+
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign,
+                                                          outputs='index')
     
-    
-    extremum_channels_ids =  get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-    
-    features = pd.DataFrame(index=unit_ids, columns=feature_names)
+    template_metrics = pd.DataFrame(index=unit_ids, columns=feature_names)
     
     for unit_id in unit_ids:
         template_all_chans = waveform_extractor.get_template(unit_id)
@@ -40,15 +50,14 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         
         # take only at extremum
         template = template_all_chans[:, chan_ind]
-        print(template.shape, chan_ind)
-        
         
         for feature_name in feature_names:
             func = _metric_name_to_func[feature_name]
-            value = func(template, sampling_frequency, **kargs)
-            features.at[unit_id, feature_name] = value
+            value = func(template, sampling_frequency=sampling_frequency, **kwargs)
+            template_metrics.at[unit_id, feature_name] = value
 
-    return features
+    return template_metrics
+
 
 def get_trough_and_peak_idx(template):
     """
@@ -61,15 +70,18 @@ def get_trough_and_peak_idx(template):
     peak_idx = trough_idx + np.argmax(template[trough_idx:])
     return trough_idx, peak_idx
 
-def get_peak_to_valley(template, sampling_frequency, **kargs):
+
+def get_peak_to_valley(template, **kwargs):
     """
     Time between trough and peak
     """
+    sampling_frequency = kwargs["sampling_frequency"]
     trough_idx, peak_idx = get_trough_and_peak_idx(template)
     ptv = (peak_idx - trough_idx) / sampling_frequency
     return ptv
 
-def get_peak_trough_ratio(template, sampling_frequency, **kargs):
+
+def get_peak_trough_ratio(template, **kwargs):
     """
     Ratio peak heigth and trough depth
     """
@@ -77,12 +89,14 @@ def get_peak_trough_ratio(template, sampling_frequency, **kargs):
     ptratio = template[peak_idx] / template[trough_idx]
     return ptratio
 
-def get_half_width(template, sampling_frequency, **kargs):
+
+def get_half_width(template, **kwargs):
     """
     Width of waveform at its half of amplitude
     """
     trough_idx, peak_idx = get_trough_and_peak_idx(template)
-    
+    sampling_frequency = kwargs["sampling_frequency"]
+
     if peak_idx == 0:
         return np.nan
     
@@ -105,7 +119,8 @@ def get_half_width(template, sampling_frequency, **kargs):
         hw = (cross_post_pk - cross_pre_pk) / sampling_frequency
         return hw
 
-def get_repolarization_slope(template, sampling_frequency, **kargs):
+
+def get_repolarization_slope(template, **kwargs):
     """
     Return slope of repolarization period between trough and baseline
 
@@ -118,6 +133,7 @@ def get_repolarization_slope(template, sampling_frequency, **kargs):
     """
     
     trough_idx, peak_idx = get_trough_and_peak_idx(template)
+    sampling_frequency = kwargs["sampling_frequency"]
 
     times = np.arange(template.shape[0]) / sampling_frequency
 
@@ -136,7 +152,8 @@ def get_repolarization_slope(template, sampling_frequency, **kargs):
     res = scipy.stats.linregress(times[trough_idx:return_to_base_idx], template[trough_idx:return_to_base_idx])
     return res.slope
 
-def get_recovery_slope(template, sampling_frequency, window_ms=0.7, **kargs):
+
+def get_recovery_slope(template, window_ms=0.7, **kwargs):
     """
     Return the recovery slope of input waveforms. After repolarization,
     the neuron hyperpolarizes untill it peaks. The recovery slope is the
@@ -149,6 +166,7 @@ def get_recovery_slope(template, sampling_frequency, window_ms=0.7, **kargs):
     """
     
     trough_idx, peak_idx = get_trough_and_peak_idx(template)
+    sampling_frequency = kwargs["sampling_frequency"]
 
     times = np.arange(template.shape[0]) / sampling_frequency
 
@@ -156,7 +174,7 @@ def get_recovery_slope(template, sampling_frequency, window_ms=0.7, **kargs):
         return np.nan
     max_idx = int(peak_idx + ((window_ms / 1000) * sampling_frequency))
     max_idx = np.min([max_idx, template.shape[0]])
-    res = res = scipy.stats.linregress(times[peak_idx:max_idx], template[peak_idx:max_idx])
+    res = scipy.stats.linregress(times[peak_idx:max_idx], template[peak_idx:max_idx])
     return res.slope
 
 

@@ -22,7 +22,7 @@ def test_get_unit_amplitudes():
     amplitudes = get_unit_amplitudes(we,  peak_sign='neg', outputs='concatenated', chunk_size=10000, n_jobs=1)
     # print(amplitudes)
     
-    amplitudes = get_unit_amplitudes(we,  peak_sign='neg', outputs='by_units', chunk_size=10000, n_jobs=1)
+    amplitudes = get_unit_amplitudes(we,  peak_sign='neg', outputs='by_unit', chunk_size=10000, n_jobs=1)
     # print(amplitudes)
     
 
