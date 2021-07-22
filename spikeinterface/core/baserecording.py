@@ -16,7 +16,7 @@ class BaseRecording(BaseExtractor):
     Internally handle list of RecordingSegment
     """
     _main_annotations = ['is_filtered']
-    _main_properties = ['group', 'location']
+    _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []  # recording do not handle features
 
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
@@ -39,8 +39,8 @@ class BaseRecording(BaseExtractor):
         sf_khz = self.get_sampling_frequency() / 1000.
         duration = self.get_total_duration()
         txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s'
-        if 'files_path' in self._kwargs:
-            txt += '\n  files_path: {}'.format(self._kwargs['files_path'])
+        if 'file_paths' in self._kwargs:
+            txt += '\n  file_paths: {}'.format(self._kwargs['file_paths'])
         if 'file_path' in self._kwargs:
             txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
         return txt
@@ -127,16 +127,18 @@ class BaseRecording(BaseExtractor):
         if format == 'binary':
             # TODO save propreties as npz!!!!!
             folder = save_kwargs['folder']
-            files_path = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
+            file_paths = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
             dtype = save_kwargs.get('dtype', 'float32')
 
             job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
-            write_binary_recording(self, files_path=files_path, dtype=dtype, **job_kwargs)
+            write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
-            cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
-                                              self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(),
-                                              time_axis=0)
+            cached = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
+                                              num_chan=self.get_num_channels(), dtype=dtype,
+                                              channel_ids=self.get_channel_ids(), time_axis=0,
+                                              file_offset=0, gain_to_uV=self.get_channel_gains(),
+                                              offset_to_uV=self.get_channel_offsets())
 
         elif format == 'memory':
             job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
@@ -407,7 +409,7 @@ class BaseRecording(BaseExtractor):
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
-    def split_by(self, property='group', outputs='list'):
+    def split_by(self, property='group', outputs='dict'):
         assert outputs in ('list', 'dict')
         from .channelslicerecording import ChannelSliceRecording
         values = self.get_property(property)

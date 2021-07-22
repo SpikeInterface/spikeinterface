@@ -35,11 +35,11 @@ def test_BaseRecording():
     sampling_frequency = 10000
     dtype = 'int16'
     
-    files_path = [f'test_base_recording_{i}.raw' for i in range(num_seg)]
+    file_paths = [f'test_base_recording_{i}.raw' for i in range(num_seg)]
     for i in range(num_seg):
-        a = np.memmap(files_path[i], dtype=dtype, mode='w+', shape=(num_samples, num_chan))
+        a = np.memmap(file_paths[i], dtype=dtype, mode='w+', shape=(num_samples, num_chan))
         a[:] = np.random.randn(*a.shape).astype(dtype)
-    rec = BinaryRecordingExtractor(files_path, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
     
     assert rec.get_num_segments() == 2
     assert rec.get_num_channels() == 3

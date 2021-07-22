@@ -1,27 +1,29 @@
-import numpy as np
+from copy import deepcopy
 import pandas as pd
 
-from .quality_metric_list import (_metric_name_to_func, 
-    calculate_pc_metrics, _possible_pc_metric_names)
+from .quality_metric_list import (_metric_name_to_func,
+                                  calculate_pc_metrics, _possible_pc_metric_names)
+
 
 class QualityMetricCalculator:
     """
     
     """
+
     def __init__(self, waveform_extractor, waveform_principal_component=None):
         self.waveform_extractor = waveform_extractor
         self.waveform_principal_component = waveform_principal_component
-        
+
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting
-    
+
     def compute_metrics(self, metric_names=None, **kargs):
         if metric_names is None:
             metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
-        
+
         unit_ids = self.sorting.unit_ids
         metrics = pd.DataFrame(index=unit_ids)
-        
+
         # simple metrics not based on PCs
         for name in metric_names:
             if name in _possible_pc_metric_names:
@@ -36,7 +38,7 @@ class QualityMetricCalculator:
                 # so several columns
                 for i, col in enumerate(res._fields):
                     metrics[col] = pd.Series(res[i])
-        
+
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names):
@@ -50,6 +52,10 @@ class QualityMetricCalculator:
 
 
 def compute_quality_metrics(waveform_extractor, metric_names=None, waveform_principal_component=None):
-    df = QualityMetricCalculator(waveform_extractor,
-            waveform_principal_component=waveform_principal_component).compute_metrics(metric_names)
+    qmc = QualityMetricCalculator(waveform_extractor, waveform_principal_component)
+    df = qmc.compute_metrics(metric_names)
     return df
+
+
+def get_quality_metric_list():
+    return deepcopy(list(_metric_name_to_func.keys()))

@@ -48,7 +48,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # piggyback on binary data recording extractor
         BinaryRecordingExtractor.__init__(self,
-                                          files_path=bin_file,
+                                          file_paths=bin_file,
                                           sampling_frequency=float(params['fs']),
                                           num_chan=nb_channels,
                                           dtype=params['dtype'],
@@ -91,7 +91,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # write recording
         recording_fn = (save_path / recording_name).absolute()
-        write_binary_recording(recording, files_path=recording_fn, dtype=dtype, verbose=verbose, **job_kwargs)
+        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, verbose=verbose, **job_kwargs)
 
         # write probe file
         probe_fn = (save_path / probe_name).absolute()

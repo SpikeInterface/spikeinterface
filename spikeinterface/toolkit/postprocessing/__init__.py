@@ -5,13 +5,13 @@ from .template_tools import (get_template_amplitudes,
     get_template_channel_sparsity,
     compute_unit_centers_of_mass)
 
-from .template_metrics import (calculate_template_metrics)
+from .template_metrics import (calculate_template_metrics, get_template_metric_names)
 
 from .template_similarity import compute_template_similarity
 
 from .principal_component import (WaveformPrincipalComponent,
     compute_principal_components)
     
-from .unit_amplitudes import get_unit_amplitudes
+from .unit_amplitudes import get_spike_amplitudes
 
 from .correlograms import compute_correlograms

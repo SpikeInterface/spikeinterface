@@ -7,16 +7,38 @@ from .template_tools import (get_template_extremum_channel,
     get_template_extremum_channel_peak_shift)
 
 
-
-def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', outputs='concatenated',  **job_kwargs):
+def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatenated',  **job_kwargs):
     """
     Computes the spike amplitudes from a WaveformExtractor.
     Amplitudes can be computed in absolute value (uV) or relative to the template amplitude.
-    
+
     1. The waveform extractor is used to determine the max channel per unit.
-    2. Then a "peak_shift" is estimated because for some sorter the spike index is not always at the
-       extremum.
-    3. Extract all epak chunk by chunk (parallel or not)
+    2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
+       peak.
+    3. Amplitudes are extracted in chunks (parallel or not)
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor object
+    peak_sign: str
+        The sign to compute maximum channel:
+            - 'neg'
+            - 'pos'
+            - 'both'
+    outputs: str
+        How the output should be returned:
+            - 'concatenated'
+            - 'by_unit'
+    job_kwargs: Keyword arguments for ChunkRecordingExecutor
+
+    Returns
+    -------
+    amplitudes: np.array
+        The spike amplitudes.
+            - If 'concatenated' ...
+            - If 'by_unit' ...
+            TODO
 
     """
     we = waveform_extractor
@@ -33,7 +55,7 @@ def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', outputs='concatena
     init_func = _init_worker_unit_amplitudes
     init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                        handle_returns=True, job_name='extract amplitudes',  **job_kwargs)
+                                       handle_returns=True, job_name='extract amplitudes',  **job_kwargs)
     out = processor.run()
     amps, segments = zip(*out)
     amps = np.concatenate(amps)
@@ -46,16 +68,16 @@ def get_unit_amplitudes(waveform_extractor,  peak_sign='neg', outputs='concatena
     
     if outputs == 'concatenated':
         return amplitudes
-    elif outputs == 'by_units':
-        amplitudes_by_units = []
+    elif outputs == 'by_unit':
+        amplitudes_by_unit = []
         for segment_index in range(recording.get_num_segments()):
-            amplitudes_by_units.append({})
+            amplitudes_by_unit.append({})
             for unit_id in sorting.unit_ids:
                 spike_times, spike_labels = all_spikes[segment_index]
                 mask = spike_labels == unit_id
                 amps = amplitudes[segment_index][mask]
-                amplitudes_by_units[segment_index][unit_id] = amps
-        return amplitudes_by_units
+                amplitudes_by_unit[segment_index][unit_id] = amps
+        return amplitudes_by_unit
 
 
 def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, peak_shifts):

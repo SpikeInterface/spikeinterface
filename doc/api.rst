@@ -71,7 +71,7 @@ Postprocessing
     .. autofunction:: calculate_template_metrics
     .. autofunction:: export_to_phy
     .. autofunction:: compute_principal_components
-    .. autofunction:: get_unit_amplitudes
+    .. autofunction:: get_spike_amplitudes
 
 
 Quality metrics

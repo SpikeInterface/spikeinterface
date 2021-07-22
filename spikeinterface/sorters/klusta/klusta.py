@@ -96,13 +96,13 @@ class KlustaSorter(BaseSorter):
         # source file
         if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['offset'] == 0:
             # no need to copy
-            raw_filename = str(Path(recording._kwargs['files_path'][0]).resolve())
+            raw_filename = str(Path(recording._kwargs['file_paths'][0]).resolve())
             dtype = recording._kwargs['dtype']
         else:
             # save binary file (chunk by hcunk) into a new file
             raw_filename = output_folder / 'recording.dat'
             dtype = 'int16'
-            BinaryRecordingExtractor.write_recording(recording, files_path=[raw_filename],
+            BinaryRecordingExtractor.write_recording(recording, file_paths=[raw_filename],
                                                      dtype='int16', total_memory=p["total_memory"],
                                                      n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
                                                                 

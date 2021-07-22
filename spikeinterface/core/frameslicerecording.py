@@ -34,6 +34,9 @@ class FrameSliceRecording(BaseRecording):
         sub_segment = FrameSliceRecordingSegment(parent_segment, start_frame, end_frame)
         self.add_recording_segment(sub_segment)
 
+        # copy properties and annotations
+        parent_recording.copy_metadata(self)
+
         # update dump dict
         self._kwargs = {'parent_recording': parent_recording.to_dict(), 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
 

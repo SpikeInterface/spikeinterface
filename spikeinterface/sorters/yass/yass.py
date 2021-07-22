@@ -18,6 +18,7 @@ class YassSorter(BaseSorter):
 
     sorter_name = 'yass'
     requires_locations = False
+    docker_requires_gpu = True
 
     # #################################################
 
@@ -167,7 +168,7 @@ class YassSorter(BaseSorter):
         input_file_path = os.path.join(output_folder, 'data.bin')
         dtype = 'int16'  # HARD CODE THIS FOR YASS
         input_file_path = output_folder / 'data.bin'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
                                                  dtype=dtype, verbose=False,
                                                  total_memory=p["total_memory"], n_jobs=p["n_jobs_bin"])
  

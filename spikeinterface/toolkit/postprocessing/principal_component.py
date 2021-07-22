@@ -170,9 +170,10 @@ class WaveformPrincipalComponent:
         elif p['mode'] == 'concatenated':
             self._run_concatenated(component_memmap)
     
-    def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg', **job_kwargs):
+    def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg',
+                           **job_kwargs):
         """
-        This run the PCs on all spike from the sorting.
+        This run the PCs on all spikes from the sorting.
         This is a long computation because waveform need to be extracted from each spikes.
         
         Used mainly for `export_to_phy()`
@@ -226,13 +227,12 @@ class WaveformPrincipalComponent:
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name='extract PCs', **job_kwargs)
         processor.run()
 
-    
     def _fit_by_channel_local(self):
         we = self.waveform_extractor
         p = self._params
         
         unit_ids = we.sorting.unit_ids
-        channel_ids  = we.recording.channel_ids
+        channel_ids = we.recording.channel_ids
         
         # there is one PCA per channel for independant fit per channel
         all_pca = [IncrementalPCA(n_components=p['n_components'], whiten=p['whiten']) for _ in channel_ids]
@@ -255,7 +255,7 @@ class WaveformPrincipalComponent:
         p = self._params
         
         unit_ids = we.sorting.unit_ids
-        channel_ids  = we.recording.channel_ids
+        channel_ids = we.recording.channel_ids
         
         all_pca = self._fit_by_channel_local()
         
@@ -392,7 +392,8 @@ def _init_work_all_pc_extractor(recording, all_pcs, spike_times, spike_labels, n
 
 
 def compute_principal_components(waveform_extractor, load_if_exists=False, 
-            n_components=5, mode='by_channel_local',  whiten=True, dtype='float32'):
+                                 n_components=5, mode='by_channel_local',
+                                 whiten=True, dtype='float32'):
     """
     
     
