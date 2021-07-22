@@ -74,7 +74,7 @@ class PyKilosortSorter(BaseSorter):
         
         assert isinstance(recording, BinaryRecordingExtractor)
         assert recording.get_num_segments() ==1
-        dat_path = recording._kwargs['files_path'][0]
+        dat_path = recording._kwargs['file_paths'][0]
         print('dat_path', dat_path)
         
         

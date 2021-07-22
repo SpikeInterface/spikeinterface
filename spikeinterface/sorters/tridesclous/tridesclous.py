@@ -95,7 +95,7 @@ class TridesclousSorter(BaseSorter):
         if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['time_axis'] == 0:
             # no need to copy
             kwargs = recording._kwargs
-            files_path = kwargs['files_path']
+            file_paths = kwargs['file_paths']
             dtype = kwargs['dtype']
             num_chan = kwargs['num_chan']
             offset = kwargs['offset']
@@ -105,8 +105,8 @@ class TridesclousSorter(BaseSorter):
             # save binary file (chunk by hcunk) into a new file
             num_chan = recording.get_num_channels()
             dtype = recording.get_dtype().str
-            files_path = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
-            BinaryRecordingExtractor.write_recording(recording, files_path=files_path,
+            file_paths = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
+            BinaryRecordingExtractor.write_recording(recording, file_paths=file_paths,
                                                                     dtype=dtype, total_memory="500M", n_jobs=-1,
                                                                     verbose=False, progress_bar=verbose)
             offset = 0
@@ -116,7 +116,7 @@ class TridesclousSorter(BaseSorter):
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
         
 
-        tdc_dataio.set_data_source(type='RawData', filenames=files_path,
+        tdc_dataio.set_data_source(type='RawData', filenames=file_paths,
                                    dtype=dtype, sample_rate=sr,
                                    total_channel=num_chan, offset=offset)
         tdc_dataio.set_probe_file(str(prb_file))
