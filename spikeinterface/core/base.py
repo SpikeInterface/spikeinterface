@@ -1,4 +1,3 @@
-from typing import List, Union
 
 from pathlib import Path
 import importlib
@@ -57,7 +56,7 @@ class BaseExtractor:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
 
-    def _check_segment_index(self, segment_index: Union[int, None] = None) -> int:
+    def _check_segment_index(self, segment_index=None):
         if segment_index is None:
             if self.get_num_segments() == 1:
                 return 0
@@ -450,6 +449,9 @@ class BaseExtractor:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file, base_folder=folder)
             
+            # hack to load probe for recording
+            extractor = extractor._after_load(folder)
+
             # load properties
             prop_folder = folder / 'properties'
             for prop_file in prop_folder.iterdir():
@@ -457,8 +459,7 @@ class BaseExtractor:
                     values = np.load(prop_file)
                     key = prop_file.stem
                     extractor.set_property(key, values)
-
-            extractor = extractor._after_load(folder)
+           
             return extractor
 
         else:

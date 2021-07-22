@@ -134,15 +134,11 @@ class BaseRecording(BaseExtractor):
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
-            is_filtered = False
-            if 'is_filtered' in self.get_annotation_keys():
-                is_filtered = self.get_annotation("is_filtered")
             cached = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
                                               num_chan=self.get_num_channels(), dtype=dtype,
                                               channel_ids=self.get_channel_ids(), time_axis=0,
                                               file_offset=0, gain_to_uV=self.get_channel_gains(),
-                                              offset_to_uV=self.get_channel_offsets(),
-                                              is_filtered=is_filtered)
+                                              offset_to_uV=self.get_channel_offsets())
 
         elif format == 'memory':
             job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
