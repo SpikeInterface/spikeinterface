@@ -72,6 +72,7 @@ recording_extractor_full_list = [
     MaxwellRecordingExtractor,
     NixRecordingExtractor,
     SpikeGadgetsRecordingExtractor,
+]
 
 sorting_extractor_full_list = [
     NpzSortingExtractor,
