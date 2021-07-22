@@ -8,6 +8,9 @@ from .basesorting import BaseSorting, BaseSortingSegment
 class UnitsSelectionSorting(BaseSorting):
     """
     Class that handles slicin a Sorting object based on a list of unit_ids.
+
+    Do not use this classe directly but use `sorting.select_units(...)`
+
     """
     def __init__(self, parent_sorting, unit_ids=None, renamed_unit_ids=None):
         if unit_ids is None:

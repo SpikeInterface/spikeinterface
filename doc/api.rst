@@ -15,17 +15,37 @@ Module :mod:`spikeinterface.core`
 
     .. autoclass:: BinaryRecordingExtractor
 
+    .. autofunction:: read_binary
+
     .. autoclass:: NpzSortingExtractor
 
     .. autoclass:: NumpyRecording
 
     .. autoclass:: NumpySorting
 
+    .. autoclass:: ChannelSliceRecording
+
+    .. autoclass:: UnitsSelectionSorting
+
+    .. autoclass:: FrameSliceRecording
+
+    .. autofunction:: append_recordings
+
+    .. autofunction:: concatenate_recordings
+
+    .. autofunction:: append_sortings
+
+    .. autofunction:: extract_waveforms
+
+    .. autoclass:: WaveformExtractor
+
+    .. autofunction:: download_dataset
+
+    .. autofunction:: write_binary_recording
 
     .. autofunction:: set_global_tmp_folder
 
     .. autofunction:: set_global_dataset_folder
-
 
 
 
@@ -34,6 +54,35 @@ Module :mod:`spikeinterface.extractors`
 .. automodule:: spikeinterface.extractors
 
     .. autofunction:: toy_example
+    .. autofunction:: read_bids_folder
+    .. autofunction:: read_mearec
+    .. autofunction:: read_spikeglx
+    .. autofunction:: read_openephys
+    .. autofunction:: read_intan
+    .. autofunction:: read_neuroscope
+    .. autofunction:: read_plexon
+    .. autofunction:: read_neuralynx
+    .. autofunction:: read_blackrock
+    .. autofunction:: read_mcsraw
+    .. autofunction:: read_kilosort
+    .. autofunction:: read_spike2
+    .. autofunction:: read_ced
+    .. autofunction:: read_maxwell
+    .. autofunction:: read_nix
+    .. autofunction:: read_spikegadgets
+    .. autofunction:: read_klusta
+    .. autofunction:: read_hdsort
+    .. autofunction:: read_waveclust
+    .. autofunction:: read_yass
+    .. autofunction:: read_combinato
+    .. autofunction:: read_tridesclous
+    .. autofunction:: read_spykingcircus
+    .. autofunction:: read_herdingspikes
+    .. autofunction:: read_mda_recording
+    .. autofunction:: read_mda_sorting
+    .. autofunction:: read_shybrid_recording
+    .. autofunction:: read_shybrid_sorting
+    .. autofunction:: read_alf_sorting
 
 
 Module :mod:`spikeinterface.toolkit`
@@ -69,7 +118,6 @@ Postprocessing
     .. autofunction:: get_template_best_channels
     .. autofunction:: compute_unit_centers_of_mass
     .. autofunction:: calculate_template_metrics
-    .. autofunction:: export_to_phy
     .. autofunction:: compute_principal_components
     .. autofunction:: get_spike_amplitudes
 
