@@ -146,7 +146,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         # save binary file
         input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
                                                  dtype='int16', total_memory=p["total_memory"],
                                                  n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 

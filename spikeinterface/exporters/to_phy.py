@@ -95,9 +95,9 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
 
     if copy_binary:
         rec_path = output_folder / 'recording.dat'
-        write_binary_recording(recording, files_path=rec_path, verbose=verbose, dtype=dtype, **job_kwargs)
+        write_binary_recording(recording, file_paths=rec_path, verbose=verbose, dtype=dtype, **job_kwargs)
     elif isinstance(recording, BinaryRecordingExtractor):
-        rec_path = recording._kwargs['files_path'][0]
+        rec_path = recording._kwargs['file_paths'][0]
         dtype = recording.get_dtype()
     else:  # don't save recording.dat
         rec_path = 'None'

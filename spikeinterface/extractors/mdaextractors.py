@@ -92,7 +92,7 @@ class MdaRecordingExtractor(BaseRecording):
         header = MdaHeader(dt0=dtype, dims0=(num_chan, num_frames))
         header_size = header.header_size
 
-        write_binary_recording(recording, files_path=save_file_path, dtype=dtype,
+        write_binary_recording(recording, file_paths=save_file_path, dtype=dtype,
                                byte_offset=header_size, verbose=verbose, add_file_extension=False, **job_kwargs)
 
         with save_file_path.open('rb+') as f:

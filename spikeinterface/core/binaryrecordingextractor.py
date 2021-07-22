@@ -16,7 +16,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    files_path: str or Path or list
+    file_paths: str or Path or list
         Path to the binary file
     sampling_frequency: float
         The sampling frequncy
@@ -49,7 +49,7 @@ class BinaryRecordingExtractor(BaseRecording):
     mode = 'file'
     installation_mesg = ""  # error message when not installed
 
-    def __init__(self, files_path, sampling_frequency, num_chan, dtype, channel_ids=None,
+    def __init__(self, file_paths, sampling_frequency, num_chan, dtype, channel_ids=None,
                  time_axis=0, file_offset=0, gain_to_uV=None, offset_to_uV=None,
                  is_filtered=None):
 
@@ -60,12 +60,12 @@ class BinaryRecordingExtractor(BaseRecording):
         
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         
-        if isinstance(files_path, list):
+        if isinstance(file_paths, list):
             # several segment
-            datfiles = [Path(p) for p in files_path]
+            datfiles = [Path(p) for p in file_paths]
         else:
             # one segment
-            datfiles = [Path(files_path)]
+            datfiles = [Path(file_paths)]
         
         dtype = np.dtype(dtype)
         
@@ -82,7 +82,7 @@ class BinaryRecordingExtractor(BaseRecording):
         if offset_to_uV is not None:
             self.set_channel_offsets(offset_to_uV)
 
-        self._kwargs = {'files_path': [str(e.absolute()) for e in datfiles],
+        self._kwargs = {'file_paths': [str(e.absolute()) for e in datfiles],
                         'sampling_frequency': sampling_frequency,
                         'num_chan': num_chan, 'dtype': dtype.str,
                         'channel_ids': channel_ids, 'time_axis': time_axis, 'file_offset': file_offset,
@@ -91,7 +91,7 @@ class BinaryRecordingExtractor(BaseRecording):
                         }
 
     @staticmethod
-    def write_recording(recording, files_path, dtype=None, **job_kwargs):
+    def write_recording(recording, file_paths, dtype=None, **job_kwargs):
         '''
         Save the traces of a recording extractor in binary .dat format.
 
@@ -99,7 +99,7 @@ class BinaryRecordingExtractor(BaseRecording):
         ----------
         recording: RecordingExtractor
             The recording extractor object to be saved in .dat format
-        files_path: str
+        file_paths: str
             The path to the file.
         dtype: dtype
             Type of the saved data. Default float32.
@@ -108,7 +108,7 @@ class BinaryRecordingExtractor(BaseRecording):
             * n_jobs
             * progress_bar
         '''
-        write_binary_recording(recording, files_path=files_path, dtype=dtype, **job_kwargs)
+        write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
