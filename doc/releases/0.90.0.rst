@@ -34,7 +34,7 @@ toolkit:
   * no more dependancy on spikemetrics
   * total rewrite of compute_quality_metrics()
   * total rewrite of export_to_phy()
-  * total rewrite of get_unit_amplitudes()
+  * total rewrite of get_spike_amplitudes()
   * total rewrite of calculate_pc_metrics()
 
 sortingcomponents (new module):

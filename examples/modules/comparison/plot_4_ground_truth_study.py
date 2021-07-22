@@ -126,7 +126,7 @@ ax1.set_title('Run times')
 
 ##############################################################################
 
-perfs = dataframes['perf_by_units']
+perfs = dataframes['perf_by_unit']
 fig2, ax2 = plt.subplots()
 sns.swarmplot(data=perfs, x='sorter_name', y='recall', hue='rec_name', ax=ax2)
 ax2.set_title('Recall')
