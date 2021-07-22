@@ -185,11 +185,20 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_timeseries
     .. autofunction:: plot_rasters
     .. autofunction:: plot_probe_map
+    .. autofunction:: plot_isi_distribution
+    .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_autocorrelograms
+    .. autofunction:: plot_drift_over_time
+    .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_unit_waveforms
     .. autofunction:: plot_unit_templates
+    .. autofunction:: plot_unit_waveform_density_map
     .. autofunction:: plot_amplitudes_timeseries
     .. autofunction:: plot_amplitudes_distribution
     .. autofunction:: plot_principal_component
+    .. autofunction:: plot_unit_localization
+    .. autofunction:: plot_unit_probe_map
+    .. autofunction:: plot_units_depth_vs_amplitude
     .. autofunction:: plot_confusion_matrix
     .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_multicomp_graph
@@ -198,6 +207,7 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_comparison_collision_pair_by_pair
     .. autofunction:: plot_comparison_collision_by_similarity
     .. autofunction:: plot_sorting_performance
+    .. autofunction:: plot_unit_summary
 
 
 Module :mod:`spikeinterface.exporters`
