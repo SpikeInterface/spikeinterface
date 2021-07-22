@@ -88,8 +88,21 @@ Module :mod:`spikeinterface.extractors`
 Module :mod:`spikeinterface.toolkit`
 ------------------------------------
 
+toolkit.utils
+~~~~~~~~~~~~~
+
+
+.. automodule:: spikeinterface.toolkit
+
+    .. autofunction:: get_random_data_chunks
+    .. autofunction:: get_channel_distances
+    .. autofunction:: get_closest_channels
+    .. autofunction:: get_noise_levels
+
+
 Preprocessing
 ~~~~~~~~~~~~~
+
 .. automodule:: spikeinterface.toolkit.preprocessing
 
     .. autofunction:: filter
@@ -118,8 +131,10 @@ Postprocessing
     .. autofunction:: get_template_best_channels
     .. autofunction:: compute_unit_centers_of_mass
     .. autofunction:: calculate_template_metrics
+    .. autofunction:: get_template_metric_names
     .. autofunction:: compute_principal_components
     .. autofunction:: get_spike_amplitudes
+    .. autofunction:: compute_correlograms
 
 
 Quality metrics
@@ -127,8 +142,7 @@ Quality metrics
 .. automodule:: spikeinterface.toolkit.qualitymetrics
 
     .. autofunction:: compute_quality_metrics
-
-
+    .. autofunction:: get_quality_metric_list
 
 
 Module :mod:`spikeinterface.sorters`
