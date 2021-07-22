@@ -34,8 +34,8 @@ class BinaryRecordingExtractor(BaseRecording):
         The gain to apply to the traces
     offset_to_uV: float or array-like
         The offset to apply to the traces
-    is_filtered: bool
-        If True, the recording is assumed to be filtered
+    is_filtered: bool or None
+        If True, the recording is assumed to be filtered. If None, is_filtered is not set.
 
     Returns
     -------
@@ -50,7 +50,8 @@ class BinaryRecordingExtractor(BaseRecording):
     installation_mesg = ""  # error message when not installed
 
     def __init__(self, files_path, sampling_frequency, num_chan, dtype, channel_ids=None,
-                 time_axis=0, file_offset=0, gain_to_uV=None, offset_to_uV=None, is_filtered=False):
+                 time_axis=0, file_offset=0, gain_to_uV=None, offset_to_uV=None,
+                 is_filtered=None):
 
         if channel_ids is None:
             channel_ids = list(range(num_chan))
@@ -72,7 +73,8 @@ class BinaryRecordingExtractor(BaseRecording):
             rec_segment = BinaryRecordingSegment(datfile, num_chan, dtype, time_axis, file_offset)
             self.add_recording_segment(rec_segment)
 
-        self.annotate(is_filtered=is_filtered)
+        if is_filtered is not None:
+            self.annotate(is_filtered=is_filtered)
 
         if gain_to_uV is not None:
             self.set_channel_gains(gain_to_uV)

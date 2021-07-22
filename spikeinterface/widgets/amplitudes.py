@@ -22,7 +22,7 @@ class AmplitudeBaseWidget(BaseWidget):
             assert all(isinstance(e, dict) for e in amplitudes)
             self.amplitudes = amplitudes
         else:
-            self.amplitudes = get_unit_amplitudes(self.we,  peak_sign='neg', outputs='by_units', **job_kwargs)
+            self.amplitudes = get_unit_amplitudes(self.we,  peak_sign='neg', outputs='by_unit', **job_kwargs)
 
         if unit_ids is None:
             unit_ids = waveform_extractor.sorting.unit_ids
