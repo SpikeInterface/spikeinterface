@@ -8,7 +8,7 @@ import spikeinterface.extractors as se
 from spikeinterface import BaseRecording, BaseSorting, write_binary_recording, BinaryRecordingExtractor
 from spikeinterface.toolkit import (
     get_template_extremum_channel, get_template_channel_sparsity,
-    get_unit_amplitudes, compute_template_similarity,
+    get_spike_amplitudes, compute_template_similarity,
     WaveformPrincipalComponent)
 
 
@@ -40,7 +40,7 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         If True, the recording is copied and saved in the phy 'output_folder'.
     
     peak_sign: 'neg', 'pos', 'both'
-        Used by get_unit_amplitudes
+        Used by get_spike_amplitudes
     
     
     verbose: bool
@@ -157,7 +157,7 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
     np.save(str(output_folder / 'channel_groups.npy'), channel_groups)
 
     if compute_amplitudes:
-        amplitudes = get_unit_amplitudes(waveform_extractor,  peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
+        amplitudes = get_spike_amplitudes(waveform_extractor,  peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
         # one segment only
         amplitudes = amplitudes[0][:, np.newaxis]
         np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
