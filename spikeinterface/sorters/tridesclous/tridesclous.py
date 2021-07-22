@@ -98,7 +98,7 @@ class TridesclousSorter(BaseSorter):
             file_paths = kwargs['file_paths']
             dtype = kwargs['dtype']
             num_chan = kwargs['num_chan']
-            offset = kwargs['offset']
+            file_offset = kwargs['file_offset']
         else:
             if verbose:
                 print('Local copy of recording')
@@ -109,16 +109,15 @@ class TridesclousSorter(BaseSorter):
             BinaryRecordingExtractor.write_recording(recording, file_paths=file_paths,
                                                                     dtype=dtype, total_memory="500M", n_jobs=-1,
                                                                     verbose=False, progress_bar=verbose)
-            offset = 0
+            file_offset = 0
             
 
         # initialize source and probe file
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
-        
 
         tdc_dataio.set_data_source(type='RawData', filenames=file_paths,
                                    dtype=dtype, sample_rate=sr,
-                                   total_channel=num_chan, offset=offset)
+                                   total_channel=num_chan, file_offset=file_offset)
         tdc_dataio.set_probe_file(str(prb_file))
         if verbose:
             print(tdc_dataio)
