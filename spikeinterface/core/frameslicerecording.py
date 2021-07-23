@@ -7,7 +7,7 @@ class FrameSliceRecording(BaseRecording):
     Class to get a lazy frame slice.
     Work only with mono segment recording.
 
-    Do not use this classe directly but use `recording.frame_slice(...)`
+    Do not use this class directly but use `recording.frame_slice(...)`
 
     """
 
