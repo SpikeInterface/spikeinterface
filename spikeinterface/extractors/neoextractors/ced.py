@@ -27,7 +27,7 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=file_path, stream_id=stream_id)
 
 
-def read_ced(*args, **kargs):
-    recording = CedRecordingExtractor(*args, **kargs)
+def read_ced(*args, **kwargs):
+    recording = CedRecordingExtractor(*args, **kwargs)
     return recording
 read_ced.__doc__ = CedRecordingExtractor.__doc__

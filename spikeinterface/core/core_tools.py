@@ -8,6 +8,54 @@ from tqdm import tqdm
 from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor
 
 
+def read_python(path):
+    """Parses python scripts in a dictionary
+
+    Parameters
+    ----------
+    path: str or Path
+        Path to file to parse
+
+    Returns
+    -------
+    metadata:
+        dictionary containing parsed file
+
+    """
+    from six import exec_
+    import re
+    path = Path(path).absolute()
+    assert path.is_file()
+    with path.open('r') as f:
+        contents = f.read()
+    contents = re.sub(r'range\(([\d,]*)\)',r'list(range(\1))',contents)
+    metadata = {}
+    exec_(contents, {}, metadata)
+    metadata = {k.lower(): v for (k, v) in metadata.items()}
+    return metadata
+
+
+def write_python(path, dict):
+    """Saves python dictionary to file
+
+    Parameters
+    ----------
+    path: str or Path
+        Path to save file
+    dict: dict
+        dictionary to save
+    """
+    with Path(path).open('w') as f:
+        for k, v in dict.items():
+            if isinstance(v ,str) and not v.startswith("'"):
+                if 'path' in k and 'win' in sys.platform:
+                    f.write(str(k) + " = r'" + str(v) + "'\n")
+                else:
+                    f.write(str(k) + " = '" + str(v) + "'\n")
+            else:
+                f.write(str(k) + " = " + str(v) + "\n")
+
+
 def check_json(d):
     # quick hack to ensure json writable
     for k, v in d.items():
@@ -153,12 +201,18 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         If True, output is verbose (when chunks are used)
     byte_offset: int
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
-
-    **job_kwargs: 
-        Use by job_tools modules to set:
-            * chunk_size or chunk_memory, or total_memory
-            * n_jobs
-            * progress_bar 
+    **job_kwargs: keyword arguments for parallel processing:
+        * chunk_size or chunk_memory, or total_memory
+            - chunk_size: int
+                number of samples per chunk
+            - chunk_memory: str
+                Memory usage for each job (e.g. '100M', '1G'
+            - total_memory: str
+                Total memory usage (e.g. '500M', '2G')
+        * n_jobs: int
+            Number of jobs to use. With -1 the number of jobs is the same as number of cores
+        * progress_bar: bool
+            If True, a progress bar is printedr
     '''
     assert file_paths is not None, "Provide 'file_path'"
 
@@ -307,12 +361,18 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
         Type of the saved data. Default float32.
     verbose: bool
         If True, output is verbose (when chunks are used)
-
-    **job_kwargs: 
-        Use by job_tools modules to set:
-            * chunk_size or chunk_memory, or total_memory
-            * n_jobs
-            * progress_bar 
+    **job_kwargs: keyword arguments for parallel processing:
+        * chunk_size or chunk_memory, or total_memory
+            - chunk_size: int
+                number of samples per chunk
+            - chunk_memory: str
+                Memory usage for each job (e.g. '100M', '1G'
+            - total_memory: str
+                Total memory usage (e.g. '500M', '2G')
+        * n_jobs: int
+            Number of jobs to use. With -1 the number of jobs is the same as number of cores
+        * progress_bar: bool
+            If True, a progress bar is printed
 
     Returns
     ---------

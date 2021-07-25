@@ -65,8 +65,8 @@ class ProxyAppendRecordingSegment(BaseRecordingSegment):
     def get_traces(self, *args, **kwargs):
         return self.parent_segment.get_traces(*args, **kwargs)
 
-def append_recordings(*args, **kargs):
-    return AppendSegmentRecording(*args, **kargs)
+def append_recordings(*args, **kwargs):
+    return AppendSegmentRecording(*args, **kwargs)
 append_recordings.__doc__ == AppendSegmentRecording.__doc__
 
 
@@ -157,8 +157,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def concatenate_recordings(*args, **kargs):
-    return ConcatenateSegmentRecording(*args, **kargs)
+def concatenate_recordings(*args, **kwargs):
+    return ConcatenateSegmentRecording(*args, **kwargs)
 concatenate_recordings.__doc__ == ConcatenateSegmentRecording.__doc__
 
 
@@ -203,6 +203,6 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(self, *args, **kwargs):
         return self.parent_segment.get_unit_spike_train(*args, **kwargs)
 
-def append_sortings(*args, **kargs):
-    return AppendSegmentSorting(*args, **kargs)
+def append_sortings(*args, **kwargs):
+    return AppendSegmentSorting(*args, **kwargs)
 append_sortings.__doc__ == AppendSegmentSorting.__doc__

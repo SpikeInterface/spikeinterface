@@ -449,12 +449,61 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
 def extract_waveforms(recording, sorting, folder,
                       load_if_exists=False,
-                      ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None, **job_kwargs):
+                      ms_before=3., ms_after=4.,
+                      max_spikes_per_unit=500,
+                      overwrite=False,
+                      dtype=None,
+                      **job_kwargs):
     """
-    
+    Extracts waveform on paired Recording-Sorting objects.
+    Waveforms are persistent on disk and cached in memory.
+
+    Parameters
+    ----------
+    recording: Recording
+        The recording object
+    sorting: Sorting
+        The sorting object
+    folder: Path
+        The folder where waveforms are cached
+    load_if_exists: bool
+        If True and waveforms have already been extracted in the specified folder, they are loaded
+        and not recomputed.
+    ms_before: float
+        Time in ms to cut before spike peak
+    ms_after: float
+        Time in ms to cut after spike peak
+    max_spikes_per_unit: int
+        Number of spikes per unit to extract waveforms from (default 500).
+        Use None to extract waveforms for all spikes
+    overwrite: bool
+        If True and 'folder' exists, the folder is removed and waveforms are recomputed.
+        Othewise an error is raised.
+    dtype: dtype
+        Dtype of the output waveforms.
+    **job_kwargs: keyword arguments for parallel processing:
+        * chunk_size or chunk_memory, or total_memory
+            - chunk_size: int
+                number of samples per chunk
+            - chunk_memory: str
+                Memory usage for each job (e.g. '100M', '1G'
+            - total_memory: str
+                Total memory usage (e.g. '500M', '2G')
+        * n_jobs: int
+            Number of jobs to use. With -1 the number of jobs is the same as number of cores
+        * progress_bar: bool
+            If True, a progress bar is printed
+
+    Returns
+    -------
+    we: WaveformExtractor
+        The WaveformExtractor object
+
     """
 
     folder = Path(folder)
+    if overwrite and folder.is_dir():
+        shutil.rmtree(folder)
     if load_if_exists and folder.is_dir():
         we = WaveformExtractor.load_from_folder(folder)
     else:

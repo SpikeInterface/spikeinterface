@@ -28,7 +28,7 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=file_path, stream_id=stream_id)
 
 
-def read_mcsraw(*args, **kargs):
-    recording = MCSRawRecordingExtractor(*args, **kargs)
+def read_mcsraw(*args, **kwargs):
+    recording = MCSRawRecordingExtractor(*args, **kwargs)
     return recording
 read_mcsraw.__doc__ = MCSRawRecordingExtractor.__doc__

@@ -37,6 +37,7 @@ from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
 from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
 from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
+from .phyextractors import PhySortingExtractor
 
 # sorting in relation with simulator
 from .shybridextractors import (  SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
@@ -128,6 +129,7 @@ sorting_extractor_full_list = [
     # neo based
     MEArecSortingExtractor,
     KiloSortSortingExtractor,
+    PhySortingExtractor
 
     ##OLD
     # ~ MdaSortingExtractor,
