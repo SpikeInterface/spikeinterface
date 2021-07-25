@@ -25,7 +25,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = {'file_path' : str(file_path), 'stream_id': stream_id}
 
 
-def read_plexon(*args, **kargs):
-    recording = PlexonRecordingExtractor(*args, **kargs)
+def read_plexon(*args, **kwargs):
+    recording = PlexonRecordingExtractor(*args, **kwargs)
     return recording
 read_plexon.__doc__ = PlexonRecordingExtractor.__doc__

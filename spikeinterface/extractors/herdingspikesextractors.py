@@ -125,7 +125,7 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
         rf.close()
     """
     
-def read_herdingspikes(*args, **kargs):
-    sorting = HerdingspikesSortingExtractor(*args, **kargs)
+def read_herdingspikes(*args, **kwargs):
+    sorting = HerdingspikesSortingExtractor(*args, **kwargs)
     return sorting
 read_herdingspikes.__doc__ = HerdingspikesSortingExtractor.__doc__

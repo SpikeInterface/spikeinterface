@@ -32,7 +32,7 @@ def find_spike_from_templates(recording, waveform_extractor,
     
     method: 'simple' / ...
     
-    peak_detect_kargs: dict
+    peak_detect_kwargs: dict
         Params for peak detection
     
     job_kwargs: dict

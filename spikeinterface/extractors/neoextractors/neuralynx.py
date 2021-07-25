@@ -26,7 +26,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
 
 
 
-def read_neuralynx(*args, **kargs):
-    recording = NeuralynxRecordingExtractor(*args, **kargs)
+def read_neuralynx(*args, **kwargs):
+    recording = NeuralynxRecordingExtractor(*args, **kwargs)
     return recording
 read_neuralynx.__doc__ = NeuralynxRecordingExtractor.__doc__

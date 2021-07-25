@@ -82,7 +82,7 @@ class CombinatoSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_combinato(*args, **kargs):
-    sorting = CombinatoSortingExtractor(*args, **kargs)
+def read_combinato(*args, **kwargs):
+    sorting = CombinatoSortingExtractor(*args, **kwargs)
     return sorting
 read_combinato.__doc__ = CombinatoSortingExtractor.__doc__

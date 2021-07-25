@@ -48,8 +48,8 @@ class WaveClustSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_waveclust(*args, **kargs):
-    sorting = WaveClusSortingExtractor(*args, **kargs)
+def read_waveclust(*args, **kwargs):
+    sorting = WaveClusSortingExtractor(*args, **kwargs)
     return sorting
 read_waveclust.__doc__ = WaveClusSortingExtractor.__doc__
 

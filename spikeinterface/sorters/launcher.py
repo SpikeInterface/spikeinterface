@@ -97,7 +97,7 @@ def run_sorters(sorter_list,
 
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
-            * 'loop' : no kargs
+            * 'loop' : no kwargs
             * 'joblib' : {'n_jobs' : } number of processes
             * 'dask' : {'client':} the dask client for submiting task
             

@@ -103,10 +103,18 @@ class BinaryRecordingExtractor(BaseRecording):
             The path to the file.
         dtype: dtype
             Type of the saved data. Default float32.
-        **job_kwargs: keyword argumentds for "write_binary_recording" function:
+        **job_kwargs: keyword arguments for parallel processing:
             * chunk_size or chunk_memory, or total_memory
-            * n_jobs
-            * progress_bar
+                - chunk_size: int
+                    number of samples per chunk
+                - chunk_memory: str
+                    Memory usage for each job (e.g. '100M', '1G'
+                - total_memory: str
+                    Total memory usage (e.g. '500M', '2G')
+            * n_jobs: int
+                Number of jobs to use. With -1 the number of jobs is the same as number of cores
+            * progress_bar: bool
+                If True, a progress bar is printed
         '''
         write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
@@ -145,8 +153,8 @@ class BinaryRecordingSegment(BaseRecordingSegment):
 BinDatRecordingExtractor = BinaryRecordingExtractor
 
 
-def read_binary(*args, **kargs):
-    recording = BinaryRecordingExtractor(*args, **kargs)
+def read_binary(*args, **kwargs):
+    recording = BinaryRecordingExtractor(*args, **kwargs)
     return recording
 
 

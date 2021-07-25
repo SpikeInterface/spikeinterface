@@ -4,10 +4,9 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor
 from spikeinterface.toolkit import get_noise_levels, get_channel_distances
 
 
-
 def localize_peaks(recording, peaks, method='center_of_mass', 
-        local_radius_um=150, ms_before=0.3, ms_after=0.6,
-        **job_kwargs):
+                   local_radius_um=150, ms_before=0.3, ms_after=0.6,
+                   **job_kwargs):
     """
     Localize peak (spike) in 2D or 3D depending the probe.ndim of the recording.
     
@@ -28,8 +27,18 @@ def localize_peaks(recording, peaks, method='center_of_mass',
         The left window before a peak in millisecond
     ms_after: float
         The left window before a peak in millisecond
-    job_kwargs: dict
-        Parameters for ChunkRecordingExecutor
+    **job_kwargs: keyword arguments for parallel processing:
+        * chunk_size or chunk_memory, or total_memory
+            - chunk_size: int
+                number of samples per chunk
+            - chunk_memory: str
+                Memory usage for each job (e.g. '100M', '1G'
+            - total_memory: str
+                Total memory usage (e.g. '500M', '2G')
+        * n_jobs: int
+            Number of jobs to use. With -1 the number of jobs is the same as number of cores
+        * progress_bar: bool
+            If True, a progress bar is printed
     """
     assert method in ('center_of_mass', )
     

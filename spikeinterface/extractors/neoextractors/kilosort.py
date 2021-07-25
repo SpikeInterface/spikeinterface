@@ -38,7 +38,7 @@ class KiloSortSortingExtractor(NeoBaseSortingExtractor):
             use_natural_unit_ids=use_natural_unit_ids)
 
 
-def read_kilosort(*args, **kargs):
-    sorting = KiloSortSortingExtractor(*args, **kargs)
+def read_kilosort(*args, **kwargs):
+    sorting = KiloSortSortingExtractor(*args, **kwargs)
     return sorting
 read_kilosort.__doc__ = KiloSortSortingExtractor.__doc__

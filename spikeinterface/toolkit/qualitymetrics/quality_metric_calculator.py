@@ -7,9 +7,20 @@ from .quality_metric_list import (_metric_name_to_func,
 
 class QualityMetricCalculator:
     """
-    
-    """
+    Class to compute quality metrics of spike sorting output.
 
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor object
+    waveform_principal_component: WaveformPrincipalComponent
+        The principal component object (optional - only required if PC-based metrics need to be computed)
+
+    Returns
+    -------
+    qmc: QualityMetricCalculator
+
+    """
     def __init__(self, waveform_extractor, waveform_principal_component=None):
         self.waveform_extractor = waveform_extractor
         self.waveform_principal_component = waveform_principal_component
@@ -17,7 +28,20 @@ class QualityMetricCalculator:
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting
 
-    def compute_metrics(self, metric_names=None, **kargs):
+    def compute_metrics(self, metric_names=None, **kwargs):
+        """
+        Computes quality metrics
+
+        Parameters
+        ----------
+        metric_names: list or None
+            List of quality metrics to compute. If None, all metrics are computed
+        **kwargs: keyword arguments for quality metrics (TODO)
+
+        Returns
+        -------
+
+        """
         if metric_names is None:
             metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
 
@@ -29,7 +53,7 @@ class QualityMetricCalculator:
             if name in _possible_pc_metric_names:
                 continue
             func = _metric_name_to_func[name]
-            res = func(self.waveform_extractor, **kargs)
+            res = func(self.waveform_extractor, **kwargs)
             if isinstance(res, dict):
                 # res is a dict convert to series
                 metrics[name] = pd.Series(res)
@@ -51,9 +75,23 @@ class QualityMetricCalculator:
         return metrics
 
 
-def compute_quality_metrics(waveform_extractor, metric_names=None, waveform_principal_component=None):
+def compute_quality_metrics(waveform_extractor, metric_names=None, waveform_principal_component=None,
+                            **kwargs):
+    """
+
+    Parameters
+    ----------
+    waveform_extractor
+    metric_names
+    waveform_principal_component
+    kwargs
+
+    Returns
+    -------
+
+    """
     qmc = QualityMetricCalculator(waveform_extractor, waveform_principal_component)
-    df = qmc.compute_metrics(metric_names)
+    df = qmc.compute_metrics(metric_names, **kwargs)
     return df
 
 

@@ -108,7 +108,7 @@ class PeakActivityMapWidget(BaseWidget):
         if self.with_contact_color:
             poly, poly_contour = plot_probe(probe, ax=self.ax, contacts_values=rates,
                         probe_shape_kwargs={'facecolor':'w', 'alpha' : .1},
-                        contacts_kargs= {'alpha' : 1.}
+                        contacts_kwargs= {'alpha' : 1.}
                         )
             artists = artists + (poly, poly_contour)
 
