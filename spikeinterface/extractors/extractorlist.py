@@ -10,24 +10,23 @@ from .neoextractors import (
     IntanRecordingExtractor, read_intan,
     NeuroScopeRecordingExtractor, read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
-    NeuralynxRecordingExtractor, read_neuralynx, 
+    NeuralynxRecordingExtractor, read_neuralynx,
     BlackrockRecordingExtractor, read_blackrock,
     MCSRawRecordingExtractor, read_mcsraw,
-    KiloSortSortingExtractor, read_kilosort,
     Spike2RecordingExtractor, read_spike2,
     CedRecordingExtractor, read_ced,
-    MaxwellRecordingExtractor,  read_maxwell,
+    MaxwellRecordingExtractor, read_maxwell,
     NixRecordingExtractor, read_nix,
     SpikeGadgetsRecordingExtractor, read_spikegadgets,
-    
+
 )
 
 # NWB sorting/recording/event
 from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
-    read_nwb, read_nwb_recording, read_nwb_sorting)
-
+                            read_nwb, read_nwb_recording, read_nwb_sorting)
 
 # sorting extractors in relation with a sorter
+from .kilosortextractors import KiloSortSortingExtractor, read_kilosort
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
@@ -40,12 +39,11 @@ from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_
 from .phyextractors import PhySortingExtractor
 
 # sorting in relation with simulator
-from .shybridextractors import (  SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
-   read_shybrid_recording, read_shybrid_sorting)
+from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
+                                read_shybrid_recording, read_shybrid_sorting)
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
-
 
 ########################################
 
@@ -72,9 +70,9 @@ recording_extractor_full_list = [
     CedRecordingExtractor,
     MaxwellRecordingExtractor,
     NixRecordingExtractor,
+    NwbRecordingExtractor,
     SpikeGadgetsRecordingExtractor,
-    
-    
+
     ##OLD
     # ~ MdaRecordingExtractor,
     # ~ MEArecRecordingExtractor,          OK
@@ -125,11 +123,12 @@ sorting_extractor_full_list = [
     TridesclousSortingExtractor,
     SpykingCircusSortingExtractor,
     HerdingspikesSortingExtractor,
+    KiloSortSortingExtractor,
+    PhySortingExtractor,
+    NwbSortingExtractor,
 
     # neo based
-    MEArecSortingExtractor,
-    KiloSortSortingExtractor,
-    PhySortingExtractor
+    MEArecSortingExtractor
 
     ##OLD
     # ~ MdaSortingExtractor,

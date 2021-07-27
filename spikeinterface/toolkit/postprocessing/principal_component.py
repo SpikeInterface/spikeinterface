@@ -186,7 +186,6 @@ class WaveformPrincipalComponent:
         sorting = we.sorting
         recording = we.recording
 
-        
         assert sorting.get_num_segments() == 1
         assert p['mode'] in ('by_channel_local', 'by_channel_global')
         
@@ -200,10 +199,9 @@ class WaveformPrincipalComponent:
         best_channels_index = get_template_channel_sparsity(we, method='best_channels', 
                     peak_sign=peak_sign, num_channels=max_channels_per_template,outputs='index')
 
-
         unit_channels = [best_channels_index[unit_id] for unit_id in sorting.unit_ids]
         
-        if  p['mode'] == 'by_channel_local':
+        if p['mode'] == 'by_channel_local':
             all_pca = self._fit_by_channel_local()
         elif p['mode'] == 'by_channel_global':
             one_pca = self._fit_by_channel_global()
@@ -234,7 +232,7 @@ class WaveformPrincipalComponent:
         unit_ids = we.sorting.unit_ids
         channel_ids = we.recording.channel_ids
         
-        # there is one PCA per channel for independant fit per channel
+        # there is one PCA per channel for independent fit per channel
         all_pca = [IncrementalPCA(n_components=p['n_components'], whiten=p['whiten']) for _ in channel_ids]
         
         # fit

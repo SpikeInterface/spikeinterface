@@ -1,6 +1,5 @@
 from pathlib import Path
 import numpy as np
-import csv
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment, read_python)
 
@@ -13,7 +12,7 @@ class PhySortingExtractor(BaseSorting):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str(optional)
+    exclude_cluster_groups: list or str (optional)
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
     """
     extractor_name = 'PhySorting'
