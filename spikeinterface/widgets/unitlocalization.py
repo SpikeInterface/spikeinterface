@@ -78,9 +78,9 @@ class UnitLocalizationWidget(BaseWidget):
         ax = self.ax
         probe = we.recording.get_probe()
         probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
-        contacts_kwargs = dict(alpha=1., edgecolor='k', lw=0.5)
+        contacts_kargs = dict(alpha=1., edgecolor='k', lw=0.5)
         poly_contact, poly_contour = plot_probe(probe, ax=ax,
-                                                contacts_colors='w', contacts_kargs=contacts_kwargs,
+                                                contacts_colors='w', contacts_kargs=contacts_kargs,
                                                 probe_shape_kwargs=probe_shape_kwargs)
         poly_contact.set_zorder(2)
         if poly_contour is not None:
