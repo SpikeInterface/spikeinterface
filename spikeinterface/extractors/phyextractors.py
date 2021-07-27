@@ -74,7 +74,6 @@ class PhySortingExtractor(BaseSorting):
 
             cluster_info["id"] = cluster_info["cluster_id"]
             del cluster_info["cluster_id"]
-            print(cluster_info)
 
         if exclude_cluster_groups is not None:
             if isinstance(exclude_cluster_groups, str):

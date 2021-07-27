@@ -72,12 +72,12 @@ def test_extract_waveforms():
     folder1 = Path('test_extract_waveforms_1job')
     if folder1.is_dir():
         shutil.rmtree(folder1)
-    we1 = extract_waveforms(recording, sorting, folder1)
+    we1 = extract_waveforms(recording, sorting, folder1, max_spikes_per_unit=None)
 
     folder2 = Path('test_extract_waveforms_2job')
     if folder2.is_dir():
         shutil.rmtree(folder2)
-    we2 = extract_waveforms(recording, sorting, folder2, n_jobs=2, total_memory="10M")
+    we2 = extract_waveforms(recording, sorting, folder2, n_jobs=2, total_memory="10M", max_spikes_per_unit=None)
 
     wf1 = we1.get_waveforms(0)
     wf2 = we2.get_waveforms(0)
