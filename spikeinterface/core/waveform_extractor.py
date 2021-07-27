@@ -318,8 +318,8 @@ class WaveformExtractor:
             shape = (n_spikes, self.nsamples, num_chans)
             wfs = np.zeros(shape, dtype=p['dtype'])
             np.save(file_path, wfs)
-            wfs = np.load(file_path, mmap_mode='r+')
-            wfs_memmap[unit_id] = wfs
+            # wfs = np.load(file_path, mmap_mode='r+')
+            wfs_memmap[unit_id] = file_path
 
         # and run
         func = _waveform_extractor_chunk
@@ -391,7 +391,7 @@ def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
         sorting = load_extractor(sorting)
     worker_ctx['sorting'] = sorting
 
-    worker_ctx['wfs_memmap'] = wfs_memmap
+    worker_ctx['wfs_memmap_files'] = wfs_memmap
     worker_ctx['selected_spikes'] = selected_spikes
     worker_ctx['selected_spike_times'] = selected_spike_times
     worker_ctx['nbefore'] = nbefore
@@ -414,7 +414,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     # recover variables of the worker
     recording = worker_ctx['recording']
     sorting = worker_ctx['sorting']
-    wfs_memmap = worker_ctx['wfs_memmap']
+    wfs_memmap_files = worker_ctx['wfs_memmap_files']
     selected_spikes = worker_ctx['selected_spikes']
     selected_spike_times = worker_ctx['selected_spike_times']
     nbefore = worker_ctx['nbefore']
@@ -439,7 +439,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
         traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
 
         for unit_id, (i0, i1, local_spike_times) in to_extract.items():
-            wfs = wfs_memmap[unit_id]
+            wfs = np.load(wfs_memmap_files[unit_id], mmap_mode="r+")
             for i in range(local_spike_times.size):
                 st = local_spike_times[i]
                 st = int(st)
@@ -464,7 +464,7 @@ def extract_waveforms(recording, sorting, folder,
         The recording object
     sorting: Sorting
         The sorting object
-    folder: Path
+    folder: str or Path
         The folder where waveforms are cached
     load_if_exists: bool
         If True and waveforms have already been extracted in the specified folder, they are loaded
