@@ -129,7 +129,7 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     extractor_name = 'BasePhyKilosortSorting'
 
     def __init__(self, folder_path, exclude_cluster_groups=None):
-        BasePhyKilosortSortingExtractor.__init__(folder_path, exclude_cluster_groups, keep_good_only=False)
+        BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
 
 
 class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
@@ -146,7 +146,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     extractor_name = 'KiloSortSorting'
 
     def __init__(self, folder_path, keep_good_only=False):
-        BasePhyKilosortSortingExtractor.__init__(folder_path, exclude_cluster_groups=None,
+        BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups=None,
                                                  keep_good_only=keep_good_only)
 
 
