@@ -7,7 +7,6 @@ from matplotlib.animation import FuncAnimation
 from probeinterface.plotting import plot_probe
 
 
-
 class PeakActivityMapWidget(BaseWidget):
     """
     Plots spike rate (estimated estimated with detect_peaks()) as 2D activity map.
@@ -51,17 +50,18 @@ class PeakActivityMapWidget(BaseWidget):
     W: ProbeMapWidget
         The output widget
     """
+
     def __init__(self, recording, peaks=None, detect_peaks_kwargs={},
-                weight_with_amplitudes=True, bin_duration_s=None,
-                with_contact_color=True, with_interpolated_map=True,
-                figure=None, ax=None):
+                 weight_with_amplitudes=True, bin_duration_s=None,
+                 with_contact_color=True, with_interpolated_map=True,
+                 figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
-        
+
         assert recording.get_num_segments() == 1, 'Handle only one segment'
-        
+
         self.recording = recording
-        self.peaks= peaks
-        self.detect_peaks_kwargs= detect_peaks_kwargs
+        self.peaks = peaks
+        self.detect_peaks_kwargs = detect_peaks_kwargs
         self.weight_with_amplitudes = weight_with_amplitudes
         self.bin_duration_s = bin_duration_s
         self.with_contact_color = with_contact_color
@@ -77,53 +77,56 @@ class PeakActivityMapWidget(BaseWidget):
 
         fs = rec.get_sampling_frequency()
         duration = rec.get_total_duration()
-        
+
         probe = rec.get_probe()
-        
-        
+
         if self.bin_duration_s is None:
             self._plot_one_bin(rec, probe, peaks, duration)
         else:
             bin_size = int(self.bin_duration_s * fs)
             num_frames = int(duration / self.bin_duration_s)
+
             def animate_func(i):
                 i0 = np.searchsorted(peaks['sample_ind'], bin_size * i)
-                i1 = np.searchsorted(peaks['sample_ind'], bin_size * (i +1))
+                i1 = np.searchsorted(peaks['sample_ind'], bin_size * (i + 1))
                 local_peaks = peaks[i0:i1]
                 artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
                 return artists
+
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
-                        interval=100, blit=True)
+                                           interval=100, blit=True)
 
     def _plot_one_bin(self, rec, probe, peaks, duration):
-    
+
         # TODO: @alessio weight_with_amplitudes is not implemented yet
         rates = np.zeros(rec.get_num_channels(), dtype='float64')
-        for chan_ind, chan_id in  enumerate(rec.channel_ids):
+        for chan_ind, chan_id in enumerate(rec.channel_ids):
             mask = peaks['channel_ind'] == chan_ind
             num_spike = np.sum(mask)
             rates[chan_ind] = num_spike / duration
-        
+
         artists = ()
         if self.with_contact_color:
             poly, poly_contour = plot_probe(probe, ax=self.ax, contacts_values=rates,
-                        probe_shape_kwargs={'facecolor':'w', 'alpha' : .1},
-                        contacts_kwargs= {'alpha' : 1.}
-                        )
+                                            probe_shape_kwargs={'facecolor': 'w', 'alpha': .1},
+                                            contacts_kargs={'alpha': 1.}
+                                            )
             artists = artists + (poly, poly_contour)
 
         if self.with_interpolated_map:
             image, xlims, ylims = probe.to_image(rates, pixel_size=0.5,
-                num_pixel=None, method='linear',
-                xlims=None, ylims=None)
-            im = self.ax.imshow(image, extent=xlims+ylims, origin='lower', alpha=0.5)
-            artists = artists + (im, )
+                                                 num_pixel=None, method='linear',
+                                                 xlims=None, ylims=None)
+            im = self.ax.imshow(image, extent=xlims + ylims, origin='lower', alpha=0.5)
+            artists = artists + (im,)
 
         return artists
+
 
 def plot_peak_activity_map(*args, **kwargs):
     W = PeakActivityMapWidget(*args, **kwargs)
     W.plot()
     return W
-plot_peak_activity_map.__doc__ = PeakActivityMapWidget.__doc__
 
+
+plot_peak_activity_map.__doc__ = PeakActivityMapWidget.__doc__
