@@ -5,30 +5,27 @@ import numpy as np
 import shutil
 import spikeinterface.extractors as se
 
-from spikeinterface import BaseRecording, BaseSorting, write_binary_recording, BinaryRecordingExtractor
+from spikeinterface import BaseRecording, BaseSorting, write_binary_recording, BinaryRecordingExtractor, \
+    WaveformExtractor
 from spikeinterface.toolkit import (
     get_template_extremum_channel, get_template_channel_sparsity,
     get_spike_amplitudes, compute_template_similarity,
     WaveformPrincipalComponent)
 
 
-def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute_pc_features=True,
+def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
                   compute_amplitudes=True, max_channels_per_template=16, copy_binary=True, remove_if_exists=False,
                   peak_sign='neg',
                   dtype=None, verbose=True, **job_kwargs):
-    '''
-    Exports paired recording and sorting extractors to phy template-gui format.
+    """
+    Exports a waveform extractor to the phy template-gui format.
 
     Parameters
     ----------
-    recording: RecordingExtractor
-        The recording extractor
-    sorting: SortingExtractor
-        The sorting extractor
+    waveform_extractor: a WaveformExtractor or None
+        If WaveformExtractor is provide then the compute is faster otherwise
     output_folder: str
         The output folder where the phy template-gui files are saved
-    waveform_extractor: a WaveformExtractor or None
-        If WaveformExtractor is provide then the compute is faster otherwise 
     compute_pc_features: bool
         If True (default), pc features are computed
     compute_amplitudes: bool
@@ -39,6 +36,8 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
         If True, the recording is copied and saved in the phy 'output_folder'.
     peak_sign: 'neg', 'pos', 'both'
         Used by get_spike_amplitudes
+    verbose: bool
+        If True, output is verbose.
     **job_kwargs: keyword arguments for parallel processing:
         * chunk_size or chunk_memory, or total_memory
             - chunk_size: int
@@ -51,12 +50,12 @@ def export_to_phy(recording, sorting, output_folder, waveform_extractor, compute
             Number of jobs to use. With -1 the number of jobs is the same as number of cores
         * progress_bar: bool
             If True, a progress bar is printed
-    
-    
-    verbose: bool
-    '''
-    if not isinstance(recording, BaseRecording) or not isinstance(sorting, BaseSorting):
-        raise AttributeError('recording and sorting must be extractor objects')
+    """
+
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    assert isinstance(waveform_extractor, WaveformExtractor), 'waveform_extractor and sorting must be a ' \
+                                                              'WaveformExtractor object'
 
     assert recording.get_num_segments() == sorting.get_num_segments(), \
         "The recording and sorting objects must have the same number of segments!"
