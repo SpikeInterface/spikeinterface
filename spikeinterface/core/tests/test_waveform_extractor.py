@@ -48,9 +48,11 @@ def test_WaveformExtractor():
     templates = we.get_all_templates()
     assert templates.shape == (5, 210, 2)
 
-    shutil.rmtree(folder)
-    shutil.rmtree(folder_rec)
-
+    try:
+        shutil.rmtree(folder)
+        shutil.rmtree(folder_rec)
+    except:
+        print("Failed removing test folders")
 
 def test_extract_waveforms():
     # 2 segments
@@ -83,10 +85,13 @@ def test_extract_waveforms():
     wf2 = we2.get_waveforms(0)
     assert np.array_equal(wf1, wf2)
 
-    shutil.rmtree(folder_rec)
-    shutil.rmtree(folder_sort)
-    shutil.rmtree(folder1)
-    shutil.rmtree(folder2)
+    try:
+        shutil.rmtree(folder_rec)
+        shutil.rmtree(folder_sort)
+        shutil.rmtree(folder1)
+        shutil.rmtree(folder2)
+    except:
+        print("Failed removing test folders")
 
 
 if __name__ == '__main__':
