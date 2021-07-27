@@ -4,9 +4,9 @@ import numpy as np
 from spikeinterface.core import (BaseSorting, BaseSortingSegment, read_python)
 
 
-class PhySortingExtractor(BaseSorting):
+class BasePhyKilosortSortingExtractor(BaseSorting):
     """
-    SortingExtractor for a Phy output folder
+    Base SortingExtractor for Phy and Kilosort output folder
 
     Parameters
     ----------
@@ -15,13 +15,13 @@ class PhySortingExtractor(BaseSorting):
     exclude_cluster_groups: list or str (optional)
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
     """
-    extractor_name = 'PhySorting'
+    extractor_name = 'BasePhyKilosortSorting'
     installed = False  # check at class level if installed or not
     is_writable = False
     mode = 'folder'
     installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
 
-    def __init__(self, folder_path, exclude_cluster_groups=None):
+    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False):
         try:
             import pandas as pd
             HAVE_PD = True
@@ -82,6 +82,9 @@ class PhySortingExtractor(BaseSorting):
                     for exclude_group in exclude_cluster_groups:
                         cluster_info = cluster_info.query(f"group != '{exclude_group}'")
 
+        if keep_good_only and "KSLabel" in cluster_info.columns:
+            cluster_info = cluster_info.query(f"KSLabel != 'good'")
+
         unit_ids = cluster_info["id"].values
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
@@ -112,9 +115,52 @@ class PhySortingSegment(BaseSortingSegment):
         return spike_times.copy()
 
 
+class PhySortingExtractor(BasePhyKilosortSortingExtractor):
+    """
+    Base SortingExtractor for Phy and Kilosort output folder
+
+    Parameters
+    ----------
+    folder_path: str or Path
+        Path to the output Phy folder (containing the params.py)
+    exclude_cluster_groups: list or str (optional)
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
+    """
+    extractor_name = 'BasePhyKilosortSorting'
+
+    def __init__(self, folder_path, exclude_cluster_groups=None):
+        BasePhyKilosortSortingExtractor.__init__(folder_path, exclude_cluster_groups, keep_good_only=False)
+
+
+class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
+    """
+    SortingExtractor for a Kilosort output folder
+
+    Parameters
+    ----------
+    folder_path: str or Path
+        Path to the output Phy folder (containing the params.py)
+    keep_good_only: bool
+        If True, only Kilosort-labeled 'good' units are returned
+    """
+    extractor_name = 'KiloSortSorting'
+
+    def __init__(self, folder_path, keep_good_only=False):
+        BasePhyKilosortSortingExtractor.__init__(folder_path, exclude_cluster_groups=None,
+                                                 keep_good_only=keep_good_only)
+
+
 def read_phy(*args, **kwargs):
     sorting = PhySortingExtractor(*args, **kwargs)
     return sorting
 
 
 read_phy.__doc__ = PhySortingExtractor.__doc__
+
+
+def read_kilosort(*args, **kwargs):
+    sorting = KiloSortSortingExtractor(*args, **kwargs)
+    return sorting
+
+
+read_kilosort.__doc__ = KiloSortSortingExtractor.__doc__

@@ -26,7 +26,6 @@ from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
                             read_nwb, read_nwb_recording, read_nwb_sorting)
 
 # sorting extractors in relation with a sorter
-from .kilosortextractors import KiloSortSortingExtractor, read_kilosort
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
@@ -36,7 +35,7 @@ from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
 from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
 from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
-from .phyextractors import PhySortingExtractor
+from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor, read_phy, read_kilosort
 
 # sorting in relation with simulator
 from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
