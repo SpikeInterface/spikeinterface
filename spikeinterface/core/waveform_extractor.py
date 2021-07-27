@@ -473,14 +473,14 @@ def extract_waveforms(recording, sorting, folder,
         Time in ms to cut before spike peak
     ms_after: float
         Time in ms to cut after spike peak
-    max_spikes_per_unit: int
+    max_spikes_per_unit: int or None
         Number of spikes per unit to extract waveforms from (default 500).
         Use None to extract waveforms for all spikes
     overwrite: bool
         If True and 'folder' exists, the folder is removed and waveforms are recomputed.
         Othewise an error is raised.
-    dtype: dtype
-        Dtype of the output waveforms.
+    dtype: dtype or None
+        Dtype of the output waveforms. If None, the recording dtype is maintained.
     **job_kwargs: keyword arguments for parallel processing:
         * chunk_size or chunk_memory, or total_memory
             - chunk_size: int
@@ -500,8 +500,8 @@ def extract_waveforms(recording, sorting, folder,
         The WaveformExtractor object
 
     """
-
     folder = Path(folder)
+    assert not (overwrite and load_if_exists), "Use either 'overwrite=True' or 'load_if_exists=True'"
     if overwrite and folder.is_dir():
         shutil.rmtree(folder)
     if load_if_exists and folder.is_dir():
