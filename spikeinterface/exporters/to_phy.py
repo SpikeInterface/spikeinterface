@@ -40,11 +40,10 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         If True, output is verbose.
     {}
     """
-
-    recording = waveform_extractor.recording
-    sorting = waveform_extractor.sorting
     assert isinstance(waveform_extractor, WaveformExtractor), 'waveform_extractor and sorting must be a ' \
                                                               'WaveformExtractor object'
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
 
     assert recording.get_num_segments() == sorting.get_num_segments(), \
         "The recording and sorting objects must have the same number of segments!"
