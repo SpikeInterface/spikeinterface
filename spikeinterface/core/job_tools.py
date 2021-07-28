@@ -10,6 +10,21 @@ from tqdm import tqdm
 # import loky
 from concurrent.futures import ProcessPoolExecutor
 
+_shared_job_kwargs_doc = \
+    """**job_kwargs: keyword arguments for parallel processing:
+            * chunk_size or chunk_memory, or total_memory
+                - chunk_size: int
+                    number of samples per chunk
+                - chunk_memory: str
+                    Memory usage for each job (e.g. '100M', '1G'
+                - total_memory: str
+                    Total memory usage (e.g. '500M', '2G')
+            * n_jobs: int
+                Number of jobs to use. With -1 the number of jobs is the same as number of cores
+            * progress_bar: bool
+                If True, a progress bar is printed
+    """
+
 
 def divide_segment_into_chunks(num_frames, chunk_size):
     if chunk_size is None:
@@ -31,6 +46,7 @@ def divide_segment_into_chunks(num_frames, chunk_size):
 
     return chunks
 
+
 def devide_recording_into_chunks(recording, chunk_size):
     all_chunks = []
     for segment_index in range(recording.get_num_segments()):
@@ -38,8 +54,7 @@ def devide_recording_into_chunks(recording, chunk_size):
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
         all_chunks.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
     return all_chunks
-    
-    
+
 
 _exponents = {'k': 1e3, 'M': 1e6, 'G': 1e9}
 
@@ -138,7 +153,7 @@ class ChunkRecordingExecutor:
 
         self.verbose = verbose
         self.progress_bar = progress_bar
-        
+
         self.handle_returns = handle_returns
 
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
@@ -152,8 +167,7 @@ class ChunkRecordingExecutor:
 
     def run(self):
         all_chunks = devide_recording_into_chunks(self.recording, self.chunk_size)
-        
-        
+
         if self.handle_returns:
             returns = []
         else:
@@ -172,7 +186,6 @@ class ChunkRecordingExecutor:
             #  if self.verbose:
             #   print('num chunks to compute', len(all_chunks))
 
-
             # loky : this bug!!!
             # executor = loky.get_reusable_executor(max_workers=self.n_jobs,
             # initializer=worker_initializer,
@@ -180,26 +193,25 @@ class ChunkRecordingExecutor:
             # context="loky", timeout=10.,
             # reuse=False,
             # kill_workers=True)
-                        
+
             n_jobs = min(self.n_jobs, len(all_chunks))
             # parallel
             with ProcessPoolExecutor(max_workers=n_jobs,
-                                           initializer=worker_initializer,
-                                           initargs=(self.func, self.init_func, self.init_args)) as executor :
+                                     initializer=worker_initializer,
+                                     initargs=(self.func, self.init_func, self.init_args)) as executor:
 
                 results = executor.map(function_wrapper, all_chunks)
-                
+
                 if self.progress_bar:
                     results = tqdm(results, desc=self.job_name, total=len(all_chunks))
-            
+
                 if self.handle_returns:
                     for res in results:
                         returns.append(res)
                 else:
                     for res in results:
                         pass
-                
-        
+
         return returns
 
 

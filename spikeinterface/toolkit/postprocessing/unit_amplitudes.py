@@ -1,16 +1,14 @@
 import numpy as np
 
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor
-
-from .template_tools import (get_template_extremum_channel, 
-    get_template_extremum_channel_peak_shift)
+from .template_tools import (get_template_extremum_channel,
+                             get_template_extremum_channel_peak_shift)
 
 
-def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatenated',  **job_kwargs):
+def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatenated', **job_kwargs):
     """
     Computes the spike amplitudes from a WaveformExtractor.
-    Amplitudes can be computed in absolute value (uV) or relative to the template amplitude.
 
     1. The waveform extractor is used to determine the max channel per unit.
     2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
@@ -30,23 +28,21 @@ def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatena
         How the output should be returned:
             - 'concatenated'
             - 'by_unit'
-    job_kwargs: Keyword arguments for ChunkRecordingExecutor
+    {}
 
     Returns
     -------
     amplitudes: np.array
         The spike amplitudes.
-            - If 'concatenated' ...
-            - If 'by_unit' ...
-            TODO
-
+            - If 'concatenated' all amplitudes for all spikes and all units are concatenated
+            - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
     we = waveform_extractor
     recording = we.recording
     sorting = we.sorting
 
     all_spikes = sorting.get_all_spike_trains()
-    
+
     extremum_channels_index = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, outputs='index')
     peak_shifts = get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg')
 
@@ -55,17 +51,17 @@ def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatena
     init_func = _init_worker_unit_amplitudes
     init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       handle_returns=True, job_name='extract amplitudes',  **job_kwargs)
+                                       handle_returns=True, job_name='extract amplitudes', **job_kwargs)
     out = processor.run()
     amps, segments = zip(*out)
     amps = np.concatenate(amps)
     segments = np.concatenate(segments)
-    
+
     amplitudes = []
     for segment_index in range(recording.get_num_segments()):
         mask = segments == segment_index
         amplitudes.append(amps[mask])
-    
+
     if outputs == 'concatenated':
         return amplitudes
     elif outputs == 'by_unit':
@@ -78,6 +74,9 @@ def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatena
                 amps = amplitudes[segment_index][mask]
                 amplitudes_by_unit[segment_index][unit_id] = amps
         return amplitudes_by_unit
+
+
+get_spike_amplitudes.__doc__ = get_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 
 
 def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, peak_shifts):
@@ -110,23 +109,22 @@ def _unit_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     all_spikes = worker_ctx['all_spikes']
     recording = worker_ctx['recording']
-    
+
     spike_times, spike_labels = all_spikes[segment_index]
     d = np.diff(spike_times)
     assert np.all(d >= 0)
-    
 
     i0 = np.searchsorted(spike_times, start_frame)
     i1 = np.searchsorted(spike_times, end_frame)
-    
+
     if i0 != i1:
         # some spike in the chunk
-        
-        extremum_channels_index= worker_ctx['extremum_channels_index']
+
+        extremum_channels_index = worker_ctx['extremum_channels_index']
 
         # load trace in memory
         traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
-        
+
         st = spike_times[i0:i1]
         st = st - start_frame
         # TODO : think of a vectorize version of this
@@ -137,4 +135,3 @@ def _unit_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     segments = np.zeros(amplitudes.size, dtype='int64') + segment_index
 
     return amplitudes, segments
-

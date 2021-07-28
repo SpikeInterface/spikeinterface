@@ -8,6 +8,7 @@ import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .core_tools import read_binary_recording, write_binary_recording
+from .job_tools import _shared_job_kwargs_doc
 
 
 class BinaryRecordingExtractor(BaseRecording):
@@ -92,7 +93,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
     @staticmethod
     def write_recording(recording, file_paths, dtype=None, **job_kwargs):
-        '''
+        """
         Save the traces of a recording extractor in binary .dat format.
 
         Parameters
@@ -103,12 +104,11 @@ class BinaryRecordingExtractor(BaseRecording):
             The path to the file.
         dtype: dtype
             Type of the saved data. Default float32.
-        **job_kwargs: keyword argumentds for "write_binary_recording" function:
-            * chunk_size or chunk_memory, or total_memory
-            * n_jobs
-            * progress_bar
-        '''
+        {}
+        """
         write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
+
+BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
@@ -145,8 +145,8 @@ class BinaryRecordingSegment(BaseRecordingSegment):
 BinDatRecordingExtractor = BinaryRecordingExtractor
 
 
-def read_binary(*args, **kargs):
-    recording = BinaryRecordingExtractor(*args, **kargs)
+def read_binary(*args, **kwargs):
+    recording = BinaryRecordingExtractor(*args, **kwargs)
     return recording
 
 

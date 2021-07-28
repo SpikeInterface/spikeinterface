@@ -297,7 +297,7 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     def count_well_detected_units(self, well_detected_score):
         """
         Count how many well detected units.
-        Kargs are the same as get_well_detected_units.
+        kwargs are the same as get_well_detected_units.
         """
         return len(self.get_well_detected_units(well_detected_score=well_detected_score))
 
@@ -464,6 +464,6 @@ num_bad: {num_bad}
 """
 
 
-def compare_sorter_to_ground_truth(*args, **kargs):
-    return GroundTruthComparison(*args, **kargs)
+def compare_sorter_to_ground_truth(*args, **kwargs):
+    return GroundTruthComparison(*args, **kwargs)
 compare_sorter_to_ground_truth.__doc__ = GroundTruthComparison.__doc__

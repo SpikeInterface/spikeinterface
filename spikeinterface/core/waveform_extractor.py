@@ -7,7 +7,7 @@ import numpy as np
 from .base import load_extractor
 
 from .core_tools import check_json
-from .job_tools import ChunkRecordingExecutor, ensure_n_jobs
+from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 
 
 class WaveformExtractor:
@@ -318,8 +318,8 @@ class WaveformExtractor:
             shape = (n_spikes, self.nsamples, num_chans)
             wfs = np.zeros(shape, dtype=p['dtype'])
             np.save(file_path, wfs)
-            wfs = np.load(file_path, mmap_mode='r+')
-            wfs_memmap[unit_id] = wfs
+            # wfs = np.load(file_path, mmap_mode='r+')
+            wfs_memmap[unit_id] = file_path
 
         # and run
         func = _waveform_extractor_chunk
@@ -391,7 +391,7 @@ def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
         sorting = load_extractor(sorting)
     worker_ctx['sorting'] = sorting
 
-    worker_ctx['wfs_memmap'] = wfs_memmap
+    worker_ctx['wfs_memmap_files'] = wfs_memmap
     worker_ctx['selected_spikes'] = selected_spikes
     worker_ctx['selected_spike_times'] = selected_spike_times
     worker_ctx['nbefore'] = nbefore
@@ -414,7 +414,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     # recover variables of the worker
     recording = worker_ctx['recording']
     sorting = worker_ctx['sorting']
-    wfs_memmap = worker_ctx['wfs_memmap']
+    wfs_memmap_files = worker_ctx['wfs_memmap_files']
     selected_spikes = worker_ctx['selected_spikes']
     selected_spike_times = worker_ctx['selected_spike_times']
     nbefore = worker_ctx['nbefore']
@@ -439,7 +439,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
         traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
 
         for unit_id, (i0, i1, local_spike_times) in to_extract.items():
-            wfs = wfs_memmap[unit_id]
+            wfs = np.load(wfs_memmap_files[unit_id], mmap_mode="r+")
             for i in range(local_spike_times.size):
                 st = local_spike_times[i]
                 st = int(st)
@@ -449,12 +449,50 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
 def extract_waveforms(recording, sorting, folder,
                       load_if_exists=False,
-                      ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None, **job_kwargs):
+                      ms_before=3., ms_after=4.,
+                      max_spikes_per_unit=500,
+                      overwrite=False,
+                      dtype=None,
+                      **job_kwargs):
     """
-    
-    """
+    Extracts waveform on paired Recording-Sorting objects.
+    Waveforms are persistent on disk and cached in memory.
 
+    Parameters
+    ----------
+    recording: Recording
+        The recording object
+    sorting: Sorting
+        The sorting object
+    folder: str or Path
+        The folder where waveforms are cached
+    load_if_exists: bool
+        If True and waveforms have already been extracted in the specified folder, they are loaded
+        and not recomputed.
+    ms_before: float
+        Time in ms to cut before spike peak
+    ms_after: float
+        Time in ms to cut after spike peak
+    max_spikes_per_unit: int or None
+        Number of spikes per unit to extract waveforms from (default 500).
+        Use None to extract waveforms for all spikes
+    overwrite: bool
+        If True and 'folder' exists, the folder is removed and waveforms are recomputed.
+        Othewise an error is raised.
+    dtype: dtype or None
+        Dtype of the output waveforms. If None, the recording dtype is maintained.
+    {}
+
+    Returns
+    -------
+    we: WaveformExtractor
+        The WaveformExtractor object
+
+    """
     folder = Path(folder)
+    assert not (overwrite and load_if_exists), "Use either 'overwrite=True' or 'load_if_exists=True'"
+    if overwrite and folder.is_dir():
+        shutil.rmtree(folder)
     if load_if_exists and folder.is_dir():
         we = WaveformExtractor.load_from_folder(folder)
     else:
@@ -463,3 +501,6 @@ def extract_waveforms(recording, sorting, folder,
         we.run(**job_kwargs)
 
     return we
+
+
+extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_doc)

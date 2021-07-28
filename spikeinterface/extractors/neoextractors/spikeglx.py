@@ -36,7 +36,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
 
 
-def read_spikeglx(*args, **kargs):
-    recording = SpikeGLXRecordingExtractor(*args, **kargs)
+def read_spikeglx(*args, **kwargs):
+    recording = SpikeGLXRecordingExtractor(*args, **kwargs)
     return recording
 read_spikeglx.__doc__ = SpikeGLXRecordingExtractor.__doc__

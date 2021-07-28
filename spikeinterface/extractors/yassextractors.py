@@ -60,7 +60,7 @@ class YassSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_yass(*args, **kargs):
-    sorting = YassSortingExtractor(*args, **kargs)
+def read_yass(*args, **kwargs):
+    sorting = YassSortingExtractor(*args, **kwargs)
     return sorting
 read_yass.__doc__ = YassSortingExtractor.__doc__

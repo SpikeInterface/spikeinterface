@@ -40,7 +40,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=file_path, stream_id=stream_id, rec_name = rec_name)
 
 
-def read_maxwell(*args, **kargs):
-    recording = MaxwellRecordingExtractor(*args, **kargs)
+def read_maxwell(*args, **kwargs):
+    recording = MaxwellRecordingExtractor(*args, **kwargs)
     return recording
 read_maxwell.__doc__ = MaxwellRecordingExtractor.__doc__

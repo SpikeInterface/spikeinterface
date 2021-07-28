@@ -25,7 +25,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=file_path, stream_id=stream_id)
 
 
-def read_blackrock(*args, **kargs):
-    recording = BlackrockRecordingExtractor(*args, **kargs)
+def read_blackrock(*args, **kwargs):
+    recording = BlackrockRecordingExtractor(*args, **kwargs)
     return recording
 read_blackrock.__doc__ = BlackrockRecordingExtractor.__doc__

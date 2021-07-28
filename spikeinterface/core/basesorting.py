@@ -37,7 +37,6 @@ class BaseSorting(BaseExtractor):
         return len(self.get_unit_ids())
 
     def add_sorting_segment(self, sorting_segment):
-        # todo: check consistency with unit ids and freq
         self._sorting_segments.append(sorting_segment)
         sorting_segment.set_parent_extractor(self)
 

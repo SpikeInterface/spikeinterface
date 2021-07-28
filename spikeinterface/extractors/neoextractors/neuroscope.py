@@ -26,7 +26,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=file_path, stream_id=stream_id)
 
 
-def read_neuroscope(*args, **kargs):
-    recording = NeuroScopeRecordingExtractor(*args, **kargs)
+def read_neuroscope(*args, **kwargs):
+    recording = NeuroScopeRecordingExtractor(*args, **kwargs)
     return recording
 read_neuroscope.__doc__ = NeuroScopeRecordingExtractor.__doc__

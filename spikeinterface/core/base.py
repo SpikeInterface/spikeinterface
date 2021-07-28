@@ -130,7 +130,7 @@ class BaseExtractor:
         return v
 
     def get_annotation_keys(self):
-        return self._annotations.keys()
+        return list(self._annotations.keys())
 
     def set_property(self, key, values, ids=None):
         """
@@ -178,7 +178,7 @@ class BaseExtractor:
         return values
 
     def get_property_keys(self):
-        return self._properties.keys()
+        return list(self._properties.keys())
 
     def copy_metadata(self, other, only_main=False, ids=None):
         """
@@ -469,7 +469,7 @@ class BaseExtractor:
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
 
-    def _save(self, folder, **save_kargs):
+    def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
         raise NotImplementedError
@@ -479,22 +479,22 @@ class BaseExtractor:
         # this is internally call by load(...) main function
         raise NotImplementedError
 
-    def save(self, **kargs):
+    def save(self, **kwargs):
         """
         route save_to_folder() or save_to_mem()
         """
-        if kargs.get('format', None) == 'memory':
-            return self.save_to_memory(**kargs)
+        if kwargs.get('format', None) == 'memory':
+            return self.save_to_memory(**kwargs)
         else:
-            return self.save_to_folder(**kargs)
+            return self.save_to_folder(**kwargs)
 
-    def save_to_memory(self, **kargs):
+    def save_to_memory(self, **kwargs):
         # used only by recording at the moment
-        cached = self._save(**kargs)
+        cached = self._save(**kwargs)
         self.copy_metadata(cached)
         return cached
 
-    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kargs):
+    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -567,7 +567,7 @@ class BaseExtractor:
             np.save(prop_folder / (key + '.npy'), values)
 
         # save data (done the subclass)
-        cached = self._save(folder=folder, verbose=verbose, **save_kargs)
+        cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
 
         # copy properties/
         self.copy_metadata(cached)
