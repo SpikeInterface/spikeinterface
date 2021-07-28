@@ -6,6 +6,22 @@ from spikeinterface.core.tests.testing_tools import generate_recording, generate
 from spikeinterface import WaveformExtractor, extract_waveforms
 
 
+def _clean_all():
+    folders = ["wf_rec1", "wf_rec2", "wf_sort2", "test_waveform_extractor",
+               "test_extract_waveforms_1job", "test_extract_waveforms_2job"]
+    for folder in folders:
+        if Path(folder).exists():
+            shutil.rmtree(folder)
+
+
+def setup_module():
+    _clean_all()
+
+
+def teardown_module():
+    _clean_all()
+
+
 def test_WaveformExtractor():
     durations = [30, 40]
     sampling_frequency = 30000.
@@ -13,7 +29,7 @@ def test_WaveformExtractor():
     # 2 segments
     recording = generate_recording(num_channels=2, durations=durations, sampling_frequency=sampling_frequency)
     recording.annotate(is_filtered=True)
-    folder_rec = "wf_rec"
+    folder_rec = "wf_rec1"
     recording = recording.save(folder=folder_rec)
     sorting = generate_sorting(num_units=5, sampling_frequency=sampling_frequency, durations=durations)
 
@@ -48,11 +64,6 @@ def test_WaveformExtractor():
     templates = we.get_all_templates()
     assert templates.shape == (5, 210, 2)
 
-    try:
-        shutil.rmtree(folder)
-        shutil.rmtree(folder_rec)
-    except:
-        print("Failed removing test folders")
 
 def test_extract_waveforms():
     # 2 segments
@@ -62,10 +73,10 @@ def test_extract_waveforms():
 
     recording = generate_recording(num_channels=2, durations=durations, sampling_frequency=sampling_frequency)
     recording.annotate(is_filtered=True)
-    folder_rec = "wf_rec"
+    folder_rec = "wf_rec2"
     recording = recording.save(folder=folder_rec)
     sorting = generate_sorting(num_units=5, sampling_frequency=sampling_frequency, durations=durations)
-    folder_sort = "wf_sort"
+    folder_sort = "wf_sort2"
     sorting = sorting.save(folder=folder_sort)
     # test without dump !!!!
     #  recording = recording.save()
@@ -84,14 +95,6 @@ def test_extract_waveforms():
     wf1 = we1.get_waveforms(0)
     wf2 = we2.get_waveforms(0)
     assert np.array_equal(wf1, wf2)
-
-    try:
-        shutil.rmtree(folder_rec)
-        shutil.rmtree(folder_sort)
-        shutil.rmtree(folder1)
-        shutil.rmtree(folder2)
-    except:
-        print("Failed removing test folders")
 
 
 if __name__ == '__main__':

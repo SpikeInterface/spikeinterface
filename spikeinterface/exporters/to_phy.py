@@ -3,10 +3,10 @@ import csv
 
 import numpy as np
 import shutil
-import spikeinterface.extractors as se
 
-from spikeinterface import BaseRecording, BaseSorting, write_binary_recording, BinaryRecordingExtractor, \
+from spikeinterface import write_binary_recording, BinaryRecordingExtractor, \
     WaveformExtractor
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.toolkit import (
     get_template_extremum_channel, get_template_channel_sparsity,
     get_spike_amplitudes, compute_template_similarity,
@@ -38,18 +38,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         Used by get_spike_amplitudes
     verbose: bool
         If True, output is verbose.
-    **job_kwargs: keyword arguments for parallel processing:
-        * chunk_size or chunk_memory, or total_memory
-            - chunk_size: int
-                number of samples per chunk
-            - chunk_memory: str
-                Memory usage for each job (e.g. '100M', '1G'
-            - total_memory: str
-                Total memory usage (e.g. '500M', '2G')
-        * n_jobs: int
-            Number of jobs to use. With -1 the number of jobs is the same as number of cores
-        * progress_bar: bool
-            If True, a progress bar is printed
+    {}
     """
 
     recording = waveform_extractor.recording
@@ -206,3 +195,6 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
 
     if verbose:
         print('Run:\nphy template-gui ', str(output_folder / 'params.py'))
+
+
+export_to_phy.__doc__ = export_to_phy.__doc__.format(_shared_job_kwargs_doc)

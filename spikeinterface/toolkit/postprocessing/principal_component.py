@@ -20,7 +20,7 @@ class WaveformPrincipalComponent:
 
     Parameters
     ----------
-    waveformextractor: WaveformExtractor
+    waveform_extractor: WaveformExtractor
         The WaveformExtractor object
 
     Returns
@@ -36,7 +36,6 @@ class WaveformPrincipalComponent:
     >>> all_components = pc.get_all_components()
 
     """
-
     def __init__(self, waveform_extractor):
         self.waveform_extractor = waveform_extractor
 
@@ -209,9 +208,9 @@ class WaveformPrincipalComponent:
             one_pca = self._fit_by_channel_global()
             all_pca = [one_pca] * recording.get_num_channels()
 
-        #  nSpikes, nFeaturesPerChannel, nPCFeatures
+        # nSpikes, nFeaturesPerChannel, nPCFeatures
         # this come from  phy template-gui
-        #  https://github.com/kwikteam/phy-contrib/blob/master/docs/template-gui.md#datasets
+        # https://github.com/kwikteam/phy-contrib/blob/master/docs/template-gui.md#datasets
         shape = (spike_times.size, p['n_components'], max_channels_per_template)
         all_pcs = np.lib.format.open_memmap(filename=file_path, mode='w+', dtype='float32', shape=shape)
         all_pcs_args = dict(filename=file_path, mode='r+', dtype='float32', shape=shape)
@@ -337,7 +336,7 @@ class WaveformPrincipalComponent:
 
 def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
-    all_pcs = np.lib.format.open_memmap(**worker_ctx['all_pcs_args'])
+    all_pcs = worker_ctx['all_pcs']
     spike_times = worker_ctx['spike_times']
     spike_labels = worker_ctx['spike_labels']
     nbefore = worker_ctx['nbefore']
@@ -381,7 +380,7 @@ def _init_work_all_pc_extractor(recording, all_pcs_args, spike_times, spike_labe
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
     worker_ctx['recording'] = recording
-    worker_ctx['all_pcs_args'] = all_pcs_args
+    worker_ctx['all_pcs'] = np.lib.format.open_memmap(**all_pcs_args)
     worker_ctx['spike_times'] = spike_times
     worker_ctx['spike_labels'] = spike_labels
     worker_ctx['nbefore'] = nbefore
@@ -396,8 +395,29 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
                                  n_components=5, mode='by_channel_local',
                                  whiten=True, dtype='float32'):
     """
-    
-    
+    Compute PC scores from waveform extractor.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    load_if_exists: bool
+        If True and pc scores are already in the waveform extractor folders, pc scores are loaded and not recomputed.
+    n_components: int
+        Number of components fo PCA
+    mode: str
+        - 'by_channel_local': a local PCA is fitted for each channel (projection by channel)
+        - 'by_channel_global': a global PCA is fitted for all channels (projection by channel)
+        - 'concatenated': channels are concatenated and a global PCA is fitted
+    whiten: bool
+        If True, waveforms are pre-whitened
+    dtype: dtype
+        Dtype of the pc scores (default float32)
+
+    Returns
+    -------
+    pc: WaveformPrincipalComponent
+        The waveform principal component object
     """
 
     folder = waveform_extractor.folder
