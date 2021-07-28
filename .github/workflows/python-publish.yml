@@ -1,0 +1,47 @@
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
+
+name: Test and Upload Python Package
+
+on:
+  push:
+    tags:
+       - '*'
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: s-weigand/setup-conda@v1
+        with:
+          python-version: 3.6
+      - name: Which python
+        run: |
+          conda --version
+          which python
+      - name: Install dependencies
+        run: |
+          pip install pytest
+          pip install setuptools wheel twine
+          pip install -r requirements.txt
+          pip install -r requirements_rtd.txt
+          pip install .
+          pip install sphinx pillow sphinx-gallery
+      - name: Test with pytest
+        run: |
+          pytest
+      - name: Test docs
+        run: |
+          cd doc
+          make html
+          cd ..
+      - name: Publish on PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          python setup.py sdist bdist_wheel
+          twine upload dist/*

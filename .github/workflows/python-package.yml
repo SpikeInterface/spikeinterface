@@ -1,0 +1,57 @@
+name: Python Package using Conda
+
+on: [push]
+
+jobs:
+  build-and-test:
+    name: Test on (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: s-weigand/setup-conda@v1
+        with:
+          python-version: 3.6
+      - name: Which python
+        run: |
+          conda --version
+          which python
+      - name: Install dependencies
+        run: |
+          pip install pytest
+          pip install -r requirements.txt
+          pip install .
+      - name: Test with pytest
+        run: |
+          pytest
+
+  build-docs:
+    name: Test on (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: s-weigand/setup-conda@v1
+        with:
+          python-version: 3.6
+      - name: Which python
+        run: |
+          conda --version
+          which python
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements_rtd.txt
+          pip install .
+          pip install sphinx pillow sphinx-gallery
+      - name: Build docs
+        run: |
+          cd doc
+          make html
+
