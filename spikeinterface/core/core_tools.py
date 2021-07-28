@@ -5,7 +5,8 @@ import datetime
 import numpy as np
 from tqdm import tqdm
 
-from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor
+from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
+    _shared_job_kwargs_doc
 
 
 def read_python(path):
@@ -201,18 +202,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         If True, output is verbose (when chunks are used)
     byte_offset: int
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
-    **job_kwargs: keyword arguments for parallel processing:
-        * chunk_size or chunk_memory, or total_memory
-            - chunk_size: int
-                number of samples per chunk
-            - chunk_memory: str
-                Memory usage for each job (e.g. '100M', '1G'
-            - total_memory: str
-                Total memory usage (e.g. '500M', '2G')
-        * n_jobs: int
-            Number of jobs to use. With -1 the number of jobs is the same as number of cores
-        * progress_bar: bool
-            If True, a progress bar is printedr
+    {}
     '''
     assert file_paths is not None, "Provide 'file_path'"
 
@@ -244,6 +234,9 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
+
+
+write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
 def write_binary_recording_file_handle(recording, file_handle=None,
@@ -349,7 +342,7 @@ def make_shared_array(shape, dtype):
 
 
 def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
-    '''
+    """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
 
@@ -361,23 +354,12 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
         Type of the saved data. Default float32.
     verbose: bool
         If True, output is verbose (when chunks are used)
-    **job_kwargs: keyword arguments for parallel processing:
-        * chunk_size or chunk_memory, or total_memory
-            - chunk_size: int
-                number of samples per chunk
-            - chunk_memory: str
-                Memory usage for each job (e.g. '100M', '1G'
-            - total_memory: str
-                Total memory usage (e.g. '500M', '2G')
-        * n_jobs: int
-            Number of jobs to use. With -1 the number of jobs is the same as number of cores
-        * progress_bar: bool
-            If True, a progress bar is printed
+    {}
 
     Returns
     ---------
     arrays: one arrays per segment
-    '''
+    """
 
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
     n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
@@ -416,9 +398,12 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
     return arrays
 
 
+write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
+
+
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
                                time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M', verbose=False):
-    '''
+    """
     Save the traces of a recording extractor in an h5 dataset.
 
     Parameters
@@ -448,7 +433,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M') 
     verbose: bool
         If True, output is verbose (when chunks are used)
-    '''
+    """
     import h5py
     # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
     assert save_path is not None or file_handle is not None, "Provide 'save_path' or 'file handle'"

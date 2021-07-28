@@ -7,7 +7,7 @@ import numpy as np
 from .base import load_extractor
 
 from .core_tools import check_json
-from .job_tools import ChunkRecordingExecutor, ensure_n_jobs
+from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 
 
 class WaveformExtractor:
@@ -481,18 +481,7 @@ def extract_waveforms(recording, sorting, folder,
         Othewise an error is raised.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
-    **job_kwargs: keyword arguments for parallel processing:
-        * chunk_size or chunk_memory, or total_memory
-            - chunk_size: int
-                number of samples per chunk
-            - chunk_memory: str
-                Memory usage for each job (e.g. '100M', '1G'
-            - total_memory: str
-                Total memory usage (e.g. '500M', '2G')
-        * n_jobs: int
-            Number of jobs to use. With -1 the number of jobs is the same as number of cores
-        * progress_bar: bool
-            If True, a progress bar is printed
+    {}
 
     Returns
     -------
@@ -512,3 +501,6 @@ def extract_waveforms(recording, sorting, folder,
         we.run(**job_kwargs)
 
     return we
+
+
+extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_doc)
