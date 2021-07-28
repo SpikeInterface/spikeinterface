@@ -6,6 +6,9 @@ class FrameSliceRecording(BaseRecording):
     """
     Class to get a lazy frame slice.
     Work only with mono segment recording.
+
+    Do not use this class directly but use `recording.frame_slice(...)`
+
     """
 
     def __init__(self, parent_recording, start_frame=None, end_frame=None):
