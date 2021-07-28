@@ -15,17 +15,37 @@ Module :mod:`spikeinterface.core`
 
     .. autoclass:: BinaryRecordingExtractor
 
+    .. autofunction:: read_binary
+
     .. autoclass:: NpzSortingExtractor
 
     .. autoclass:: NumpyRecording
 
     .. autoclass:: NumpySorting
 
+    .. autoclass:: ChannelSliceRecording
+
+    .. autoclass:: UnitsSelectionSorting
+
+    .. autoclass:: FrameSliceRecording
+
+    .. autofunction:: append_recordings
+
+    .. autofunction:: concatenate_recordings
+
+    .. autofunction:: append_sortings
+
+    .. autofunction:: extract_waveforms
+
+    .. autoclass:: WaveformExtractor
+
+    .. autofunction:: download_dataset
+
+    .. autofunction:: write_binary_recording
 
     .. autofunction:: set_global_tmp_folder
 
     .. autofunction:: set_global_dataset_folder
-
 
 
 
@@ -34,13 +54,55 @@ Module :mod:`spikeinterface.extractors`
 .. automodule:: spikeinterface.extractors
 
     .. autofunction:: toy_example
+    .. autofunction:: read_bids_folder
+    .. autofunction:: read_mearec
+    .. autofunction:: read_spikeglx
+    .. autofunction:: read_openephys
+    .. autofunction:: read_intan
+    .. autofunction:: read_neuroscope
+    .. autofunction:: read_plexon
+    .. autofunction:: read_neuralynx
+    .. autofunction:: read_blackrock
+    .. autofunction:: read_mcsraw
+    .. autofunction:: read_kilosort
+    .. autofunction:: read_spike2
+    .. autofunction:: read_ced
+    .. autofunction:: read_maxwell
+    .. autofunction:: read_nix
+    .. autofunction:: read_spikegadgets
+    .. autofunction:: read_klusta
+    .. autofunction:: read_hdsort
+    .. autofunction:: read_waveclust
+    .. autofunction:: read_yass
+    .. autofunction:: read_combinato
+    .. autofunction:: read_tridesclous
+    .. autofunction:: read_spykingcircus
+    .. autofunction:: read_herdingspikes
+    .. autofunction:: read_mda_recording
+    .. autofunction:: read_mda_sorting
+    .. autofunction:: read_shybrid_recording
+    .. autofunction:: read_shybrid_sorting
+    .. autofunction:: read_alf_sorting
 
 
 Module :mod:`spikeinterface.toolkit`
 ------------------------------------
 
+toolkit.utils
+~~~~~~~~~~~~~
+
+
+.. automodule:: spikeinterface.toolkit
+
+    .. autofunction:: get_random_data_chunks
+    .. autofunction:: get_channel_distances
+    .. autofunction:: get_closest_channels
+    .. autofunction:: get_noise_levels
+
+
 Preprocessing
 ~~~~~~~~~~~~~
+
 .. automodule:: spikeinterface.toolkit.preprocessing
 
     .. autofunction:: filter
@@ -69,9 +131,10 @@ Postprocessing
     .. autofunction:: get_template_best_channels
     .. autofunction:: compute_unit_centers_of_mass
     .. autofunction:: calculate_template_metrics
-    .. autofunction:: export_to_phy
+    .. autofunction:: get_template_metric_names
     .. autofunction:: compute_principal_components
     .. autofunction:: get_spike_amplitudes
+    .. autofunction:: compute_correlograms
 
 
 Quality metrics
@@ -79,8 +142,7 @@ Quality metrics
 .. automodule:: spikeinterface.toolkit.qualitymetrics
 
     .. autofunction:: compute_quality_metrics
-
-
+    .. autofunction:: get_quality_metric_list
 
 
 Module :mod:`spikeinterface.sorters`
@@ -123,11 +185,20 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_timeseries
     .. autofunction:: plot_rasters
     .. autofunction:: plot_probe_map
+    .. autofunction:: plot_isi_distribution
+    .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_autocorrelograms
+    .. autofunction:: plot_drift_over_time
+    .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_unit_waveforms
     .. autofunction:: plot_unit_templates
+    .. autofunction:: plot_unit_waveform_density_map
     .. autofunction:: plot_amplitudes_timeseries
     .. autofunction:: plot_amplitudes_distribution
     .. autofunction:: plot_principal_component
+    .. autofunction:: plot_unit_localization
+    .. autofunction:: plot_unit_probe_map
+    .. autofunction:: plot_units_depth_vs_amplitude
     .. autofunction:: plot_confusion_matrix
     .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_multicomp_graph
@@ -136,6 +207,7 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_comparison_collision_pair_by_pair
     .. autofunction:: plot_comparison_collision_by_similarity
     .. autofunction:: plot_sorting_performance
+    .. autofunction:: plot_unit_summary
 
 
 Module :mod:`spikeinterface.exporters`

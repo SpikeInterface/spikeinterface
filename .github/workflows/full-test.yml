@@ -30,6 +30,7 @@ jobs:
             ${{ runner.os }}-venv
       - name: Install dependencies
         run: |
+          sudo apt update
           # this is for datalad and download testing datasets
           sudo apt install git git-annex
           # needed for correct operation of git/git-annex/DataLad

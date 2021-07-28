@@ -8,6 +8,9 @@ from .baserecording import BaseRecording, BaseRecordingSegment
 class ChannelSliceRecording(BaseRecording):
     """
     Class to slice a Recording object based on channel_ids.
+
+    Do not use this class directly but use `recording.channel_slice(...)`
+
     """
 
     def __init__(self, parent_recording, channel_ids=None, renamed_channel_ids=None):
