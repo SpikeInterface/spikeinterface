@@ -5,7 +5,56 @@ import datetime
 import numpy as np
 from tqdm import tqdm
 
-from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor
+from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
+    _shared_job_kwargs_doc
+
+
+def read_python(path):
+    """Parses python scripts in a dictionary
+
+    Parameters
+    ----------
+    path: str or Path
+        Path to file to parse
+
+    Returns
+    -------
+    metadata:
+        dictionary containing parsed file
+
+    """
+    from six import exec_
+    import re
+    path = Path(path).absolute()
+    assert path.is_file()
+    with path.open('r') as f:
+        contents = f.read()
+    contents = re.sub(r'range\(([\d,]*)\)',r'list(range(\1))',contents)
+    metadata = {}
+    exec_(contents, {}, metadata)
+    metadata = {k.lower(): v for (k, v) in metadata.items()}
+    return metadata
+
+
+def write_python(path, dict):
+    """Saves python dictionary to file
+
+    Parameters
+    ----------
+    path: str or Path
+        Path to save file
+    dict: dict
+        dictionary to save
+    """
+    with Path(path).open('w') as f:
+        for k, v in dict.items():
+            if isinstance(v ,str) and not v.startswith("'"):
+                if 'path' in k and 'win' in sys.platform:
+                    f.write(str(k) + " = r'" + str(v) + "'\n")
+                else:
+                    f.write(str(k) + " = '" + str(v) + "'\n")
+            else:
+                f.write(str(k) + " = " + str(v) + "\n")
 
 
 def check_json(d):
@@ -153,12 +202,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         If True, output is verbose (when chunks are used)
     byte_offset: int
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
-
-    **job_kwargs: 
-        Use by job_tools modules to set:
-            * chunk_size or chunk_memory, or total_memory
-            * n_jobs
-            * progress_bar 
+    {}
     '''
     assert file_paths is not None, "Provide 'file_path'"
 
@@ -190,6 +234,9 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
+
+
+write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
 def write_binary_recording_file_handle(recording, file_handle=None,
@@ -295,7 +342,7 @@ def make_shared_array(shape, dtype):
 
 
 def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
-    '''
+    """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
 
@@ -307,17 +354,12 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
         Type of the saved data. Default float32.
     verbose: bool
         If True, output is verbose (when chunks are used)
-
-    **job_kwargs: 
-        Use by job_tools modules to set:
-            * chunk_size or chunk_memory, or total_memory
-            * n_jobs
-            * progress_bar 
+    {}
 
     Returns
     ---------
     arrays: one arrays per segment
-    '''
+    """
 
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
     n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
@@ -356,9 +398,12 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
     return arrays
 
 
+write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
+
+
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
                                time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M', verbose=False):
-    '''
+    """
     Save the traces of a recording extractor in an h5 dataset.
 
     Parameters
@@ -388,7 +433,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M') 
     verbose: bool
         If True, output is verbose (when chunks are used)
-    '''
+    """
     import h5py
     # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
     assert save_path is not None or file_handle is not None, "Provide 'save_path' or 'file handle'"

@@ -87,21 +87,17 @@ def test_compute_principal_components_for_all_spikes():
     pc = compute_principal_components(we, load_if_exists=True)
     print(pc)
 
-    pc_file = 'all_pc.npy'
-    pc.run_for_all_spikes(pc_file, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
-    
-    all_pc = np.load(pc_file)
-    # print(all_pc.shape)
-    # print(all_pc)
-    
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # ax.scatter(all_pc[:, 0, 0], all_pc[:, -1, 0])
-    # plt.show()
+    pc_file1 = 'all_pc1.npy'
+    pc.run_for_all_spikes(pc_file1, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
+    all_pc1 = np.load(pc_file1)
+
+    pc_file2 = 'all_pc2.npy'
+    pc.run_for_all_spikes(pc_file2, max_channels_per_template=7, chunk_size=10000, n_jobs=2)
+    all_pc2 = np.load(pc_file2)
+
+    assert np.array_equal(all_pc1, all_pc2)
 
 
 if __name__ == '__main__':
     setup_module()
-    
-    # test_WaveformPrincipalComponent()
     test_compute_principal_components_for_all_spikes()

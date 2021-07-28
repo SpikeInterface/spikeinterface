@@ -88,6 +88,6 @@ class SymmetricSortingComparison(BaseTwoSorterComparison):
             return self.agreement_scores.at[unit1, unit2]
 
 
-def compare_two_sorters(*args, **kargs):
-        return SymmetricSortingComparison(*args, **kargs)
+def compare_two_sorters(*args, **kwargs):
+        return SymmetricSortingComparison(*args, **kwargs)
 compare_two_sorters.__doc__ = SymmetricSortingComparison.__doc__

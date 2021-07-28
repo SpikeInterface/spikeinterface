@@ -13,18 +13,17 @@ from .neoextractors import (
     NeuralynxRecordingExtractor, read_neuralynx, 
     BlackrockRecordingExtractor, read_blackrock,
     MCSRawRecordingExtractor, read_mcsraw,
-    KiloSortSortingExtractor, read_kilosort,
     Spike2RecordingExtractor, read_spike2,
     CedRecordingExtractor, read_ced,
-    MaxwellRecordingExtractor,  read_maxwell,
+    MaxwellRecordingExtractor, read_maxwell,
     NixRecordingExtractor, read_nix,
     SpikeGadgetsRecordingExtractor, read_spikegadgets,
-    
+
 )
 
 # NWB sorting/recording/event
 from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
-    read_nwb, read_nwb_recording, read_nwb_sorting)
+                            read_nwb, read_nwb_recording, read_nwb_sorting)
 
 
 # sorting extractors in relation with a sorter
@@ -37,10 +36,11 @@ from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
 from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
 from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
+from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor, read_phy, read_kilosort
 
 # sorting in relation with simulator
-from .shybridextractors import (  SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
-   read_shybrid_recording, read_shybrid_sorting)
+from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
+                                read_shybrid_recording, read_shybrid_sorting)
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
@@ -71,6 +71,7 @@ recording_extractor_full_list = [
     CedRecordingExtractor,
     MaxwellRecordingExtractor,
     NixRecordingExtractor,
+    NwbRecordingExtractor,
     SpikeGadgetsRecordingExtractor,
 ]
 
@@ -91,11 +92,12 @@ sorting_extractor_full_list = [
     TridesclousSortingExtractor,
     SpykingCircusSortingExtractor,
     HerdingspikesSortingExtractor,
+    KiloSortSortingExtractor,
+    PhySortingExtractor,
+    NwbSortingExtractor,
 
     # neo based
-    MEArecSortingExtractor,
-    KiloSortSortingExtractor,
-
+    MEArecSortingExtractor
 ]
 
 event_extractor_full_list = [
