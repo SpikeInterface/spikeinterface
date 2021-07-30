@@ -31,7 +31,7 @@ def detect_peaks(recording, method='by_channel',
 
       * 'by_channel' : peak are dettected in each channel independantly
       * 'locally_exclusive' : locally given a radius the best peak only is taken but
-          not neirbhoring channels
+        not neighboring channels
 
     Parameters
     ----------

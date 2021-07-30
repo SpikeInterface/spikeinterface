@@ -9,17 +9,15 @@ def localize_peaks(recording, peaks, method='center_of_mass',
                    **job_kwargs):
     """
     Localize peak (spike) in 2D or 3D depending the probe.ndim of the recording.
-    
-    At the moment only trivial and bad method "center_of_mass" is implemented.
-    
+
     Parameters
     ----------
     recording: RecordingExtractor
         The recording extractor object
     peaks: numpy
         peak vector given by detect_peaks() in "compact_numpy" way.
-    method: str 'center_of_mass'/
-        Mathod used
+    method: str
+        Method to be used ('center_of_mass')
     local_radius_um: float
         Radius in micrometer to make neihgborhood for channel
         around the peak
