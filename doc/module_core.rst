@@ -20,6 +20,7 @@ It represents an extracellular recording and has the following features:
 
 * retrieve raw and scaled traces from each segment
 * keep info about channel_ids VS channel indices
+* handle probe information
 * store channel properties
 * store object annotations
 * enable grouping, splitting, and slicing
