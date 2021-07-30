@@ -1,4 +1,5 @@
 from typing import List, Union
+from pathlib import Path
 
 import numpy as np
 
@@ -157,20 +158,25 @@ class BaseRecording(BaseExtractor):
 
         else:
             raise ValueError(f'format {format} not supported')
-
+        
         if self.get_property('contact_vector') is not None:
             probegroup = self.get_probegroup()
-            write_probeinterface(folder / 'probe.json', probegroup)
             cached.set_probegroup(probegroup)
-
+        
         return cached
 
-    def _after_load(self, folder):
+    def _extra_metadata_from_folder(self, folder):
         # load probe
+        folder = Path(folder)
         if (folder / 'probe.json').is_file():
             probegroup = read_probeinterface(folder / 'probe.json')
             self.set_probegroup(probegroup, in_place=True)
-        return self
+    
+    def _extra_metadata_to_folder(self, folder):
+        # save probe
+        if self.get_property('contact_vector') is not None:
+            probegroup = self.get_probegroup()
+            write_probeinterface(folder / 'probe.json', probegroup)
 
     def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """

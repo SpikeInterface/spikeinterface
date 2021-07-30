@@ -73,9 +73,6 @@ class BaseSorting(BaseExtractor):
 
         return cached
 
-    def _after_load(self, folder):
-        return self
-
     def get_unit_property(self, unit_id, key):
         values = self.get_property(key)
         v = values[self.id_to_index(unit_id)]
