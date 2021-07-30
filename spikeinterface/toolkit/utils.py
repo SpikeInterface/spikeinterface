@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.spatial
 
+
 def get_random_data_chunks(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0):
     """
     Take chunks across segments randomly
@@ -16,13 +17,14 @@ def get_random_data_chunks(recording, num_chunks_per_segment=20, chunk_size=1000
     for segment_index in range(recording.get_num_segments()):
         length = recording.get_num_frames(segment_index)
         random_starts = np.random.RandomState(seed=seed).randint(0,
-                            length - chunk_size, size=num_chunks_per_segment)
+                                                                 length - chunk_size, size=num_chunks_per_segment)
         for start_frame in random_starts:
-            chunk = recording.get_traces(start_frame=start_frame, 
-                                                                    end_frame=start_frame + chunk_size,
-                                                                    segment_index=segment_index)
+            chunk = recording.get_traces(start_frame=start_frame,
+                                         end_frame=start_frame + chunk_size,
+                                         segment_index=segment_index)
             chunk_list.append(chunk)
     return np.concatenate(chunk_list, axis=0)
+
 
 def get_channel_distances(recording):
     """
@@ -53,9 +55,9 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
         distance in ascending order for each channel id given in input
     """
     closest_channels_id = []
-    
+
     locations = recording.get_channel_locations(channel_ids=channel_ids)
-    
+
     closest_channels_inds = []
     dist = []
     for i in range(locations.shape[0]):

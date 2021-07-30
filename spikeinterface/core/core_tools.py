@@ -29,7 +29,7 @@ def read_python(path):
     assert path.is_file()
     with path.open('r') as f:
         contents = f.read()
-    contents = re.sub(r'range\(([\d,]*)\)',r'list(range(\1))',contents)
+    contents = re.sub(r'range\(([\d,]*)\)', r'list(range(\1))', contents)
     metadata = {}
     exec_(contents, {}, metadata)
     metadata = {k.lower(): v for (k, v) in metadata.items()}
@@ -48,7 +48,7 @@ def write_python(path, dict):
     """
     with Path(path).open('w') as f:
         for k, v in dict.items():
-            if isinstance(v ,str) and not v.startswith("'"):
+            if isinstance(v, str) and not v.startswith("'"):
                 if 'path' in k and 'win' in sys.platform:
                     f.write(str(k) + " = r'" + str(v) + "'\n")
                 else:
@@ -155,11 +155,11 @@ def _init_binary_worker(recording, rec_memmaps_dict, dtype):
         worker_ctx['recording'] = load_extractor(recording)
     else:
         worker_ctx['recording'] = recording
-    
+
     rec_memmaps = []
     for d in rec_memmaps_dict:
         rec_memmaps.append(np.memmap(**d))
-        
+
     worker_ctx['rec_memmaps'] = rec_memmaps
     worker_ctx['dtype'] = np.dtype(dtype)
 
@@ -225,7 +225,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         shape = (num_frames, num_channels)
         rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', offset=byte_offset, shape=shape)
         rec_memmaps.append(rec_memmap)
-        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode='r+',  offset=byte_offset, shape=shape))
+        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode='r+', offset=byte_offset, shape=shape))
 
     # use executor (loop or workers)
     func = _write_binary_chunk
@@ -386,7 +386,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
     # use executor (loop or workers)
     func = _write_memory_chunk
     init_func = _init_memory_worker
-    if n_jobs >1:
+    if n_jobs > 1:
         init_args = (recording.to_dict(), None, shm_names, shapes, dtype)
     else:
         init_args = (recording.to_dict(), arrays, None, None, dtype)
@@ -402,7 +402,8 @@ write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_j
 
 
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
-                               time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M', verbose=False):
+                               time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M',
+                               verbose=False):
     """
     Save the traces of a recording extractor in an h5 dataset.
 
@@ -458,7 +459,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         dtype_file = dtype
 
     if single_axis:
-        shape = (num_frames, )
+        shape = (num_frames,)
     else:
         if time_axis == 0:
             shape = (num_frames, num_channels)

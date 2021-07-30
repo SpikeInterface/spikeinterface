@@ -73,10 +73,10 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         final_gains = gains * additional_gain
         final_offsets = offsets * additional_gain
-        
+
         self.set_property('gain_to_uV', final_gains)
         self.set_property('offset_to_uV', final_offsets)
-        
+
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
             rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index)
@@ -230,8 +230,7 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
 
         channel_ids = event_channels['id']
 
-       
-        BaseEvent.__init__(self, channel_ids,  structured_dtype=False)
+        BaseEvent.__init__(self, channel_ids, structured_dtype=False)
 
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):

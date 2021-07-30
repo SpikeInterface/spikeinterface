@@ -2,8 +2,7 @@ Implement a spike sorter
 --------------------------
 
 Implementing a new spike sorter for a specific file format is as simple as creating a new
-subclass based on the predefined base classes provided in the
-`spikesorters <https://github.com/SpikeInterface/spikesorters>`_ package.
+subclass based on the predefined base class :code:`BaseSorter`.
 
 To enable standardization among subclasses, the :code:`BaseSorter` is base class which require a new
 subclass to override a few methods.

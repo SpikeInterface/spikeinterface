@@ -3,7 +3,6 @@ from pathlib import Path
 import sys
 import shutil
 
-
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
@@ -26,7 +25,7 @@ class KlustaSorter(BaseSorter):
     """
 
     sorter_name = 'klusta'
-    
+
     requires_locations = False
 
     _default_params = {
@@ -73,7 +72,7 @@ class KlustaSorter(BaseSorter):
     @classmethod
     def is_installed(cls):
         return HAVE_KLUSTA
-    
+
     @classmethod
     def get_sorter_version(cls):
         return klusta.__version__
@@ -91,7 +90,6 @@ class KlustaSorter(BaseSorter):
         prb_file = output_folder / 'probe.prb'
         probegroup = recording.get_probegroup()
         write_prb(prb_file, probegroup, radius=p['adjacency_radius'])
-
 
         # source file
         # TODO fix .dat
@@ -111,7 +109,6 @@ class KlustaSorter(BaseSorter):
             BinaryRecordingExtractor.write_recording(recording, file_paths=[raw_filename],
                                                      dtype='int16', total_memory=p["total_memory"],
                                                      n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
-                                                                
 
         if p['detect_sign'] < 0:
             detect_sign = 'negative'

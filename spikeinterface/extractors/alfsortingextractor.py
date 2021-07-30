@@ -137,4 +137,3 @@ class ALFSortingSegment(BaseSortingSegment):
 def read_alf_sorting(folder_path, sampling_frequency=30000):
     sorting = ALFSortingExtractor(folder_path, sampling_frequency=sampling_frequency)
     return sorting
-

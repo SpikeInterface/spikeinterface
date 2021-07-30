@@ -21,6 +21,7 @@ class QualityMetricCalculator:
     qmc: QualityMetricCalculator
 
     """
+
     def __init__(self, waveform_extractor, waveform_principal_component=None):
         self.waveform_extractor = waveform_extractor
         self.waveform_principal_component = waveform_principal_component

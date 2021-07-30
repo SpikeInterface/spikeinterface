@@ -15,7 +15,6 @@ from .tridesclous import TridesclousSorter
 from .waveclus import WaveClusSorter
 from .yass import YassSorter
 
-
 sorter_full_list = [
     CombinatoSorter,
     HDSortSorter,
@@ -51,6 +50,7 @@ def installed_sorters():
     l = sorted([s.sorter_name for s in sorter_full_list if s.is_installed()])
     return l
 
+
 def print_sorter_versions():
     txt = ''
     for name in installed_sorters():
@@ -58,7 +58,7 @@ def print_sorter_versions():
         txt += '{}: {}\n'.format(name, version)
     txt = txt[:-1]
     print(txt)
-    
+
 
 def get_default_params(sorter_name_or_class):
     '''

@@ -16,7 +16,7 @@ class BaseEvent(BaseExtractor):
 
         if np.isscalar(structured_dtype):
             structured_dtype = {chan_id: structured_dtype for chan_id in channel_ids}
-        
+
         self.structured_dtype = structured_dtype
 
     def __repr__(self):
