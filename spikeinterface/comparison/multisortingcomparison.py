@@ -3,7 +3,6 @@ from pathlib import Path
 import json
 import os
 
-
 from spikeinterface.core import load_extractor, BaseSorting, BaseSortingSegment
 from .basecomparison import BaseComparison
 from .symmetricsortingcomparison import SymmetricSortingComparison
@@ -48,12 +47,13 @@ class MultiSortingComparison(BaseComparison):
 
     multi_sorting_comparison: MultiSortingComparison
         MultiSortingComparison object with the multiple sorter comparison
-    '''    
-    def __init__(self, sorting_list, name_list=None, delta_time=0.4, #sampling_frequency=None,
+    '''
+
+    def __init__(self, sorting_list, name_list=None, delta_time=0.4,  # sampling_frequency=None,
                  match_score=0.5, chance_score=0.1, n_jobs=-1, spiketrain_mode='union', verbose=False,
                  do_matching=True):
         BaseComparison.__init__(self, sorting_list, name_list=name_list,
-                                delta_time=delta_time, # sampling_frequency=sampling_frequency,
+                                delta_time=delta_time,  #  sampling_frequency=sampling_frequency,
                                 match_score=match_score, chance_score=chance_score,
                                 n_jobs=n_jobs, verbose=verbose)
         self._spiketrain_mode = spiketrain_mode
@@ -83,8 +83,8 @@ class MultiSortingComparison(BaseComparison):
         '''
         assert minimum_agreement_count > 0, "'minimum_agreement_count' should be greater than 0"
         sorting = AgreementSortingExtractor(self.sampling_frequency, self,
-                    min_agreement_count=minimum_agreement_count,
-                    min_agreement_count_only=minimum_agreement_count_only)
+                                            min_agreement_count=minimum_agreement_count,
+                                            min_agreement_count_only=minimum_agreement_count_only)
         return sorting
 
     def compute_subgraphs(self):
@@ -150,7 +150,7 @@ class MultiSortingComparison(BaseComparison):
         mcmp._do_agreement()
         return mcmp
 
-    def _do_comparison(self,):
+    def _do_comparison(self, ):
         # do pairwise matching
         if self._verbose:
             print('Multicomaprison step 1: pairwise comparison')
@@ -164,7 +164,7 @@ class MultiSortingComparison(BaseComparison):
                                                   sorting1_name=self.name_list[i],
                                                   sorting2_name=self.name_list[j],
                                                   delta_time=self.delta_time,
-                                                  #sampling_frequency=self.sampling_frequency,
+                                                  # sampling_frequency=self.sampling_frequency,
                                                   match_score=self.match_score,
                                                   n_jobs=self._n_jobs,
                                                   verbose=False)
@@ -191,7 +191,6 @@ class MultiSortingComparison(BaseComparison):
                     node2 = comp.sorting2_name, u2
                     score = comp.agreement_scores.loc[u1, u2]
                     self.graph.add_edge(node1, node2, weight=score)
-
 
         # the graph is symmetrical
         self.graph = self.graph.to_undirected()
@@ -308,41 +307,40 @@ class MultiSortingComparison(BaseComparison):
 class AgreementSortingExtractor(BaseSorting):
 
     def __init__(self, sampling_frequency, multisortingcomparison,
-                    min_agreement_count=1, min_agreement_count_only=False):
+                 min_agreement_count=1, min_agreement_count_only=False):
 
         self._msc = multisortingcomparison
         self.is_dumpable = False
 
         # TODO: @alessio I leav this for you
         # if min_agreement_count_only:
-            # self._unit_ids = list(u for u in self._msc._new_units.keys()
-                                  # if self._msc._new_units[u]['agreement_number'] == min_agreement_count)
+        # self._unit_ids = list(u for u in self._msc._new_units.keys()
+        # if self._msc._new_units[u]['agreement_number'] == min_agreement_count)
         # else:
-            # self._unit_ids = list(u for u in self._msc._new_units.keys()
-                                  # if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
+        # self._unit_ids = list(u for u in self._msc._new_units.keys()
+        # if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
 
         # for unit in self._unit_ids:
-            # self.set_unit_property(unit_id=unit, property_name='agreement_number',
-                                   # value=self._msc._new_units[unit]['agreement_number'])
-            # self.set_unit_property(unit_id=unit, property_name='avg_agreement',
-                                   # value=self._msc._new_units[unit]['avg_agreement'])
-            # self.set_unit_property(unit_id=unit, property_name='sorter_unit_ids',
-                                   # value=self._msc._new_units[unit]['sorter_unit_ids'])
-
+        # self.set_unit_property(unit_id=unit, property_name='agreement_number',
+        # value=self._msc._new_units[unit]['agreement_number'])
+        # self.set_unit_property(unit_id=unit, property_name='avg_agreement',
+        # value=self._msc._new_units[unit]['avg_agreement'])
+        # self.set_unit_property(unit_id=unit, property_name='sorter_unit_ids',
+        # value=self._msc._new_units[unit]['sorter_unit_ids'])
 
         if min_agreement_count_only:
             unit_ids = list(u for u in self._msc._new_units.keys()
-                                  if self._msc._new_units[u]['agreement_number'] == min_agreement_count)
+                            if self._msc._new_units[u]['agreement_number'] == min_agreement_count)
         else:
             unit_ids = list(u for u in self._msc._new_units.keys()
-                                  if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
-        
+                            if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
+
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
         if len(unit_ids) > 0:
             for k in ('agreement_number', 'avg_agreement', 'sorter_unit_ids'):
                 values = [self._msc._new_units[unit_id][k] for unit_id in unit_ids]
                 self.set_property(k, values, ids=unit_ids)
-        
+
         sorting_segment = AgreementSortingSegment(multisortingcomparison)
         self.add_sorting_segment(sorting_segment)
 
@@ -360,4 +358,6 @@ class AgreementSortingSegment(BaseSortingSegment):
 
 def compare_multiple_sorters(*args, **kwargs):
     return MultiSortingComparison(*args, **kwargs)
+
+
 compare_multiple_sorters.__doc__ = MultiSortingComparison.__doc__

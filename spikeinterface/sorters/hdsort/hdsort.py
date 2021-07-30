@@ -11,7 +11,6 @@ from ..utils import ShellScript
 # from spikeinterface.extractors import MaxOneRecordingExtractor
 from spikeinterface.extractors import HDSortSortingExtractor
 
-
 PathType = Union[str, Path]
 
 
@@ -82,13 +81,13 @@ class HDSortSorter(BaseSorter):
     More information on HDSort at:
         https://git.bsse.ethz.ch/hima_public/HDsort.git
     """
-    
+
     handle_multi_segment = False
-    
+
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.hdsort_path)
-    
+
     @staticmethod
     def get_sorter_version():
         p = os.getenv('HDSORT_PATH', None)
@@ -117,24 +116,24 @@ class HDSortSorter(BaseSorter):
         source_dir = Path(__file__).parent
         utils_path = source_dir.parent / 'utils'
 
-        # if isinstance(recording, MaxOneRecordingExtractor):
-        if False: # TODO
-            #~ self.params['file_name'] = str(Path(recording._file_path).absolute())
+        #  if isinstance(recording, MaxOneRecordingExtractor):
+        if False:  # TODO
+            # ~ self.params['file_name'] = str(Path(recording._file_path).absolute())
             trace_file_name = str(Path(recording._file_path).absolute())
-            #~ self.params['file_format'] =  'maxone'
+            # ~ self.params['file_format'] =  'maxone'
             file_format = 'maxone'
             if verbose:
                 print('Using MaxOne format directly')
         else:
             # Generate three files dataset in Mea1k format
             trace_file_name = cls.write_hdsort_input_format(recording,
-                            str(output_folder / 'recording.h5'),
-                            chunk_memory=params["chunk_memory"])
-            #~ self.params['file_format'] = 'mea1k'
+                                                            str(output_folder / 'recording.h5'),
+                                                            chunk_memory=params["chunk_memory"])
+            # ~ self.params['file_format'] = 'mea1k'
             file_format = 'mea1k'
 
         p = params
-        #~ p['sort_name'] = 'hdsort_output'
+        # ~ p['sort_name'] = 'hdsort_output'
         sort_name = 'hdsort_output'
 
         # read the template txt files
@@ -149,11 +148,11 @@ class HDSortSorter(BaseSorter):
                 Path(HDSortSorter.hdsort_path).absolute()),
             utils_path=str(utils_path.absolute()),
             config_path=str((output_folder / 'hdsort_config.m').absolute()),
-            #~ file_name=p['file_name'],
+            # ~ file_name=p['file_name'],
             file_name=trace_file_name,
-            #~ file_format=p['file_format'],
+            # ~ file_format=p['file_format'],
             file_format=file_format,
-            #~ sort_name=p['sort_name'],
+            # ~ sort_name=p['sort_name'],
             sort_name=sort_name,
             chunk_size=p['chunk_size'],
             loop_mode=p['loop_mode']
@@ -186,13 +185,12 @@ class HDSortSorter(BaseSorter):
                               [hdsort_master_txt, hdsort_config_txt]):
             with (output_folder / fname).open('w') as f:
                 f.write(txt)
-        
+
         # store sample rate in a file
         samplerate = recording.get_sampling_frequency()
         samplerate_fname = str(output_folder / 'samplerate.txt')
         with open(samplerate_fname, 'w') as f:
             f.write('{}'.format(samplerate))
-
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
@@ -219,12 +217,12 @@ class HDSortSorter(BaseSorter):
 
         if retcode != 0:
             raise Exception('HDsort returned a non-zero exit code')
-        
+
     @classmethod
     def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
         sorting = HDSortSortingExtractor(file_path=str(output_folder / 'hdsort_output' /
-                                                          'hdsort_output_results.mat'))
+                                                       'hdsort_output_results.mat'))
         return sorting
 
     @classmethod
@@ -241,7 +239,7 @@ class HDSortSorter(BaseSorter):
                 with h5py.File(recording._file_path, 'r') as f:
                     keys = f.keys()
                     if "version" in keys and "ephys" in keys and "mapping" in keys and "frame_rate" in keys \
-                        and "frame_numbers" in keys:
+                            and "frame_numbers" in keys:
                         if "sig" in f["ephys"].keys():
                             write_file = False
                             trace_file_name = str(Path(recording._file_path).absolute())
@@ -272,8 +270,8 @@ class HDSortSorter(BaseSorter):
                 # save traces
                 segment_index = 0
                 write_to_h5_dataset_format(recording, dataset_path='/ephys/signal', segment_index=0,
-                            file_handle=f, time_axis=1, chunk_memory=chunk_memory)
+                                           file_handle=f, time_axis=1, chunk_memory=chunk_memory)
 
             trace_file_name = str(save_path.absolute())
-        
+
         return trace_file_name

@@ -141,4 +141,6 @@ class KlustSortingSegment(BaseSortingSegment):
 def read_klusta(*args, **kwargs):
     sorting = KlustaSortingExtractor(*args, **kwargs)
     return sorting
+
+
 read_klusta.__doc__ = KlustaSortingExtractor.__doc__

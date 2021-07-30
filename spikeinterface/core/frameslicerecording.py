@@ -2,6 +2,7 @@ import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 
+
 class FrameSliceRecording(BaseRecording):
     """
     Class to get a lazy frame slice.
@@ -13,9 +14,9 @@ class FrameSliceRecording(BaseRecording):
 
     def __init__(self, parent_recording, start_frame=None, end_frame=None):
         channel_ids = parent_recording.get_channel_ids()
-    
+
         assert parent_recording.get_num_segments() == 1, 'FrameSliceRecording work only with one segment'
-        
+
         parent_size = parent_recording.get_num_samples(0)
         if start_frame is None:
             start_frame = 0
@@ -41,7 +42,8 @@ class FrameSliceRecording(BaseRecording):
         parent_recording.copy_metadata(self)
 
         # update dump dict
-        self._kwargs = {'parent_recording': parent_recording.to_dict(), 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
+        self._kwargs = {'parent_recording': parent_recording.to_dict(), 'start_frame': int(start_frame),
+                        'end_frame': int(end_frame)}
 
 
 class FrameSliceRecordingSegment(BaseRecordingSegment):
@@ -50,7 +52,6 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
         self._parent_recording_segment = parent_recording_segment
         self.start_frame = start_frame
         self.end_frame = end_frame
-        
 
     def get_num_samples(self):
         return self.end_frame - self.start_frame

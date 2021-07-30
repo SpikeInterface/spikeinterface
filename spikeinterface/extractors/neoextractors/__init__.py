@@ -1,7 +1,8 @@
 from .mearec import MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec
 from .spikeglx import SpikeGLXRecordingExtractor, read_spikeglx
 from .openephys import (OpenEphysLegacyRecordingExtractor,
-    OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys)
+                        OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys,
+                        read_openephys_event)
 from .intan import IntanRecordingExtractor, read_intan
 from .neuroscope import NeuroScopeRecordingExtractor, read_neuroscope
 from .plexon import PlexonRecordingExtractor, read_plexon

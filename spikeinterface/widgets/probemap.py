@@ -6,7 +6,6 @@ from .basewidget import BaseWidget
 from probeinterface.plotting import plot_probe
 
 
-
 class ProbeMapWidget(BaseWidget):
     """
     Plot the probe of a recording.
@@ -28,9 +27,10 @@ class ProbeMapWidget(BaseWidget):
     W: ProbeMapWidget
         The output widget
     """
+
     def __init__(self, recording, values=None, channel_ids=None, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
-        
+
         if channel_ids is not None:
             recording = recording.channel_slice(channel_ids)
         self._recording = recording
@@ -47,5 +47,6 @@ def plot_probe_map(*args, **kwargs):
     W = ProbeMapWidget(*args, **kwargs)
     W.plot()
     return W
-plot_probe_map.__doc__ = ProbeMapWidget.__doc__
 
+
+plot_probe_map.__doc__ = ProbeMapWidget.__doc__

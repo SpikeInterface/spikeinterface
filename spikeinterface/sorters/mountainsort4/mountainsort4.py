@@ -1,16 +1,13 @@
 import copy
 from pathlib import Path
 
-
 from spikeinterface.toolkit import bandpass_filter, whiten
 
 from ..basesorter import BaseSorter
 from ..utils import RecordingExtractorOldAPI
 from spikeinterface.core import load_extractor
 
-
 from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
-
 
 
 class Mountainsort4Sorter(BaseSorter):
@@ -30,7 +27,7 @@ class Mountainsort4Sorter(BaseSorter):
         'filter': True,
         'whiten': True,  # Whether to do channel whitening as part of preprocessing
         'curation': False,
-        #'num_workers': None,
+        # 'num_workers': None,
         'num_workers': 1,
         'clip_size': 50,
         'detect_threshold': 3,
@@ -40,9 +37,11 @@ class Mountainsort4Sorter(BaseSorter):
 
     _params_description = {
         'detect_sign': "Use -1 (negative) or 1 (positive) depending "
-                       "on the sign of the spikes in the recording",  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
+                       "on the sign of the spikes in the recording",
+        # Use -1, 0, or 1, depending on the sign of the spikes in the recording
         'adjacency_radius': "Radius in um to build channel neighborhood "
-                            "(Use -1 to include all channels in every neighborhood)",  # Use -1 to include all channels in every neighborhood
+                            "(Use -1 to include all channels in every neighborhood)",
+        # Use -1 to include all channels in every neighborhood
         'freq_min': "High-pass filter cutoff frequency",
         'freq_max': "Low-pass filter cutoff frequency",
         'filter': "Enable or disable filter",
@@ -73,7 +72,7 @@ class Mountainsort4Sorter(BaseSorter):
         except ImportError:
             HAVE_MS4 = False
         return HAVE_MS4
-    
+
     @staticmethod
     def get_sorter_version():
         import mountainsort4
@@ -99,7 +98,7 @@ class Mountainsort4Sorter(BaseSorter):
         p = params
 
         samplerate = recording.get_sampling_frequency()
-        
+
         # Bandpass filter
         if p['filter'] and p['freq_min'] is not None and p['freq_max'] is not None:
             if verbose:
@@ -111,10 +110,9 @@ class Mountainsort4Sorter(BaseSorter):
             if verbose:
                 print('whitenning')
             recording = whiten(recording=recording)
-            
+
         print('Mountainsort4 use the OLD spikeextractors mapped with RecordingExtractorOldAPI')
         old_api_recording = RecordingExtractorOldAPI(recording)
-
 
         # Check location no more needed done in basesorter
         old_api_sorting = mountainsort4.mountainsort4(
@@ -144,10 +142,9 @@ class Mountainsort4Sorter(BaseSorter):
         new_api_sorting = NumpySorting.from_dict(units_dict_list, samplerate)
         NpzSortingExtractor.write_sorting(new_api_sorting, str(output_folder / 'firings.npz'))
 
-   
     @classmethod
     def _get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
-        result_fname = output_folder/ 'firings.npz'
+        result_fname = output_folder / 'firings.npz'
         sorting = NpzSortingExtractor(result_fname)
         return sorting

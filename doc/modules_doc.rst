@@ -6,9 +6,10 @@ Modules documentation
 
     module_core
     module_extractors
-    module_sorter
     module_toolkit
+    module_sorters
     module_comparison
     module_exporters
+    module_widgets
     module_sorting_components
 

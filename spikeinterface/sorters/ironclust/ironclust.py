@@ -4,12 +4,10 @@ from typing import Union
 import copy
 import sys
 
-
 from ..utils import ShellScript
 from ..basesorter import BaseSorter
 
 from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
-
 
 PathType = Union[str, Path]
 
@@ -35,7 +33,7 @@ class IronClustSorter(BaseSorter):
 
     sorter_name: str = 'ironclust'
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)
-    
+
     requires_locations = True
 
     _default_params = {
@@ -55,7 +53,7 @@ class IronClustSorter(BaseSorter):
         'batch_sec_drift': 300,  # batch duration in seconds. clustering time duration
         'step_sec_drift': 20,  # compute anatomical similarity every n sec
         'knn': 30,  # K nearest neighbors
-        'n_jobs_bin': 1, # number of jobs for binary write
+        'n_jobs_bin': 1,  # number of jobs for binary write
         'total_memory': '500M',
         'min_count': 30,  # Minimum cluster size
         'fGpu': True,  # Use GPU if available
@@ -66,13 +64,13 @@ class IronClustSorter(BaseSorter):
         'delta_cut': 1,  # Cluster detection threshold (delta-cutoff)
         'post_merge_mode': 1,  # post merge mode
         'sort_mode': 1,  # sort mode
-        'fParfor': False, #parfor loop
-        'filter': True, # Enable or disable filter
-        'clip_pre': 0.25, # pre-peak clip duration in ms
-        'clip_post': 0.75, # post-peak clip duration in ms
-        'merge_thresh_cc': 1, #cross-correlogram merging threshold, set to 1 to disable
-        'nRepeat_merge': 3, #number of repeats for merge
-        'merge_overlap_thresh': 0.95   #knn-overlap merge threshold
+        'fParfor': False,  # parfor loop
+        'filter': True,  # Enable or disable filter
+        'clip_pre': 0.25,  # pre-peak clip duration in ms
+        'clip_post': 0.75,  # post-peak clip duration in ms
+        'merge_thresh_cc': 1,  # cross-correlogram merging threshold, set to 1 to disable
+        'nRepeat_merge': 3,  # number of repeats for merge
+        'merge_overlap_thresh': 0.95  # knn-overlap merge threshold
     }
 
     _params_description = {
@@ -122,7 +120,7 @@ class IronClustSorter(BaseSorter):
     and provide the installation path by setting the IRONCLUST_PATH
     environment variables or using IronClustSorter.set_ironclust_path().\n\n
     """
-    
+
     handle_multi_segment = False
 
     @classmethod
@@ -163,7 +161,7 @@ class IronClustSorter(BaseSorter):
         # Generate three files in the dataset directory: raw.mda, geom.csv, params.json
         MdaRecordingExtractor.write_recording(recording=recording, save_path=str(dataset_dir),
                                               n_jobs=p["n_jobs_bin"], total_memory=p["total_memory"], verbose=verbose)
-        
+
         samplerate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
         num_timepoints = recording.get_num_frames(segment_index=0)
@@ -191,9 +189,9 @@ class IronClustSorter(BaseSorter):
     def _run_from_folder(cls, output_folder, params, verbose):
         dataset_dir = (output_folder / 'ironclust_dataset').absolute()
         source_dir = (Path(__file__).parent).absolute()
-        
+
         tmpdir = (output_folder / 'tmp').absolute()
-        
+
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
 
@@ -240,7 +238,6 @@ class IronClustSorter(BaseSorter):
         result_fname = tmpdir / 'firings.mda'
         if not result_fname.is_file():
             raise Exception(f'Result file does not exist: {result_fname}')
-
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):

@@ -12,6 +12,7 @@ class UnitsSelectionSorting(BaseSorting):
     Do not use this class directly but use `sorting.select_units(...)`
 
     """
+
     def __init__(self, parent_sorting, unit_ids=None, renamed_unit_ids=None):
         if unit_ids is None:
             unit_ids = parent_sorting.get_unit_ids()

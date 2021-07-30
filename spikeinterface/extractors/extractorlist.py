@@ -10,7 +10,7 @@ from .neoextractors import (
     IntanRecordingExtractor, read_intan,
     NeuroScopeRecordingExtractor, read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
-    NeuralynxRecordingExtractor, read_neuralynx, 
+    NeuralynxRecordingExtractor, read_neuralynx,
     BlackrockRecordingExtractor, read_blackrock,
     MCSRawRecordingExtractor, read_mcsraw,
     Spike2RecordingExtractor, read_spike2,
@@ -24,7 +24,6 @@ from .neoextractors import (
 # NWB sorting/recording/event
 from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
                             read_nwb, read_nwb_recording, read_nwb_sorting)
-
 
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor, read_klusta
@@ -44,7 +43,6 @@ from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtract
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
-
 
 ########################################
 
@@ -103,4 +101,3 @@ sorting_extractor_full_list = [
 event_extractor_full_list = [
     OpenEphysBinaryEventExtractor,
 ]
-
