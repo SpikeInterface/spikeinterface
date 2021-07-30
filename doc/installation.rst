@@ -1,50 +1,56 @@
 Installation
 ============
 
-:code:`spikeinterface` is a Python package. It can be installed using pip:
+:code:`spikeinterface` is a Python package.
+
+The actual "new API" (v0.90.0) is not released on pypi yet.
+It will be released in July 2021.
+
+
+To use it now, you have to install :code:`spikeinterface` work-in-progress
+from source. You also need :code:`neo` and :code:`probeinterface`:
+
 
 .. code-block:: bash
 
-    pip install spikeinterface
+    git clone https://github.com/NeuralEnsemble/python-neo.git
+    cd python-neo
+    python setup.py install (or develop)
+    cd ..
 
-The pip installation will install a specific and fixed version of the spikeinterface packages.
-
-To use the latest updates, install `spikeinterface` and the related packages from source:
-
-.. code-block:: bash
+    git clone https://github.com/SpikeInterface/probeinterface.git
+    cd probeinterface
+    python setup.py install (or develop)
+    cd ..
 
     git clone https://github.com/SpikeInterface/spikeinterface.git
     cd spikeinterface
     python setup.py install (or develop)
+    cd ..
+
 
 
 
 Requirements
 ------------
 
-The following Python packages are required for running the full SpikeInterface framework.
-They are installed when using the pip installer for :code:`spikeinterface`.
+spiekinterface.core itself has only a few dependencies:
 
-- spikeextractors
-- spiketoolkit
-- spikesorters
-- spikecomparison
-- spikewidgets
+  * numpy
+  * neo>=0.9.0
+  * joblib
+  * probeinterface
+  * tqdm
 
+Some sub-modules have more dependencies, so you should also install:
 
-If you installed :code:`spikeinterface` from source, you can install the latest releases of the spikeinterface packages:
+  * scipy
+  * h5py
+  * pandas
+  * sklearn
+  * matplotlib
+  * networkx
+  * datalad
+  * MEArec
 
-.. code-block:: bash
-
-    pip install --upgrade spikeextractors spiketoolkit spikesorters spikecomparison spikewidgets
-
-
-You can also install each package from GitHub to keep up with the latest updates. In order to do so, for example for
-:code:`spikeextractors`, run:
-
-.. code-block:: bash
-
-    pip uninstall spikeextractors
-    git clone https://github.com/SpikeInterface/spikeextractors
-    cd spikeextractors
-    python setup.py install (or develop)
+All sorters must installed independently.

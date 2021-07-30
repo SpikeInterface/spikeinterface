@@ -13,22 +13,28 @@ This example show how to compare the result of two sorters.
 import numpy as np
 import matplotlib.pyplot as plt
 
+import spikeinterface as si
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
 ##############################################################################
-# First, let's create a toy example:
+# First, let's download a simulated dataset
+#  from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
-recording, sorting = se.example_datasets.toy_example(num_channels=4, duration=10, seed=0)
+local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+recording, sorting = se.read_mearec(local_path)
+print(recording)
+print(sorting)
+
 
 
 #############################################################################
 # Then run two spike sorters and compare their ouput.
 
-sorting_KL = ss.run_klusta(recording)
-sorting_MS4 = ss.run_mountainsort4(recording)
+sorting_HS = ss.run_herdingspikes(recording)
+sorting_TDC = ss.run_tridesclous(recording)
 
 
 #############################################################################
@@ -39,47 +45,47 @@ sorting_MS4 = ss.run_mountainsort4(recording)
 # 
 # Let’s see how to inspect and access this matching.
 
-cmp_KL_MS4 = sc.compare_two_sorters(sorting1=sorting_KL, sorting2=sorting_MS4, 
-                                               sorting1_name='klusta', sorting2_name='ms4')
+cmp_HS_TDC = sc.compare_two_sorters(sorting1=sorting_HS, sorting2=sorting_TDC, 
+                                               sorting1_name='HS', sorting2_name='TDC')
 
 #############################################################################
 # We can check the agreement matrix to inspect the matching.
 
-sw.plot_agreement_matrix(cmp_KL_MS4)
+sw.plot_agreement_matrix(cmp_HS_TDC)
 
 #############################################################################
 # Some useful internal dataframes help to check the match and count
 #  like **match_event_count** or **agreement_scores**
 
-print(cmp_KL_MS4.match_event_count)
-print(cmp_KL_MS4.agreement_scores)
+print(cmp_HS_TDC.match_event_count)
+print(cmp_HS_TDC.agreement_scores)
 
 #############################################################################
-# In order to check which units were matched, the :code:`get_mapped_sorting`
+# In order to check which units were matched, the :code:`get_matching`
 # methods can be used. If units are not matched they are listed as -1.
 
-# units matched to klusta units
-mapped_sorting_klusta = cmp_KL_MS4.get_mapped_sorting1()
-print('Klusta units:', sorting_KL.get_unit_ids())
-print('Klusta mapped units:', mapped_sorting_klusta.get_mapped_unit_ids())
+sc_to_tdc, tdc_to_sc = cmp_HS_TDC.get_matching()
 
-# units matched to ms4 units
-mapped_sorting_ms4 = cmp_KL_MS4.get_mapped_sorting2()
-print('Mountainsort units:',sorting_MS4.get_unit_ids())
-print('Mountainsort mapped units:',mapped_sorting_ms4.get_mapped_unit_ids())
+print('matching HS to TDC')
+print(sc_to_tdc)
+print('matching TDC to HS')
+print(tdc_to_sc)
+
 
 #############################################################################
 # The :code:get_unit_spike_train` returns the mapped spike train. We can use
 # it to check the spike times.
 
-# find a unit from KL that have a match
-ind  = np.where(np.array(mapped_sorting_klusta.get_mapped_unit_ids())!=-1)[0][0]
-u1 = sorting_KL.get_unit_ids()[ind]
-print(ind, u1)
+matched_ids = sc_to_tdc[sc_to_tdc != -1]
+
+unit_id_HS = matched_ids.index[0]
+unit_id_TDC = matched_ids[unit_id_HS]
+
+
 
 # check that matched spike trains correspond
-st1 = sorting_KL.get_unit_spike_train(u1)
-st2 = mapped_sorting_klusta.get_unit_spike_train(u1)
+st1 = sorting_HS.get_unit_spike_train(unit_id_HS)
+st2 = sorting_TDC.get_unit_spike_train(unit_id_TDC)
 fig, ax = plt.subplots()
 ax.plot(st1, np.zeros(st1.size), '|')
 ax.plot(st2, np.ones(st2.size), '|')

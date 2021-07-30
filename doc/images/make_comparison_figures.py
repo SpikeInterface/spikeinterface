@@ -11,9 +11,9 @@ import sys
 sys.path.append('../../examples/modules/comparison/')
 from generate_erroneous_sorting import generate_erroneous_sorting
 
-import spikeextractors as se
-import spikecomparison as sc
-import spikewidgets as sw
+import spikeinterface.extractors as se
+import spikeinterface.comparison as sc
+import spikeinterface.widgets as sw
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,11 +22,6 @@ import matplotlib.pyplot as plt
 def make_comparison_figures():
     
     gt_sorting, tested_sorting = generate_erroneous_sorting()
-    
-    #~ gt_sorting = se.NpzSortingExtractor('rec0.npz')
-    #~ tested_sorting = se.NpzSortingExtractor('rec0[#]spykingcircus.npz')
-    #~ print('gt_sorting', len(gt_sorting.get_unit_ids()))
-    #~ print('tested_sorting', len(tested_sorting.get_unit_ids()))
     
     comp = sc.compare_sorter_to_ground_truth(gt_sorting, tested_sorting, gt_name=None, tested_name=None,
                                    delta_time=0.4, sampling_frequency=None, min_accuracy=0.5, exhaustive_gt=True, match_mode='hungarian', 

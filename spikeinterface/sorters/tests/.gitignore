@@ -1,0 +1,5 @@
+*_output/*
+test_run_sorters_*/*
+*.dat
+*.json
+*.raw

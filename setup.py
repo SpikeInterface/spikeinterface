@@ -1,9 +1,19 @@
 from setuptools import setup, find_packages
 
-with open("requirements.txt", mode='r') as f:
-    install_requires = f.read().split('\n')
+def open_requirements(fname):
+    with open(fname, mode='r') as f:
+        requires = f.read().split('\n')
+    requires = [e for e in requires if len(e) > 0 and not e.startswith('#')]
+    return requires
+    
+install_requires = open_requirements('requirements.txt')
+full_requires = open_requirements('requirements_full.txt')
+extractors_requires = open_requirements('requirements_extractors.txt')
 
-install_requires = [e for e in install_requires if len(e) > 0]
+extras_require = {
+    "full": full_requires,
+    "extractors": extractors_requires,
+}
 
 d = {}
 exec(open("spikeinterface/version.py").read(), None, d)
@@ -22,8 +32,10 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/SpikeInterface/spikeinterface",
     packages=find_packages(),
+    include_package_data=True,
     package_data={},
     install_requires=install_requires,
+    extras_require=extras_require,
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",

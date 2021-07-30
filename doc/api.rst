@@ -1,132 +1,169 @@
 API
 ===
 
+Module :mod:`spikeinterface.core`
+---------------------------------
+.. automodule:: spikeinterface.core
+
+    .. autofunction:: load_extractor
+
+    .. autoclass:: BaseRecording
+
+    .. autoclass:: BaseSorting
+
+    .. autoclass:: BaseEvent
+
+    .. autoclass:: BinaryRecordingExtractor
+
+    .. autofunction:: read_binary
+
+    .. autoclass:: NpzSortingExtractor
+
+    .. autoclass:: NumpyRecording
+
+    .. autoclass:: NumpySorting
+
+    .. autoclass:: ChannelSliceRecording
+
+    .. autoclass:: UnitsSelectionSorting
+
+    .. autoclass:: FrameSliceRecording
+
+    .. autofunction:: append_recordings
+
+    .. autofunction:: concatenate_recordings
+
+    .. autofunction:: append_sortings
+
+    .. autofunction:: extract_waveforms
+
+    .. autoclass:: WaveformExtractor
+
+    .. autofunction:: download_dataset
+
+    .. autofunction:: write_binary_recording
+
+    .. autofunction:: set_global_tmp_folder
+
+    .. autofunction:: set_global_dataset_folder
+
+    .. autoclass:: ChunkRecordingExecutor
+
+
+
 Module :mod:`spikeinterface.extractors`
 ---------------------------------------
-.. automodule:: spikeextractors
+.. automodule:: spikeinterface.extractors
 
-    .. autoclass:: spikeextractors.baseextractor.BaseExtractor
-        :members:
-    .. autoclass:: RecordingExtractor
-        :members:
-    .. autoclass:: SortingExtractor
-        :members:
-
-    .. autoclass:: SubRecordingExtractor
-        :members:
-
-    .. autoclass:: SubSortingExtractor
-        :members:
-
-    .. autoclass:: MultiRecordingChannelExtractor
-        :members:
-
-    .. autoclass:: MultiRecordingTimeExtractor
-        :members:
-
-    .. autoclass:: MultiSortingExtractor
-        :members:
-
-    .. autofunction:: load_extractor_from_dict
-    .. autofunction:: load_extractor_from_json
-    .. autofunction:: load_extractor_from_pickle
-    .. autofunction:: load_probe_file
-    .. autofunction:: save_to_probe_file
-    .. autofunction:: write_to_binary_dat_format
-    .. autofunction:: get_sub_extractors_by_property
-
+    .. autofunction:: toy_example
+    .. autofunction:: read_bids_folder
+    .. autofunction:: read_mearec
+    .. autofunction:: read_spikeglx
+    .. autofunction:: read_openephys
+    .. autofunction:: read_openephys_event
+    .. autofunction:: read_intan
+    .. autofunction:: read_neuroscope
+    .. autofunction:: read_plexon
+    .. autofunction:: read_neuralynx
+    .. autofunction:: read_blackrock
+    .. autofunction:: read_mcsraw
+    .. autofunction:: read_kilosort
+    .. autofunction:: read_spike2
+    .. autofunction:: read_ced
+    .. autofunction:: read_maxwell
+    .. autofunction:: read_nix
+    .. autofunction:: read_spikegadgets
+    .. autofunction:: read_klusta
+    .. autofunction:: read_hdsort
+    .. autofunction:: read_waveclust
+    .. autofunction:: read_yass
+    .. autofunction:: read_combinato
+    .. autofunction:: read_tridesclous
+    .. autofunction:: read_spykingcircus
+    .. autofunction:: read_herdingspikes
+    .. autofunction:: read_mda_recording
+    .. autofunction:: read_mda_sorting
+    .. autofunction:: read_shybrid_recording
+    .. autofunction:: read_shybrid_sorting
+    .. autofunction:: read_alf_sorting
 
 
 Module :mod:`spikeinterface.toolkit`
---------------------------------------
+------------------------------------
+
+toolkit.utils
+~~~~~~~~~~~~~
+
+
+.. automodule:: spikeinterface.toolkit
+
+    .. autofunction:: get_random_data_chunks
+    .. autofunction:: get_channel_distances
+    .. autofunction:: get_closest_channels
+    .. autofunction:: get_noise_levels
+
 
 Preprocessing
 ~~~~~~~~~~~~~
-.. automodule:: spiketoolkit.preprocessing
 
+.. automodule:: spikeinterface.toolkit.preprocessing
+
+    .. autofunction:: filter
     .. autofunction:: bandpass_filter
-    .. autofunction:: blank_saturation
-    .. autofunction:: clip
-    .. autofunction:: normalize_by_quantile
     .. autofunction:: notch_filter
+    .. autofunction:: normalize_by_quantile
+    .. autofunction:: scale
+    .. autofunction:: center
+    .. autofunction:: whiten
     .. autofunction:: rectify
+    .. autofunction:: blank_staturation
+    .. autofunction:: clip
+    .. autofunction:: common_reference
     .. autofunction:: remove_artifacts
     .. autofunction:: remove_bad_channels
-    .. autofunction:: resample
-    .. autofunction:: transform
-    .. autofunction:: whiten
-    .. autofunction:: common_reference
 
 
 Postprocessing
 ~~~~~~~~~~~~~~
-.. automodule:: spiketoolkit.postprocessing
+.. automodule:: spikeinterface.toolkit.postprocessing
 
-    .. autofunction:: get_unit_waveforms
-    .. autofunction:: get_unit_templates
-    .. autofunction:: get_unit_amplitudes
-    .. autofunction:: get_unit_max_channels
-    .. autofunction:: set_unit_properties_by_max_channel_properties
-    .. autofunction:: compute_unit_pca_scores
-    .. autofunction:: export_to_phy
-    .. autofunction:: compute_unit_template_features
+    .. autofunction:: get_template_amplitudes
+    .. autofunction:: get_template_extremum_channel
+    .. autofunction:: get_template_extremum_channel_peak_shift
+    .. autofunction:: get_template_extremum_amplitude
+    .. autofunction:: get_template_channel_sparsity
+    .. autofunction:: compute_unit_centers_of_mass
+    .. autofunction:: calculate_template_metrics
+    .. autofunction:: get_template_metric_names
+    .. autofunction:: compute_principal_components
+    .. autofunction:: get_spike_amplitudes
+    .. autofunction:: compute_correlograms
 
-Validation
-~~~~~~~~~~~~~~
-.. automodule:: spiketoolkit.validation
 
-    .. autofunction:: compute_isolation_distances
-    .. autofunction:: compute_isi_violations
-    .. autofunction:: compute_snrs
-    .. autofunction:: compute_amplitude_cutoffs
-    .. autofunction:: compute_d_primes
-    .. autofunction:: compute_drift_metrics
-    .. autofunction:: compute_firing_rates
-    .. autofunction:: compute_l_ratios
-    .. autofunction:: compute_nn_metrics
-    .. autofunction:: compute_num_spikes
-    .. autofunction:: compute_presence_ratios
-    .. autofunction:: compute_silhouette_scores
+Quality metrics
+~~~~~~~~~~~~~~~
+.. automodule:: spikeinterface.toolkit.qualitymetrics
+
     .. autofunction:: compute_quality_metrics
-
-
-Curation
-~~~~~~~~~~~~~~
-.. automodule:: spiketoolkit.curation
-
-    .. autofunction:: threshold_amplitude_cutoffs
-    .. autofunction:: threshold_d_primes
-    .. autofunction:: threshold_drift_metrics
-    .. autofunction:: threshold_firing_rates
-    .. autofunction:: threshold_isi_violations
-    .. autofunction:: threshold_isolation_distances
-    .. autofunction:: threshold_l_ratios
-    .. autofunction:: threshold_nn_metrics
-    .. autofunction:: threshold_num_spikes
-    .. autofunction:: threshold_presence_ratios
-    .. autofunction:: threshold_silhouette_scores
-    .. autofunction:: threshold_snrs
-
-    .. autoclass:: CurationSortingExtractor
-        :members:
-
-
+    .. autofunction:: get_quality_metric_list
 
 
 Module :mod:`spikeinterface.sorters`
---------------------------------------
-.. automodule:: spikesorters
+------------------------------------
+.. automodule:: spikeinterface.sorters
 
     .. autofunction:: available_sorters
+    .. autofunction:: installed_sorters
     .. autofunction:: get_default_params
+    .. autofunction:: print_sorter_versions
+    .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
     .. autofunction:: run_sorters
 
 
-
 Module :mod:`spikeinterface.comparison`
 ---------------------------------------
-.. automodule:: spikecomparison
+.. automodule:: spikeinterface.comparison
 
     .. autofunction:: compare_two_sorters
     .. autofunction:: compare_multiple_sorters
@@ -144,31 +181,49 @@ Module :mod:`spikeinterface.comparison`
         :undoc-members:
 
 
-
-
-
-
 Module :mod:`spikeinterface.widgets`
---------------------------------------
-.. automodule:: spikewidgets
+------------------------------------
+.. automodule:: spikeinterface.widgets
 
     .. autofunction:: plot_timeseries
-    .. autofunction:: plot_electrode_geometry
-    .. autofunction:: plot_spectrum
-    .. autofunction:: plot_spectrogram
-    .. autofunction:: plot_activity_map
     .. autofunction:: plot_rasters
-    .. autofunction:: plot_autocorrelograms
-    .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_probe_map
     .. autofunction:: plot_isi_distribution
+    .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_autocorrelograms
+    .. autofunction:: plot_drift_over_time
+    .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_unit_waveforms
     .. autofunction:: plot_unit_templates
-    .. autofunction:: plot_unit_template_maps
-    .. autofunction:: plot_amplitudes_distribution
+    .. autofunction:: plot_unit_waveform_density_map
     .. autofunction:: plot_amplitudes_timeseries
+    .. autofunction:: plot_amplitudes_distribution
+    .. autofunction:: plot_principal_component
+    .. autofunction:: plot_unit_localization
+    .. autofunction:: plot_unit_probe_map
+    .. autofunction:: plot_units_depth_vs_amplitude
     .. autofunction:: plot_confusion_matrix
     .. autofunction:: plot_agreement_matrix
-    .. autofunction:: plot_sorting_performance
     .. autofunction:: plot_multicomp_graph
     .. autofunction:: plot_multicomp_agreement
     .. autofunction:: plot_multicomp_agreement_by_sorter
+    .. autofunction:: plot_comparison_collision_pair_by_pair
+    .. autofunction:: plot_comparison_collision_by_similarity
+    .. autofunction:: plot_sorting_performance
+    .. autofunction:: plot_unit_summary
+
+
+Module :mod:`spikeinterface.exporters`
+--------------------------------------
+.. automodule:: spikeinterface.exporters
+
+    .. autofunction:: export_to_phy
+    .. autofunction:: export_report
+
+
+Module :mod:`spikeinterface.sortingcomponents`
+----------------------------------------------
+.. automodule:: spikeinterface.sortingcomponents
+
+    .. autofunction:: detect_peaks
+    .. autofunction:: localize_peaks

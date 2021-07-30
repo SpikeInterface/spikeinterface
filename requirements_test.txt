@@ -1,0 +1,40 @@
+pytest
+
+# recent datalad need a too recent version for git-annex
+# so we use an old one here
+datalad==0.14.4
+
+## install sorters ##
+# python based only
+# no GPU (no pykilosort, no yass)
+
+## mountainsort4
+# have some problems with dask
+# temporary removed from tests
+# pybind11
+# isosplit5
+# mountainsort4
+
+## klusta
+# is removed from test
+# do not work anymore on python3.8
+# Cython
+# tqdm
+# click
+# klusta
+# klustakwik2==0.2.7
+
+## tridesclous
+pyqt5
+hdbscan
+loky
+tridesclous>=1.6.3
+
+# shybrid
+shybrid
+
+## spyking-circus
+spyking-circus
+
+## herdingspikes
+herdingspikes

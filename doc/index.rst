@@ -1,41 +1,61 @@
 Welcome to SpikeInterface's documentation!
 ==========================================
 
+
+
+.. warning::
+
+    This is the documentation for SpikeInterface (0.90.0)
+    
+    To see the documentation for the old API (0.1X) see: https://spikeinterface.readthedocs.io/en/stable
+
 .. image:: images/logo.png
   :scale: 100 %
-  :align: right
+  :align: center
 
-Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility of spike sorting and all its associated computations.
+
+Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility
+of spike sorting and all its associated computations.
+
+
 
 With SpikeInterface, users can:
 
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
 - run many popular, semi-automatic spike sorters.
-- post-process sorted datasets.
+- post-process sorted datasets
 - compare and benchmark spike sorting outputs.
-- validate and curate spike sorting outputs.
+- compute quliy metrics to validate and curate spike sorting outputs
 - visualize recordings and spike sorting outputs.
+- export report and export to phy with one line
 
 **NEWS**
 
-- New SpikeInterface release! Version 0.11.0 is now out (on 10/12/2020)!
+- New SpikeInterface major release! Version 0.90.0 is will be out soon!
+
+  * breaks backward compatility with 0.10/0.11/0.12/0.13 series
+  * will be released in summer 2021
+  * is not a metapackage anymore
+  * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
+
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
    
-   overview
-   installation
-   supported
-   sortersinfo
-   getting_started/plot_getting_started.rst
-   modules/index.rst
-   sorters_comparison
-   contribute
-   api
-   whatisnew
-   authors
+    overview
+    installation
+    getting_started/plot_getting_started.rst
+    modules_doc
+    modules/index.rst
+    supported_formats_and_sorters
+    install_sorters
+    contribute
+    api
+    whatisnew
+    authors
+
 
 For more information, please have a look at:
 
