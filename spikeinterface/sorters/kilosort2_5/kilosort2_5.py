@@ -6,7 +6,6 @@ from typing import Union
 import shutil
 import json
 
-
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
@@ -25,7 +24,8 @@ def check_if_installed(kilosort2_5_path: Union[str, None]):
         kilosort2_5_path = kilosort2_5_path[1:-1]
     kilosort2_5_path = str(Path(kilosort2_5_path).absolute())
 
-    if (Path(kilosort2_5_path) / 'master_kilosort.m').is_file() or (Path(kilosort2_5_path) / 'main_kilosort.m').is_file():
+    if (Path(kilosort2_5_path) / 'master_kilosort.m').is_file() or (
+            Path(kilosort2_5_path) / 'main_kilosort.m').is_file():
         return True
     else:
         return False
@@ -98,9 +98,9 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     More information on Kilosort2.5 at:
         https://github.com/MouseLand/Kilosort
     """
-    
+
     handle_multi_segment = False
-    
+
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.kilosort2_5_path)
@@ -122,7 +122,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             os.environ["KILOSORT2_5_PATH"] = kilosort2_5_path
         except Exception as e:
             print("Could not set KILOSORT2_5_PATH environment variable:", e)
-
 
     @classmethod
     def _check_params(cls, recording, output_folder, params):
@@ -151,7 +150,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
                                                  dtype='int16', total_memory=p["total_memory"],
                                                  n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
-
         if p['car']:
             use_car = 1
         else:
@@ -172,7 +170,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             channel_path=str((output_folder / 'kilosort2_5_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort2_5_config.m').absolute()),
         )
-
 
         kilosort2_5_config_txt = kilosort2_5_config_txt.format(
             nchan=recording.get_num_channels(),

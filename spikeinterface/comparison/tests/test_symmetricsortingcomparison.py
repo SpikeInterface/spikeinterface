@@ -1,6 +1,5 @@
 import numpy as np
 
-
 from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_two_sorters
 
@@ -10,7 +9,6 @@ def make_sorting(times1, labels1, times2, labels2):
     sorting1 = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
     sorting2 = NumpySorting.from_times_labels([times2], [labels2], sampling_frequency)
     return sorting1, sorting2
-
 
 
 def test_compare_two_sorters():

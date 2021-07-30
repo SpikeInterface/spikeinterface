@@ -9,9 +9,9 @@ from spikeinterface.core import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
 from spikeinterface.extractors import CombinatoSortingExtractor
 
-
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
@@ -100,9 +100,9 @@ class CombinatoSorter(BaseSorter):
     More information on Combinato at:
         https://github.com/jniediek/combinato/wiki
     """
-    
+
     handle_multi_segment = False
-    
+
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.combinato_path)
@@ -135,8 +135,9 @@ class CombinatoSorter(BaseSorter):
         vcFile_h5 = str(output_folder / ('recording.h5'))
         with h5py.File(vcFile_h5, mode='w') as f:
             f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
-            write_to_h5_dataset_format(recording, dataset_path='/data', segment_index=0,  
-                file_handle=f, time_axis=0, single_axis=True, chunk_memory=params['chunk_memory'])
+            write_to_h5_dataset_format(recording, dataset_path='/data', segment_index=0,
+                                       file_handle=f, time_axis=0, single_axis=True,
+                                       chunk_memory=params['chunk_memory'])
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
@@ -177,7 +178,7 @@ class CombinatoSorter(BaseSorter):
             sign_thr=sign_thr)
 
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
         retcode = shell_script.wait()
 

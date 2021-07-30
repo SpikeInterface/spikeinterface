@@ -1,4 +1,5 @@
 import os, getpass
+
 if getpass.getuser() == 'samuel':
     ironclust_path = '/home/samuel/Documents/SpikeInterface/ironclust/'
     os.environ["IRONCLUST_PATH"] = ironclust_path
@@ -8,6 +9,7 @@ import pytest
 
 from spikeinterface.sorters import IronClustSorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
+
 
 # This run several tests
 @pytest.mark.skipif(not IronClustSorter.is_installed(), reason='ironclust not installed')

@@ -9,7 +9,6 @@ import json
 import traceback
 import json
 
-
 from spikeinterface.core import load_extractor
 
 from .sorterlist import sorter_dict
@@ -24,23 +23,21 @@ def _run_one(arg_list):
         recording = recording
 
     SorterClass = sorter_dict[sorter_name]
-    
+
     # because this is checks in run_sorters before this call
     remove_existing_folder = False
     # result is retrieve later
     delete_output_folder = False
     # because we won't want the loop/worker to break
-    raise_error=False
+    raise_error = False
 
-    
-    
-    # only classmethod call not instance (stateless at instance level but state is in folder) 
+    # only classmethod call not instance (stateless at instance level but state is in folder)
     output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
     SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
-    
-    
+
+
 _implemented_engine = ('loop', 'joblib', 'dask')
 
 
@@ -52,7 +49,7 @@ def run_sorters(sorter_list,
                 engine='loop',
                 engine_kwargs={},
                 verbose=False,
-                with_output=True, 
+                with_output=True,
                 ):
     """
     This run several sorter on several recording.
@@ -122,14 +119,14 @@ def run_sorters(sorter_list,
 
     """
     working_folder = Path(working_folder)
-    
+
     mode_if_folder_exists in ('raise', 'keep', 'overwrite')
-    
+
     if mode_if_folder_exists == 'raise' and working_folder.is_dir():
         raise Exception('working_folder already exists, please remove it')
-    
+
     assert engine in _implemented_engine, f'engine must be in {_implemented_engine}'
-    
+
     if isinstance(sorter_list, str):
         sorter_list = [sorter_list]
 
@@ -150,7 +147,7 @@ def run_sorters(sorter_list,
         for sorter_name in sorter_list:
 
             output_folder = working_folder / str(rec_name) / sorter_name
-            
+
             if output_folder.is_dir():
                 # sorter folder exists
                 if mode_if_folder_exists == 'raise':
@@ -172,7 +169,7 @@ def run_sorters(sorter_list,
                 recording_arg = recording
             task_args = (sorter_name, recording_arg, output_folder, verbose, params)
             task_args_list.append(task_args)
-    
+
     if engine == 'loop':
         # simple loop in main process
         for task_args in task_args_list:

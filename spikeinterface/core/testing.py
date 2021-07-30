@@ -19,8 +19,9 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
             assert np.allclose(RX1.get_traces(segment_index=segment_idx,
                                               return_scaled=return_scaled), RX2.get_traces(return_scaled=return_scaled))
         else:
-            assert np.allclose(RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
-                               RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype))
+            assert np.allclose(
+                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
+                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype))
         sf = 0
         ef = N
         ch = [RX1.get_channel_ids()[0], RX1.get_channel_ids()[-1]]
@@ -59,7 +60,6 @@ def check_sortings_equal(SX1, SX2):
             train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx))
             train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx))
             assert np.array_equal(train1, train2)
-
 
 # def check_sorting_properties_features(SX1, SX2):
 #     # check properties

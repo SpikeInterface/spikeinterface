@@ -36,6 +36,7 @@ class WaveformPrincipalComponent:
     >>> all_components = pc.get_all_components()
 
     """
+
     def __init__(self, waveform_extractor):
         self.waveform_extractor = waveform_extractor
 

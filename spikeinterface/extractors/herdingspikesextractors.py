@@ -124,8 +124,11 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
         rf.create_dataset("cluster_id", data=all_labels)
         rf.close()
     """
-    
+
+
 def read_herdingspikes(*args, **kwargs):
     sorting = HerdingspikesSortingExtractor(*args, **kwargs)
     return sorting
+
+
 read_herdingspikes.__doc__ = HerdingspikesSortingExtractor.__doc__

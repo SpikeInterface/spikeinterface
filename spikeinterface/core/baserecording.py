@@ -74,13 +74,13 @@ class BaseRecording(BaseExtractor):
         return self._recording_segments[segment_index].get_num_samples()
 
     get_num_frames = get_num_samples
-    
+
     def get_total_samples(self):
         s = 0
         for segment_index in range(self.get_num_segments()):
             s += self.get_num_samples(segment_index)
         return s
-    
+
     def get_total_duration(self):
         duration = self.get_total_samples() / self.get_sampling_frequency()
         return duration
@@ -403,7 +403,7 @@ class BaseRecording(BaseExtractor):
         from spikeinterface import ChannelSliceRecording
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
-    
+
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceRecording
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
@@ -415,7 +415,7 @@ class BaseRecording(BaseExtractor):
         values = self.get_property(property)
         if values is None:
             raise ValueError(f'property {property} is not set')
-        
+
         if outputs == 'list':
             recordings = []
         elif outputs == 'dict':
