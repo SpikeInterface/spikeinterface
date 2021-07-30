@@ -1,0 +1,14 @@
+SpikeInterface 0.13.0 release notes
+-----------------------------------
+
+13th Mar 2021
+
+- spikeextractors: https://github.com/SpikeInterface/spikeextractors/releases/tag/0.9.7
+
+- spiketoolkit: https://github.com/SpikeInterface/spiketoolkit/releases/tag/0.7.6
+
+- spikesorters: https://github.com/SpikeInterface/spikesorters/releases/tag/0.4.5
+
+- spikecomparison: https://github.com/SpikeInterface/spikecomparison/releases/tag/0.3.3
+
+- spikewidgets: https://github.com/SpikeInterface/spikewidgets/releases/tag/0.5.4

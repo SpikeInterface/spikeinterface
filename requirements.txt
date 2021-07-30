@@ -1,5 +1,6 @@
-spikeextractors>=0.9.5
-spiketoolkit>=0.7.3
-spikesorters>=0.4.4
-spikecomparison>=0.3.2
-spikewidgets>=0.5.2
+numpy
+neo
+joblib
+tqdm
+probeinterface>=0.2.3
+

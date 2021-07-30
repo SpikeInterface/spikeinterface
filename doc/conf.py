@@ -16,63 +16,52 @@ import shutil
 from pathlib import Path
 # sys.path.insert(0, os.path.abspath('.'))
 
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if on_rtd:
+    # need a git config
+    os.system('git config --global user.email "rtd@example.com"')
+    os.system('git config --global user.name "RTD Almighty"')
+
 
 if not os.path.isdir('sources'):
     os.mkdir('sources')
 
-# parse requirements file
-req_file = Path(os.getcwd()).parent / 'requirements.txt'
-version_dict = {}
-with req_file.open('r') as f:
-    for line in f.readlines():
-        if '==' in line:
-            split_line = line.split('==')
-            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
-        elif '>=' in line:
-            split_line = line.split('>=')
-            version_dict[split_line[0]] = split_line[1].strip('\n').strip("'")
-        else:
-            continue
 
-#print(version_dict)
+# clean some folder
+folders =  [
 
-# clone git repos and checkout the right tag
-cwd = os.getcwd()
+    '../examples/getting_started/herdingspikes_output',
+    '../examples/getting_started/phy_folder_for_TDC',
+    '../examples/getting_started/redringspikes_output2',
+    '../examples/getting_started/tridesclous_output',
+    '../examples/getting_started/waveforms',
 
-subpacakges_sources = {
-    'spikeextractors' : ' https://github.com/SpikeInterface/spikeextractors.git',
-    'spiketoolkit' : ' https://github.com/SpikeInterface/spiketoolkit.git',
-    'spikesorters' : ' https://github.com/SpikeInterface/spikesorters.git',
-    'spikecomparison' : ' https://github.com/SpikeInterface/spikecomparison.git',
-    'spikewidgets' : ' https://github.com/SpikeInterface/spikewidgets.git',
-}
+    '../examples/modules/comparison/herdingspikes_output',
+    '../examples/modules/comparison/mountainsort4_output',
+    '../examples/modules/comparison/tridesclous_output',
 
-for name, url in subpacakges_sources.items():
-    os.chdir(cwd)
-    folder = 'sources/' + name
-    
-    if os.path.exists(folder):
-        os.chdir(folder)
-        os.system('git fetch')
-        os.system('git checkout '+version_dict[name])
-    else:
-        os.chdir('sources')
-        os.system('git clone --branch ' + version_dict[name] + ' '+url)
 
-    os.chdir(cwd)
-    sys.path.insert(0, os.path.abspath(folder))
-    
+    '../examples/modules/core/waveform_folder',
+    '../examples/modules/core/waveform_folder2',
 
-# clean study
-study_folder = '../examples/modules/comparison/a_study_folder'
-if os.path.isdir(study_folder):
-    print('Removing study folder')
-    shutil.rmtree(study_folder)
+    '../examples/modules/sorters/tridesclous_output',
+
+    '../examples/modules/toolkit/waveforms_mearec',
+
+    '../examples/modules/widgets/waveforms_mearec',
+
+
+]
+
+for folder in folders:
+    if os.path.isdir(folder):
+        print('Removing folder', folder)
+        shutil.rmtree(folder)
 
 # -- Project information -----------------------------------------------------
 
 project = 'spikeinterface'
-copyright = '2019, Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
+copyright = '2021, Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
 author = 'Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
 
 
@@ -84,6 +73,7 @@ author = 'Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, 
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx_gallery.gen_gallery',
+    'numpydoc',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -124,9 +114,12 @@ from sphinx_gallery.sorting import FileNameSortKey
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
+    'only_warn_on_example_error': True,
     'examples_dirs': ['../examples/getting_started', '../examples/modules'],   # path to your example scripts
     'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute'],  # path where to save gallery generated examples
-    'subsection_order': ExplicitOrder(['../examples/modules/extractors/',
+    'subsection_order': ExplicitOrder([
+                                        '../examples/modules/core/',
+                                        '../examples/modules/extractors/',
                                        '../examples/modules/toolkit',
                                        '../examples/modules/sorters',
                                        '../examples/modules/comparison',
