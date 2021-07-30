@@ -6,7 +6,6 @@ from typing import Union
 import shutil
 import json
 
-
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
@@ -98,7 +97,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     More information on Kilosort3 at:
         https://github.com/MouseLand/Kilosort
     """
-    
+
     handle_multi_segment = False
 
     @classmethod
@@ -208,4 +207,3 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-

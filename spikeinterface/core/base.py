@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import importlib
 from copy import deepcopy
@@ -130,7 +129,7 @@ class BaseExtractor:
         return v
 
     def get_annotation_keys(self):
-        return self._annotations.keys()
+        return list(self._annotations.keys())
 
     def set_property(self, key, values, ids=None):
         """
@@ -178,7 +177,7 @@ class BaseExtractor:
         return values
 
     def get_property_keys(self):
-        return self._properties.keys()
+        return list(self._properties.keys())
 
     def copy_metadata(self, other, only_main=False, ids=None):
         """
@@ -448,7 +447,7 @@ class BaseExtractor:
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file, base_folder=folder)
-            
+
             # hack to load probe for recording
             extractor = extractor._after_load(folder)
 
@@ -459,7 +458,7 @@ class BaseExtractor:
                     values = np.load(prop_file)
                     key = prop_file.stem
                     extractor.set_property(key, values)
-           
+
             return extractor
 
         else:
@@ -469,7 +468,7 @@ class BaseExtractor:
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
 
-    def _save(self, folder, **save_kargs):
+    def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
         raise NotImplementedError
@@ -479,22 +478,22 @@ class BaseExtractor:
         # this is internally call by load(...) main function
         raise NotImplementedError
 
-    def save(self, **kargs):
+    def save(self, **kwargs):
         """
         route save_to_folder() or save_to_mem()
         """
-        if kargs.get('format', None) == 'memory':
-            return self.save_to_memory(**kargs)
+        if kwargs.get('format', None) == 'memory':
+            return self.save_to_memory(**kwargs)
         else:
-            return self.save_to_folder(**kargs)
+            return self.save_to_folder(**kwargs)
 
-    def save_to_memory(self, **kargs):
+    def save_to_memory(self, **kwargs):
         # used only by recording at the moment
-        cached = self._save(**kargs)
+        cached = self._save(**kwargs)
         self.copy_metadata(cached)
         return cached
 
-    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kargs):
+    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -558,7 +557,7 @@ class BaseExtractor:
                 json.dumps({'warning': 'the provenace is not dumpable!!!'}),
                 encoding='utf8'
             )
-        
+
         # save properties
         prop_folder = folder / 'properties'
         prop_folder.mkdir(parents=True, exist_ok=False)
@@ -567,7 +566,7 @@ class BaseExtractor:
             np.save(prop_folder / (key + '.npy'), values)
 
         # save data (done the subclass)
-        cached = self._save(folder=folder, verbose=verbose, **save_kargs)
+        cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
 
         # copy properties/
         self.copy_metadata(cached)
@@ -619,7 +618,7 @@ def _make_paths_absolute(d, base):
                     assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
                     absolute_paths = []
                     for path in d[k]:
-                        
+
                         if not Path(path).exists():
                             absolute_paths.append(str(base / path))
                     d[k] = absolute_paths
@@ -645,23 +644,23 @@ def is_dict_extractor(d):
         return False
     is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
     return is_extractor
-    
+
 
 def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
-    
+
     if 'kwargs' not in dic:
         raise Exception(f'This dict cannot be load into extractor {dic}')
     kwargs = deepcopy(dic['kwargs'])
-    
+
     # handle nested
     for k, v in kwargs.items():
-        
+
         if isinstance(v, dict) and is_dict_extractor(v):
-            kwargs[k] = _load_extractor_from_dict(v) 
-    
-    # handle list of extractors list
+            kwargs[k] = _load_extractor_from_dict(v)
+
+            # handle list of extractors list
     for k, v in kwargs.items():
         if isinstance(v, list):
             if all(is_dict_extractor(e) for e in v):

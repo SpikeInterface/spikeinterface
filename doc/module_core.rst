@@ -4,49 +4,82 @@ Core module
 Overview
 --------
 
-* object oriented for sorting (simple object model)
-* comparison with neo
-* multi segment
+The :code:`core` module provides the basic classes and tools of the SpikeInterface ecosystem.
+
+
+Several Base classes are implemented here and inherited throughout the SI code-base.
+
+All classes support multiple segments. Each segment is a contiguous piece of data (recording, sorting, events).
 
 
 Recording
--------
+---------
 
-* trace retriever
-* channel_ids vs channel indexes
-* annotation
-* properties
-* dump
-* group and split
-* segment handling (concatenate...)à
+The :code:`BaseRecording` class serves as basis for all :code:`RecordingExtractors`.
+It represents an extracellular recording and has the following features:
+
+* retrieve raw and scaled traces from each segment
+* keep info about channel_ids VS channel indices
+* handle probe information
+* store channel properties
+* store object annotations
+* enable grouping, splitting, and slicing
+* handle segment operations (e.g. concatenation)
 
 
 Sorting
 -------
 
-* spiketrain retriever
-* unit_ids
-* properties
-* annotations
+The :code:`BaseSorting` class serves as basis for all :code:`SortingExtractors`.
+It represents a spike sorted output and has the following features:
+
+* retrieve spike trains for different units
+* keep info about unit_ids VS unit indices
+* store channel properties
+* store object annotations
+* enable selection of sub-units
+
 
 Event
 -----
 
-* event or epoch retriever
-* new object that will be enhenced
+The :code:`BaseEvent` class serves as basis for all :code:`Event` classes.
+It represents a events during the recording (e.g. TTL pulses) and has the following features:
+
+* retrieve events and/or epochs from files
+* enable grouping, splitting, and slicing (TODO)
+* handle segment operations (e.g. concatenation) (TODO)
 
 WaveformExtractor
 -----------------
 
-* snippet (aka waveforms) retriever
-* sample concept
-* template
-* save in folder
+The :code:`WaveformExtractor` class is the core of postprocessing a spike sorting output.
+It combines a paired recording-sorting objects to extract waveforms.
+It allows to:
+
+* retrieve waveforms
+* control spike subsampling for waveforms
+* compute templates (i.e. average extracellular waveforms)
+* save waveforms in a folder for easy retrieval
 
 
-save concept
-------------
+Saving and loading
+------------------
+
+All SI objects hold full information about their history to endure provenance. Each object is in fact internally
+represented as a dictionary (:code:`si_object.to_dict()`) which can be used to reload the object from scratch.
+
+The :code:`save()` function allows to easily store SI objects to a folder on disk. :code:`Recording` objects are stored
+in binary (.raw) format  and :code:`Sorting` object in numpy (.npz) format. With the actual data, the :code:`save()`
+function also stores the provenance dictionary and all the properties and annotations associated to the object.
+
+From a saved SI folder, an SI object can be reloaded with the :code:`si.load_extractor()` function.
+
+This saving/loading features enables to store SI objects efficiently and to distribute processing.
 
 
-dump concept
-------------
+Parallel processing
+-------------------
+
+The :code:`core` module also contains the basic tools used throughout SI for parallel processing. To discover more
+about it, checkout the :py:class:`spikeinterface.core.ChunkRecordingExecutor` class.

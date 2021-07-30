@@ -30,8 +30,9 @@ class ISIDistributionWidget(BaseMultiWidget):
     W: ISIDistributionWidget
         The output widget
     """
-    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, 
-        figure=None, ax=None, axes=None):
+
+    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0,
+                 figure=None, ax=None, axes=None):
         BaseMultiWidget.__init__(self, figure, ax, axes)
         self._sorting = sorting
         self._unit_ids = unit_ids
@@ -54,17 +55,17 @@ class ISIDistributionWidget(BaseMultiWidget):
             for segment_index in range(num_seg):
                 ax = self.get_tiled_ax(num_ax, nrows, ncols)
                 times_ms = self._sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index) \
-                        / float(self._sampling_frequency) *1000.
-                # bin_counts, bin_edges = compute_isi_dist(times, bins=self._bins, maxwindow=self._window)
+                           / float(self._sampling_frequency) * 1000.
+                #  bin_counts, bin_edges = compute_isi_dist(times, bins=self._bins, maxwindow=self._window)
                 isi = np.diff(times_ms)
                 bins = np.arange(0, self.window_ms, self.bin_ms)
                 bin_counts, bin_edges = np.histogram(isi, bins=bins, density=True)
-                
+
                 ax.bar(x=bin_edges[:-1], height=bin_counts, width=self.bin_ms, color='gray', align='edge')
 
-                #~ with plt.rc_context({'axes.edgecolor': 'gray'}):
-                    #~ _plot_isi(bin_counts=bin_counts, bin_edges=bin_edges, ax=ax,
-                              #~ xticks=[0, self._window / 2, self._window])
+                # ~ with plt.rc_context({'axes.edgecolor': 'gray'}):
+                # ~ _plot_isi(bin_counts=bin_counts, bin_edges=bin_edges, ax=ax,
+                # ~ xticks=[0, self._window / 2, self._window])
                 # if i == 0:
                 #     ax.set_ylabel(f'segment {segment_index}')
                 # if segment_index == num_seg - 1:
@@ -81,28 +82,28 @@ class ISIDistributionWidget(BaseMultiWidget):
                 num_ax += 1
 
 
-
 def plot_isi_distribution(*args, **kwargs):
     W = ISIDistributionWidget(*args, **kwargs)
     W.plot()
     return W
+
+
 plot_isi_distribution.__doc__ = ISIDistributionWidget.__doc__
 
+# ~ def _plot_isi(bin_counts, bin_edges, ax, xticks=None, title=''):
+# ~ bins = bin_edges[:-1] + np.mean(np.diff(bin_edges))
+# ~ wid = np.mean(np.diff(bins))
+# ~ ax.bar(x=bins, height=bin_counts, width=wid, color='gray', align='edge')
+# ~ if xticks is not None:
+# ~ ax.set_xticks(xticks)
+# ~ ax.set_xlabel('dt (s)')
+# ~ ax.set_yticks([])
+# ~ if title:
+# ~ ax.set_title(title, color='gray')
 
-#~ def _plot_isi(bin_counts, bin_edges, ax, xticks=None, title=''):
-    #~ bins = bin_edges[:-1] + np.mean(np.diff(bin_edges))
-    #~ wid = np.mean(np.diff(bins))
-    #~ ax.bar(x=bins, height=bin_counts, width=wid, color='gray', align='edge')
-    #~ if xticks is not None:
-        #~ ax.set_xticks(xticks)
-    #~ ax.set_xlabel('dt (s)')
-    #~ ax.set_yticks([])
-    #~ if title:
-        #~ ax.set_title(title, color='gray')
 
-
-#~ def compute_isi_dist(times, *, bins, maxwindow=10.):
-    #~ isi = np.diff(times)
-    #~ isi = isi[isi < maxwindow]
-    #~ bin_counts, bin_edges = np.histogram(isi, bins=bins, density=True)
-    #~ return bin_counts, bin_edges
+# ~ def compute_isi_dist(times, *, bins, maxwindow=10.):
+# ~ isi = np.diff(times)
+# ~ isi = isi[isi < maxwindow]
+# ~ bin_counts, bin_edges = np.histogram(isi, bins=bins, density=True)
+# ~ return bin_counts, bin_edges

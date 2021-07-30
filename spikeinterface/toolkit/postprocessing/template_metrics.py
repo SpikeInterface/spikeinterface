@@ -34,23 +34,23 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     """
     unit_ids = waveform_extractor.sorting.unit_ids
     sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
-    
+
     if feature_names is None:
         feature_names = list(_metric_name_to_func.keys())
 
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign,
                                                           outputs='index')
-    
+
     template_metrics = pd.DataFrame(index=unit_ids, columns=feature_names)
-    
+
     for unit_id in unit_ids:
         template_all_chans = waveform_extractor.get_template(unit_id)
         chan_id = extremum_channels_ids[unit_id]
         chan_ind = waveform_extractor.sorting.id_to_index(chan_id)
-        
+
         # take only at extremum
         template = template_all_chans[:, chan_ind]
-        
+
         for feature_name in feature_names:
             func = _metric_name_to_func[feature_name]
             value = func(template, sampling_frequency=sampling_frequency, **kwargs)
@@ -99,7 +99,7 @@ def get_half_width(template, **kwargs):
 
     if peak_idx == 0:
         return np.nan
-    
+
     trough_val = template[trough_idx]
     # threshold is half of peak heigth (assuming baseline is 0)
     threshold = 0.5 * trough_val
@@ -109,7 +109,7 @@ def get_half_width(template, **kwargs):
 
     if len(cpre_idx) == 0 or len(cpost_idx) == 0:
         hw = np.nan
-    
+
     else:
         # last occurence of template lower than thr, before peak
         cross_pre_pk = cpre_idx[0] - 1
@@ -131,7 +131,7 @@ def get_repolarization_slope(template, **kwargs):
     Optionally the function returns also the indices per waveform where the
     potential crosses baseline.
     """
-    
+
     trough_idx, peak_idx = get_trough_and_peak_idx(template)
     sampling_frequency = kwargs["sampling_frequency"]
 
@@ -145,10 +145,10 @@ def get_repolarization_slope(template, **kwargs):
         return np.nan
     # first time after  trough, where template is at baseline
     return_to_base_idx = rtrn_idx[0] + trough_idx
-    
+
     if return_to_base_idx - trough_idx < 3:
         return np.nan
-        
+
     res = scipy.stats.linregress(times[trough_idx:return_to_base_idx], template[trough_idx:return_to_base_idx])
     return res.slope
 
@@ -164,7 +164,7 @@ def get_recovery_slope(template, window_ms=0.7, **kwargs):
     Takes a numpy array of waveforms and returns an array with
     recovery slopes per waveform.
     """
-    
+
     trough_idx, peak_idx = get_trough_and_peak_idx(template)
     sampling_frequency = kwargs["sampling_frequency"]
 
@@ -185,6 +185,3 @@ _metric_name_to_func = {
     'repolarization_slope': get_repolarization_slope,
     'recovery_slope': get_recovery_slope,
 }
-
-
-

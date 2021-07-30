@@ -1,19 +1,16 @@
 from pathlib import Path
 import copy
 
-
 from ..basesorter import BaseSorter
 from ..utils import RecordingExtractorOldAPI
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import HerdingspikesSortingExtractor
-import spikeinterface.toolkit as st
 
 
 class HerdingspikesSorter(BaseSorter):
-
     sorter_name = 'herdingspikes'
-    
+
     requires_locations = True
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': False}
     _default_params = {
@@ -119,9 +116,9 @@ class HerdingspikesSorter(BaseSorter):
     More information on HerdingSpikes at:
       * https://github.com/mhhennig/hs2
     """
-    
+
     handle_multi_segment = False
-    
+
     @classmethod
     def is_installed(cls):
         try:
@@ -130,7 +127,7 @@ class HerdingspikesSorter(BaseSorter):
         except ImportError:
             HAVE_HS = False
         return HAVE_HS
-    
+
     @classmethod
     def get_sorter_version(cls):
         import herdingspikes as hs
@@ -144,14 +141,14 @@ class HerdingspikesSorter(BaseSorter):
     def _setup_recording(cls, recording, output_folder, params, verbose):
         # nothing to copy inside the folder : Herdingspikes used nativelly spikeinterface
         pass
-    
+
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         import herdingspikes as hs
+        import spikeinterface.toolkit as st
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
-        
-        
+
         p = params
 
         # Bandpass filter
@@ -161,13 +158,13 @@ class HerdingspikesSorter(BaseSorter):
 
         if p['pre_scale']:
             recording = st.normalize_by_quantile(
-                recording = recording, scale=p['pre_scale_value'],
+                recording=recording, scale=p['pre_scale_value'],
                 median=0.0, q1=0.05, q2=0.95
             )
-        
+
         print('Herdingspikes use the OLD spikeextractors with RecordingExtractorOldAPI')
         old_api_recording = RecordingExtractorOldAPI(recording)
-        
+
         # this should have its name changed
         Probe = hs.probe.RecordingExtractor(
             old_api_recording,
@@ -196,10 +193,10 @@ class HerdingspikesSorter(BaseSorter):
         H.DetectFromRaw(load=True, tInc=int(p['t_inc']))
 
         sorted_file = str(output_folder / 'HS2_sorted.hdf5')
-        if(not H.spikes.empty):
+        if (not H.spikes.empty):
             C = hs.HSClustering(H)
             C.ShapePCA(pca_ncomponents=p['pca_ncomponents'],
-                            pca_whiten=p['pca_whiten'])
+                       pca_whiten=p['pca_whiten'])
             C.CombinedClustering(
                 alpha=p['clustering_alpha'],
                 cluster_subset=p['clustering_subset'],
@@ -214,9 +211,9 @@ class HerdingspikesSorter(BaseSorter):
         if p['filter_duplicates']:
             uids = C.spikes.cl.unique()
             for u in uids:
-                s = C.spikes[C.spikes.cl==u].t.diff()<p['spk_evaluation_time']/1000*Probe.fps
+                s = C.spikes[C.spikes.cl == u].t.diff() < p['spk_evaluation_time'] / 1000 * Probe.fps
                 C.spikes = C.spikes.drop(s.index[s])
-        
+
         if verbose:
             print('Saving to', sorted_file)
         C.SaveHDF5(sorted_file, sampling=Probe.fps)

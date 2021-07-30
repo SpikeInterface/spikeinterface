@@ -6,7 +6,6 @@ from .basewidget import BaseWidget
 from probeinterface.plotting import plot_probe
 
 
-
 class DriftOverTimeWidget(BaseWidget):
     """
     Plot "y" (=depth) (or "x") drift over time.
@@ -48,10 +47,11 @@ class DriftOverTimeWidget(BaseWidget):
     W: ProbeMapWidget
         The output widget
     """
+
     def __init__(self, recording, peaks=None, detect_peaks_kwargs={},
-                mode='heatmap',
-                probe_axis=1, weight_with_amplitudes=True, bin_duration_s=60.,
-                figure=None, ax=None):
+                 mode='heatmap',
+                 probe_axis=1, weight_with_amplitudes=True, bin_duration_s=60.,
+                 figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
         possible_modes = ('heatmap', 'scatter')
@@ -59,11 +59,11 @@ class DriftOverTimeWidget(BaseWidget):
         if mode == 'scatter':
             assert not weight_with_amplitudes, 'with scatter mode, weight_with_amplitudes must be False'
         assert recording.get_num_segments() == 1, 'Handle only one segment'
-        
+
         self.recording = recording
-        self.peaks= peaks
+        self.peaks = peaks
         self.mode = mode
-        self.detect_peaks_kwargs= detect_peaks_kwargs
+        self.detect_peaks_kwargs = detect_peaks_kwargs
         self.probe_axis = probe_axis
         self.weight_with_amplitudes = weight_with_amplitudes
         self.bin_duration_s = bin_duration_s
@@ -73,7 +73,6 @@ class DriftOverTimeWidget(BaseWidget):
 
     def _do_plot(self):
         rec = self.recording
-        
 
         peaks = self.peaks
         if peaks is None:
@@ -85,35 +84,34 @@ class DriftOverTimeWidget(BaseWidget):
         bin_size = int(fs * self.bin_duration_s)
 
         total_size = rec.get_num_samples(segment_index=0)
-        
+
         probe = rec.get_probe()
         positions = probe.contact_positions
-        
+
         all_depth = np.unique(positions[:, self.probe_axis])
-        
+
         if self.mode == 'heatmap':
             ndepth = all_depth.size
             step = np.min(np.diff(all_depth))
-            depth_bins = np.arange(np.min(all_depth), np.max(all_depth)+step, step)
+            depth_bins = np.arange(np.min(all_depth), np.max(all_depth) + step, step)
 
             nchunk = total_size // bin_size
 
-            peak_density = np.zeros((depth_bins.size -1, nchunk), dtype='float32')
+            peak_density = np.zeros((depth_bins.size - 1, nchunk), dtype='float32')
             for i in range(nchunk):
-                mask = (peaks['sample_ind'] >= (i*bin_size)) & (peaks['sample_ind'] < ((i + 1) * bin_size))
+                mask = (peaks['sample_ind'] >= (i * bin_size)) & (peaks['sample_ind'] < ((i + 1) * bin_size))
                 depths = positions[peaks['channel_ind'][mask], self.probe_axis]
-                
+
                 if self.weight_with_amplitudes:
                     count, bins = np.histogram(depths, bins=depth_bins, weights=np.abs(peaks['channel_ind'][mask]))
                 else:
                     count, bins = np.histogram(depths, bins=depth_bins)
                 peak_density[:, i] = count
 
+            extent = (0, self.bin_duration_s * nchunk, depth_bins[0], depth_bins[-1])
 
-            extent = (0, self.bin_duration_s*nchunk, depth_bins[0], depth_bins[-1])
-            
-            im = self.ax.imshow(peak_density, interpolation='nearest', 
-                            origin ='lower', aspect = 'auto', extent = extent)
+            im = self.ax.imshow(peak_density, interpolation='nearest',
+                                origin='lower', aspect='auto', extent=extent)
         elif self.mode == 'scatter':
             times = peaks['sample_ind'] / fs
             depths = positions[peaks['channel_ind'], self.probe_axis]
@@ -121,19 +119,16 @@ class DriftOverTimeWidget(BaseWidget):
             factor = np.min(np.diff(all_depth))
             depths += np.random.randn(depths.size) * factor * 0.15
             self.ax.scatter(times, depths, alpha=0.4, s=1, color='k')
-        
+
         self.ax.set_xlabel('time (s)')
         txt_axis = ['x', 'y'][self.probe_axis]
         self.ax.set_ylabel(f'{txt_axis} (um)')
-        
-
-
-
 
 
 def plot_drift_over_time(*args, **kwargs):
     W = DriftOverTimeWidget(*args, **kwargs)
     W.plot()
     return W
-plot_drift_over_time.__doc__ = DriftOverTimeWidget.__doc__
 
+
+plot_drift_over_time.__doc__ = DriftOverTimeWidget.__doc__

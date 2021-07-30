@@ -7,7 +7,6 @@ It is useful when we do extractor.save(name='name').
 import tempfile
 from pathlib import Path
 
-
 ########################################
 
 global temp_folder
@@ -52,9 +51,10 @@ def reset_global_tmp_folder():
     """
     global temp_folder
     temp_folder = Path(tempfile.mkdtemp(dir=base))
-    # print('New global_tmp_folder: ', temp_folder)
+    #  print('New global_tmp_folder: ', temp_folder)
     global temp_folder_set
     temp_folder_set = False
+
 
 ########################################
 

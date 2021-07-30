@@ -5,9 +5,9 @@ from pathlib import Path
 
 import numpy as np
 
-
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .core_tools import read_binary_recording, write_binary_recording
+from .job_tools import _shared_job_kwargs_doc
 
 
 class BinaryRecordingExtractor(BaseRecording):
@@ -57,18 +57,18 @@ class BinaryRecordingExtractor(BaseRecording):
             channel_ids = list(range(num_chan))
         else:
             assert len(channel_ids) == num_chan, 'Provided recording channels have the wrong length'
-        
+
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
-        
+
         if isinstance(file_paths, list):
             # several segment
             datfiles = [Path(p) for p in file_paths]
         else:
             # one segment
             datfiles = [Path(file_paths)]
-        
+
         dtype = np.dtype(dtype)
-        
+
         for datfile in datfiles:
             rec_segment = BinaryRecordingSegment(datfile, num_chan, dtype, time_axis, file_offset)
             self.add_recording_segment(rec_segment)
@@ -92,7 +92,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
     @staticmethod
     def write_recording(recording, file_paths, dtype=None, **job_kwargs):
-        '''
+        """
         Save the traces of a recording extractor in binary .dat format.
 
         Parameters
@@ -103,12 +103,13 @@ class BinaryRecordingExtractor(BaseRecording):
             The path to the file.
         dtype: dtype
             Type of the saved data. Default float32.
-        **job_kwargs: keyword argumentds for "write_binary_recording" function:
-            * chunk_size or chunk_memory, or total_memory
-            * n_jobs
-            * progress_bar
-        '''
+        {}
+        """
         write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
+
+
+BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(
+    _shared_job_kwargs_doc)
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
@@ -132,12 +133,12 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         traces = self._timeseries[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
-        
+
         if self._timeseries.dtype.str.startswith('uint'):
             exp_idx = self._dtype.find('int') + 3
             exp = int(self._dtype[exp_idx:])
-            traces = traces.astype('float32') - 2**(exp - 1)
-            
+            traces = traces.astype('float32') - 2 ** (exp - 1)
+
         return traces
 
 
@@ -145,8 +146,8 @@ class BinaryRecordingSegment(BaseRecordingSegment):
 BinDatRecordingExtractor = BinaryRecordingExtractor
 
 
-def read_binary(*args, **kargs):
-    recording = BinaryRecordingExtractor(*args, **kargs)
+def read_binary(*args, **kwargs):
+    recording = BinaryRecordingExtractor(*args, **kwargs)
     return recording
 
 
