@@ -7,14 +7,17 @@ import spikeinterface.toolkit as st
 
 import matplotlib.pyplot as plt
 
-def export_report(waveform_extractor, output_folder, remove_if_exists=False, **job_wargs):
+def export_report(waveform_extractor, output_folder, remove_if_exists=False,
+            metrics=None, amplitudes=None, **job_wargs):
     we = waveform_extractor
     sorting = we.sorting
     unit_ids = sorting.unit_ids
     
-    # some computation
-    amplitudes = st.get_spike_amplitudes(we,  peak_sign='neg', outputs='by_unit', **job_wargs)
     
+    if amplitudes is None:
+        # compute amplituds if not provided
+        amplitudes = st.get_spike_amplitudes(we,  peak_sign='neg', outputs='by_unit', **job_wargs)
+
     output_folder = Path(output_folder).absolute()
     if output_folder.is_dir():
         if remove_if_exists:
@@ -31,12 +34,18 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, **j
     units.to_csv(output_folder / 'unit list.csv', sep='\t')
     
     # metrics
-    pca = st.WaveformPrincipalComponent(we)
-    pca.set_params(n_components=5, mode='by_channel_local')
-    pca.run()    
-    metrics = st.compute_quality_metrics(we, waveform_principal_component=pca)
-    metrics.to_csv(output_folder / 'quality metrics.csv')
+    #~ pca = st.WaveformPrincipalComponent(we)
+    #~ pca.set_params(n_components=5, mode='by_channel_local')
+    #~ pca.run()
+
+    pca = st.compute_principal_components(we, load_if_exists=True,
+                                 n_components=5, mode='by_channel_local')
     
+
+    if metrics is None:
+        metrics = st.compute_quality_metrics(we, waveform_principal_component=pca)
+    metrics.to_csv(output_folder / 'quality metrics.csv')
+
     unit_colors = sw.get_unit_colors(sorting)
     
     # global figures
