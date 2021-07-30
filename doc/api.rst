@@ -47,6 +47,8 @@ Module :mod:`spikeinterface.core`
 
     .. autofunction:: set_global_dataset_folder
 
+    .. autoclass:: ChunkRecordingExecutor
+
 
 
 Module :mod:`spikeinterface.extractors`
@@ -58,6 +60,7 @@ Module :mod:`spikeinterface.extractors`
     .. autofunction:: read_mearec
     .. autofunction:: read_spikeglx
     .. autofunction:: read_openephys
+    .. autofunction:: read_openephys_event
     .. autofunction:: read_intan
     .. autofunction:: read_neuroscope
     .. autofunction:: read_plexon
@@ -128,7 +131,7 @@ Postprocessing
     .. autofunction:: get_template_extremum_channel
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
-    .. autofunction:: get_template_best_channels
+    .. autofunction:: get_template_channel_sparsity
     .. autofunction:: compute_unit_centers_of_mass
     .. autofunction:: calculate_template_metrics
     .. autofunction:: get_template_metric_names

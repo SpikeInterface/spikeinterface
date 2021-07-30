@@ -37,7 +37,6 @@ class BaseSorting(BaseExtractor):
         return len(self.get_unit_ids())
 
     def add_sorting_segment(self, sorting_segment):
-        # todo: check consistency with unit ids and freq
         self._sorting_segments.append(sorting_segment)
         sorting_segment.set_parent_extractor(self)
 
@@ -86,7 +85,7 @@ class BaseSorting(BaseExtractor):
         from spikeinterface import UnitsSelectionSorting
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
-    
+
     def get_all_spike_trains(self, outputs='unit_id'):
         """
         Return all spike trains concatenated
@@ -99,9 +98,9 @@ class BaseSorting(BaseExtractor):
             for i, unit_id in enumerate(self.unit_ids):
                 st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 spike_times.append(st)
-                if outputs =='unit_id':
-                    spike_labels.append(np.array([unit_id]*st.size))
-                elif outputs =='unit_index':
+                if outputs == 'unit_id':
+                    spike_labels.append(np.array([unit_id] * st.size))
+                elif outputs == 'unit_index':
                     spike_labels.append(np.zeros(st.size, dtype='int64') + i)
             spike_times = np.concatenate(spike_times)
             spike_labels = np.concatenate(spike_labels)

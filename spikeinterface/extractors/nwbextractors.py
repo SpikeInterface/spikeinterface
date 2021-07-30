@@ -4,7 +4,6 @@ from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 
-
 try:
     import pandas as pd
     import pynwb
@@ -87,11 +86,11 @@ class NwbRecordingExtractor(BaseRecording):
 
             dtype = es.data.dtype
 
-            BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency,dtype=dtype)
+            BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
             recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=electrical_series_name,
                                                     num_frames=num_frames)
             self.add_recording_segment(recording_segment)
-            
+
             # If gains are not 1, set has_scaled to True
             if np.any(gains != 1):
                 self.set_channel_gains(gains)
@@ -138,7 +137,7 @@ class NwbRecordingExtractor(BaseRecording):
                 elif prop_name == "group":
                     if np.isscalar(val):
                         groups = [val] * len(channel_ids)
-                    else :
+                    else:
                         groups = val
                     self.set_channel_groups(groups)
                 else:
@@ -146,6 +145,7 @@ class NwbRecordingExtractor(BaseRecording):
 
             self._kwargs = {'file_path': str(Path(file_path).absolute()),
                             'electrical_series_name': electrical_series_name}
+
 
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, path: PathType, electrical_series_name, num_frames):
@@ -185,7 +185,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
                     traces = recordings[:, resorted_indices]
                 else:
                     traces = es.data[start_frame:end_frame, channel_indices]
-                
+
         return traces
 
 
@@ -291,22 +291,22 @@ class NwbSortingSegment(BaseSortingSegment):
         return frames[(frames > start_frame) & (frames < end_frame)]
 
 
-
 def read_nwb_recording(*args, **kwargs):
     recording = NwbRecordingExtractor(*args, **kwargs)
-    return  recording
+    return recording
+
 
 def read_nwb_sorting(*args, **kwargs):
     sorting = NwbSortingExtractor(*args, **kwargs)
-    return  sorting
+    return sorting
+
 
 def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None):
     outputs = ()
     if load_recording:
         rec = read_nwb_recording(file_path, electrical_series_name=electrical_series_name)
-        outputs = outputs + (rec, )
+        outputs = outputs + (rec,)
     if load_sorting:
         sorting = read_nwb_sorting(file_path, electrical_series_name=electrical_series_name)
-        outputs = outputs + (sorting, )
+        outputs = outputs + (sorting,)
     return outputs
-

@@ -17,18 +17,20 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
     file_path: str
         The xml  file.
     stream_id: str or None
-    """ 
+    """
     mode = 'file'
     NeoRawIOClass = 'RawMCSRawIO'
 
     def __init__(self, file_path, stream_id=None):
-        neo_kwargs = {'filename' : file_path}
+        neo_kwargs = {'filename': file_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
-        
+
         self._kwargs = dict(file_path=file_path, stream_id=stream_id)
 
 
-def read_mcsraw(*args, **kargs):
-    recording = MCSRawRecordingExtractor(*args, **kargs)
+def read_mcsraw(*args, **kwargs):
+    recording = MCSRawRecordingExtractor(*args, **kwargs)
     return recording
+
+
 read_mcsraw.__doc__ = MCSRawRecordingExtractor.__doc__

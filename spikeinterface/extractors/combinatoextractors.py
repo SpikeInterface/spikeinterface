@@ -53,7 +53,7 @@ class CombinatoSortingExtractor(BaseSorting):
 
                 times_css = fdet[sign]['times'][()]
                 for gr, cls in groups.items():
-                    if keep_good_only and (group_type[gr]<1): #artifact or unsorted
+                    if keep_good_only and (group_type[gr] < 1):  # artifact or unsorted
                         continue
                     spiketrains[unit_counter] = np.rint(
                         times_css[sp_index[np.isin(sp_class, cls)]] * (sampling_frequency / 1000))
@@ -62,8 +62,8 @@ class CombinatoSortingExtractor(BaseSorting):
         unit_ids = np.arange(unit_counter, dtype='int64')
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(CombinatoSortingSegment(spiketrains))
-        self.set_property('unsorted',np.array([metadata[u]['group_type'] == 0 for u in range(unit_counter)]))
-        self.set_property('artifact',np.array([metadata[u]['group_type']  == -1 for u in range(unit_counter)]))
+        self.set_property('unsorted', np.array([metadata[u]['group_type'] == 0 for u in range(unit_counter)]))
+        self.set_property('artifact', np.array([metadata[u]['group_type'] == -1 for u in range(unit_counter)]))
         self._kwargs = {'folder_path': str(folder_path), 'user': user, 'det_sign': det_sign}
 
 
@@ -82,7 +82,9 @@ class CombinatoSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_combinato(*args, **kargs):
-    sorting = CombinatoSortingExtractor(*args, **kargs)
+def read_combinato(*args, **kwargs):
+    sorting = CombinatoSortingExtractor(*args, **kwargs)
     return sorting
+
+
 read_combinato.__doc__ = CombinatoSortingExtractor.__doc__

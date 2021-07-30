@@ -6,15 +6,14 @@ from typing import Union
 import shutil
 import json
 
-
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
-
 PathType = Union[str, Path]
+
 
 def check_if_installed(kilosort2_path: Union[str, None]):
     if kilosort2_path is None:
@@ -87,9 +86,9 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
     More information on Kilosort2 at:
         https://github.com/MouseLand/Kilosort2
     """
-    
+
     handle_multi_segment = False
-    
+
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.kilosort2_path)
@@ -159,7 +158,6 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
             channel_path=str((output_folder / 'kilosort2_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort2_config.m').absolute()),
         )
-
 
         kilosort2_config_txt = kilosort2_config_txt.format(
             nchan=recording.get_num_channels(),

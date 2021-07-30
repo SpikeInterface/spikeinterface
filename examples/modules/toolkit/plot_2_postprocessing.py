@@ -141,7 +141,7 @@ for i, unit_id in enumerate(sorting.unit_ids):
 
 
 # output_folder = 'mearec_exported_to_phy'
-# st.export_to_phy(recording, sorting, output_folder, we,
+# st.export_to_phy(we,
 #                  compute_pc_features=False, compute_amplitudes=True,
 #                  remove_if_exists=True)
 

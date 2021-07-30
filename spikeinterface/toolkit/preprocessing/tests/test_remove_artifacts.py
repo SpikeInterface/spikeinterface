@@ -7,14 +7,14 @@ from spikeinterface.toolkit.preprocessing import remove_artifacts
 
 import numpy as np
 
+
 def test_remove_artifacts():
     # one segment only
     rec = generate_recording(durations=[10.])
 
     triggers = [15000, 30000]
     list_triggers = [triggers]
-    
-    
+
     ms = 10
     ms_frames = int(ms * rec.get_sampling_frequency() / 1000)
 
@@ -26,7 +26,7 @@ def test_remove_artifacts():
     traces_short_0 = rec_rmart.get_traces(start_frame=triggers[0] - 10, end_frame=triggers[0] + 10)
     traces_all_1 = rec_rmart.get_traces(start_frame=triggers[1] - ms_frames, end_frame=triggers[1] + ms_frames)
     traces_short_1 = rec_rmart.get_traces(start_frame=triggers[1] - 10, end_frame=triggers[1] + 10)
-    
+
     assert not np.any(traces_all_0)
     assert not np.any(traces_all_1)
     assert not np.any(traces_short_0)
@@ -44,7 +44,6 @@ def test_remove_artifacts():
 
     assert not np.allclose(traces_all_0, traces_all_0_clean)
     assert not np.allclose(traces_all_1, traces_all_1_clean)
-
 
 
 if __name__ == '__main__':

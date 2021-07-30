@@ -1,7 +1,6 @@
 import unittest
 import pytest
 
-
 from spikeinterface.sorters import Mountainsort4Sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
@@ -18,4 +17,3 @@ if __name__ == '__main__':
     test.setUp()
     test.test_with_class()
     test.test_with_run()
-
