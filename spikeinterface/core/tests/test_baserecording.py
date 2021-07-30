@@ -134,6 +134,7 @@ def test_BaseRecording():
     # test save with probe
     folder = cache_folder / 'simple_recording3'
     rec2 = rec_p.save(folder=folder, chunk_size=10, n_jobs=2)
+    rec2 = load_extractor(folder)
     probe2 = rec2.get_probe()
     assert np.array_equal(probe2.contact_positions, [[0, 30.], [0., 0.]])
     positions2 = rec_p.get_channel_locations()

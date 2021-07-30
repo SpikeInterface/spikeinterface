@@ -209,7 +209,7 @@ class BaseExtractor:
         # TODO: copy features also
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
-                relative_to=None):
+                relative_to=None, folder_metadata=None):
         '''
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
         extractor with load_extractor_from_dict(dump_dict)
@@ -238,7 +238,8 @@ class BaseExtractor:
             version = imported_module.__version__
         except AttributeError:
             version = 'unknown'
-
+        
+        
         dump_dict = {
             'class': class_name,
             'module': module,
@@ -270,9 +271,13 @@ class BaseExtractor:
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
-
             dump_dict = _make_paths_relative(dump_dict, relative_to)
-
+        
+        if folder_metadata is not None:
+            if relative_to is not None:
+                folder_metadata = Path(folder_metadata).absolute().relative_to(relative_to)
+            dump_dict['folder_metadata'] = str(folder_metadata)
+        
         return dump_dict
 
     @staticmethod
@@ -296,7 +301,38 @@ class BaseExtractor:
             assert base_folder is not None, 'When  relative_paths=True, need to provide base_folder'
             d = _make_paths_absolute(d, base_folder)
         extractor = _load_extractor_from_dict(d)
+        folder_metadata = d.get('folder_metadata', None)
+        if folder_metadata is not None:
+            folder_metadata = Path(folder_metadata)
+            if d['relative_paths']:
+                folder_metadata = base_folder / folder_metadata
+            extractor.load_metadata_from_folder(folder_metadata)
         return extractor
+    
+    def load_metadata_from_folder(self, folder_metadata):
+        # hack to load probe for recording
+        folder_metadata = Path(folder_metadata)
+        
+        self._extra_metadata_from_folder(folder_metadata)
+
+        # load properties
+        prop_folder = folder_metadata / 'properties'
+        for prop_file in prop_folder.iterdir():
+            if prop_file.suffix == '.npy':
+                values = np.load(prop_file)
+                key = prop_file.stem
+                self.set_property(key, values)
+    
+    def save_metadata_to_folder(self, folder_metadata):
+        self._extra_metadata_to_folder(folder_metadata)
+        
+        # save properties
+        prop_folder = folder_metadata / 'properties'
+        prop_folder.mkdir(parents=True, exist_ok=False)
+        for key in self.get_property_keys():
+            values = self.get_property(key)
+            np.save(prop_folder / (key + '.npy'), values)
+        
 
     def clone(self):
         """
@@ -345,7 +381,7 @@ class BaseExtractor:
             " %s" % (', '.join(extensions))
         return file_path
 
-    def dump(self, file_path, relative_to=None):
+    def dump(self, file_path, relative_to=None, folder_metadata=None):
         """
         Dumps extractor to json or pickle
 
@@ -357,13 +393,13 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         """
         if str(file_path).endswith('.json'):
-            self.dump_to_json(file_path, relative_to)
+            self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
-            self.dump_to_pickle(file_path, relative_to)
+            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
             raise ValueError('Dump: file must .json or .pkl')
 
-    def dump_to_json(self, file_path=None, relative_to=None):
+    def dump_to_json(self, file_path=None, relative_to=None, folder_metadata=None):
         '''
         Dump recording extractor to json file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -379,7 +415,8 @@ class BaseExtractor:
         dump_dict = self.to_dict(include_annotations=True,
                                  include_properties=False,
                                  include_features=False,
-                                 relative_to=relative_to)
+                                 relative_to=relative_to,
+                                 folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
         file_path.write_text(
             json.dumps(check_json(dump_dict), indent=4),
@@ -387,7 +424,7 @@ class BaseExtractor:
         )
 
     def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True,
-                       relative_to=None):
+                       relative_to=None, folder_metadata=None):
         '''
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -407,7 +444,8 @@ class BaseExtractor:
         dump_dict = self.to_dict(include_annotations=True,
                                  include_properties=False,
                                  include_features=False,
-                                 relative_to=relative_to)
+                                 relative_to=relative_to, 
+                                 folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
@@ -448,16 +486,6 @@ class BaseExtractor:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file, base_folder=folder)
 
-            # hack to load probe for recording
-            extractor = extractor._after_load(folder)
-
-            # load properties
-            prop_folder = folder / 'properties'
-            for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == '.npy':
-                    values = np.load(prop_file)
-                    key = prop_file.stem
-                    extractor.set_property(key, values)
 
             return extractor
 
@@ -473,11 +501,14 @@ class BaseExtractor:
         # this is internally call by cache(...) main function
         raise NotImplementedError
 
-    def _after_load(self, folder):
-        # This implemented in BaseRecording or baseSorting
-        # this is internally call by load(...) main function
-        raise NotImplementedError
-
+    def _extra_metadata_from_folder(self, folder):
+        # This implemented in BaseRecording for probe
+        pass
+    
+    def _extra_metadata_to_folder(self, folder):
+        # This implemented in BaseRecording for probe
+        pass
+    
     def save(self, **kwargs):
         """
         route save_to_folder() or save_to_mem()
@@ -558,21 +589,17 @@ class BaseExtractor:
                 encoding='utf8'
             )
 
-        # save properties
-        prop_folder = folder / 'properties'
-        prop_folder.mkdir(parents=True, exist_ok=False)
-        for key in self.get_property_keys():
-            values = self.get_property(key)
-            np.save(prop_folder / (key + '.npy'), values)
 
         # save data (done the subclass)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
+        
+        self.save_metadata_to_folder(folder)
 
         # copy properties/
         self.copy_metadata(cached)
 
         # dump
-        cached.dump(folder / f'cached.{dump_ext}', relative_to=folder)
+        cached.dump(folder / f'cached.{dump_ext}', relative_to=folder, folder_metadata=folder)
 
         return cached
 
