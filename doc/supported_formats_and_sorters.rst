@@ -1,3 +1,5 @@
+.. _compatible-tech:
+
 Compatible Technology
 ~~~~~~~~~~~~~~~~~~~~~
 

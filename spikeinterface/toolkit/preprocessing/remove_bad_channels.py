@@ -1,11 +1,11 @@
 import numpy as np
 
-
 from spikeinterface.core.channelslicerecording import (ChannelSliceRecording,
-    ChannelSliceRecordingSegment)
-from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
+                                                       ChannelSliceRecordingSegment)
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..utils import get_random_data_chunks
+
 
 class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
     """
@@ -28,8 +28,6 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
     name = 'remove_bad_channels'
 
     def __init__(self, recording, bad_threshold=5, **random_chunk_kwargs):
-
-
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
         stds = np.std(random_data, axis=0)
@@ -50,4 +48,6 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
 # function for API
 def remove_bad_channels(*args, **kwargs):
     return RemoveBadChannelsRecording(*args, **kwargs)
+
+
 remove_bad_channels.__doc__ = RemoveBadChannelsRecording.__doc__

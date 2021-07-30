@@ -6,6 +6,7 @@ from spikeinterface.core import (BaseRecording, BaseSorting,
 
 try:
     import yaml
+
     HAVE_YAML = True
 except:
     HAVE_YAML = False
@@ -63,4 +64,6 @@ class YassSortingSegment(BaseSortingSegment):
 def read_yass(*args, **kwargs):
     sorting = YassSortingExtractor(*args, **kwargs)
     return sorting
+
+
 read_yass.__doc__ = YassSortingExtractor.__doc__

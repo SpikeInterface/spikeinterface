@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import importlib
 from copy import deepcopy
@@ -448,7 +447,7 @@ class BaseExtractor:
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file, base_folder=folder)
-            
+
             # hack to load probe for recording
             extractor = extractor._after_load(folder)
 
@@ -459,7 +458,7 @@ class BaseExtractor:
                     values = np.load(prop_file)
                     key = prop_file.stem
                     extractor.set_property(key, values)
-           
+
             return extractor
 
         else:
@@ -558,7 +557,7 @@ class BaseExtractor:
                 json.dumps({'warning': 'the provenace is not dumpable!!!'}),
                 encoding='utf8'
             )
-        
+
         # save properties
         prop_folder = folder / 'properties'
         prop_folder.mkdir(parents=True, exist_ok=False)
@@ -619,7 +618,7 @@ def _make_paths_absolute(d, base):
                     assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
                     absolute_paths = []
                     for path in d[k]:
-                        
+
                         if not Path(path).exists():
                             absolute_paths.append(str(base / path))
                     d[k] = absolute_paths
@@ -645,23 +644,23 @@ def is_dict_extractor(d):
         return False
     is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
     return is_extractor
-    
+
 
 def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
-    
+
     if 'kwargs' not in dic:
         raise Exception(f'This dict cannot be load into extractor {dic}')
     kwargs = deepcopy(dic['kwargs'])
-    
+
     # handle nested
     for k, v in kwargs.items():
-        
+
         if isinstance(v, dict) and is_dict_extractor(v):
-            kwargs[k] = _load_extractor_from_dict(v) 
-    
-    # handle list of extractors list
+            kwargs[k] = _load_extractor_from_dict(v)
+
+            # handle list of extractors list
     for k, v in kwargs.items():
         if isinstance(v, list):
             if all(is_dict_extractor(e) for e in v):

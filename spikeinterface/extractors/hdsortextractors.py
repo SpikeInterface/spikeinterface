@@ -246,4 +246,6 @@ def _squeeze(arr):
 def read_hdsort(*args, **kwargs):
     sorting = HDSortSortingExtractor(*args, **kwargs)
     return sorting
+
+
 read_hdsort.__doc__ = HDSortSortingExtractor.__doc__
