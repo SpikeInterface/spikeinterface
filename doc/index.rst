@@ -5,9 +5,9 @@ Welcome to SpikeInterface's documentation!
 
 .. warning::
 
-    This is the documentation for SpikeInterface (0.90.0)
+    This is the documentation for SpikeInterface (0.90.0), which breaks compatibility with version 0.13.0.
     
-    To see the documentation for the old API (0.1X) see: https://spikeinterface.readthedocs.io/en/stable
+    See the documentation for the version 0.13.0 (old API) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
 
 .. image:: images/logo.png
   :scale: 100 %
@@ -26,18 +26,20 @@ With SpikeInterface, users can:
 - run many popular, semi-automatic spike sorters.
 - post-process sorted datasets
 - compare and benchmark spike sorting outputs.
-- compute quliy metrics to validate and curate spike sorting outputs
+- compute quality metrics to validate and curate spike sorting outputs
 - visualize recordings and spike sorting outputs.
 - export report and export to phy with one line
 
 **NEWS**
 
-- New SpikeInterface major release! Version 0.90.0 is will be out soon!
+- New SpikeInterface major release! Version 0.90.0 is out!
 
   * breaks backward compatility with 0.10/0.11/0.12/0.13 series
-  * will be released in summer 2021
+  * has been released on 31st July 2021
   * is not a metapackage anymore
   * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
+
+  Please see the release notes here: :ref:`release0.90.0`
 
 
 .. toctree::
