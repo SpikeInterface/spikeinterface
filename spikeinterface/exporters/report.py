@@ -9,7 +9,8 @@ import spikeinterface.toolkit as st
 import matplotlib.pyplot as plt
 
 
-def export_report(waveform_extractor, output_folder, remove_if_exists=False, format="png", **job_wargs):
+def export_report(waveform_extractor, output_folder, remove_if_exists=False, format="png",
+                                       metrics=None, amplitudes=None, **job_wargs):
     """
     Exports a SI spike sorting report. The report includes summary figures of the spike sorting output
     (e.g. amplitude distributions, unit localization and depth VS amplitude) as well as unit-specific reports,
@@ -24,17 +25,19 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     remove_if_exists: bool
         If True and the output folder exists, it is removed
     format: str
-        'png' (default) or 'pdf'
+        'png' (default) or 'pdf' or any format handle by matplotlib
     {}
     """
     we = waveform_extractor
     sorting = we.sorting
     unit_ids = sorting.unit_ids
 
-    assert format in ["png", "pdf"], "'format' can be 'png' or 'pdf'"
+    # lets matplotlib do this check svg is also cool
+    # assert format in ["png", "pdf"], "'format' can be 'png' or 'pdf'"
 
-    # some computation
-    amplitudes = st.get_spike_amplitudes(we, peak_sign='neg', outputs='by_unit', **job_wargs)
+    if amplitudes is None:
+        # compute amplituds if not provided
+        amplitudes = st.get_spike_amplitudes(we,  peak_sign='neg', outputs='by_unit', **job_wargs)
 
     output_folder = Path(output_folder).absolute()
     if output_folder.is_dir():
@@ -52,10 +55,10 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     units.to_csv(output_folder / 'unit list.csv', sep='\t')
 
     # metrics
-    pca = st.WaveformPrincipalComponent(we)
-    pca.set_params(n_components=5, mode='by_channel_local')
-    pca.run()
-    metrics = st.compute_quality_metrics(we, waveform_principal_component=pca)
+    if metrics is None:
+        pca = st.compute_principal_components(we, load_if_exists=True,
+                                     n_components=5, mode='by_channel_local')
+        metrics = st.compute_quality_metrics(we, waveform_principal_component=pca)
     metrics.to_csv(output_folder / 'quality metrics.csv')
 
     unit_colors = sw.get_unit_colors(sorting)

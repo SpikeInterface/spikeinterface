@@ -44,7 +44,11 @@ class QualityMetricCalculator:
 
         """
         if metric_names is None:
-            metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
+            # metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
+            
+            # By default we take all metrics and 3 metrics PCA based only
+            # 'nearest_neighbor' is really slow and not taken by default
+            metric_names = list(_metric_name_to_func.keys()) +  ['isolation_distance', 'l_ratio', 'd_prime']
 
         unit_ids = self.sorting.unit_ids
         metrics = pd.DataFrame(index=unit_ids)
