@@ -18,16 +18,13 @@ jobs:
           python-version: 3.8
       - name: Install dependencies for testing
         run: |
-          sudo apt install git git-annex
-          sudo apt install mpich libmpich-dev
-          python -m pip install --upgrade pip
+          pip install pytest
           pip install setuptools wheel twine
           pip install -r requirements.txt
-          pip install -r requirements_test.txt
           pip install -e .
-      - name: Test with pytest and build coverage report
+      - name: Test core with pytest
         run: |
-          pytest
+          pytest spikeinterface/core
       - name: Publish on PyPI
         env:
           TWINE_USERNAME: __token__
