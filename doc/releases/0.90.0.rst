@@ -1,7 +1,9 @@
+.. _release0.90.0:
+
 SpikeInterface 0.90.0 release notes
 -----------------------------------
 
-1rt July 2021 (speculative date)
+31st July 2021
 
 Major release.
 
