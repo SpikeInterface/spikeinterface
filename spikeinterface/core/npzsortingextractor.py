@@ -86,3 +86,9 @@ class NpzSortingSegment(BaseSortingSegment):
         if end_frame is not None:
             spike_times = spike_times[spike_times < end_frame]
         return spike_times.astype('int64')
+
+
+def read_npz_sorting(*args, **kwargs):
+    sorting = NpzSortingExtractor(*args, **kwargs)
+    return sorting
+read_npz_sorting.__doc__ = NpzSortingExtractor.__doc__
