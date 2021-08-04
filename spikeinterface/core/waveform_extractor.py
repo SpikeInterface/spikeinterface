@@ -141,6 +141,13 @@ class WaveformExtractor:
         if dtype is None:
             dtype = self.recording.get_dtype()
 
+        if return_scaled:
+            # check if has scaled values:
+            if "gain_to_uV" not in self.recording.get_property_keys() \
+                    and "offset_to_uV" not in self.recording.get_property_keys():
+                print("Setting 'return_scaled' to False")
+                return_scaled = False
+
         if np.issubdtype(dtype, np.integer) and return_scaled:
             dtype = "float32"
 
