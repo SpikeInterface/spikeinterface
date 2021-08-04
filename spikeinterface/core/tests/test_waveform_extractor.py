@@ -92,9 +92,18 @@ def test_extract_waveforms():
         shutil.rmtree(folder2)
     we2 = extract_waveforms(recording, sorting, folder2, n_jobs=2, total_memory="10M", max_spikes_per_unit=None)
 
+    folder3 = Path('test_extract_waveforms_returnscaled')
+    if folder3.is_dir():
+        shutil.rmtree(folder3)
+    we3 = extract_waveforms(recording, sorting, folder3, n_jobs=2, total_memory="10M", max_spikes_per_unit=None,
+                            return_scaled=True)
+
     wf1 = we1.get_waveforms(0)
     wf2 = we2.get_waveforms(0)
     assert np.array_equal(wf1, wf2)
+
+    wf3 = we3.get_waveforms(0)
+    assert np.array_equal(wf1.shape, wf3.shape)
 
 
 if __name__ == '__main__':
