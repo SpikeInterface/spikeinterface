@@ -119,7 +119,7 @@ class WaveformExtractor:
             shutil.rmtree(waveform_folder)
         waveform_folder.mkdir()
 
-    def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, dtype=None):
+    def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
         """
         Set parameters for waveform extraction
 
@@ -131,6 +131,8 @@ class WaveformExtractor:
             Cut out in ms after spike time
         max_spikes_per_unit: int
             Maximum number of spikes to extract per unit
+        return_scaled: bool
+            If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
         dtype: np.dtype
             The dtype of the computed waveforms
         """
@@ -145,6 +147,7 @@ class WaveformExtractor:
             ms_before=float(ms_before),
             ms_after=float(ms_after),
             max_spikes_per_unit=max_spikes_per_unit,
+            return_scaled=return_scaled,
             dtype=dtype.str)
 
         (self.folder / 'params.json').write_text(
@@ -165,6 +168,10 @@ class WaveformExtractor:
     @property
     def nsamples(self):
         return self.nbefore + self.nafter
+
+    @property
+    def return_scaled(self):
+        return self._params['return_scaled']
 
     def get_waveforms(self, unit_id, with_index=False):
         """
@@ -266,7 +273,6 @@ class WaveformExtractor:
 
     def sample_spikes(self):
         p = self._params
-        sampling_frequency = self.recording.get_sampling_frequency()
         nbefore = self.nbefore
         nafter = self.nafter
 
@@ -296,6 +302,7 @@ class WaveformExtractor:
         num_chans = self.recording.get_num_channels()
         nbefore = self.nbefore
         nafter = self.nafter
+        return_scaled = self.return_scaled
 
         n_jobs = ensure_n_jobs(self.recording, job_kwargs.get('n_jobs', None))
 
@@ -328,7 +335,7 @@ class WaveformExtractor:
             init_args = (self.recording, self.sorting,)
         else:
             init_args = (self.recording.to_dict(), self.sorting.to_dict(),)
-        init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter)
+        init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter, return_scaled)
         processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, job_name='extract waveforms',
                                            **job_kwargs)
         processor.run()
@@ -378,7 +385,7 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
 
 # used by WaveformExtractor + ChunkRecordingExecutor
 def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
-                                    selected_spikes, selected_spike_times, nbefore, nafter):
+                                    selected_spikes, selected_spike_times, nbefore, nafter, return_scaled):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -396,6 +403,7 @@ def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
     worker_ctx['selected_spike_times'] = selected_spike_times
     worker_ctx['nbefore'] = nbefore
     worker_ctx['nafter'] = nafter
+    worker_ctx['return_scaled'] = return_scaled
 
     num_seg = sorting.get_num_segments()
     unit_cum_sum = {}
@@ -452,6 +460,7 @@ def extract_waveforms(recording, sorting, folder,
                       ms_before=3., ms_after=4.,
                       max_spikes_per_unit=500,
                       overwrite=False,
+                      return_scaled=True,
                       dtype=None,
                       **job_kwargs):
     """
@@ -479,8 +488,11 @@ def extract_waveforms(recording, sorting, folder,
     overwrite: bool
         If True and 'folder' exists, the folder is removed and waveforms are recomputed.
         Othewise an error is raised.
+    return_scaled: bool
+        If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
+
     {}
 
     Returns
@@ -497,7 +509,8 @@ def extract_waveforms(recording, sorting, folder,
         we = WaveformExtractor.load_from_folder(folder)
     else:
         we = WaveformExtractor.create(recording, sorting, folder)
-        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
+                      return_scaled=return_scaled)
         we.run(**job_kwargs)
 
     return we
