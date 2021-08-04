@@ -431,6 +431,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     selected_spike_times = worker_ctx['selected_spike_times']
     nbefore = worker_ctx['nbefore']
     nafter = worker_ctx['nafter']
+    return_scaled = worker_ctx['return_scaled']
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
     to_extract = {}
@@ -448,7 +449,8 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
         end = int(end)
 
         # load trace in memory
-        traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
+        traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index,
+                                      return_scaled=return_scaled)
 
         for unit_id, (i0, i1, local_spike_times) in to_extract.items():
             wfs = np.load(wfs_memmap_files[unit_id], mmap_mode="r+")
