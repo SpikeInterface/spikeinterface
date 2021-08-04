@@ -85,16 +85,22 @@ def test_extract_waveforms():
     folder1 = Path('test_extract_waveforms_1job')
     if folder1.is_dir():
         shutil.rmtree(folder1)
-    we1 = extract_waveforms(recording, sorting, folder1, max_spikes_per_unit=None)
+    we1 = extract_waveforms(recording, sorting, folder1, max_spikes_per_unit=None, return_scaled=False)
 
     folder2 = Path('test_extract_waveforms_2job')
     if folder2.is_dir():
         shutil.rmtree(folder2)
-    we2 = extract_waveforms(recording, sorting, folder2, n_jobs=2, total_memory="10M", max_spikes_per_unit=None)
+    we2 = extract_waveforms(recording, sorting, folder2, n_jobs=2, total_memory="10M", max_spikes_per_unit=None,
+                            return_scaled=False)
 
     folder3 = Path('test_extract_waveforms_returnscaled')
     if folder3.is_dir():
         shutil.rmtree(folder3)
+
+    # set scaling values to recording
+    gain = 0.1
+    recording.set_channel_gains(gain)
+    recording.set_channel_offsets(0)
     we3 = extract_waveforms(recording, sorting, folder3, n_jobs=2, total_memory="10M", max_spikes_per_unit=None,
                             return_scaled=True)
 
@@ -103,7 +109,7 @@ def test_extract_waveforms():
     assert np.array_equal(wf1, wf2)
 
     wf3 = we3.get_waveforms(0)
-    assert np.array_equal(wf1.shape, wf3.shape)
+    assert np.array_equal((wf1).astype("float32") * gain, wf3)
 
 
 if __name__ == '__main__':
