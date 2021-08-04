@@ -45,7 +45,7 @@ class FilterRecording(BasePreprocessor):
         # self.coeff is 'sos' or 'ab' style
         coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
 
-        BasePreprocessor.__init__(self, recording)
+        BasePreprocessor.__init__(self, recording, dtype="float32")
         self.annotate(is_filtered=True)
 
         margin = int(margin_ms * sf / 1000.)
