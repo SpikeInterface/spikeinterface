@@ -1,4 +1,4 @@
-import neo
+from pathlib import Path
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -24,7 +24,7 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        self._kwargs = dict(file_path=file_path, stream_id=stream_id)
+        self._kwargs = dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id)
 
 
 def read_ced(*args, **kwargs):

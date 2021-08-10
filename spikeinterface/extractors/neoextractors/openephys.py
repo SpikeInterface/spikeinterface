@@ -5,7 +5,6 @@ There are 2 openephys reader:
 
 https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 """
-import neo
 from pathlib import Path
 
 import numpy as np
@@ -38,7 +37,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'dirname': folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
+        self._kwargs = dict(folder_path=str(Path(folder_path).absolute()), stream_id=stream_id)
 
 
 class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
@@ -64,7 +63,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'dirname': folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
+        self._kwargs = dict(folder_path=str(Path(folder_path).absolute()), stream_id=stream_id)
 
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):

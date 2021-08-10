@@ -1,8 +1,6 @@
-import numpy as np
+from pathlib import Path
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-
-import neo
 
 import probeinterface as pi
 
@@ -30,7 +28,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_probe(probe, in_place=True)
         self.annotate(is_filtered=True)
 
-        self._kwargs = {'file_path': str(file_path), 'locs_2d': locs_2d}
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'locs_2d': locs_2d}
 
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
@@ -45,7 +43,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
                                          use_natural_unit_ids=use_natural_unit_ids,
                                          **neo_kwargs)
 
-        self._kwargs = {'file_path': str(file_path), 'use_natural_unit_ids': use_natural_unit_ids}
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'use_natural_unit_ids': use_natural_unit_ids}
 
 
 def read_mearec(file_path, locs_2d=True, use_natural_unit_ids=True):

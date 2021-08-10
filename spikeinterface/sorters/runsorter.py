@@ -89,6 +89,7 @@ def modify_input_folder(d, input_folder):
         d["kwargs"] = dcopy_kwargs
         return d, folder_to_mount
     else:
+        folder_to_mount = None
         for k in d.keys():
             if "path" in k:
                 # paths can be str or list of str
@@ -113,7 +114,7 @@ def modify_input_folder(d, input_folder):
                     d[k] = relative_paths
                 else:
                     raise ValueError(f'{k} key for path  must be str or list[str]')
-            return d, folder_to_mount
+        return d, folder_to_mount
 
 
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,

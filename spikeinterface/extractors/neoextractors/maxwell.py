@@ -38,7 +38,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         rec_name = self.neo_reader.rec_name
         probe = pi.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
         self.set_probe(probe, in_place=True)
-        self._kwargs = dict(file_path=file_path, stream_id=stream_id, rec_name=rec_name)
+        self._kwargs = dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id, rec_name=rec_name)
 
 
 def read_maxwell(*args, **kwargs):
