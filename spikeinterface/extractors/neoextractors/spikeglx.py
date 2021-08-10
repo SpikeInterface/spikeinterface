@@ -1,4 +1,4 @@
-import neo
+from pathlib import Path
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -34,7 +34,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         #  probe = read_spikeglx(folder_path, in_place=True)
         #  self.set_probegroup(probe)
 
-        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
+        self._kwargs = dict(folder_path=str(Path(folder_path).absolute()), stream_id=stream_id)
 
 
 def read_spikeglx(*args, **kwargs):

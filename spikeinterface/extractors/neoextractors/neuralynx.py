@@ -1,4 +1,4 @@
-import neo
+from pathlib import Path
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -22,7 +22,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'dirname': folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
+        self._kwargs = dict(folder_path=str(Path(folder_path).absolute()), stream_id=stream_id)
 
 
 def read_neuralynx(*args, **kwargs):

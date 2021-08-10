@@ -1,4 +1,4 @@
-import neo
+from pathlib import Path
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -23,7 +23,7 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': file_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        self._kwargs = {'file_path': str(file_path), 'stream_id': stream_id}
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'stream_id': stream_id}
 
 
 def read_spike2(*args, **kwargs):
