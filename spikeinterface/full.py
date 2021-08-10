@@ -25,3 +25,5 @@ from .toolkit import *
 from .comparison import *
 from .widgets import *
 from .exporters import *
+
+from .version import version as __version__
