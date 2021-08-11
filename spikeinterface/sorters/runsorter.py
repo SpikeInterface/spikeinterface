@@ -203,8 +203,10 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             commands.append(cmd)
         else:
             # install from pypi with same version as host
-            cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
-            res = client.containers.run(docker_image, cmd)
+            if SorterClass.docker_requires_full:
+                cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
+            else:
+                cmd = f'pip install --upgrade --force spikeinterface=={si_version}'
             commands.append(cmd)
 
     # run sorter on folder
