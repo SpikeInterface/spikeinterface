@@ -1,8 +1,6 @@
 import copy
 from pathlib import Path
 
-from spikeinterface.toolkit import bandpass_filter, whiten
-
 from ..basesorter import BaseSorter
 from ..utils import RecordingExtractorOldAPI
 from spikeinterface.core import load_extractor
@@ -92,6 +90,7 @@ class Mountainsort4Sorter(BaseSorter):
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         import mountainsort4
+        from spikeinterface.toolkit import bandpass_filter, whiten
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
