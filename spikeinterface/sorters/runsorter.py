@@ -2,6 +2,7 @@ import shutil
 import os
 from pathlib import Path
 import json
+from copy import deepcopy
 
 from ..version import version as si_version
 from spikeinterface.core import BaseRecording
@@ -84,25 +85,35 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
 
 
 def modify_input_folder(d, input_folder):
-    if "kwargs" in d.keys():
-        dcopy_kwargs, folder_to_mount = modify_input_folder(d["kwargs"], input_folder)
-        d["kwargs"] = dcopy_kwargs
-        return d, folder_to_mount
+    dcopy = deepcopy(d)
+    if "kwargs" in dcopy.keys():
+        # handle nested
+        kwargs = dcopy["kwargs"]
+        other_extractor_dict = None
+        for k, v in kwargs.items():
+            if isinstance(v, dict) and si.base.is_dict_extractor(v):
+                other_extractor_dict = v
+        if other_extractor_dict is None:
+            dcopy_kwargs, folder_to_mount = modify_input_folder(kwargs, input_folder)
+        else:
+            dcopy_kwargs, folder_to_mount = modify_input_folder(other_extractor_dict, input_folder)
+        dcopy["kwargs"] = dcopy_kwargs
+        return dcopy, folder_to_mount
     else:
-        for k in d.keys():
+        for k in dcopy.keys():
             if "path" in k:
                 # paths can be str or list of str
-                if isinstance(d[k], str):
+                if isinstance(dcopy[k], str):
                     # one path
-                    abs_path = Path(d[k])
+                    abs_path = Path(dcopy[k])
                     folder_to_mount = abs_path.parent
-                    relative_path = str(Path(d[k]).relative_to(folder_to_mount))
-                    d[k] = f"{input_folder}/{relative_path}"
+                    relative_path = str(Path(dcopy[k]).relative_to(folder_to_mount))
+                    dcopy[k] = f"{input_folder}/{relative_path}"
                 elif isinstance(d[k], list):
                     # list of path
                     relative_paths = []
                     folder_to_mount = None
-                    for abs_path in d[k]:
+                    for abs_path in dcopy[k]:
                         abs_path = Path(abs_path)
                         if folder_to_mount is None:
                             folder_to_mount = abs_path.parent
@@ -110,10 +121,10 @@ def modify_input_folder(d, input_folder):
                             assert folder_to_mount == abs_path.parent
                         relative_path = str(abs_path.relative_to(folder_to_mount))
                         relative_paths.append(f"{input_folder}/{relative_path}")
-                    d[k] = relative_paths
+                    dcopy[k] = relative_paths
                 else:
                     raise ValueError(f'{k} key for path  must be str or list[str]')
-            return d, folder_to_mount
+            return dcopy, folder_to_mount
 
 
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,

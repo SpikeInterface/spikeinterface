@@ -687,7 +687,7 @@ def _load_extractor_from_dict(dic):
         if isinstance(v, dict) and is_dict_extractor(v):
             kwargs[k] = _load_extractor_from_dict(v)
 
-            # handle list of extractors list
+    # handle list of extractors list
     for k, v in kwargs.items():
         if isinstance(v, list):
             if all(is_dict_extractor(e) for e in v):
