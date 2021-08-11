@@ -6,6 +6,7 @@ from copy import deepcopy
 
 from ..version import version as si_version
 from spikeinterface.core import BaseRecording
+from spikeinterface.core.base import is_dict_extractor
 from spikeinterface.core.core_tools import check_json
 from .sorterlist import sorter_dict
 
@@ -91,7 +92,7 @@ def modify_input_folder(d, input_folder):
         kwargs = dcopy["kwargs"]
         other_extractor_dict = None
         for k, v in kwargs.items():
-            if isinstance(v, dict) and si.base.is_dict_extractor(v):
+            if isinstance(v, dict) and is_dict_extractor(v):
                 other_extractor_dict = v
         if other_extractor_dict is None:
             dcopy_kwargs, folder_to_mount = modify_input_folder(kwargs, input_folder)
