@@ -206,7 +206,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             if SorterClass.docker_requires_full:
                 cmd = 'pip install .[full]'
             else:
-                cmd = 'pip install .'
+                # for now, always install full
+                cmd = 'pip install .[full]'
             commands.append(cmd)
             cmd = 'cd ..'
             commands.append(cmd)
@@ -218,7 +219,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             if SorterClass.docker_requires_full:
                 cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
             else:
-                cmd = f'pip install --upgrade --force spikeinterface=={si_version}'
+                # for now, always install full
+                cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
             commands.append(cmd)
 
     # run sorter on folder
