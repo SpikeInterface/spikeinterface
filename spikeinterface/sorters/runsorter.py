@@ -90,15 +90,18 @@ def modify_input_folder(d, input_folder):
     if "kwargs" in dcopy.keys():
         # handle nested
         kwargs = dcopy["kwargs"]
-        other_extractor_dict = None
+        nested_extractor_dict = None
+        nested_extractor_key = None
         for k, v in kwargs.items():
             if isinstance(v, dict) and is_dict_extractor(v):
-                other_extractor_dict = v
-        if other_extractor_dict is None:
+                nested_extractor_dict = v
+                nested_extractor_key = k
+        if nested_extractor_dict is None:
             dcopy_kwargs, folder_to_mount = modify_input_folder(kwargs, input_folder)
+            dcopy["kwargs"] = dcopy_kwargs
         else:
-            dcopy_kwargs, folder_to_mount = modify_input_folder(other_extractor_dict, input_folder)
-        dcopy["kwargs"] = dcopy_kwargs
+            dcopy_kwargs, folder_to_mount = modify_input_folder(nested_extractor_dict, input_folder)
+            dcopy["kwargs"][nested_extractor_key] = dcopy_kwargs
         return dcopy, folder_to_mount
     else:
         for k in dcopy.keys():
