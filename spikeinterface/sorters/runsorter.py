@@ -186,7 +186,17 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             cmd = 'pip install --upgrade --force MEArec'
             commands.append(cmd)
 
-            cmd = 'pip install --upgrade --force https://github.com/SpikeInterface/spikeinterface/archive/master.zip'
+            cmd = 'git clone https://github.com/SpikeInterface/spikeinterface.git'
+            commands.append(cmd)
+            cmd = 'cd spikeinterface'
+            commands.append(cmd)
+
+            if SorterClass.docker_requires_full:
+                cmd = 'pip install .[full]'
+            else:
+                cmd = 'pip install .'
+            commands.append(cmd)
+            cmd = 'cd ..'
             commands.append(cmd)
 
             cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'

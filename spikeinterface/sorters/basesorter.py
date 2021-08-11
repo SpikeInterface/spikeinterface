@@ -24,6 +24,7 @@ class BaseSorter:
     SortingExtractor_Class = None  # convinience to get the extractor
     requires_locations = False
     docker_requires_gpu = False
+    docker_requires_full = False
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': True}
     _default_params = {}
     _params_description = {}

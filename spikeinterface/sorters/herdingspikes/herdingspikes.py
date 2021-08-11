@@ -12,6 +12,7 @@ class HerdingspikesSorter(BaseSorter):
     sorter_name = 'herdingspikes'
 
     requires_locations = True
+    docker_requires_full = True
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': False}
     _default_params = {
         # core params

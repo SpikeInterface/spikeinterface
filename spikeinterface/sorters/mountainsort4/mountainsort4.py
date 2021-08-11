@@ -17,6 +17,7 @@ class Mountainsort4Sorter(BaseSorter):
 
     sorter_name = 'mountainsort4'
     requires_locations = False
+    docker_requires_full = True
     compatible_with_parallel = {'loky': True, 'multiprocessing': False, 'threading': False}
 
     _default_params = {
