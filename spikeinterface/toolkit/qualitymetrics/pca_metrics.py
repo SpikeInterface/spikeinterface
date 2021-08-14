@@ -11,7 +11,7 @@ from ..postprocessing import WaveformPrincipalComponent
 _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor']
 
 
-def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neighbors=4, ):
+def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neighbors=4, seed=0):
     if metric_names is None:
         metric_names = _possible_pc_metric_names
     # print('metric_names', metric_names)
@@ -59,7 +59,12 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neig
                                                                   max_spikes_for_nn, n_neighbors)
             pc_metrics['nn_hit_rate'][unit_id] = nn_hit_rate
             pc_metrics['nn_miss_rate'][unit_id] = nn_miss_rate
-
+            
+        if 'nearest_neighbor_isolation' in metric_names:
+            nn_isolation = nearest_neighbors_isolation(pcs_flat, labels, unit_id, 
+                                                       max_spikes_for_nn, n_neighbors, seed)
+            pc_metrics['nn_isolation'][unit_id] = nn_isolation
+    
     return pc_metrics
 
 
@@ -231,7 +236,7 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
     -----------
     1) Choose a cluster
     2) Compute the isolation function with every other cluster
-    3) Isolation metric is defined as the min of (2)
+    3) Isolation score is defined as the min of (2)
     
     Implementation
     --------------
@@ -240,18 +245,19 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
     We set |A| = |B|:
         If max_spikes_for_nn < |A| and max_spikes_for_nn < |B|, then randomly subsample max_spikes_for_nn samples from A and B.
         If max_spikes_for_nn > min(|A|, |B|) (e.g. |A| > max_spikes_for_nn > |B|), then randomly subsample min(|A|, |B|) samples from A and B.
-        This is because the metric depends on the size of the clusters being compared.
+        This is because the metric is affected by the size of the clusters being compared independently of how well-isolated they are.
         
     Isolation function:
         Isolation(A, B) = 1/k \sum_{j=1}^k |{x \in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
             where \rho(x) is the cluster x belongs to (in this case, either A or B)
-        Note that this definition implies that the isolation function is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
+        Note that this definition implies that the isolation funciton  (1) ranges from 0 to 1; and 
+                                                                       (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
 
     Parameters:
     -----------
-    all_pcs: array-like, (num_spikes, PCs)
+    all_pcs: array_like, (num_spikes, PCs)
         2D array of PCs for all spikes
-    all_labels: array-like, (num_spikes, )
+    all_labels: array_like, (num_spikes, )
         1D array of cluster labels for all spikes
     this_unit_id: int
         ID of unit for which thiss metric will be calculated
@@ -264,7 +270,7 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
 
     Outputs:
     --------
-    isolation_score : float
+    nearest_neighbor_isolation : float
     
     """
     
@@ -308,5 +314,5 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
 
         isolation[other_unit_id==other_units_ids] = (target_nn_in_target + other_nn_in_other) / (2*spikes_for_nn_actual) / n_neighbors_adjusted
     
-    isolation_score = np.min(isolation)
-    return isolation_score
+    nearest_neighbor_isolation = np.min(isolation)
+    return nearest_neighbor_isolation
