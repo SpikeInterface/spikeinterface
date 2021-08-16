@@ -267,6 +267,105 @@ _common_run_doc = """
     """ + _common_param_doc
 
 
+def run_sorter_docker_singularity(
+    sorter_name, recording, docker_image, output_folder=None,
+    remove_existing_folder=True, delete_output_folder=False,
+    verbose=False, raise_error=True, **sorter_params):
+    
+    import subprocess
+
+    # Basic command using Singularity
+    commands = ['singularity', 'exec', 'spyking-circus-base_1.0.7.sif']
+
+    # cmd = ['singularity', '--help']
+    # cmd = ['singularity', 'inspect', 'spyking-circus-base_1.0.7.sif']
+    # extra_cmd = ['echo', '"hello world"']
+    # commands += extra_cmd
+
+    if output_folder is None:
+        output_folder = sorter_name + '_output'
+
+    SorterClass = sorter_dict[sorter_name]
+    output_folder = Path(output_folder).absolute()
+    parent_folder = output_folder.parent
+    folder_name = output_folder.stem
+
+    # find input folder of recording for folder bind
+    rec_dict = recording.to_dict()
+    rec_dict, recording_input_folder = modify_input_folder(rec_dict, '/recording_input_folder')
+
+    # create 3 files for communication with docker
+    # recordonc dict inside
+    (parent_folder / 'in_docker_recording.json').write_text(
+        json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
+    # need to share specific parameters
+    (parent_folder / 'in_docker_params.json').write_text(
+        json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
+    # the py script
+    py_script = f"""
+import json
+from spikeinterface import load_extractor
+from spikeinterface.sorters import run_sorter_local
+
+# load recorsding in docker
+recording = load_extractor('/sorting_output_folder/in_docker_recording.json')
+
+# load params in docker
+with open('/sorting_output_folder/in_docker_params.json', encoding='utf8', mode='r') as f:
+    sorter_params = json.load(f)
+
+# run in docker
+output_folder = '/sorting_output_folder/{folder_name}'
+run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
+            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+            verbose={verbose}, raise_error={raise_error}, **sorter_params)
+"""
+    (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
+
+    # docker bind (mount)
+    volumes = {
+        str(parent_folder): {'bind': '/sorting_output_folder', 'mode': 'rw'},
+        str(recording_input_folder): {'bind': '/recording_input_folder', 'mode': 'ro'},
+    }
+
+    # run sorter on folder
+    cmd = ['python', '/sorting_output_folder/in_docker_sorter_script.py']
+    commands += cmd
+
+    # put file permission to user (because docker is root...)
+    uid = os.getuid()
+    cmd = ['chown', f'{uid}:{uid}', '-R', f'/sorting_output_folder/{folder_name}']
+    commands += cmd
+
+    # # ~ commands = commands[0:4]
+    # # ~ commands = ' ; '.join(commands)
+    # commands = ' && '.join(commands)
+    # command = f'sh -c "{commands}"'
+
+    # extra_kwargs = {}
+    # if SorterClass.docker_requires_gpu:
+    #     extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+
+    # if verbose:
+    #     print(f"Running sorter in {docker_image}")
+    # res = client.containers.run(docker_image, command=command, volumes=volumes, **extra_kwargs)
+
+    subp = subprocess.run(cmd, capture_output=False, text=True)
+
+    # clean useless files
+    os.remove(parent_folder / 'in_docker_recording.json')
+    os.remove(parent_folder / 'in_docker_params.json')
+    os.remove(parent_folder / 'in_docker_sorter_script.py')
+
+    sorting = SorterClass.get_result_from_folder(output_folder)
+
+    if delete_output_folder:
+        shutil.rmtree(output_folder)
+
+    return sorting
+
+
+
 def run_hdsort(*args, **kwargs):
     return run_sorter('hdsort', *args, **kwargs)
 
