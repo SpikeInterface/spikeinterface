@@ -3,12 +3,17 @@ import os
 from pathlib import Path
 import json
 from copy import deepcopy
+from typing import Union
+
+from numpy.lib.type_check import imag
 
 from ..version import version as si_version
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.base import is_dict_extractor
 from spikeinterface.core.core_tools import check_json
 from .sorterlist import sorter_dict
+
+PathType = Union[str, Path]
 
 _common_param_doc = """
     Parameters
@@ -110,7 +115,10 @@ def modify_input_folder(d, input_folder):
                 if isinstance(dcopy[k], str):
                     # one path
                     abs_path = Path(dcopy[k])
-                    folder_to_mount = abs_path.parent
+                    if abs_path.is_file():
+                        folder_to_mount = abs_path.parent
+                    elif abs_path.is_dir():
+                        folder_to_mount = abs_path
                     relative_path = str(Path(dcopy[k]).relative_to(folder_to_mount))
                     dcopy[k] = f"{input_folder}/{relative_path}"
                 elif isinstance(d[k], list):
@@ -265,6 +273,221 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
 _common_run_doc = """
     Runs {} sorter
     """ + _common_param_doc
+
+
+
+def run_sorter_docker_singularity(
+    sorter_name: str, recording: BaseRecording, docker_image: str, output_folder: PathType=None,
+    remove_existing_folder: bool=True, delete_output_folder: bool=False,
+    verbose: bool=False, raise_error: bool=True, **sorter_params):
+    """
+    Run sorters from Docker images, using Singularity.
+
+    Args:
+        sorter_name (str): [description]
+        recording (BaseRecording): [description]
+        docker_image (str): [description]
+        output_folder (PathType, optional): [description]. Defaults to None.
+        remove_existing_folder (bool, optional): [description]. Defaults to True.
+        delete_output_folder (bool, optional): [description]. Defaults to False.
+        verbose (bool, optional): [description]. Defaults to False.
+        raise_error (bool, optional): [description]. Defaults to True.
+    """
+    
+    from spython.main import Client
+
+    SorterClass = sorter_dict[sorter_name]
+
+    # Set up basic folders and files structure
+    if output_folder is None:
+        output_folder = sorter_name + '_output'
+    output_folder = Path(output_folder).absolute()
+    parent_folder = output_folder.parent
+    folder_name = output_folder.stem
+
+    # find input folder of recording for folder bind
+    rec_dict = recording.to_dict()
+    rec_dict, recording_input_folder = modify_input_folder(rec_dict, '/recording_input_folder')
+
+    # create 3 files for communication with docker
+    # recordonc dict inside
+    (parent_folder / 'in_docker_recording.json').write_text(
+        json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
+    # need to share specific parameters
+    (parent_folder / 'in_docker_params.json').write_text(
+        json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
+    # the py script
+    py_script = f"""
+import json
+from spikeinterface import load_extractor
+from spikeinterface.sorters import run_sorter_local
+
+# load recorsding in docker
+recording = load_extractor('/sorting_output_folder/in_docker_recording.json')
+
+# load params in docker
+with open('/sorting_output_folder/in_docker_params.json', encoding='utf8', mode='r') as f:
+    sorter_params = json.load(f)
+
+# run in docker
+output_folder = '/sorting_output_folder/{folder_name}'
+run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
+            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+            verbose={verbose}, raise_error={raise_error}, **sorter_params)
+"""
+    (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
+
+
+    # Client.load('docker://spikeinterface/spyking-circus-base:1.0.7')
+
+    # check if docker contains spikeinertace already
+    cmd = ['pip', 'show', 'spikeinterface']
+    result = Client.execute(image=docker_image, command=cmd, return_result=True)
+    if result['return_code'] == 0:
+        need_si_install = False
+    else:
+        need_si_install = True
+
+    # Make commands to run sorter
+    commands = ['singularity', 'exec']
+
+    # Run sorter on folder
+    commands += [docker_image, 'ls', '/sorting_output_folder']
+    # commands += [docker_image, 'python', '/sorting_output_folder/in_docker_sorter_script.py']
+
+    volumes = [
+        f'/{str(parent_folder.resolve())}:/sorting_output_folder',
+        f'/{str(recording_input_folder.resolve())}:/recording_input_folder'
+    ]
+
+    result = Client.execute(
+        image='spyking-circus-base_1.0.7.sif', 
+        command=cmd, 
+        bind=volumes,
+        return_result=True,
+        writable=True
+    )
+
+    return result
+
+
+def run_sorter_docker_singularity_2(
+    sorter_name: str, recording: BaseRecording, docker_image: str, output_folder: PathType=None,
+    remove_existing_folder: bool=True, delete_output_folder: bool=False,
+    verbose: bool=False, raise_error: bool=True, **sorter_params):
+    """
+    Run sorters from Docker images, using Singularity. Version 2.
+
+    Args:
+        sorter_name (str): [description]
+        recording (BaseRecording): [description]
+        docker_image (str): [description]
+        output_folder (PathType, optional): [description]. Defaults to None.
+        remove_existing_folder (bool, optional): [description]. Defaults to True.
+        delete_output_folder (bool, optional): [description]. Defaults to False.
+        verbose (bool, optional): [description]. Defaults to False.
+        raise_error (bool, optional): [description]. Defaults to True.
+    """
+
+    import subprocess
+
+    SorterClass = sorter_dict[sorter_name]
+
+    # Set up basic folders and files structure
+    if output_folder is None:
+        output_folder = sorter_name + '_output'
+    output_folder = Path(output_folder).absolute()
+    parent_folder = output_folder.parent
+    folder_name = output_folder.stem
+
+    # find input folder of recording for folder bind
+    rec_dict = recording.to_dict()
+    rec_dict, recording_input_folder = modify_input_folder(rec_dict, '/recording_input_folder')
+
+    # create 3 files for communication with docker
+    # recordonc dict inside
+    (parent_folder / 'in_docker_recording.json').write_text(
+        json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
+    # need to share specific parameters
+    (parent_folder / 'in_docker_params.json').write_text(
+        json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
+    # the py script
+    py_script = f"""
+import json
+from spikeinterface import load_extractor
+from spikeinterface.sorters import run_sorter_local
+
+# load recorsding in docker
+recording = load_extractor('/sorting_output_folder/in_docker_recording.json')
+
+# load params in docker
+with open('/sorting_output_folder/in_docker_params.json', encoding='utf8', mode='r') as f:
+    sorter_params = json.load(f)
+
+# run in docker
+output_folder = '/sorting_output_folder/{folder_name}'
+run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
+            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+            verbose={verbose}, raise_error={raise_error}, **sorter_params)
+"""
+    (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
+
+    # Make commands using Singularity in a subprocess
+    # Example:
+    # cmd = ['singularity', 'inspect', 'spyking-circus-base_1.0.7.sif']
+    # To bind on command line, command should look like this:
+    # singularity exec /
+    #   --bind /home/luiz/storage/taufferconsulting/client_ben/project_spikeinterface_dandi:/sorting_output_folder /
+    #   spyking-circus-base_1.0.7.sif /
+    #   ls /sorting_output_folder
+
+    # # Install dependencies
+    # base_commands = ['singularity', 'exec', docker_image]
+    # commands = base_commands + ['bash', '-c', 'pip show spikeinterface']
+    # r = subprocess.run(commands, capture_output=True, text=True)
+
+    # if 'not found: spikeinterface' in r.stderr:
+    #     commands = base_commands + ['bash', '-c', 'pip install spikeinterface']
+    #     _ = subprocess.run()
+
+    # _ = subprocess.run(
+    #     commands + [docker_image, 'bash', '-c', 'pip install scikit-learn']
+    # )
+
+    # Binding paths
+    base_commands = ['singularity', 'exec']
+    cmd = base_commands + ['--bind', f'/{str(parent_folder.resolve())}:/sorting_output_folder']
+    cmd += ['--bind', f'/{str(recording_input_folder.resolve())}:/recording_input_folder']
+
+    # Run sorter on folder
+    # commands += [docker_image, 'ls', '/sorting_output_folder']
+    cmd += [
+        docker_image, 
+        'bash', '-c',
+        'python /sorting_output_folder/in_docker_sorter_script.py'
+    ]
+
+    # extra_kwargs = {}
+    # if SorterClass.docker_requires_gpu:
+    #     extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+
+    # if verbose:
+    #     print(f"Running sorter in {docker_image}")
+
+    _ = subprocess.run(cmd)#, capture_output=True, text=True)
+
+    # clean useless files
+    os.remove(parent_folder / 'in_docker_recording.json')
+    os.remove(parent_folder / 'in_docker_params.json')
+    os.remove(parent_folder / 'in_docker_sorter_script.py')
+
+    sorting = SorterClass.get_result_from_folder(output_folder)
+
+    if delete_output_folder:
+        shutil.rmtree(output_folder)
+
+    return sorting
+
 
 
 def run_hdsort(*args, **kwargs):
