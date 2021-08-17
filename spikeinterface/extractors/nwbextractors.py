@@ -36,7 +36,7 @@ class NwbRecordingExtractor(BaseRecording):
     mode = 'file'
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
-    def __init__(self, file_path: PathType, electrical_series_name: str = None):
+    def __init__(self, file_path: PathType, electrical_series_name: str=None, driver: str=None):
         """
         Load an NWBFile as a RecordingExtractor.
 
@@ -47,7 +47,7 @@ class NwbRecordingExtractor(BaseRecording):
         """
         assert HAVE_NWB, self.installation_mesg
         self._file_path = str(file_path)
-        with NWBHDF5IO(self._file_path, 'r') as io:
+        with NWBHDF5IO(self._file_path, 'r', driver=driver) as io:
             nwbfile = io.read()
             if electrical_series_name is not None:
                 electrical_series_name = electrical_series_name
