@@ -88,7 +88,7 @@ class NwbRecordingExtractor(BaseRecording):
 
             BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
             recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=electrical_series_name,
-                                                    num_frames=num_frames)
+                                                    num_frames=num_frames, driver=driver)
             self.add_recording_segment(recording_segment)
 
             # If gains are not 1, set has_scaled to True
@@ -148,11 +148,12 @@ class NwbRecordingExtractor(BaseRecording):
 
 
 class NwbRecordingSegment(BaseRecordingSegment):
-    def __init__(self, path: PathType, electrical_series_name, num_frames):
+    def __init__(self, path: PathType, electrical_series_name, num_frames, driver:str=None):
         BaseRecordingSegment.__init__(self)
         self._path = path
         self._electrical_series_name = electrical_series_name
         self._num_samples = num_frames
+        self._nwbiodriver = driver
 
     def get_num_samples(self):
         """Returns the number of samples in this signal block
@@ -168,7 +169,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        with NWBHDF5IO(self._path, 'r') as io:
+        with NWBHDF5IO(self._path, 'r', load_namespaces=True, driver=self._nwbiodriver) as io:
             nwbfile = io.read()
             es = nwbfile.acquisition[self._electrical_series_name]
 
