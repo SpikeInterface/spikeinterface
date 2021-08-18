@@ -46,8 +46,15 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str, optional
         """
         assert HAVE_NWB, self.installation_mesg
-        self._file_path = str(file_path)
-        with NWBHDF5IO(self._file_path, 'r', load_namespaces=True, driver=driver) as io:
+        if 'http' in file_path:
+            use_path = file_path
+            use_path = use_path.replace(use_path.split('http')[0], '')
+            self._file_path = use_path
+            driver = 'ros3'
+        else:
+            self._file_path = str(file_path)
+            use_path = str(file_path)
+        with NWBHDF5IO(use_path, 'r', load_namespaces=True, driver=driver) as io:
             nwbfile = io.read()
             if electrical_series_name is not None:
                 electrical_series_name = electrical_series_name
@@ -87,7 +94,7 @@ class NwbRecordingExtractor(BaseRecording):
             dtype = es.data.dtype
 
             BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
-            recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=electrical_series_name,
+            recording_segment = NwbRecordingSegment(path=use_path, electrical_series_name=electrical_series_name,
                                                     num_frames=num_frames, driver=driver)
             self.add_recording_segment(recording_segment)
 
@@ -150,7 +157,13 @@ class NwbRecordingExtractor(BaseRecording):
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, path: PathType, electrical_series_name, num_frames, driver:str=None):
         BaseRecordingSegment.__init__(self)
-        self._path = path
+        if 'http' in path:
+            use_path = path
+            use_path = use_path.replace(use_path.split('http')[0], '')
+            self._path = use_path
+            driver = 'ros3'
+        else:
+            self._path = str(path)
         self._electrical_series_name = electrical_series_name
         self._num_samples = num_frames
         self._nwbiodriver = driver
