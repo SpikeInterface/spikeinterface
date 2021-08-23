@@ -1,7 +1,7 @@
 import unittest
 import pytest
 
-from spikeinterface.core.tests.testing_tools import generate_recording
+from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.toolkit.preprocessing import rectify
 

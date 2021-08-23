@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 
 
-from spikeinterface.core.tests.testing_tools import generate_recording, generate_sorting
+from spikeinterface.core.testing_tools import generate_recording, generate_sorting
 
 from spikeinterface import WaveformExtractor, extract_waveforms
 
