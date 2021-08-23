@@ -61,7 +61,7 @@ class QualityMetricCalculator:
         if 'seed' in kwargs:
             seed = kwargs['seed']
         else:
-            seed = 0
+            seed = None
 
         if metric_names is None:
             # metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
