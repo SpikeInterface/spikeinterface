@@ -2,7 +2,7 @@ import unittest
 import pytest
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-from spikeinterface.core.tests.testing_tools import generate_recording
+from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.toolkit.preprocessing import filter, bandpass_filter,notch_filter
 

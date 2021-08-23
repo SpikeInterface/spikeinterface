@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 from spikeinterface.core import NpzSortingExtractor
-from spikeinterface.core.tests.testing_tools import create_sorting_npz
+from spikeinterface.core.testing_tools import create_sorting_npz
 
 
 def test_NpzSortingExtractor():

@@ -10,7 +10,7 @@ import numpy as np
 from spikeinterface.core import NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.tests.testing_tools import create_sorting_npz
+from spikeinterface.core.testing_tools import create_sorting_npz
 
 def _clean_all():
     cache_folder = './my_cache_folder'
