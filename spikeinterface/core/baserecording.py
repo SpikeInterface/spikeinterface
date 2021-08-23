@@ -378,7 +378,7 @@ class BaseRecording(BaseExtractor):
 
     def clear_channel_groups(self, channel_ids=None):
         if channel_ids is None:
-            n = self.get_num_channel()
+            n = self.get_num_channels()
         else:
             n = len(channel_ids)
         groups = np.zeros(n, dtype='int64')

@@ -264,8 +264,9 @@ class HDSortSorter(BaseSorter):
                 mapping = np.empty(recording.get_num_channels(), dtype=mapping_dtype)
                 x = locations[:, 0]
                 y = locations[:, 1]
+                # channel should be from 0 to num_channel - 1
                 for i, ch in enumerate(recording.get_channel_ids()):
-                    mapping[i] = (ch, x[i], y[i], ch)
+                    mapping[i] = (ch, x[i], y[i], i)
                 ephys.create_dataset('mapping', data=mapping)
                 # save traces
                 segment_index = 0
