@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import UnitId, SampleIndex
 
 import numpy as np
 
@@ -9,7 +8,11 @@ from .basesorting import BaseSorting, BaseSortingSegment
 class UnitsSelectionSorting(BaseSorting):
     """
     Class that handles slicin a Sorting object based on a list of unit_ids.
+
+    Do not use this class directly but use `sorting.select_units(...)`
+
     """
+
     def __init__(self, parent_sorting, unit_ids=None, renamed_unit_ids=None):
         if unit_ids is None:
             unit_ids = parent_sorting.get_unit_ids()
@@ -37,6 +40,9 @@ class UnitsSelectionSorting(BaseSorting):
 
         parent_sorting.copy_metadata(self, only_main=False, ids=self._unit_ids)
 
+        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), unit_ids=unit_ids,
+                            renamed_unit_ids=renamed_unit_ids)
+
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
     def __init__(self, parent_segment, ids_conversion):
@@ -45,9 +51,9 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
         self._ids_conversion = ids_conversion
 
     def get_unit_spike_train(self,
-                             unit_id: UnitId,
-                             start_frame: Union[SampleIndex, None] = None,
-                             end_frame: Union[SampleIndex, None] = None,
+                             unit_id,
+                             start_frame: Union[int, None] = None,
+                             end_frame: Union[int, None] = None,
                              ) -> np.ndarray:
         unit_id_parent = self._ids_conversion[unit_id]
         times = self._parent_segment.get_unit_spike_train(unit_id_parent, start_frame, end_frame)

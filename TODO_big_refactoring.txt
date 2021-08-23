@@ -3,93 +3,65 @@ Here the TODO list for the NEW spikeinterface API
 core:
     * add kachery extractor (jeremy)
     * save features as np (sam)
-    * event object (sam and alessio)
-    * segment concatenator (sam)
-    * mono segment class (sam)
-    * add hither (alessio, sam or jeremy) for launcher and/or container
     * waveform_extractor improve cache option
+    * time vector
+    * binary_interface()
+    * rescaler / dtype
 
-    
+
 extractors:
 
     * nwb: reader/writer (with multi segment) (ben?)
-    * all event reader (get_ttl()) (alessio)
-    * MdaRecordingExtractor  : need to be done in neo ??
     * BiocamRecordingExtractor  : need to be done in neo
-    * MaxOneRecordingExtractor  : need to be done in neo
-    * MCSH5RecordingExtractor  : need to be done in neo ???
-    * SHYBRIDRecordingExtractor:  need to be done in neo ???
-    * NIXIORecordingExtractor: wrappe neo
-    * CEDRecordingExtractor : need to be ported in neo
-    * MdaSortingExtractor
-    * HDSortSortingExtractor
-    * HS2SortingExtractor
     * OpenEphysSortingExtractor : need to be done in neo
-    * MaxOneSortingExtractor  : need to be done in neo
-    * SHYBRIDSortingExtractor
-    * NIXIOSortingExtractor
-    * ALFSortingExtractor
-    
-    * make function for all reader
+
 
 toolkit:
   * preprocessing:
     * ResampleRecording
-  * postprocessing: 
-     * export to phy (pca + amplitudes)
-     * integrate amplitudes
+
   * validation (= qualitymetrics):
+     * decide good channel selection in PCA metrics
      * "max_drift",
      * "cumulative_drift",
      * "silhouette_score",
      * "noise_overlap",
 
-
   * get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0)
      remove chunk and use duration instead.
 
+  * make shift to max sorting extractor
 
-
-sorting components:
-    all (sam)
 
 sorters:
 
   * almost done : needs tests
   * is_installed() on run time
-  * some sorter do not have yet the extractor
   * unify parameters for copy to binary > common methods
   * make something to not copy binary when not needed
-
-comparison:
-  * done: need tests
+  
+  * install all files *.m, *.prm
 
 
 widgets:
-  * many of them
-  * plot_activity_map
-  * in probeinterface click and get channel!!
+  * fix plot_multicomp_graph()
 
 
 examples:
 
   * check and read everything
   * toolkit examples
+  * make more example with widgets
+  
 
 
 doc:
 
   * read everything (typos/grammar)
   * try to build documentation with dithub actions as artifact after test (alessio ?)
-  * make on example for extractor
-  * plot_4_sorting_concatenated_recordings.py
+  * make API
 
 
-Tests suite:
-
-  * make several workflow:
-    * multi os for : core and extractors
-    * unbuntu for all modules
 
 
 Linked projects:

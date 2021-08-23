@@ -6,15 +6,14 @@ from typing import Union
 import shutil
 import json
 
-
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
-
 PathType = Union[str, Path]
+
 
 def check_if_installed(kilosort2_path: Union[str, None]):
     if kilosort2_path is None:
@@ -37,6 +36,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
     sorter_name: str = 'kilosort2'
     kilosort2_path: Union[str, None] = os.getenv('KILOSORT2_PATH', None)
     requires_locations = False
+    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
@@ -86,9 +86,9 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
     More information on Kilosort2 at:
         https://github.com/MouseLand/Kilosort2
     """
-    
+
     handle_multi_segment = False
-    
+
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.kilosort2_path)
@@ -134,9 +134,9 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
 
         # save binary file
         input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
-                                                                dtype='int16', total_memory='500M',
-                                                                n_jobs=-1, verbose=False, progress_bar=verbose)
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
+                                                 dtype='int16', total_memory=p["total_memory"],
+                                                 n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
         if p['car']:
             use_car = 1
@@ -158,7 +158,6 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
             channel_path=str((output_folder / 'kilosort2_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort2_config.m').absolute()),
         )
-
 
         kilosort2_config_txt = kilosort2_config_txt.format(
             nchan=recording.get_num_channels(),

@@ -137,11 +137,11 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
 
     # preload all spiketrains 2 into a list
     s2_spiketrains = [sorting2.get_unit_spike_train(u2) for u2 in unit2_ids]
-    
+
     match_event_count_lists = Parallel(n_jobs=n_jobs)(delayed(count_match_spikes)(sorting1.get_unit_spike_train(u1),
                                                                                   s2_spiketrains, delta_frames) for
                                                       i1, u1 in enumerate(unit1_ids))
-    
+
     match_event_count = pd.DataFrame(np.array(match_event_count_lists),
                                      index=unit1_ids, columns=unit2_ids)
 
@@ -290,7 +290,7 @@ def make_best_match(agreement_scores, min_score):
     best_match_12 = pd.Series(index=unit1_ids, dtype=unit2_ids.dtype)
     best_match_12[:] = -1
     for i1, u1 in enumerate(unit1_ids):
-        if scores.shape[1]>0: 
+        if scores.shape[1] > 0:
             ind_max = np.argmax(scores[i1, :])
             if scores[i1, ind_max] >= min_score:
                 best_match_12[u1] = unit2_ids[ind_max]
@@ -298,7 +298,7 @@ def make_best_match(agreement_scores, min_score):
     best_match_21 = pd.Series(index=unit2_ids, dtype=unit1_ids.dtype)
     best_match_21[:] = -1
     for i2, u2 in enumerate(unit2_ids):
-        if scores.shape[0]>0: 
+        if scores.shape[0] > 0:
             ind_max = np.argmax(scores[:, i2])
             if scores[ind_max, i2] >= min_score:
                 best_match_21[u2] = unit1_ids[ind_max]
@@ -419,8 +419,8 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
                 # find and label closest spikes
                 ind_st1 = np.array([np.abs(sts1[u1] - tm).argmin() for tm in times_matched])
                 ind_st2 = np.array([np.abs(mapped_st - tm).argmin() for tm in times_matched])
-                assert(len(np.unique(ind_st1)) == len(ind_st1))
-                assert(len(np.unique(ind_st2)) == len(ind_st2))
+                assert (len(np.unique(ind_st1)) == len(ind_st1))
+                assert (len(np.unique(ind_st2)) == len(ind_st2))
                 lab_st1[ind_st1] = 'TP'
                 lab_st2[ind_st2] = 'TP'
         else:
@@ -667,39 +667,39 @@ def make_matching_events(times1, times2, delta):
     membership = np.concatenate((np.ones(times1.shape) * 1, np.ones(times2.shape) * 2))
     spike_idx = np.concatenate((np.arange(times1.size, dtype='int64'), np.arange(times2.size, dtype='int64')))
     indices = times_concat.argsort()
-    
+
     times_concat_sorted = times_concat[indices]
     membership_sorted = membership[indices]
     spike_index_sorted = spike_idx[indices]
-    
+
     inds, = np.nonzero((np.diff(times_concat_sorted) <= delta) & (np.diff(membership_sorted) != 0))
-    
+
     dtype = [('index1', 'int64'), ('index2', 'int64'), ('delta_frame', 'int64')]
-    
+
     if len(inds) == 0:
         return np.array([], dtype=dtype)
-    
-    
+
     matching_event = np.zeros(inds.size, dtype=dtype)
-    
+
     mask1 = membership_sorted[inds] == 1
     inds1 = inds[mask1]
     n1 = np.sum(mask1)
     matching_event[:n1]['index1'] = spike_index_sorted[inds1]
-    matching_event[:n1]['index2'] = spike_index_sorted[inds1+1]
-    matching_event[:n1]['delta_frame'] = times_concat_sorted[inds1+1] - times_concat_sorted[inds1]
+    matching_event[:n1]['index2'] = spike_index_sorted[inds1 + 1]
+    matching_event[:n1]['delta_frame'] = times_concat_sorted[inds1 + 1] - times_concat_sorted[inds1]
 
     mask2 = membership_sorted[inds] == 2
     inds2 = inds[mask2]
     n2 = np.sum(mask2)
-    matching_event[n1:]['index1'] = spike_index_sorted[inds2+1]
+    matching_event[n1:]['index1'] = spike_index_sorted[inds2 + 1]
     matching_event[n1:]['index2'] = spike_index_sorted[inds2]
-    matching_event[n1:]['delta_frame'] = times_concat_sorted[inds2] - times_concat_sorted[inds2+1]
-    
+    matching_event[n1:]['delta_frame'] = times_concat_sorted[inds2] - times_concat_sorted[inds2 + 1]
+
     order = np.argsort(matching_event['index1'])
     matching_event = matching_event[order]
-    
+
     return matching_event
+
 
 def make_collision_events(sorting, delta):
     """
@@ -723,21 +723,20 @@ def make_collision_events(sorting, delta):
         1d of all collision
 
     """
-    dtype = [
-            ('index1', 'int64'), ('unit_id1', 'int64'),
-            ('index2', 'int64'), ('unit_id2', 'int64'),
-            ('delta_frame', 'int64')
-        ]
-    
     unit_ids = np.array(sorting.get_unit_ids())
-    
+    dtype = [
+        ('index1', 'int64'), ('unit_id1', unit_ids.dtype),
+        ('index2', 'int64'), ('unit_id2', unit_ids.dtype),
+        ('delta_frame', 'int64')
+    ]
+
     collision_events = []
     for i, u1 in enumerate(unit_ids):
         times1 = sorting.get_unit_spike_train(u1)
-        
-        for u2 in unit_ids[i+1:]:
+
+        for u2 in unit_ids[i + 1:]:
             times2 = sorting.get_unit_spike_train(u2)
-                
+
             matching_event = make_matching_events(times1, times2, delta)
             ce = np.zeros(matching_event.size, dtype=dtype)
             ce['index1'] = matching_event['index1']
@@ -745,9 +744,9 @@ def make_collision_events(sorting, delta):
             ce['index2'] = matching_event['index2']
             ce['unit_id2'] = u2
             ce['delta_frame'] = matching_event['delta_frame']
-            
+
             collision_events.append(ce)
-    
+
     collision_events = np.concatenate(collision_events)
-    
+
     return collision_events

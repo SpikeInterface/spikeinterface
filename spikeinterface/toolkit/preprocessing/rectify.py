@@ -1,6 +1,7 @@
 import numpy as np
 
-from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+
 
 class RectifyRecording(BasePreprocessor):
     name = 'rectify'
@@ -22,8 +23,9 @@ class RectifyRecordingSegment(BasePreprocessorSegment):
         return np.abs(traces)
 
 
-
 # function for API
 def rectify(*args, **kwargs):
     return RectifyRecording(*args, **kwargs)
+
+
 rectify.__doc__ = RectifyRecording.__doc__

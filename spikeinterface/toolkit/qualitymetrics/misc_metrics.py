@@ -16,19 +16,19 @@ import scipy.ndimage
 from ..utils import get_noise_levels
 
 from ..postprocessing import (
-        get_template_extremum_channel,
-        get_template_extremum_amplitude,
-    )
+    get_template_extremum_channel,
+    get_template_extremum_amplitude,
+)
 
 
-def compute_num_spikes(waveform_extractor, **kargs):
+def compute_num_spikes(waveform_extractor, **kwargs):
     """
     Compute number of spike accross segments.
     """
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
-    
+
     num_spikes = {}
     for unit_id in unit_ids:
         n = 0
@@ -39,7 +39,7 @@ def compute_num_spikes(waveform_extractor, **kargs):
     return num_spikes
 
 
-def compute_firing_rate(waveform_extractor, **kargs):
+def compute_firing_rate(waveform_extractor, **kwargs):
     """
     Compute firing rate acrros segments.
     """
@@ -48,10 +48,10 @@ def compute_firing_rate(waveform_extractor, **kargs):
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
     fs = recording.get_sampling_frequency()
-    
-    seg_durations = [ recording.get_num_samples(i)  / fs for i in range(num_segs)]
+
+    seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
     total_duraion = np.sum(seg_durations)
-    
+
     firing_rates = {}
     for unit_id in unit_ids:
         n = 0
@@ -60,7 +60,7 @@ def compute_firing_rate(waveform_extractor, **kargs):
             n += st.size
 
         firing_rates[unit_id] = n / total_duraion
-    
+
     return firing_rates
 
 
@@ -80,11 +80,11 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
     fs = recording.get_sampling_frequency()
-    
-    seg_length = [ recording.get_num_samples(i)  for i in range(num_segs)]
+
+    seg_length = [recording.get_num_samples(i) for i in range(num_segs)]
     total_length = np.sum(seg_length)
-    seg_durations = [ recording.get_num_samples(i)  / fs for i in range(num_segs)]
-    
+    seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
+
     presence_ratio = {}
     for unit_id in unit_ids:
         spiketrain = []
@@ -95,12 +95,11 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
         spiketrain = np.concatenate(spiketrain)
         h, b = np.histogram(spiketrain, np.linspace(0, total_length, num_bin_edges))
         presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
-    
+
     return presence_ratio
 
 
-
-def compute_snrs(waveform_extractor, peak_sign='neg', **kargs):
+def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
     """
     Compute signal to noise ratio.
     """
@@ -109,21 +108,20 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kargs):
     unit_ids = sorting.unit_ids
     channel_ids = recording.channel_ids
 
-    
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
     unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign)
-    noise_levels = get_noise_levels(recording, **kargs)
-    
+    noise_levels = get_noise_levels(recording, **kwargs)
+
     # make a dict to acces by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
-    
+
     snrs = {}
     for unit_id in unit_ids:
         chan_id = extremum_channels_ids[unit_id]
         noise = noise_levels[chan_id]
         amplitude = unit_amplitudes[unit_id]
         snrs[unit_id] = np.abs(amplitude) / noise
-    
+
     return snrs
 
 
@@ -137,30 +135,30 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5):
     num_segs = sorting.get_num_segments()
     fs = recording.get_sampling_frequency()
 
-    seg_durations = [ recording.get_num_samples(i)  / fs for i in range(num_segs)]
+    seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
     total_duraion = np.sum(seg_durations)
-    
+
     isi_threshold = (isi_threshold_ms / 1000. * fs)
-    
+
     isi_violations_count = {}
     isi_violations_rate = {}
-    
+
     for unit_id in unit_ids:
         num_violations = 0
         for segment_index in range(num_segs):
             st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             isi = np.diff(st)
             num_violations += np.sum(isi < isi_threshold)
-        
+
         isi_violations_count[unit_id] = num_violations
         isi_violations_rate[unit_id] = num_violations / total_duraion
-    
+
     res = namedtuple('isi_violaion', ['isi_violations_rate', 'isi_violations_count'])
     return res(isi_violations_rate, isi_violations_count)
 
 
-def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg', 
-            num_histogram_bins=500, histogram_smoothing_value=3, **kargs):
+def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
+                              num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes
     This code come from 
@@ -183,11 +181,11 @@ def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg',
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
-    
+
     before = waveform_extractor.nbefore
-    
+
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-    
+
     all_fraction_missing = {}
     for unit_id in unit_ids:
         waveforms = waveform_extractor.get_waveforms(unit_id)
@@ -196,7 +194,7 @@ def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg',
         amplitudes = waveforms[:, before, chan_ind]
 
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
-        
+
         # TODO : change with something better scipy.ndimage.filters.gaussian_filter1d
         pdf = scipy.ndimage.filters.gaussian_filter1d(h, histogram_smoothing_value)
         support = b[:-1]
@@ -208,7 +206,7 @@ def compute_amplitudes_cutoff(waveform_extractor,  peak_sign='neg',
         fraction_missing = np.sum(pdf[G:]) * bin_size
 
         fraction_missing = np.min([fraction_missing, 0.5])
-        
+
         all_fraction_missing[unit_id] = fraction_missing
-    
+
     return all_fraction_missing

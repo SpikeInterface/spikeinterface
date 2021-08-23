@@ -8,8 +8,8 @@ from sklearn.neighbors import NearestNeighbors
 
 from ..postprocessing import WaveformPrincipalComponent
 
-
 _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor']
+
 
 def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neighbors=4, ):
     if metric_names is None:
@@ -18,17 +18,17 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neig
 
     assert isinstance(pca, WaveformPrincipalComponent)
     we = pca.waveform_extractor
-    
+
     unit_ids = we.sorting.unit_ids
     channel_ids = we.recording.channel_ids
-    
+
     # create output dict of dict  pc_metrics['metric_name'][unit_id]
-    pc_metrics = {k:{} for k in metric_names}
+    pc_metrics = {k: {} for k in metric_names}
     if 'nearest_neighbor' in metric_names:
         pc_metrics.pop('nearest_neighbor')
         pc_metrics['nn_hit_rate'] = {}
         pc_metrics['nn_miss_rate'] = {}
-    
+
     for unit_id in unit_ids:
         # @alessio @ cole: please propose something here
         # TODO : make clear neiborhood for channel_ids and unit_ids
@@ -36,35 +36,33 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neig
         neighbor_unit_ids = unit_ids
         neighbor_channel_ids = channel_ids
         # END DEBUG
-        
 
         labels, pcs = pca.get_all_components(
-                channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
-        
+            channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
+
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
-        
+
         # metrics
-        if 'isolation_distance' in metric_names or  'l_ratio' in metric_names:
+        if 'isolation_distance' in metric_names or 'l_ratio' in metric_names:
             isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
             if 'isolation_distance' in metric_names:
                 pc_metrics['isolation_distance'][unit_id] = isolation_distance
             if 'l_ratio' in metric_names:
                 pc_metrics['l_ratio'][unit_id] = l_ratio
-        
+
         if 'd_prime' in metric_names:
             d_prime = lda_metrics(pcs_flat, labels, unit_id)
             pc_metrics['d_prime'][unit_id] = d_prime
-        
+
         if 'nearest_neighbor' in metric_names:
             nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id,
-                            max_spikes_for_nn, n_neighbors)
+                                                                  max_spikes_for_nn, n_neighbors)
             pc_metrics['nn_hit_rate'][unit_id] = nn_hit_rate
             pc_metrics['nn_miss_rate'][unit_id] = nn_miss_rate
-            
-        
 
     return pc_metrics
-    
+
+
 #################################################################
 # Code from spikemetrics
 
@@ -104,14 +102,14 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
         return np.nan, np.nan
 
     mahalanobis_other = np.sort(scipy.spatial.distance.cdist(mean_value,
-                                      pcs_for_other_units,
-                                      'mahalanobis', VI=VI)[0])
+                                                             pcs_for_other_units,
+                                                             'mahalanobis', VI=VI)[0])
 
     mahalanobis_self = np.sort(scipy.spatial.distance.cdist(mean_value,
-                                     pcs_for_this_unit,
-                                     'mahalanobis', VI=VI)[0])
-    
-      # number of spikes
+                                                            pcs_for_this_unit,
+                                                            'mahalanobis', VI=VI)[0])
+
+    # number of spikes
     n = np.min([pcs_for_this_unit.shape[0], pcs_for_other_units.shape[0]])
 
     if n >= 2:
@@ -125,7 +123,6 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
         isolation_distance = np.nan
 
     return isolation_distance, l_ratio
-
 
 
 def lda_metrics(all_pcs, all_labels, this_unit_id):

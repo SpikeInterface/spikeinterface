@@ -26,13 +26,31 @@ if on_rtd:
 if not os.path.isdir('sources'):
     os.mkdir('sources')
 
-   
 
 # clean some folder
 folders =  [
-    '../examples/modules/comparison/a_study_folder',
-    '../examples/modules/core/my_recording',
-    '../examples/modules/core/my_sorting',
+
+    '../examples/getting_started/herdingspikes_output',
+    '../examples/getting_started/phy_folder_for_TDC',
+    '../examples/getting_started/redringspikes_output2',
+    '../examples/getting_started/tridesclous_output',
+    '../examples/getting_started/waveforms',
+
+    '../examples/modules/comparison/herdingspikes_output',
+    '../examples/modules/comparison/mountainsort4_output',
+    '../examples/modules/comparison/tridesclous_output',
+
+
+    '../examples/modules/core/waveform_folder',
+    '../examples/modules/core/waveform_folder2',
+
+    '../examples/modules/sorters/tridesclous_output',
+
+    '../examples/modules/toolkit/waveforms_mearec',
+
+    '../examples/modules/widgets/waveforms_mearec',
+
+
 ]
 
 for folder in folders:
@@ -43,7 +61,7 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'spikeinterface'
-copyright = '2019, Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
+copyright = '2021, Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
 author = 'Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
 
 

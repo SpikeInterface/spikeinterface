@@ -1,5 +1,6 @@
 import os
 import os, getpass
+
 if getpass.getuser() == 'samuel':
     kilosort2_path = '/home/samuel/Documents/Spikeinterface/Kilosort2'
     os.environ["KILOSORT2_PATH"] = kilosort2_path
@@ -12,9 +13,6 @@ if getpass.getuser() == 'samuel':
 
     waveclust_path = '/home/samuel/Documents/Spikeinterface/wave_clus/'
     os.environ["WAVECLUS_PATH"] = waveclust_path
-    
-    
-
 
 import pytest
 
@@ -23,8 +21,6 @@ from spikeinterface.sorters import print_sorter_versions
 
 def test_print_sorter_versions():
     print_sorter_versions()
-
-
 
 
 if __name__ == '__main__':

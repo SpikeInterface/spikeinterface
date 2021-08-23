@@ -1,5 +1,5 @@
 from typing import List, Union
-from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
+from pathlib import Path
 
 import numpy as np
 
@@ -17,10 +17,10 @@ class BaseRecording(BaseExtractor):
     Internally handle list of RecordingSegment
     """
     _main_annotations = ['is_filtered']
-    _main_properties = ['group', 'location']
+    _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []  # recording do not handle features
 
-    def __init__(self, sampling_frequency: SamplingFrequencyHz, channel_ids: List[ChannelId], dtype):
+    def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
 
         self.is_dumpable = True
@@ -38,9 +38,10 @@ class BaseRecording(BaseExtractor):
         nseg = self.get_num_segments()
         nchan = self.get_num_channels()
         sf_khz = self.get_sampling_frequency() / 1000.
-        txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz'
-        if 'files_path' in self._kwargs:
-            txt += '\n  files_path: {}'.format(self._kwargs['files_path'])
+        duration = self.get_total_duration()
+        txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s'
+        if 'file_paths' in self._kwargs:
+            txt += '\n  file_paths: {}'.format(self._kwargs['file_paths'])
         if 'file_path' in self._kwargs:
             txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
         return txt
@@ -69,18 +70,28 @@ class BaseRecording(BaseExtractor):
     def get_dtype(self):
         return self._dtype
 
-    def get_num_samples(self, segment_index: Union[int, None]):
+    def get_num_samples(self, segment_index=None):
         segment_index = self._check_segment_index(segment_index)
         return self._recording_segments[segment_index].get_num_samples()
 
     get_num_frames = get_num_samples
 
+    def get_total_samples(self):
+        s = 0
+        for segment_index in range(self.get_num_segments()):
+            s += self.get_num_samples(segment_index)
+        return s
+
+    def get_total_duration(self):
+        duration = self.get_total_samples() / self.get_sampling_frequency()
+        return duration
+
     def get_traces(self,
                    segment_index: Union[int, None] = None,
-                   start_frame: Union[SampleIndex, None] = None,
-                   end_frame: Union[SampleIndex, None] = None,
-                   channel_ids: Union[List[ChannelId], None] = None,
-                   order: Union[Order, None] = None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_ids: Union[List, None] = None,
+                   order: Union[str, None] = None,
                    return_scaled=False,
                    ):
         segment_index = self._check_segment_index(segment_index)
@@ -88,12 +99,14 @@ class BaseRecording(BaseExtractor):
         rs = self._recording_segments[segment_index]
         traces = rs.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=channel_indices)
         if order is not None:
+            assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
             gains = self.get_property('gain_to_uV')
             offsets = self.get_property('offset_to_uV')
             if gains is None or offsets is None:
-                raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_to_uV properties)')
+                raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_'
+                                 'to_uV properties)')
             gains = gains[channel_indices].astype('float32')
             offsets = offsets[channel_indices].astype('float32')
             traces = traces.astype('float32') * gains + offsets
@@ -115,16 +128,18 @@ class BaseRecording(BaseExtractor):
         if format == 'binary':
             # TODO save propreties as npz!!!!!
             folder = save_kwargs['folder']
-            files_path = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
+            file_paths = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
             dtype = save_kwargs.get('dtype', 'float32')
 
             job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
-            write_binary_recording(self, files_path=files_path, dtype=dtype, **job_kwargs)
+            write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
-            cached = BinaryRecordingExtractor(files_path, self.get_sampling_frequency(),
-                                              self.get_num_channels(), dtype, channel_ids=self.get_channel_ids(),
-                                              time_axis=0)
+            cached = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
+                                              num_chan=self.get_num_channels(), dtype=dtype,
+                                              channel_ids=self.get_channel_ids(), time_axis=0,
+                                              file_offset=0, gain_to_uV=self.get_channel_gains(),
+                                              offset_to_uV=self.get_channel_offsets())
 
         elif format == 'memory':
             job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
@@ -143,22 +158,25 @@ class BaseRecording(BaseExtractor):
 
         else:
             raise ValueError(f'format {format} not supported')
+        
+        if self.get_property('contact_vector') is not None:
+            probegroup = self.get_probegroup()
+            cached.set_probegroup(probegroup)
+        
+        return cached
 
+    def _extra_metadata_from_folder(self, folder):
+        # load probe
+        folder = Path(folder)
+        if (folder / 'probe.json').is_file():
+            probegroup = read_probeinterface(folder / 'probe.json')
+            self.set_probegroup(probegroup, in_place=True)
+    
+    def _extra_metadata_to_folder(self, folder):
+        # save probe
         if self.get_property('contact_vector') is not None:
             probegroup = self.get_probegroup()
             write_probeinterface(folder / 'probe.json', probegroup)
-            cached.set_probegroup(probegroup)
-
-        return cached
-
-    def _after_load(self, folder):
-        # load probe
-        if (folder / 'probe.json').is_file():
-            probegroup = read_probeinterface(folder / 'probe.json')
-            other = self.set_probegroup(probegroup)
-            return other
-        else:
-            return self
 
     def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """
@@ -239,6 +257,7 @@ class BaseRecording(BaseExtractor):
             raise ValueError('The given Probe have "device_channel_indices" that do not match channel count')
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
+        arr['device_channel_indices'] = np.arange(arr.size, dtype='int64')
 
         # create recording : channel slice or clone or self
         if in_place:
@@ -314,6 +333,12 @@ class BaseRecording(BaseExtractor):
                     probe.set_planar_contour(contour)
         return probegroup
 
+    def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}):
+        probe = Probe()
+        probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
+        probe.set_device_channel_indices(np.arange(self.get_num_channels()))
+        self.set_probe(probe, in_place=True)
+
     def set_channel_locations(self, locations, channel_ids=None):
         if self.get_property('contact_vector') is not None:
             raise ValueError('set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
@@ -385,13 +410,18 @@ class BaseRecording(BaseExtractor):
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
-    def split_by(self, property='group', outputs='list'):
+    def frame_slice(self, start_frame, end_frame):
+        from spikeinterface import FrameSliceRecording
+        sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
+        return sub_recording
+
+    def split_by(self, property='group', outputs='dict'):
         assert outputs in ('list', 'dict')
         from .channelslicerecording import ChannelSliceRecording
         values = self.get_property(property)
         if values is None:
             raise ValueError(f'property {property} is not set')
-        
+
         if outputs == 'list':
             recordings = []
         elif outputs == 'dict':
@@ -415,7 +445,7 @@ class BaseRecordingSegment(BaseSegment):
     def __init__(self):
         BaseSegment.__init__(self)
 
-    def get_num_samples(self) -> SampleIndex:
+    def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment
 
         Returns:
@@ -425,20 +455,20 @@ class BaseRecordingSegment(BaseSegment):
         raise NotImplementedError
 
     def get_traces(self,
-                   start_frame: Union[SampleIndex, None] = None,
-                   end_frame: Union[SampleIndex, None] = None,
-                   channel_indices: Union[List[ChannelIndex], None] = None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
                    ) -> np.ndarray:
         """
         Return the raw traces, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        start_frame: (Union[SampleIndex, None], optional)
+        start_frame: (Union[int, None], optional)
             start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[SampleIndex, None], optional)
+        end_frame: (Union[int, None], optional)
             end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List[ChannelIndex], None], optional)
+        channel_indices: (Union[List, None], optional)
             Indices of channels to return, or all channels if None. Defaults to None.
         order: (Order, optional)
             The memory order of the returned array.

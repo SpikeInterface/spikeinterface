@@ -1,7 +1,8 @@
 import numpy as np
-import scipy.interpolate 
+import scipy.interpolate
 
-from .basepreprocessor import BasePreprocessor,BasePreprocessorSegment
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+
 
 class RemoveArtifactsRecording(BasePreprocessor):
     """
@@ -56,58 +57,60 @@ class RemoveArtifactsRecording(BasePreprocessor):
     """
     name = 'remove_artifacts'
 
-    def __init__(self, recording,  list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1.):
-        self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers, 
-                ms_before=ms_before, ms_after=ms_after, mode=mode, fit_sample_spacing=fit_sample_spacing)
+    def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1.):
 
         num_seg = recording.get_num_segments()
-        if num_seg ==1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
+        if num_seg == 1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
             # when unisque segment accept list instead of of list of list
             list_triggers = [list_triggers]
-        
+
         # some check
         assert isinstance(list_triggers, list)
         assert len(list_triggers) == num_seg
-        assert all( isinstance(list_triggers[i], list) for i in range(num_seg))
+        assert all(isinstance(list_triggers[i], list) for i in range(num_seg))
         assert mode in ('zeros', 'linear', 'cubic')
-        
+
         sf = recording.get_sampling_frequency()
         pad = [int(ms_before * sf / 1000), int(ms_after * sf / 1000)]
-        
-        fit_sample_interval = int(fit_sample_spacing * sf / 1000.  )
-        fit_sample_range = fit_sample_interval *2 + 1
+
+        fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
+        fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
 
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             triggers = list_triggers[seg_index]
-            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad,  mode, fit_samples)
+            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples)
             self.add_recording_segment(rec_segment)
+
+        list_triggers_int = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
+        self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers_int,
+                            ms_before=float(ms_before), ms_after=float(ms_after), mode=mode,
+                            fit_sample_spacing=fit_sample_spacing)
 
 
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, triggers, pad,  mode,  fit_samples):
+    def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
-        
+
         self.triggers = np.asarray(triggers, dtype='int64')
         self.pad = pad
         self.mode = mode
-        self. fit_samples = fit_samples
+        self.fit_samples = fit_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-        
+
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
-        
+
         triggers = self.triggers[(self.triggers > start_frame) & (self.triggers < end_frame)] - start_frame
-        
-        
+
         pad = self.pad
-        
+
         if self.mode == 'zeros':
             for trig in triggers:
                 if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
@@ -124,7 +127,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                 post_data_start_idx = trig + pad[1] + 1
 
                 # Generate fit points from the sample points determined
-                # pre_idx = pre_data_end_idx - self.rev_fit_samples + 1
+                #  pre_idx = pre_data_end_idx - self.rev_fit_samples + 1
                 pre_idx = pre_data_end_idx - self.fit_samples[::-1]
                 post_idx = post_data_start_idx + self.fit_samples
 
@@ -150,7 +153,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
                 # Get the median value from 5 samples around each fit point
                 # for robustness to noise / small fluctuations
-                pre_vals = [] # np.zeros((0, traces.shape[1]), dtype=traces.dtype)1
+                pre_vals = []  #  np.zeros((0, traces.shape[1]), dtype=traces.dtype)1
                 for idx in iter(pre_idx):
                     if idx == pre_idx[-1]:
                         idxs = np.arange(idx - 3, idx + 1)
@@ -163,26 +166,28 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                 post_vals = []
                 for idx in iter(post_idx):
                     if idx == post_idx[0]:
-                        idxs = np.arange(idx, idx+4)
+                        idxs = np.arange(idx, idx + 4)
                     else:
                         idxs = np.arange(idx - 2, idx + 3)
                     if np.max(idx) >= traces.shape[0]:
                         idx = idx[idx < traces.shape[0]]
                     median_vals = np.median(traces[idxs, :], axis=0, keepdims=True)
                     post_vals.append(median_vals)
-                
-                if len(all_idx) >0:
+
+                if len(all_idx) > 0:
                     interp_traces = np.concatenate(pre_vals + post_vals, axis=0)
 
                 if self.mode == 'cubic' and len(all_idx) >= 5:
                     # Enough fit points present on either side to do cubic spline fit:
-                    interp_function = scipy.interpolate.interp1d(all_idx, interp_traces, 
-                                                kind='cubic', axis=0, bounds_error=False, fill_value='extrapolate')
+                    interp_function = scipy.interpolate.interp1d(all_idx, interp_traces,
+                                                                 kind='cubic', axis=0, bounds_error=False,
+                                                                 fill_value='extrapolate')
                     traces[gap_idx, :] = interp_function(gap_idx)
                 elif self.mode == 'linear' and len(all_idx) >= 2:
                     # Enough fit points present for a linear fit
                     interp_function = scipy.interpolate.interp1d(all_idx, interp_traces,
-                                                    kind='linear', axis=0,  bounds_error=False, fill_value='extrapolate')
+                                                                 kind='linear', axis=0, bounds_error=False,
+                                                                 fill_value='extrapolate')
                     traces[gap_idx, :] = interp_function(gap_idx)
                 elif len(pre_idx) > len(post_idx):
                     # not enough fit points, fill with nearest neighbour on side with the most data points
@@ -204,4 +209,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 # function for API
 def remove_artifacts(*args, **kwargs):
     return RemoveArtifactsRecording(*args, **kwargs)
+
+
 remove_artifacts.__doc__ = RemoveArtifactsRecording.__doc__

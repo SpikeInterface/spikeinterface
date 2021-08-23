@@ -6,7 +6,6 @@ from typing import Union
 import shutil
 import json
 
-
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
@@ -38,6 +37,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     sorter_name: str = 'kilosort3'
     kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
+    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
@@ -56,6 +56,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         'NT': None,
         'keep_good_only': False,
         'total_memory': '500M',
+        'n_jobs_bin': 1
     }
 
     _params_description = {
@@ -75,6 +76,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
         'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
+        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
     sorter_description = """Kilosort3 is a GPU-accelerated and efficient template-matching spike sorter. On top of its 
@@ -95,7 +97,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     More information on Kilosort3 at:
         https://github.com/MouseLand/Kilosort
     """
-    
+
     handle_multi_segment = False
 
     @classmethod
@@ -143,9 +145,9 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         # save binary file
         input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
-                                                                dtype='int16', total_memory='500M',
-                                                                n_jobs=-1, verbose=False, progress_bar=verbose)
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
+                                                 dtype='int16', total_memory=p["total_memory"],
+                                                 n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
         if p['car']:
             use_car = 1
@@ -205,4 +207,3 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-

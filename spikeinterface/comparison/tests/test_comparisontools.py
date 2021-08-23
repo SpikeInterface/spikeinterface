@@ -3,10 +3,10 @@ from numpy.testing import assert_array_equal
 
 from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import (do_count_event,
-            make_match_count_matrix, make_agreement_scores,
-             make_possible_match, make_best_match, make_hungarian_match,
-             do_score_labels, compare_spike_trains, do_confusion_matrix, do_count_score,
-             compute_performance)
+                                       make_match_count_matrix, make_agreement_scores,
+                                       make_possible_match, make_best_match, make_hungarian_match,
+                                       do_score_labels, compare_spike_trains, do_confusion_matrix, do_count_score,
+                                       compute_performance)
 
 
 def make_sorting(times1, labels1, times2, labels2):

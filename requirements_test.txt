@@ -1,15 +1,8 @@
 pytest
 
-# optional dependancy for sub modules
-h5py
-pandas
-scipy
-scikit-learn
-matplotlib
-networkx
-datalad
-MEArec
-
+# recent datalad need a too recent version for git-annex
+# so we use an old one here
+datalad==0.14.4
 
 ## install sorters ##
 # python based only
@@ -35,7 +28,10 @@ MEArec
 pyqt5
 hdbscan
 loky
-tridesclous>=1.6.2
+tridesclous>=1.6.3
+
+# shybrid
+shybrid
 
 ## spyking-circus
 spyking-circus

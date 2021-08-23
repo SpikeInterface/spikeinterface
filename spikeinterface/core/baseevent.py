@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import UnitId, ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
@@ -11,9 +10,14 @@ class BaseEvent(BaseExtractor):
     Abstract class representing events.
     """
 
-    def __init__(self, channel_ids):
+    def __init__(self, channel_ids, structured_dtype):
         BaseExtractor.__init__(self, channel_ids)
         self._event_segments: List[BaseEventSegment] = []
+
+        if np.isscalar(structured_dtype):
+            structured_dtype = {chan_id: structured_dtype for chan_id in channel_ids}
+
+        self.structured_dtype = structured_dtype
 
     def __repr__(self):
         clsname = self.__class__.__name__
