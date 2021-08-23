@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import UnitId, ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
@@ -11,7 +10,7 @@ class BaseSorting(BaseExtractor):
     Abstract class representing several segment several units and relative spiketrains.
     """
 
-    def __init__(self, sampling_frequency: SamplingFrequencyHz, unit_ids: List[UnitId]):
+    def __init__(self, sampling_frequency: float, unit_ids: List):
 
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
@@ -31,14 +30,13 @@ class BaseSorting(BaseExtractor):
     def unit_ids(self):
         return self._main_ids
 
-    def get_unit_ids(self) -> List[UnitId]:
+    def get_unit_ids(self) -> List:
         return self._main_ids
 
     def get_num_units(self) -> int:
         return len(self.get_unit_ids())
 
     def add_sorting_segment(self, sorting_segment):
-        # todo: check consistency with unit ids and freq
         self._sorting_segments.append(sorting_segment)
         sorting_segment.set_parent_extractor(self)
 
@@ -49,10 +47,10 @@ class BaseSorting(BaseExtractor):
         return len(self._sorting_segments)
 
     def get_unit_spike_train(self,
-                             unit_id: UnitId,
+                             unit_id,
                              segment_index: Union[int, None] = None,
-                             start_frame: Union[SampleIndex, None] = None,
-                             end_frame: Union[SampleIndex, None] = None,
+                             start_frame: Union[int, None] = None,
+                             end_frame: Union[int, None] = None,
                              ):
         segment_index = self._check_segment_index(segment_index)
         S = self._sorting_segments[segment_index]
@@ -75,9 +73,6 @@ class BaseSorting(BaseExtractor):
 
         return cached
 
-    def _after_load(self, folder):
-        return self
-
     def get_unit_property(self, unit_id, key):
         values = self.get_property(key)
         v = values[self.id_to_index(unit_id)]
@@ -87,22 +82,22 @@ class BaseSorting(BaseExtractor):
         from spikeinterface import UnitsSelectionSorting
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
-    
+
     def get_all_spike_trains(self, outputs='unit_id'):
         """
         Return all spike trains concatenated
         """
         assert outputs in ('unit_id', 'unit_index')
-        spikes =  []
+        spikes = []
         for segment_index in range(self.get_num_segments()):
             spike_times = []
             spike_labels = []
             for i, unit_id in enumerate(self.unit_ids):
                 st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 spike_times.append(st)
-                if outputs =='unit_id':
-                    spike_labels.append(np.array([unit_id]*st.size))
-                elif outputs =='unit_index':
+                if outputs == 'unit_id':
+                    spike_labels.append(np.array([unit_id] * st.size))
+                elif outputs == 'unit_index':
                     spike_labels.append(np.zeros(st.size, dtype='int64') + i)
             spike_times = np.concatenate(spike_times)
             spike_labels = np.concatenate(spike_labels)
@@ -122,9 +117,9 @@ class BaseSortingSegment(BaseSegment):
         BaseSegment.__init__(self)
 
     def get_unit_spike_train(self,
-                             unit_id: UnitId,
-                             start_frame: Union[SampleIndex, None] = None,
-                             end_frame: Union[SampleIndex, None] = None,
+                             unit_id,
+                             start_frame: Union[int, None] = None,
+                             end_frame: Union[int, None] = None,
                              ) -> np.ndarray:
         # must be implemented in subclass
         raise NotImplementedError

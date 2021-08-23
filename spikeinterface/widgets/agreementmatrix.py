@@ -4,9 +4,6 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
 
-
-
-
 class AgreementMatrixWidget(BaseWidget):
     """
     Plots sorting comparison confusion matrix.
@@ -27,7 +24,8 @@ class AgreementMatrixWidget(BaseWidget):
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
-    """    
+    """
+
     def __init__(self, sorting_comparison, ordered=True, count_text=True, unit_ticks=True,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
@@ -49,7 +47,7 @@ class AgreementMatrixWidget(BaseWidget):
 
         N1 = scores.shape[0]
         N2 = scores.shape[1]
-        
+
         unit_ids1 = scores.index.values
         unit_ids2 = scores.columns.values
 
@@ -60,16 +58,16 @@ class AgreementMatrixWidget(BaseWidget):
             for i, u1 in enumerate(unit_ids1):
                 u2 = self._sc.best_match_12[u1]
                 if u2 != -1:
-                    j = np.where(unit_ids2==u2)[0][0]
-                    
+                    j = np.where(unit_ids2 == u2)[0][0]
+
                     self.ax.text(j, i, '{:0.2f}'.format(scores.at[u1, u2]),
-                                        ha='center', va='center', color='white')
-        
+                                 ha='center', va='center', color='white')
+
         # Major ticks
         self.ax.set_xticks(np.arange(0, N2))
         self.ax.set_yticks(np.arange(0, N1))
         self.ax.xaxis.tick_bottom()
-        
+
         # Labels for major ticks
         if self._unit_ticks:
             self.ax.set_yticklabels(scores.index, fontsize=12)
@@ -77,15 +75,15 @@ class AgreementMatrixWidget(BaseWidget):
 
         self.ax.set_xlabel(self._sc.name_list[1], fontsize=20)
         self.ax.set_ylabel(self._sc.name_list[0], fontsize=20)
-        
-        self.ax.set_xlim(-0.5, N2-0.5)
-        self.ax.set_ylim(N1-0.5, -0.5, )
+
+        self.ax.set_xlim(-0.5, N2 - 0.5)
+        self.ax.set_ylim(N1 - 0.5, -0.5, )
 
 
 def plot_agreement_matrix(*args, **kwargs):
     W = AgreementMatrixWidget(*args, **kwargs)
     W.plot()
     return W
-plot_agreement_matrix.__doc__ = AgreementMatrixWidget.__doc__
-        
 
+
+plot_agreement_matrix.__doc__ = AgreementMatrixWidget.__doc__

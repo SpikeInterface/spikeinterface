@@ -5,18 +5,11 @@ import numpy as np
 from numpy.lib.format import open_memmap
 import sys
 
-
 from spikeinterface.extractors import SpykingCircusSortingExtractor
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
 from probeinterface import write_prb
-
-try:
-    import circus
-    HAVE_SC = True
-except ImportError:
-    HAVE_SC = False
 
 
 class SpykingcircusSorter(BaseSorter):
@@ -37,7 +30,7 @@ class SpykingcircusSorter(BaseSorter):
         'num_workers': None,
         'whitening_max_elts': 1000,  # I believe it relates to subsampling and affects compute time
         'clustering_max_elts': 10000,  # I believe it relates to subsampling and affects compute time
-        }
+    }
 
     _params_description = {
         'detect_sign': "Use -1 (negative), 1 (positive) or 0 (both) depending "
@@ -65,15 +58,21 @@ class SpykingcircusSorter(BaseSorter):
         More information on Spyking-Circus at:
             https://spyking-circus.readthedocs.io/en/latest/
     """
-    
+
     handle_multi_segment = False
-    
+
     @classmethod
     def is_installed(cls):
+        try:
+            import circus
+            HAVE_SC = True
+        except ImportError:
+            HAVE_SC = False
         return HAVE_SC
-    
+
     @staticmethod
     def get_sorter_version():
+        import circus
         return circus.__version__
 
     @classmethod
@@ -81,7 +80,7 @@ class SpykingcircusSorter(BaseSorter):
         # check and re dump params
         p = params
         if p['num_workers'] is None:
-            p['num_workers'] = np.maximum(1, int(os.cpu_count()/2))
+            p['num_workers'] = np.maximum(1, int(os.cpu_count() / 2))
         return p
 
     @classmethod
@@ -91,7 +90,7 @@ class SpykingcircusSorter(BaseSorter):
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
         p = params
-        
+
         if p['detect_sign'] < 0:
             detect_sign = 'negative'
         elif p['detect_sign'] > 0:
@@ -102,7 +101,7 @@ class SpykingcircusSorter(BaseSorter):
             auto = p['auto_merge']
         else:
             auto = 0
-        
+
         source_dir = Path(__file__).parent
 
         # save prb file
@@ -110,9 +109,9 @@ class SpykingcircusSorter(BaseSorter):
         prb_file = output_folder / 'probe.prb'
         probegroup = recording.get_probegroup()
         write_prb(prb_file, probegroup,
-                        total_nb_channels=recording.get_num_channels(),
-                        radius=p['adjacency_radius'])
-        
+                  total_nb_channels=recording.get_num_channels(),
+                  radius=p['adjacency_radius'])
+
         # save binary file
         file_name = 'recording'
         # We should make this copy more efficient with chunks
@@ -124,8 +123,8 @@ class SpykingcircusSorter(BaseSorter):
         data_file = open_memmap(npy_file, shape=(n_frames, n_chan), dtype=np.float32, mode='w+')
         nb_chunks = n_frames // chunk_size
         for i in range(nb_chunks + 1):
-            start_frame = i*chunk_size
-            end_frame = min((i+1)*chunk_size, n_frames)
+            start_frame = i * chunk_size
+            end_frame = min((i + 1) * chunk_size, n_frames)
             data = recording.get_traces(start_frame=start_frame, end_frame=end_frame).astype('float32')
             data_file[start_frame:end_frame, :] = data
 
@@ -135,18 +134,18 @@ class SpykingcircusSorter(BaseSorter):
         with (source_dir / 'config_default.params').open('r') as f:
             circus_config = f.readlines()
         circus_config = ''.join(circus_config).format(sample_rate, prb_file, p['template_width_ms'],
-                    p['detect_threshold'], detect_sign, p['filter'], p['whitening_max_elts'],
-                    p['clustering_max_elts'], auto)
+                                                      p['detect_threshold'], detect_sign, p['filter'],
+                                                      p['whitening_max_elts'],
+                                                      p['clustering_max_elts'], auto)
         with (output_folder / (file_name + '.params')).open('w') as f:
             f.writelines(circus_config)
 
-    
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         sorter_name = cls.sorter_name
-        
+
         num_workers = params['num_workers']
-        
+
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
                         spyking-circus {recording} -c {num_workers}
@@ -170,4 +169,3 @@ class SpykingcircusSorter(BaseSorter):
     def _get_result_from_folder(cls, output_folder):
         sorting = SpykingCircusSortingExtractor(folder_path=Path(output_folder) / 'recording')
         return sorting
-

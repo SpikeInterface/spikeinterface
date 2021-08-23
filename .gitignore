@@ -29,6 +29,13 @@ spikeinterface/toolkit/*/tests/*/*/*.npz
 
 spikeinterface/toolkit/*/tests/*_output/*
 
+spikeinterface/exporters/tests/*/*
+
+spikeinterface/sorters/tests/*/*
+
+
+spikeinterface/widgets/tests/mearec_test/*
+
 examples/getting_started/*_output/*
 examples/getting_started/waveforms/*
 examples/*/*/*/*.raw
@@ -36,9 +43,16 @@ examples/*/*/*/*/*.npy
 examples/*/*/sorter_outputs
 examples/*/*/*_to_phy
 
-
-
 .vscode/*
+
+# MauroToro: My absolute mess of envs
+bin/
+DATA/
+etc/
+include/
+share/
+dist_metrics.pxd
+pyvenv.cfg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -162,4 +176,3 @@ examples/modules/comparison/tmp_*
 examples/modules/comparison/a_study_folder/*
 examples/modules/toolkit/phy/*
 examples/modules/toolkit/tmp_*
-

@@ -1,15 +1,13 @@
-
 from spikeinterface.sorters import CombinatoSorter
 
 import os, getpass
+
 if getpass.getuser() == 'samuel':
     combinato_path = '/home/samuel/Documents/SpikeInterface/combinato/'
-    CombinatoSorter.set_combinato_path(combinato_path)    
+    CombinatoSorter.set_combinato_path(combinato_path)
 
 import unittest
 import pytest
-
-
 
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 

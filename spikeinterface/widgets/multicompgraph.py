@@ -5,7 +5,6 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget, BaseMultiWidget
 
 
-
 class MultiCompGraphWidget(BaseWidget):
     """
     Plots multi sorting comparison graph.
@@ -34,6 +33,7 @@ class MultiCompGraphWidget(BaseWidget):
     W: MultiCompGraphWidget
         The output widget
     """
+
     def __init__(self, multi_sorting_comparison, draw_labels=False, node_cmap='viridis',
                  edge_cmap='hot', alpha_edges=0.5, colorbar=False, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
@@ -69,7 +69,8 @@ class MultiCompGraphWidget(BaseWidget):
                                    edge_cmap=plt.cm.get_cmap(self._edge_cmap), edge_vmin=self._msc.match_score,
                                    edge_vmax=1, ax=self.ax)
         if self._draw_labels:
-            _ = nx.draw_networkx_labels(g, pos=nx.circular_layout((sorted(g))), nodelist=sorted(g.nodes), ax=self.ax)
+            labels = {key: key[0] for key in sorted(g.nodes)}
+            _ = nx.draw_networkx_labels(g, pos=nx.circular_layout((sorted(g))), labels=labels, ax=self.ax)
         if self._colorbar:
             norm = matplotlib.colors.Normalize(vmin=self._msc.match_score, vmax=1)
             cmap = plt.cm.get_cmap(self._edge_cmap)
@@ -100,7 +101,8 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
     -------
     W: MultiCompGraphWidget
         The output widget
-    """    
+    """
+
     def __init__(self, multi_sorting_comparison, plot_type='pie', cmap='YlOrRd', fs=10,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
@@ -162,7 +164,8 @@ class MultiCompAgreementBySorterWidget(BaseMultiWidget):
     -------
     W: MultiCompGraphWidget
         The output widget
-    """    
+    """
+
     def __init__(self, multi_sorting_comparison, plot_type='pie', cmap='YlOrRd', fs=9,
                  figure=None, axes=None, ax=None, show_legend=True):
         BaseMultiWidget.__init__(self, figure, ax, axes)
@@ -187,7 +190,7 @@ class MultiCompAgreementBySorterWidget(BaseMultiWidget):
             v, c = np.unique([len(np.unique(sn)) for sn in sg_names if name in sn], return_counts=True)
             if self._type == 'pie':
                 p = ax.pie(c, colors=colors[v - 1], textprops={'color': 'k', 'fontsize': self._fs},
-                           autopct=lambda pct: _getabs(pct, c),  pctdistance=1.18)
+                           autopct=lambda pct: _getabs(pct, c), pctdistance=1.18)
                 if (self._show_legend) and (i == len(name_list) - 1):
                     plt.legend(p[0], v, frameon=False, title='k=', handlelength=1, handletextpad=0.5,
                                bbox_to_anchor=(1.15, 1.25), loc=2, borderaxespad=0., labelspacing=0.15)
@@ -215,12 +218,12 @@ def _getabs(pct, allvals):
     return "{:d}".format(absolute)
 
 
-
-
 def plot_multicomp_graph(*args, **kwargs):
     W = MultiCompGraphWidget(*args, **kwargs)
     W.plot()
     return W
+
+
 plot_multicomp_graph.__doc__ = MultiCompGraphWidget.__doc__
 
 
@@ -228,6 +231,8 @@ def plot_multicomp_agreement(*args, **kwargs):
     W = MultiCompGlobalAgreementWidget(*args, **kwargs)
     W.plot()
     return W
+
+
 plot_multicomp_agreement.__doc__ = MultiCompGlobalAgreementWidget.__doc__
 
 
@@ -235,4 +240,6 @@ def plot_multicomp_agreement_by_sorter(*args, **kwargs):
     W = MultiCompAgreementBySorterWidget(*args, **kwargs)
     W.plot()
     return W
+
+
 plot_multicomp_agreement_by_sorter.__doc__ = MultiCompAgreementBySorterWidget.__doc__

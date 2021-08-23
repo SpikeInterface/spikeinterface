@@ -1,5 +1,4 @@
 from typing import List, Union
-from .mytypes import ChannelId, SampleIndex, ChannelIndex, Order, SamplingFrequencyHz
 
 import numpy as np
 
@@ -9,6 +8,9 @@ from .baserecording import BaseRecording, BaseRecordingSegment
 class ChannelSliceRecording(BaseRecording):
     """
     Class to slice a Recording object based on channel_ids.
+
+    Do not use this class directly but use `recording.channel_slice(...)`
+
     """
 
     def __init__(self, parent_recording, channel_ids=None, renamed_channel_ids=None):
@@ -41,13 +43,13 @@ class ChannelSliceRecording(BaseRecording):
 
         # copy annotation and properties
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
-        
+
         # change the wiring of the probe
         contact_vector = self.get_property('contact_vector')
         if contact_vector is not None:
             contact_vector['device_channel_indices'] = np.arange(len(channel_ids), dtype='int64')
             self.set_property('contact_vector', contact_vector)
-        
+
         # update dump dict
         self._kwargs = {'parent_recording': parent_recording.to_dict(), 'channel_ids': channel_ids,
                         'renamed_channel_ids': renamed_channel_ids}
@@ -63,13 +65,13 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
         self._parent_recording_segment = parent_recording_segment
         self._parent_channel_indices = parent_channel_indices
 
-    def get_num_samples(self) -> SampleIndex:
+    def get_num_samples(self) -> int:
         return self._parent_recording_segment.get_num_samples()
 
     def get_traces(self,
-                   start_frame: Union[SampleIndex, None] = None,
-                   end_frame: Union[SampleIndex, None] = None,
-                   channel_indices: Union[List[ChannelIndex], None] = None,
+                   start_frame: Union[int, None] = None,
+                   end_frame: Union[int, None] = None,
+                   channel_indices: Union[List, None] = None,
                    ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
         traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)

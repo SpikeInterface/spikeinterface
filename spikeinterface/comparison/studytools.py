@@ -19,17 +19,16 @@ import os
 
 import pandas as pd
 
-
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict
-from spikeinterface.sorters.launcher import  iter_output_folders, iter_sorting_output
+from spikeinterface.sorters.launcher import iter_output_folders, iter_sorting_output
 
 from .comparisontools import _perf_keys
 from .groundtruthcomparison import compare_sorter_to_ground_truth
 
 
-def setup_comparison_study(study_folder, gt_dict):
+def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
     """
     Based on a dict of (recording, sorting) create the study folder.
 
@@ -52,14 +51,13 @@ def setup_comparison_study(study_folder, gt_dict):
     log_folder.mkdir(parents=True, exist_ok=True)
     tables_folder = study_folder / 'tables'
     tables_folder.mkdir(parents=True, exist_ok=True)
-    
-    
+
     for rec_name, (recording, sorting_gt) in gt_dict.items():
         # write recording using save with binary
         folder = study_folder / 'ground_truth' / rec_name
         sorting_gt.save(folder=folder, format='npz')
         folder = study_folder / 'raw_files' / rec_name
-        recording.save(folder=folder, format='binary')#, n_jobs=-1, total_memory='1G')
+        recording.save(folder=folder, format='binary', **job_kwargs)
 
     # make an index of recording names
     with open(study_folder / 'names.txt', mode='w', encoding='utf8') as f:
@@ -112,7 +110,7 @@ def get_recordings(study_folder):
     rec_names = get_rec_names(study_folder)
     recording_dict = {}
     for rec_name in rec_names:
-        rec = load_extractor(study_folder /  'raw_files' / rec_name)
+        rec = load_extractor(study_folder / 'raw_files' / rec_name)
         recording_dict[rec_name] = rec
 
     return recording_dict
@@ -140,7 +138,7 @@ def get_ground_truths(study_folder):
     rec_names = get_rec_names(study_folder)
     ground_truths = {}
     for rec_name in rec_names:
-        sorting = load_extractor(study_folder /  'ground_truth' / rec_name)
+        sorting = load_extractor(study_folder / 'ground_truth' / rec_name)
         ground_truths[rec_name] = sorting
     return ground_truths
 
@@ -315,4 +313,3 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
     dataframes['perf_by_spiketrain'] = perf_by_spiketrain
 
     return dataframes
-

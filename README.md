@@ -59,9 +59,31 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 ## Documentation
 
-All documentation for SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
+All documentation for spikeinterface work-in-progress can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
 
 Documentation of current API release 0.12.0 is [here](https://spikeinterface.readthedocs.io/en/stable/).
+
+## How to install work-in-progress version
+
+Here a simple recipe to install work-in-progress version (0.90.0.dev0):
+
+```
+git clone https://github.com/NeuralEnsemble/python-neo.git
+cd python-neo
+python setup.py install (or develop)
+cd ..
+
+git clone https://github.com/SpikeInterface/probeinterface.git
+cd probeinterface
+python setup.py install (or develop)
+cd ..
+
+git clone https://github.com/SpikeInterface/spikeinterface.git
+cd spikeinterface
+python setup.py install (or develop)
+cd ..
+```
+
 
 ## Citation
 

@@ -1,7 +1,7 @@
 import copy
 from pathlib import Path
 import sys
-
+import shutil
 
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
@@ -9,8 +9,7 @@ from ..utils import ShellScript
 from probeinterface import write_prb
 
 from spikeinterface.core import BinaryRecordingExtractor
-# TODO
-# from spikeinterface.extractors import KlustaSortingExtractor
+from spikeinterface.extractors import KlustaSortingExtractor
 
 try:
     import klusta
@@ -26,7 +25,7 @@ class KlustaSorter(BaseSorter):
     """
 
     sorter_name = 'klusta'
-    
+
     requires_locations = False
 
     _default_params = {
@@ -66,14 +65,14 @@ class KlustaSorter(BaseSorter):
        >>> pip install click klusta klustakwik2
 
     More information on klusta at:
-      * https://github.com/kwikteam/phy"
+      * https://github.com/kwikteam/phy
       * https://github.com/kwikteam/klusta
     """
 
     @classmethod
     def is_installed(cls):
         return HAVE_KLUSTA
-    
+
     @classmethod
     def get_sorter_version(cls):
         return klusta.__version__
@@ -92,20 +91,24 @@ class KlustaSorter(BaseSorter):
         probegroup = recording.get_probegroup()
         write_prb(prb_file, probegroup, radius=p['adjacency_radius'])
 
-
         # source file
-        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['offset'] ==0:
+        # TODO fix .dat
+        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['file_offset'] == 0:
             # no need to copy
-            raw_filename = str(Path(recording._kwargs['files_path'][0]).resolve())
+            raw_filename = Path(recording._kwargs['file_paths'][0]).resolve()
+            if raw_filename.suffix != ".dat":
+                print("Binary file is not a .dat file. Making a copy!")
+                shutil.copy(raw_filename, output_folder / "recording.dat")
+                raw_filename = output_folder / "recording.dat"
+            raw_filename = str(raw_filename)
             dtype = recording._kwargs['dtype']
         else:
-            # save binary file (chunk by hcunk) into a new file
+            # save binary file (chunk by chunk) into a new file
             raw_filename = output_folder / 'recording.dat'
             dtype = 'int16'
-            BinaryRecordingExtractor.write_recording(recording, files_path=[raw_filename],
-                                                                dtype='int16', total_memory="500M",
-                                                                n_jobs=-1, verbose=False, progress_bar=verbose)
-                                                                
+            BinaryRecordingExtractor.write_recording(recording, file_paths=[raw_filename],
+                                                     dtype='int16', total_memory=p["total_memory"],
+                                                     n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
         if p['detect_sign'] < 0:
             detect_sign = 'negative'
@@ -159,5 +162,5 @@ class KlustaSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
-        sorting = se.KlustaSortingExtractor(file_or_folder_path=Path(output_folder) / 'recording.kwik')
+        sorting = KlustaSortingExtractor(file_or_folder_path=Path(output_folder) / 'recording.kwik')
         return sorting

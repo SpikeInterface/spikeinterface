@@ -36,10 +36,9 @@ class HerdingspikesSortingExtractor(BaseSorting):
         if load_unit_info:
             self.load_unit_info()
 
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'load_unit_info': load_unit_info}
-
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'load_unit_info': load_unit_info}
 
     def load_unit_info(self):
         # TODO
@@ -125,3 +124,11 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
         rf.create_dataset("cluster_id", data=all_labels)
         rf.close()
     """
+
+
+def read_herdingspikes(*args, **kwargs):
+    sorting = HerdingspikesSortingExtractor(*args, **kwargs)
+    return sorting
+
+
+read_herdingspikes.__doc__ = HerdingspikesSortingExtractor.__doc__
