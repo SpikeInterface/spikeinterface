@@ -40,6 +40,7 @@ class RasterWidget(BaseWidget):
             nseg = sorting.get_num_segments()
             if nseg != 1:
                 raise ValueError('You must provide segment_index=...')
+            else:
                 segment_index = 0
         self.segment_index = segment_index
 
@@ -49,7 +50,8 @@ class RasterWidget(BaseWidget):
         self._color = color
         self._max_frame = 0
         for unit_id in self._sorting.get_unit_ids():
-            spike_train = self._sorting.get_unit_spike_train(unit_id)
+            spike_train = self._sorting.get_unit_spike_train(unit_id,
+                                                             segment_index=self.segment_index)
             curr_max_frame = np.max(spike_train)
             if curr_max_frame > self._max_frame:
                 self._max_frame = curr_max_frame
@@ -75,7 +77,8 @@ class RasterWidget(BaseWidget):
             for u_i, unit_id in enumerate(units_ids):
                 spiketrain = self._sorting.get_unit_spike_train(unit_id,
                                                                 start_frame=self._visible_trange[0],
-                                                                end_frame=self._visible_trange[1])
+                                                                end_frame=self._visible_trange[1],
+                                                                segment_index=self.segment_index)
                 spiketimes = spiketrain / float(self._sampling_frequency)
                 self.ax.plot(spiketimes, u_i * np.ones_like(spiketimes),
                              marker='|', mew=1, markersize=3,
