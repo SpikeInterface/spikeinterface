@@ -25,7 +25,7 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
     """
 
     def __init__(self, sorting, unit_ids=None,
-                 window_ms=100.0, bin_ms=1.0, symmetrize=True,
+                 window_ms=100.0, bin_ms=1.0, symmetrize=False,
                  figure=None, ax=None, axes=None):
 
         if unit_ids is not None:
