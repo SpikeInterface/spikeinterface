@@ -30,7 +30,6 @@ w_isi = sw.plot_isi_distribution(sorting, window_ms=150.0, bin_ms=5.0)
 # plot_autocorrelograms()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 
-print(sorting.unit_ids)
 w_ach = sw.plot_autocorrelograms(sorting, window_ms=150.0, bin_ms=5.0, unit_ids=[1, 2, 5], symmetrize=True)
 
 ##############################################################################
