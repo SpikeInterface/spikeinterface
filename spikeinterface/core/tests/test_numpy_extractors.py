@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 
 from spikeinterface.core import NumpyRecording, NumpySorting, NumpyEvent
-from spikeinterface.core.tests.testing_tools import create_sorting_npz
+from spikeinterface.core.testing_tools import create_sorting_npz
 from spikeinterface.core import NpzSortingExtractor
 
 cache_folder = Path('./my_cache_folder')

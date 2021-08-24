@@ -3,7 +3,7 @@ import pytest
 
 import numpy as np
 
-from spikeinterface.core.tests.testing_tools import generate_recording
+from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.toolkit.preprocessing import (
     get_chunk_with_margin)
