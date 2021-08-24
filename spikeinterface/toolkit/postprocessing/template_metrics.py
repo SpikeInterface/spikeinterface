@@ -38,14 +38,14 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     if feature_names is None:
         feature_names = list(_metric_name_to_func.keys())
 
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign,
-                                                          outputs='index')
+    extremum_channels_inds = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign,
+                                                           outputs='index')
 
     template_metrics = pd.DataFrame(index=unit_ids, columns=feature_names)
 
     for unit_id in unit_ids:
         template_all_chans = waveform_extractor.get_template(unit_id)
-        chan_ind = extremum_channels_ids[unit_id]
+        chan_ind = extremum_channels_inds[unit_id]
 
         # take only at extremum
         template = template_all_chans[:, chan_ind]
