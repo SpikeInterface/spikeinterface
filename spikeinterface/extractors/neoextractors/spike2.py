@@ -1,5 +1,3 @@
-import neo
-
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
