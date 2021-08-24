@@ -45,8 +45,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
 
     for unit_id in unit_ids:
         template_all_chans = waveform_extractor.get_template(unit_id)
-        chan_id = extremum_channels_ids[unit_id]
-        chan_ind = waveform_extractor.sorting.id_to_index(chan_id)
+        chan_ind = extremum_channels_ids[unit_id]
 
         # take only at extremum
         template = template_all_chans[:, chan_ind]

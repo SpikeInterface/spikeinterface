@@ -319,7 +319,7 @@ class BaseExtractor:
         prop_folder = folder_metadata / 'properties'
         for prop_file in prop_folder.iterdir():
             if prop_file.suffix == '.npy':
-                values = np.load(prop_file)
+                values = np.load(prop_file, allow_pickle=True)
                 key = prop_file.stem
                 self.set_property(key, values)
     
