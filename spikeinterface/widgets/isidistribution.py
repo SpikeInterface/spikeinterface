@@ -1,9 +1,9 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from .basewidget import BaseMultiWidget
+from .basewidget import BaseWidget
 
 
-class ISIDistributionWidget(BaseMultiWidget):
+class ISIDistributionWidget(BaseWidget):
     """
     Plots spike train ISI distribution.
 
@@ -32,14 +32,23 @@ class ISIDistributionWidget(BaseMultiWidget):
     """
 
     def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0,
-                 figure=None, ax=None, axes=None):
-        BaseMultiWidget.__init__(self, figure, ax, axes)
+                 ncols=5, axes=None):
+        
         self._sorting = sorting
+        if unit_ids is None:
+            unit_ids = sorting.get_unit_ids()
         self._unit_ids = unit_ids
+        
         self._sampling_frequency = sorting.get_sampling_frequency()
         self.window_ms = window_ms
         self.bin_ms = bin_ms
         self.name = 'ISIDistribution'
+        
+        if axes is None:
+            naxes = len(unit_ids)
+        else:
+            naxes = None
+        BaseWidget.__init__(self, None, None, axes, ncols=ncols, naxes=naxes)
 
     def plot(self):
         self._do_plot()
@@ -52,34 +61,28 @@ class ISIDistributionWidget(BaseMultiWidget):
         nrows, ncols = len(unit_ids), num_seg
         num_ax = 0
         for i, unit_id in enumerate(unit_ids):
+            ax = self.axes.flatten()[i]
+            
+            bins = np.arange(0, self.window_ms, self.bin_ms)
+            bin_counts = None
             for segment_index in range(num_seg):
-                ax = self.get_tiled_ax(num_ax, nrows, ncols)
+                #~ ax = self.get_tiled_ax(num_ax, nrows, ncols)
                 times_ms = self._sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index) \
                            / float(self._sampling_frequency) * 1000.
                 #  bin_counts, bin_edges = compute_isi_dist(times, bins=self._bins, maxwindow=self._window)
                 isi = np.diff(times_ms)
-                bins = np.arange(0, self.window_ms, self.bin_ms)
-                bin_counts, bin_edges = np.histogram(isi, bins=bins, density=True)
-
-                ax.bar(x=bin_edges[:-1], height=bin_counts, width=self.bin_ms, color='gray', align='edge')
-
-                # ~ with plt.rc_context({'axes.edgecolor': 'gray'}):
-                # ~ _plot_isi(bin_counts=bin_counts, bin_edges=bin_edges, ax=ax,
-                # ~ xticks=[0, self._window / 2, self._window])
-                # if i == 0:
-                #     ax.set_ylabel(f'segment {segment_index}')
-                # if segment_index == num_seg - 1:
-                #     ax.set_xlabel('Times [s]')
-                # if segment_index == 0:
-                #     ax.set_title(f'{unit_id}')
-                if i == 0:
-                    ax.set_title(f'segment {segment_index}')
-                if i == len(unit_ids) - 1:
-                    ax.set_xlabel('Times [ms]')
+                
+                bin_counts_, bin_edges = np.histogram(isi, bins=bins, density=True)
                 if segment_index == 0:
-                    ax.set_ylabel(f'{unit_id}')
-                # ax.set_title(f"AXES {num_ax}")
-                num_ax += 1
+                    bin_counts = bin_counts_
+                else:
+                    bin_counts += bin_counts_
+                    # TODO handle sensity when several semgent
+
+            ax.bar(x=bin_edges[:-1], height=bin_counts, width=self.bin_ms, color='gray', align='edge')
+
+            if segment_index == 0:
+                ax.set_ylabel(f'{unit_id}')
 
 
 def plot_isi_distribution(*args, **kwargs):

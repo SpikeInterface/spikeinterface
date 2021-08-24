@@ -1,11 +1,11 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from .basewidget import BaseMultiWidget
+from .basewidget import BaseWidget
 
 from spikeinterface.toolkit import compute_correlograms
 
 
-class CrossCorrelogramsWidget(BaseMultiWidget):
+class CrossCorrelogramsWidget(BaseWidget):
     """
     Plots spike train cross-correlograms.
     The diagonal is auto-correlogram.
@@ -26,7 +26,7 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
 
     def __init__(self, sorting, unit_ids=None,
                  window_ms=100.0, bin_ms=1.0, symmetrize=False,
-                 figure=None, ax=None, axes=None):
+                axes=None):
 
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
@@ -35,8 +35,8 @@ class CrossCorrelogramsWidget(BaseMultiWidget):
 
         if axes is None:
             n = len(sorting.unit_ids)
-            figure, axes = plt.subplots(nrows=n, ncols=n, sharex=True, sharey=True)
-        BaseMultiWidget.__init__(self, figure, None, axes)
+            fig, axes = plt.subplots(nrows=n, ncols=n, sharex=True, sharey=True)
+        BaseWidget.__init__(self, None, None, axes)
 
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)
@@ -66,7 +66,7 @@ def plot_crosscorrelograms(*args, **kwargs):
 plot_crosscorrelograms.__doc__ = CrossCorrelogramsWidget.__doc__
 
 
-class AutoCorrelogramsWidget(BaseMultiWidget):
+class AutoCorrelogramsWidget(BaseWidget):
     """
     Plots spike train auto-correlograms.
 
@@ -86,22 +86,16 @@ class AutoCorrelogramsWidget(BaseMultiWidget):
 
     def __init__(self, sorting, unit_ids=None,
                  window_ms=100.0, bin_ms=1.0, symmetrize=False,
-                 ncols=5,
-                 figure=None, ax=None, axes=None):
+                 ncols=5, axes=None):
 
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=symmetrize)
 
-        n = len(sorting.unit_ids)
-        if n < ncols:
-            ncols = n
-        nrows = int(np.ceil(n / ncols))
-
         if axes is None:
-            figure, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True, sharey=True)
-        BaseMultiWidget.__init__(self, figure, None, axes)
+            naxes = len(sorting.unit_ids)
+        BaseWidget.__init__(self, None, None, axes, ncols=ncols, naxes=naxes)
 
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)
