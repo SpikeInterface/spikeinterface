@@ -4,7 +4,7 @@ import pytest
 
 import numpy as np
 
-from spikeinterface.core.tests.testing_tools import generate_recording
+from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.toolkit.utils import (get_random_data_chunks,
                                           get_closest_channels, get_noise_levels)
