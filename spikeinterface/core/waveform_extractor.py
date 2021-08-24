@@ -143,8 +143,7 @@ class WaveformExtractor:
 
         if return_scaled:
             # check if has scaled values:
-            if "gain_to_uV" not in self.recording.get_property_keys() \
-                    and "offset_to_uV" not in self.recording.get_property_keys():
+            if not self.recording.has_scaled_traces():
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 
