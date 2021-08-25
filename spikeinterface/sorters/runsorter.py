@@ -201,24 +201,21 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
 
     if need_si_install:
         if 'dev' in si_version:
+            if verbose:
+                print(f"Installing spikeinterface from sources in {docker_image}")
             # install from github source several stuff
             cmd = 'pip install --upgrade --force MEArec'
             commands.append(cmd)
 
-            cmd = 'git clone https://github.com/SpikeInterface/spikeinterface.git'
-            commands.append(cmd)
-            cmd = 'cd spikeinterface'
-            commands.append(cmd)
-
-            cmd = 'pip install .[full]'
-            commands.append(cmd)
-            cmd = 'cd ..'
+            cmd = 'pip install -e git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
             commands.append(cmd)
 
             cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
             commands.append(cmd)
         else:
             # install from pypi with same version as host
+            if verbose:
+                print(f"Installing spikeinterface=={si_version} in {docker_image}")
             cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
             commands.append(cmd)
 
