@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from .basewidget import BaseWidget, BaseMultiWidget
+from .basewidget import BaseWidget
 from spikeinterface.comparison.collisioncomparison import CollisionGTComparison
 
 class ComparisonCollisionPairByPairWidget(BaseWidget):
@@ -39,41 +39,6 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
         self.unit_ids = unit_ids
         self.nbins = nbins
 
-        fs = self.comp.sorting1.get_sampling_frequency()
-        self.width = (2*comp.collision_lag) / fs * 1000.
-
-        self._compute()
-
-    def _compute(self):
-        
-        fs = self.comp.sorting1.get_sampling_frequency()
-        all_tp_count1 = []
-        all_fn_count1 = []
-        all_tp_count2 = []
-        all_fn_count2 = []
-
-        n = len(self.unit_ids)
-
-        for r in range(n):
-            for c in range(r+1, n):
-                
-                u1 = self.unit_ids[r]
-                u2 = self.unit_ids[c]
-                
-                bins, tp_count1, fn_count1, tp_count2, fn_count2 = self.comp.get_label_count_per_collision_bins(u1, u2, nbins=self.nbins)
-                self.lags = bins[:-1] / fs * 1000
-                all_tp_count1 += [tp_count1]
-                all_tp_count2 += [tp_count2]
-                all_fn_count1 += [fn_count1]
-                all_fn_count2 += [fn_count2]
-
-
-        self.all_fn_count1 = np.array(all_fn_count1)
-        self.all_fn_count2 = np.array(all_fn_count2)
-        self.all_tp_count1 = np.array(all_tp_count1)
-        self.all_tp_count2 = np.array(all_tp_count2)
-
-
     def plot(self):
         self._do_plot()
 
@@ -99,20 +64,31 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
 
         fs = self.comp.sorting1.get_sampling_frequency()
 
-        count = 0
-
+        #~ count = 0
+        
+        lags = self.comp.bins[:-1] / fs * 1000
+        width = lags[1] -lags[0]
+        
         for r in range(n):
             for c in range(r+1, n):
                                 
                 ax = axs[r, c]
-                ax.bar(self.lags, self.all_tp_count1[count], width=self.width,  color='g')
-                ax.bar(self.lags, self.all_fn_count1[count], width=self.width, bottom=self.all_tp_count1[count], color='r')
+                
+                u1 = self.unit_ids[r]
+                u2 = self.unit_ids[c]
+                ind1 = self.comp.sorting1.id_to_index(u1)
+                ind2 = self.comp.sorting1.id_to_index(u2)
+                
+                tp = self.comp.all_tp[ind1, ind2, :]
+                fn = self.comp.all_fn[ind1, ind2, :]
+                ax.bar(lags, tp, width=width,  color='g')
+                ax.bar(lags, fn, width=width, bottom=tp, color='r')
                 
                 ax = axs[c, r]
-                ax.bar(self.lags, self.all_tp_count2[count], width=self.width,  color='g')
-                ax.bar(self.lags, self.all_fn_count2[count], width=self.width, bottom=self.all_tp_count2[count], color='r')
-                count =+ 1
-        
+                tp = self.comp.all_tp[ind2, ind1, :]
+                fn = self.comp.all_fn[ind2, ind1, :]
+                ax.bar(lags, tp, width=width,  color='g')
+                ax.bar(lags, fn, width=width, bottom=tp, color='r')
 
         for r in range(n):
             ax = axs[r, 0]
@@ -273,7 +249,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
 
-class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
+class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', collision_lag=2, exhaustive_gt=False, nbins=10, figure=None, ax=None, axes=None):
@@ -284,7 +260,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
         if axes is None and ax is None:
             figure, axes = plt.subplots(nrows=self._nrows, ncols=self._ncols, sharex=True, sharey=True)
         
-        BaseMultiWidget.__init__(self, figure, ax, axes)
+        BaseWidget.__init__(self, figure, ax)
 
         self.study = study
         self.collision_lag = collision_lag

@@ -17,21 +17,18 @@ class UnitSummaryWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting: SortingExtractor
-        The sorting extractor object
-    unit_ids: list
-        List of unit ids
-    bins: int
-        Number of bins
-    window: float
-        Window size in s
+    waveform_extractor: WaveformExtractor
+        The waveform extractor object
+    unit_id: into or str
+        The unit id to plot the summary of
+    amplitudes: dict or None
+        Amplitudes 'by_unit' as returned by the st.postprocessing.get_spike_amplitudes(..., output="by_unit") function
+    unit_colors: list or None
+        Optional matplotlib color for the unit
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
-    axes: list of matplotlib axes
-        The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
-        and figure parameters are ignored
 
     Returns
     -------
@@ -39,7 +36,7 @@ class UnitSummaryWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, waveform_extractor, unit_id, amplitudes,
+    def __init__(self, waveform_extractor, unit_id, amplitudes=None,
                  unit_colors=None, figure=None, ax=None):
 
         assert ax is None
@@ -67,7 +64,12 @@ class UnitSummaryWidget(BaseWidget):
         fig = self.figure
         self.ax.remove()
 
-        gs = fig.add_gridspec(3, 6)
+        if self.amplitudes is None:
+            nrows = 2
+        else:
+            nrows = 3
+
+        gs = fig.add_gridspec(nrows, 6)
 
         ax = fig.add_subplot(gs[:, 0])
         plot_unit_probe_map(we, unit_ids=[self.unit_id], axes=[ax], colorbar=False)
@@ -83,9 +85,10 @@ class UnitSummaryWidget(BaseWidget):
         plot_isi_distribution(we.sorting, unit_ids=[self.unit_id], axes=[ax])
         ax.set_title('')
 
-        ax = fig.add_subplot(gs[-1, 1:])
-        plot_amplitudes_timeseries(we, amplitudes=self.amplitudes, unit_ids=[self.unit_id], ax=ax,
-                                   unit_colors=self.unit_colors)
+        if self.amplitudes is not None:
+            ax = fig.add_subplot(gs[-1, 1:])
+            plot_amplitudes_timeseries(we, amplitudes=self.amplitudes, unit_ids=[self.unit_id], ax=ax,
+                                       unit_colors=self.unit_colors)
         ax.set_title('')
 
         fig.suptitle(f'Unit ID: {self.unit_id}')

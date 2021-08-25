@@ -15,7 +15,7 @@ class CollisionGTComparison(GroundTruthComparison):
     
     """
 
-    def __init__(self, gt_sorting, tested_sorting, collision_lag=2.0, **kwargs):
+    def __init__(self, gt_sorting, tested_sorting, collision_lag=2.0, nbins=11, **kwargs):
 
         # Force compute labels
         kwargs['compute_labels'] = True
@@ -23,7 +23,10 @@ class CollisionGTComparison(GroundTruthComparison):
         GroundTruthComparison.__init__(self, gt_sorting, tested_sorting, **kwargs)
 
         self.collision_lag = collision_lag
+        self.nbins = nbins
+        
         self.detect_gt_collision()
+        self.compute_all_pair_collision_bins()
 
     def detect_gt_collision(self):
         delta = int(self.collision_lag / 1000 * self.sampling_frequency)
@@ -52,10 +55,7 @@ class CollisionGTComparison(GroundTruthComparison):
 
         return score_label1, score_label2, delta
 
-    def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, nbins=11):
-        d = int(self.collision_lag / 1000 * self.sampling_frequency)
-
-        bins = np.arange(-d, d, d/nbins)
+    def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, bins):
         
         score_label1, score_label2, delta = self.get_label_for_collision(gt_unit_id1, gt_unit_id2)
         
@@ -78,4 +78,34 @@ class CollisionGTComparison(GroundTruthComparison):
         tp_count2 = tp_count2[::-1]
         fn_count2 = fn_count2[::-1]
 
-        return bins, tp_count1, fn_count1, tp_count2, fn_count2
+        return tp_count1, fn_count1, tp_count2, fn_count2
+
+    def compute_all_pair_collision_bins(self):
+
+        d = int(self.collision_lag / 1000 * self.sampling_frequency)
+        bins = np.linspace(-d, d, self.nbins)
+        self.bins = bins
+        
+        unit_ids = self.sorting1.unit_ids
+        n = len(unit_ids)
+
+        all_tp_count1 = []
+        all_fn_count1 = []
+        all_tp_count2 = []
+        all_fn_count2 = []
+        
+        self.all_tp = np.zeros((n, n, self.nbins - 1), dtype='int64')
+        self.all_fn = np.zeros((n, n, self.nbins - 1), dtype='int64')
+
+        for i in range(n):
+            for j in range(i+1, n):
+                u1 = unit_ids[i]
+                u2 = unit_ids[j]
+                
+                tp_count1, fn_count1, tp_count2, fn_count2 = self.get_label_count_per_collision_bins(u1, u2, bins)
+                
+                self.all_tp[i, j, :] = tp_count1
+                self.all_tp[j, i, :] = tp_count2
+                self.all_fn[i, j, :] = fn_count1
+                self.all_fn[j, i, :] = fn_count2
+

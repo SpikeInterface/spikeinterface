@@ -8,3 +8,4 @@ from .groundtruthcomparison import compare_sorter_to_ground_truth, GroundTruthCo
 from .multisortingcomparison import compare_multiple_sorters, MultiSortingComparison
 from .collisioncomparison import CollisionGTComparison
 from .groundtruthstudy import GroundTruthStudy
+from .collisionstudy import CollisionGtStudy

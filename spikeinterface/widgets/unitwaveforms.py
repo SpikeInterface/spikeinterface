@@ -1,12 +1,12 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .basewidget import BaseWidget, BaseMultiWidget
+from .basewidget import BaseWidget
 from .utils import get_unit_colors
 from ..toolkit import get_template_channel_sparsity
 
 
-class UnitWaveformsWidget(BaseMultiWidget):
+class UnitWaveformsWidget(BaseWidget):
     """
     Plots unit waveforms.
 
@@ -40,9 +40,6 @@ class UnitWaveformsWidget(BaseMultiWidget):
         If None, then the get_unit_colors() is internally used.
     show_all_channels: bool
         Show the whole probe if True, or only selected channels if False
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
         The axis to be used. If not given an axis is created
     axes: list of matplotlib axes
         The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
@@ -52,17 +49,14 @@ class UnitWaveformsWidget(BaseMultiWidget):
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, max_channels=None, radius_um=None,
-
-                 ncols=5,
-                 figure=None, ax=None, axes=None, lw=2, axis_equal=False,
+                 ncols=5, axes=None, lw=2, axis_equal=False,
                  set_title=True
                  ):
-
-        BaseMultiWidget.__init__(self, figure, ax, axes)
 
         self.waveform_extractor = waveform_extractor
         self._recording = waveform_extractor.recording
         self._sorting = waveform_extractor.sorting
+        sorting = waveform_extractor.sorting
 
         if unit_ids is None:
             unit_ids = self._sorting.get_unit_ids()
@@ -94,6 +88,14 @@ class UnitWaveformsWidget(BaseMultiWidget):
 
         self._set_title = set_title
 
+        if axes is None:
+            num_axes = len(unit_ids)
+        else:
+            num_axes = None
+        BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
+
+
+
     def plot(self):
         self._do_plot()
 
@@ -120,8 +122,8 @@ class UnitWaveformsWidget(BaseMultiWidget):
             channel_inds = {unit_id: slice(None) for unit_id in unit_ids}
 
         for i, unit_id in enumerate(unit_ids):
-
-            ax = self.get_tiled_ax(i, nrows, ncols)
+            
+            ax = self.axes.flatten()[i]
             color = self.unit_colors[unit_id]
 
             chan_inds = channel_inds[unit_id]

@@ -1,14 +1,14 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .basewidget import BaseMultiWidget, BaseWidget
+from .basewidget import BaseWidget
 from spikeinterface.toolkit import compute_correlograms
 from spikeinterface.comparison.collisioncomparison import GroundTruthComparison
 
 
 
 
-class ConnectivityComparisonWidget(BaseMultiWidget):
+class ConnectivityComparisonWidget(BaseWidget):
     """
     Plots difference between real CC matrix, and reconstructed one
 
@@ -31,7 +31,7 @@ class ConnectivityComparisonWidget(BaseMultiWidget):
         The output widget
     """
     def __init__(self, gt_comparison, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, templates=None, metric='cosine_similarity', figure=None, ax=None):
-        BaseMultiWidget.__init__(self, figure, ax)
+        BaseWidget.__init__(self, figure, ax)
         self._gtcomp = gt_comparison
         self._window_ms = window_ms
         self._bin_ms = bin_ms

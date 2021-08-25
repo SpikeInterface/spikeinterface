@@ -1,12 +1,12 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .basewidget import BaseMultiWidget
+from .basewidget import BaseWidget
 from spikeinterface.toolkit import compute_correlograms
 
 
 
-class StudyComparisonStatisticsWidget(BaseMultiWidget):
+class StudyComparisonStatisticsWidget(BaseWidget):
     """
     Plots difference between real CC matrix, and reconstructed one
 
@@ -40,7 +40,7 @@ class StudyComparisonStatisticsWidget(BaseMultiWidget):
         if axes is None and ax is None:
             figure, axes = plt.subplots(nrows=self._nrows, ncols=self._ncols)
         
-        BaseMultiWidget.__init__(self, figure, ax, axes)
+        BaseWidget.__init__(self, figure, ax, axes)
         self._study = study
         self.sorter_names = self._study.sorter_names
         self.rec_names = study.rec_names
