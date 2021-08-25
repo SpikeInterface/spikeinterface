@@ -45,10 +45,10 @@ class ISIDistributionWidget(BaseWidget):
         self.name = 'ISIDistribution'
         
         if axes is None:
-            naxes = len(unit_ids)
+            num_axes = len(unit_ids)
         else:
-            naxes = None
-        BaseWidget.__init__(self, None, None, axes, ncols=ncols, naxes=naxes)
+            num_axes = None
+        BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
 
     def plot(self):
         self._do_plot()
