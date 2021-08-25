@@ -110,7 +110,8 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
 
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
     unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign)
-    noise_levels = get_noise_levels(recording, **kwargs)
+    return_scaled = waveform_extractor.return_scaled
+    noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **kwargs)
 
     # make a dict to acces by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
