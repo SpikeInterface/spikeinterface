@@ -94,8 +94,8 @@ class AutoCorrelogramsWidget(BaseWidget):
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=symmetrize)
 
         if axes is None:
-            naxes = len(sorting.unit_ids)
-        BaseWidget.__init__(self, None, None, axes, ncols=ncols, naxes=naxes)
+            num_axes = len(sorting.unit_ids)
+        BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
 
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)

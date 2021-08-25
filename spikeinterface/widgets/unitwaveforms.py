@@ -89,10 +89,10 @@ class UnitWaveformsWidget(BaseWidget):
         self._set_title = set_title
 
         if axes is None:
-            naxes = len(unit_ids)
+            num_axes = len(unit_ids)
         else:
-            naxes = None
-        BaseWidget.__init__(self, None, None, axes, ncols=ncols, naxes=naxes)
+            num_axes = None
+        BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
 
 
 

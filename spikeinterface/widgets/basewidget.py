@@ -5,7 +5,7 @@ import numpy as np
 
 # This class replace the old BaseWidget and BaseMultiWidget
 class BaseWidget:
-    def __init__(self, figure=None, ax=None, axes=None, ncols=None, naxes=None):
+    def __init__(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
         """
         figure/ax/axes : only one of then can be not None
         """
@@ -23,28 +23,28 @@ class BaseWidget:
             figure = axes.flatten()[0].get_figure()
         else:
             # one fig with one ax
-            if naxes is None:
+            if num_axes is None:
                 figure, ax = plt.subplots()
                 axes = np.array([[ax]])
             else:
-                if naxes == 0:
+                if num_axes == 0:
                     # one figure without plots (diffred subplot creation with 
                     self.figure = plt.figure()
                     ax = None
                     axes = None
-                elif naxes == 1:
+                elif num_axes == 1:
                     ax = self.figure.add_subplot(111)
                     axes = np.array([[ax]])
                 else:
                     assert ncols is not None
-                    if naxes < ncols:
-                        ncols = naxes
-                    nrows = int(np.ceil(naxes / ncols))
+                    if num_axes < ncols:
+                        ncols = num_axes
+                    nrows = int(np.ceil(num_axes / ncols))
                     figure, axes = plt.subplots(nrows=nrows, ncols=ncols, )
                     ax = None
                     # remove extra axes
-                    if ncols * nrows > naxes:
-                        for extra_ax in axes.flatten()[naxes:]:
+                    if ncols * nrows > num_axes:
+                        for extra_ax in axes.flatten()[num_axes:]:
                             extra_ax.remove()
                 
         
