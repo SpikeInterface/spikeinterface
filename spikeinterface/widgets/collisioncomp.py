@@ -299,6 +299,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
             
             gt_sorting = self.study.get_ground_truth(rec_name)
             templates = self.study.get_templates(rec_name)
+            snrs = self.study.get_units_snr(rec_name)
 
             for sort_name in self.study.sorter_names:        
                 if sort_name not in self.all_results:
@@ -313,21 +314,30 @@ class StudyComparisonCollisionBySimilarityWidget(BaseMultiWidget):
 
                 similarities, data, pair_names = widget.get_good_only()
 
+                snr = []
+                for p in pair_names:
+                    x, y = p.split(' ')
+                    snr += [(snrs[x] + snrs[y])/2]
+
+                snr = np.array(snr)                    
+
                 if 'similarity' in self.all_results[sort_name]:
                     self.all_results[sort_name]['similarity'] = np.concatenate((self.all_results[sort_name]['similarity'], similarities))
                     self.all_results[sort_name]['data'] = np.vstack((self.all_results[sort_name]['data'], data))
                     self.all_results[sort_name]['pair'] = np.concatenate((self.all_results[sort_name]['pair'], pair_names))
+                    self.all_results[sort_name]['snr'] = np.concatenate((self.all_results[sort_name]['snr'], snr))
                 else:   
                     self.all_results[sort_name]['similarity'] = similarities
                     self.all_results[sort_name]['data'] = data
                     self.all_results[sort_name]['pair'] = pair_names
+                    self.all_results[sort_name]['snr'] = snr
             
         for sort_name in self.study.sorter_names:
             idx = np.argsort(self.all_results[sort_name]['similarity'])
             self.all_results[sort_name]['similarity'] = self.all_results[sort_name]['similarity'][idx]
             self.all_results[sort_name]['data'] = self.all_results[sort_name]['data'][idx]
             self.all_results[sort_name]['pair'] = self.all_results[sort_name]['pair'][idx]
-            
+            self.all_results[sort_name]['snr'] = self.all_results[sort_name]['snr'][idx]
 
     def plot(self, cc_similarity=np.arange(0, 1, 0.1), show_legend=False, ylim=(0.5, 1)):
 
