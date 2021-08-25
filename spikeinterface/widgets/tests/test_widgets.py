@@ -16,9 +16,9 @@ import spikeinterface.toolkit as st
 
 class TestWidgets(unittest.TestCase):
     def setUp(self):
-        # ~ self._rec, self._sorting = se.toy_example(num_channels=10, duration=10, num_segments=1)
-        # ~ self._rec = self._rec.save()
-        # ~ self._sorting = self._sorting.save()
+        #~ self._rec, self._sorting = se.toy_example(num_channels=10, duration=10, num_segments=1)
+        #~ self._rec = self._rec.save()
+        #~ self._sorting = self._sorting.save()
         local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
         self._rec = se.MEArecRecordingExtractor(local_path)
 
@@ -55,9 +55,10 @@ class TestWidgets(unittest.TestCase):
     # sw.plot_spectrogram(self._rec, channel=0)
 
     def test_unitwaveforms(self):
-        sw.plot_unit_waveforms(self._we)
-        sw.plot_unit_waveforms(self._we, max_channels=5)
-        sw.plot_unit_waveforms(self._we, radius_um=60)
+        w = sw.plot_unit_waveforms(self._we)
+        unit_ids = self._sorting.unit_ids[:6]
+        sw.plot_unit_waveforms(self._we, max_channels=5, unit_ids=unit_ids)
+        sw.plot_unit_waveforms(self._we, radius_um=60, unit_ids=unit_ids)
 
     def test_plot_unit_waveform_density_map(self):
         unit_ids = self._sorting.unit_ids[:3]
@@ -147,31 +148,31 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
 
-    # ~ mytest.test_timeseries()
-    # ~ mytest.test_rasters()
-    # ~ mytest.test_plot_probe_map()
-    # ~ mytest.test_unitwaveforms()
-    # ~ mytest.test_plot_unit_waveform_density_map()
+    #~ mytest.test_timeseries()
+    #~ mytest.test_rasters()
+    #~ mytest.test_plot_probe_map()
+    #~ mytest.test_unitwaveforms()
+    #~ mytest.test_plot_unit_waveform_density_map()
     # mytest.test_unittemplates()
-    # ~ mytest.test_plot_unit_probe_map()
+    #~ mytest.test_plot_unit_probe_map()
     #  mytest.test_plot_units_depth_vs_amplitude()
-    # ~ mytest.test_amplitudes_timeseries()
-    # ~ mytest.test_amplitudes_distribution()
-    # ~ mytest.test_principal_component()
-    # ~ mytest.test_plot_unit_localization()
+    #~ mytest.test_amplitudes_timeseries()
+    #~ mytest.test_amplitudes_distribution()
+    #~ mytest.test_principal_component()
+    #~ mytest.test_plot_unit_localization()
 
-    #  mytest.test_autocorrelograms()
-    mytest.test_crosscorrelogram()
-    #  mytest.test_isi_distribution()
+    #~ mytest.test_autocorrelograms()
+    #~ mytest.test_crosscorrelogram()
+    #~ mytest.test_isi_distribution()
 
     #  mytest.test_plot_drift_over_time()
     #  mytest.test_plot_peak_activity_map()
 
     # mytest.test_confusion()
     # mytest.test_agreement()
-    # ~ mytest.test_multicomp_graph()
+    #~ mytest.test_multicomp_graph()
     #  mytest.test_sorting_performance()
 
-    # ~ mytest.test_plot_unit_summary()
+    mytest.test_plot_unit_summary()
 
     plt.show()
