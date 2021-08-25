@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 def export_report(waveform_extractor, output_folder, remove_if_exists=False, format="png",
-                                       metrics=None, amplitudes=None, **job_wargs):
+                  metrics=None, amplitudes=None, **job_wargs):
     """
     Exports a SI spike sorting report. The report includes summary figures of the spike sorting output
     (e.g. amplitude distributions, unit localization and depth VS amplitude) as well as unit-specific reports,
