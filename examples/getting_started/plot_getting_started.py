@@ -1,6 +1,6 @@
 """
-Getting started with SpikeInterface
-===================================
+Getting started tutorial
+========================
 
 In this introductory example, you will see how to use the :code:`spikeinterface` to perform a full electrophysiology analysis.
 We will first create some simulated data, and we will then perform some pre-processing, run a couple of spike sorting
@@ -26,7 +26,7 @@ import spikeinterface
 # - :code:`comparison` : comparison of spike sorting output
 # - :code:`widgets` : visualization
 
-import spikeinterface as si # import core only
+import spikeinterface as si  # import core only
 import spikeinterface.extractors as se
 import spikeinterface.toolkit as st
 import spikeinterface.sorters as ss
@@ -35,13 +35,12 @@ import spikeinterface.widgets as sw
 
 ##############################################################################
 #  We can also import all submodules at once with this
-#  this internally import core+extractors+toolkit+sorters+comparison+widgets+exporters
+#   this internally import core+extractors+toolkit+sorters+comparison+widgets+exporters
 #
 # This is usefull for notbooks but this is a more heavy import because internally many more dependency
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
 
 import spikeinterface.full as si
-
 
 ##############################################################################
 # First, let's download a simulated dataset from the
@@ -54,7 +53,6 @@ local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 recording, sorting_true = se.read_mearec(local_path)
 print(recording)
 print(sorting_true)
-
 
 ##############################################################################
 # :code:`recording` is a :code:`RecordingExtractor` object, which extracts information about channel ids, channel locations
@@ -88,15 +86,14 @@ num_seg = recording.get_num_segments()
 unit_ids = sorting_true.get_unit_ids()
 spike_train = sorting_true.get_unit_spike_train(unit_id=unit_ids[0])
 
-
 print('Number of segments:', num_seg)
 print('Unit ids:', unit_ids)
 print('Spike train of first unit:', spike_train)
 
 ##################################################################
-# :code:`spikeinterface` internally uses the :code:`probeinterface`
+#  :code:`spikeinterface` internally uses the :code:`probeinterface`
 # to handle Probe and ProbeGroup.
-# So any probe in the probeinterface collections can be download
+#  So any probe in the probeinterface collections can be download
 # and set to a Recording object.
 # In this case, the MEArec dataset already handles a Probe and we don't need to set it.
 
@@ -104,8 +101,8 @@ probe = recording.get_probe()
 print(probe)
 
 from probeinterface.plotting import plot_probe
-plot_probe(probe)
 
+plot_probe(probe)
 
 ##############################################################################
 # Using the :code:`toolkit`, you can perform preprocessing on the recordings.
@@ -124,7 +121,6 @@ print(recording_cmr)
 # this computes and saves the recording after applying the preprocessing chain
 recording_preprocessed = recording_cmr.save(format='binary')
 print(recording_preprocessed)
-
 
 ##############################################################################
 # Now you are ready to spike sort using the :code:`sorters` module!
@@ -171,9 +167,6 @@ sorting_TDC = ss.run_tridesclous(recording=recording_preprocessed)
 print('Units found by herdingspikes:', sorting_HS.get_unit_ids())
 print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 
-
-
-
 ##############################################################################
 # :code:`spikeinterface` provides a efficient way to extractor waveform snippets from paired recording/sorting objects.
 # The :code:`WaveformExtractor` class samples some spikes (:code:`max_spikes_per_unit=500`) for each cluster and stores
@@ -202,8 +195,8 @@ print(template.shape)
 
 from spikeinterface.exporters import export_to_phy
 
-export_to_phy(recording_preprocessed, sorting_TDC, './phy_folder_for_TDC', we_TDC,
-    compute_pc_features=False, compute_amplitudes=True)
+export_to_phy(we_TDC, './phy_folder_for_TDC',
+              compute_pc_features=False, compute_amplitudes=True)
 
 ##############################################################################
 # Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
@@ -222,7 +215,6 @@ print(snrs)
 isi_violations_rate, isi_violations_count = st.compute_isi_violations(we_TDC, isi_threshold_ms=1.5)
 print(isi_violations_rate)
 print(isi_violations_count)
-
 
 ##############################################################################
 # All theses quality mertics can be computed in one shot and returned as
@@ -264,7 +256,6 @@ comp_gt_TDC.get_performance()
 w_conf = sw.plot_confusion_matrix(comp_gt_TDC)
 w_agr = sw.plot_agreement_matrix(comp_gt_TDC)
 
-
 ##############################################################################
 # When comparing two sorters (2), we can see the matching of units between sorters.
 # Units which are not matched has -1 as unit id:
@@ -275,7 +266,6 @@ comp_TDC_HS.hungarian_match_12
 # or the reverse:
 
 comp_TDC_HS.hungarian_match_21
-
 
 ##############################################################################
 # When comparing multiple sorters (3), you can extract a :code:`SortingExtractor` object with units in agreement

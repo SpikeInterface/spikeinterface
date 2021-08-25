@@ -10,7 +10,8 @@ https://github.com/kwikteam/phy-doc/blob/master/docs/kwik-model.md
 
 import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting,
-                                 BaseRecordingSegment, BaseSortingSegment)
+                                 BaseRecordingSegment, BaseSortingSegment,
+                                 read_python)
 
 import numpy as np
 from pathlib import Path
@@ -137,7 +138,9 @@ class KlustSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_klusta(*args, **kargs):
-    sorting = KlustaSortingExtractor(*args, **kargs)
+def read_klusta(*args, **kwargs):
+    sorting = KlustaSortingExtractor(*args, **kwargs)
     return sorting
+
+
 read_klusta.__doc__ = KlustaSortingExtractor.__doc__

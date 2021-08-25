@@ -18,6 +18,7 @@ class YassSorter(BaseSorter):
 
     sorter_name = 'yass'
     requires_locations = False
+    docker_requires_gpu = True
 
     # #################################################
 
@@ -131,7 +132,7 @@ class YassSorter(BaseSorter):
             import yass
             HAVE_YASS = True
         except ImportError:
-            HAVE_YASS = False        
+            HAVE_YASS = False
         return HAVE_YASS
 
     @classmethod
@@ -149,17 +150,17 @@ class YassSorter(BaseSorter):
         config_default_location = os.path.join(source_dir, 'config_default.yaml')
 
         with open(config_default_location) as file:
-            yass_params = yaml.load(file, Loader=yaml.FullLoader)        
+            yass_params = yaml.load(file, Loader=yaml.FullLoader)
 
-        # update root folder
+            # update root folder
         yass_params['data']['root_folder'] = str(output_folder.absolute())
 
-        # geometry
+        #  geometry
         probe_file_txt = os.path.join(output_folder, 'geom.txt')
         geom_txt = recording.get_channel_locations()
         np.savetxt(probe_file_txt, geom_txt)
-        
-        #  params
+
+        #   params
         yass_params['recordings']['sampling_rate'] = recording.get_sampling_frequency()
         yass_params['recordings']['n_channels'] = recording.get_num_channels()
 
@@ -167,12 +168,9 @@ class YassSorter(BaseSorter):
         input_file_path = os.path.join(output_folder, 'data.bin')
         dtype = 'int16'  # HARD CODE THIS FOR YASS
         input_file_path = output_folder / 'data.bin'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
                                                  dtype=dtype, verbose=False,
                                                  total_memory=p["total_memory"], n_jobs=p["n_jobs_bin"])
- 
-        
-
 
         retrain = False
         if params['neural_nets_path'] is None:
@@ -181,7 +179,6 @@ class YassSorter(BaseSorter):
 
         # MERGE yass_params with self.params that could be changed by the user
         merge_params = merge_params_dict(yass_params, params)
-
 
         # to yaml
         fname_config = output_folder / 'config.yaml'
@@ -194,16 +191,16 @@ class YassSorter(BaseSorter):
         if retrain:
             # retrain NNs
             YassSorter.train(recording, output_folder, verbose)
-            
+
             # update NN folder location
-            neural_nets_path = output_folder / 'tmp' / 'nn_train' 
+            neural_nets_path = output_folder / 'tmp' / 'nn_train'
         else:
-            #  load previous NNs
+            #   load previous NNs
             if verbose:
                 print("USING PREVIOUSLY TRAINED NNs FROM THIS LOCATION: ", params['neural_nets_path'])
             # use previuosly trained NN folder location
             neural_nets_path = Path(params['neural_nets_path'])
-        
+
         merge_params['neuralnetwork']['denoise']['filename'] = str(neural_nets_path.absolute() / 'denoise.pt')
         merge_params['neuralnetwork']['detect']['filename'] = str(neural_nets_path.absolute() / 'detect.pt')
 
@@ -225,9 +222,9 @@ class YassSorter(BaseSorter):
                         yass sort {config_file}'''
 
         shell_script = ShellScript(shell_cmd,
-                                   # script_path=os.path.join(output_folder, self.sorter_name),
+                                   #  script_path=os.path.join(output_folder, self.sorter_name),
                                    script_path=output_folder / 'run_yass',
-                                   log_path= output_folder / (cls.sorter_name + '.log'),
+                                   log_path=output_folder / (cls.sorter_name + '.log'),
                                    verbose=verbose)
         shell_script.start()
 
@@ -241,9 +238,10 @@ class YassSorter(BaseSorter):
     @classmethod
     def train(cls, recording, output_folder, verbose):
         ''' Train NNs on yass prior to running yass sort'''
-        
+
         if verbose:
-            print("TRAINING YASS (Note: using default spike width, neighbour chan radius; to change, see parameter files)")
+            print(
+                "TRAINING YASS (Note: using default spike width, neighbour chan radius; to change, see parameter files)")
             print("To use previously-trained NNs, change the NNs prior to running: ")
             print("            ss.set_NNs('path_to_NNs') (or set params['neural_nets_path'] = path_toNNs)")
             print("prior to running ss.run_sorter()")
@@ -257,8 +255,9 @@ class YassSorter(BaseSorter):
                         yass train {config_file}'''
 
         shell_script = ShellScript(shell_cmd,
-                                   script_path=output_folder / 'run_yass_train', #os.path.join(output_folder, cls.sorter_name),
-                                   log_path= output_folder / (cls.sorter_name + '_train.log'),
+                                   script_path=output_folder / 'run_yass_train',
+                                   # os.path.join(output_folder, cls.sorter_name),
+                                   log_path=output_folder / (cls.sorter_name + '_train.log'),
                                    verbose=verbose)
         shell_script.start()
 
@@ -266,11 +265,11 @@ class YassSorter(BaseSorter):
 
         if retcode != 0:
             raise Exception('yass returned a non-zero exit code')
-        
+
         if verbose:
             print("TRAINING COMPLETED. NNs located at: ", output_folder,
-                "/tmp/nn_train/detect.pt and ",
-                output_folder, "/tmp/nn_train/denoise.pt")
+                  "/tmp/nn_train/detect.pt and ",
+                  output_folder, "/tmp/nn_train/denoise.pt")
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
@@ -279,16 +278,13 @@ class YassSorter(BaseSorter):
 
     # TODO integrate this logic somewhere or remove ????
     # def neural_nets_default(self, output_folder):
-        # ''' Revert to default NNs
-        # '''
-        # self.merge_params['neuralnetwork']['denoise']['filename'] = 'denoise.pt'
-        # self.merge_params['neuralnetwork']['detect']['filename'] = 'detect.pt'
-        # fname_config = os.path.join(output_folder, 'config.yaml')
-        # with open(fname_config, 'w') as file:
-            # documents = yaml.dump(self.merge_params, file)
-
-
-
+    # ''' Revert to default NNs
+    # '''
+    # self.merge_params['neuralnetwork']['denoise']['filename'] = 'denoise.pt'
+    # self.merge_params['neuralnetwork']['detect']['filename'] = 'detect.pt'
+    # fname_config = os.path.join(output_folder, 'config.yaml')
+    # with open(fname_config, 'w') as file:
+    # documents = yaml.dump(self.merge_params, file)
 
 
 def merge_params_dict(yass_params, params):
@@ -303,8 +299,8 @@ def merge_params_dict(yass_params, params):
     merge_params['preprocess']['filter']['low_pass_freq'] = params['freq_min']
     merge_params['preprocess']['filter']['high_factor'] = params['freq_max']
 
-    merge_params['neuralnetwork']['detect']['filename'] = os.path.join( params['neural_nets_path'], 'detect.pt')
-    merge_params['neuralnetwork']['denoise']['filename'] = os.path.join( params['neural_nets_path'], 'denoise.pt')
+    merge_params['neuralnetwork']['detect']['filename'] = os.path.join(params['neural_nets_path'], 'detect.pt')
+    merge_params['neuralnetwork']['denoise']['filename'] = os.path.join(params['neural_nets_path'], 'denoise.pt')
 
     merge_params['resources']['multi_processing'] = params['multi_processing']
     merge_params['resources']['n_processors'] = params['n_processors']
@@ -323,5 +319,5 @@ def merge_params_dict(yass_params, params):
     merge_params['deconvolution']['update_templates'] = params['update_templates']
     merge_params['deconvolution']['neuron_discover'] = params['neuron_discover']
     merge_params['deconvolution']['template_update_time'] = params['template_update_time']
-    
+
     return merge_params

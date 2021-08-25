@@ -6,15 +6,16 @@ import numpy as np
 
 from spikeinterface.extractors import *
 
+
 @pytest.mark.skip('')
 def test_spykingcircusextractors():
     # not tested here, tested in run_spykingcircus(...)
     pass
 
-    # sc_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/spykingcircus_output/'
+    #  sc_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/spykingcircus_output/'
     # sorting = SpykingCircusSortingExtractor(sc_folder)
-    # print(sorting)
+    #  print(sorting)
 
-    
+
 if __name__ == '__main__':
     test_spykingcircusextractors()

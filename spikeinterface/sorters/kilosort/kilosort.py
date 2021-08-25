@@ -6,12 +6,12 @@ from typing import Union
 import shutil
 import numpy as np
 
-
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import ShellScript, get_git_commit
 
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
+
 
 def check_if_installed(kilosort_path: Union[str, None]):
     if kilosort_path is None:
@@ -34,9 +34,10 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
     sorter_name: str = 'kilosort'
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
-    
+
     requires_locations = False
-    
+    docker_requires_gpu = True
+
     _default_params = {
         'detect_threshold': 6,
         'car': True,
@@ -74,13 +75,13 @@ class KilosortSorter(KilosortBase, BaseSorter):
     More information on KiloSort at:
         https://github.com/cortex-lab/KiloSort
     """
-    
+
     handle_multi_segment = False
 
     @classmethod
     def is_installed(cls):
         return check_if_installed(cls.kilosort_path)
-    
+
     @classmethod
     def get_sorter_version(cls):
         commit = get_git_commit(os.getenv('KILOSORT_PATH', None))
@@ -118,7 +119,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
         p = params
-        
+
         source_dir = Path(__file__).parent
 
         # prepare electrode positions for this group (only one group, the split is done in basesorter)
@@ -129,7 +130,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         # save binary file : handle only one segment
         input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
                                                  dtype='int16', total_memory=p["total_memory"],
                                                  n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
@@ -142,7 +143,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
             kilosort_channelmap_txt = f.read()
 
         nchan = recording.get_num_channels()
-        
+
         if p['useGPU']:
             useGPU = 1
         else:
@@ -193,4 +194,3 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-

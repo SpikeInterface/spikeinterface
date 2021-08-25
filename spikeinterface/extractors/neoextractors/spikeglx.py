@@ -1,8 +1,7 @@
-import neo
-
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 from probeinterface import read_spikeglx
+
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     """
@@ -21,22 +20,24 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         
     stream_id: str or None
         stream for instance : 'imec0.ap' 'nidq' or 'imec0.lf'
-    """ 
+    """
     mode = 'folder'
     NeoRawIOClass = 'SpikeGLXRawIO'
-    
+
     def __init__(self, folder_path, stream_id=None):
-        neo_kwargs = {'dirname' : folder_path}
+        neo_kwargs = {'dirname': str(folder_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
-        
+
         # open the corresponding stream probe
-        # probe = read_spikeglx(folder_path, in_place=True)
-        # self.set_probegroup(probe)
-        
-        self._kwargs = dict(folder_path=folder_path, stream_id=stream_id)
+        #  probe = read_spikeglx(folder_path, in_place=True)
+        #  self.set_probegroup(probe)
+
+        self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
-def read_spikeglx(*args, **kargs):
-    recording = SpikeGLXRecordingExtractor(*args, **kargs)
+def read_spikeglx(*args, **kwargs):
+    recording = SpikeGLXRecordingExtractor(*args, **kwargs)
     return recording
+
+
 read_spikeglx.__doc__ = SpikeGLXRecordingExtractor.__doc__

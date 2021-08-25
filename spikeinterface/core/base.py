@@ -1,5 +1,3 @@
-from typing import List, Union
-
 from pathlib import Path
 import importlib
 from copy import deepcopy
@@ -57,7 +55,7 @@ class BaseExtractor:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
 
-    def _check_segment_index(self, segment_index: Union[int, None]) -> int:
+    def _check_segment_index(self, segment_index=None):
         if segment_index is None:
             if self.get_num_segments() == 1:
                 return 0
@@ -130,6 +128,9 @@ class BaseExtractor:
             v = deepcopy(v)
         return v
 
+    def get_annotation_keys(self):
+        return list(self._annotations.keys())
+
     def set_property(self, key, values, ids=None):
         """
         Set property vector:
@@ -176,7 +177,7 @@ class BaseExtractor:
         return values
 
     def get_property_keys(self):
-        return self._properties.keys()
+        return list(self._properties.keys())
 
     def copy_metadata(self, other, only_main=False, ids=None):
         """
@@ -193,7 +194,7 @@ class BaseExtractor:
         if only_main:
             ann_keys = BaseExtractor._main_annotations
             prop_keys = BaseExtractor._main_properties
-            feat_keys = BaseExtractor._main_features
+            # feat_keys = BaseExtractor._main_features
         else:
             ann_keys = self._annotations.keys()
             prop_keys = self._properties.keys()
@@ -208,7 +209,7 @@ class BaseExtractor:
         # TODO: copy features also
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
-                relative_to=None):
+                relative_to=None, folder_metadata=None):
         '''
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
         extractor with load_extractor_from_dict(dump_dict)
@@ -237,7 +238,8 @@ class BaseExtractor:
             version = imported_module.__version__
         except AttributeError:
             version = 'unknown'
-
+        
+        
         dump_dict = {
             'class': class_name,
             'module': module,
@@ -269,9 +271,13 @@ class BaseExtractor:
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
-
             dump_dict = _make_paths_relative(dump_dict, relative_to)
-
+        
+        if folder_metadata is not None:
+            if relative_to is not None:
+                folder_metadata = Path(folder_metadata).absolute().relative_to(relative_to)
+            dump_dict['folder_metadata'] = str(folder_metadata)
+        
         return dump_dict
 
     @staticmethod
@@ -295,7 +301,38 @@ class BaseExtractor:
             assert base_folder is not None, 'When  relative_paths=True, need to provide base_folder'
             d = _make_paths_absolute(d, base_folder)
         extractor = _load_extractor_from_dict(d)
+        folder_metadata = d.get('folder_metadata', None)
+        if folder_metadata is not None:
+            folder_metadata = Path(folder_metadata)
+            if d['relative_paths']:
+                folder_metadata = base_folder / folder_metadata
+            extractor.load_metadata_from_folder(folder_metadata)
         return extractor
+    
+    def load_metadata_from_folder(self, folder_metadata):
+        # hack to load probe for recording
+        folder_metadata = Path(folder_metadata)
+        
+        self._extra_metadata_from_folder(folder_metadata)
+
+        # load properties
+        prop_folder = folder_metadata / 'properties'
+        for prop_file in prop_folder.iterdir():
+            if prop_file.suffix == '.npy':
+                values = np.load(prop_file, allow_pickle=True)
+                key = prop_file.stem
+                self.set_property(key, values)
+    
+    def save_metadata_to_folder(self, folder_metadata):
+        self._extra_metadata_to_folder(folder_metadata)
+        
+        # save properties
+        prop_folder = folder_metadata / 'properties'
+        prop_folder.mkdir(parents=True, exist_ok=False)
+        for key in self.get_property_keys():
+            values = self.get_property(key)
+            np.save(prop_folder / (key + '.npy'), values)
+        
 
     def clone(self):
         """
@@ -344,7 +381,7 @@ class BaseExtractor:
             " %s" % (', '.join(extensions))
         return file_path
 
-    def dump(self, file_path, relative_to=None):
+    def dump(self, file_path, relative_to=None, folder_metadata=None):
         """
         Dumps extractor to json or pickle
 
@@ -356,13 +393,13 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         """
         if str(file_path).endswith('.json'):
-            self.dump_to_json(file_path, relative_to)
+            self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
-            self.dump_to_pickle(file_path, relative_to)
+            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
             raise ValueError('Dump: file must .json or .pkl')
 
-    def dump_to_json(self, file_path=None, relative_to=None):
+    def dump_to_json(self, file_path=None, relative_to=None, folder_metadata=None):
         '''
         Dump recording extractor to json file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -375,7 +412,11 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=False, include_features=False, relative_to=relative_to)
+        dump_dict = self.to_dict(include_annotations=True,
+                                 include_properties=False,
+                                 include_features=False,
+                                 relative_to=relative_to,
+                                 folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
         file_path.write_text(
             json.dumps(check_json(dump_dict), indent=4),
@@ -383,7 +424,7 @@ class BaseExtractor:
         )
 
     def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True,
-                       relative_to=None):
+                       relative_to=None, folder_metadata=None):
         '''
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -400,8 +441,11 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         '''
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_properties=include_properties, include_features=include_features,
-                                 relative_to=relative_to)
+        dump_dict = self.to_dict(include_annotations=True,
+                                 include_properties=False,
+                                 include_features=False,
+                                 relative_to=relative_to, 
+                                 folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
@@ -441,16 +485,8 @@ class BaseExtractor:
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file, base_folder=folder)
-            
-            # load properties
-            prop_folder = folder / 'properties'
-            for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == '.npy':
-                    values = np.load(prop_file)
-                    key = prop_file.stem
-                    extractor.set_property(key, values)
 
-            extractor = extractor._after_load(folder)
+
             return extractor
 
         else:
@@ -460,32 +496,35 @@ class BaseExtractor:
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
 
-    def _save(self, folder, **save_kargs):
+    def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
         raise NotImplementedError
 
-    def _after_load(self, folder):
-        # This implemented in BaseRecording or baseSorting
-        # this is internally call by load(...) main function
-        raise NotImplementedError
-
-    def save(self, **kargs):
+    def _extra_metadata_from_folder(self, folder):
+        # This implemented in BaseRecording for probe
+        pass
+    
+    def _extra_metadata_to_folder(self, folder):
+        # This implemented in BaseRecording for probe
+        pass
+    
+    def save(self, **kwargs):
         """
         route save_to_folder() or save_to_mem()
         """
-        if kargs.get('format', None) == 'memory':
-            return self.save_to_memory(**kargs)
+        if kwargs.get('format', None) == 'memory':
+            return self.save_to_memory(**kwargs)
         else:
-            return self.save_to_folder(**kargs)
+            return self.save_to_folder(**kwargs)
 
-    def save_to_memory(self, **kargs):
+    def save_to_memory(self, **kwargs):
         # used only by recording at the moment
-        cached = self._save(**kargs)
+        cached = self._save(**kwargs)
         self.copy_metadata(cached)
         return cached
 
-    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kargs):
+    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -549,22 +588,18 @@ class BaseExtractor:
                 json.dumps({'warning': 'the provenace is not dumpable!!!'}),
                 encoding='utf8'
             )
-        
-        # save properties
-        prop_folder = folder / 'properties'
-        prop_folder.mkdir(parents=True, exist_ok=False)
-        for key in self.get_property_keys():
-            values = self.get_property(key)
-            np.save(prop_folder / (key + '.npy'), values)
+
 
         # save data (done the subclass)
-        cached = self._save(folder=folder, verbose=verbose, **save_kargs)
+        cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
+        
+        self.save_metadata_to_folder(folder)
 
         # copy properties/
         self.copy_metadata(cached)
 
         # dump
-        cached.dump(folder / f'cached.{dump_ext}', relative_to=folder)
+        cached.dump(folder / f'cached.{dump_ext}', relative_to=folder, folder_metadata=folder)
 
         return cached
 
@@ -610,7 +645,7 @@ def _make_paths_absolute(d, base):
                     assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
                     absolute_paths = []
                     for path in d[k]:
-                        
+
                         if not Path(path).exists():
                             absolute_paths.append(str(base / path))
                     d[k] = absolute_paths
@@ -636,23 +671,23 @@ def is_dict_extractor(d):
         return False
     is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
     return is_extractor
-    
+
 
 def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
-    
+
     if 'kwargs' not in dic:
         raise Exception(f'This dict cannot be load into extractor {dic}')
     kwargs = deepcopy(dic['kwargs'])
-    
+
     # handle nested
     for k, v in kwargs.items():
-        
+
         if isinstance(v, dict) and is_dict_extractor(v):
-            kwargs[k] = _load_extractor_from_dict(v) 
-    
-    # handle list of extractors list
+            kwargs[k] = _load_extractor_from_dict(v)
+
+            # handle list of extractors list
     for k, v in kwargs.items():
         if isinstance(v, list):
             if all(is_dict_extractor(e) for e in v):
@@ -671,6 +706,7 @@ def _load_extractor_from_dict(dic):
 
     extractor._annotations.update(dic['annotations'])
     for k, v in dic['properties'].items():
+        # print(k, v)
         extractor.set_property(k, v)
     # TODO features
 

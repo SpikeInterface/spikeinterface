@@ -32,10 +32,11 @@ class SortingPerformanceWidget(BaseWidget):
     -------
     W: SortingPerformanceWidget
         The output widget
-    """    
-    def __init__(self, sorting_comparison, metrics, 
-            performance_name='accuracy', metric_name='snr',
-                markersize=10, marker='.', figure=None, ax=None):
+    """
+
+    def __init__(self, sorting_comparison, metrics,
+                 performance_name='accuracy', metric_name='snr',
+                 markersize=10, marker='.', figure=None, ax=None):
         assert isinstance(sorting_comparison, GroundTruthComparison), \
             "The 'sorting_comparison' object should be a GroundTruthComparison instance"
         BaseWidget.__init__(self, figure, ax)
@@ -54,18 +55,19 @@ class SortingPerformanceWidget(BaseWidget):
         unit_ids = comp.sorting1.get_unit_ids()
         perf = comp.get_performance()[self.performance_name]
         metric = self.metrics[self.metric_name]
-        
+
         ax = self.ax
-        
+
         ax.plot(metric, perf, marker=self.marker, markersize=int(self.markersize), ls='')
         ax.set_xlabel(self.metric_name)
         ax.set_ylabel(self.performance_name)
         ax.set_ylim(0, 1.05)
-        
+
 
 def plot_sorting_performance(*args, **kwargs):
     W = SortingPerformanceWidget(*args, **kwargs)
     W.plot()
     return W
+
+
 plot_sorting_performance.__doc__ = SortingPerformanceWidget.__doc__
-        

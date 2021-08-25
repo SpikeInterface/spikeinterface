@@ -73,14 +73,14 @@ class GroundTruthComparison(BaseTwoSorterComparison):
                  delta_time=0.4, sampling_frequency=None, match_score=0.5, well_detected_score=0.8,
                  redundant_score=0.2, overmerged_score=0.2, chance_score=0.1, exhaustive_gt=False, n_jobs=-1,
                  match_mode='hungarian', compute_labels=False, compute_misclassifications=False, verbose=False):
-        
+
         if gt_name is None:
             gt_name = 'ground truth'
         if tested_name is None:
             tested_name = 'tested'
         BaseTwoSorterComparison.__init__(self, gt_sorting, tested_sorting, sorting1_name=gt_name,
                                          sorting2_name=tested_name, delta_time=delta_time,
-                                         match_score=match_score, # sampling_frequency=sampling_frequency, 
+                                         match_score=match_score,  # sampling_frequency=sampling_frequency,
                                          chance_score=chance_score, n_jobs=n_jobs,
                                          verbose=verbose)
         self.exhaustive_gt = exhaustive_gt
@@ -324,7 +324,7 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     def count_well_detected_units(self, well_detected_score):
         """
         Count how many well detected units.
-        Kargs are the same as get_well_detected_units.
+        kwargs are the same as get_well_detected_units.
         """
         return len(self.get_well_detected_units(well_detected_score=well_detected_score))
 
@@ -491,6 +491,8 @@ num_bad: {num_bad}
 """
 
 
-def compare_sorter_to_ground_truth(*args, **kargs):
-    return GroundTruthComparison(*args, **kargs)
+def compare_sorter_to_ground_truth(*args, **kwargs):
+    return GroundTruthComparison(*args, **kwargs)
+
+
 compare_sorter_to_ground_truth.__doc__ = GroundTruthComparison.__doc__

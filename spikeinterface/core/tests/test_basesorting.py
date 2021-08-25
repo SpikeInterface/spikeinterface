@@ -10,48 +10,48 @@ import numpy as np
 from spikeinterface.core import NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.tests.testing_tools import create_sorting_npz
+from spikeinterface.core.testing_tools import create_sorting_npz
+
 
 def _clean_all():
     cache_folder = './my_cache_folder'
     if Path(cache_folder).exists():
         shutil.rmtree(cache_folder)
-    
+
+
 def setup_module():
     _clean_all()
+
 
 def teardown_module():
     _clean_all()
 
 
-
 def test_BaseSorting():
     num_seg = 2
     file_path = 'test_BaseSorting.npz'
-    
+
     create_sorting_npz(num_seg, file_path)
-    
+
     sorting = NpzSortingExtractor(file_path)
     print(sorting)
 
-
     assert sorting.get_num_segments() == 2
     assert sorting.get_num_units() == 3
-    
-    
+
     # annotations / properties
     sorting.annotate(yep='yop')
     assert sorting.get_annotation('yep') == 'yop'
-    
+
     sorting.set_property('amplitude', [-20, -40., -55.5])
     values = sorting.get_property('amplitude')
-    assert np.all(values ==  [-20, -40., -55.5])
-    
+    assert np.all(values == [-20, -40., -55.5])
+
     # dump/load dict
     d = sorting.to_dict()
     sorting2 = BaseExtractor.from_dict(d)
     sorting3 = load_extractor(d)
-    
+
     # dump/load json
     sorting.dump_to_json('test_BaseSorting.json')
     sorting2 = BaseExtractor.load('test_BaseSorting.json')
@@ -68,8 +68,7 @@ def test_BaseSorting():
     sorting2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     sorting3 = BaseExtractor.load(folder)
-    
-    
+
     spikes = sorting.get_all_spike_trains()
     print(spikes)
 
@@ -77,4 +76,3 @@ def test_BaseSorting():
 if __name__ == '__main__':
     _clean_all()
     test_BaseSorting()
-

@@ -4,8 +4,6 @@ from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
 
-
-
 class ConfusionMatrixWidget(BaseWidget):
     """
     Plots sorting comparison confusion matrix.
@@ -28,6 +26,7 @@ class ConfusionMatrixWidget(BaseWidget):
     W: ConfusionMatrixWidget
         The output widget
     """
+
     def __init__(self, gt_comparison, count_text=True, unit_ticks=True,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
@@ -64,7 +63,7 @@ class ConfusionMatrixWidget(BaseWidget):
         self.ax.set_xticks(np.arange(0, N2 + 1))
         self.ax.set_yticks(np.arange(0, N1 + 1))
         self.ax.xaxis.tick_bottom()
-        
+
         # Labels for major ticks
         if self._unit_ticks:
             self.ax.set_yticklabels(confusion_matrix.index, fontsize=12)
@@ -75,14 +74,15 @@ class ConfusionMatrixWidget(BaseWidget):
 
         self.ax.set_xlabel(self._gtcomp.name_list[1], fontsize=20)
         self.ax.set_ylabel(self._gtcomp.name_list[0], fontsize=20)
-        
-        self.ax.set_xlim(-0.5, N2+0.5)
-        self.ax.set_ylim(N1+0.5, -0.5, )
+
+        self.ax.set_xlim(-0.5, N2 + 0.5)
+        self.ax.set_ylim(N1 + 0.5, -0.5, )
 
 
 def plot_confusion_matrix(*args, **kwargs):
     W = ConfusionMatrixWidget(*args, **kwargs)
     W.plot()
     return W
-plot_confusion_matrix.__doc__ = ConfusionMatrixWidget.__doc__
 
+
+plot_confusion_matrix.__doc__ = ConfusionMatrixWidget.__doc__

@@ -92,7 +92,7 @@ class MdaRecordingExtractor(BaseRecording):
         header = MdaHeader(dt0=dtype, dims0=(num_chan, num_frames))
         header_size = header.header_size
 
-        write_binary_recording(recording, files_path=save_file_path, dtype=dtype,
+        write_binary_recording(recording, file_paths=save_file_path, dtype=dtype,
                                byte_offset=header_size, verbose=verbose, add_file_extension=False, **job_kwargs)
 
         with save_file_path.open('rb+') as f:
@@ -210,14 +210,15 @@ class MdaSortingSegment(BaseSortingSegment):
             (self._labels == unit_id) & (start_frame <= self._spike_times) & (self._spike_times < end_frame))
         return np.rint(self._spike_times[inds]).astype(int)
 
+
 def read_mda_recording(folder_path, **kwargs):
     recording = MdaRecordingExtractor(folder_path, **kwargs)
     return recording
 
+
 def read_mda_sorting(file_path, **kwargs):
     sorting = MdaSortingExtractor(file_path, **kwargs)
     return sorting
-
 
 
 def _concatenate(list):

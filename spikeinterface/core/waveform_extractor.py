@@ -7,7 +7,7 @@ import numpy as np
 from .base import load_extractor
 
 from .core_tools import check_json
-from .job_tools import ChunkRecordingExecutor, ensure_n_jobs
+from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 
 
 class WaveformExtractor:
@@ -53,10 +53,10 @@ class WaveformExtractor:
             "The recording and sorting objects must have the same number of segments!"
         np.testing.assert_almost_equal(recording.get_sampling_frequency(),
                                        sorting.get_sampling_frequency(), decimal=2)
-        
+
         if not recording.is_filtered():
             raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
-                'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
+                            'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
 
         self.recording = recording
         self.sorting = sorting
@@ -100,7 +100,7 @@ class WaveformExtractor:
             else:
                 raise FileExistsError('Folder already exists')
         folder.mkdir(parents=True)
-        
+
         if recording.is_dumpable:
             recording.dump(folder / 'recording.json', relative_to=None)
         if sorting.is_dumpable:
@@ -119,7 +119,7 @@ class WaveformExtractor:
             shutil.rmtree(waveform_folder)
         waveform_folder.mkdir()
 
-    def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, dtype=None):
+    def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
         """
         Set parameters for waveform extraction
 
@@ -131,6 +131,8 @@ class WaveformExtractor:
             Cut out in ms after spike time
         max_spikes_per_unit: int
             Maximum number of spikes to extract per unit
+        return_scaled: bool
+            If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
         dtype: np.dtype
             The dtype of the computed waveforms
         """
@@ -139,10 +141,23 @@ class WaveformExtractor:
         if dtype is None:
             dtype = self.recording.get_dtype()
 
+        if return_scaled:
+            # check if has scaled values:
+            if not self.recording.has_scaled_traces():
+                print("Setting 'return_scaled' to False")
+                return_scaled = False
+
+        if np.issubdtype(dtype, np.integer) and return_scaled:
+            dtype = "float32"
+
+        if max_spikes_per_unit is not None:
+            max_spikes_per_unit = int(max_spikes_per_unit)
+
         self._params = dict(
             ms_before=float(ms_before),
             ms_after=float(ms_after),
-            max_spikes_per_unit=int(max_spikes_per_unit),
+            max_spikes_per_unit=max_spikes_per_unit,
+            return_scaled=return_scaled,
             dtype=dtype.str)
 
         (self.folder / 'params.json').write_text(
@@ -163,6 +178,10 @@ class WaveformExtractor:
     @property
     def nsamples(self):
         return self.nbefore + self.nafter
+
+    @property
+    def return_scaled(self):
+        return self._params['return_scaled']
 
     def get_waveforms(self, unit_id, with_index=False):
         """
@@ -235,7 +254,7 @@ class WaveformExtractor:
                 template = np.average(wfs, axis=0)
                 self._template_average[unit_id] = template
                 return template
-    
+
     def get_all_templates(self, unit_ids=None, mode='median'):
         """
         Return several templates (average waveform)
@@ -255,16 +274,15 @@ class WaveformExtractor:
         if unit_ids is None:
             unit_ids = self.sorting.unit_ids
         num_chans = self.recording.get_num_channels()
-        
+
         dtype = self._params['dtype']
         templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
         for i, unit_id in enumerate(unit_ids):
             templates[i, :, :] = self.get_template(unit_id, mode=mode)
         return templates
-    
+
     def sample_spikes(self):
         p = self._params
-        sampling_frequency = self.recording.get_sampling_frequency()
         nbefore = self.nbefore
         nafter = self.nafter
 
@@ -294,7 +312,8 @@ class WaveformExtractor:
         num_chans = self.recording.get_num_channels()
         nbefore = self.nbefore
         nafter = self.nafter
-        
+        return_scaled = self.return_scaled
+
         n_jobs = ensure_n_jobs(self.recording, job_kwargs.get('n_jobs', None))
 
         selected_spikes = self.sample_spikes()
@@ -316,18 +335,19 @@ class WaveformExtractor:
             shape = (n_spikes, self.nsamples, num_chans)
             wfs = np.zeros(shape, dtype=p['dtype'])
             np.save(file_path, wfs)
-            wfs = np.load(file_path, mmap_mode='r+')
-            wfs_memmap[unit_id] = wfs
-        
+            # wfs = np.load(file_path, mmap_mode='r+')
+            wfs_memmap[unit_id] = file_path
+
         # and run
         func = _waveform_extractor_chunk
         init_func = _init_worker_waveform_extractor
         if n_jobs == 1:
-            init_args = (self.recording, self.sorting, )
+            init_args = (self.recording, self.sorting,)
         else:
-            init_args = (self.recording.to_dict(), self.sorting.to_dict(), )
-        init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter)
-        processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, job_name='extract waveforms', **job_kwargs)
+            init_args = (self.recording.to_dict(), self.sorting.to_dict(),)
+        init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter, return_scaled)
+        processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, job_name='extract waveforms',
+                                           **job_kwargs)
         processor.run()
 
 
@@ -346,9 +366,12 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
         n_per_segment = [sorting.get_unit_spike_train(unit_id, segment_index=i).size for i in range(num_seg)]
         cum_sum = [0] + np.cumsum(n_per_segment).tolist()
         total = np.sum(n_per_segment)
-        if total > max_spikes_per_unit:
-            global_inds = np.random.choice(total, size=max_spikes_per_unit, replace=False)
-            global_inds = np.sort(global_inds)
+        if max_spikes_per_unit is not None:
+            if total > max_spikes_per_unit:
+                global_inds = np.random.choice(total, size=max_spikes_per_unit, replace=False)
+                global_inds = np.sort(global_inds)
+            else:
+                global_inds = np.arange(total)
         else:
             global_inds = np.arange(total)
         sel_spikes = []
@@ -372,7 +395,7 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
 
 # used by WaveformExtractor + ChunkRecordingExecutor
 def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
-                                    selected_spikes, selected_spike_times, nbefore, nafter):
+                                    selected_spikes, selected_spike_times, nbefore, nafter, return_scaled):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -385,11 +408,12 @@ def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
         sorting = load_extractor(sorting)
     worker_ctx['sorting'] = sorting
 
-    worker_ctx['wfs_memmap'] = wfs_memmap
+    worker_ctx['wfs_memmap_files'] = wfs_memmap
     worker_ctx['selected_spikes'] = selected_spikes
     worker_ctx['selected_spike_times'] = selected_spike_times
     worker_ctx['nbefore'] = nbefore
     worker_ctx['nafter'] = nafter
+    worker_ctx['return_scaled'] = return_scaled
 
     num_seg = sorting.get_num_segments()
     unit_cum_sum = {}
@@ -408,11 +432,12 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     # recover variables of the worker
     recording = worker_ctx['recording']
     sorting = worker_ctx['sorting']
-    wfs_memmap = worker_ctx['wfs_memmap']
+    wfs_memmap_files = worker_ctx['wfs_memmap_files']
     selected_spikes = worker_ctx['selected_spikes']
     selected_spike_times = worker_ctx['selected_spike_times']
     nbefore = worker_ctx['nbefore']
     nafter = worker_ctx['nafter']
+    return_scaled = worker_ctx['return_scaled']
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
     to_extract = {}
@@ -430,10 +455,11 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
         end = int(end)
 
         # load trace in memory
-        traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
+        traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index,
+                                      return_scaled=return_scaled)
 
         for unit_id, (i0, i1, local_spike_times) in to_extract.items():
-            wfs = wfs_memmap[unit_id]
+            wfs = np.load(wfs_memmap_files[unit_id], mmap_mode="r+")
             for i in range(local_spike_times.size):
                 st = local_spike_times[i]
                 st = int(st)
@@ -441,24 +467,65 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 wfs[pos, :, :] = traces[st - start - nbefore:st - start + nafter, :]
 
 
-
-def extract_waveforms(recording, sorting, folder, 
-        load_if_exists=False,
-        ms_before=3., ms_after=4., max_spikes_per_unit=500, dtype=None,**job_kwargs):
+def extract_waveforms(recording, sorting, folder,
+                      load_if_exists=False,
+                      ms_before=3., ms_after=4.,
+                      max_spikes_per_unit=500,
+                      overwrite=False,
+                      return_scaled=True,
+                      dtype=None,
+                      **job_kwargs):
     """
-    
-    """
+    Extracts waveform on paired Recording-Sorting objects.
+    Waveforms are persistent on disk and cached in memory.
 
+    Parameters
+    ----------
+    recording: Recording
+        The recording object
+    sorting: Sorting
+        The sorting object
+    folder: str or Path
+        The folder where waveforms are cached
+    load_if_exists: bool
+        If True and waveforms have already been extracted in the specified folder, they are loaded
+        and not recomputed.
+    ms_before: float
+        Time in ms to cut before spike peak
+    ms_after: float
+        Time in ms to cut after spike peak
+    max_spikes_per_unit: int or None
+        Number of spikes per unit to extract waveforms from (default 500).
+        Use None to extract waveforms for all spikes
+    overwrite: bool
+        If True and 'folder' exists, the folder is removed and waveforms are recomputed.
+        Othewise an error is raised.
+    return_scaled: bool
+        If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
+    dtype: dtype or None
+        Dtype of the output waveforms. If None, the recording dtype is maintained.
+
+    {}
+
+    Returns
+    -------
+    we: WaveformExtractor
+        The WaveformExtractor object
+
+    """
     folder = Path(folder)
+    assert not (overwrite and load_if_exists), "Use either 'overwrite=True' or 'load_if_exists=True'"
+    if overwrite and folder.is_dir():
+        shutil.rmtree(folder)
     if load_if_exists and folder.is_dir():
         we = WaveformExtractor.load_from_folder(folder)
     else:
         we = WaveformExtractor.create(recording, sorting, folder)
-        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
+                      return_scaled=return_scaled)
         we.run(**job_kwargs)
-    
+
     return we
 
-    
-    
-    
+
+extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_doc)

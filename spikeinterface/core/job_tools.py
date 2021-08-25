@@ -7,8 +7,23 @@ import numpy as np
 import joblib
 from tqdm import tqdm
 
-#  import loky
+# import loky
 from concurrent.futures import ProcessPoolExecutor
+
+_shared_job_kwargs_doc = \
+    """**job_kwargs: keyword arguments for parallel processing:
+            * chunk_size or chunk_memory, or total_memory
+                - chunk_size: int
+                    number of samples per chunk
+                - chunk_memory: str
+                    Memory usage for each job (e.g. '100M', '1G'
+                - total_memory: str
+                    Total memory usage (e.g. '500M', '2G')
+            * n_jobs: int
+                Number of jobs to use. With -1 the number of jobs is the same as number of cores
+            * progress_bar: bool
+                If True, a progress bar is printed
+    """
 
 
 def divide_segment_into_chunks(num_frames, chunk_size):
@@ -31,6 +46,7 @@ def divide_segment_into_chunks(num_frames, chunk_size):
 
     return chunks
 
+
 def devide_recording_into_chunks(recording, chunk_size):
     all_chunks = []
     for segment_index in range(recording.get_num_segments()):
@@ -38,8 +54,7 @@ def devide_recording_into_chunks(recording, chunk_size):
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
         all_chunks.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
     return all_chunks
-    
-    
+
 
 _exponents = {'k': 1e3, 'M': 1e6, 'G': 1e9}
 
@@ -125,14 +140,47 @@ def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memor
 
 class ChunkRecordingExecutor:
     """
-    Helper class that runs a "function" over chunks on a recording
+    Core class for parallel processing to run a "function" over chunks on a recording.
     
     It supports running a function:
-        * in loop with chunk processing (less memory)
-        * at once if chunk_size is None (lot of memory if recording is long)
+        * in loop with chunk processing (low RAM usage)
+        * at once if chunk_size is None (high RAM usage)
         * in parallel with ProcessPoolExecutor (higher speed)
-    
-    Handle initializer when needed to avoid heavy serialization of args.
+
+    The initializer ('init_func') allows to set a global context to avoid heavy serialization
+    (for examples, see implementation in `core.WaveformExtractor`).
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording to be processed
+    func: function
+        Function that runs on each chunk
+    init_func: function
+        Initializer function to set the global context (accessible by 'func')
+    init_args: tuple
+        Arguments for init_func
+    verbose: bool
+        If True, output is verbose
+    progress_bar: bool
+        If True, a progress bar is printed to monitor the progress of the process
+    handle_returns: bool
+        If True, the function can return values
+    n_jobs: int
+        Number of jobs to be used (default 1). Use -1 to use as many jobs as number of cores
+    total_memory: str
+        Total memory (RAM) to use (e.g. "1G", "500M")
+    chunk_memory: str
+        Memory per chunk (RAM) to use (e.g. "1G", "500M")
+    chunk_size: int or None
+        Size of each chunk in number of samples. If 'total_memory' or 'chunk_memory' are used, it is ignored.
+    job_name: str
+        Job name
+
+    Returns
+    -------
+    res: list
+        If 'handle_returns' is True, the results for each chunk process
     """
 
     def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
@@ -146,7 +194,7 @@ class ChunkRecordingExecutor:
 
         self.verbose = verbose
         self.progress_bar = progress_bar
-        
+
         self.handle_returns = handle_returns
 
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
@@ -159,9 +207,11 @@ class ChunkRecordingExecutor:
             print(self.job_name, 'with', 'n_jobs', self.n_jobs, ' chunk_size', self.chunk_size)
 
     def run(self):
+        """
+        Runs the defined jobs.
+        """
         all_chunks = devide_recording_into_chunks(self.recording, self.chunk_size)
-        
-        
+
         if self.handle_returns:
             returns = []
         else:
@@ -177,37 +227,24 @@ class ChunkRecordingExecutor:
                 if self.handle_returns:
                     returns.append(res)
         else:
-            #  if self.verbose:
-            #   print('num chunks to compute', len(all_chunks))
-            
             n_jobs = min(self.n_jobs, len(all_chunks))
             # parallel
-            executor = ProcessPoolExecutor(max_workers=n_jobs,
-                                           initializer=worker_initializer,
-                                           initargs=(self.func, self.init_func, self.init_args))
+            with ProcessPoolExecutor(max_workers=n_jobs,
+                                     initializer=worker_initializer,
+                                     initargs=(self.func, self.init_func, self.init_args)) as executor:
 
-            # loky : this bug!!!
-            # executor = loky.get_reusable_executor(max_workers=self.n_jobs,
-            # initializer=worker_initializer,
-            # initargs=(self.func, self.init_func, self.init_args),
-            # context="loky", timeout=10.,
-            # reuse=False,
-            # kill_workers=True)
-            
-            results = executor.map(function_wrapper, all_chunks)
-            
+                results = executor.map(function_wrapper, all_chunks)
 
-            if self.progress_bar:
-                results = tqdm(results, desc=self.job_name, total=len(all_chunks))
-            
-            if self.handle_returns:
-                for res in results:
-                    returns.append(res)
-            else:
-                for res in results:
-                    pass
-                
-        
+                if self.progress_bar:
+                    results = tqdm(results, desc=self.job_name, total=len(all_chunks))
+
+                if self.handle_returns:
+                    for res in results:
+                        returns.append(res)
+                else:
+                    for res in results:
+                        pass
+
         return returns
 
 

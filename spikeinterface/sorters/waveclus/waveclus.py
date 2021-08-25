@@ -155,7 +155,8 @@ class WaveClusSorter(BaseSorter):
                     "sr", data=[recording.get_sampling_frequency()], dtype='float32')
                 rec_sliced = ChannelSliceRecording(recording, channel_ids=[id])
                 write_to_h5_dataset_format(rec_sliced, dataset_path='/data', segment_index=0,
-                                           file_handle=f, time_axis=0, single_axis=True, chunk_memory=params['chunk_memory'])
+                                           file_handle=f, time_axis=0, single_axis=True,
+                                           chunk_memory=params['chunk_memory'])
 
         if verbose:
             samplerate = recording.get_sampling_frequency()

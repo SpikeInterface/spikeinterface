@@ -8,14 +8,12 @@ from pprint import pprint
 
 import distutils.version
 
-
 from spikeinterface.extractors import TridesclousSortingExtractor
 
 from ..basesorter import BaseSorter
 from spikeinterface.core import BinaryRecordingExtractor
 
 from probeinterface import write_prb
-
 
 
 class TridesclousSorter(BaseSorter):
@@ -57,7 +55,7 @@ class TridesclousSorter(BaseSorter):
       * https://github.com/tridesclous/tridesclous
       * https://tridesclous.readthedocs.io
     """
-    
+
     # TODO make the TDC handle multi segment (should be easy)
     handle_multi_segment = True
 
@@ -67,9 +65,9 @@ class TridesclousSorter(BaseSorter):
             import tridesclous as tdc
             HAVE_TDC = True
         except ImportError:
-            HAVE_TDC = False        
+            HAVE_TDC = False
         return HAVE_TDC
-        
+
     @classmethod
     def get_sorter_version(cls):
         import tridesclous as tdc
@@ -82,43 +80,41 @@ class TridesclousSorter(BaseSorter):
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
         import tridesclous as tdc
-        
+
         # save prb file
         probegroup = recording.get_probegroup()
         prb_file = output_folder / 'probe.prb'
         write_prb(prb_file, probegroup)
-        
+
         num_seg = recording.get_num_segments()
         sr = recording.get_sampling_frequency()
-        
+
         # source file
         if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['time_axis'] == 0:
             # no need to copy
             kwargs = recording._kwargs
-            files_path = kwargs['files_path']
+            file_paths = kwargs['file_paths']
             dtype = kwargs['dtype']
             num_chan = kwargs['num_chan']
-            offset = kwargs['offset']
+            file_offset = kwargs['file_offset']
         else:
             if verbose:
                 print('Local copy of recording')
             # save binary file (chunk by hcunk) into a new file
             num_chan = recording.get_num_channels()
             dtype = recording.get_dtype().str
-            files_path = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
-            BinaryRecordingExtractor.write_recording(recording, files_path=files_path,
-                                                                    dtype=dtype, total_memory="500M", n_jobs=-1,
-                                                                    verbose=False, progress_bar=verbose)
-            offset = 0
-            
+            file_paths = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
+            BinaryRecordingExtractor.write_recording(recording, file_paths=file_paths,
+                                                     dtype=dtype, total_memory="500M", n_jobs=-1,
+                                                     verbose=False, progress_bar=verbose)
+            file_offset = 0
 
         # initialize source and probe file
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
-        
 
-        tdc_dataio.set_data_source(type='RawData', filenames=files_path,
+        tdc_dataio.set_data_source(type='RawData', filenames=file_paths,
                                    dtype=dtype, sample_rate=sr,
-                                   total_channel=num_chan, offset=offset)
+                                   total_channel=num_chan, offset=file_offset)
         tdc_dataio.set_probe_file(str(prb_file))
         if verbose:
             print(tdc_dataio)
@@ -141,7 +137,7 @@ class TridesclousSorter(BaseSorter):
             if verbose:
                 print('catalogue_nested_params')
                 pprint(catalogue_nested_params)
-            
+
             peeler_params = tdc.get_auto_params_for_peelers(tdc_dataio, chan_grp)
             if verbose:
                 print('peeler_params')
@@ -150,10 +146,9 @@ class TridesclousSorter(BaseSorter):
             cc = tdc.CatalogueConstructor(dataio=tdc_dataio, chan_grp=chan_grp)
             tdc.apply_all_catalogue_steps(cc, catalogue_nested_params, verbose=verbose)
 
-
             if verbose:
                 print(cc)
-            
+
             # apply Peeler (template matching)
             initial_catalogue = tdc_dataio.load_catalogue(chan_grp=chan_grp)
             peeler = tdc.Peeler(tdc_dataio)
@@ -162,8 +157,7 @@ class TridesclousSorter(BaseSorter):
             peeler.run(duration=None, progressbar=False)
             if verbose:
                 t1 = time.perf_counter()
-                print('peeler.tun', t1-t0)
-
+                print('peeler.tun', t1 - t0)
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
@@ -175,7 +169,7 @@ def make_nested_tdc_params(tdc_dataio, chan_grp, **new_params):
     import tridesclous as tdc
 
     params = tdc.get_auto_params_for_catalogue(tdc_dataio, chan_grp=chan_grp)
-    
+
     if 'freq_min' in new_params:
         params['preprocessor']['highpass_freq'] = new_params['freq_min']
 
@@ -184,17 +178,17 @@ def make_nested_tdc_params(tdc_dataio, chan_grp, **new_params):
 
     if 'common_ref_removal' in new_params:
         params['preprocessor']['common_ref_removal'] = new_params['common_ref_removal']
-    
+
     if 'detect_sign' in new_params:
         detect_sign = new_params['detect_sign']
         if detect_sign == -1:
             params['peak_detector']['peak_sign'] = '-'
         elif detect_sign == 1:
             params['peak_detector']['peak_sign'] = '+'
-    
+
     if 'detect_threshold' in new_params:
         params['peak_detector']['relative_threshold'] = new_params['detect_threshold']
-    
+
     nested_params = new_params.get('nested_params', None)
     if nested_params is not None:
         for k, v in nested_params.items():

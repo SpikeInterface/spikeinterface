@@ -19,6 +19,6 @@ def test_mda_extractors():
 
     check_sortings_equal(sort, sort_mda)
 
-    
+
 if __name__ == '__main__':
     test_mda_extractors()

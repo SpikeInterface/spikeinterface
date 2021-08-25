@@ -20,7 +20,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         sampling_frequency = par[0, 0][np.where(np.array(par.dtype.names) == 'sr')[0][0]][0][0]
         unit_ids = np.unique(classes).astype('int')
         if keep_good_only:
-            unit_ids = unit_ids[unit_ids>0]
+            unit_ids = unit_ids[unit_ids > 0]
         spiketrains = {}
         for unit_id in unit_ids:
             mask = (classes == unit_id)
@@ -48,8 +48,9 @@ class WaveClustSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_waveclust(*args, **kargs):
-    sorting = WaveClusSortingExtractor(*args, **kargs)
+def read_waveclust(*args, **kwargs):
+    sorting = WaveClusSortingExtractor(*args, **kwargs)
     return sorting
-read_waveclust.__doc__ = WaveClusSortingExtractor.__doc__
 
+
+read_waveclust.__doc__ = WaveClusSortingExtractor.__doc__

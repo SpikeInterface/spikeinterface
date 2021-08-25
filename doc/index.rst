@@ -5,18 +5,17 @@ Welcome to SpikeInterface's documentation!
 
 .. warning::
 
-    This is the not yet released documentation of spikeinterface (0.90.0)
+    This is the documentation for SpikeInterface (0.90.0), which breaks compatibility with version 0.13.0.
     
-    To see reelased documention this is here https://spikeinterface.readthedocs.io/en/stable
-    
-    Actual  API released is 0.12.0.
+    See the documentation for the version 0.13.0 (old API) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
 
 .. image:: images/logo.png
   :scale: 100 %
   :align: center
 
 
-Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility of spike sorting and all its associated computations.
+Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility
+of spike sorting and all its associated computations.
 
 
 
@@ -25,36 +24,40 @@ With SpikeInterface, users can:
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
 - run many popular, semi-automatic spike sorters.
-- post-process sorted datasets.
+- post-process sorted datasets
 - compare and benchmark spike sorting outputs.
-- validate and curate spike sorting outputs.
+- compute quality metrics to validate and curate spike sorting outputs
 - visualize recordings and spike sorting outputs.
+- export report and export to phy with one line
 
 **NEWS**
 
-- New SpikeInterface major release! Version 0.90.0 is will be out soon!
+- New SpikeInterface major release! Version 0.90.0 is out!
 
-  * breaks backward compatility with 0.10/0.11/0.12 series
-  * will be released in summer 2021
+  * breaks backward compatility with 0.10/0.11/0.12/0.13 series
+  * has been released on 31st July 2021
   * is not a metapackage anymore
   * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
 
+  Please see the release notes here: :ref:`release0.90.0`
+
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
    
-   overview
-   installation
-   supported
-   sortersinfo
-   getting_started/plot_getting_started.rst
-   modules/index.rst
-   sorters_comparison
-   contribute
-   api
-   whatisnew
-   authors
+    overview
+    installation
+    getting_started/plot_getting_started.rst
+    modules_doc
+    modules/index.rst
+    supported_formats_and_sorters
+    install_sorters
+    contribute
+    api
+    whatisnew
+    authors
+
 
 For more information, please have a look at:
 

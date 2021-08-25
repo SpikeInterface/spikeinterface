@@ -16,7 +16,7 @@ class BaseComparison:
       * delta_time to delta_frames
     """
 
-    def __init__(self, sorting_list, name_list=None, delta_time=0.4, # sampling_frequency=None,
+    def __init__(self, sorting_list, name_list=None, delta_time=0.4,  # sampling_frequency=None,
                  match_score=0.5, chance_score=0.1, n_jobs=-1, verbose=False):
 
         self.sorting_list = sorting_list
@@ -25,13 +25,13 @@ class BaseComparison:
         self.name_list = name_list
         if np.any(['_' in name for name in name_list]):
             raise ValueError("Sorter names in 'name_list' cannot contain '_'")
-        
+
         if not np.all(s.get_num_segments() == 1 for s in sorting_list):
             raise Exception('Comparison module work with sorting having num_segments=1')
 
         # take sampling frequency from sorting list and test that they are equivalent.
         sampling_freqs = np.array([s.get_sampling_frequency() for s in self.sorting_list], dtype='float64')
-        
+
         # Some sorter round the sampling freq lets emit a warning
         sf0 = sampling_freqs[0]
         if not np.all(sf0 == sampling_freqs):
@@ -54,9 +54,9 @@ class BaseTwoSorterComparison(BaseComparison):
     """
 
     def __init__(self, sorting1, sorting2, sorting1_name=None, sorting2_name=None,
-                 delta_time=0.4,  match_score=0.5,
+                 delta_time=0.4, match_score=0.5,
                  chance_score=0.1, n_jobs=1, verbose=False):
-                     # sampling_frequency=None
+        # sampling_frequency=None
 
         sorting_list = [sorting1, sorting2]
         if sorting1_name is None:
@@ -68,7 +68,7 @@ class BaseTwoSorterComparison(BaseComparison):
         BaseComparison.__init__(self, sorting_list, name_list=name_list, delta_time=delta_time,
                                 match_score=match_score,
                                 chance_score=chance_score, verbose=verbose, n_jobs=n_jobs)
-                                # sampling_frequency=sampling_frequency, 
+        # sampling_frequency=sampling_frequency,
 
         self.unit1_ids = self.sorting1.get_unit_ids()
         self.unit2_ids = self.sorting2.get_unit_ids()
@@ -100,7 +100,6 @@ class BaseTwoSorterComparison(BaseComparison):
         # spike count for each spike train
         self.event_counts1 = do_count_event(self.sorting1)
         self.event_counts2 = do_count_event(self.sorting2)
-       
 
         # matrix of  event match count for each pair
         self.match_event_count = make_match_count_matrix(self.sorting1, self.sorting2, self.delta_frames,

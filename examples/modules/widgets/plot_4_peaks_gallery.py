@@ -2,10 +2,10 @@
 Peaks Widgets Gallery
 =====================
 
-Some wodgets are usefull before sorting and works with "peaks" given by detect_peaks()
+Some widgets are useful before sorting and works with "peaks" given by detect_peaks()
 function.
 
-They are usefull to check drift before running sorters.
+They are useful to check drift before running sorters.
 
 '''
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ import spikeinterface.full as si
 
 ##############################################################################
 # First, let's download a simulated dataset
-#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+# from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 rec, sorting = si.read_mearec(local_path)
@@ -57,7 +57,7 @@ si.plot_peak_activity_map(rec_filtred, bin_duration_s=1.)
 
 ##############################################################################
 # plot_drift_over_time'()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~
 # heatmap mode
 # here bin_duration_s=1. because the rec is short (10s).
 # a better value could 60s
@@ -67,7 +67,7 @@ si.plot_drift_over_time(rec_filtred, peaks=peaks, bin_duration_s=1.,
 
 ##############################################################################
 # plot_drift_over_time'()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~
 # in scatter mode
 
 si.plot_drift_over_time(rec_filtred, peaks=peaks, weight_with_amplitudes=False, mode='scatter')

@@ -62,7 +62,7 @@ class SymmetricSortingComparison(BaseTwoSorterComparison):
 
     def get_matching(self):
         return self.hungarian_match_12, self.hungarian_match_21
-    
+
     def get_matching_event_count(self, unit1, unit2):
         if (unit1 is not None) and (unit2 is not None):
             return self.match_event_count.at[unit1, unit2]
@@ -88,6 +88,8 @@ class SymmetricSortingComparison(BaseTwoSorterComparison):
             return self.agreement_scores.at[unit1, unit2]
 
 
-def compare_two_sorters(*args, **kargs):
-        return SymmetricSortingComparison(*args, **kargs)
+def compare_two_sorters(*args, **kwargs):
+    return SymmetricSortingComparison(*args, **kwargs)
+
+
 compare_two_sorters.__doc__ = SymmetricSortingComparison.__doc__

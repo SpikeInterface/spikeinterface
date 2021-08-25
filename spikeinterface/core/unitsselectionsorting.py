@@ -8,7 +8,11 @@ from .basesorting import BaseSorting, BaseSortingSegment
 class UnitsSelectionSorting(BaseSorting):
     """
     Class that handles slicin a Sorting object based on a list of unit_ids.
+
+    Do not use this class directly but use `sorting.select_units(...)`
+
     """
+
     def __init__(self, parent_sorting, unit_ids=None, renamed_unit_ids=None):
         if unit_ids is None:
             unit_ids = parent_sorting.get_unit_ids()
@@ -35,6 +39,9 @@ class UnitsSelectionSorting(BaseSorting):
             self.add_sorting_segment(sub_segment)
 
         parent_sorting.copy_metadata(self, only_main=False, ids=self._unit_ids)
+
+        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), unit_ids=unit_ids,
+                            renamed_unit_ids=renamed_unit_ids)
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):

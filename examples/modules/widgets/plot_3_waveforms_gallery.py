@@ -12,7 +12,7 @@ import spikeinterface.widgets as sw
 
 ##############################################################################
 # First, let's download a simulated dataset
-#  on the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+#  from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 recording = se.MEArecRecordingExtractor(local_path)
@@ -22,7 +22,7 @@ print(sorting)
 
 ##############################################################################
 # Extract spike waveforms
-# --------------------------
+# -----------------------
 # 
 # For convinience metris are computed on the WaveformExtractor object that gather recording/sorting and
 # extracted waveforms in a single object
@@ -36,7 +36,7 @@ we = si.extract_waveforms(recording, sorting, folder,
 
 ##############################################################################
 # plot_unit_waveforms()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~
 
 unit_ids = sorting.unit_ids[:4]
 
@@ -44,7 +44,7 @@ sw.plot_unit_waveforms(we, unit_ids=unit_ids)
 
 ##############################################################################
 # plot_unit_templates()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~
 
 unit_ids = sorting.unit_ids
 
@@ -52,7 +52,7 @@ sw.plot_unit_templates(we, unit_ids=unit_ids, ncols=5)
 
 ##############################################################################
 # plot_unit_probe_map()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~
 
 unit_ids = sorting.unit_ids[:4]
 sw.plot_unit_probe_map(we, unit_ids=unit_ids)
@@ -60,7 +60,7 @@ sw.plot_unit_probe_map(we, unit_ids=unit_ids)
 
 ##############################################################################
 # plot_unit_waveform_density_map()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 
 # This is your best friend to check over merge
 
@@ -69,27 +69,21 @@ sw.plot_unit_waveform_density_map(we, unit_ids=unit_ids, max_channels=5)
 
 ##############################################################################
 # plot_amplitudes_distribution()
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 sw.plot_amplitudes_distribution(we)
 
 ##############################################################################
 # plot_amplitudes_timeseres()
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 sw.plot_amplitudes_timeseries(we)
 
 ##############################################################################
 # plot_units_depth_vs_amplitude()
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 sw.plot_units_depth_vs_amplitude(we)
 
-##############################################################################
-# plot_pca_features()
-# ~~~~~~~~~~~~~~~~~~~~~~~~
-
-# TODO : @alessio : this is for you
-sw.plot_principal_component(we)
 
 plt.show()

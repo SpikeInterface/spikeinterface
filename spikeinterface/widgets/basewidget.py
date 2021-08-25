@@ -3,7 +3,6 @@ from matplotlib import gridspec
 import numpy as np
 
 
-
 class BaseWidget:
     def __init__(self, figure=None, ax=None):
         if figure is None and ax is None:
@@ -16,13 +15,13 @@ class BaseWidget:
             self.figure = ax.get_figure()
             self.ax = ax
         self.name = None
-    
+
     def get_figure(self):
         return self.figure
-    
+
     def get_ax(self):
         return self.ax
-    
+
     def get_name(self):
         return self.name
 
@@ -42,7 +41,7 @@ class BaseMultiWidget:
             self.figure = ax.get_figure()
             self.ax = ax
         if axes is not None:
-            # assert len(axes) > 1, "'axes' should be a list with more than one axis"
+            #  assert len(axes) > 1, "'axes' should be a list with more than one axis"
             self.axes = axes
             self.axes = np.array(self.axes)
             assert self.axes.ndim == 2 or self.axes.ndim == 1, "'axes' can be a 1-d array or list or a 2d array of axis"

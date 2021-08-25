@@ -1,6 +1,4 @@
 
-import sklearn.metrics.pairwise
-
 
 def compute_template_similarity(waveform_extractor, method='cosine_similarity'):
     """
@@ -13,6 +11,8 @@ def compute_template_similarity(waveform_extractor, method='cosine_similarity'):
     method: str
         Method name
     """
+    import sklearn.metrics.pairwise
+
     templates = waveform_extractor.get_all_templates()
     s = templates.shape
     if method == 'cosine_similarity':
@@ -21,7 +21,5 @@ def compute_template_similarity(waveform_extractor, method='cosine_similarity'):
     # elif method == '':
     else:
         raise ValueError(f'compute_template_similarity(method{method}) not exists')
-    
+
     return similarity
-    
-    

@@ -6,7 +6,6 @@ from typing import Union
 import shutil
 import json
 
-
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
@@ -38,6 +37,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     sorter_name: str = 'kilosort3'
     kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
+    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
@@ -97,7 +97,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     More information on Kilosort3 at:
         https://github.com/MouseLand/Kilosort
     """
-    
+
     handle_multi_segment = False
 
     @classmethod
@@ -145,7 +145,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         # save binary file
         input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, files_path=[input_file_path],
+        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
                                                  dtype='int16', total_memory=p["total_memory"],
                                                  n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
@@ -207,4 +207,3 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-

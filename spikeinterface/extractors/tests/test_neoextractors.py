@@ -1,6 +1,5 @@
 import unittest
 
-
 import pytest
 import numpy as np
 
@@ -8,12 +7,14 @@ from spikeinterface import download_dataset
 from spikeinterface.extractors import *
 
 from spikeinterface.extractors.tests.common_tests import (RecordingCommonTestSuite,
-    SortingCommonTestSuite, EventCommonTestSuite)
+                                                          SortingCommonTestSuite, EventCommonTestSuite)
+
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ['mearec']
     entities = ['mearec/mearec_test_10s.h5']
+
 
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecSortingExtractor
@@ -30,6 +31,7 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spikeglx/Noise4Sam_g0', {'stream_id': 'nidq'}),
     ]
 
+
 class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = OpenEphysBinaryRecordingExtractor
     downloads = ['openephysbinary']
@@ -41,6 +43,7 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '1'}),
     ]
 
+
 class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = OpenEphysBinaryEventExtractor
     downloads = ['openephysbinary']
@@ -48,12 +51,14 @@ class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
         'openephysbinary/v0.4.4.1_with_video_tracking',
     ]
 
+
 class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = OpenEphysLegacyRecordingExtractor
     downloads = ['openephys']
     entities = [
         'openephys/OpenEphys_SampleData_1',
     ]
+
 
 class ItanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = IntanRecordingExtractor
@@ -68,12 +73,14 @@ class ItanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('intan/intan_rhs_test_1.rhs', {'stream_id': '11'}),
     ]
 
+
 class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeRecordingExtractor
     downloads = ['neuroscope']
     entities = [
         'neuroscope/test1/test1.xml',
     ]
+
 
 class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = PlexonRecordingExtractor
@@ -82,13 +89,14 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'plexon/File_plexon_3.plx',
     ]
 
+
 # TODO : this fail, need investigate
 # class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-    # ExtractorClass = NeuralynxRecordingExtractor
-    # downloads = ['neuralynx']
-    # entities = [
-        # 'neuralynx/Cheetah_v5.6.3',
-    # ]
+# ExtractorClass = NeuralynxRecordingExtractor
+# downloads = ['neuralynx']
+# entities = [
+# 'neuralynx/Cheetah_v5.6.3',
+# ]
 
 
 class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -99,6 +107,7 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
     ]
+
 
 class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MCSRawRecordingExtractor
@@ -116,7 +125,6 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ]
 
 
-
 class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Spike2RecordingExtractor
     downloads = ['spike2/130322-1LY.smr']
@@ -124,17 +132,19 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
     ]
 
+
 @pytest.mark.skip(reason='Ced extractor depend on sonpy and next neo version')
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
     downloads = [
         'spike2/130322-1LY.smr',
         'spike2/m365_1sec.smrx',
-        ]
+    ]
     entities = [
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
         'spike2/m365_1sec.smrx',
     ]
+
 
 @pytest.mark.skip(reason="Maxwell HDF5 compression need a manual installable plugin!!!")
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -142,17 +152,27 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['maxwell']
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
-        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id':'well0000', 'rec_name': 'rec0000'})
+        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well0000', 'rec_name': 'rec0000'})
+    ]
+
+
+class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = SpikeGadgetsRecordingExtractor
+    downloads = ['spikegadgets']
+    entities = [
+        ('spikegadgets/20210225_em8_minirec2_ac.rec', {'stream_id': 'ECU'}),
+        ('spikegadgets/20210225_em8_minirec2_ac.rec', {'stream_id': 'trodes'}),
+        'spikegadgets/W122_06_09_2019_1_fromSD.rec'
     ]
 
 
 if __name__ == '__main__':
-    #~ test = MearecRecordingTest()
-    #~ test = MearecSortingTest()
-    #~ test = SpikeGLXRecordingTest()
-    #~ test = OpenEphysBinaryRecordingTest()
-    #~ test = OpenEphysLegacyRecordingTest()
-    #~ test = OpenEphysBinaryEventTest()
+    # ~ test = MearecRecordingTest()
+    # ~ test = MearecSortingTest()
+    # ~ test = SpikeGLXRecordingTest()
+    # ~ test = OpenEphysBinaryRecordingTest()
+    # ~ test = OpenEphysLegacyRecordingTest()
+    # ~ test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
@@ -160,11 +180,10 @@ if __name__ == '__main__':
     # test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
-    #~ test = Spike2RecordingTest()
-    #~ test = CedRecordingTest()
-    test = MaxwellRecordingTest()
-    
+    # ~ test = Spike2RecordingTest()
+    # ~ test = CedRecordingTest()
+    # ~ test = MaxwellRecordingTest()
+    test = SpikeGadgetsRecordingTest()
+
     test.setUp()
     test.test_open()
-    
-    

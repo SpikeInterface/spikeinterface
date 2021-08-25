@@ -1,7 +1,7 @@
 import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting,
-    BaseRecordingSegment, BaseSortingSegment,
-    BaseEvent, BaseEventSegment)
+                                 BaseRecordingSegment, BaseSortingSegment,
+                                 BaseEvent, BaseEventSegment)
 
 
 class NumpyRecording(BaseRecording):
@@ -153,7 +153,7 @@ class NumpySorting(BaseSorting):
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
 
         return sorting
-    
+
     @staticmethod
     def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None):
         """
@@ -167,23 +167,23 @@ class NumpySorting(BaseSorting):
         """
         import neo
 
-        assert isinstance(neo_spiketrains,  list)
-        
+        assert isinstance(neo_spiketrains, list)
+
         if isinstance(neo_spiketrains[0], list):
             # multi segment
             assert isinstance(neo_spiketrains[0][0], neo.SpikeTrain)
         elif isinstance(neo_spiketrains[0], neo.SpikeTrain):
             # unique segment
             neo_spiketrains = [neo_spiketrains]
-        
+
         nseg = len(neo_spiketrains)
-        
+
         if unit_ids is None:
             unit_ids = np.arange(len(neo_spiketrains[0]), dtype='int64')
-        
+
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for seg_index in range(nseg):
-            
+
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
@@ -213,19 +213,18 @@ class NumpySortingSegment(BaseSortingSegment):
 class NumpyEvent(BaseEvent):
     def __init__(self, channel_ids, structured_dtype):
         BaseEvent.__init__(self, channel_ids, structured_dtype)
-    
-    
+
     def from_dict(event_dict_list):
         if isinstance(event_dict_list, dict):
             event_dict_list = [event_dict_list]
 
         channel_ids = list(event_dict_list[0].keys())
-        
+
         structured_dtype = {}
         for chan_id in channel_ids:
             values = event_dict_list[0][chan_id]
             structured_dtype[chan_id] = values.dtype.fields is not None
-        
+
         event = NumpyEvent(channel_ids, structured_dtype)
         for i, event_dict in enumerate(event_dict_list):
             event.add_event_segment(NumpyEventSegment(event_dict))
@@ -233,17 +232,14 @@ class NumpyEvent(BaseEvent):
         return event
 
 
-
-    
 class NumpyEventSegment(BaseEventSegment):
     def __init__(self, event_dict):
         BaseEventSegment.__init__(self)
-        
-        #~ for channel_id, event_array in event_dict.items():
-            
-            
+
+        # ~ for channel_id, event_array in event_dict.items():
+
         self._event_dict = event_dict
-    
+
     def get_event_times(self, channel_id, start_time, end_time):
         times = self._event_dict[channel_id]
         if times.dtype.fields is None:
@@ -260,5 +256,3 @@ class NumpyEventSegment(BaseEventSegment):
                 times = times[times[filed0] <= end_time]
 
         return times
-
-

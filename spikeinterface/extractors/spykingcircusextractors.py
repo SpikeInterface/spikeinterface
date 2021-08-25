@@ -5,6 +5,7 @@ from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
@@ -98,9 +99,11 @@ def _load_sample_rate(params_file):
                     sample_rate = sample_rate[:sample_rate.find('#')]
                 sample_rate = float(sample_rate)
     return sample_rate
-    
 
-def read_spykingcircus(*args, **kargs):
-    sorting = SpykingCircusSortingExtractor(*args, **kargs)
+
+def read_spykingcircus(*args, **kwargs):
+    sorting = SpykingCircusSortingExtractor(*args, **kwargs)
     return sorting
+
+
 read_spykingcircus.__doc__ = SpykingCircusSortingExtractor.__doc__
