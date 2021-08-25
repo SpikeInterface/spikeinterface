@@ -21,11 +21,16 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     waveform_extractor: a WaveformExtractor or None
         If WaveformExtractor is provide then the compute is faster otherwise
     output_folder: str
-        The output folder where the preport files are saved
+        The output folder where the report files are saved
     remove_if_exists: bool
         If True and the output folder exists, it is removed
     format: str
-        'png' (default) or 'pdf' or any format handle by matplotlib
+        'png' (default) or 'pdf' or any format handled by matplotlib
+    metrics: pandas.DataFrame or None
+        Quality metrics to export to csv. If None, quality metrics are computed.
+    amplitudes: dict or None
+        Amplitudes 'by_unit' as returned by the st.postprocessing.get_spike_amplitudes(..., output="by_unit") function.
+        If None, amplitudes are computed.
     {}
     """
     we = waveform_extractor
@@ -37,7 +42,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
 
     if amplitudes is None:
         # compute amplituds if not provided
-        amplitudes = st.get_spike_amplitudes(we,  peak_sign='neg', outputs='by_unit', **job_wargs)
+        amplitudes = st.get_spike_amplitudes(we, peak_sign='neg', outputs='by_unit', **job_wargs)
 
     output_folder = Path(output_folder).absolute()
     if output_folder.is_dir():
@@ -57,7 +62,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     # metrics
     if metrics is None:
         pca = st.compute_principal_components(we, load_if_exists=True,
-                                     n_components=5, mode='by_channel_local')
+                                              n_components=5, mode='by_channel_local')
         metrics = st.compute_quality_metrics(we, waveform_principal_component=pca)
     metrics.to_csv(output_folder / 'quality metrics.csv')
 
