@@ -3,92 +3,65 @@ from matplotlib import gridspec
 import numpy as np
 
 
+# This class replace the old BaseWidget and BaseMultiWidget
 class BaseWidget:
-    def __init__(self, figure=None, ax=None):
-        if figure is None and ax is None:
-            self.figure = plt.figure()
-            self.ax = self.figure.add_subplot(111)
-        elif ax is None:
-            self.figure = figure
-            self.ax = self.figure.add_subplot(111)
+    def __init__(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
+        """
+        figure/ax/axes : only one of then can be not None
+        """
+        if figure is not None:
+            assert ax is None and axes is None, 'figure/ax/axes : only one of then can be not None'
+            ax = figure.add_subplot(111)
+            axes = np.array([[ax]])
+        elif ax is not None:
+            assert figure is None and axes is None, 'figure/ax/axes : only one of then can be not None'
+            figure = ax.get_figure()
+            axes = np.array([[ax]])
+        elif axes is not None:
+            assert figure is None and ax is None, 'figure/ax/axes : only one of then can be not None'
+            axes = np.asarray(axes)
+            figure = axes.flatten()[0].get_figure()
         else:
-            self.figure = ax.get_figure()
-            self.ax = ax
-        self.name = None
-
-    def get_figure(self):
-        return self.figure
-
-    def get_ax(self):
-        return self.ax
-
-    def get_name(self):
-        return self.name
-
-
-class BaseMultiWidget:
-    def __init__(self, figure=None, ax=None, axes=None):
-        self._use_gs = True
-        self._gs = None
-        self.axes = []
-        if figure is None and ax is None and axes is None:
-            self.figure = plt.figure()
-            self.ax = self.figure.add_subplot(111)
-        elif ax is None and axes is None:
-            self.figure = figure
-            self.ax = self.figure.add_subplot(111)
-        elif axes is None:
-            self.figure = ax.get_figure()
-            self.ax = ax
-        if axes is not None:
-            #  assert len(axes) > 1, "'axes' should be a list with more than one axis"
-            self.axes = axes
-            self.axes = np.array(self.axes)
-            assert self.axes.ndim == 2 or self.axes.ndim == 1, "'axes' can be a 1-d array or list or a 2d array of axis"
-            if self.axes.ndim == 1:
-                self.figure = self.axes[0].get_figure()
+            # one fig with one ax
+            if num_axes is None:
+                figure, ax = plt.subplots()
+                axes = np.array([[ax]])
             else:
-                self.figure = self.axes[0, 0].get_figure()
-            self._use_gs = False
-        else:
-            self.ax.axis('off')
-        self.name = None
-
-    def get_tiled_ax(self, i, nrows, ncols, hspace=0.3, wspace=0.3, is_diag=False):
-        if self._use_gs:
-            if self._gs is None:
-                self._gs = gridspec.GridSpecFromSubplotSpec(int(nrows), int(ncols), subplot_spec=self.ax,
-                                                            hspace=hspace, wspace=wspace)
-            r = int(i // ncols)
-            c = int(np.mod(i, ncols))
-            gs_sel = self._gs[r, c]
-            ax = self.figure.add_subplot(gs_sel)
-            self.axes.append(ax)
-            if r == c:
-                diag = True
-            else:
-                diag = False
-            if is_diag:
-                return ax, diag
-            else:
-                return ax
-        else:
-            if np.array(self.axes).ndim == 1:
-                assert i < len(self.axes), f"{i} exceeds the number of available axis"
-                if is_diag:
-                    return self.axes[i], False
+                if num_axes == 0:
+                    # one figure without plots (diffred subplot creation with 
+                    self.figure = plt.figure()
+                    ax = None
+                    axes = None
+                elif num_axes == 1:
+                    ax = self.figure.add_subplot(111)
+                    axes = np.array([[ax]])
                 else:
-                    return self.axes[i]
-            else:
-                nrows = self.axes.shape[0]
-                ncols = self.axes.shape[1]
-                r = int(i // ncols)
-                c = int(np.mod(i, ncols))
-                if r == c:
-                    diag = True
-                else:
-                    diag = False
-                if is_diag:
-                    return self.axes[r, c], diag
-                else:
-                    return self.axes[r, c]
+                    assert ncols is not None
+                    if num_axes < ncols:
+                        ncols = num_axes
+                    nrows = int(np.ceil(num_axes / ncols))
+                    figure, axes = plt.subplots(nrows=nrows, ncols=ncols, )
+                    ax = None
+                    # remove extra axes
+                    if ncols * nrows > num_axes:
+                        for extra_ax in axes.flatten()[num_axes:]:
+                            extra_ax.remove()
+                
+        
+        self.figure = figure
+        self.ax = ax
+        # axes is a 2D array of ax
+        self.axes = axes
+        # self.figure.axes is the flatten of all axes
+
+# keep here just in case it is needed
+
+#    def create_tiled_ax(self, i, nrows, ncols, hspace=0.3, wspace=0.3, is_diag=False):
+#        gs = gridspec.GridSpecFromSubplotSpec(int(nrows), int(ncols), subplot_spec=self.ax,
+#                                                        hspace=hspace, wspace=wspace)
+#        r = int(i // ncols)
+#        c = int(np.mod(i, ncols))
+#        gs_sel = gs[r, c]
+#        ax = self.figure.add_subplot(gs_sel)
+#        return ax
+
