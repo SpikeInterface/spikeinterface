@@ -169,7 +169,7 @@ class CombinatoSorter(BaseSorter):
             extra_cmd = str(tmpdir)[:2]
             shell_cmd = shell_cmd.replace('/', '\\')
         else:
-            extra_cmd = '# !/bin/bash'
+            extra_cmd = '#!/bin/bash'
 
         shell_cmd = shell_cmd.format(
             extra_cmd=extra_cmd,

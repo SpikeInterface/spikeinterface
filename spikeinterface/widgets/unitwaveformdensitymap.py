@@ -1,12 +1,12 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .basewidget import BaseWidget, BaseMultiWidget
+from .basewidget import BaseWidget
 from .utils import get_unit_colors
 from ..toolkit import get_template_channel_sparsity
 
 
-class UnitWaveformDensityMapWidget(BaseMultiWidget):
+class UnitWaveformDensityMapWidget(BaseWidget):
     """
     Plots unit waveforms using heat map density.
     
@@ -40,7 +40,7 @@ class UnitWaveformDensityMapWidget(BaseMultiWidget):
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
                  max_channels=None, radius_um=None, same_axis=False,
                  unit_colors=None,
-                 figure=None, ax=None, axes=None):
+                 ax=None, axes=None):
 
         self.waveform_extractor = waveform_extractor
         self.recording = waveform_extractor.recording
@@ -76,7 +76,7 @@ class UnitWaveformDensityMapWidget(BaseMultiWidget):
                 fig, axes = plt.subplots(nrows=nrows, squeeze=False)
                 axes = axes[:, 0]
                 ax = None
-        BaseMultiWidget.__init__(self, figure=None, ax=ax, axes=axes)
+        BaseWidget.__init__(self, figure=None, ax=ax, axes=axes)
 
     def plot(self):
         we = self.waveform_extractor

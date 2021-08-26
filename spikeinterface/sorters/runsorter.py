@@ -1,12 +1,15 @@
 import shutil
 import os
+import sys
 from pathlib import Path
 import json
+from copy import deepcopy
 
 from ..version import version as si_version
-from spikeinterface.core import BaseRecording
+from spikeinterface.core.base import is_dict_extractor
 from spikeinterface.core.core_tools import check_json
 from .sorterlist import sorter_dict
+from .utils import SpikeSortingError
 
 _common_param_doc = """
     Parameters
@@ -84,25 +87,41 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
 
 
 def modify_input_folder(d, input_folder):
-    if "kwargs" in d.keys():
-        dcopy_kwargs, folder_to_mount = modify_input_folder(d["kwargs"], input_folder)
-        d["kwargs"] = dcopy_kwargs
-        return d, folder_to_mount
+    dcopy = deepcopy(d)
+    if "kwargs" in dcopy.keys():
+        # handle nested
+        kwargs = dcopy["kwargs"]
+        nested_extractor_dict = None
+        nested_extractor_key = None
+        for k, v in kwargs.items():
+            if isinstance(v, dict) and is_dict_extractor(v):
+                nested_extractor_dict = v
+                nested_extractor_key = k
+        if nested_extractor_dict is None:
+            dcopy_kwargs, folder_to_mount = modify_input_folder(kwargs, input_folder)
+            dcopy["kwargs"] = dcopy_kwargs
+        else:
+            dcopy_kwargs, folder_to_mount = modify_input_folder(nested_extractor_dict, input_folder)
+            dcopy["kwargs"][nested_extractor_key] = dcopy_kwargs
+        return dcopy, folder_to_mount
     else:
-        for k in d.keys():
+        for k in dcopy.keys():
             if "path" in k:
                 # paths can be str or list of str
-                if isinstance(d[k], str):
+                if isinstance(dcopy[k], str):
                     # one path
-                    abs_path = Path(d[k])
-                    folder_to_mount = abs_path.parent
-                    relative_path = str(Path(d[k]).relative_to(folder_to_mount))
-                    d[k] = f"{input_folder}/{relative_path}"
+                    abs_path = Path(dcopy[k])
+                    if abs_path.is_file():
+                        folder_to_mount = abs_path.parent
+                    elif abs_path.is_dir():
+                        folder_to_mount = abs_path
+                    relative_path = str(Path(dcopy[k]).relative_to(folder_to_mount))
+                    dcopy[k] = f"{input_folder}/{relative_path}"
                 elif isinstance(d[k], list):
                     # list of path
                     relative_paths = []
                     folder_to_mount = None
-                    for abs_path in d[k]:
+                    for abs_path in dcopy[k]:
                         abs_path = Path(abs_path)
                         if folder_to_mount is None:
                             folder_to_mount = abs_path.parent
@@ -110,10 +129,10 @@ def modify_input_folder(d, input_folder):
                             assert folder_to_mount == abs_path.parent
                         relative_path = str(abs_path.relative_to(folder_to_mount))
                         relative_paths.append(f"{input_folder}/{relative_path}")
-                    d[k] = relative_paths
+                    dcopy[k] = relative_paths
                 else:
                     raise ValueError(f'{k} key for path  must be str or list[str]')
-            return d, folder_to_mount
+            return dcopy, folder_to_mount
 
 
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
@@ -182,19 +201,22 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
 
     if need_si_install:
         if 'dev' in si_version:
+            if verbose:
+                print(f"Installing spikeinterface from sources in {docker_image}")
             # install from github source several stuff
             cmd = 'pip install --upgrade --force MEArec'
             commands.append(cmd)
 
-            cmd = 'pip install --upgrade --force https://github.com/SpikeInterface/spikeinterface/archive/master.zip'
+            cmd = 'pip install -e git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
             commands.append(cmd)
 
             cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
             commands.append(cmd)
         else:
             # install from pypi with same version as host
+            if verbose:
+                print(f"Installing spikeinterface=={si_version} in {docker_image}")
             cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
-            res = client.containers.run(docker_image, cmd)
             commands.append(cmd)
 
     # run sorter on folder
@@ -218,12 +240,21 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
 
     if verbose:
         print(f"Running sorter in {docker_image}")
-    res = client.containers.run(docker_image, command=command, volumes=volumes, **extra_kwargs)
-
-    # clean useless files
-    os.remove(parent_folder / 'in_docker_recording.json')
-    os.remove(parent_folder / 'in_docker_params.json')
-    os.remove(parent_folder / 'in_docker_sorter_script.py')
+        # flush whatever is in the stdout
+        sys.stdout.flush()
+    try:
+        res = client.containers.run(docker_image, command=command, volumes=volumes, stdout=verbose,
+                                    **extra_kwargs)
+        # clean useless files
+        os.remove(parent_folder / 'in_docker_recording.json')
+        os.remove(parent_folder / 'in_docker_params.json')
+        os.remove(parent_folder / 'in_docker_sorter_script.py')
+    except Exception as e:
+        # clean useless files
+        os.remove(parent_folder / 'in_docker_recording.json')
+        os.remove(parent_folder / 'in_docker_params.json')
+        os.remove(parent_folder / 'in_docker_sorter_script.py')
+        raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{e}")
 
     sorting = SorterClass.get_result_from_folder(output_folder)
 

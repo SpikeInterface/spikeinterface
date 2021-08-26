@@ -1,6 +1,6 @@
 import platform
 
-from spikeinterface.core.tests.testing_tools import generate_recording
+from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording
 

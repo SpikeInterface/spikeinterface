@@ -1,11 +1,11 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .basewidget import BaseWidget, BaseMultiWidget
+from .basewidget import BaseWidget
 from ..toolkit import WaveformPrincipalComponent, compute_principal_components
 
 
-class PrincipalComponentWidget(BaseMultiWidget):
+class PrincipalComponentWidget(BaseWidget):
     """
     Plots principal component.
 
@@ -19,7 +19,7 @@ class PrincipalComponentWidget(BaseMultiWidget):
 
     def __init__(self, waveform_extractor, pc=None,
                  figure=None, ax=None, axes=None, **pc_kwargs):
-        BaseMultiWidget.__init__(self, figure, ax, axes)
+        BaseWidget.__init__(self, figure, ax, axes)
 
         self.we = waveform_extractor
 

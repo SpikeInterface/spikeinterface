@@ -4,7 +4,7 @@ import pytest
 
 import numpy as np
 
-from spikeinterface.core.tests.testing_tools import generate_recording
+from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.toolkit.utils import (get_random_data_chunks,
                                           get_closest_channels, get_noise_levels)
@@ -25,7 +25,12 @@ def test_get_closest_channels():
 def test_get_noise_levels():
     rec = generate_recording(num_channels=2, sampling_frequency=1000., durations=[60.])
 
-    noise_levels = get_noise_levels(rec)
+    noise_levels = get_noise_levels(rec, return_scaled=False)
+    print(noise_levels)
+
+    rec.set_channel_gains(0.1)
+    rec.set_channel_offsets(0)
+    noise_levels = get_noise_levels(rec, return_scaled=True)
     print(noise_levels)
 
 

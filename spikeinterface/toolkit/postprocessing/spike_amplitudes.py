@@ -6,7 +6,8 @@ from .template_tools import (get_template_extremum_channel,
                              get_template_extremum_channel_peak_shift)
 
 
-def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatenated', **job_kwargs):
+def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatenated', return_scaled=True,
+                         **job_kwargs):
     """
     Computes the spike amplitudes from a WaveformExtractor.
 
@@ -24,6 +25,8 @@ def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatena
             - 'neg'
             - 'pos'
             - 'both'
+    return_scaled: bool
+        If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
     outputs: str
         How the output should be returned:
             - 'concatenated'
@@ -46,10 +49,16 @@ def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatena
     extremum_channels_index = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, outputs='index')
     peak_shifts = get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg')
 
+    if return_scaled:
+        # check if has scaled values:
+        if not waveform_extractor.recording.has_scaled_traces():
+            print("Setting 'return_scaled' to False")
+            return_scaled = False
+
     # and run
-    func = _unit_amplitudes_chunk
-    init_func = _init_worker_unit_amplitudes
-    init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts)
+    func = _spike_amplitudes_chunk
+    init_func = _init_worker_spike_amplitudes
+    init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts, return_scaled)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='extract amplitudes', **job_kwargs)
     out = processor.run()
@@ -79,7 +88,7 @@ def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatena
 get_spike_amplitudes.__doc__ = get_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 
 
-def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, peak_shifts):
+def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -90,6 +99,7 @@ def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, pe
         sorting = load_extractor(sorting)
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
+    worker_ctx['return_scaled'] = return_scaled
     all_spikes = sorting.get_all_spike_trains()
     for segment_index in range(recording.get_num_segments()):
         spike_times, spike_labels = all_spikes[segment_index]
@@ -105,10 +115,11 @@ def _init_worker_unit_amplitudes(recording, sorting, extremum_channels_index, pe
     return worker_ctx
 
 
-def _unit_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
+def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     all_spikes = worker_ctx['all_spikes']
     recording = worker_ctx['recording']
+    return_scaled = worker_ctx['return_scaled']
 
     spike_times, spike_labels = all_spikes[segment_index]
     d = np.diff(spike_times)
@@ -123,7 +134,8 @@ def _unit_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
         extremum_channels_index = worker_ctx['extremum_channels_index']
 
         # load trace in memory
-        traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+        traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                      return_scaled=return_scaled)
 
         st = spike_times[i0:i1]
         st = st - start_frame
