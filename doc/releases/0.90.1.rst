@@ -1,0 +1,36 @@
+.. _release0.90.1:
+
+SpikeInterface 0.90.1 release notes
+-----------------------------------
+
+26th August 2021
+
+Minor release - bug fixes
+
+general:
+  * fix lazy imports
+  * expose __version__ in full import
+
+core:
+  * added return_scaled to WaveformExtractor (True by default)
+  * fix unit selection kwargs
+  * add has_scaled_traces() to BaseRecording
+
+extractors:
+  * fix str type for files and folders in neo extractors
+
+sorters:
+  * fix HDsort channel map
+  * fix docker mapping when recording is preprocessed
+  * remove mountainsort4 curation
+  * fix combinato script
+
+toolkit:
+  * fix to auto and cross correlograms
+  * fix channel indices for template metrics
+  * add return_scaled to spike_amplitudes and SNR computation
+
+widgets:
+  * fix raster widgets segments indexes
+  * fix docs for unit_summary
+  * refactor BaseWidget (and remove BaseMultiWidget)
