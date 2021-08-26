@@ -6,7 +6,7 @@ from spikeinterface.core import UnitsSelectionSorting
 from spikeinterface.core import NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.tests.testing_tools import create_sorting_npz
+from spikeinterface.core.testing_tools import create_sorting_npz
 
 
 def test_unitsselectionsorting():

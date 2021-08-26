@@ -1,13 +1,13 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .basewidget import BaseWidget, BaseMultiWidget
+from .basewidget import BaseWidget
 from matplotlib.animation import FuncAnimation
 
 from probeinterface.plotting import plot_probe
 
 
-class UnitProbeMapWidget(BaseMultiWidget):
+class UnitProbeMapWidget(BaseWidget):
     """
     Plots unit map. Amplitude is color coded on probe contact.
     
@@ -27,7 +27,7 @@ class UnitProbeMapWidget(BaseMultiWidget):
 
     def __init__(self, waveform_extractor, unit_ids=None, channel_ids=None,
                  animated=None, colorbar=True,
-                 ncols=5, figure=None, ax=None, axes=None):
+                 ncols=5,  axes=None):
 
         self.waveform_extractor = waveform_extractor
         if unit_ids is None:
@@ -46,8 +46,8 @@ class UnitProbeMapWidget(BaseMultiWidget):
             ncols = n
         nrows = int(np.ceil(n / ncols))
         if axes is None:
-            figure, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True, sharey=True)
-        BaseMultiWidget.__init__(self, figure, ax, axes)
+            fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True, sharey=True)
+        BaseWidget.__init__(self, None, None, axes)
 
     def plot(self):
         we = self.waveform_extractor

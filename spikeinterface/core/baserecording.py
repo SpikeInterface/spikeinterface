@@ -102,15 +102,22 @@ class BaseRecording(BaseExtractor):
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
-            gains = self.get_property('gain_to_uV')
-            offsets = self.get_property('offset_to_uV')
-            if gains is None or offsets is None:
+            if not self.has_scaled_traces():
                 raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_'
                                  'to_uV properties)')
-            gains = gains[channel_indices].astype('float32')
-            offsets = offsets[channel_indices].astype('float32')
-            traces = traces.astype('float32') * gains + offsets
+            else:
+                gains = self.get_property('gain_to_uV')
+                offsets = self.get_property('offset_to_uV')
+                gains = gains[channel_indices].astype('float32')
+                offsets = offsets[channel_indices].astype('float32')
+                traces = traces.astype('float32') * gains + offsets
         return traces
+
+    def has_scaled_traces(self):
+        if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
+            return False
+        else:
+            return True
 
     def is_filtered(self):
         # the is_filtered is handle with annotation
@@ -379,7 +386,7 @@ class BaseRecording(BaseExtractor):
 
     def clear_channel_groups(self, channel_ids=None):
         if channel_ids is None:
-            n = self.get_num_channel()
+            n = self.get_num_channels()
         else:
             n = len(channel_ids)
         groups = np.zeros(n, dtype='int64')

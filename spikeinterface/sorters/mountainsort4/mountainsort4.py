@@ -26,13 +26,13 @@ class Mountainsort4Sorter(BaseSorter):
         'freq_max': 6000,
         'filter': True,
         'whiten': True,  # Whether to do channel whitening as part of preprocessing
-        'curation': False,
+        # 'curation': False, -- commented this becaues not implemented in mountainsort4 package (yet?)
         # 'num_workers': None,
         'num_workers': 1,
         'clip_size': 50,
         'detect_threshold': 3,
         'detect_interval': 10,  # Minimum number of timepoints between events detected on the same channel
-        'noise_overlap_threshold': 0.15,  # Use None for no automated curation'
+        # 'noise_overlap_threshold': 0.15,  # Use None for no automated curation' -- commented this becaues not implemented in mountainsort4 package (yet?)
     }
 
     _params_description = {
@@ -46,12 +46,12 @@ class Mountainsort4Sorter(BaseSorter):
         'freq_max': "Low-pass filter cutoff frequency",
         'filter': "Enable or disable filter",
         'whiten': "Enable or disable whitening",
-        'curation': "Enable or disable curation",
+        # 'curation': "Enable or disable curation", -- commented this becaues not implemented in mountainsort4 package (yet?)
         'num_workers': "Number of workers (if None, half of the cpu number is used)",
         'clip_size': "Number of samples per waveform",
         'detect_threshold': "Threshold for spike detection",
         'detect_interval': "Minimum number of timepoints between events detected on the same channel",
-        'noise_overlap_threshold': "Noise overlap threshold for automatic curation",
+        # 'noise_overlap_threshold': "Noise overlap threshold for automatic curation", -- commented this becaues not implemented in mountainsort4 package (yet?)
     }
 
     sorter_description = """Mountainsort4 is a fully automatic density-based spike sorter using the isosplit clustering 
@@ -126,15 +126,15 @@ class Mountainsort4Sorter(BaseSorter):
             verbose=verbose
         )
 
-        # Curate
-        if p['noise_overlap_threshold'] is not None and p['curation'] is True:
-            if verbose:
-                print('Curating')
-            old_api_sorting = mountainsort4.mountainsort4_curation(
-                recording=old_api_recording,
-                sorting=old_api_sorting,
-                noise_overlap_threshold=p['noise_overlap_threshold']
-            )
+        # Curate -- commented this becaues not implemented in mountainsort4 package (yet?)
+        # if p['noise_overlap_threshold'] is not None and p['curation'] is True:
+        #     if verbose:
+        #         print('Curating')
+        #     old_api_sorting = mountainsort4.mountainsort4_curation(
+        #         recording=old_api_recording,
+        #         sorting=old_api_sorting,
+        #         noise_overlap_threshold=p['noise_overlap_threshold']
+        #     )
 
         # convert sorting to new API and save it
         unit_ids = old_api_sorting.get_unit_ids()

@@ -1,8 +1,4 @@
-import numpy as np
-
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-
-import neo
 
 import probeinterface as pi
 
@@ -23,7 +19,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = 'MEArecRawIO'
 
     def __init__(self, file_path, locs_2d=True):
-        neo_kwargs = {'filename': file_path}
+        neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, **neo_kwargs)
 
         probe = pi.read_mearec(file_path)
@@ -39,7 +35,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
     handle_spike_frame_directly = False
 
     def __init__(self, file_path, use_natural_unit_ids=True):
-        neo_kwargs = {'filename': file_path}
+        neo_kwargs = {'filename': str(file_path)}
         NeoBaseSortingExtractor.__init__(self,
                                          sampling_frequency=None,  # auto guess is correct here
                                          use_natural_unit_ids=use_natural_unit_ids,
