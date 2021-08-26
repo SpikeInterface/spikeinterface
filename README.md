@@ -47,41 +47,43 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 
 
-`spikeinterface` version 0.90.0:
+`spikeinterface` version 0.90.1:
 
-  * break backward compatility with 0.10/0.11/0.12 series.
-  * will be release summer 2021
-  * is no more a metapackage
-  * no more depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets
+  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series.
+  * has been released in July 2021 (0.90.0)
+  * is not a metapackage anymore
+  * it doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets anymore
 
 
 **Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
 ## Documentation
 
-All documentation for spikeinterface work-in-progress can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
+All documentation for spikeinterface 0.90.1 can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
 
 Documentation of current API release 0.12.0 is [here](https://spikeinterface.readthedocs.io/en/stable/).
 
-## How to install work-in-progress version
+## How to install new SI version (0.90.1)
 
-Here a simple recipe to install work-in-progress version (0.90.0.dev0):
+You can install the new `spikeinterface` version with pip:
 
+```bash
+pip install spikeinterface==0.90.1
 ```
-git clone https://github.com/NeuralEnsemble/python-neo.git
-cd python-neo
-python setup.py install (or develop)
-cd ..
 
-git clone https://github.com/SpikeInterface/probeinterface.git
-cd probeinterface
-python setup.py install (or develop)
-cd ..
+To get the latest updates, you can install `spikeinterface` from sources:
 
+```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git
 cd spikeinterface
 python setup.py install (or develop)
 cd ..
+```
+
+To install the olde `spikeinterface` API, you can use pip and point to the old version:
+
+```bash
+pip install spikeinterface==0.13
 ```
 
 
