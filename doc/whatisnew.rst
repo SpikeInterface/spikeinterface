@@ -6,6 +6,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.90.1.rst
   releases/0.90.0.rst
   releases/0.13.0.rst
   releases/0.12.0.rst
@@ -14,10 +15,18 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
+NEW API
+-------
+
+Version 0.90.1
+==============
+
+* Minor release  - bug fixes
+
 Version 0.90.0
 ==============
 
-Major release:
+* Major release:
 
   * many API modifications : no backward compatibility
   * contains all subpackages
