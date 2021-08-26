@@ -2,6 +2,7 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.colors
 
 from .basewidget import BaseWidget
 from spikeinterface.comparison.collisioncomparison import CollisionGTComparison
@@ -28,7 +29,7 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
     W: MultiCompGraphWidget
         The output widget
     """    
-    def __init__(self, comp, unit_ids=None, nbins=11, figure=None, ax=None):
+    def __init__(self, comp, unit_ids=None, figure=None, ax=None):
 
         BaseWidget.__init__(self, figure, ax)
         if unit_ids is None:
@@ -37,7 +38,6 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
 
         self.comp = comp
         self.unit_ids = unit_ids
-        self.nbins = nbins
 
     def plot(self):
         self._do_plot()
@@ -64,10 +64,8 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
 
         fs = self.comp.sorting1.get_sampling_frequency()
 
-        #~ count = 0
-        
-        lags = self.comp.bins[:-1] / fs * 1000
-        width = lags[1] -lags[0]
+        lags = self.comp.bins / fs * 1000
+        width = lags[1] - lags[0]
         
         for r in range(n):
             for c in range(r+1, n):
@@ -81,14 +79,14 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
                 
                 tp = self.comp.all_tp[ind1, ind2, :]
                 fn = self.comp.all_fn[ind1, ind2, :]
-                ax.bar(lags, tp, width=width,  color='g')
-                ax.bar(lags, fn, width=width, bottom=tp, color='r')
+                ax.bar(lags[:-1], tp, width=width,  color='g', align='edge')
+                ax.bar(lags[:-1], fn, width=width, bottom=tp, color='r', align='edge')
                 
                 ax = axs[c, r]
                 tp = self.comp.all_tp[ind2, ind1, :]
                 fn = self.comp.all_fn[ind2, ind1, :]
-                ax.bar(lags, tp, width=width,  color='g')
-                ax.bar(lags, fn, width=width, bottom=tp, color='r')
+                ax.bar(lags[:-1], tp, width=width,  color='g', align='edge')
+                ax.bar(lags[:-1], fn, width=width, bottom=tp, color='r', align='edge')
 
         for r in range(n):
             ax = axs[r, 0]
@@ -118,16 +116,15 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         metric for ordering
     unit_ids: list
         List of considered units
-    nbins: int
-        Number of bins
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
     """
 
-    def __init__(self, comp, templates, unit_ids=None, metric='cosine_similarity', nbins=10, figure=None, ax=None):
+    def __init__(self, comp, templates, unit_ids=None, metric='cosine_similarity',figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
+        
         if unit_ids is None:
             # take all units
             unit_ids = comp.sorting1.get_unit_ids()
@@ -135,12 +132,13 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         self.comp = comp
         self.templates = templates
         self.unit_ids = unit_ids
-        self.nbins = nbins
         self.metric = metric
 
-        self._compute()
+    def plot(self):
+        self._do_plot()
 
-    def _compute(self):
+    def _do_plot(self):
+        
         import sklearn
 
         # compute similarity
@@ -154,73 +152,19 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
             similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
         else:
             raise NotImplementedError('metric=...')
-
-        # print(similarity_matrix)
-
+        
+        fs = self.comp.sorting1.get_sampling_frequency()
+        lags = self.comp.bins / fs * 1000
+        
         n = len(self.unit_ids)
 
-        fs = self.comp.sorting1.get_sampling_frequency()
-        recall_scores = []
-        similarities = []
-        pair_names = []
-        for r in range(n):
-            for c in range(r + 1, n):
-                u1 = self.unit_ids[r]
-                u2 = self.unit_ids[c]
-  
-                bins, tp_count1, fn_count1, tp_count2, fn_count2 = self.comp.get_label_count_per_collision_bins(u1, u2, nbins=self.nbins)
-                self.lags = bins[:-1] / fs * 1000
-                
-                accuracy1 = tp_count1 / (tp_count1 + fn_count1)
-                recall_scores.append(accuracy1)
-                similarities.append(similarity_matrix[r, c])
-                pair_names.append(f'{u1} {u2}')
+        similarities, recall_scores, pair_names = self.comp.compute_collision_by_similarity(similarity_matrix, unit_ids=self.unit_ids, good_only=False)
 
-                accuracy2 = tp_count2 / (tp_count2 + fn_count2)
-                recall_scores.append(accuracy2)
-                similarities.append(similarity_matrix[r, c])
-                pair_names.append(f'{u2} {u1}')
-
-        self.recall_scores = np.array(recall_scores)
-        self.similarities = np.array(similarities)
-        self.pair_names = np.array(pair_names)
-        
-        order = np.argsort(self.similarities)
-        self.similarities = self.similarities[order]
-        self.recall_scores = self.recall_scores[order, :]
-        self.pair_names = self.pair_names[order]
-
-
-    def get_good_only(self, well_detected_score=0.9):
-
-        # matched_units = self.comp.get_well_matched_units(well_detected_score)
-        # valid_indices = []
-        # for count, pair in enumerate(self.pair_names):
-        #    u1, u2 = pair.split(' ')
-        #    if u1 in matched_units and u2 in matched_units:
-        #        valid_indices += [count]
-        # valid_indices = np.array(valid_indices)
-
-        valid_indices = np.where(self.recall_scores.sum(1) > 0)[0]
-        return self.similarities[valid_indices], self.recall_scores[valid_indices], self.pair_names[valid_indices]
-
-    def plot(self, good_only=False):
-        self._do_plot(good_only)
-
-
-    def _do_plot(self, good_only):
-        
         fig = self.figure
-
-        if good_only:
-            similarities, scores, names = self.get_good_only()
-        else:
-            similarities, scores, names = self.similarities, self.recall_scores, self.pair_names
 
         for ax in fig.axes:
             ax.remove()
         
-
         n_pair = len(similarities)
 
         ax0 = fig.add_axes([0.1, 0.1, .25, 0.8])
@@ -228,18 +172,18 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
         plt.setp(ax1.get_yticklabels(), visible=False)
         
-        im = ax1.imshow(scores[::-1, :],
+        im = ax1.imshow(recall_scores[::-1, :],
                     cmap='viridis',
                     aspect='auto',
                     interpolation='none',
-                    extent=(self.lags[0], self.lags[-1], -0.5, n_pair-0.5),
+                    extent=(lags[0], lags[-1], -0.5, n_pair-0.5),
                     )
         im.set_clim(0,1)
 
         ax0.plot(similarities, np.arange(n_pair), color='k')
 
         ax0.set_yticks(np.arange(n_pair))
-        ax0.set_yticklabels(names)
+        ax0.set_yticklabels(pair_names)
         # ax0.set_xlim(0,1)
 
         ax0.set_xlabel(self.metric)
@@ -252,111 +196,82 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
-    def __init__(self, study, metric='cosine_similarity', collision_lag=2, exhaustive_gt=False, nbins=10, figure=None, ax=None, axes=None):
+    def __init__(self, study, metric='cosine_similarity', 
+                        similarity_bins=np.arange(0, 1, 0.1), show_legend=False, ylim=(0.5, 1),
+                        good_only=True,
+                        ncols=3, axes=None):
         
-        self._ncols = 3
-        self._nrows = int(np.ceil(len(study.sorter_names) / self._ncols))
-
-        if axes is None and ax is None:
-            figure, axes = plt.subplots(nrows=self._nrows, ncols=self._ncols, sharex=True, sharey=True)
-        
-        BaseWidget.__init__(self, figure, ax)
+        if axes is None:
+            num_axes = len(study.sorter_names)
+        else:
+            num_axes = None
+        BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
 
         self.study = study
-        self.collision_lag = collision_lag
-        self.exhaustive_gt = exhaustive_gt
-        self.nbins = nbins
         self.metric = metric
-        self.all_results = {}
-        self._compute()
-        
+        self.similarity_bins = np.asarray(similarity_bins)
+        self.show_legend = show_legend
+        self.ylim = ylim
+        self.good_only = good_only
 
-    def _compute(self):
 
-        for rec_name in self.study.rec_names:
-            
-            gt_sorting = self.study.get_ground_truth(rec_name)
-            templates = self.study.get_templates(rec_name)
-            snrs = self.study.get_units_snr(rec_name)
-
-            for sort_name in self.study.sorter_names:        
-                if sort_name not in self.all_results:
-                    self.all_results[sort_name] = {}
-
-                tested_sorting = self.study.get_sorting(sort_name, rec_name)
-
-                comp = CollisionGTComparison(gt_sorting, tested_sorting, collision_lag=self.collision_lag, exhaustive_gt=self.exhaustive_gt)
-                widget = ComparisonCollisionBySimilarityWidget(comp, templates)
-                plt.close()
-                self.lags = np.linspace(-self.collision_lag, self.collision_lag, len(widget.lags))
-
-                similarities, data, pair_names = widget.get_good_only()
-
-                snr = []
-                for p in pair_names:
-                    x, y = p.split(' ')
-                    snr += [(snrs[x] + snrs[y])/2]
-
-                snr = np.array(snr)                    
-
-                if 'similarity' in self.all_results[sort_name]:
-                    self.all_results[sort_name]['similarity'] = np.concatenate((self.all_results[sort_name]['similarity'], similarities))
-                    self.all_results[sort_name]['data'] = np.vstack((self.all_results[sort_name]['data'], data))
-                    self.all_results[sort_name]['pair'] = np.concatenate((self.all_results[sort_name]['pair'], pair_names))
-                    self.all_results[sort_name]['snr'] = np.concatenate((self.all_results[sort_name]['snr'], snr))
-                else:   
-                    self.all_results[sort_name]['similarity'] = similarities
-                    self.all_results[sort_name]['data'] = data
-                    self.all_results[sort_name]['pair'] = pair_names
-                    self.all_results[sort_name]['snr'] = snr
-            
-        for sort_name in self.study.sorter_names:
-            idx = np.argsort(self.all_results[sort_name]['similarity'])
-            self.all_results[sort_name]['similarity'] = self.all_results[sort_name]['similarity'][idx]
-            self.all_results[sort_name]['data'] = self.all_results[sort_name]['data'][idx]
-            self.all_results[sort_name]['pair'] = self.all_results[sort_name]['pair'][idx]
-            self.all_results[sort_name]['snr'] = self.all_results[sort_name]['snr'][idx]
-
-    def plot(self, cc_similarity=np.arange(0, 1, 0.1), show_legend=False, ylim=(0.5, 1)):
-
-        import matplotlib.colors as colors
+    def plot(self):
 
         my_cmap = plt.get_cmap('winter')
-        cNorm  = colors.Normalize(vmin=cc_similarity.min(), vmax=cc_similarity.max())
+        cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
-        for scount, sort_name in enumerate(self.study.sorter_names):
+        for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
+            
+            # loop over recordings
+            all_similarities = []
+            all_recall_scores = []
+            for rec_name in self.study.rec_names:
+                
+                templates = self.study.get_templates(rec_name)
+                flat_templates = templates.reshape(templates.shape[0], -1)
+                import sklearn
+                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+            
+                comp = self.study.comparisons[(rec_name, sorter_name)]
+                similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix, good_only=self.good_only)
 
-            ax = self.get_tiled_ax(scount, self._nrows, self._ncols)
+                all_similarities.append(similarities)
+                all_recall_scores.append(recall_scores)
+            
+            all_similarities = np.concatenate(all_similarities, axis=0)
+            all_recall_scores = np.concatenate(all_recall_scores, axis=0)
+            
+            order = np.argsort(all_similarities)
+            all_similarities = all_similarities[order]
+            all_recall_scores = all_recall_scores[order, :]
 
-            for count, i in enumerate(range(len(cc_similarity) - 1)):
-                cmin, cmax = cc_similarity[i], cc_similarity[i + 1]
-                amin, amax = np.searchsorted(self.all_results[sort_name]['similarity'], [cmin, cmax])
-                r = self.all_results[sort_name]['data'][amin:amax]
+            fs = comp.sorting1.get_sampling_frequency()
+            lags = comp.bins / fs * 1000            
+            
+            
+            # plot by similarity bins
+            ax = self.axes.flatten()[sorter_ind]
+            
+            for i in range(self.similarity_bins.size- 1):
+                cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
+                amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
+                mean_recall_scores = np.mean(all_recall_scores[amin:amax], axis=0)
+                mean_recall_scores = np.nan_to_num(mean_recall_scores)
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
-                ax.plot(self.lags, np.nan_to_num(r.mean(0)), label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
-                ax.set_title(sort_name)
-                if show_legend:
+                ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
+                ax.set_title(sorter_name)
+                if self.show_legend:
                     ax.legend()
-                if np.mod(scount, self._ncols) == 0:
-                    ax.set_ylabel('collision accuracy')
-                else:
-                    ax.tick_params(labelleft=False)
 
-                if (scount // self._ncols) == (self._nrows - 1):
-                    ax.set_xlabel('lag (ms)')
-                else:
-                    ax.tick_params(labelbottom=False)
+                if self.ylim is not None:
+                    ax.set_ylim(self.ylim)
 
-                if ylim is not None:
-                    ax.set_ylim(ylim)
 
 def plot_comparison_collision_pair_by_pair(*args, **kwargs):
     W = ComparisonCollisionPairByPairWidget(*args, **kwargs)
     W.plot()
     return W
-
-
 plot_comparison_collision_pair_by_pair.__doc__ = ComparisonCollisionPairByPairWidget.__doc__
 
 
@@ -364,6 +279,11 @@ def plot_comparison_collision_by_similarity(*args, **kwargs):
     W = ComparisonCollisionBySimilarityWidget(*args, **kwargs)
     W.plot()
     return W
-
-
 plot_comparison_collision_by_similarity.__doc__ = ComparisonCollisionBySimilarityWidget.__doc__
+
+
+def plot_study_comparison_collision_by_similarity(*args, **kwargs):
+    W = StudyComparisonCollisionBySimilarityWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_study_comparison_collision_by_similarity.__doc__ = StudyComparisonCollisionBySimilarityWidget.__doc__

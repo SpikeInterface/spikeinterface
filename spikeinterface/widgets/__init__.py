@@ -34,9 +34,8 @@ from .multicompgraph import (
     plot_multicomp_agreement_by_sorter, MultiCompAgreementBySorterWidget)
 from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
-
     plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget,
-    StudyComparisonCollisionBySimilarityWidget)
+    plot_study_comparison_collision_by_similarity, StudyComparisonCollisionBySimilarityWidget)
 
 from .sortingperformance import plot_sorting_performance
 
