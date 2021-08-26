@@ -47,11 +47,11 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 
 
-`spikeinterface` version 0.90.1:
+`spikeinterface` version 0.90:
 
   * breaks backward compatibility with 0.10/0.11/0.12/0.13 series.
-  * has been released in July 2021 (0.90.0)
-  * is not a metapackage anymore
+  * has been first released in July 2021 (0.90.0)
+  * is not a meta-package anymore
   * it doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets anymore
 
 
@@ -59,16 +59,16 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 ## Documentation
 
-All documentation for spikeinterface 0.90.1 can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
+All documentation for spikeinterface 0.90 can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
 
 Documentation of current API release 0.12.0 is [here](https://spikeinterface.readthedocs.io/en/stable/).
 
-## How to install new SI version (0.90.1)
+## How to install new SI version (0.90)
 
 You can install the new `spikeinterface` version with pip:
 
 ```bash
-pip install spikeinterface==0.90.1
+pip install spikeinterface==0.90
 ```
 
 To get the latest updates, you can install `spikeinterface` from sources:
