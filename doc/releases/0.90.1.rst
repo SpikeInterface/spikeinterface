@@ -5,7 +5,7 @@ SpikeInterface 0.90.1 release notes
 
 26th August 2021
 
-Manor release. - bug fixes
+Minor release - bug fixes
 
 general:
   * fix lazy imports
