@@ -9,7 +9,6 @@ class CrossCorrelogramsWidget(BaseWidget):
     """
     Plots spike train cross-correlograms.
     The diagonal is auto-correlogram.
-
     Parameters
     ----------
     sorting: SortingExtractor
@@ -45,8 +44,7 @@ class CrossCorrelogramsWidget(BaseWidget):
         for i, unit_id1 in enumerate(unit_ids):
             for j, unit_id2 in enumerate(unit_ids):
                 ccg = correlograms[i, j]
-                ax = self.get_tiled_ax(i+j*len(unit_ids), len(unit_ids), len(unit_ids))
-                #ax = self.axes[i, j]
+                ax = self.axes[i, j]
                 if i == j:
                     color = 'g'
                 else:
@@ -54,9 +52,8 @@ class CrossCorrelogramsWidget(BaseWidget):
                 ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align='edge')
 
         for i, unit_id in enumerate(unit_ids):
-            self.get_tiled_ax(i, len(unit_ids), len(unit_ids)).set_title(str(unit_id))
-            self.get_tiled_ax(i + len(unit_ids)*(len(unit_ids)-1), len(unit_ids), len(unit_ids)).set_xlabel('time (ms)')
-            #self.get_tiled_ax(i + len(unit_ids)*(len(unit_ids)-1), len(unit_ids), len(unit_ids)).set_xlabel('time (ms)')
+            self.axes[0, i].set_title(str(unit_id))
+            self.axes[-1, i].set_xlabel('CCG (ms)')
 
 
 def plot_crosscorrelograms(*args, **kwargs):
@@ -71,7 +68,6 @@ plot_crosscorrelograms.__doc__ = CrossCorrelogramsWidget.__doc__
 class AutoCorrelogramsWidget(BaseWidget):
     """
     Plots spike train auto-correlograms.
-
     Parameters
     ----------
     sorting: SortingExtractor
@@ -98,7 +94,6 @@ class AutoCorrelogramsWidget(BaseWidget):
         if axes is None:
             num_axes = len(sorting.unit_ids)
         BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
-
 
     def plot(self):
         correlograms, bins = compute_correlograms(self.sorting, **self.compute_kwargs)
