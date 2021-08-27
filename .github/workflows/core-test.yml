@@ -21,6 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           conda install pytest
+          pip install pandas
           pip install -r requirements.txt
           pip install -e .
       - name: Test core with pytest
