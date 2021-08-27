@@ -36,6 +36,7 @@ class AppendSegmentRecording(BaseRecording):
         sampling_frequency = rec0.get_sampling_frequency()
         dtype = rec0.get_dtype()
         channel_ids = rec0.channel_ids
+        self.recording_list = recording_list
 
         # check same carracteristics
         ok1 = all(sampling_frequency == rec.get_sampling_frequency() for rec in recording_list)
@@ -45,7 +46,7 @@ class AppendSegmentRecording(BaseRecording):
             raise ValueError("Recording don't have the same sampling_frequency/dtype/channel_ids")
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
-        self.copy_metadata(rec0)
+        rec0.copy_metadata(self)
 
         for rec in recording_list:
             for parent_segment in rec._recording_segments:
@@ -93,7 +94,8 @@ class ConcatenateSegmentRecording(BaseRecording):
         one_rec = append_recordings(recording_list)
 
         BaseRecording.__init__(self, one_rec.get_sampling_frequency(), one_rec.channel_ids, one_rec.get_dtype())
-        self.copy_metadata(one_rec)
+        one_rec.copy_metadata(self)
+        self.recording_list = recording_list
 
         parent_segments = []
         for rec in recording_list:
@@ -185,6 +187,7 @@ class AppendSegmentSorting(BaseSorting):
         sorting0 = sorting_list[0]
         sampling_frequency = sorting0.get_sampling_frequency()
         unit_ids = sorting0.unit_ids
+        self.sorting_list = sorting_list
 
         # check same carracteristics
         ok1 = all(sampling_frequency == sorting.get_sampling_frequency() for sorting in sorting_list)
@@ -193,7 +196,7 @@ class AppendSegmentSorting(BaseSorting):
             raise ValueError("Sorting don't have the same sampling_frequency/unit_ids")
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.copy_metadata(sorting0)
+        sorting0.copy_metadata(self)
 
         for sorting in sorting_list:
             for parent_segment in sorting._sorting_segments:

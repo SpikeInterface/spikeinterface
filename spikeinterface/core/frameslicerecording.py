@@ -28,7 +28,7 @@ class FrameSliceRecording(BaseRecording):
         else:
             assert 0 < end_frame <= parent_size
 
-        assert end_frame > start_frame
+        assert end_frame > start_frame, "'start_frame' must be smaller than 'end_frame'!"
 
         BaseRecording.__init__(self,
                                sampling_frequency=parent_recording.get_sampling_frequency(),
@@ -65,5 +65,7 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
             end_frame = self.get_num_samples()
         parent_start = self.start_frame + start_frame
         parent_end = self.start_frame + end_frame
-        traces = self._parent_recording_segment.get_traces(parent_start, parent_end, channel_indices)
+        traces = self._parent_recording_segment.get_traces(start_frame=parent_start,
+                                                           end_frame=parent_end,
+                                                           channel_indices=channel_indices)
         return traces
