@@ -259,7 +259,7 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
 
     def __init__(self, study, metric='cosine_similarity', 
                         similarity_bins=np.linspace(0, 1, 11), show_legend=False,
-                        ncols=3, axes=None):
+                        ncols=3, axes=None, cmap='winter'):
         
         if axes is None:
             num_axes = len(study.sorter_names)
@@ -268,6 +268,7 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
         BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
 
         self.ncols = ncols
+        self.cmap = cmap
         self.study = study
         self.metric = metric
         self.similarity_bins = np.asarray(similarity_bins)
@@ -275,7 +276,7 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
 
     def plot(self):
 
-        my_cmap = plt.get_cmap('winter')
+        my_cmap = plt.get_cmap(self.cmap)
         cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
@@ -330,6 +331,69 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
             #    ax.set_ylim(self.ylim)
 
 
+class StudyComparisonConnectivityBySimilarityRangeWidget(BaseWidget):
+
+
+    def __init__(self, study, metric='cosine_similarity', 
+                        similarity_range=[0, 1], show_legend=False,
+                        axes=None):
+        
+        if axes is None:
+            num_axes = 1
+        else:
+            num_axes = None
+        BaseWidget.__init__(self, None, None, axes, ncols=1, num_axes=1)
+
+        self.study = study
+        self.metric = metric
+        self.similarity_range = similarity_range
+        self.show_legend = show_legend
+
+        print(self.axes)
+
+    def plot(self):
+
+        for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
+            
+            # loop over recordings
+            all_errors = []
+            all_similarities = []
+            for rec_name in self.study.rec_names:
+                
+                templates = self.study.get_templates(rec_name)
+                flat_templates = templates.reshape(templates.shape[0], -1)
+                import sklearn
+                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+            
+                comp = self.study.comparisons[(rec_name, sorter_name)]
+                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix)
+
+                all_similarities.append(similarities)
+                all_errors.append(errors)
+            
+            all_similarities = np.concatenate(all_similarities, axis=0)
+            all_errors = np.concatenate(all_errors, axis=0)
+            
+            idx = (all_similarities >= self.similarity_range[0]) & (all_similarities <= self.similarity_range[1])
+            all_similarities = all_similarities[idx]
+            all_errors = all_errors[idx]
+
+            order = np.argsort(all_similarities)
+            all_similarities = all_similarities[order]
+            all_errors = all_errors[order, :]
+
+            mean_error = np.mean(all_errors, axis=0)
+            mean_error = np.nan_to_num(mean_error)
+            self.axes[0][0].plot(mean_error, color='C%d' %sorter_ind, label=sorter_name)
+            
+            
+        self.axes[0][0].set_ylabel('cc error')
+        self.axes[0][0].set_xlabel('lags (ms)')
+
+        if self.show_legend:
+            self.axes[0][0].legend()
+
+
 # def plot_comparison_collision_pair_by_pair(*args, **kwargs):
 #     W = ComparisonCollisionPairByPairWidget(*args, **kwargs)
 #     W.plot()
@@ -349,3 +413,9 @@ def plot_study_comparison_connectivity_by_similarity(*args, **kwargs):
     W.plot()
     return W
 plot_study_comparison_connectivity_by_similarity.__doc__ = StudyComparisonConnectivityBySimilarityWidget.__doc__
+
+def plot_study_comparison_connectivity_by_similarity_range(*args, **kwargs):
+    W = StudyComparisonConnectivityBySimilarityRangeWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_study_comparison_connectivity_by_similarity_range.__doc__ = StudyComparisonConnectivityBySimilarityRangeWidget.__doc__
