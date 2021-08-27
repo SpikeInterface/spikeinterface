@@ -255,7 +255,7 @@ class GroundTruthStudy:
         return metrics    
         
 
-    def get_metrics(self, rec_name=None, **metric_kargs):
+    def get_metrics(self, rec_name=None, **metric_kwargs):
 
         """
         Load or compute units metrics  for a given recording.
