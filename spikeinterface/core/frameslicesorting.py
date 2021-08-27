@@ -46,7 +46,7 @@ class FrameSliceSorting(BaseSorting):
 
         # update dump dict
         self._kwargs = {'parent_sorting': parent_sorting.to_dict(), 'start_frame': int(start_frame),
-                        'end_frame': end_frame}
+                        'end_frame': int(end_frame)}
 
 
 class FrameSliceSortingSegment(BaseSortingSegment):
