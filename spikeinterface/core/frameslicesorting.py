@@ -19,7 +19,7 @@ class FrameSliceSorting(BaseSorting):
 
         parent_size = 0
         for u in parent_sorting.get_unit_ids():
-            parent_size = max([parent_size, max(parent_sorting.get_unit_spike_train(u))])
+            parent_size = np.max([parent_size, np.max(parent_sorting.get_unit_spike_train(u))])
 
         if start_frame is None:
             start_frame = 0
