@@ -197,7 +197,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
-                        similarity_bins=np.arange(0, 1, 0.1), show_legend=False, ylim=(0.5, 1),
+                        similarity_bins=np.linspace(0, 1, 11), show_legend=False, ylim=(0.5, 1),
                         good_only=True,
                         ncols=3, axes=None):
         
@@ -207,6 +207,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
             num_axes = None
         BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
 
+        self.ncols = ncols
         self.study = study
         self.metric = metric
         self.similarity_bins = np.asarray(similarity_bins)
@@ -253,19 +254,26 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
             # plot by similarity bins
             ax = self.axes.flatten()[sorter_ind]
             
-            for i in range(self.similarity_bins.size- 1):
+            for i in range(self.similarity_bins.size - 1):
                 cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
                 amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
                 mean_recall_scores = np.mean(all_recall_scores[amin:amax], axis=0)
                 mean_recall_scores = np.nan_to_num(mean_recall_scores)
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
                 ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
-                ax.set_title(sorter_name)
-                if self.show_legend:
-                    ax.legend()
+            
+            if np.mod(sorter_ind, self.ncols) == 0:
+                ax.set_ylabel('collision accuracy')
 
-                if self.ylim is not None:
-                    ax.set_ylim(self.ylim)
+            if sorter_ind >= (len(self.study.sorter_names) // self.ncols):
+                ax.set_xlabel('lags (ms)')
+
+            ax.set_title(sorter_name)
+            if self.show_legend:
+                ax.legend()
+
+            if self.ylim is not None:
+                ax.set_ylim(self.ylim)
 
 
 def plot_comparison_collision_pair_by_pair(*args, **kwargs):
