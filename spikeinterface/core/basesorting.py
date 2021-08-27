@@ -83,6 +83,12 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
+    # add tests
+    def frame_slice(self, start_frame, end_frame):
+        from spikeinterface import FrameSliceSorting
+        sub_sorting = FrameSliceSorting(self, start_frame=start_frame, end_frame=end_frame)
+        return sub_sorting
+
     def get_all_spike_trains(self, outputs='unit_id'):
         """
         Return all spike trains concatenated
