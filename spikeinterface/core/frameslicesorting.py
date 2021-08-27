@@ -17,17 +17,19 @@ class FrameSliceSorting(BaseSorting):
 
         assert parent_sorting.get_num_segments() == 1, 'FrameSliceSorting work only with one segment'
 
-        parent_size = 0
-        for u in parent_sorting.get_unit_ids():
-            parent_size = np.max([parent_size, np.max(parent_sorting.get_unit_spike_train(u))])
+        if start_frame is not None or end_frame is None:
+            parent_size = 0
+            for u in parent_sorting.get_unit_ids():
+                parent_size = np.max([parent_size, np.max(parent_sorting.get_unit_spike_train(u))])
 
         if start_frame is None:
             start_frame = 0
         else:
             assert 0 <= start_frame < parent_size
 
-        # for sorting, we don't know the number of samples, so we allow end_frame to be None
-        if end_frame is not None:
+        if end_frame is None:
+            end_frame = parent_size + 1
+        else:
             assert end_frame > start_frame, "'start_frame' must be smaller than 'end_frame'!"
 
         BaseSorting.__init__(self,
