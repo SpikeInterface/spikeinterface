@@ -1,10 +1,10 @@
-from spikeinterface.extractors import toy_example
+from spikeinterface.core.testing_tools import generate_sorting
 
 
 def test_FrameSliceSorting():
     fs = 30000
     duration = 10
-    rec, sort = toy_example(num_units=10, num_segments=1, duration=10, sampling_frequency=fs)
+    sort = generate_sorting(num_units=10,  durations=[duration], sampling_frequency=fs)
 
     mid_frame = (duration * fs) // 2
     # duration of all slices is mid_frame. Spike trains are re-referenced to the start_time
