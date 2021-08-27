@@ -22,6 +22,7 @@ from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent
 from .channelslicerecording import ChannelSliceRecording
 from .unitsselectionsorting import UnitsSelectionSorting
 from .frameslicerecording import FrameSliceRecording
+from .frameslicesorting import FrameSliceSorting
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
 from .segmentutils import (

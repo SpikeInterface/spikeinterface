@@ -26,7 +26,9 @@ class FrameSliceRecording(BaseRecording):
         if end_frame is None:
             end_frame = parent_size
         else:
-            assert 0 <= start_frame <= parent_size
+            assert 0 < end_frame <= parent_size
+
+        assert end_frame > start_frame
 
         BaseRecording.__init__(self,
                                sampling_frequency=parent_recording.get_sampling_frequency(),
