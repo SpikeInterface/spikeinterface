@@ -336,20 +336,14 @@ class StudyComparisonConnectivityBySimilarityRangeWidget(BaseWidget):
 
     def __init__(self, study, metric='cosine_similarity', 
                         similarity_range=[0, 1], show_legend=False,
-                        axes=None):
+                        ax=None):
         
-        if axes is None:
-            num_axes = 1
-        else:
-            num_axes = None
-        BaseWidget.__init__(self, None, None, axes, ncols=1, num_axes=1)
+        BaseWidget.__init__(self, None, ax)
 
         self.study = study
         self.metric = metric
         self.similarity_range = similarity_range
         self.show_legend = show_legend
-
-        print(self.axes)
 
     def plot(self):
 
@@ -384,14 +378,14 @@ class StudyComparisonConnectivityBySimilarityRangeWidget(BaseWidget):
 
             mean_error = np.mean(all_errors, axis=0)
             mean_error = np.nan_to_num(mean_error)
-            self.axes[0][0].plot(mean_error, color='C%d' %sorter_ind, label=sorter_name)
+            self.axe.plot(mean_error, color='C%d' %sorter_ind, label=sorter_name)
             
             
-        self.axes[0][0].set_ylabel('cc error')
-        self.axes[0][0].set_xlabel('lags (ms)')
+        self.ax.set_ylabel('cc error')
+        self.ax.set_xlabel('lags (ms)')
 
         if self.show_legend:
-            self.axes[0][0].legend()
+            self.ax.legend()
 
 
 # def plot_comparison_collision_pair_by_pair(*args, **kwargs):

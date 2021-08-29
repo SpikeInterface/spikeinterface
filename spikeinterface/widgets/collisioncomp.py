@@ -283,13 +283,9 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
 
     def __init__(self, study, metric='cosine_similarity', 
                         similarity_range=[0, 1], show_legend=False, ylim=(0.5, 1),
-                        good_only=True, axes=None):
+                        good_only=True, ax=None):
         
-        if axes is None:
-            num_axes = 1
-        else:
-            num_axes = None
-        BaseWidget.__init__(self, None, None, axes, ncols=1, num_axes=num_axes)
+        BaseWidget.__init__(self, None, ax)
 
         self.study = study
         self.metric = metric
@@ -335,16 +331,16 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
             
             mean_recall_scores = np.mean(all_recall_scores, axis=0)
             mean_recall_scores = np.nan_to_num(mean_recall_scores)
-            self.axes[0][0].plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
+            self.ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
             
-        self.axes[0][0].set_ylabel('collision accuracy')
-        self.axes[0][0].set_xlabel('lags (ms)')
+        self.ax.set_ylabel('collision accuracy')
+        self.ax.set_xlabel('lags (ms)')
 
         if self.show_legend:
-            self.axes[0][0].legend()
+            self.ax.legend()
 
         if self.ylim is not None:
-            self.axes[0][0].set_ylim(self.ylim)
+            self.ax.set_ylim(self.ylim)
 
 
 def plot_comparison_collision_pair_by_pair(*args, **kwargs):
