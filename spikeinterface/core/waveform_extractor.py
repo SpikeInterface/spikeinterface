@@ -199,7 +199,7 @@ class WaveformExtractor:
         Returns
         -------
         wfs: np.array
-            The returned waveform (num_spikes, num_channels, num_samples)
+            The returned waveform (num_spikes, num_samples, num_channels)
         indices: np.array
             If 'with_index' is True, the spike indices corresponding to the waveforms extracted
         """
