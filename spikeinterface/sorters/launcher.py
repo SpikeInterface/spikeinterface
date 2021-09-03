@@ -12,7 +12,7 @@ import json
 from spikeinterface.core import load_extractor
 
 from .sorterlist import sorter_dict
-from .runsorters import run_sorter_local, run_sorter_docker
+from .runsorter import run_sorter_local, run_sorter_docker
 
 
 def _run_one(arg_list):
@@ -40,7 +40,7 @@ def _run_one(arg_list):
 
         run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
                       remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
-                      verbose=verbose, raise_error=raise_error, **sorter_params):
+                      verbose=verbose, raise_error=raise_error, **sorter_params)
 
 
 _implemented_engine = ('loop', 'joblib', 'dask')
