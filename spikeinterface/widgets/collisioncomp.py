@@ -343,6 +343,81 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
             self.ax.set_ylim(self.ylim)
 
 
+class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
+
+
+    def __init__(self, study, metric='cosine_similarity', 
+                        similarity_ranges=np.linspace(0, 1, 11), show_legend=False, ylim=(0.5, 1),
+                        good_only=True, ax=None, show_std=False):
+        
+        BaseWidget.__init__(self, None, ax)
+
+        self.study = study
+        self.metric = metric
+        self.similarity_ranges = similarity_ranges
+        self.show_legend = show_legend
+        self.ylim = ylim
+        self.good_only = good_only
+        self.show_std = show_std
+
+
+    def plot(self):
+
+        for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
+            
+            # loop over recordings
+            all_similarities = []
+            all_recall_scores = []
+            for rec_name in self.study.rec_names:
+                
+                templates = self.study.get_templates(rec_name)
+                flat_templates = templates.reshape(templates.shape[0], -1)
+                import sklearn
+                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+            
+                comp = self.study.comparisons[(rec_name, sorter_name)]
+                similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix, good_only=self.good_only)
+
+                all_similarities.append(similarities)
+                all_recall_scores.append(recall_scores)
+            
+            all_similarities = np.concatenate(all_similarities, axis=0)
+            all_recall_scores = np.concatenate(all_recall_scores, axis=0)
+            
+            order = np.argsort(all_similarities)
+            all_similarities = all_similarities[order]
+            all_recall_scores = all_recall_scores[order, :]
+
+            fs = comp.sorting1.get_sampling_frequency()
+            lags = comp.bins / fs * 1000            
+            
+            mean_recall_scores = []
+            std_recall_scores = []
+            for i in range(self.similarity_ranges.size - 1):
+                cmin, cmax = self.similarity_ranges[i], self.similarity_ranges[i + 1]
+                amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
+                value = np.mean(all_recall_scores[amin:amax])
+                mean_recall_scores += [np.nan_to_num(value)]
+                value = np.std(all_recall_scores[amin:amax])
+                std_recall_scores += [np.nan_to_num(value)]
+
+            xaxis = np.diff(self.similarity_ranges)/2 + self.similarity_ranges[:-1]
+
+            if not self.show_std:
+                self.ax.plot(xaxis, mean_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
+            else:
+                self.ax.errobar(xaxis, mean_recall_scores, yerr=std_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
+
+        self.ax.set_ylabel('collision accuracy')
+        self.ax.set_xlabel('similarity')
+
+        if self.show_legend:
+            self.ax.legend()
+
+        if self.ylim is not None:
+            self.ax.set_ylim(self.ylim)
+
+
 def plot_comparison_collision_pair_by_pair(*args, **kwargs):
     W = ComparisonCollisionPairByPairWidget(*args, **kwargs)
     W.plot()
@@ -368,3 +443,9 @@ def plot_study_comparison_collision_by_similarity_range(*args, **kwargs):
     W.plot()
     return W
 plot_study_comparison_collision_by_similarity_range.__doc__ = StudyComparisonCollisionBySimilarityRangeWidget.__doc__
+
+def plot_study_comparison_collision_by_similarity_ranges(*args, **kwargs):
+    W = StudyComparisonCollisionBySimilarityRangesWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_study_comparison_collision_by_similarity_ranges.__doc__ = StudyComparisonCollisionBySimilarityRangesWidget.__doc__

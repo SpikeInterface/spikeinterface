@@ -36,7 +36,8 @@ from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
     plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget,
     plot_study_comparison_collision_by_similarity, StudyComparisonCollisionBySimilarityWidget,
-    plot_study_comparison_collision_by_similarity_range, StudyComparisonCollisionBySimilarityRangeWidget)
+    plot_study_comparison_collision_by_similarity_range, StudyComparisonCollisionBySimilarityRangeWidget,
+    StudyComparisonCollisionBySimilarityRangesWidget, plot_study_comparison_collision_by_similarity_ranges)
 
 from .sortingperformance import plot_sorting_performance
 
