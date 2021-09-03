@@ -110,6 +110,10 @@ def run_sorters(sorter_list,
     with_output: bool
         return the output.
 
+    docker_images: dict
+        A dictionary {sorter_name : docker_image} to specify is some sorters
+        should use docker images
+
     run_sorter_kwargs: dict
         This contains kwargs specific to run_sorter function:\
             * 'raise_error' :  bool
@@ -167,11 +171,7 @@ def run_sorters(sorter_list,
                         shutil.rmtree(str(output_folder))
 
             params = sorter_params.get(sorter_name, {})
-            use_docker = sorter_name in docker_images
-            if use_docker:
-                docker_image = docker_images[sorter_name]
-            else:
-                docker_image = None
+            docker_image = docker_images.get(sorter_name, None)
 
             if need_dump:
                 if not recording.is_dumpable:
