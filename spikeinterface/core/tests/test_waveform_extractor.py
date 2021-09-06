@@ -64,9 +64,9 @@ def test_WaveformExtractor():
     templates = we.get_all_templates()
     assert templates.shape == (5, 210, 2)
 
-    wf_std = we.get_waveform_std(0)
+    wf_std = we.get_template(0, mode='std')
     assert wf_std.shape == (210, 2)
-    wfs_std = we.get_waveforms_std()
+    wfs_std = we.get_all_templates(mode='std')
     assert wfs_std.shape == (5, 210, 2)
 
 def test_extract_waveforms():

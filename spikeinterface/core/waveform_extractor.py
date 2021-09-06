@@ -64,7 +64,7 @@ class WaveformExtractor:
 
         # cache in memory
         self._waveforms = {}
-        self._waveforms_std = {}
+        self._template_std = {}
         self._template_average = {}
         self._template_median = {}
         self._params = {}
@@ -111,7 +111,7 @@ class WaveformExtractor:
 
     def _reset(self):
         self._waveforms = {}
-        self._waveforms_std = {}
+        self._template_std = {}
         self._template_average = {}
         self._template_median = {}
         self._params = {}
@@ -221,52 +221,6 @@ class WaveformExtractor:
         else:
             return wfs
 
-    def get_waveform_std(self, unit_id):
-        """
-        Return standard deviation of waveform per unit for every time point
-
-        Parameters
-        ----------
-        unit_id: int
-            Unit id to retrieve waveforms for
-        Returns
-        -------
-        wf_std: np.array
-            The returned waveform standard deviation (num_samples, num_channels)
-        """
-        assert unit_id in self.sorting.unit_ids
-        if unit_id in self._waveforms_std:
-            return self._waveforms_std[unit_id]
-        else:
-            wf = self.get_waveforms(unit_id)
-            wf_std = np.std(wf, axis=0)
-            self._waveforms_std[unit_id] = wf_std
-            return wf_std
-
-    def get_waveforms_std(self, unit_ids=None):
-        """
-        Return several waveforms' standard deviation
-
-        Parameters
-        ----------
-        unit_ids: list or None
-            Unit ids to retrieve waveforms for
-
-        Returns
-        -------
-        wfs_std: np.array
-            The returned waveforms' std (num_units, num_samples, num_channels)
-        """
-        if unit_ids is None:
-            unit_ids = self.sorting.unit_ids
-        num_chans = self.recording.get_num_channels()
-
-        dtype = self._params['dtype']
-        wfs_std = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
-        for i, unit_id in enumerate(unit_ids):
-            wfs_std[i, :, :] = self.get_waveform_std(unit_id)
-        return wfs_std
-
     def get_template(self, unit_id, mode='median'):
         """
         Return template (average waveform)
@@ -276,14 +230,14 @@ class WaveformExtractor:
         unit_id: int
             Unit id to retrieve waveforms for
         mode: str
-            'mean' or 'median' (default)
+            'mean', 'median' (default), 'std'(standard deviation)
 
         Returns
         -------
         template: np.array
             The returned template (num_samples, num_channels)
         """
-        assert mode in ('median', 'average')
+        assert mode in ('median', 'average', 'std')
         assert unit_id in self.sorting.unit_ids
 
         if mode == 'median':
@@ -301,6 +255,14 @@ class WaveformExtractor:
                 wfs = self.get_waveforms(unit_id)
                 template = np.average(wfs, axis=0)
                 self._template_average[unit_id] = template
+                return template
+        elif mode == 'std':
+            if unit_id in self._template_std:
+                return self._template_std[unit_id]
+            else:
+                wfs = self.get_waveforms(unit_id)
+                template = np.std(wfs, axis=0)
+                self._template_std[unit_id] = template
                 return template
 
     def get_all_templates(self, unit_ids=None, mode='median'):
