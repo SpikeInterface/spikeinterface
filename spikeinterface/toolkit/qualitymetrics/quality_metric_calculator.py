@@ -38,11 +38,31 @@ class QualityMetricCalculator:
         metric_names: list or None
             List of quality metrics to compute. If None, all metrics are computed
         **kwargs: keyword arguments for quality metrics (TODO)
+            max_spikes_for_nn: int
+                maximum number of spikes to use per cluster in PCA metrics
+            n_neighbors: int
+                number of nearest neighbors to check membership of in PCA metrics
+            seed: int
+                seed for pseudorandom number generator used in PCA metrics (e.g. nn_isolation)
 
         Returns
         -------
+        metrics: pd.DataFrame
 
         """
+        if 'max_spikes_for_nn' in kwargs:
+            max_spikes_for_nn = kwargs['max_spikes_for_nn']
+        else:
+            max_spikes_for_nn = 2000
+        if 'n_neighbors' in kwargs:
+            n_neighbors = kwargs['n_neighbors']
+        else:
+            n_neighbors = 6
+        if 'seed' in kwargs:
+            seed = kwargs['seed']
+        else:
+            seed = None
+
         if metric_names is None:
             # metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
             
@@ -73,7 +93,8 @@ class QualityMetricCalculator:
         if len(pc_metric_names):
             if self.waveform_principal_component is None:
                 raise ValueError('waveform_principal_component must be provied')
-            pc_metrics = calculate_pc_metrics(self.waveform_principal_component, metric_names=pc_metric_names)
+            pc_metrics = calculate_pc_metrics(self.waveform_principal_component, metric_names=pc_metric_names, 
+                                              max_spikes_for_nn=max_spikes_for_nn, n_neighbors=n_neighbors, seed=seed)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 
