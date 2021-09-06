@@ -8,7 +8,7 @@ from sklearn.neighbors import NearestNeighbors
 
 from ..postprocessing import WaveformPrincipalComponent
 
-_possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor']
+_possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor', 'nn_isolation']
 
 
 def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neighbors=4, seed=0):
