@@ -232,7 +232,9 @@ class WaveformExtractor:
         unit_id: int
             Unit id to retrieve waveforms for
         mode: str
-            'mean', 'median' (default), 'std'(standard deviation), 'quantile', quantile_value
+            'mean', 'median' (default), 'std'(standard deviation), 'quantile'
+        quantile_value: float
+            quantile value for argument to np.quantile
 
         Returns
         -------
@@ -287,8 +289,9 @@ class WaveformExtractor:
         unit_ids: list or None
             Unit ids to retrieve waveforms for
         mode: str
-            'mean' or 'median' (default)
-
+            'mean' or 'median' (default), 'std', 'quantile'
+        quantile_value: float
+            quantile value as argument to np.quantile
         Returns
         -------
         templates: np.array
