@@ -41,13 +41,13 @@ from .collisioncomp import (
 
 from .sortingperformance import plot_sorting_performance
 
+# ground truth study (=comparison over sorter)
+from .gtstudy import StudyComparisonRunTimesWidget, plot_gt_study_run_times
+
+
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
 # connectivity comparison
 from .connectivitycomp import (StudyComparisonConnectivityBySimilarityWidget, plot_study_comparison_connectivity_by_similarity,
     StudyComparisonConnectivityBySimilarityRangeWidget, plot_study_comparison_connectivity_by_similarity_range)
-
-# study comparison
-from .studycompstats import StudyComparisonStatisticsWidget
-
