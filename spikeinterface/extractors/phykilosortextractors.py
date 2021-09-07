@@ -48,7 +48,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         # try to load cluster info
         cluster_info_files = [p for p in phy_folder.iterdir() if p.suffix in ['.csv', '.tsv']
                               and "cluster_info" in p.name]
-        if len(cluster_info_files) == 1:
+
+        if len(cluster_info_files) == 0:
+            cluster_info = pd.DataFrame({'id' : unit_ids})
+            cluster_info['group'] = ['unsorted']*len(unit_ids)
+
+        elif len(cluster_info_files) == 1:
             cluster_info_file = cluster_info_files[0]
             if cluster_info_file.suffix == ".tsv":
                 delimeter = "\t"
@@ -72,6 +77,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                     cluster_info = pd.merge(cluster_info, new_property, on='cluster_id')
 
             cluster_info["id"] = cluster_info["cluster_id"]
+
             del cluster_info["cluster_id"]
 
         if exclude_cluster_groups is not None:
@@ -84,8 +90,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         if keep_good_only and "KSLabel" in cluster_info.columns:
             cluster_info = cluster_info.query(f"KSLabel != 'good'")
-
         unit_ids = cluster_info["id"].values
+
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         for prop_name in cluster_info.columns:
