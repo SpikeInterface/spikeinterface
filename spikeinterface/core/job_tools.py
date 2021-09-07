@@ -209,6 +209,10 @@ class ChunkRecordingExecutor:
         else:
             returns = None
 
+        import sys
+        if self.n_jobs != 1 and not (sys.version_info >= (3, 8)):
+            self.n_jobs = 1
+
         if self.n_jobs == 1:
             if self.progress_bar:
                 all_chunks = tqdm(all_chunks, ascii=True, desc=self.job_name)
