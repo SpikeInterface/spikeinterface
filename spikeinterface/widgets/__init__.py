@@ -50,4 +50,5 @@ from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
 # connectivity comparison
 from .connectivitycomp import (StudyComparisonConnectivityBySimilarityWidget, plot_study_comparison_connectivity_by_similarity,
-    StudyComparisonConnectivityBySimilarityRangeWidget, plot_study_comparison_connectivity_by_similarity_range)
+    StudyComparisonConnectivityBySimilarityRangeWidget, plot_study_comparison_connectivity_by_similarity_range,
+    StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget, plot_study_comparison_connectivity_by_similarity_ranges_mean_error)

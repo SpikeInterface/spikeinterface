@@ -28,7 +28,11 @@ class ConnectivityGTComparison(GroundTruthComparison):
         self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=True)
         self.correlograms = {}
         self.compute_correlograms()
-        
+
+    @property
+    def time_axis(self):
+        return np.linspace(-self.window_ms/2, self.window_ms/2, self.nb_timesteps)
+    
     def compute_correlograms(self):
         import sklearn
         correlograms_1, bins = compute_correlograms(self.sorting1, **self.compute_kwargs)        

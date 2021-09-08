@@ -406,7 +406,7 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
             if not self.show_std:
                 self.ax.plot(xaxis, mean_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
             else:
-                self.ax.errobar(xaxis, mean_recall_scores, yerr=std_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
+                self.ax.errorbar(xaxis, mean_recall_scores, yerr=std_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
 
         self.ax.set_ylabel('collision accuracy')
         self.ax.set_xlabel('similarity')

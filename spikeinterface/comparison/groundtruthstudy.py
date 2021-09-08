@@ -197,7 +197,7 @@ class GroundTruthStudy:
         return dataframes
     
     def compute_waveforms(self, rec_name, sorter_name=None, 
-                ms_before=3., ms_after=4., max_spikes_per_unit=500, 
+                ms_before=3., ms_after=4., max_spikes_per_unit=500,
                 n_jobs=-1, total_memory='1G'):
 
         rec = self.get_recording(rec_name)
