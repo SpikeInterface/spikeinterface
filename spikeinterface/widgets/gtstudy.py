@@ -19,13 +19,11 @@ class StudyComparisonRunTimesWidget(BaseWidget):
     ----------
     gt_comparison: GroundTruthComparison
         The ground truth sorting comparison object
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
+    ax: matplotlib ax
+        The ax to be used. If not given a figure is created
+    color: 
+        
 
-    Returns
-    -------
-    W: ConfusionMatrixWidget
-        The output widget
     """
     def __init__(self, study, color='#F7DC6F',  ax=None):
         
@@ -76,15 +74,12 @@ class StudyComparisonUnitCountWidget(BaseWidget):
     ----------
     gt_comparison: GroundTruthComparison
         The ground truth sorting comparison object
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
+    ax: matplotlib ax
+        The ax to be used. If not given a figure is created
+    cmap_name
 
-    Returns
-    -------
-    W: ConfusionMatrixWidget
-        The output widget
     """
-    def __init__(self, study, exhaustive_gt=False, cmap_name='Set2',  ax=None):
+    def __init__(self, study, cmap_name='Set2',  ax=None):
         
         self.study = study
         self.cmap_name = cmap_name
