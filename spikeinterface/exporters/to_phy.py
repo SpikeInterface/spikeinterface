@@ -15,7 +15,7 @@ from spikeinterface.toolkit import (
 
 def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
                   compute_amplitudes=True, max_channels_per_template=16, copy_binary=True, remove_if_exists=False,
-                  peak_sign='neg',
+                  peak_sign='neg', template_mode='median',
                   dtype=None, verbose=True, **job_kwargs):
     """
     Exports a waveform extractor to the phy template-gui format.
@@ -36,6 +36,8 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         If True, the recording is copied and saved in the phy 'output_folder'.
     peak_sign: 'neg', 'pos', 'both'
         Used by get_spike_amplitudes
+    template_mode: str
+        Parameter 'mode' to be given to WaveformExtractor.get_template()
     verbose: bool
         If True, output is verbose.
     {}
@@ -122,7 +124,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     templates = []
     templates_ind = []
     for unit_id in unit_ids:
-        template = waveform_extractor.get_template(unit_id)
+        template = waveform_extractor.get_template(unit_id, mode=template_mode)
         if max_channels_per_template is None:
             inds = np.arange(channel_ids, dtype='int64')
         else:
