@@ -13,3 +13,8 @@ class ConnectivityGtStudy(GroundTruthStudy):
             self.comparisons[(rec_name, sorter_name)] = comp
 
         self.exhaustive_gt = exhaustive_gt
+
+    @property
+    def time_axis(self):
+        for key, value in self.comparisons.keys():
+            return value.time_axis
