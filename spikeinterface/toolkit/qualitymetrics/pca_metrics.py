@@ -8,10 +8,10 @@ from sklearn.neighbors import NearestNeighbors
 
 from ..postprocessing import WaveformPrincipalComponent
 
-_possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor']
+_possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor', 'nn_isolation']
 
 
-def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neighbors=4, ):
+def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neighbors=4, seed=0):
     if metric_names is None:
         metric_names = _possible_pc_metric_names
     # print('metric_names', metric_names)
@@ -59,7 +59,12 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neig
                                                                   max_spikes_for_nn, n_neighbors)
             pc_metrics['nn_hit_rate'][unit_id] = nn_hit_rate
             pc_metrics['nn_miss_rate'][unit_id] = nn_miss_rate
-
+            
+        if 'nearest_neighbor_isolation' in metric_names:
+            nn_isolation = nearest_neighbors_isolation(pcs_flat, labels, unit_id, 
+                                                       max_spikes_for_nn, n_neighbors, seed)
+            pc_metrics['nn_isolation'][unit_id] = nn_isolation
+    
     return pc_metrics
 
 
@@ -221,3 +226,93 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
     miss_rate = np.mean(other_cluster_nearest < n)
 
     return hit_rate, miss_rate
+
+def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_for_nn, n_neighbors, seed):
+    """ Calculates unit isolation based on NearestNeighbors search in PCA space
+
+    Based on isolation metric described in Chung et al. (2017) Neuron 95: 1381-1394.
+
+    Rough logic
+    -----------
+    1) Choose a cluster
+    2) Compute the isolation function with every other cluster
+    3) Isolation score is defined as the min of (2)
+    
+    Implementation
+    --------------
+    Let A and B be clusters from sorting. 
+    
+    We set |A| = |B|:
+        If max_spikes_for_nn < |A| and max_spikes_for_nn < |B|, then randomly subsample max_spikes_for_nn samples from A and B.
+        If max_spikes_for_nn > min(|A|, |B|) (e.g. |A| > max_spikes_for_nn > |B|), then randomly subsample min(|A|, |B|) samples from A and B.
+        This is because the metric is affected by the size of the clusters being compared independently of how well-isolated they are.
+        
+    Isolation function:
+        Isolation(A, B) = 1/k \sum_{j=1}^k |{x \in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
+            where \rho(x) is the cluster x belongs to (in this case, either A or B)
+        Note that this definition implies that the isolation funciton  (1) ranges from 0 to 1; and 
+                                                                       (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
+
+    Parameters:
+    -----------
+    all_pcs: array_like, (num_spikes, PCs)
+        2D array of PCs for all spikes
+    all_labels: array_like, (num_spikes, )
+        1D array of cluster labels for all spikes
+    this_unit_id: int
+        ID of unit for which thiss metric will be calculated
+    max_spikes_for_nn: int
+        max number of spikes to use per cluster
+    n_neighbors: int
+        number of neighbors to check membership of
+    seed: int
+        seed for random subsampling of spikes
+
+    Outputs:
+    --------
+    nearest_neighbor_isolation : float
+    
+    """
+    
+    rng = np.random.default_rng(seed=seed)
+    
+    all_units_ids = np.unique(all_labels)
+    other_units_ids = np.setdiff1d(all_units_ids, this_unit_id)
+
+    isolation = np.zeros(len(other_units_ids),)
+    # compute isolation with each cluster
+    for other_unit_id in other_units_ids:
+        n_spikes_target_unit = np.sum(all_labels==this_unit_id)
+        pcs_target_unit = all_pcs[all_labels==this_unit_id, :]
+
+        n_spikes_other_unit = np.sum(all_labels==other_unit_id)
+        pcs_other_unit = all_pcs[all_labels==other_unit_id]
+
+        spikes_for_nn_actual = np.min([n_spikes_target_unit, n_spikes_other_unit, max_spikes_for_nn])
+
+        if spikes_for_nn_actual < n_spikes_target_unit:
+            pcs_target_unit_idx = rng.choice(np.arange(n_spikes_target_unit), size=spikes_for_nn_actual)
+            pcs_target_unit = pcs_target_unit[pcs_target_unit_idx]
+
+        if spikes_for_nn_actual < n_spikes_other_unit:
+            pcs_other_unit_idx = rng.choice(np.arange(n_spikes_other_unit), size=spikes_for_nn_actual)
+            pcs_other_unit = pcs_other_unit[pcs_other_unit_idx]
+
+        pcs_concat = np.concatenate((pcs_target_unit, pcs_other_unit), axis=0)
+        label_concat = np.concatenate((np.zeros(spikes_for_nn_actual),np.ones(spikes_for_nn_actual)))
+        
+        # if n_neighbors is greater than the number of spikes in both clusters, then set it to max possible
+        if n_neighbors > len(label_concat):
+            n_neighbors_adjusted = len(label_concat)-1
+        else:
+            n_neighbors_adjusted = n_neighbors
+        
+        _, membership_ind = NearestNeighbors(n_neighbors=n_neighbors_adjusted, algorithm='auto').fit(pcs_concat).kneighbors()
+        
+        target_nn_in_target = np.sum(label_concat[membership_ind[:spikes_for_nn_actual]]==0)
+        other_nn_in_other = np.sum(label_concat[membership_ind[spikes_for_nn_actual:]]==1) 
+
+        isolation[other_unit_id==other_units_ids] = (target_nn_in_target + other_nn_in_other) / (2*spikes_for_nn_actual) / n_neighbors_adjusted
+    
+    nearest_neighbor_isolation = np.min(isolation)
+    return nearest_neighbor_isolation
