@@ -6,6 +6,7 @@ Various widgets on top of GroundTruthStudy to summary results:
 """
 import numpy as np
 from matplotlib import pyplot as plt
+import pandas as pd
 
 from .basewidget import BaseWidget
 
@@ -129,12 +130,54 @@ class StudyComparisonUnitCountWidget(BaseWidget):
         ax.set_xlim(0, sorter_names.size + 1)
 
 
-
-
 def plot_gt_study_unit_counts(*args, **kwargs):
     W = StudyComparisonUnitCountWidget(*args, **kwargs)
     W.plot()
     return W
 plot_gt_study_unit_counts.__doc__ = StudyComparisonUnitCountWidget.__doc__
 
+
+class StudyComparisonPerformencesWidget(BaseWidget):
+    """
+    Plot run times for a study.
+
+    Parameters
+    ----------
+    gt_comparison: GroundTruthComparison
+        The ground truth sorting comparison object
+    ax: matplotlib ax
+        The ax to be used. If not given a figure is created
+    cmap_name
+
+    """
+    def __init__(self, study, palette='Set1',  ax=None):
+        
+        self.study = study
+        self.palette = palette
+        
+        # TODO handle multiple recording names
+        BaseWidget.__init__(self, ax=ax)
+        
+    def plot(self):
+        import seaborn as sns
+        study = self.study
+        ax = self.ax
+        
+        perf_by_units = study.aggregate_performance_by_unit()
+        print(perf_by_units)
+        perf_by_units = perf_by_units.reset_index()
+        
+        sns.set_palette(sns.color_palette(self.palette))
+        df = pd.melt(perf_by_units, id_vars='sorter_name', var_name='Metric', value_name='Score', 
+                value_vars=('accuracy','precision', 'recall'))
+        sns.swarmplot(data=df, x='sorter_name', y='Score', hue='Metric', dodge=True,
+                        s=3, ax=ax) # order=sorter_list,  
+        #~ ax.set_xticklabels(sorter_names_short, rotation=30, ha='center')
+        #~ ax.legend(bbox_to_anchor=(1.0, 1), loc=2, borderaxespad=0., frameon=False, fontsize=8, markerscale=0.5)        
+
+def plot_gt_study_performences(*args, **kwargs):
+    W = StudyComparisonPerformencesWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_gt_study_performences.__doc__ = StudyComparisonPerformencesWidget.__doc__
 
