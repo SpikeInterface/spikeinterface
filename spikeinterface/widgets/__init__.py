@@ -42,8 +42,8 @@ from .collisioncomp import (
 from .sortingperformance import plot_sorting_performance
 
 # ground truth study (=comparison over sorter)
-from .gtstudy import StudyComparisonRunTimesWidget, plot_gt_study_run_times
-
+from .gtstudy import (StudyComparisonRunTimesWidget, plot_gt_study_run_times,
+    StudyComparisonUnitCountWidget, plot_gt_study_unit_counts)
 
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget

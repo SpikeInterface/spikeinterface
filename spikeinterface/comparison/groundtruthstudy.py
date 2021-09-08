@@ -154,11 +154,11 @@ class GroundTruthStudy:
         index = pd.MultiIndex.from_tuples(self.computed_names, names=['rec_name', 'sorter_name'])
 
         count_units = pd.DataFrame(index=index, columns=['num_gt', 'num_sorter', 'num_well_detected', 'num_redundant',
-                                                         'num_overmerged'])
+                                                         'num_overmerged'], dtype=int)
 
         if self.exhaustive_gt:
-            count_units['num_false_positive'] = None
-            count_units['num_bad'] = None
+            count_units['num_false_positive'] = pd.Series(dtype=int)
+            count_units['num_bad'] = pd.Series(dtype=int)
 
         for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
             gt_sorting = self.get_ground_truth(rec_name)
