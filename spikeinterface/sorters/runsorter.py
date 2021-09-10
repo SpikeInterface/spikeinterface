@@ -258,7 +258,10 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         os.remove(parent_folder / 'in_docker_recording.json')
         os.remove(parent_folder / 'in_docker_params.json')
         os.remove(parent_folder / 'in_docker_sorter_script.py')
-        raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{e}")
+        if raise_error:
+            raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{e}")
+        else:
+            return
 
     if with_output:
         sorting = SorterClass.get_result_from_folder(output_folder)
