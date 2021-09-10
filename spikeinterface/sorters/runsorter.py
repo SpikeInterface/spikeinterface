@@ -176,84 +176,88 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     volumes = {}
     volumes[str(recording_input_folder)] = {'bind': str(recording_input_folder), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder), 'mode': 'rw'}
+
+    extra_kwargs = {}
+    if SorterClass.docker_requires_gpu:
+        extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
     
     client = docker.from_env()
+    
+    container = client.containers.create(docker_image, tty=True,  volumes=volumes, **extra_kwargs)
+    container.start()
+    
 
     # check if docker contains spikeinertace already
     cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
-    try:
-        res = client.containers.run(docker_image, cmd)
-        need_si_install = False
-    except docker.errors.ContainerError:
-        need_si_install = True
-    
-    # create a comman shell list
-    commands = []
+    res = container.exec_run(cmd)
+    need_si_install = b'ModuleNotFoundError' in res.output
 
     if need_si_install:
         if 'dev' in si_version:
             if verbose:
                 print(f"Installing spikeinterface from sources in {docker_image}")
-            # install from github source several stuff
+            # TODO later check output
             cmd = 'pip install --upgrade --force MEArec'
-            commands.append(cmd)
-
+            res = container.exec_run(cmd)
             cmd = 'pip install -e git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
-            commands.append(cmd)
-
+            res = container.exec_run(cmd)
             cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
-            commands.append(cmd)
+            res = container.exec_run(cmd)
         else:
-            # install from pypi with same version as host
             if verbose:
                 print(f"Installing spikeinterface=={si_version} in {docker_image}")
             cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
-            commands.append(cmd)
+            res = container.exec_run(cmd)
+    else:
+        # TODO version checking
+        if verbose:
+            print(f'spikeinterface is already installed in {docker_image}')
+
 
     # run sorter on folder
+    if verbose:
+        print(f'Running {sorter_name} sorter inside {docker_image}')
     cmd = 'python "{}"'.format(parent_folder/'in_docker_sorter_script.py')
-    commands.append(cmd)
+    res = container.exec_run(cmd)
+    run_sorter_output = res.output
 
-    # put file permission to user (because docker is root...)
+    # chown folder to user uid
     uid = os.getuid()
     cmd = f'chown {uid}:{uid} -R "{output_folder}"'
-    commands.append(cmd)
-
-    commands = ' && '.join(commands)
-    command = f'sh -c "{commands}"'
-
-    extra_kwargs = {}
-    if SorterClass.docker_requires_gpu:
-        extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
-
+    res = container.exec_run(cmd)
+    
     if verbose:
-        print(f"Running sorter in {docker_image}")
-        # flush whatever is in the stdout
-        sys.stdout.flush()
-
-    try:
-        res = client.containers.run(docker_image, command=command, volumes=volumes, **extra_kwargs)
-        run_error = False
-    except Exception as e:
-        run_error = True
-        
+        print('stopping container')
+    container.stop()
+    
     # clean useless files
     os.remove(parent_folder / 'in_docker_recording.json')
     os.remove(parent_folder / 'in_docker_params.json')
-    os.remove(parent_folder / 'in_docker_sorter_script.py')
+    os.remove(parent_folder / 'in_docker_sorter_script.py')    
+    
+    # check error 
+    output_folder = Path(output_folder)
+    log_file = output_folder / 'spikeinterface_log.json'
+    if not log_file.is_file():
+        run_error = True
+    else:
+        with log_file.open('r', encoding='utf8') as f:
+            log = json.load(f)
+        run_error = bool(log['error'])
     
     if run_error:
         if raise_error:
-            raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{e}")
-        else:
-            return
+            raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{run_sorter_output}")
+        
+        sorting = None
+    else:
+        sorting = SorterClass.get_result_from_folder(output_folder)
     
-    sorting = SorterClass.get_result_from_folder(output_folder)
-
     if delete_output_folder:
         shutil.rmtree(output_folder)
-
+    
     return sorting
+    
 
 
 _common_run_doc = """
