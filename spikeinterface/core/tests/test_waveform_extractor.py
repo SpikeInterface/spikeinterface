@@ -64,14 +64,14 @@ def test_WaveformExtractor():
     templates = we.get_all_templates()
     assert templates.shape == (5, 210, 2)
 
-    wf_std = we.get_template(0, mode='std')
+    wf_std = we.get_template(0, mode='std', segment_index=1)
     assert wf_std.shape == (210, 2)
     wfs_std = we.get_all_templates(mode='std')
     assert wfs_std.shape == (5, 210, 2)
 
-    wf_qnt = we.get_template(0, mode='quantile', quantile_value = 0.9)
+    wf_qnt = we.get_template(0, mode='quantile', quantile_value = 0.9, segment_index=0)
     assert wf_qnt.shape == (210, 2)
-    wf_qnt = we.get_all_templates(mode='quantile')
+    wf_qnt = we.get_all_templates(mode='quantile', segment_index=1)
     assert wf_qnt.shape == (5, 210, 2)
 
 def test_extract_waveforms():
