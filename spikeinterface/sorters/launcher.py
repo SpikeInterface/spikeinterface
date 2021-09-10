@@ -12,6 +12,7 @@ import json
 from spikeinterface.core import load_extractor
 
 from .sorterlist import sorter_dict
+from .runsorter import run_sorter_local, run_sorter_docker
 
 
 def _run_one(arg_list):

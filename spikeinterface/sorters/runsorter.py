@@ -247,7 +247,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         # flush whatever is in the stdout
         sys.stdout.flush()
     try:
-        res = client.containers.run(docker_image, command=command, volumes=volumes, stdout=verbose,
+        res = client.containers.run(docker_image, command=command, volumes=volumes, 
                                     **extra_kwargs)
         # clean useless files
         os.remove(parent_folder / 'in_docker_recording.json')
