@@ -197,7 +197,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
-                        similarity_bins=np.linspace(0, 1, 11), show_legend=False, ylim=(0.5, 1),
+                        similarity_bins=np.linspace(0, 1, 11), show_legend=False, ylim=(0.3, 1),
                         good_only=True,
                         ncols=3, axes=None, cmap='winter'):
         
@@ -223,6 +223,14 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
+        import sklearn
+
+        similarity_matrix = {}
+        for rec_name in self.study.rec_names:
+            templates = self.study.get_templates(rec_name)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
             # loop over recordings
@@ -230,16 +238,14 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
             all_recall_scores = []
             for rec_name in self.study.rec_names:
                 
-                templates = self.study.get_templates(rec_name)
-                flat_templates = templates.reshape(templates.shape[0], -1)
-                import sklearn
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-            
-                comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix, good_only=self.good_only)
+                try:
+                    comp = self.study.comparisons[(rec_name, sorter_name)]
+                    similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=self.good_only)
 
-                all_similarities.append(similarities)
-                all_recall_scores.append(recall_scores)
+                    all_similarities.append(similarities)
+                    all_recall_scores.append(recall_scores)
+                except Exception:
+                    pass
             
             all_similarities = np.concatenate(all_similarities, axis=0)
             all_recall_scores = np.concatenate(all_recall_scores, axis=0)
@@ -282,7 +288,7 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
-                        similarity_range=[0, 1], show_legend=False, ylim=(0.5, 1),
+                        similarity_range=[0, 1], show_legend=False, ylim=(0.3, 1),
                         good_only=True, ax=None):
         
         BaseWidget.__init__(self, None, ax)
@@ -297,20 +303,23 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
 
     def plot(self):
 
+        import sklearn
+
+        similarity_matrix = {}
+        for rec_name in self.study.rec_names:
+            templates = self.study.get_templates(rec_name)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
             # loop over recordings
             all_similarities = []
             all_recall_scores = []
             for rec_name in self.study.rec_names:
-                
-                templates = self.study.get_templates(rec_name)
-                flat_templates = templates.reshape(templates.shape[0], -1)
-                import sklearn
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-            
+                           
                 comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix, good_only=self.good_only)
+                similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=self.good_only)
 
                 all_similarities.append(similarities)
                 all_recall_scores.append(recall_scores)
@@ -363,20 +372,23 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
 
     def plot(self):
 
+        import sklearn
+
+        similarity_matrix = {}
+        for rec_name in self.study.rec_names:
+            templates = self.study.get_templates(rec_name)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
             # loop over recordings
             all_similarities = []
             all_recall_scores = []
             for rec_name in self.study.rec_names:
-                
-                templates = self.study.get_templates(rec_name)
-                flat_templates = templates.reshape(templates.shape[0], -1)
-                import sklearn
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-            
+                           
                 comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix, good_only=self.good_only)
+                similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=self.good_only)
 
                 all_similarities.append(similarities)
                 all_recall_scores.append(recall_scores)
