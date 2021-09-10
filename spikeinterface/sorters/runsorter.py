@@ -45,7 +45,7 @@ _common_param_doc = """
 def run_sorter(sorter_name, recording, output_folder=None,
                remove_existing_folder=True, delete_output_folder=False,
                verbose=False, raise_error=True, docker_image=None,
-               **sorter_params):
+               with_output=True, **sorter_params):
     """
     Generic function to run a sorter via function approach.
 
@@ -56,18 +56,19 @@ def run_sorter(sorter_name, recording, output_folder=None,
         sorting = run_sorter_local(sorter_name, recording, output_folder=output_folder,
                                    remove_existing_folder=remove_existing_folder,
                                    delete_output_folder=delete_output_folder,
-                                   verbose=verbose, raise_error=raise_error, **sorter_params)
+                                   verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
     else:
         sorting = run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
                                     remove_existing_folder=remove_existing_folder,
                                     delete_output_folder=delete_output_folder,
-                                    verbose=verbose, raise_error=raise_error, **sorter_params)
+                                    verbose=verbose, raise_error=raise_error, 
+                                    with_output=with_output, **sorter_params)
     return sorting
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
                      remove_existing_folder=True, delete_output_folder=False,
-                     verbose=False, raise_error=True, **sorter_params):
+                     verbose=False, raise_error=True, with_output=True, **sorter_params):
     if isinstance(recording, list):
         raise Exception('You you want to run several sorters/recordings use run_sorters(...)')
 
@@ -78,7 +79,10 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
-    sorting = SorterClass.get_result_from_folder(output_folder)
+    if with_output:
+        sorting = SorterClass.get_result_from_folder(output_folder)
+    else:
+        return
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
@@ -137,7 +141,7 @@ def modify_input_folder(d, input_folder):
 
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
                       remove_existing_folder=True, delete_output_folder=False,
-                      verbose=False, raise_error=True, **sorter_params):
+                      verbose=False, raise_error=True, with_output=True, **sorter_params):
     import docker
 
     if output_folder is None:
@@ -256,10 +260,14 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         os.remove(parent_folder / 'in_docker_sorter_script.py')
         raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{e}")
 
-    sorting = SorterClass.get_result_from_folder(output_folder)
+    if with_output:
+        sorting = SorterClass.get_result_from_folder(output_folder)
 
-    if delete_output_folder:
-        shutil.rmtree(output_folder)
+        if delete_output_folder:
+            shutil.rmtree(output_folder)
+
+    else:
+        return
 
     return sorting
 
