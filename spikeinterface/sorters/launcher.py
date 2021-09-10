@@ -56,6 +56,7 @@ def run_sorters(sorter_list,
                 engine_kwargs={},
                 verbose=False,
                 with_output=True,
+                docker_images={}
                 ):
     """
     This run several sorter on several recording.
@@ -109,6 +110,10 @@ def run_sorters(sorter_list,
 
     with_output: bool
         return the output.
+
+    docker_images: dict
+        A dictionary {sorter_name : docker_image} to specify is some sorters
+        should use docker images
 
     run_sorter_kwargs: dict
         This contains kwargs specific to run_sorter function:\
@@ -167,6 +172,8 @@ def run_sorters(sorter_list,
                         shutil.rmtree(str(output_folder))
 
             params = sorter_params.get(sorter_name, {})
+            docker_image = docker_images.get(sorter_name, None)
+            
             if need_dump:
                 if not recording.is_dumpable:
                     raise Exception('recording not dumpable call recording.save() before')
