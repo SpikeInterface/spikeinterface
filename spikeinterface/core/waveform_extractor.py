@@ -258,7 +258,7 @@ class WaveformExtractor:
             else:
                 wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
                 template = np.median(waveforms_for_segment(wfs, index_ar, segment_index), axis=0)
-                self._template_median[unit_id] = template
+                self._template_median[unit_id][segment_index] = template
                 return template
         elif mode == 'average':
             if segment_index in self._template_average[unit_id]:
@@ -266,7 +266,7 @@ class WaveformExtractor:
             else:
                 wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
                 template = np.average(waveforms_for_segment(wfs, index_ar, segment_index), axis=0)
-                self._template_average[unit_id] = template
+                self._template_average[unit_id][segment_index] = template
                 return template
         elif mode == 'std':
             if segment_index in self._template_std[unit_id]:
@@ -274,15 +274,18 @@ class WaveformExtractor:
             else:
                 wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
                 template = np.std(waveforms_for_segment(wfs, index_ar, segment_index), axis=0)
-                self._template_std[unit_id] = template
+                self._template_std[unit_id][segment_index] = template
                 return template
         elif mode == 'quantile':
-            if quantile_value in self._template_quantile[unit_id]:
-                return self._template_quantile[unit_id][quantile_value]
+            if quantile_value in self._template_quantile[unit_id] and \
+                segment_index in self._template_quantile[unit_id][quantile_value]:
+                return self._template_quantile[unit_id][quantile_value][segment_index]
             else:
                 wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
                 template = np.quantile(waveforms_for_segment(wfs, index_ar, segment_index), quantile_value, axis=0)
-                self._template_quantile[unit_id][quantile_value] = template
+                if quantile_value not in self._template_quantile[unit_id]:
+                    self._template_quantile[unit_id][quantile_value] = dict()
+                self._template_quantile[unit_id][quantile_value][segment_index] = template
 
                 return template
 
