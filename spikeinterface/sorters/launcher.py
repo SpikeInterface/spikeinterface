@@ -3,16 +3,14 @@ Utils functions to launch several sorter on several recording in parralell or no
 """
 import os
 from pathlib import Path
-import multiprocessing
 import shutil
-import json
-import traceback
+import numpy as np
 import json
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load_extractor, aggregate_units
 
 from .sorterlist import sorter_dict
-from .runsorter import run_sorter_local, run_sorter_docker
+from .runsorter import run_sorter_local, run_sorter_docker, _common_param_doc, run_sorter
 
 
 def _run_one(arg_list):
@@ -46,6 +44,120 @@ def _run_one(arg_list):
 _implemented_engine = ('loop', 'joblib', 'dask')
 
 
+def run_sorter_by_property(sorter_name,
+                           recording,
+                           grouping_property,
+                           working_folder,
+                           mode_if_folder_exists='raise',
+                           engine='loop',
+                           engine_kwargs={},
+                           verbose=False,
+                           with_output=True,
+                           docker_image=None,
+                           **sorter_params):
+    """
+    Generic function to run a sorter on a recording after splitting by a 'goruping_property' (e.g. 'group').
+
+    Internally, the function works as follows:
+        * the recording is split based on the provided 'grouping_property' (using the 'split_by' function)
+        * the 'run_sorters' function is run on the split recordings
+        * sorting outputs are aggregated using the 'aggregate_units' function
+        * the 'grouping_property' is added as a property to the SortingExtractor
+
+    Parameters
+    ----------
+
+    sorter_name: str
+        The sorter name
+
+    recording: BaseRecording
+        The recording to be sorted
+
+    grouping_property: object
+        Property to split by before sorting
+
+    working_folder: str
+        The working directory.
+
+    sorter_params: dict of dict with sorter_name as key
+        This allow to overwrite default params for sorter.
+
+    mode_if_folder_exists: 'raise_if_exists' or 'overwrite' or 'keep'
+        The mode when the subfolder of recording/sorter already exists.
+            * 'raise' : raise error if subfolder exists
+            * 'overwrite' : delete and force recompute
+            * 'keep' : do not compute again if f=subfolder exists and log is OK
+
+    engine: str
+        'loop', 'joblib', or 'dask'
+
+    engine_kwargs: dict
+        This contains kwargs specific to the launcher engine:
+            * 'loop' : no kwargs
+            * 'joblib' : {'n_jobs' : } number of processes
+            * 'dask' : {'client':} the dask client for submiting task
+
+    verbose: bool
+        default True
+
+    with_output: bool
+        return the output.
+
+    docker_images: dict
+        A dictionary {sorter_name : docker_image} to specify is some sorters
+        should use docker images
+
+    run_sorter_kwargs: dict
+        This contains kwargs specific to run_sorter function:\
+            * 'raise_error' :  bool
+            * 'parallel' : bool
+            * 'n_jobs' : int
+            * 'joblib_backend' : 'loky' / 'multiprocessing' / 'threading'
+
+    Returns
+    -------
+
+    sorting : UnitsAggregationSorting
+        The aggregated SortingExtractor.
+
+    Examples
+    --------
+
+    This example shows how to run spike sorting split by group using the 'joblib' backend with 4 jobs for parallel
+    processing.
+
+    >>> sorting = si.run_sorter_by_property("tridesclous", recording, grouping_property="group",
+                                            working_folder="sort_by_group", engine="joblib",
+                                            engine_kwargs={"n_jobs": 4})
+
+    """
+
+    assert grouping_property in recording.get_property_keys(), f"The 'grouping_property' {grouping_property} is not " \
+                                                               f"a recording property!"
+    recording_dict = recording.split_by(grouping_property)
+
+    sorting_output = run_sorters([sorter_name], recording_dict, working_folder,
+                                 mode_if_folder_exists=mode_if_folder_exists,
+                                 engine=engine,
+                                 engine_kwargs=engine_kwargs,
+                                 verbose=verbose,
+                                 with_output=with_output,
+                                 docker_images={sorter_name: docker_image},
+                                 sorter_params={sorter_name: sorter_params})
+
+    grouping_property_values = np.array([])
+    sorting_list = []
+    for (output_name, sorting) in sorting_output.items():
+        prop_name, sorter_name = output_name
+        sorting_list.append(sorting)
+        grouping_property_values = np.concatenate((grouping_property_values, [prop_name] * len(sorting.get_unit_ids())))
+
+    aggregate_sorting = aggregate_units(sorting_list)
+    aggregate_sorting.set_property(key=grouping_property, values=grouping_property_values)
+
+    return aggregate_sorting
+
+
 def run_sorters(sorter_list,
                 recording_dict_or_list,
                 working_folder,
@@ -55,7 +167,7 @@ def run_sorters(sorter_list,
                 engine_kwargs={},
                 verbose=False,
                 with_output=True,
-                docker_images = {}
+                docker_images={}
                 ):
     """
     This run several sorter on several recording.
@@ -122,7 +234,7 @@ def run_sorters(sorter_list,
             * 'joblib_backend' : 'loky' / 'multiprocessing' / 'threading'
 
     Returns
-    ----------
+    -------
 
     results : dict
         The output is nested dict[(rec_name, sorter_name)] of SortingExtractor.

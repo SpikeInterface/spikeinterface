@@ -6,7 +6,7 @@ import pytest
 
 from spikeinterface.core import set_global_tmp_folder
 from spikeinterface.extractors import toy_example
-from spikeinterface.sorters import run_sorters, collect_sorting_outputs
+from spikeinterface.sorters import run_sorters, run_sorter_by_property, collect_sorting_outputs
 
 
 def test_run_sorters_with_list():
@@ -34,6 +34,28 @@ def test_run_sorters_with_list():
 
     run_sorters(sorter_list, recording_list, working_folder,
                 engine='loop', verbose=False, with_output=False)
+
+
+def test_run_sorter_by_property():
+    cache_folder = './local_cache'
+    working_folder = 'test_run_sorter_by_property'
+
+    if os.path.exists(cache_folder):
+        shutil.rmtree(cache_folder)
+    if os.path.exists(working_folder):
+        shutil.rmtree(working_folder)
+
+    rec0, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
+    rec0.set_channel_groups(["0"] * 4 + ["1"] * 4)
+
+    # make dumpable
+    set_global_tmp_folder(cache_folder)
+    rec0 = rec0.save(name='rec0')
+    sorter_name = 'tridesclous'
+
+    sorting = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
+                                     engine='loop', verbose=False, with_output=False)
+    assert "group" in sorting.get_property_keys()
 
 
 def test_run_sorters_with_dict():
@@ -161,7 +183,9 @@ def test_collect_sorting_outputs():
 if __name__ == '__main__':
     # test_run_sorters_with_list()
 
-    test_run_sorters_with_dict()
+    test_run_sorter_by_property()
+
+    # test_run_sorters_with_dict()
 
     # test_run_sorters_joblib()
 
