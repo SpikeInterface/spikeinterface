@@ -103,16 +103,11 @@ def run_sorter_by_property(sorter_name,
     with_output: bool
         return the output.
 
-    docker_images: dict
-        A dictionary {sorter_name : docker_image} to specify is some sorters
-        should use docker images
-
-    run_sorter_kwargs: dict
-        This contains kwargs specific to run_sorter function:\
-            * 'raise_error' :  bool
-            * 'parallel' : bool
-            * 'n_jobs' : int
-            * 'joblib_backend' : 'loky' / 'multiprocessing' / 'threading'
+    docker_image: None or str
+        If str run the sorter inside a container (docker) using the docker package.
+        
+    **sorter_params: keyword args
+        Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
     Returns
     -------
