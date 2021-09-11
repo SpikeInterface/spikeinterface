@@ -52,7 +52,6 @@ def run_sorter_by_property(sorter_name,
                            engine='loop',
                            engine_kwargs={},
                            verbose=False,
-                           with_output=True,
                            docker_image=None,
                            **sorter_params):
     """
@@ -100,12 +99,9 @@ def run_sorter_by_property(sorter_name,
     verbose: bool
         default True
 
-    with_output: bool
-        return the output.
-
     docker_image: None or str
         If str run the sorter inside a container (docker) using the docker package.
-        
+
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -136,7 +132,7 @@ def run_sorter_by_property(sorter_name,
                                  engine=engine,
                                  engine_kwargs=engine_kwargs,
                                  verbose=verbose,
-                                 with_output=with_output,
+                                 with_output=True,
                                  docker_images={sorter_name: docker_image},
                                  sorter_params={sorter_name: sorter_params})
 
