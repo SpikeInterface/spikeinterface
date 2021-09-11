@@ -64,10 +64,10 @@ class WaveformExtractor:
 
         # cache in memory
         self._waveforms = {}
-        self._template_std = {i:dict() for i in self.sorting.unit_ids}
-        self._template_average = {i:dict() for i in self.sorting.unit_ids}
-        self._template_median = {i:dict() for i in self.sorting.unit_ids}
-        self._template_quantile = {i:dict() for i in self.sorting.unit_ids}
+        self._template_std = {}
+        self._template_average = {}
+        self._template_median = {}
+        self._template_quantile = {}
         self._params = {}
 
         if (self.folder / 'params.json').is_file():
@@ -112,10 +112,10 @@ class WaveformExtractor:
 
     def _reset(self):
         self._waveforms = {}
-        self._template_std = {i: dict() for i in self.sorting.unit_ids}
-        self._template_average = {i: dict() for i in self.sorting.unit_ids}
-        self._template_median = {i: dict() for i in self.sorting.unit_ids}
-        self._template_quantile = {i: dict() for i in self.sorting.unit_ids}
+        self._template_std = {}
+        self._template_average = {}
+        self._template_median = {}
+        self._template_quantile = {}
         self._params = {}
 
         waveform_folder = self.folder / 'waveforms'
@@ -223,7 +223,7 @@ class WaveformExtractor:
         else:
             return wfs
 
-    def get_template(self, unit_id, mode='median', quantile_value=0.5, segment_index=-1):
+    def get_template(self, unit_id, mode='median', quantile_value=0.5):
         """
         Return template (average waveform)
 
@@ -243,53 +243,44 @@ class WaveformExtractor:
         """
         assert mode in ('median', 'average', 'std', 'quantile')
         assert unit_id in self.sorting.unit_ids
-        assert -2<segment_index<self.sorting.get_num_segments()
-
-        def waveforms_for_segment(wfs, index_ar, segment_index):
-            if segment_index is not -1:
-                segment_index_ar = np.array([i[1] for i in index_ar])
-                return wfs[segment_index_ar == segment_index, :, :]
-            else:
-                return wfs
 
         if mode == 'median':
-            if segment_index in self._template_median[unit_id]:
-                return self._template_median[unit_id][segment_index]
+            if unit_id in self._template_median:
+                return self._template_median[unit_id]
             else:
-                wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
-                template = np.median(waveforms_for_segment(wfs, index_ar, segment_index), axis=0)
-                self._template_median[unit_id][segment_index] = template
+                wfs = self.get_waveforms(unit_id)
+                template = np.median(wfs, axis=0)
+                self._template_median[unit_id] = template
                 return template
         elif mode == 'average':
-            if segment_index in self._template_average[unit_id]:
-                return self._template_average[unit_id][segment_index]
+            if unit_id in self._template_average:
+                return self._template_average[unit_id]
             else:
-                wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
-                template = np.average(waveforms_for_segment(wfs, index_ar, segment_index), axis=0)
-                self._template_average[unit_id][segment_index] = template
+                wfs = self.get_waveforms(unit_id)
+                template = np.average(wfs, axis=0)
+                self._template_average[unit_id] = template
                 return template
         elif mode == 'std':
-            if segment_index in self._template_std[unit_id]:
-                return self._template_std[unit_id][segment_index]
+            if unit_id in self._template_std:
+                return self._template_std[unit_id]
             else:
-                wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
-                template = np.std(waveforms_for_segment(wfs, index_ar, segment_index), axis=0)
-                self._template_std[unit_id][segment_index] = template
+                wfs = self.get_waveforms(unit_id)
+                template = np.std(wfs, axis=0)
+                self._template_std[unit_id] = template
                 return template
         elif mode == 'quantile':
-            if quantile_value in self._template_quantile[unit_id] and \
-                segment_index in self._template_quantile[unit_id][quantile_value]:
-                return self._template_quantile[unit_id][quantile_value][segment_index]
+            if quantile_value in self._template_quantile:
+                if unit_id in self._template_quantile[quantile_value]:
+                    return self._template_quantile[quantile_value][unit_id]
             else:
-                wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
-                template = np.quantile(waveforms_for_segment(wfs, index_ar, segment_index), quantile_value, axis=0)
-                if quantile_value not in self._template_quantile[unit_id]:
-                    self._template_quantile[unit_id][quantile_value] = dict()
-                self._template_quantile[unit_id][quantile_value][segment_index] = template
-
+                wfs = self.get_waveforms(unit_id)
+                template = np.quantile(wfs, quantile_value, axis=0)
+                if quantile_value not in self._template_quantile:
+                    self._template_quantile[quantile_value] = dict()
+                self._template_quantile[quantile_value][unit_id] = template
                 return template
 
-    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5, segment_index=-1):
+    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5):
         """
         Return several templates (average waveform)
 
@@ -313,8 +304,7 @@ class WaveformExtractor:
         dtype = self._params['dtype']
         templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
         for i, unit_id in enumerate(unit_ids):
-            templates[i, :, :] = self.get_template(unit_id, mode=mode, quantile_value=quantile_value,
-                                                   segment_index=segment_index)
+            templates[i, :, :] = self.get_template(unit_id, mode=mode, quantile_value=quantile_value)
         return templates
 
     def sample_spikes(self):
