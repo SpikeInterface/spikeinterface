@@ -53,7 +53,7 @@ class StudyComparisonRunTimesWidget(BaseWidget):
         ax.bar(x, av_run_times.values, width=0.8, color=self.color, yerr=yerr)
         ax.set_ylabel('run times (s)')
         ax.set_xticks(x)
-        ax.set_xticklabels(sorter_names)
+        ax.set_xticklabels(sorter_names, rotation=45)
         ax.set_xlim(0, sorter_names.size + 1)
 
 
@@ -123,7 +123,7 @@ class StudyComparisonUnitCountWidget(BaseWidget):
         ax.legend()
 
         ax.set_xticks(np.arange(sorter_names.size) + 1)
-        ax.set_xticklabels(sorter_names, rotation=0, ha='left')        
+        ax.set_xticklabels(sorter_names, rotation=45, ha='left')        
         ax.set_ylabel('# units')
         ax.set_xlim(0, sorter_names.size + 1)
         
@@ -249,12 +249,12 @@ class StudyComparisonPerformencesAveragesWidget(BaseWidget):
                 yerr = None
             else:
                 yerr = stds[col].values
-            ax.bar(x, m[col].values[0], yerr=yerr[0], width=width, color=cmap(c), label=clean_labels[c])
+            ax.bar(x, m[col].values.flatten(), yerr=yerr.flatten(), width=width, color=cmap(c), label=clean_labels[c])
 
         ax.legend()
 
         ax.set_xticks(np.arange(sorter_names.size) + 1 + width)
-        ax.set_xticklabels(sorter_names, rotation=0)        
+        ax.set_xticklabels(sorter_names, rotation=45)        
         ax.set_ylabel('metric')
         ax.set_xlim(0, sorter_names.size + 1)
         

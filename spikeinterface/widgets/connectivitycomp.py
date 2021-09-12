@@ -34,20 +34,25 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
         cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
+        import sklearn
+                
+        similarity_matrix = {}
+        for rec_name in self.study.rec_names:
+            templates = self.study.get_templates(rec_name)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
             # loop over recordings
             all_errors = []
             all_similarities = []
             for rec_name in self.study.rec_names:
-                
-                templates = self.study.get_templates(rec_name)
-                flat_templates = templates.reshape(templates.shape[0], -1)
-                import sklearn
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-            
-                comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix)
+                            
+                if (rec_name, sorter_name) in self.study.comparisons.keys():
+    
+                    comp = self.study.comparisons[(rec_name, sorter_name)]
+                    similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix[rec_name])
 
                 all_similarities.append(similarities)
                 all_errors.append(errors)
@@ -103,20 +108,23 @@ class StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(BaseWidget):
 
     def plot(self):
 
+        import sklearn
+                
+        similarity_matrix = {}
+        for rec_name in self.study.rec_names:
+            templates = self.study.get_templates(rec_name)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
             # loop over recordings
             all_errors = []
             all_similarities = []
             for rec_name in self.study.rec_names:
-                
-                templates = self.study.get_templates(rec_name)
-                flat_templates = templates.reshape(templates.shape[0], -1)
-                import sklearn
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-            
+                            
                 comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix)
+                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix[rec_name])
 
                 all_similarities.append(similarities)
                 all_errors.append(errors)
@@ -178,20 +186,23 @@ class StudyComparisonConnectivityBySimilarityRangeWidget(BaseWidget):
 
     def plot(self):
 
+        import sklearn
+                
+        similarity_matrix = {}
+        for rec_name in self.study.rec_names:
+            templates = self.study.get_templates(rec_name)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
             # loop over recordings
             all_errors = []
             all_similarities = []
             for rec_name in self.study.rec_names:
-                
-                templates = self.study.get_templates(rec_name)
-                flat_templates = templates.reshape(templates.shape[0], -1)
-                import sklearn
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-            
+                            
                 comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix)
+                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix[rec_name])
 
                 all_similarities.append(similarities)
                 all_errors.append(errors)
