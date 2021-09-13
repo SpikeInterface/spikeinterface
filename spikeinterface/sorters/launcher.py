@@ -24,7 +24,6 @@ def _run_one(arg_list):
     else:
         recording = recording
 
-    SorterClass = sorter_dict[sorter_name]
 
     # because this is checks in run_sorters before this call
     remove_existing_folder = False
@@ -37,7 +36,6 @@ def _run_one(arg_list):
 
         run_sorter_local(sorter_name, recording, output_folder, remove_existing_folder,
             delete_output_folder, verbose, raise_error, with_output)
-
     else:
 
         run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
@@ -174,7 +172,7 @@ def run_sorters(sorter_list,
 
             params = sorter_params.get(sorter_name, {})
             docker_image = docker_images.get(sorter_name, None)
-            
+
             if need_dump:
                 if not recording.is_dumpable:
                     raise Exception('recording not dumpable call recording.save() before')
@@ -183,7 +181,6 @@ def run_sorters(sorter_list,
                 recording_arg = recording
 
             task_args = (sorter_name, recording_arg, output_folder, verbose, params, docker_image, with_output)
-
             task_args_list.append(task_args)
 
     if engine == 'loop':
