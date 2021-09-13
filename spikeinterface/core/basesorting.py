@@ -54,7 +54,7 @@ class BaseSorting(BaseExtractor):
                              ):
         segment_index = self._check_segment_index(segment_index)
         S = self._sorting_segments[segment_index]
-        return S.get_unit_spike_train(unit_id=unit_id, start_frame=start_frame, end_frame=end_frame)
+        return S.get_unit_spike_train(unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
 
     def _save(self, format='npz', **save_kwargs):
         """

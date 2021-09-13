@@ -53,7 +53,7 @@ def test_WaveformExtractor():
     assert wfs.shape[0] <= 500
     assert wfs.shape[1:] == (210, 2)
 
-    wfs, sampled_index = we.get_waveforms(0, with_index=True)
+    wfs, sampled_index = we.get_waveforms(0, with_sample_index=True)
 
     # load back
     we = WaveformExtractor.load_from_folder(folder)
