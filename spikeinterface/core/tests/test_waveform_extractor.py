@@ -7,7 +7,8 @@ from spikeinterface import WaveformExtractor, extract_waveforms
 
 
 def _clean_all():
-    folders = ["wf_rec1", "wf_rec2", "wf_sort2", "test_waveform_extractor",
+    folders = ["wf_rec1", "wf_rec2", "wf_rec3", "wf_sort2", "test_waveform_extractor",
+               "test_waveform_extractor_groups",
                "test_extract_waveforms_1job", "test_extract_waveforms_2job"]
     for folder in folders:
         if Path(folder).exists():
@@ -74,6 +75,7 @@ def test_WaveformExtractor():
     wf_qnt = we.get_all_templates(mode='quantile')
     assert wf_qnt.shape == (5, 210, 2)
 
+
 def test_extract_waveforms():
     # 2 segments
 
@@ -102,6 +104,10 @@ def test_extract_waveforms():
     we2 = extract_waveforms(recording, sorting, folder2, n_jobs=2, total_memory="10M", max_spikes_per_unit=None,
                             return_scaled=False)
 
+    wf1 = we1.get_waveforms(0)
+    wf2 = we2.get_waveforms(0)
+    assert np.array_equal(wf1, wf2)
+
     folder3 = Path('test_extract_waveforms_returnscaled')
     if folder3.is_dir():
         shutil.rmtree(folder3)
@@ -113,12 +119,36 @@ def test_extract_waveforms():
     we3 = extract_waveforms(recording, sorting, folder3, n_jobs=2, total_memory="10M", max_spikes_per_unit=None,
                             return_scaled=True)
 
-    wf1 = we1.get_waveforms(0)
-    wf2 = we2.get_waveforms(0)
-    assert np.array_equal(wf1, wf2)
-
     wf3 = we3.get_waveforms(0)
     assert np.array_equal((wf1).astype("float32") * gain, wf3)
+
+    folder4 = Path('test_extract_waveforms_group')
+    if folder4.is_dir():
+        shutil.rmtree(folder4)
+
+    recording = generate_recording(num_channels=4, durations=durations, sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=True)
+    folder_rec = "wf_rec3"
+    recording = recording.save(folder=folder_rec)
+    recording.set_channel_groups([0, 0, 1, 1])
+    sorting.set_property("group", [0, 0, 0, 1, 1])
+
+    we4 = extract_waveforms(recording, sorting, folder4)
+
+    wf1 = we4.get_waveforms(0)
+    wf1g = we4.get_waveforms(0, by_property="group")
+    assert wf1.shape[-1] == 4
+    assert wf1g.shape[-1] == 2
+
+    tmp1 = we4.get_template(0)
+    tmp1g = we4.get_template(0, by_property="group")
+    assert tmp1.shape[-1] == 4
+    assert tmp1g.shape[-1] == 2
+
+    tmp_all = we4.get_all_templates()
+    tmpg_all = we4.get_all_templates(by_property="group")
+    assert tmp_all.shape[-1] == 4
+    assert tmpg_all.shape[-1] == 2
 
 
 if __name__ == '__main__':

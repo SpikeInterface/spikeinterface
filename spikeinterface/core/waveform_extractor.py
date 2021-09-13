@@ -187,7 +187,13 @@ class WaveformExtractor:
     def return_scaled(self):
         return self._params['return_scaled']
 
-    def get_waveforms(self, unit_id, with_index=False):
+    def _check_property_consistency(self, by_property):
+        assert by_property in self.recording.get_property_keys(), f"Property {by_property} is not a " \
+                                                                  f"recording property"
+        assert by_property in self.sorting.get_property_keys(), f"Property {by_property} is not a " \
+                                                                f"sorting property"
+
+    def get_waveforms(self, unit_id, with_index=False, by_property=None):
         """
         Return waveforms
 
@@ -197,6 +203,9 @@ class WaveformExtractor:
             Unit id to retrieve waveforms for
         with_index: bool
             If True, spike indices of extracted waveforms are returned (default False)
+        by_property: object or None
+            If given and 'by_property' is a property of both the associated recording and sorting objects,
+            the waveforms are returned on the channels corresponding to the specified property (e.g. 'group')
 
         Returns
         -------
@@ -216,6 +225,15 @@ class WaveformExtractor:
             wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs
 
+        if by_property is not None:
+            self._check_property_consistency(by_property)
+            unit_property = self.sorting.get_property(by_property)[self.sorting.ids_to_indices([unit_id])[0]]
+            rec_by = self.recording.split_by(by_property)
+            assert unit_property in rec_by.keys(), f"Unit property {unit_property} cannot be found in the " \
+                                                   f"recording properties"
+            channels_indices = self.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
+            wfs = wfs[:, :, channels_indices]
+
         if with_index:
             sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
             sampled_index = np.load(sampled_index_file)
@@ -223,7 +241,7 @@ class WaveformExtractor:
         else:
             return wfs
 
-    def get_template(self, unit_id, mode='median', quantile_value=0.5):
+    def get_template(self, unit_id, mode='median', quantile_value=0.5, by_property=None):
         """
         Return template (average waveform)
 
@@ -234,7 +252,10 @@ class WaveformExtractor:
         mode: str
             'mean', 'median' (default), 'std'(standard deviation), 'quantile'
         quantile_value: float
-            quantile value for argument to np.quantile
+            Quantile value for argument to np.quantile
+        by_property: object or None
+            If given and 'by_property' is a property of both the associated recording and sorting objects,
+            the template is returned on the channels corresponding to the specified property (e.g. 'group')
 
         Returns
         -------
@@ -245,42 +266,46 @@ class WaveformExtractor:
         assert unit_id in self.sorting.unit_ids
 
         if mode == 'median':
-            if unit_id in self._template_median:
+            if unit_id in self._template_median and not by_property:
                 return self._template_median[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, by_property=by_property)
                 template = np.median(wfs, axis=0)
-                self._template_median[unit_id] = template
+                if not by_property:
+                    self._template_median[unit_id] = template
                 return template
         elif mode == 'average':
-            if unit_id in self._template_average:
+            if unit_id in self._template_average and not by_property:
                 return self._template_average[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, by_property=by_property)
                 template = np.average(wfs, axis=0)
-                self._template_average[unit_id] = template
+                if not by_property:
+                    self._template_average[unit_id] = template
                 return template
         elif mode == 'std':
-            if unit_id in self._template_std:
+            if unit_id in self._template_std and not by_property:
                 return self._template_std[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, by_property=by_property)
                 template = np.std(wfs, axis=0)
-                self._template_std[unit_id] = template
+                if not by_property:
+                    self._template_std[unit_id] = template
                 return template
         elif mode == 'quantile':
-            if quantile_value in self._template_quantile:
-                if unit_id in self._template_quantile[quantile_value]:
-                    return self._template_quantile[quantile_value][unit_id]
+            if quantile_value in self._template_quantile and unit_id in self._template_quantile[quantile_value] \
+                    and by_property is None:
+                return self._template_quantile[quantile_value][unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, by_property=by_property)
                 template = np.quantile(wfs, quantile_value, axis=0)
-                if quantile_value not in self._template_quantile:
-                    self._template_quantile[quantile_value] = dict()
-                self._template_quantile[quantile_value][unit_id] = template
+                if not by_property:
+                    if quantile_value not in self._template_quantile:
+                        self._template_quantile[quantile_value] = dict()
+                    self._template_quantile[quantile_value][unit_id] = template
                 return template
 
-    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5):
+    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5, by_property=None):
         """
         Return several templates (average waveform)
 
@@ -291,7 +316,11 @@ class WaveformExtractor:
         mode: str
             'mean' or 'median' (default), 'std', 'quantile'
         quantile_value: float
-            quantile value as argument to np.quantile
+            Quantile value as argument to np.quantile
+        by_property: object or None
+            If given and 'by_property' is a property of both the associated recording and sorting objects,
+            the templates are returned on the channels corresponding to the specified property (e.g. 'group')
+
         Returns
         -------
         templates: np.array
@@ -299,12 +328,30 @@ class WaveformExtractor:
         """
         if unit_ids is None:
             unit_ids = self.sorting.unit_ids
-        num_chans = self.recording.get_num_channels()
-
+        if np.isscalar(unit_ids):
+            unit_ids = np.array([unit_ids])
         dtype = self._params['dtype']
-        templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
+
+        if by_property is not None:
+            self._check_property_consistency(by_property)
+            rec_by = self.recording.split_by(by_property)
+            num_channels = [rec.get_num_channels() for rec in rec_by.values()]
+            if all([num_chans == num_channels[0] for num_chans in num_channels]):
+                templates = np.zeros((len(unit_ids), self.nsamples, num_channels[0]), dtype=dtype)
+            else:
+                templates = np.zeros((len(unit_ids), self.nsamples, np.max(num_channels)), dtype=dtype)
+        else:
+            num_chans = self.recording.get_num_channels()
+            templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
         for i, unit_id in enumerate(unit_ids):
-            templates[i, :, :] = self.get_template(unit_id, mode=mode, quantile_value=quantile_value)
+            # print(unit_id)
+            template = self.get_template(unit_id, mode=mode, quantile_value=quantile_value,
+                                         by_property=by_property)
+            if template.shape[1] == templates.shape[2]:
+                templates[i, :, :] = template
+            else:
+                # some channels are missing
+                templates[i, :, :template.shape[1]] = template
         return templates
 
     def sample_spikes(self):
