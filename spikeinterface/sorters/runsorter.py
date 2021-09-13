@@ -246,6 +246,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         print(f"Running sorter in {docker_image}")
         # flush whatever is in the stdout
         sys.stdout.flush()
+
     try:
         res = client.containers.run(docker_image, command=command, volumes=volumes, 
                                     **extra_kwargs)
