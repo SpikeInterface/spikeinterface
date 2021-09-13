@@ -193,7 +193,7 @@ class WaveformExtractor:
         assert by_property in self.sorting.get_property_keys(), f"Property {by_property} is not a " \
                                                                 f"sorting property"
 
-    def get_waveforms(self, unit_id, with_index=False, by_property=None):
+    def get_waveforms(self, unit_id, with_sample_index=False, by_property=None, with_channel_index=False):
         """
         Return waveforms
 
@@ -201,18 +201,22 @@ class WaveformExtractor:
         ----------
         unit_id: int
             Unit id to retrieve waveforms for
-        with_index: bool
+        with_sample_index: bool
             If True, spike indices of extracted waveforms are returned (default False)
         by_property: object or None
             If given and 'by_property' is a property of both the associated recording and sorting objects,
             the waveforms are returned on the channels corresponding to the specified property (e.g. 'group')
+        with_channel_index: bool
+            If True, channel indices on which the template is defined are returned.
 
         Returns
         -------
         wfs: np.array
             The returned waveform (num_spikes, num_samples, num_channels)
-        indices: np.array
-            If 'with_index' is True, the spike indices corresponding to the waveforms extracted
+        sample_indices: np.array
+            If 'with_sample_index' is True, the spike indices corresponding to the waveforms extracted
+        channel_indices: np.array
+            If 'with_channel_index' is True, the channel indices on which the waveforms are extracted
         """
         assert unit_id in self.sorting.unit_ids, "'unit_id' is invalid"
 
@@ -233,13 +237,21 @@ class WaveformExtractor:
                                                    f"recording properties"
             channels_indices = self.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             wfs = wfs[:, :, channels_indices]
+        else:
+            channels_indices = self.recording.ids_to_indices(self.recording.get_channel_ids())
 
-        if with_index:
-            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
-            sampled_index = np.load(sampled_index_file)
-            return wfs, sampled_index
+        if with_sample_index or with_channel_index:
+            returns = (wfs,)
         else:
             return wfs
+
+        if with_sample_index:
+            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
+            sampled_index = np.load(sampled_index_file)
+            returns = returns + (sampled_index,)
+        if with_channel_index:
+            returns = returns + (channels_indices,)
+        return returns
 
     def get_template(self, unit_id, mode='median', quantile_value=0.5, by_property=None):
         """
@@ -261,6 +273,8 @@ class WaveformExtractor:
         -------
         template: np.array
             The returned template (num_samples, num_channels)
+        channel_indices: np.array
+            Channels used to get the template (if 'with_channel_index' is True)
         """
         assert mode in ('median', 'average', 'std', 'quantile')
         assert unit_id in self.sorting.unit_ids
@@ -344,7 +358,6 @@ class WaveformExtractor:
             num_chans = self.recording.get_num_channels()
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
         for i, unit_id in enumerate(unit_ids):
-            # print(unit_id)
             template = self.get_template(unit_id, mode=mode, quantile_value=quantile_value,
                                          by_property=by_property)
             if template.shape[1] == templates.shape[2]:

@@ -70,7 +70,7 @@ def get_template_extremum_channel(waveform_extractor, peak_sign='neg', outputs='
 def get_template_channel_sparsity(waveform_extractor, method='best_channels',
                                   peak_sign='neg', num_channels=None, radius_um=None, outputs='id'):
     """
-    Get channel sparsity for each template with several methods:
+    Get channel sparsity (subset of indices) for each template with several methods:
       * "best_channels": get N best channel, channels are ordered in that case
       * "radius": radius un um around the best channel, channels are not ordered
       * "threshold" : TODO
@@ -145,7 +145,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
         elif peak_sign == 'pos':
             peak_pos = np.argmax(template[:, chan_ind])
         shift = peak_pos - waveform_extractor.nbefore
-        shifts[unit_id] = shift
+        shifts[unit_id] = shift.astype("int64")
 
     return shifts
 
