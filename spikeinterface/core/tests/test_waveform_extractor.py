@@ -69,10 +69,15 @@ def test_WaveformExtractor():
     wfs_std = we.get_all_templates(mode='std')
     assert wfs_std.shape == (5, 210, 2)
 
-    wf_qnt = we.get_template(0, mode='quantile', quantile_value = 0.9)
+    wf_qnt = we.get_template(0, mode='quantile', quantile_value=0.9)
     assert wf_qnt.shape == (210, 2)
     wf_qnt = we.get_all_templates(mode='quantile')
     assert wf_qnt.shape == (5, 210, 2)
+
+    wf_segment = we.get_template_segment(unit_id=0,segment_index=0)
+    assert wf_segment.shape == (210, 2)
+    wf_segment = we.get_template_segment(unit_id=0, segment_index=1, quantile_value=0.9, mode='quantile')
+    assert wf_segment.shape == (210, 2)
 
 def test_extract_waveforms():
     # 2 segments
