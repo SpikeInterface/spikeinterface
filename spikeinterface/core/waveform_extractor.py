@@ -223,6 +223,11 @@ class WaveformExtractor:
         else:
             return wfs
 
+    def get_waveforms_segment(self, segment_index, unit_id):
+        wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
+        segment_index_ar = np.array([i[1] for i in index_ar])
+        return wfs[segment_index_ar == segment_index, :, :]
+
     def get_template(self, unit_id, mode='median', quantile_value=0.5):
         """
         Return template (average waveform)
@@ -306,6 +311,20 @@ class WaveformExtractor:
         for i, unit_id in enumerate(unit_ids):
             templates[i, :, :] = self.get_template(unit_id, mode=mode, quantile_value=quantile_value)
         return templates
+
+    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median'):
+        assert mode in ('median', 'average', 'std', 'quantile')
+        assert unit_id in self.sorting.unit_ids
+        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id)
+        if mode == 'median':
+            return np.median(waveforms_segment, axis=0)
+        elif mode == 'average':
+            return np.mean(waveforms_segment, axis=0)
+        elif mode == 'std':
+            return np.std(waveforms_segment, axis=0)
+        elif mode == 'quantile':
+            assert quantile_value is not None, 'enter quantile value'
+            return np.quantile(waveforms_segment, quantile_value, axis=0)
 
     def sample_spikes(self):
         p = self._params
