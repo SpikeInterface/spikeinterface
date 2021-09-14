@@ -35,6 +35,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         rec_name = self.neo_reader.rec_name
         probe = pi.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
         self.set_probe(probe, in_place=True)
+        self.set_property("electrode", self.get_property("contact_vector")["electrode"])
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id, rec_name=rec_name)
 
 
