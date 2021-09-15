@@ -361,6 +361,11 @@ class StudyComparisonPerformencesByTemplateSimilarity(BaseWidget):
                 
         flat_templates_gt = {}
         for rec_name in self.study.rec_names:
+
+            waveform_folder = self.study.study_folder / 'waveforms' / f'waveforms_GroundTruth_{rec_name}'
+            if not waveform_folder.is_dir():
+                self.study.compute_waveforms(rec_name)
+
             templates = self.study.get_templates(rec_name)
             flat_templates_gt[rec_name] = templates.reshape(templates.shape[0], -1)
         
@@ -377,18 +382,17 @@ class StudyComparisonPerformencesByTemplateSimilarity(BaseWidget):
                     self.study.compute_waveforms(rec_name, sorter_name)
                 templates = self.study.get_templates(rec_name, sorter_name)
                 flat_templates = templates.reshape(templates.shape[0], -1)
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates, flat_templates_gt[rec_name])
+                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates_gt[rec_name], flat_templates)
 
                 comp = self.study.comparisons[(rec_name, sorter_name)]
 
-                matched_units = comp.get_well_detected_units()
-                good_units = comp.best_match_21[matched_units].values
-                good_units_ids = comp.sorting1.ids_to_indices(good_units)
+                for i, u1 in enumerate(comp.sorting1.unit_ids):
+                    u2 = comp.best_match_12[u1]
+                    if u2 != -1:
+                        all_results[sorter_name]['similarity'] += [similarity_matrix[comp.sorting1.id_to_index(u1), comp.sorting2.id_to_index(u2)]]
+                        all_results[sorter_name]['accuracy'] += [comp.agreement_scores.at[u1, u2]]
 
-                all_results[sorter_name]['similarity'] += [similarity_matrix[matched_units, good_units_ids]]
-                all_results[sorter_name]['accuracy'] += [comp.agreement_scores.at[a, b] for (a, b) in zip(good_units, matched_units)]
-
-            all_results[sorter_name]['similarity'] = np.concatenate(all_results[sorter_name]['similarity'])
+            all_results[sorter_name]['similarity'] = np.array(all_results[sorter_name]['similarity'])
             all_results[sorter_name]['accuracy'] = np.array(all_results[sorter_name]['accuracy'])
 
 
