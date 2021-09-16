@@ -231,7 +231,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     res = container.exec_run(cmd)
     
     if verbose:
-        print('stopping container')
+        print('Stopping container')
     container.stop()
     
     # clean useless files
