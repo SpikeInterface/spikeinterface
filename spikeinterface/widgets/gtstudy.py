@@ -343,7 +343,7 @@ class StudyComparisonPerformencesByTemplateSimilarity(BaseWidget):
     cmap_name
 
     """
-    def __init__(self, study, cmap_name='Set1',  ax=None, ylim=(0.5, 1), show_legend=True):
+    def __init__(self, study, cmap_name='Set1',  ax=None, ylim=(0.6, 1), show_legend=True):
         
         self.study = study
         self.cmap_name = cmap_name
@@ -377,26 +377,27 @@ class StudyComparisonPerformencesByTemplateSimilarity(BaseWidget):
 
             for rec_name in self.study.rec_names:
 
-                waveform_folder = self.study.study_folder / 'waveforms' / f'waveforms_{sorter_name}_{rec_name}'
-                if not waveform_folder.is_dir():
-                    self.study.compute_waveforms(rec_name, sorter_name)
-                templates = self.study.get_templates(rec_name, sorter_name)
-                flat_templates = templates.reshape(templates.shape[0], -1)
-                similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates_gt[rec_name], flat_templates)
+                try:
+                    waveform_folder = self.study.study_folder / 'waveforms' / f'waveforms_{sorter_name}_{rec_name}'
+                    if not waveform_folder.is_dir():
+                        self.study.compute_waveforms(rec_name, sorter_name)
+                    templates = self.study.get_templates(rec_name, sorter_name)
+                    flat_templates = templates.reshape(templates.shape[0], -1)
+                    similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates_gt[rec_name], flat_templates)
 
-                comp = self.study.comparisons[(rec_name, sorter_name)]
+                    comp = self.study.comparisons[(rec_name, sorter_name)]
 
-                for i, u1 in enumerate(comp.sorting1.unit_ids):
-                    u2 = comp.best_match_12[u1]
-                    if u2 != -1:
-                        all_results[sorter_name]['similarity'] += [similarity_matrix[comp.sorting1.id_to_index(u1), comp.sorting2.id_to_index(u2)]]
-                        all_results[sorter_name]['accuracy'] += [comp.agreement_scores.at[u1, u2]]
+                    for i, u1 in enumerate(comp.sorting1.unit_ids):
+                        u2 = comp.best_match_12[u1]
+                        if u2 != -1:
+                            all_results[sorter_name]['similarity'] += [similarity_matrix[comp.sorting1.id_to_index(u1), comp.sorting2.id_to_index(u2)]]
+                            all_results[sorter_name]['accuracy'] += [comp.agreement_scores.at[u1, u2]]
+                except Exception:
+                    pass
 
             all_results[sorter_name]['similarity'] = np.array(all_results[sorter_name]['similarity'])
             all_results[sorter_name]['accuracy'] = np.array(all_results[sorter_name]['accuracy'])
 
-
-        print(all_results)
         from matplotlib.patches import Ellipse
 
         similarity_means = [all_results[sorter_name]['similarity'].mean() for sorter_name in self.study.sorter_names]
@@ -411,16 +412,16 @@ class StudyComparisonPerformencesByTemplateSimilarity(BaseWidget):
             e.set_alpha(0.2)
             e.set_facecolor(colors[scount])
             self.ax.add_artist(e)
+            self.ax.scatter([x], [y], c=colors[scount], label=self.study.sorter_names[scount])
             scount += 1
 
-        self.ax.scatter(similarity_means, accuracy_means, c=colors)
         self.ax.set_ylabel('accuracy')
         self.ax.set_xlabel('cosine similarity')
         if self.ylim is not None:
             self.ax.set_ylim(self.ylim)
 
         if self.show_legend:
-            self.ax.legend(self.study.sorter_names)
+            self.ax.legend()
 
 
 

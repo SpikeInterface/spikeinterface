@@ -222,57 +222,27 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         my_cmap = plt.get_cmap(self.cmap)
         cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
-
-        import sklearn
-                
-        similarity_matrix = {}
-        for rec_name in self.study.rec_names:
-            templates = self.study.get_templates(rec_name)
-            flat_templates = templates.reshape(templates.shape[0], -1)
-            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+        self.study.precompute_scores_by_similarities(self.good_only)
+        lags = self.study.get_lags() 
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
-            # loop over recordings
-            all_similarities = []
-            all_recall_scores = []
-
-            for rec_name in self.study.rec_names:
-                            
-                if (rec_name, sorter_name) in self.study.comparisons.keys():
-    
-                    comp = self.study.comparisons[(rec_name, sorter_name)]
-                    similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=self.good_only)
-
-                all_similarities.append(similarities)
-                all_recall_scores.append(recall_scores)
-            
-            all_similarities = np.concatenate(all_similarities, axis=0)
-            all_recall_scores = np.concatenate(all_recall_scores, axis=0)
-            
-            order = np.argsort(all_similarities)
-            all_similarities = all_similarities[order]
-            all_recall_scores = all_recall_scores[order, :]
-
-            fs = comp.sorting1.get_sampling_frequency()
-            lags = comp.bins / fs * 1000            
-            
+            curves = self.study.get_lag_profile_over_similarity_bins(self.similarity_bins, sorter_name) 
             
             # plot by similarity bins
             ax = self.axes.flatten()[sorter_ind]
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
             
             for i in range(self.similarity_bins.size - 1):
                 cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
-                amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
-                mean_recall_scores = np.mean(all_recall_scores[amin:amax], axis=0)
-                mean_recall_scores = np.nan_to_num(mean_recall_scores)
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
-                ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
+                ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, curves[(cmin, cmax)], label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
             
             if np.mod(sorter_ind, self.ncols) == 0:
                 ax.set_ylabel('collision accuracy')
 
-            if sorter_ind >= (len(self.study.sorter_names) // self.ncols):
+            if sorter_ind > (len(self.study.sorter_names) // self.ncols):
                 ax.set_xlabel('lags (ms)')
 
             ax.set_title(sorter_name)
@@ -303,46 +273,12 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
 
     def plot(self):
 
-        import sklearn
-                
-        similarity_matrix = {}
-        for rec_name in self.study.rec_names:
-            templates = self.study.get_templates(rec_name)
-            flat_templates = templates.reshape(templates.shape[0], -1)
-            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-
+        self.study.precompute_scores_by_similarities(self.good_only)
+        lags = self.study.get_lags()    
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
-            # loop over recordings
-            all_similarities = []
-            all_recall_scores = []
-
-            for rec_name in self.study.rec_names:
-                
-                if (rec_name, sorter_name) in self.study.comparisons.keys():
-                    comp = self.study.comparisons[(rec_name, sorter_name)]
-                    similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=self.good_only)
-
-                    all_similarities.append(similarities)
-                    all_recall_scores.append(recall_scores)
-            
-            all_similarities = np.concatenate(all_similarities, axis=0)
-            all_recall_scores = np.concatenate(all_recall_scores, axis=0)
-
-            idx = (all_similarities >= self.similarity_range[0]) & (all_similarities <= self.similarity_range[1])
-            all_similarities = all_similarities[idx]
-            all_recall_scores = all_recall_scores[idx]
-            
-            order = np.argsort(all_similarities)
-            all_similarities = all_similarities[order]
-            all_recall_scores = all_recall_scores[order, :]
-
-            fs = comp.sorting1.get_sampling_frequency()
-            lags = comp.bins / fs * 1000            
-            
-            mean_recall_scores = np.mean(all_recall_scores, axis=0)
-            mean_recall_scores = np.nan_to_num(mean_recall_scores)
+            mean_recall_scores = self.study.get_mean_over_similarity_range(self.similarity_range, sorter_name)
             self.ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
             
         self.ax.set_ylabel('collision accuracy')
@@ -375,40 +311,18 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
 
     def plot(self):
 
-        import sklearn
-                
-        similarity_matrix = {}
-        for rec_name in self.study.rec_names:
-            templates = self.study.get_templates(rec_name)
-            flat_templates = templates.reshape(templates.shape[0], -1)
-            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+        self.study.precompute_scores_by_similarities(self.good_only)
+        lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
-            # loop over recordings
-            all_similarities = []
-            all_recall_scores = []
+            all_similarities = self.study.all_similarities[sorter_name]
+            all_recall_scores = self.study.all_recall_scores[sorter_name]
 
-            for rec_name in self.study.rec_names:
-                            
-                if (rec_name, sorter_name) in self.study.comparisons.keys():
-    
-                    comp = self.study.comparisons[(rec_name, sorter_name)]
-                    similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=self.good_only)
-
-                all_similarities.append(similarities)
-                all_recall_scores.append(recall_scores)
-            
-            all_similarities = np.concatenate(all_similarities, axis=0)
-            all_recall_scores = np.concatenate(all_recall_scores, axis=0)
-            
             order = np.argsort(all_similarities)
             all_similarities = all_similarities[order]
             all_recall_scores = all_recall_scores[order, :]
 
-            fs = comp.sorting1.get_sampling_frequency()
-            lags = comp.bins / fs * 1000            
-            
             mean_recall_scores = []
             std_recall_scores = []
             for i in range(self.similarity_ranges.size - 1):
