@@ -485,12 +485,22 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     return_scaled = worker_ctx['return_scaled']
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
+    seg_size = recording.get_num_samples(segment_index=segment_index)
+    
     to_extract = {}
     for unit_id in sorting.unit_ids:
         spike_times = selected_spike_times[unit_id][segment_index]
         i0 = np.searchsorted(spike_times, start_frame)
         i1 = np.searchsorted(spike_times, end_frame)
         if i0 != i1:
+            # protect from spikes on border :  <0 or >seg_size
+            # waveform will not be extracted and a zeros will be left in the memmap file
+            while (spike_times[i0] - nbefore) < 0 and (i0!=i1):
+                i0 = i0 + 1
+            while (spike_times[i1] + nafter) > seg_size and (i0!=i1):
+                i1 = i1 + 1
+
+        if i0 != i1:            
             to_extract[unit_id] = i0, i1, spike_times[i0:i1]
 
     if len(to_extract) > 0:
@@ -498,7 +508,14 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
         end = max(st[-1] for _, _, st in to_extract.values()) + nafter
         start = int(start)
         end = int(end)
-
+        
+        # protect from spikes on border
+        if start < 0:
+            start = 0
+        
+        if stop > seg_size:
+            stop = seg_size
+        
         # load trace in memory
         traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index,
                                       return_scaled=return_scaled)
