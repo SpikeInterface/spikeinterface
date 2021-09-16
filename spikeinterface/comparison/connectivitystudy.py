@@ -3,6 +3,8 @@ from .groundtruthstudy import GroundTruthStudy
 from .studytools import iter_computed_sorting
 from .connectivitycomparison import ConnectivityGTComparison
 
+import numpy as np
+
 class ConnectivityGtStudy(GroundTruthStudy):
 
     def run_comparisons(self, exhaustive_gt=True, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs):
@@ -32,7 +34,7 @@ class ConnectivityGtStudy(GroundTruthStudy):
                 similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
 
             self.all_similarities = {}
-            self.all_recall_scores = {}
+            self.all_errors = {}
             self._computed = True
 
             for sorter_ind, sorter_name in enumerate(self.sorter_names):
