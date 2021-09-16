@@ -34,47 +34,23 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
         cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
-        import sklearn
-                
-        similarity_matrix = {}
-        for rec_name in self.study.rec_names:
-            templates = self.study.get_templates(rec_name)
-            flat_templates = templates.reshape(templates.shape[0], -1)
-            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+        self.study.precompute_scores_by_similarities()
+        time_axis = self.study.time_axis
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
-            # loop over recordings
-            all_errors = []
-            all_similarities = []
-            for rec_name in self.study.rec_names:
-                            
-                if (rec_name, sorter_name) in self.study.comparisons.keys():
-    
-                    comp = self.study.comparisons[(rec_name, sorter_name)]
-                    similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix[rec_name])
+            result = self.get_error_profile_over_similarity_bins(similarity_bins, sorter_name)
 
-                all_similarities.append(similarities)
-                all_errors.append(errors)
-            
-            all_similarities = np.concatenate(all_similarities, axis=0)
-            all_errors = np.concatenate(all_errors, axis=0)
-            
-            order = np.argsort(all_similarities)
-            all_similarities = all_similarities[order]
-            all_errors = all_errors[order, :]
-
-            
             # plot by similarity bins
             ax = self.axes.flatten()[sorter_ind]
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
             
             for i in range(self.similarity_bins.size - 1):
                 cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
                 amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
-                mean_error = np.mean(all_errors[amin:amax], axis=0)
-                mean_error = np.nan_to_num(mean_error)
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
-                ax.plot(comp.time_axis, mean_error, label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
+                ax.plot(time_axis, result[(cmin, cmax)], label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
             
             if np.mod(sorter_ind, self.ncols) == 0:
                 ax.set_ylabel('cc error')
@@ -108,38 +84,18 @@ class StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(BaseWidget):
 
     def plot(self):
 
-        import sklearn
-                
-        similarity_matrix = {}
-        for rec_name in self.study.rec_names:
-            templates = self.study.get_templates(rec_name)
-            flat_templates = templates.reshape(templates.shape[0], -1)
-            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+        self.study.precompute_scores_by_similarities()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
-            # loop over recordings
-            all_errors = []
-            all_similarities = []
-            for rec_name in self.study.rec_names:
-                            
-                comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix[rec_name])
-
-                all_similarities.append(similarities)
-                all_errors.append(errors)
             
-            all_similarities = np.concatenate(all_similarities, axis=0)
-            all_errors = np.concatenate(all_errors, axis=0)
+            all_similarities = self.study.all_similarities[sorter_name]
+            all_errors = self.study.all_errors[sorter_name]
             
             order = np.argsort(all_similarities)
             all_similarities = all_similarities[order]
             all_errors = all_errors[order, :]
 
-            
-            # plot by similarity bins
-            ax = self.axes.flatten()[sorter_ind]
-            
             mean_rerrors = []
             std_errors = []
             for i in range(self.similarity_ranges.size - 1):
@@ -166,69 +122,6 @@ class StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(BaseWidget):
         if self.ylim is not None:
             self.ax.set_ylim(self.ylim)
 
-            #if self.ylim is not None:
-            #    ax.set_ylim(self.ylim)
-
-
-class StudyComparisonConnectivityBySimilarityRangeWidget(BaseWidget):
-
-
-    def __init__(self, study, metric='cosine_similarity', 
-                        similarity_range=[0, 1], show_legend=False,
-                        ax=None):
-        
-        BaseWidget.__init__(self, None, ax)
-
-        self.study = study
-        self.metric = metric
-        self.similarity_range = similarity_range
-        self.show_legend = show_legend
-
-    def plot(self):
-
-        import sklearn
-                
-        similarity_matrix = {}
-        for rec_name in self.study.rec_names:
-            templates = self.study.get_templates(rec_name)
-            flat_templates = templates.reshape(templates.shape[0], -1)
-            similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-
-        for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-            
-            # loop over recordings
-            all_errors = []
-            all_similarities = []
-            for rec_name in self.study.rec_names:
-                            
-                comp = self.study.comparisons[(rec_name, sorter_name)]
-                similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix[rec_name])
-
-                all_similarities.append(similarities)
-                all_errors.append(errors)
-            
-            all_similarities = np.concatenate(all_similarities, axis=0)
-            all_errors = np.concatenate(all_errors, axis=0)
-            
-            idx = (all_similarities >= self.similarity_range[0]) & (all_similarities <= self.similarity_range[1])
-            all_similarities = all_similarities[idx]
-            all_errors = all_errors[idx]
-
-            order = np.argsort(all_similarities)
-            all_similarities = all_similarities[order]
-            all_errors = all_errors[order, :]
-
-            mean_error = np.mean(all_errors, axis=0)
-            mean_error = np.nan_to_num(mean_error)
-            self.ax.plot(comp.time_axis, mean_error, color='C%d' %sorter_ind, label=sorter_name)
-            
-            
-        self.ax.set_ylabel('cc error')
-        self.ax.set_xlabel('lags (ms)')
-
-        if self.show_legend:
-            self.ax.legend()
-
 
 def plot_study_comparison_connectivity_by_similarity(*args, **kwargs):
     W = StudyComparisonConnectivityBySimilarityWidget(*args, **kwargs)
@@ -236,11 +129,11 @@ def plot_study_comparison_connectivity_by_similarity(*args, **kwargs):
     return W
 plot_study_comparison_connectivity_by_similarity.__doc__ = StudyComparisonConnectivityBySimilarityWidget.__doc__
 
-def plot_study_comparison_connectivity_by_similarity_range(*args, **kwargs):
-    W = StudyComparisonConnectivityBySimilarityRangeWidget(*args, **kwargs)
-    W.plot()
-    return W
-plot_study_comparison_connectivity_by_similarity_range.__doc__ = StudyComparisonConnectivityBySimilarityRangeWidget.__doc__
+# def plot_study_comparison_connectivity_by_similarity_range(*args, **kwargs):
+#     W = StudyComparisonConnectivityBySimilarityRangeWidget(*args, **kwargs)
+#     W.plot()
+#     return W
+# plot_study_comparison_connectivity_by_similarity_range.__doc__ = StudyComparisonConnectivityBySimilarityRangeWidget.__doc__
 
 
 def plot_study_comparison_connectivity_by_similarity_ranges_mean_error(*args, **kwargs):

@@ -46,14 +46,23 @@ class ConnectivityGTComparison(GroundTruthComparison):
         #order = np.argsort(self.good_idx_gt)
         #self.good_idx_gt = self.good_idx_gt[order]
 
-        correlograms_1 = correlograms_1[self.good_idx_gt, :, :]
-        self.correlograms['true'] = correlograms_1[:, self.good_idx_gt, :]
+        if len(self.good_idx_gt) > 0:
+            correlograms_1 = correlograms_1[self.good_idx_gt, :, :]
+            self.correlograms['true'] = correlograms_1[:, self.good_idx_gt, :]
 
-        correlograms_2 = correlograms_2[self.good_idx_sorting, :, :]
-        self.correlograms['estimated'] = correlograms_2[:, self.good_idx_sorting, :]
+        if len(self.good_idx_sorting) > 0:
+            correlograms_2 = correlograms_2[self.good_idx_sorting, :, :]
+            self.correlograms['estimated'] = correlograms_2[:, self.good_idx_sorting, :]
 
-        self.nb_cells = self.correlograms['true'].shape[0]
-        self.nb_timesteps = self.correlograms['true'].shape[2]
+        try:
+            self.nb_cells = self.correlograms['true'].shape[0]
+            self.nb_timesteps = self.correlograms['true'].shape[2]
+        except Exception:
+            self.nb_cells = 0
+            self.nb_timesteps = 11
+            self.correlograms['true'] = np.zeros((0, 0, self.nb_timesteps))
+            self.correlograms['estimated'] = np.zeros((0, 0, self.nb_timesteps))
+
         self._center = self.nb_timesteps // 2
 
     def _get_slice(self, window_ms=None):
@@ -64,7 +73,7 @@ class ConnectivityGTComparison(GroundTruthComparison):
             amin = self._center - int(window_ms/self.bin_ms)
             amax = self._center + int(window_ms/self.bin_ms) + 1
 
-        return np.abs((self.correlograms['true'] - self.correlograms['estimated'])[:,:,amin:amax])
+        return np.abs((1 - self.correlograms['estimated']/self.correlograms['true'])[:,:,amin:amax])
         
     def error(self, window_ms=None):
         data = self._get_slice(window_ms)
