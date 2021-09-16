@@ -138,7 +138,7 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
                       verbose=False, raise_error=True, with_output=True, **sorter_params):
     import docker
     
-    assert platform.system().startswith('Linux'), 'run_sorter() with docker is supported only on linux platform '
+    assert platform.system() in ('Linux', 'Darwin'), 'run_sorter() with docker is supported only on linux/macos platform '
 
     if output_folder is None:
         output_folder = sorter_name + '_output'
