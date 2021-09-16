@@ -18,7 +18,7 @@ class ConnectivityGtStudy(GroundTruthStudy):
 
     @property
     def time_axis(self):
-        for key, value in self.comparisons.keys():
+        for key, value in self.comparisons.items():
             return value.time_axis
 
     def precompute_scores_by_similarities(self, good_only=True):
