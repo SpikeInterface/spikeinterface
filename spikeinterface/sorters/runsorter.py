@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 import json
 from copy import deepcopy
+import platform
+
 
 from ..version import version as si_version
 from spikeinterface.core.base import is_dict_extractor
@@ -135,6 +137,8 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
                       remove_existing_folder=True, delete_output_folder=False,
                       verbose=False, raise_error=True, with_output=True, **sorter_params):
     import docker
+    
+    assert platform.system().startswith('Linux'), 'run_sorter() with docker is supported only on linux platform '
 
     if output_folder is None:
         output_folder = sorter_name + '_output'
@@ -188,6 +192,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     client = docker.from_env()
     
     container = client.containers.create(docker_image, tty=True,  volumes=volumes, **extra_kwargs)
+    if verbose:
+        print('Starting container')
     container.start()
     
 
