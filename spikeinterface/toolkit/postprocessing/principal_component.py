@@ -344,9 +344,20 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     nafter = worker_ctx['nafter']
     unit_channels = worker_ctx['unit_channels']
     all_pca = worker_ctx['all_pca']
-
+    
+    seg_size = recording.get_num_samples(segment_index=segment_index)
+    
     i0 = np.searchsorted(spike_times, start_frame)
     i1 = np.searchsorted(spike_times, end_frame)
+
+    if i0 != i1:
+        # protect from spikes on border :  spike_time<0 or spike_time>seg_size
+        # usefull only when max_spikes_per_unit is not None
+        # waveform will not be extracted and a zeros will be left in the memmap file
+        while (spike_times[i0] - nbefore) < 0 and (i0!=i1):
+            i0 = i0 + 1
+        while (spike_times[i1-1] + nafter) > seg_size and (i0!=i1):
+            i1 = i1 - 1
 
     if i0 == i1:
         return
