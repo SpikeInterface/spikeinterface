@@ -424,8 +424,8 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
             in_segment = (global_inds >= cum_sum[segment_index]) & (global_inds < cum_sum[segment_index + 1])
             inds = global_inds[in_segment] - cum_sum[segment_index]
 
-            if nbefore is not None:
-                # clean border
+            if max_spikes_per_unit is not None:
+                # clean border when sub selection
                 assert nafter is not None
                 spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sampled_spike_times = spike_times[inds]
@@ -485,12 +485,23 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     return_scaled = worker_ctx['return_scaled']
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
+    seg_size = recording.get_num_samples(segment_index=segment_index)
+    
     to_extract = {}
     for unit_id in sorting.unit_ids:
         spike_times = selected_spike_times[unit_id][segment_index]
         i0 = np.searchsorted(spike_times, start_frame)
         i1 = np.searchsorted(spike_times, end_frame)
         if i0 != i1:
+            # protect from spikes on border :  spike_time<0 or spike_time>seg_size
+            # usefull only when max_spikes_per_unit is not None
+            # waveform will not be extracted and a zeros will be left in the memmap file
+            while (spike_times[i0] - nbefore) < 0 and (i0!=i1):
+                i0 = i0 + 1
+            while (spike_times[i1-1] + nafter) > seg_size and (i0!=i1):
+                i1 = i1 - 1
+
+        if i0 != i1:            
             to_extract[unit_id] = i0, i1, spike_times[i0:i1]
 
     if len(to_extract) > 0:
