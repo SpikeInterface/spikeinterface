@@ -253,6 +253,11 @@ class WaveformExtractor:
             returns = returns + (channels_indices,)
         return returns
 
+    def get_waveforms_segment(self, segment_index, unit_id):
+        wfs, index_ar = self.get_waveforms(unit_id, with_sample_index=True)
+        segment_index_ar = np.array([i[1] for i in index_ar])
+        return wfs[segment_index_ar == segment_index, :, :]
+
     def get_template(self, unit_id, mode='median', quantile_value=0.5, by_property=None):
         """
         Return template (average waveform)
@@ -367,6 +372,20 @@ class WaveformExtractor:
                 templates[i, :, :template.shape[1]] = template
         return templates
 
+    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median'):
+        assert mode in ('median', 'average', 'std', 'quantile')
+        assert unit_id in self.sorting.unit_ids
+        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id)
+        if mode == 'median':
+            return np.median(waveforms_segment, axis=0)
+        elif mode == 'average':
+            return np.mean(waveforms_segment, axis=0)
+        elif mode == 'std':
+            return np.std(waveforms_segment, axis=0)
+        elif mode == 'quantile':
+            assert quantile_value is not None, 'enter quantile value'
+            return np.quantile(waveforms_segment, quantile_value, axis=0)
+
     def sample_spikes(self):
         p = self._params
         nbefore = self.nbefore
@@ -465,8 +484,8 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
             in_segment = (global_inds >= cum_sum[segment_index]) & (global_inds < cum_sum[segment_index + 1])
             inds = global_inds[in_segment] - cum_sum[segment_index]
 
-            if nbefore is not None:
-                # clean border
+            if max_spikes_per_unit is not None:
+                # clean border when sub selection
                 assert nafter is not None
                 spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sampled_spike_times = spike_times[inds]
@@ -526,11 +545,22 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     return_scaled = worker_ctx['return_scaled']
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
+    seg_size = recording.get_num_samples(segment_index=segment_index)
+
     to_extract = {}
     for unit_id in sorting.unit_ids:
         spike_times = selected_spike_times[unit_id][segment_index]
         i0 = np.searchsorted(spike_times, start_frame)
         i1 = np.searchsorted(spike_times, end_frame)
+        if i0 != i1:
+            # protect from spikes on border :  spike_time<0 or spike_time>seg_size
+            # usefull only when max_spikes_per_unit is not None
+            # waveform will not be extracted and a zeros will be left in the memmap file
+            while (spike_times[i0] - nbefore) < 0 and (i0!=i1):
+                i0 = i0 + 1
+            while (spike_times[i1-1] + nafter) > seg_size and (i0!=i1):
+                i1 = i1 - 1
+
         if i0 != i1:
             to_extract[unit_id] = i0, i1, spike_times[i0:i1]
 
