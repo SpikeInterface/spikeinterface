@@ -23,8 +23,8 @@ print(sorting)
 ##############################################################################
 # Extract spike waveforms
 # -----------------------
-# 
-# For convinience metris are computed on the WaveformExtractor object that gather recording/sorting and
+#
+# For convenience, metrics are computed on the WaveformExtractor object that gather recording/sorting and
 # extracted waveforms in a single object
 
 folder = 'waveforms_mearec'
@@ -61,7 +61,7 @@ sw.plot_unit_probe_map(we, unit_ids=unit_ids)
 ##############################################################################
 # plot_unit_waveform_density_map()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 
+#
 # This is your best friend to check over merge
 
 unit_ids = sorting.unit_ids[:4]
