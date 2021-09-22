@@ -130,7 +130,7 @@ ax.plot(st2, 2 * np.ones(st2.size), '|')
 ax.plot(st3, 3 * np.ones(st3.size), '|')
 
 print('mountainsort4 spike train length', st0.size)
-print('herdingsspieks spike train length', st1.size)
+print('herdingspikes spike train length', st1.size)
 print('Tridesclous spike train length', st2.size)
 print('Agreement spike train length', st3.size)
 

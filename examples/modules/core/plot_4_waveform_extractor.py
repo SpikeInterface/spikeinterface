@@ -9,7 +9,7 @@ The `WaveformExtractor` class:
   * randomly samples a subset spikes with max_spikes_per_unit
   * extracts all waveforms snippets for each unit
   * saves waveforms in a local folder
-  * can load stored waforms
+  * can load stored waveforms
   * retrieves template (average or median waveform) for each unit
 
 Here the how!
@@ -39,7 +39,7 @@ sorting = se.MEArecSortingExtractor(local_path)
 print(recording)
 
 ###############################################################################
-# The MEArec dataset already contains a probe object that you can retreive
+# The MEArec dataset already contains a probe object that you can retrieve
 # an plot:
 
 probe = recording.get_probe()
@@ -59,7 +59,7 @@ we = extract_waveforms(recording, sorting, folder,
 print(we)
 
 ###############################################################################
-# Alternativelt, the :code:`WaveformExtractor` object can be instantiated
+# Alternatively, the :code:`WaveformExtractor` object can be instantiated
 # directly. In this case, we need to :code:`set_params()` to set the desired
 # parameters:
 
