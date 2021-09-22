@@ -4,7 +4,7 @@ Read various format into SI
 
 :code:`spikeinterface` can read various format of "recording" (traces) and "sorting" (spike train) data.
 
-Internally, to read differents formats, :code:`spikeinterface` either uses:
+Internally, to read different formats, :code:`spikeinterface` either uses:
   * a wrapper to the `neo <https://github.com/NeuralEnsemble/python-neo>`_ rawio classes
   * or a direct implementation
 
@@ -22,7 +22,7 @@ import spikeinterface as si
 import spikeinterface.extractors as se
 
 ##############################################################################
-# Let's download some datasets in differents formats from the
+# Let's download some datasets in different formats from the
 # `ephy_testing_data <https://gin.g-node.org/NeuralEnsemble/ephy_testing_data>`_ repo:
 #   * MEArec: an simulator format which is hdf5-based. It contains both a "recording" and a "sorting" in the same file.
 #   * Spike2: file from spike2 devices. It contains "recording" information only.
@@ -35,7 +35,7 @@ mearec_folder_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5'
 print(mearec_folder_path)
 
 ##############################################################################
-# Now that we have downloaded the files ww need let's load them into SI.
+# Now that we have downloaded the files let's load them into SI.
 #
 # The :code:`read_spike2` function returns one object, a :code:`RecordingExtractor`.
 #

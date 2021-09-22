@@ -1,5 +1,5 @@
 Implement a spike sorter
---------------------------
+------------------------
 
 Implementing a new spike sorter for a specific file format is as simple as creating a new
 subclass based on the predefined base class :code:`BaseSorter`.
@@ -87,7 +87,7 @@ Now you can start filling out the required methods:
     @classmethod
     def _check_params(cls, recording, output_folder, params):
         # optional
-        # can be implemented in subclass for custum checks
+        # can be implemented in subclass for custom checks
         return params
 
 
@@ -96,14 +96,14 @@ Now you can start filling out the required methods:
         return False
 
         #  optional
-        # can be implemented in subclass to check if the filter will be apllied
+        # can be implemented in subclass to check if the filter will be applied
 
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
 
         # Fill code to run your spike sorter based on the files created in the _setup_recording()
-        # You can run CLI commands (e.g. klusta, spykingcircus, tridescous), pure Python code (e.g. Mountainsort4,
+        # You can run CLI commands (e.g. klusta, spykingcircus, tridesclous), pure Python code (e.g. Mountainsort4,
         # Herding Spikes), or even MATLAB code (e.g. Kilosort, Kilosort2, Ironclust)
 
     @classmethod
@@ -121,8 +121,8 @@ Moreover, you have to add a launcher function like `run_XXXX()`.
 
 .. code-block:: python
 
-    def run_myspikesorter(*args, **kargs):
-        return run_sorter('myspikesorter', *args, **kargs)
+    def run_myspikesorter(*args, **kwargs):
+        return run_sorter('myspikesorter', *args, **kwargs)
 
 
 When you are done you need to write a test in **tests/test_myspikesorter.py**. In order to be tested, you can

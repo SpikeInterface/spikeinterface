@@ -10,7 +10,7 @@ The submodule study and the class  propose high level tools functions
 to run many groundtruth comparison with many sorter on many recordings
 and then collect and aggregate results in an easy way.
 
-The all mechanism is based on an intrinsinct organisation
+The all mechanism is based on an intrinsic organization
 into a "study_folder" with several subfolder:
 
 * raw_files : contain a copy in binary format of recordings
@@ -19,8 +19,8 @@ into a "study_folder" with several subfolder:
 * sortings: contains light copy of all sorting in npz format
 * tables: some table in cvs format
 
-In order to run and re run the computation all gt_sorting anf
-recordings are copied to a fast and universal format : 
+In order to run and re run the computation all gt_sorting and
+recordings are copied to a fast and universal format :
 binary (for recordings) and npz (for sortings).
 """
 
@@ -37,7 +37,7 @@ from spikeinterface.comparison import GroundTruthStudy
 ##############################################################################
 # Setup study folder and run all sorters
 # --------------------------------------
-# 
+#
 # We first generate the folder.
 # this can take some time because recordings are copied inside the folder.
 
@@ -60,7 +60,7 @@ study.run_sorters(sorter_list, mode_if_folder_exists="keep")
 
 ##############################################################################
 # You can re run **run_study_sorters** as many time as you want.
-# By default **mode='keep'** so only uncomputed sorter are rerun.
+# By default **mode='keep'** so only uncomputed sorters are rerun.
 # For instance, so just remove the "sorter_folders/rec1/herdingspikes" to re-run
 # only one sorter on one recording.
 #
@@ -75,9 +75,9 @@ study.copy_sortings()
 #  
 # You can collect in one shot all results and run the
 # GroundTruthComparison on it.
-# So you can acces finely to all individual results.
+# So you can access finely to all individual results.
 #  
-# Note that exhaustive_gt=True when you excatly how many
+# Note that exhaustive_gt=True when you exactly how many
 # units in ground truth (for synthetic datasets)
 
 study.run_comparisons(exhaustive_gt=True)
@@ -96,7 +96,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
 ##############################################################################
 # Collect synthetic dataframes and display
 # ----------------------------------------
-# 
+#
 # As shown previously, the performance is returned as a pandas dataframe.
 # The :code:`aggregate_performances_table` function, gathers all the outputs in
 # the study folder and merges them in a single dataframe.
