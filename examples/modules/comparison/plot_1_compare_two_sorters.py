@@ -31,7 +31,7 @@ print(sorting)
 
 
 #############################################################################
-# Then run two spike sorters and compare their ouput.
+# Then run two spike sorters and compare their output.
 
 sorting_HS = ss.run_herdingspikes(recording)
 sorting_TDC = ss.run_tridesclous(recording)
@@ -45,7 +45,7 @@ sorting_TDC = ss.run_tridesclous(recording)
 # 
 # Let’s see how to inspect and access this matching.
 
-cmp_HS_TDC = sc.compare_two_sorters(sorting1=sorting_HS, sorting2=sorting_TDC, 
+cmp_HS_TDC = sc.compare_two_sorters(sorting1=sorting_HS, sorting2=sorting_TDC,
                                                sorting1_name='HS', sorting2_name='TDC')
 
 #############################################################################

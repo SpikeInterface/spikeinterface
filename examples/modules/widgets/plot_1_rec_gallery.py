@@ -39,7 +39,7 @@ w_ts.figure.suptitle("Recording by group")
 w_ts.ax.set_ylabel("Channel_ids")
 
 ##############################################################################
-# We can also use the 'map' mode uselfull for high channel count
+# We can also use the 'map' mode useful for high channel count
 
 w_ts = sw.plot_timeseries(recording, mode='map', time_range=(5, 8),
         show_channel_ids=True, order_channel_by_depth=True)
