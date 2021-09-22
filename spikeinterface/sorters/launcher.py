@@ -15,7 +15,8 @@ from .runsorter import run_sorter_local, run_sorter_docker, _common_param_doc, r
 
 def _run_one(arg_list):
     # the multiprocessing python module force to have one unique tuple argument
-    sorter_name, recording, output_folder, verbose, sorter_params, docker_image = arg_list
+    sorter_name, recording, output_folder, verbose, sorter_params, docker_image, with_output = arg_list
+
     if isinstance(recording, dict):
         recording = load_extractor(recording)
     else:
@@ -32,13 +33,12 @@ def _run_one(arg_list):
     if docker_image is None:
 
         run_sorter_local(sorter_name, recording, output_folder, remove_existing_folder,
-            delete_output_folder, verbose, raise_error)
-
+            delete_output_folder, verbose, raise_error, with_output)
     else:
 
         run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
                       remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
-                      verbose=verbose, raise_error=raise_error, **sorter_params)
+                      verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
 
 
 _implemented_engine = ('loop', 'joblib', 'dask')
@@ -283,7 +283,7 @@ def run_sorters(sorter_list,
             else:
                 recording_arg = recording
 
-            task_args = (sorter_name, recording_arg, output_folder, verbose, params, docker_image)
+            task_args = (sorter_name, recording_arg, output_folder, verbose, params, docker_image, with_output)
             task_args_list.append(task_args)
 
     if engine == 'loop':

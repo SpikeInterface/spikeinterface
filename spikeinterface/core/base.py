@@ -490,7 +490,7 @@ class BaseExtractor:
             return extractor
 
         else:
-            raise ValueError('bad boy')
+            raise ValueError('spikeinterface.Base.load() file_path must be an existing folder or file')
 
     @staticmethod
     def load_from_folder(folder):

@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 import json
 from copy import deepcopy
+import platform
+
 
 from ..version import version as si_version
 from spikeinterface.core.base import is_dict_extractor
@@ -45,7 +47,7 @@ _common_param_doc = """
 def run_sorter(sorter_name, recording, output_folder=None,
                remove_existing_folder=True, delete_output_folder=False,
                verbose=False, raise_error=True, docker_image=None,
-               **sorter_params):
+               with_output=True, **sorter_params):
     """
     Generic function to run a sorter via function approach.
 
@@ -56,18 +58,19 @@ def run_sorter(sorter_name, recording, output_folder=None,
         sorting = run_sorter_local(sorter_name, recording, output_folder=output_folder,
                                    remove_existing_folder=remove_existing_folder,
                                    delete_output_folder=delete_output_folder,
-                                   verbose=verbose, raise_error=raise_error, **sorter_params)
+                                   verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
     else:
         sorting = run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
                                     remove_existing_folder=remove_existing_folder,
                                     delete_output_folder=delete_output_folder,
-                                    verbose=verbose, raise_error=raise_error, **sorter_params)
+                                    verbose=verbose, raise_error=raise_error, 
+                                    with_output=with_output, **sorter_params)
     return sorting
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
                      remove_existing_folder=True, delete_output_folder=False,
-                     verbose=False, raise_error=True, **sorter_params):
+                     verbose=False, raise_error=True, with_output=True, **sorter_params):
     if isinstance(recording, list):
         raise Exception('You you want to run several sorters/recordings use run_sorters(...)')
 
@@ -78,7 +81,10 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
-    sorting = SorterClass.get_result_from_folder(output_folder)
+    if with_output:
+        sorting = SorterClass.get_result_from_folder(output_folder)
+    else:
+        sorting = None
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
@@ -86,59 +92,53 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     return sorting
 
 
-def modify_input_folder(d, input_folder):
-    dcopy = deepcopy(d)
-    if "kwargs" in dcopy.keys():
+def find_recording_folder(d):
+    if "kwargs" in d.keys():
         # handle nested
-        kwargs = dcopy["kwargs"]
+        kwargs = d["kwargs"]
         nested_extractor_dict = None
-        nested_extractor_key = None
         for k, v in kwargs.items():
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
-                nested_extractor_key = k
         if nested_extractor_dict is None:
-            dcopy_kwargs, folder_to_mount = modify_input_folder(kwargs, input_folder)
-            dcopy["kwargs"] = dcopy_kwargs
+            folder_to_mount = find_recording_folder(kwargs)
         else:
-            dcopy_kwargs, folder_to_mount = modify_input_folder(nested_extractor_dict, input_folder)
-            dcopy["kwargs"][nested_extractor_key] = dcopy_kwargs
-        return dcopy, folder_to_mount
+            folder_to_mount = find_recording_folder(nested_extractor_dict)
+        return folder_to_mount
     else:
-        for k in dcopy.keys():
+        for k, v in d.items():
             if "path" in k:
                 # paths can be str or list of str
-                if isinstance(dcopy[k], str):
+                if isinstance(v, str):
                     # one path
-                    abs_path = Path(dcopy[k])
+                    abs_path = Path(v)
                     if abs_path.is_file():
                         folder_to_mount = abs_path.parent
                     elif abs_path.is_dir():
                         folder_to_mount = abs_path
-                    relative_path = str(Path(dcopy[k]).relative_to(folder_to_mount))
-                    dcopy[k] = f"{input_folder}/{relative_path}"
-                elif isinstance(d[k], list):
+                elif isinstance(v, list):
                     # list of path
                     relative_paths = []
                     folder_to_mount = None
-                    for abs_path in dcopy[k]:
+                    for abs_path in v:
                         abs_path = Path(abs_path)
                         if folder_to_mount is None:
                             folder_to_mount = abs_path.parent
                         else:
                             assert folder_to_mount == abs_path.parent
-                        relative_path = str(abs_path.relative_to(folder_to_mount))
-                        relative_paths.append(f"{input_folder}/{relative_path}")
-                    dcopy[k] = relative_paths
                 else:
                     raise ValueError(f'{k} key for path  must be str or list[str]')
-            return dcopy, folder_to_mount
+            return folder_to_mount
+
+
 
 
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
                       remove_existing_folder=True, delete_output_folder=False,
-                      verbose=False, raise_error=True, **sorter_params):
+                      verbose=False, raise_error=True, with_output=True, **sorter_params):
     import docker
+    
+    assert platform.system() in ('Linux', 'Darwin'), 'run_sorter() with docker is supported only on linux/macos platform '
 
     if output_folder is None:
         output_folder = sorter_name + '_output'
@@ -150,8 +150,8 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
 
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
-    rec_dict, recording_input_folder = modify_input_folder(rec_dict, '/recording_input_folder')
-
+    recording_input_folder = find_recording_folder(rec_dict)
+    
     # create 3 files for communication with docker
     # recordonc dict inside
     (parent_folder / 'in_docker_recording.json').write_text(
@@ -160,111 +160,114 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
     (parent_folder / 'in_docker_params.json').write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
     # the py script
+
     py_script = f"""
 import json
 from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
 # load recorsding in docker
-recording = load_extractor('/sorting_output_folder/in_docker_recording.json')
+recording = load_extractor('{parent_folder}/in_docker_recording.json')
 
 # load params in docker
-with open('/sorting_output_folder/in_docker_params.json', encoding='utf8', mode='r') as f:
+with open('{parent_folder}/in_docker_params.json', encoding='utf8', mode='r') as f:
     sorter_params = json.load(f)
 
 # run in docker
-output_folder = '/sorting_output_folder/{folder_name}'
+output_folder = '{output_folder}'
 run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
             verbose={verbose}, raise_error={raise_error}, **sorter_params)
 """
     (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
 
-    # docker bind (mount)
-    volumes = {
-        str(parent_folder): {'bind': '/sorting_output_folder', 'mode': 'rw'},
-        str(recording_input_folder): {'bind': '/recording_input_folder', 'mode': 'ro'},
-    }
+    volumes = {}
+    volumes[str(recording_input_folder)] = {'bind': str(recording_input_folder), 'mode': 'ro'}
+    volumes[str(parent_folder)] = {'bind': str(parent_folder), 'mode': 'rw'}
 
+    extra_kwargs = {}
+    if SorterClass.docker_requires_gpu:
+        extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+    
     client = docker.from_env()
+    
+    container = client.containers.create(docker_image, tty=True,  volumes=volumes, **extra_kwargs)
+    if verbose:
+        print('Starting container')
+    container.start()
+    
 
     # check if docker contains spikeinertace already
     cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
-    try:
-        res = client.containers.run(docker_image, cmd)
-        need_si_install = False
-    except docker.errors.ContainerError:
-        need_si_install = True
-
-    # create a comman shell list
-    commands = []
+    res = container.exec_run(cmd)
+    need_si_install = b'ModuleNotFoundError' in res.output
 
     if need_si_install:
         if 'dev' in si_version:
             if verbose:
                 print(f"Installing spikeinterface from sources in {docker_image}")
-            # install from github source several stuff
+            # TODO later check output
             cmd = 'pip install --upgrade --force MEArec'
-            commands.append(cmd)
-
+            res = container.exec_run(cmd)
             cmd = 'pip install -e git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
-            commands.append(cmd)
-
+            res = container.exec_run(cmd)
             cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
-            commands.append(cmd)
+            res = container.exec_run(cmd)
         else:
-            # install from pypi with same version as host
             if verbose:
                 print(f"Installing spikeinterface=={si_version} in {docker_image}")
             cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
-            commands.append(cmd)
+            res = container.exec_run(cmd)
+    else:
+        # TODO version checking
+        if verbose:
+            print(f'spikeinterface is already installed in {docker_image}')
+
 
     # run sorter on folder
-    cmd = 'python /sorting_output_folder/in_docker_sorter_script.py'
-    commands.append(cmd)
-
-    # put file permission to user (because docker is root...)
-    uid = os.getuid()
-    cmd = f'chown {uid}:{uid} -R /sorting_output_folder/{folder_name}'
-    commands.append(cmd)
-
-    # ~ commands = commands[0:4]
-    # ~ commands = ' ; '.join(commands)
-    commands = ' && '.join(commands)
-    command = f'sh -c "{commands}"'
-    #  print(command)
-
-    extra_kwargs = {}
-    if SorterClass.docker_requires_gpu:
-        extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
-
     if verbose:
-        print(f"Running sorter in {docker_image}")
-        # flush whatever is in the stdout
-        sys.stdout.flush()
+        print(f'Running {sorter_name} sorter inside {docker_image}')
+    cmd = 'python "{}"'.format(parent_folder/'in_docker_sorter_script.py')
+    res = container.exec_run(cmd)
+    run_sorter_output = res.output
 
-    try:
-        res = client.containers.run(docker_image, command=command, volumes=volumes, **extra_kwargs)
-        # clean useless files
-        os.remove(parent_folder / 'in_docker_recording.json')
-        os.remove(parent_folder / 'in_docker_params.json')
-        os.remove(parent_folder / 'in_docker_sorter_script.py')
-    except Exception as e:
-        # clean useless files
-        os.remove(parent_folder / 'in_docker_recording.json')
-        os.remove(parent_folder / 'in_docker_params.json')
-        os.remove(parent_folder / 'in_docker_sorter_script.py')
+    # chown folder to user uid
+    uid = os.getuid()
+    cmd = f'chown {uid}:{uid} -R "{output_folder}"'
+    res = container.exec_run(cmd)
+    
+    if verbose:
+        print('Stopping container')
+    container.stop()
+    
+    # clean useless files
+    os.remove(parent_folder / 'in_docker_recording.json')
+    os.remove(parent_folder / 'in_docker_params.json')
+    os.remove(parent_folder / 'in_docker_sorter_script.py')    
+    
+    # check error 
+    output_folder = Path(output_folder)
+    log_file = output_folder / 'spikeinterface_log.json'
+    if not log_file.is_file():
+        run_error = True
+    else:
+        with log_file.open('r', encoding='utf8') as f:
+            log = json.load(f)
+        run_error = bool(log['error'])
+    
+    sorting = None
+    if run_error:
         if raise_error:
-            raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{e}")
-        else:
-            return
-
-    sorting = SorterClass.get_result_from_folder(output_folder)
+            raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{run_sorter_output}")
+    else:
+        if with_output:
+            sorting = SorterClass.get_result_from_folder(output_folder)
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
-
+    
     return sorting
+    
 
 
 _common_run_doc = """

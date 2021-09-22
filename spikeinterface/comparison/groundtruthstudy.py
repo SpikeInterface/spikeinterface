@@ -107,7 +107,6 @@ class GroundTruthStudy:
             fname = rec_name + '[#]' + sorter_name
             npz_filename = sorting_folders / (fname + '.npz')
 
-            sorting = SorterClass.get_result_from_folder(output_folder)
             try:
                 sorting = SorterClass.get_result_from_folder(output_folder)
                 NpzSortingExtractor.write_sorting(sorting, npz_filename)
