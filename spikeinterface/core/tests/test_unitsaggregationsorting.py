@@ -46,6 +46,11 @@ def test_unitsaggregationsorting():
     sorting2.set_property("brain_area", ["CA2"]*num_units)
     sorting3.set_property("brain_area", ["CA3"]*num_units)
 
+    # skip for inconsistency
+    sorting1.set_property("template", np.zeros((num_units, 4, 30)))
+    sorting1.set_property("template", np.zeros((num_units, 20, 50)))
+    sorting1.set_property("template", np.zeros((num_units, 2, 10)))
+
     # incomplete property
     sorting1.set_property("quality", ["good"]*num_units)
     sorting2.set_property("quality", ["bad"]*num_units)

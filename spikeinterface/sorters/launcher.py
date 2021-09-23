@@ -22,7 +22,6 @@ def _run_one(arg_list):
     else:
         recording = recording
 
-
     # because this is checks in run_sorters before this call
     remove_existing_folder = False
     # result is retrieve later
@@ -33,12 +32,12 @@ def _run_one(arg_list):
     if docker_image is None:
 
         run_sorter_local(sorter_name, recording, output_folder, remove_existing_folder,
-            delete_output_folder, verbose, raise_error, with_output)
+                         delete_output_folder, verbose, raise_error, with_output)
     else:
 
         run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
-                      remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
-                      verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
+                          remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+                          verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
 
 
 _implemented_engine = ('loop', 'joblib', 'dask')
