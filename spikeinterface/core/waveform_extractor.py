@@ -217,7 +217,7 @@ class WaveformExtractor:
             self._waveforms[unit_id] = wfs
 
         if with_index:
-            sampled_index = self.get_selected_index(unit_id)
+            sampled_index = self.get_sampled_index(unit_id)
             return wfs, sampled_index
         else:
             return wfs
