@@ -9,6 +9,7 @@ def generate_recording(
         num_channels=2,
         sampling_frequency=30000.,  # in Hz
         durations=[10.325, 3.5],  #  in s for 2 segments
+        set_probe=True
 ):
     num_segments = len(durations)
     num_timepoints = [int(sampling_frequency * d) for d in durations]
@@ -21,9 +22,10 @@ def generate_recording(
         traces_list.append(traces)
     recording = NumpyRecording(traces_list, sampling_frequency)
 
-    probe = generate_linear_probe(num_elec=num_channels)
-    probe.set_device_channel_indices(np.arange(num_channels))
-    recording.set_probe(probe, in_place=True)
+    if set_probe:
+        probe = generate_linear_probe(num_elec=num_channels)
+        probe.set_device_channel_indices(np.arange(num_channels))
+        recording.set_probe(probe, in_place=True)
 
     return recording
 

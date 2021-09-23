@@ -12,17 +12,23 @@ class UnitsAggregationSorting(BaseSorting):
     Do not use this class directly but use `si.aggregate_units(...)`
 
     """
-    def __init__(self, sorting_list):
+    def __init__(self, sorting_list, renamed_unit_ids=None):
         unit_map = {}
 
-        # units are renamed from 0 to N-1
-        unit_ids = []
+        num_all_units = sum([sort.get_num_units() for sort in sorting_list])
+        if renamed_unit_ids is not None:
+            assert len(np.unique(renamed_unit_ids) == num_all_units), "'renamed_unit_ids' doesn't have the right size" \
+                                                                      "or has duplicates!"
+            unit_ids = list(renamed_unit_ids)
+        else:
+            unit_ids = list(np.arange(num_all_units))
+
+        # unit map maps unit ids that are used to get spike trains
         u_id = 0
         for s_i, sorting in enumerate(sorting_list):
             single_unit_ids = sorting.get_unit_ids()
             for unit_id in single_unit_ids:
-                unit_ids.append(u_id)
-                unit_map[u_id] = {'sorting_id': s_i, 'unit_id': unit_id}
+                unit_map[unit_ids[u_id]] = {'sorting_id': s_i, 'unit_id': unit_id}
                 u_id += 1
 
         sampling_frequency = sorting_list[0].get_sampling_frequency()
@@ -35,24 +41,35 @@ class UnitsAggregationSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
+        property_keys = sorting_list[0].get_property_keys()
+        property_dict = {}
+        for prop_name in property_keys:
+            if all([prop_name in sort.get_property_keys() for sort in sorting_list]):
+                for i_s, sort in enumerate(sorting_list):
+                    prop_value = sort.get_property(prop_name)
+                    if i_s == 0:
+                        property_dict[prop_name] = prop_value
+                    else:
+                        try:
+                            property_dict[prop_name] = np.concatenate((property_dict[prop_name],
+                                                                       sort.get_property(prop_name)))
+                        except Exception as e:
+                            print(f"Skipping property '{prop_name}' for shape inconsistency")
+                            del property_dict[prop_name]
+                            break
+
+        for prop_name, prop_values in property_dict.items():
+            self.set_property(key=prop_name, values=prop_values)
+
+        # add segments
         for i_seg in range(num_segments):
             parent_segments = [sort._sorting_segments[i_seg] for sort in sorting_list]
             sub_segment = UnitsAggregationSortingSegment(unit_map, parent_segments)
             self.add_sorting_segment(sub_segment)
 
-        property_keys = sorting_list[0].get_property_keys()
-        property_dict = {}
-        for prop_name in property_keys:
-            if all([prop_name in sort.get_property_keys() for sort in sorting_list]):
-                property_dict[prop_name] = np.array([])
-                for sort in sorting_list:
-                    property_dict[prop_name] = np.concatenate((property_dict[prop_name], sort.get_property(prop_name)))
-
-        for prop_name, prop_values in property_dict.items():
-            self.set_property(key=prop_name, values=prop_values)
-
         self._sortings = sorting_list
-        self._kwargs = {'sorting_list': [sort.to_dict() for sort in sorting_list]}
+        self._kwargs = {'sorting_list': [sort.to_dict() for sort in sorting_list],
+                        'renamed_unit_ids': renamed_unit_ids}
 
     @property
     def sortings(self):
@@ -76,7 +93,7 @@ class UnitsAggregationSortingSegment(BaseSortingSegment):
         return times
 
 
-def aggregate_units(sorting_list):
+def aggregate_units(sorting_list, renamed_unit_ids=None):
     """
     Aggregates units of multiple sortings into a single sorting object
 
@@ -84,10 +101,12 @@ def aggregate_units(sorting_list):
     ----------
     sorting_list: list
         List of BaseSorting objects to aggregate
+    renamed_unit_ids: array-like
+        If given, unit ids are renamed as provided. If None, unit ids are sequential integers.
 
     Returns
     -------
-    aggregate_sortimg: UnitsAggregationSorting
+    aggregate_sorting: UnitsAggregationSorting
         The aggregated sorting object
     """
-    return UnitsAggregationSorting(sorting_list)
+    return UnitsAggregationSorting(sorting_list, renamed_unit_ids)
