@@ -12,17 +12,18 @@ import json
 from spikeinterface.core import load_extractor
 
 from .sorterlist import sorter_dict
+from .runsorter import run_sorter_local, run_sorter_docker
 
 
 def _run_one(arg_list):
     # the multiprocessing python module force to have one unique tuple argument
-    sorter_name, recording, output_folder, verbose, sorter_params = arg_list
+    sorter_name, recording, output_folder, verbose, sorter_params, docker_image, with_output = arg_list
+
     if isinstance(recording, dict):
         recording = load_extractor(recording)
     else:
         recording = recording
 
-    SorterClass = sorter_dict[sorter_name]
 
     # because this is checks in run_sorters before this call
     remove_existing_folder = False
@@ -31,11 +32,15 @@ def _run_one(arg_list):
     # because we won't want the loop/worker to break
     raise_error = False
 
-    # only classmethod call not instance (stateless at instance level but state is in folder)
-    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
-    SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
-    SorterClass.setup_recording(recording, output_folder, verbose=verbose)
-    SorterClass.run_from_folder(output_folder, raise_error, verbose)
+    if docker_image is None:
+
+        run_sorter_local(sorter_name, recording, output_folder, remove_existing_folder,
+            delete_output_folder, verbose, raise_error, with_output)
+    else:
+
+        run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
+                      remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+                      verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
 
 
 _implemented_engine = ('loop', 'joblib', 'dask')
@@ -50,6 +55,7 @@ def run_sorters(sorter_list,
                 engine_kwargs={},
                 verbose=False,
                 with_output=True,
+                docker_images={}
                 ):
     """
     This run several sorter on several recording.
@@ -103,6 +109,10 @@ def run_sorters(sorter_list,
 
     with_output: bool
         return the output.
+
+    docker_images: dict
+        A dictionary {sorter_name : docker_image} to specify is some sorters
+        should use docker images
 
     run_sorter_kwargs: dict
         This contains kwargs specific to run_sorter function:\
@@ -161,13 +171,16 @@ def run_sorters(sorter_list,
                         shutil.rmtree(str(output_folder))
 
             params = sorter_params.get(sorter_name, {})
+            docker_image = docker_images.get(sorter_name, None)
+
             if need_dump:
                 if not recording.is_dumpable:
                     raise Exception('recording not dumpable call recording.save() before')
                 recording_arg = recording.to_dict()
             else:
                 recording_arg = recording
-            task_args = (sorter_name, recording_arg, output_folder, verbose, params)
+
+            task_args = (sorter_name, recording_arg, output_folder, verbose, params, docker_image, with_output)
             task_args_list.append(task_args)
 
     if engine == 'loop':

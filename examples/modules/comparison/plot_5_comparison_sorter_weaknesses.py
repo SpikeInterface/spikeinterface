@@ -2,7 +2,7 @@
 Explore sorters weaknesses with with ground-truth comparison
 =============================================================
 
-Here a syntetic dataset will demonstrate some weaknesses.
+Here a synthetic dataset will demonstrate some weaknesses.
 
 Standard weaknesses :
 
@@ -13,11 +13,11 @@ Standard weaknesses :
 Other weaknesses:
 
   * detect too many units (false positive units)
-  * detect units twice (or more) (reduntant units = oversplit units)
+  * detect units twice (or more) (redundant units = oversplit units)
   * several units are merged into one units (overmerged units)
 
 
-To demonstarte this the script `generate_erroneous_sorting.py` generate a ground truth sorting with 10 units.
+To demonstrate this the script `generate_erroneous_sorting.py` generate a ground truth sorting with 10 units.
 We duplicate the results and modify it a bit to inject some "errors":
 
   * unit 1 2 are perfect
@@ -49,7 +49,7 @@ from generate_erroneous_sorting import generate_erroneous_sorting
 
 
 ##############################################################################
-# Here the agreement matrix 
+# Here the agreement matrix
 
 sorting_true, sorting_err = generate_erroneous_sorting()
 comp = sc.compare_sorter_to_ground_truth(sorting_true, sorting_err, exhaustive_gt=True)
@@ -90,7 +90,7 @@ print('bad', comp.get_bad_units())
 
 
 ##############################################################################
-# There is a convinient function to summary everything.
+# There is a convenient function to summary everything.
 
 comp.print_summary(well_detected_score=0.75, redundant_score=0.2, overmerged_score=0.2)
 

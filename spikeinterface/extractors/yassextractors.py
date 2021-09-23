@@ -52,7 +52,7 @@ class YassSortingSegment(BaseSortingSegment):
         self._spiketrains = spiketrains
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        mask = self._spiketrains == unit_id
+        mask = self._spiketrains[:, 1] == unit_id
         times = self._spiketrains[mask, 0].squeeze()
         if start_frame is not None:
             times = times[times >= start_frame]

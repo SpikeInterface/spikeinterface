@@ -103,7 +103,7 @@ def read_openephys(folder_path, **kwargs):
     """
     # auto guess format
     files = [str(f) for f in Path(folder_path).iterdir()]
-    if np.any([f.startswith('Continuous') for f in files]):
+    if np.any([f.endswith('continuous') for f in files]):
         #  format = 'legacy'
         recording = OpenEphysLegacyRecordingExtractor(folder_path, **kwargs)
     else:

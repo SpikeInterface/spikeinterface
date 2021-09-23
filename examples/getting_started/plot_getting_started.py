@@ -12,12 +12,12 @@ import matplotlib.pyplot as plt
 
 ##############################################################################
 # The spikeinterface module by itself import only the spikeinterface.core submodule
-# which is not usefull for end user
+# which is not useful for end user
 
 import spikeinterface
 
 ##############################################################################
-# We need to import one by one different submodules separately (preferred). 
+# We need to import one by one different submodules separately (preferred).
 # There are 5 modules:
 #
 # - :code:`extractors` : file IO
@@ -37,7 +37,7 @@ import spikeinterface.widgets as sw
 #  We can also import all submodules at once with this
 #   this internally import core+extractors+toolkit+sorters+comparison+widgets+exporters
 #
-# This is usefull for notbooks but this is a more heavy import because internally many more dependency
+# This is useful for notebooks but this is a more heavy import because internally many more dependency
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
 
 import spikeinterface.full as si
@@ -106,8 +106,8 @@ plot_probe(probe)
 
 ##############################################################################
 # Using the :code:`toolkit`, you can perform preprocessing on the recordings.
-# Each pre-processing function also returns a :code:`RecordingExtractor`, 
-# which makes it easy to build pipelines. Here, we filter the recording and 
+# Each pre-processing function also returns a :code:`RecordingExtractor`,
+# which makes it easy to build pipelines. Here, we filter the recording and
 # apply common median reference (CMR).
 # All theses preprocessing steps are "lazy". The computation is done on demand when we call
 # `recording.get_traces(...)` or when we save the object to disk.
@@ -217,7 +217,7 @@ print(isi_violations_rate)
 print(isi_violations_count)
 
 ##############################################################################
-# All theses quality mertics can be computed in one shot and returned as
+# All theses quality metrics can be computed in one shot and returned as
 # a :code:`pandas.Dataframe`
 
 metrics = st.compute_quality_metrics(we_TDC, metric_names=['snr', 'isi_violation', 'amplitude_cutoff'])
@@ -225,7 +225,7 @@ print(metrics)
 
 ##############################################################################
 # Quality metrics can be also used to automatically curate the spike sorting
-# output. For example, you can select sorted units with a SNR above a 
+# output. For example, you can select sorted units with a SNR above a
 # certain threshold:
 
 keep_mask = (metrics['snr'] > 7.5) & (metrics['isi_violations_rate'] < 0.01)
@@ -239,7 +239,7 @@ print(curated_sorting)
 
 ##############################################################################
 # The final part of this tutorial deals with comparing spike sorting outputs.
-# We can either (1) compare the spike sorting results with the ground-truth 
+# We can either (1) compare the spike sorting results with the ground-truth
 # sorting :code:`sorting_true`, (2) compare the output of two (HerdingSpikes
 # and Tridesclous), or (3) compare the output of multiple sorters:
 
