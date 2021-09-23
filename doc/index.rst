@@ -41,6 +41,7 @@ With SpikeInterface, users can:
 
   Please see the release notes here: :ref:`release0.90.0`
 
+- spikeinterface now has its own GUI. See `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
 
 .. toctree::
     :maxdepth: 2
@@ -53,6 +54,7 @@ With SpikeInterface, users can:
     modules/index.rst
     supported_formats_and_sorters
     install_sorters
+    viewers
     contribute
     api
     whatisnew
