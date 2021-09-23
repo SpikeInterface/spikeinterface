@@ -76,7 +76,7 @@ In this code example, 3 sorters are run on 2 recordings using 6 jobs:
     # recording1 and recording2 are RecordingExtractor objects
     recording_dict = {"rec1": recording1, "rec2": recording2}
 
-    sorting_outputs = ss.run_sorters(sorter_list=["tridescouls", "herdingspikes", "ironclust"],
+    sorting_outputs = ss.run_sorters(sorter_list=["tridesclous", "herdingspikes", "ironclust"],
                                      recording_dict_or_list=recording_dict,
                                      working_folder="all_sorters",
                                      verbose=False,

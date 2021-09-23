@@ -11,7 +11,7 @@ Similarly to `NEO <https://github.com/NeuralEnsemble/python-neo>`_ we define eac
   1. append_recordings()/append_sortings()/append_events()
   2. concatenate_recordings()/ concatenate_sortings()/ concatenate_events()
 
-Here is the differemce. Imagine we have 2 recordings with 2 and 3 segments respectively:
+Here is the difference. Imagine we have 2 recordings with 2 and 3 segments respectively:
 
   1. In case 1. (append) we will end up with one recording with 5 segments.
   2. In case 2. (concatenate) we will end up with one recording with 1 "big" segment
