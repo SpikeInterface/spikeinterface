@@ -110,7 +110,7 @@ class NwbRecordingExtractor(BaseRecording):
                         properties['location'] = np.zeros((self.get_num_channels(), 2), dtype=float)
                     properties['location'][es_ind, 0] = nwbfile.electrodes['rel_x'][electrode_table_index]
                     if 'rel_y' in nwbfile.electrodes:
-                        properties['location'][es_ind, 1] = nwbfile.electrodes['rel_x'][electrode_table_index]
+                        properties['location'][es_ind, 1] = nwbfile.electrodes['rel_y'][electrode_table_index]
 
                 for col in nwbfile.electrodes.colnames:
                     if isinstance(nwbfile.electrodes[col][electrode_table_index], ElectrodeGroup):
