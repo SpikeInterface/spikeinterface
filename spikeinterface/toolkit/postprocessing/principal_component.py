@@ -112,21 +112,25 @@ class WaveformPrincipalComponent:
         comp = np.load(component_file)
         return comp
 
-    def get_all_components(self, channel_ids=None, unit_ids=None):
+    def get_all_components(self, channel_ids=None, unit_ids=None, outputs='id'):
         recording = self.waveform_extractor.recording
 
         if unit_ids is None:
             unit_ids = self.waveform_extractor.sorting.unit_ids
 
-        all_labels = []
+        all_labels = []  # can be unit_id or unit_index
         all_components = []
-        for unit_id in unit_ids:
+        for unit_index, unit_id in enumerate(unit_ids):
             comp = self.get_components(unit_id)
             if channel_ids is not None:
                 chan_inds = recording.ids_to_indices(channel_ids)
                 comp = comp[:, :, chan_inds]
             n = comp.shape[0]
-            labels = np.array([unit_id] * n)
+            if outputs == 'id':
+                labels = np.array([unit_id] * n)
+            elif outputs == 'index':
+                labels = np.ones(n, dtype='int64')
+                labels[:] =  unit_index
             all_labels.append(labels)
             all_components.append(comp)
         all_labels = np.concatenate(all_labels, axis=0)
@@ -241,6 +245,8 @@ class WaveformPrincipalComponent:
         # fit
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
+            if wfs.size == 0:
+                continue
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca = all_pca[chan_ind]
                 pca.partial_fit(wfs[:, :, chan_ind])
@@ -263,6 +269,8 @@ class WaveformPrincipalComponent:
         # transform
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
+            if wfs.size == 0:
+                continue
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca = all_pca[chan_ind]
                 comp = pca.transform(wfs[:, :, chan_ind])
@@ -281,6 +289,8 @@ class WaveformPrincipalComponent:
         # fit
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
+            if wfs.size == 0:
+                continue
             for chan_ind, chan_id in enumerate(channel_ids):
                 one_pca.partial_fit(wfs[:, :, chan_ind])
 
@@ -303,6 +313,8 @@ class WaveformPrincipalComponent:
         # transform
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
+            if wfs.size == 0:
+                continue
             for chan_ind, chan_id in enumerate(channel_ids):
                 comp = one_pca.transform(wfs[:, :, chan_ind])
                 component_memmap[unit_id][:, :, chan_ind] = comp
