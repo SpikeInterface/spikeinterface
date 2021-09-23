@@ -15,7 +15,7 @@ from .neoextractors import (
     MCSRawRecordingExtractor, read_mcsraw,
     Spike2RecordingExtractor, read_spike2,
     CedRecordingExtractor, read_ced,
-    MaxwellRecordingExtractor, read_maxwell,
+    MaxwellRecordingExtractor, read_maxwell, MaxwellEventExtractor, read_maxwell_event,
     NixRecordingExtractor, read_nix,
     SpikeGadgetsRecordingExtractor, read_spikegadgets,
 
@@ -100,4 +100,5 @@ sorting_extractor_full_list = [
 
 event_extractor_full_list = [
     OpenEphysBinaryEventExtractor,
+    MaxwellEventExtractor
 ]

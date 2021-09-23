@@ -34,7 +34,7 @@ from source. You also need :code:`neo` and :code:`probeinterface`:
 Requirements
 ------------
 
-spiekinterface.core itself has only a few dependencies:
+spikeinterface.core itself has only a few dependencies:
 
   * numpy
   * neo>=0.9.0
