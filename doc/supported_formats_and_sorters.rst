@@ -31,7 +31,7 @@ For raw data formats, we currently support:
 * **Neuroscope** - NeuroscopeRecordingExtractor
 * **NIX** - NIXIORecordingExtractor
 * **Neuralynx** - NeuralynxRecordingExtractor
-* **Open Ephys Leagacy** - OpenEphysLegacyRecordingExtractor
+* **Open Ephys Legacy** - OpenEphysLegacyRecordingExtractor
 * **Open Ephys Binary** - OpenEphysBinaryRecordingExtractor
 * **Phy/Kilosort** - PhyRecordingExtractor/KilosortRecordingExtractor
 * **Plexon** - PlexonRecordingExtractor
@@ -80,7 +80,7 @@ Then you can check the installed RecordingExtractor list,
 .. code:: python
 
   se.installed_recording_extractor_list
-  
+
 which outputs,
 
 .. parsed-literal::
@@ -88,7 +88,7 @@ which outputs,
    spikeinterface.extractorsBiocamRecordingExtractor,
    spikeinterface.core..BinaryRecordingExtractor,
    ...
-   
+
 and the installed SortingExtractors list,
 
 .. code:: python
@@ -101,7 +101,7 @@ which outputs,
   [spikeinterface.extractors.SpykingCircusSortingExtractor,
    spikeinterface.extractors.HerdingspikesSortingExtractor,
    ...
- 
+
 When trying to use an extractor that has not been installed in your environment, an installation message will appear indicating which python packages must be installed as a prerequisite to using the extractor,
 
 .. code:: python
@@ -118,7 +118,7 @@ throws the error,
 
   pip install MEARec
 
-  
+
 Dealing with Non-Supported File Formats
 =======================================
 
@@ -131,7 +131,7 @@ Once instantiated, the NumpyRecordingExtractor can be used like any other Record
 The NumpySortingExtractor does not need any data during instantiation. However, after instantiation, it can be filled with data using its built-in functions (load_from_extractor, set_times_labels, and add_unit).
 After sorted data is added to the NumpySortingExtractor, it can be used like any other SortingExtractor.
 
-With these two objects, we hope that any user can access SpikeInterface regardless of the nature of their underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as 
+With these two objects, we hope that any user can access SpikeInterface regardless of the nature of their underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as
 an actual extractor, please leave an issue in the spikeextractors repository.
 
 Supported Spike Sorters
@@ -173,7 +173,7 @@ Then you can check the installed Sorter list,
 .. code:: python
 
   ss.installed_sorters()
-  
+
 which outputs,
 
 .. parsed-literal::
@@ -194,7 +194,7 @@ throws the error,
 
 .. parsed-literal::
   AssertionError: This sorter ironclust is not installed.
-        Please install it with:  
+        Please install it with:
 
   To use IronClust run:
 

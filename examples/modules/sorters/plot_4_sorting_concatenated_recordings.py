@@ -31,7 +31,7 @@ import spikeinterface.full as si
 recording_single, _ = si.toy_example(duration=10, num_channels=4, dumpable=True, num_segments=1)
 print(recording_single)
 
-# make dimpable
+# make dumpable
 recording_single = recording_single.save()
 
 ##############################################################################

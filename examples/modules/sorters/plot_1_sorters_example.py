@@ -33,7 +33,7 @@ pprint(ss.installed_sorters())
 ##############################################################################
 # Change sorter parameters
 # -----------------------------------
-# 
+#
 
 default_TDC_params = ss.TridesclousSorter.default_params()
 pprint(default_TDC_params)

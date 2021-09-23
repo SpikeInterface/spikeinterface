@@ -279,6 +279,7 @@ class BaseRecording(BaseExtractor):
 
         # create a vector that handle all conatcts in property
         sub_recording.set_property('contact_vector', arr, ids=None)
+
         # planar_contour is saved in annotations
         for probe_index, probe in enumerate(probegroup.probes):
             contour = probe.probe_planar_contour
