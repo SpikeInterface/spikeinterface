@@ -31,7 +31,10 @@ def get_electrical_series(nwbfile, electrical_series_name):
         assert electrical_series_name in es_dict, 'electrical series name not present in nwbfile'
         es = es_dict[electrical_series_name]
     else:
-        es_list = [i for i in nwbfile.acquisition if isinstance(i, ElectricalSeries)]
+        es_list = []
+        for name, series in nwbfile.acquisition.items():
+            if isinstance(series, ElectricalSeries):
+                es_list.append(series)
         if len(es_list) > 1:
             raise ValueError("More than one acquisition found! You must specify 'electrical_series_name'.")
         if len(es_list) == 0:
