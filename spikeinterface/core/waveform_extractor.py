@@ -154,6 +154,8 @@ class WaveformExtractor:
         if np.issubdtype(dtype, np.integer) and return_scaled:
             dtype = "float32"
 
+        dtype = np.dtype(dtype)
+
         if max_spikes_per_unit is not None:
             max_spikes_per_unit = int(max_spikes_per_unit)
 
