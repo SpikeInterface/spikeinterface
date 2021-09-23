@@ -41,7 +41,7 @@ With SpikeInterface, users can:
 
   Please see the release notes here: :ref:`release0.90.0`
 
-- spikeinterface have now its own GUI see `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- spikeinterface now has its own GUI. See `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
 
 .. toctree::
     :maxdepth: 2
