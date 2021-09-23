@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..utils import get_channel_distances
+from ..utils import get_channel_distances, get_noise_levels
 
 
 def get_template_amplitudes(waveform_extractor, peak_sign='neg', mode='extremum'):
@@ -68,7 +68,8 @@ def get_template_extremum_channel(waveform_extractor, peak_sign='neg', outputs='
 
 
 def get_template_channel_sparsity(waveform_extractor, method='best_channels',
-                                  peak_sign='neg', num_channels=None, radius_um=None, outputs='id'):
+                                peak_sign='neg', num_channels=None, radius_um=None, 
+                                threshold=5, outputs='id'):
     """
     Get channel sparsity for each template with several methods:
       * "best_channels": get N best channel, channels are ordered in that case
@@ -103,7 +104,11 @@ def get_template_channel_sparsity(waveform_extractor, method='best_channels',
             sparsity_with_index[unit_id] = chan_inds
 
     elif method == 'threshold':
-        raise NotImplementedError
+        peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode='extremum')
+        noise = get_noise_levels(waveform_extractor.recording, return_scaled=waveform_extractor.return_scaled)
+        for unit_id in unit_ids:
+            chan_inds = np.nonzero((np.abs(peak_values[unit_id]) / noise) >=threshold)
+            sparsity_with_index[unit_id] = chan_inds
 
     # handle output ids or indexes
     if outputs == 'id':
