@@ -219,11 +219,16 @@ class WaveformExtractor:
             self._waveforms[unit_id] = wfs
 
         if with_index:
-            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
-            sampled_index = np.load(sampled_index_file)
+            sampled_index = self.get_sampled_index(unit_id)
             return wfs, sampled_index
         else:
             return wfs
+    
+    def get_sampled_index(self, unit_id):
+        sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
+        sampled_index = np.load(sampled_index_file)
+        return sampled_index
+
 
     def get_waveforms_segment(self, segment_index, unit_id):
         wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
