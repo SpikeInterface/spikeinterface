@@ -67,7 +67,7 @@ recordings = recording_4_tetrodes.split_by(property='group')
 print(recordings)
 
 ##############################################################################
-# We can also get a dict instead of the list wich is easier to handle group keys.
+# We can also get a dict instead of the list which is easier to handle group keys.
 
 recordings = recording_4_tetrodes.split_by(property='group', outputs='dict')
 print(recordings)
@@ -75,8 +75,8 @@ print(recordings)
 
 ##############################################################################
 # We can now use the `run_sorters()` function instead of the `run_sorter()`.
-# This function can run several sorters on serveral recording with diffrents parralell engine.
-#  here we use imple 'loop' but we could use also  'joblib' or 'dask' for multi process or multi node computing.
+# This function can run several sorters on several recording with different parallel engines.
+#  here we use engine 'loop' but we could use also  'joblib' or 'dask' for multi process or multi node computing.
 #  have a look to the documentation of this function that handle many cases.
 
 sorter_list = ['tridesclous']
@@ -85,7 +85,7 @@ results = ss.run_sorters(sorter_list, recordings, working_folder,
             engine='loop', with_output=True, mode_if_folder_exists='overwrite')
 
 ##############################################################################
-#  the ouput is a dict with all combinason of (group, sorter_name)
+#  the output is a dict with all combinations of (group, sorter_name)
 
 from pprint import pprint
 pprint(results)

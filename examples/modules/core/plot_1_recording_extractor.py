@@ -69,7 +69,7 @@ recording = recording.set_probe(probe)
 plot_probe(probe)
 
 ##############################################################################
-# Some extractors also implement a :code:`write` function. 
+# Some extractors also implement a :code:`write` function.
 
 file_paths = ['traces0.raw', 'traces1.raw']
 se.BinaryRecordingExtractor.write_recording(recording, file_paths)
@@ -77,7 +77,7 @@ se.BinaryRecordingExtractor.write_recording(recording, file_paths)
 ##############################################################################
 # We can read the written recording back with the proper extractor.
 # Note that this new recording is now "on disk" and not "in memory" as the Numpy recording.
-# This meand that the loading is "lazy" and the data are not loaded in memory.
+# This means that the loading is "lazy" and the data are not loaded in memory.
 
 recording2 = se.BinaryRecordingExtractor(file_paths, sampling_frequency, num_channels, traces0.dtype)
 print(recording2)
@@ -93,7 +93,7 @@ print(traces0.shape)
 print(traces1_short.shape)
 
 ##############################################################################
-# A recording internaly has :code:`channel_ids`: these are a vector that can have
+# A recording internally has :code:`channel_ids`: these are a vector that can have
 # dtype int or str:
 
 print('chan_ids (dtype=int):', recording.get_channel_ids())
@@ -117,7 +117,7 @@ recording4 = recording3.channel_slice(channel_ids=['a', 'c', 'e'])
 print(recording4)
 print(recording4.get_channel_ids())
 
-# which is equivalent to 
+# which is equivalent to
 from spikeinterface import ChannelSliceRecording
 
 recording4 = ChannelSliceRecording(recording3, channel_ids=['a', 'c', 'e'])
@@ -138,7 +138,7 @@ print(recordings[2].get_channel_ids())
 #  * a dict
 #  * a json file
 #  * a pickle file
-# 
+#
 # The "dump" operation is lazy, i.e., the traces are not exported.
 # Only the information about how to reconstruct the recording are dumped:
 

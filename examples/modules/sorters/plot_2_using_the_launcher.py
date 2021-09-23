@@ -11,7 +11,7 @@ import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 
 ##############################################################################
-# First, let's create the usueal toy example:
+# First, let's create the usual toy example:
 
 recording, sorting_true = se.toy_example(duration=10, seed=0, num_segments=1)
 print(recording)

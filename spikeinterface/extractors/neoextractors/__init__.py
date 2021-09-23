@@ -11,6 +11,6 @@ from .blackrock import BlackrockRecordingExtractor, read_blackrock
 from .mscraw import MCSRawRecordingExtractor, read_mcsraw
 from .spike2 import Spike2RecordingExtractor, read_spike2
 from .ced import CedRecordingExtractor, read_ced
-from .maxwell import MaxwellRecordingExtractor, read_maxwell
+from .maxwell import MaxwellRecordingExtractor, read_maxwell, MaxwellEventExtractor, read_maxwell_event
 from .nix import NixRecordingExtractor, read_nix
 from .spikegadgets import SpikeGadgetsRecordingExtractor, read_spikegadgets
