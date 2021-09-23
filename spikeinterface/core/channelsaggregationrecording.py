@@ -17,7 +17,7 @@ class ChannelsAggregationRecording(BaseRecording):
 
         num_all_channels = sum([rec.get_num_channels() for rec in recording_list])
         if renamed_channel_ids is not None:
-            assert len(np.unique(renamed_channel_ids) == num_all_channels), "'renamed_channel_ids' doesn't have the " \
+            assert len(np.unique(renamed_channel_ids)) == num_all_channels, "'renamed_channel_ids' doesn't have the " \
                                                                             "right size or has duplicates!"
             channel_ids = list(renamed_channel_ids)
         else:

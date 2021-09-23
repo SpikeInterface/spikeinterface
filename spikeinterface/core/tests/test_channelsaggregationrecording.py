@@ -49,6 +49,12 @@ def test_channelsaggregationrecording():
         assert np.allclose(traces2, recording_agg.get_traces(channel_ids=[3, 4, 5], segment_index=seg))
         assert np.allclose(traces3, recording_agg.get_traces(channel_ids=[6, 7, 8], segment_index=seg))
 
+    # test rename channels
+    renamed_channel_ids = [f"#Channel {i}" for i in range(3 * num_channels)]
+    recording_agg_renamed = aggregate_channels([recording1, recording2, recording3],
+                                               renamed_channel_ids=renamed_channel_ids)
+    assert all(chan in renamed_channel_ids for chan in recording_agg_renamed.get_channel_ids())
+
     # test properties
     # complete property
     recording1.set_property("brain_area", ["CA1"]*num_channels)
