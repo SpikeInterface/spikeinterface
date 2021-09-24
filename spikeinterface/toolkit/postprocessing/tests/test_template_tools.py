@@ -68,9 +68,8 @@ def test_get_template_channel_sparsity():
 
     sparsity = get_template_channel_sparsity(we, method='radius', outputs='id', radius_um=50)
     sparsity = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=50)
+    sparsity = get_template_channel_sparsity(we, method='threshold', outputs='id', threshold=3)
 
-    #  sparsity = get_template_channel_sparsity(we, method='threshold', outputs='id', threshold=..)
-    #  sparsity = get_template_channel_sparsity(we, method='threshold', outputs='index', threshold=..)
 
 
 def test_get_template_extremum_amplitude():
@@ -88,7 +87,7 @@ def test_compute_unit_centers_of_mass():
 
 
 if __name__ == '__main__':
-    # ~ setup_module()
+    #~ setup_module()
 
     # ~ test_get_template_amplitudes()
     # ~ test_get_template_extremum_channel()
