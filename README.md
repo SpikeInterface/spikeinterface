@@ -57,6 +57,8 @@ SpikeInterface is a Python framework designed to unify preexisting spike sorting
 
 **Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
+You can also have a look at the [spikeinterface-gui](https://https://github.com/SpikeInterface/spikeinterface-gui).
+
 ## Documentation
 
 All documentation for spikeinterface 0.90 can be found [here](https://spikeinterface.readthedocs.io/en/latest/).

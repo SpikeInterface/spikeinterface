@@ -154,6 +154,8 @@ class WaveformExtractor:
         if np.issubdtype(dtype, np.integer) and return_scaled:
             dtype = "float32"
 
+        dtype = np.dtype(dtype)
+
         if max_spikes_per_unit is not None:
             max_spikes_per_unit = int(max_spikes_per_unit)
 
@@ -187,36 +189,27 @@ class WaveformExtractor:
     def return_scaled(self):
         return self._params['return_scaled']
 
-    def _check_property_consistency(self, by_property):
-        assert by_property in self.recording.get_property_keys(), f"Property {by_property} is not a " \
-                                                                  f"recording property"
-        assert by_property in self.sorting.get_property_keys(), f"Property {by_property} is not a " \
-                                                                f"sorting property"
-
-    def get_waveforms(self, unit_id, with_sample_index=False, by_property=None, with_channel_index=False):
+    def get_waveforms(self, unit_id, with_index=False, sparsity=None):
         """
-        Return waveforms
+        Return waveforms for the specified unit id.
 
         Parameters
         ----------
-        unit_id: int
+        unit_id: int or str
             Unit id to retrieve waveforms for
-        with_sample_index: bool
+        with_index: bool
             If True, spike indices of extracted waveforms are returned (default False)
-        by_property: object or None
-            If given and 'by_property' is a property of both the associated recording and sorting objects,
-            the waveforms are returned on the channels corresponding to the specified property (e.g. 'group')
-        with_channel_index: bool
-            If True, channel indices on which the template is defined are returned.
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by channel ids as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
 
         Returns
         -------
         wfs: np.array
             The returned waveform (num_spikes, num_samples, num_channels)
-        sample_indices: np.array
-            If 'with_sample_index' is True, the spike indices corresponding to the waveforms extracted
-        channel_indices: np.array
-            If 'with_channel_index' is True, the channel indices on which the waveforms are extracted
+        indices: np.array
+            If 'with_index' is True, the spike indices corresponding to the waveforms extracted
         """
         assert unit_id in self.sorting.unit_ids, "'unit_id' is invalid"
 
@@ -229,104 +222,128 @@ class WaveformExtractor:
             wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs
 
-        if by_property is not None:
-            self._check_property_consistency(by_property)
-            unit_property = self.sorting.get_property(by_property)[self.sorting.ids_to_indices([unit_id])[0]]
-            rec_by = self.recording.split_by(by_property)
-            assert unit_property in rec_by.keys(), f"Unit property {unit_property} cannot be found in the " \
-                                                   f"recording properties"
-            channels_indices = self.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
-            wfs = wfs[:, :, channels_indices]
-        else:
-            channels_indices = self.recording.ids_to_indices(self.recording.get_channel_ids())
+        if sparsity is not None:
+            assert unit_id in sparsity, f"Sparsity for unit {unit_id} is not in the sparsity dictionary!"
+            chan_inds = self.recording.ids_to_indices(sparsity[unit_id])
+            wfs = wfs[:, :, chan_inds]
 
-        if with_sample_index or with_channel_index:
-            returns = (wfs,)
+        if with_index:
+            sampled_index = self.get_sampled_indices(unit_id)
+            return wfs, sampled_index
         else:
             return wfs
 
-        if with_sample_index:
-            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
-            sampled_index = np.load(sampled_index_file)
-            returns = returns + (sampled_index,)
-        if with_channel_index:
-            returns = returns + (channels_indices,)
-        return returns
-
-    def get_waveforms_segment(self, segment_index, unit_id):
-        wfs, index_ar = self.get_waveforms(unit_id, with_sample_index=True)
-        segment_index_ar = np.array([i[1] for i in index_ar])
-        return wfs[segment_index_ar == segment_index, :, :]
-
-    def get_template(self, unit_id, mode='median', quantile_value=0.5, by_property=None):
+    def get_sampled_indices(self, unit_id):
         """
-        Return template (average waveform)
+        Return sampled spike indices of extracted waveforms
 
         Parameters
         ----------
-        unit_id: int
+        unit_id: int or str
+            Unit id to retrieve indices for
+
+        Returns
+        -------
+        sampled_indices: np.array
+            The sampled indices
+        """
+        sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
+        sampled_index = np.load(sampled_index_file)
+        return sampled_index
+
+    def get_waveforms_segment(self, segment_index, unit_id, sparsity=None):
+        """
+        Return waveforms from a specified segment and unit_id.
+
+        Parameters
+        ----------
+        segment_index: int
+            The segment index to retrieve waveforms from
+        unit_id: int or str
+            Unit id to retrieve waveforms for
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
+
+        Returns
+        -------
+        wfs: np.array
+            The returned waveform (num_spikes, num_samples, num_channels)
+        """
+        wfs, index_ar = self.get_waveforms(unit_id, with_index=True, sparsity=sparsity)
+        segment_index_ar = np.array([i[1] for i in index_ar])
+        return wfs[segment_index_ar == segment_index, :, :]
+
+    def get_template(self, unit_id, mode='median', quantile_value=0.5, sparsity=None):
+        """
+        Return template (average waveform).
+
+        Parameters
+        ----------
+        unit_id: int or str
             Unit id to retrieve waveforms for
         mode: str
             'mean', 'median' (default), 'std'(standard deviation), 'quantile'
         quantile_value: float
-            Quantile value for argument to np.quantile
-        by_property: object or None
-            If given and 'by_property' is a property of both the associated recording and sorting objects,
-            the template is returned on the channels corresponding to the specified property (e.g. 'group')
+            quantile value for argument to np.quantile
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
 
         Returns
         -------
         template: np.array
             The returned template (num_samples, num_channels)
-        channel_indices: np.array
-            Channels used to get the template (if 'with_channel_index' is True)
         """
         assert mode in ('median', 'average', 'std', 'quantile')
         assert unit_id in self.sorting.unit_ids
 
         if mode == 'median':
-            if unit_id in self._template_median and not by_property:
+            if unit_id in self._template_median and sparsity is None:
                 return self._template_median[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id, by_property=by_property)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.median(wfs, axis=0)
-                if not by_property:
+                if sparsity is None:
                     self._template_median[unit_id] = template
                 return template
         elif mode == 'average':
-            if unit_id in self._template_average and not by_property:
+            if unit_id in self._template_average and sparsity is None:
                 return self._template_average[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id, by_property=by_property)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.average(wfs, axis=0)
-                if not by_property:
+                if sparsity is None:
                     self._template_average[unit_id] = template
                 return template
         elif mode == 'std':
-            if unit_id in self._template_std and not by_property:
+            if unit_id in self._template_std and sparsity is None:
                 return self._template_std[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id, by_property=by_property)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.std(wfs, axis=0)
-                if not by_property:
+                if sparsity is None:
                     self._template_std[unit_id] = template
                 return template
         elif mode == 'quantile':
-            if quantile_value in self._template_quantile and unit_id in self._template_quantile[quantile_value] \
-                    and by_property is None:
+            if quantile_value in self._template_quantile and unit_id in self._template_quantile[quantile_value]\
+                    and sparsity is None:
                 return self._template_quantile[quantile_value][unit_id]
             else:
-                wfs = self.get_waveforms(unit_id, by_property=by_property)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.quantile(wfs, quantile_value, axis=0)
-                if not by_property:
+                if sparsity is None:
                     if quantile_value not in self._template_quantile:
                         self._template_quantile[quantile_value] = dict()
                     self._template_quantile[quantile_value][unit_id] = template
                 return template
 
-    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5, by_property=None):
+    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5,
+                          sparsity=None):
         """
-        Return several templates (average waveform)
+        Return  templates (average waveform) for multiple units.
 
         Parameters
         ----------
@@ -335,10 +352,11 @@ class WaveformExtractor:
         mode: str
             'mean' or 'median' (default), 'std', 'quantile'
         quantile_value: float
-            Quantile value as argument to np.quantile
-        by_property: object or None
-            If given and 'by_property' is a property of both the associated recording and sorting objects,
-            the templates are returned on the channels corresponding to the specified property (e.g. 'group')
+            quantile value as argument to np.quantile
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
 
         Returns
         -------
@@ -347,35 +365,58 @@ class WaveformExtractor:
         """
         if unit_ids is None:
             unit_ids = self.sorting.unit_ids
-        if np.isscalar(unit_ids):
-            unit_ids = np.array([unit_ids])
-        dtype = self._params['dtype']
+        num_chans = self.recording.get_num_channels()
 
-        if by_property is not None:
-            self._check_property_consistency(by_property)
-            rec_by = self.recording.split_by(by_property)
-            num_channels = [rec.get_num_channels() for rec in rec_by.values()]
-            if all([num_chans == num_channels[0] for num_chans in num_channels]):
-                templates = np.zeros((len(unit_ids), self.nsamples, num_channels[0]), dtype=dtype)
-            else:
-                templates = np.zeros((len(unit_ids), self.nsamples, np.max(num_channels)), dtype=dtype)
-        else:
-            num_chans = self.recording.get_num_channels()
+        dtype = self._params['dtype']
+        if sparsity is None:
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
+        else:
+            num_channels_per_unit = [len(sparsity[unit_id]) for unit_id in sparsity]
+            if all(nchan == num_channels_per_unit[0] for nchan in num_channels_per_unit):
+                # same shape for all units
+                templates = np.zeros((len(unit_ids), self.nsamples, num_channels_per_unit[0]), dtype=dtype)
+            else:
+                templates = np.zeros((len(unit_ids), self.nsamples, np.max(num_channels_per_unit)), dtype=dtype)
+
         for i, unit_id in enumerate(unit_ids):
-            template = self.get_template(unit_id, mode=mode, quantile_value=quantile_value,
-                                         by_property=by_property)
-            if template.shape[1] == templates.shape[2]:
+            template = self.get_template(unit_id, mode=mode, quantile_value=quantile_value, sparsity=sparsity)
+            if template.shape[-1] == templates.shape[-1]:
                 templates[i, :, :] = template
             else:
-                # some channels are missing
-                templates[i, :, :template.shape[1]] = template
+                templates[i, :, :template.shape[-1]] = template
+
         return templates
 
-    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median'):
+    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median',
+                             sparsity=None):
+        """
+        Return template for the specified unit id computed from waveforms of a specific segment.
+
+        Parameters
+        ----------
+        unit_id: int or str
+            Unit id to retrieve waveforms for
+        segment_index: int
+            The segment index to retrieve template from
+        mode: str
+            'mean', 'median' (default), 'std'(standard deviation), 'quantile'
+        quantile_value: float
+            quantile value for argument to np.quantile
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
+
+        Returns
+        -------
+        template: np.array
+            The returned template (num_samples, num_channels)
+
+        """
         assert mode in ('median', 'average', 'std', 'quantile')
         assert unit_id in self.sorting.unit_ids
-        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id)
+        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id,
+                                                       sparsity=sparsity)
         if mode == 'median':
             return np.median(waveforms_segment, axis=0)
         elif mode == 'average':
@@ -387,7 +428,6 @@ class WaveformExtractor:
             return np.quantile(waveforms_segment, quantile_value, axis=0)
 
     def sample_spikes(self):
-        p = self._params
         nbefore = self.nbefore
         nafter = self.nafter
 
@@ -396,7 +436,6 @@ class WaveformExtractor:
 
         # store in a 2 columns (spike_index, segment_index) in a npy file
         for unit_id in self.sorting.unit_ids:
-
             n = np.sum([e.size for e in selected_spikes[unit_id]])
             sampled_index = np.zeros(n, dtype=[('spike_index', 'int64'), ('segment_index', 'int64')])
             pos = 0
@@ -546,7 +585,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
-
+    
     to_extract = {}
     for unit_id in sorting.unit_ids:
         spike_times = selected_spike_times[unit_id][segment_index]
@@ -561,7 +600,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
             while (spike_times[i1-1] + nafter) > seg_size and (i0!=i1):
                 i1 = i1 - 1
 
-        if i0 != i1:
+        if i0 != i1:            
             to_extract[unit_id] = i0, i1, spike_times[i0:i1]
 
     if len(to_extract) > 0:
