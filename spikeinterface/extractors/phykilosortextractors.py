@@ -102,8 +102,6 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         self.add_sorting_segment(PhySortingSegment(spike_times, spike_clusters))
 
-        self._kwargs = {'folder_path': str(Path(folder_path).absolute()),
-                        'exclude_cluster_groups': exclude_cluster_groups}
 
 
 class PhySortingSegment(BaseSortingSegment):
@@ -137,6 +135,9 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     def __init__(self, folder_path, exclude_cluster_groups=None):
         BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
 
+        self._kwargs = {'folder_path': str(Path(folder_path).absolute()),
+                        'exclude_cluster_groups': exclude_cluster_groups}
+
 
 class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     """
@@ -154,6 +155,9 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     def __init__(self, folder_path, keep_good_only=False):
         BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups=None,
                                                  keep_good_only=keep_good_only)
+
+        self._kwargs = {'folder_path': str(Path(folder_path).absolute()),
+                        'keep_good_only': keep_good_only}
 
 
 def read_phy(*args, **kwargs):

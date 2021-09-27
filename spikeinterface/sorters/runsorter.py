@@ -275,6 +275,33 @@ _common_run_doc = """
     """ + _common_param_doc
 
 
+def read_sorter_folder(output_folder, raise_error=True):
+    """
+    Load a sorting object from a spike sorting output folder.
+    The 'output_folder' must contain a valid 'spikeinterface_log.json' file
+    """
+    output_folder = Path(output_folder)
+    log_file = output_folder / 'spikeinterface_log.json'
+    
+    if not log_file.is_file():
+        raise Exception(f'This folder {output_folder} does not have spikeinterface_log.json')
+
+    with log_file.open('r', encoding='utf8') as f:
+        log = json.load(f)
+    
+    run_error = bool(log['error'])
+    if run_error:
+        if raise_error:
+            raise SpikeSortingError(f"Spike sorting failed for {output_folder}")
+        else:
+            return
+    
+    sorter_name = log['sorter_name']
+    SorterClass = sorter_dict[sorter_name]
+    sorting = SorterClass.get_result_from_folder(output_folder)
+    return sorting
+
+
 def run_hdsort(*args, **kwargs):
     return run_sorter('hdsort', *args, **kwargs)
 
