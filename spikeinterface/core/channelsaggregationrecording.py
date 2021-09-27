@@ -109,7 +109,7 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
                    ) -> np.ndarray:
 
         traces = []
-        if channel_indices is not None:
+        if channel_indices is not None and channel_indices != slice(None, None, None):
             if isinstance(channel_indices, slice):
                 # incas channel_indices is slice, it has step 1
                 step = channel_indices.step if channel_indices.step is not None else 1

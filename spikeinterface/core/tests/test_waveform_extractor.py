@@ -7,8 +7,8 @@ from spikeinterface import WaveformExtractor, extract_waveforms
 
 
 def _clean_all():
-    folders = ["wf_rec1", "wf_rec2", "wf_rec3", "wf_sort2", "test_waveform_extractor",
-               "test_waveform_extractor_groups",
+    folders = ["wf_rec1", "wf_rec2", "wf_rec3", "wf_sort2", "wf_sort3",
+               "test_waveform_extractor",
                "test_extract_waveforms_1job", "test_extract_waveforms_2job"]
     for folder in folders:
         if Path(folder).exists():
@@ -53,7 +53,7 @@ def test_WaveformExtractor():
     assert wfs.shape[0] <= 500
     assert wfs.shape[1:] == (210, 2)
 
-    wfs, sampled_index = we.get_waveforms(0, with_sample_index=True)
+    wfs, sampled_index = we.get_waveforms(0, with_index=True)
 
     # load back
     we = WaveformExtractor.load_from_folder(folder)
@@ -80,6 +80,7 @@ def test_WaveformExtractor():
     wf_segment = we.get_template_segment(unit_id=0, segment_index=1,
                                          quantile_value=0.9, mode='quantile')
     assert wf_segment.shape == (210, 2)
+
 
 def test_extract_waveforms():
     # 2 segments
@@ -127,35 +128,56 @@ def test_extract_waveforms():
     wf3 = we3.get_waveforms(0)
     assert np.array_equal((wf1).astype("float32") * gain, wf3)
 
-    folder4 = Path('test_extract_waveforms_group')
-    if folder4.is_dir():
-        shutil.rmtree(folder4)
 
-    recording = generate_recording(num_channels=4, durations=durations, sampling_frequency=sampling_frequency)
+
+def test_sparsity():
+    durations = [30]
+    sampling_frequency = 30000.
+
+    recording = generate_recording(num_channels=10, durations=durations, sampling_frequency=sampling_frequency)
     recording.annotate(is_filtered=True)
     folder_rec = "wf_rec3"
     recording = recording.save(folder=folder_rec)
-    recording.set_channel_groups([0, 0, 1, 1])
-    sorting.set_property("group", [0, 0, 0, 1, 1])
+    sorting = generate_sorting(num_units=5, sampling_frequency=sampling_frequency, durations=durations)
+    folder_sort = "wf_sort3"
+    sorting = sorting.save(folder=folder_sort)
 
-    we4 = extract_waveforms(recording, sorting, folder4)
+    folder = Path('test_extract_waveforms_sparsity')
+    if folder.is_dir():
+        shutil.rmtree(folder)
+    we = extract_waveforms(recording, sorting, folder, max_spikes_per_unit=None)
 
-    wf1 = we4.get_waveforms(0)
-    wf1g = we4.get_waveforms(0, by_property="group")
-    assert wf1.shape[-1] == 4
-    assert wf1g.shape[-1] == 2
+    # sparsity: same number of channels
+    num_channels = 3
+    channel_bounds = [2, 9]
+    sparsity_same = {}
+    sparsity_diff = {}
 
-    tmp1 = we4.get_template(0)
-    tmp1g = we4.get_template(0, by_property="group")
-    assert tmp1.shape[-1] == 4
-    assert tmp1g.shape[-1] == 2
+    for unit in sorting.get_unit_ids():
+        sparsity_same[unit] = np.random.permutation(recording.get_channel_ids())[:num_channels]
+        rand_channel_num = np.random.randint(channel_bounds[0], channel_bounds[1])
+        sparsity_diff[unit] = np.random.permutation(recording.get_channel_ids())[:rand_channel_num]
 
-    tmp_all = we4.get_all_templates()
-    tmpg_all = we4.get_all_templates(by_property="group")
-    assert tmp_all.shape[-1] == 4
-    assert tmpg_all.shape[-1] == 2
+    print(sparsity_same)
+    print(sparsity_diff)
+
+    for unit in sorting.get_unit_ids():
+        wf_same = we.get_waveforms(unit_id=unit, sparsity=sparsity_same)
+        temp_same = we.get_template(unit_id=unit, sparsity=sparsity_same)
+
+        assert wf_same.shape[-1] == num_channels
+        assert temp_same.shape[-1] == num_channels
+
+        wf_diff = we.get_waveforms(unit_id=unit, sparsity=sparsity_diff)
+        temp_diff = we.get_template(unit_id=unit, sparsity=sparsity_diff)
+
+        assert wf_diff.shape[-1] == len(sparsity_diff[unit])
+        assert temp_diff.shape[-1] == len(sparsity_diff[unit])
+
+
 
 
 if __name__ == '__main__':
     test_WaveformExtractor()
-    test_extract_waveforms()
+    # test_extract_waveforms()
+    # test_sparsity()
