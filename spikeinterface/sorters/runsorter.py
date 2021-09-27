@@ -277,8 +277,8 @@ _common_run_doc = """
 
 def read_sorter_folder(output_folder, raise_error=True):
     """
-    Read sorting from a folder.
-    The output_folder must contain a valid spikeinterface_log.json
+    Load a sorting object from a spike sorting output folder.
+    The 'output_folder' must contain a valid 'spikeinterface_log.json' file
     """
     output_folder = Path(output_folder)
     log_file = output_folder / 'spikeinterface_log.json'
