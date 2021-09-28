@@ -5,19 +5,26 @@ from ..utils import get_channel_distances, get_noise_levels
 
 def get_template_amplitudes(waveform_extractor, peak_sign='neg', mode='extremum'):
     """
-    Get amplitude per channel for each units
+    Get amplitude per channel for each unit.
     
     Parameters
     ----------
-    mode: 
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
         'extremum':  max or min
         'at_index': take value at spike index
 
+    Returns
+    -------
+    peak_values: dict
+        Dictionary with unit ids as keys and template amplitudes as values
     """
     assert peak_sign in ('both', 'neg', 'pos')
     assert mode in ('extremum', 'at_index')
     unit_ids = waveform_extractor.sorting.unit_ids
-    channel_ids = waveform_extractor.recording.channel_ids
 
     before = waveform_extractor.nbefore
 
@@ -48,7 +55,23 @@ def get_template_amplitudes(waveform_extractor, peak_sign='neg', mode='extremum'
 
 def get_template_extremum_channel(waveform_extractor, peak_sign='neg', outputs='id'):
     """
-    Compute for each unit on which channel id the extremum is.
+    Compute the channel with the extremum peak for each unit.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    outputs: str
+        * 'id': channel id
+        * 'index': channel index
+
+    Returns
+    -------
+    extremum_channels: dict
+        Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
+        as values
     """
     unit_ids = waveform_extractor.sorting.unit_ids
     channel_ids = waveform_extractor.recording.channel_ids
@@ -68,16 +91,44 @@ def get_template_extremum_channel(waveform_extractor, peak_sign='neg', outputs='
 
 
 def get_template_channel_sparsity(waveform_extractor, method='best_channels',
-                                peak_sign='neg', num_channels=None, radius_um=None, 
-                                threshold=5, outputs='id'):
+                                  peak_sign='neg', outputs='id', num_channels=None, radius_um=None,
+                                  threshold=5, by_property=None):
     """
-    Get channel sparsity for each template with several methods:
-      * "best_channels": get N best channel, channels are ordered in that case
-      * "radius": radius un um around the best channel, channels are not ordered
-      * "threshold" : TODO
-      
+    Get channel sparsity (subset of channels) for each template with several methods.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    method: str
+        * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
+                         number of channels.
+        * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
+        * "threshold": thresholds based on template signal-to-noise ratio. Use the 'threshold' argument
+                       to specify the SNR threshold.
+        * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
+                         Use the 'by_property' argument to specify the property name.
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    outputs: str
+        * 'id': channel id
+        * 'index': channel index
+    num_channels: int
+        Number of channels for 'best_channels' method
+    radius_um: float
+        Radius in um for 'radius' method
+    threshold: float
+        Threshold in SNR 'threshold' method
+    by_property: object
+        Property name for 'by_property' method
+
+    Returns
+    -------
+    sparsity: dict
+        Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
+        as values
     """
-    assert method in ('best_channels', 'radius', 'threshold')
+    assert method in ('best_channels', 'radius', 'threshold', 'by_property')
     assert outputs in ('id', 'index')
     we = waveform_extractor
 
@@ -107,7 +158,20 @@ def get_template_channel_sparsity(waveform_extractor, method='best_channels',
         peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode='extremum')
         noise = get_noise_levels(waveform_extractor.recording, return_scaled=waveform_extractor.return_scaled)
         for unit_id in unit_ids:
-            chan_inds = np.nonzero((np.abs(peak_values[unit_id]) / noise) >=threshold)
+            chan_inds = np.nonzero((np.abs(peak_values[unit_id]) / noise) >= threshold)
+            sparsity_with_index[unit_id] = chan_inds
+
+    elif method == 'by_property':
+        assert by_property is not None, "Specify the property with the 'by_property' argument!"
+        _check_property_consistency(waveform_extractor, by_property)
+        rec_by = waveform_extractor.recording.split_by(by_property)
+        for unit_id in unit_ids:
+            unit_index = waveform_extractor.sorting.id_to_index(unit_id)
+            unit_property = waveform_extractor.sorting.get_property(by_property)[unit_index]
+
+            assert unit_property in rec_by.keys(), f"Unit property {unit_property} cannot be found in the " \
+                                                   f"recording properties"
+            chan_inds = waveform_extractor.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             sparsity_with_index[unit_id] = chan_inds
 
     # handle output ids or indexes
@@ -123,12 +187,21 @@ def get_template_channel_sparsity(waveform_extractor, method='best_channels',
 
 def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'):
     """
-    In some situtaion some sorters, return spike index with a smal shift related to the extremum peak
-    (min or max).
-    
-    Here a function to estimtate this shift.
-    
-    This function is internally used by `get_spike_amplitudes()` to accuratly retrieve the min/max amplitudes
+    In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
+    This function estimates and return these alignment shifts for the mean template.
+    This function is internally used by `get_spike_amplitudes()` to accurately retrieve the spike amplitudes.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+
+    Returns
+    -------
+    shifts: dict
+        Dictionary with unit ids as keys and shifts as values
     """
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -158,8 +231,19 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
 def get_template_extremum_amplitude(waveform_extractor, peak_sign='neg'):
     """
     Computes amplitudes on the best channel.
-    """
 
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+
+    Returns
+    -------
+    amplitudes: dict
+        Dictionary with unit ids as keys and amplitudes as values
+    """
     unit_ids = waveform_extractor.sorting.unit_ids
 
     before = waveform_extractor.nbefore
@@ -183,10 +267,16 @@ def compute_unit_centers_of_mass(waveform_extractor, peak_sign='neg', num_channe
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
+        The waveform extractor
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    num_channels: int
+        Number of channels used to compute COM
 
     Returns
     -------
     centers_of_mass: dict of np.array
+        Dictionary with unit ids as keys and centers of mass as values
     '''
     unit_ids = waveform_extractor.sorting.unit_ids
 
@@ -202,8 +292,6 @@ def compute_unit_centers_of_mass(waveform_extractor, peak_sign='neg', num_channe
 
     coms = []
     for unit_id in unit_ids:
-        template = waveform_extractor.get_template(unit_id)
-
         chan_ids = best_channel_ids[unit_id]
         chan_inds = recording.ids_to_indices(chan_ids)
 
@@ -215,3 +303,10 @@ def compute_unit_centers_of_mass(waveform_extractor, peak_sign='neg', num_channe
     coms = dict(zip(unit_ids, coms))
 
     return coms
+
+
+def _check_property_consistency(waveform_extractor, by_property):
+    assert by_property in waveform_extractor.recording.get_property_keys(), f"Property {by_property} is not a " \
+                                                                            f"recording property"
+    assert by_property in waveform_extractor.sorting.get_property_keys(), f"Property {by_property} is not a " \
+                                                                          f"sorting property"

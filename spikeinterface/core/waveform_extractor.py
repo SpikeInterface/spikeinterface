@@ -189,16 +189,20 @@ class WaveformExtractor:
     def return_scaled(self):
         return self._params['return_scaled']
 
-    def get_waveforms(self, unit_id, with_index=False):
+    def get_waveforms(self, unit_id, with_index=False, sparsity=None):
         """
-        Return waveforms
+        Return waveforms for the specified unit id.
 
         Parameters
         ----------
-        unit_id: int
+        unit_id: int or str
             Unit id to retrieve waveforms for
         with_index: bool
             If True, spike indices of extracted waveforms are returned (default False)
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by channel ids as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
 
         Returns
         -------
@@ -218,35 +222,75 @@ class WaveformExtractor:
             wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs
 
+        if sparsity is not None:
+            assert unit_id in sparsity, f"Sparsity for unit {unit_id} is not in the sparsity dictionary!"
+            chan_inds = self.recording.ids_to_indices(sparsity[unit_id])
+            wfs = wfs[:, :, chan_inds]
+
         if with_index:
-            sampled_index = self.get_sampled_index(unit_id)
+            sampled_index = self.get_sampled_indices(unit_id)
             return wfs, sampled_index
         else:
             return wfs
-    
-    def get_sampled_index(self, unit_id):
+
+    def get_sampled_indices(self, unit_id):
+        """
+        Return sampled spike indices of extracted waveforms
+
+        Parameters
+        ----------
+        unit_id: int or str
+            Unit id to retrieve indices for
+
+        Returns
+        -------
+        sampled_indices: np.array
+            The sampled indices
+        """
         sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
         sampled_index = np.load(sampled_index_file)
         return sampled_index
 
-
-    def get_waveforms_segment(self, segment_index, unit_id):
-        wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
-        segment_index_ar = np.array([i[1] for i in index_ar])
-        return wfs[segment_index_ar == segment_index, :, :]
-
-    def get_template(self, unit_id, mode='median', quantile_value=0.5):
+    def get_waveforms_segment(self, segment_index, unit_id, sparsity=None):
         """
-        Return template (average waveform)
+        Return waveforms from a specified segment and unit_id.
 
         Parameters
         ----------
-        unit_id: int
+        segment_index: int
+            The segment index to retrieve waveforms from
+        unit_id: int or str
+            Unit id to retrieve waveforms for
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
+
+        Returns
+        -------
+        wfs: np.array
+            The returned waveform (num_spikes, num_samples, num_channels)
+        """
+        wfs, index_ar = self.get_waveforms(unit_id, with_index=True, sparsity=sparsity)
+        segment_index_ar = np.array([i[1] for i in index_ar])
+        return wfs[segment_index_ar == segment_index, :, :]
+
+    def get_template(self, unit_id, mode='median', quantile_value=0.5, sparsity=None):
+        """
+        Return template (average waveform).
+
+        Parameters
+        ----------
+        unit_id: int or str
             Unit id to retrieve waveforms for
         mode: str
             'mean', 'median' (default), 'std'(standard deviation), 'quantile'
         quantile_value: float
             quantile value for argument to np.quantile
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
 
         Returns
         -------
@@ -257,44 +301,48 @@ class WaveformExtractor:
         assert unit_id in self.sorting.unit_ids
 
         if mode == 'median':
-            if unit_id in self._template_median:
+            if unit_id in self._template_median and sparsity is None:
                 return self._template_median[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.median(wfs, axis=0)
-                self._template_median[unit_id] = template
+                if sparsity is None:
+                    self._template_median[unit_id] = template
                 return template
         elif mode == 'average':
-            if unit_id in self._template_average:
+            if unit_id in self._template_average and sparsity is None:
                 return self._template_average[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.average(wfs, axis=0)
-                self._template_average[unit_id] = template
+                if sparsity is None:
+                    self._template_average[unit_id] = template
                 return template
         elif mode == 'std':
-            if unit_id in self._template_std:
+            if unit_id in self._template_std and sparsity is None:
                 return self._template_std[unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.std(wfs, axis=0)
-                self._template_std[unit_id] = template
+                if sparsity is None:
+                    self._template_std[unit_id] = template
                 return template
         elif mode == 'quantile':
-            if quantile_value in self._template_quantile:
-                if unit_id in self._template_quantile[quantile_value]:
-                    return self._template_quantile[quantile_value][unit_id]
+            if quantile_value in self._template_quantile and unit_id in self._template_quantile[quantile_value]\
+                    and sparsity is None:
+                return self._template_quantile[quantile_value][unit_id]
             else:
-                wfs = self.get_waveforms(unit_id)
+                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
                 template = np.quantile(wfs, quantile_value, axis=0)
-                if quantile_value not in self._template_quantile:
-                    self._template_quantile[quantile_value] = dict()
-                self._template_quantile[quantile_value][unit_id] = template
+                if sparsity is None:
+                    if quantile_value not in self._template_quantile:
+                        self._template_quantile[quantile_value] = dict()
+                    self._template_quantile[quantile_value][unit_id] = template
                 return template
 
     def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5):
         """
-        Return several templates (average waveform)
+        Return  templates (average waveform) for multiple units.
 
         Parameters
         ----------
@@ -304,6 +352,7 @@ class WaveformExtractor:
             'mean' or 'median' (default), 'std', 'quantile'
         quantile_value: float
             quantile value as argument to np.quantile
+
         Returns
         -------
         templates: np.array
@@ -315,14 +364,42 @@ class WaveformExtractor:
 
         dtype = self._params['dtype']
         templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
+
         for i, unit_id in enumerate(unit_ids):
             templates[i, :, :] = self.get_template(unit_id, mode=mode, quantile_value=quantile_value)
+
         return templates
 
-    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median'):
+    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median',
+                             sparsity=None):
+        """
+        Return template for the specified unit id computed from waveforms of a specific segment.
+
+        Parameters
+        ----------
+        unit_id: int or str
+            Unit id to retrieve waveforms for
+        segment_index: int
+            The segment index to retrieve template from
+        mode: str
+            'mean', 'median' (default), 'std'(standard deviation), 'quantile'
+        quantile_value: float
+            quantile value for argument to np.quantile
+        sparsity: dict or None
+            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            (make sure to use the default output='id' when computing the sparsity)
+
+        Returns
+        -------
+        template: np.array
+            The returned template (num_samples, num_channels)
+
+        """
         assert mode in ('median', 'average', 'std', 'quantile')
         assert unit_id in self.sorting.unit_ids
-        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id)
+        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id,
+                                                       sparsity=sparsity)
         if mode == 'median':
             return np.median(waveforms_segment, axis=0)
         elif mode == 'average':
@@ -334,7 +411,6 @@ class WaveformExtractor:
             return np.quantile(waveforms_segment, quantile_value, axis=0)
 
     def sample_spikes(self):
-        p = self._params
         nbefore = self.nbefore
         nafter = self.nafter
 
@@ -343,7 +419,6 @@ class WaveformExtractor:
 
         # store in a 2 columns (spike_index, segment_index) in a npy file
         for unit_id in self.sorting.unit_ids:
-
             n = np.sum([e.size for e in selected_spikes[unit_id]])
             sampled_index = np.zeros(n, dtype=[('spike_index', 'int64'), ('segment_index', 'int64')])
             pos = 0
