@@ -46,8 +46,8 @@ def test_WaveformExtractor():
 
     we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
 
-    we.run(n_jobs=1, chunk_size=30000)
-    we.run(n_jobs=4, chunk_size=30000, progress_bar=True)
+    we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+    we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
 
     wfs = we.get_waveforms(0)
     assert wfs.shape[0] <= 500
@@ -177,6 +177,7 @@ def test_sparsity():
 
 
 if __name__ == '__main__':
+    setup_module()
     test_WaveformExtractor()
-    # test_extract_waveforms()
-    # test_sparsity()
+    test_extract_waveforms()
+    test_sparsity()
