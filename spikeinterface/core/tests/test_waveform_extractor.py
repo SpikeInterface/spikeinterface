@@ -129,7 +129,6 @@ def test_extract_waveforms():
     assert np.array_equal((wf1).astype("float32") * gain, wf3)
 
 
-
 def test_sparsity():
     durations = [30]
     sampling_frequency = 30000.
