@@ -166,7 +166,7 @@ def get_template_channel_sparsity(waveform_extractor, method='best_channels',
         _check_property_consistency(waveform_extractor, by_property)
         rec_by = waveform_extractor.recording.split_by(by_property)
         for unit_id in unit_ids:
-            unit_index = waveform_extractor.sorting.ids_to_indices([unit_id])[0]
+            unit_index = waveform_extractor.sorting.id_to_index(unit_id)
             unit_property = waveform_extractor.sorting.get_property(by_property)[unit_index]
 
             assert unit_property in rec_by.keys(), f"Unit property {unit_property} cannot be found in the " \
@@ -223,7 +223,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
         elif peak_sign == 'pos':
             peak_pos = np.argmax(template[:, chan_ind])
         shift = peak_pos - waveform_extractor.nbefore
-        shifts[unit_id] = shift.astype("int64")
+        shifts[unit_id] = shift
 
     return shifts
 

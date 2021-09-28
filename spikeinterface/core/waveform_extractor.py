@@ -340,8 +340,7 @@ class WaveformExtractor:
                     self._template_quantile[quantile_value][unit_id] = template
                 return template
 
-    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5,
-                          sparsity=None):
+    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5):
         """
         Return  templates (average waveform) for multiple units.
 
@@ -353,10 +352,6 @@ class WaveformExtractor:
             'mean' or 'median' (default), 'std', 'quantile'
         quantile_value: float
             quantile value as argument to np.quantile
-        sparsity: dict or None
-            If given, dictionary with unit ids as keys and channel sparsity by index as values.
-            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
-            (make sure to use the default output='id' when computing the sparsity)
 
         Returns
         -------
@@ -368,22 +363,10 @@ class WaveformExtractor:
         num_chans = self.recording.get_num_channels()
 
         dtype = self._params['dtype']
-        if sparsity is None:
-            templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
-        else:
-            num_channels_per_unit = [len(sparsity[unit_id]) for unit_id in sparsity]
-            if all(nchan == num_channels_per_unit[0] for nchan in num_channels_per_unit):
-                # same shape for all units
-                templates = np.zeros((len(unit_ids), self.nsamples, num_channels_per_unit[0]), dtype=dtype)
-            else:
-                templates = np.zeros((len(unit_ids), self.nsamples, np.max(num_channels_per_unit)), dtype=dtype)
+        templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
 
         for i, unit_id in enumerate(unit_ids):
-            template = self.get_template(unit_id, mode=mode, quantile_value=quantile_value, sparsity=sparsity)
-            if template.shape[-1] == templates.shape[-1]:
-                templates[i, :, :] = template
-            else:
-                templates[i, :, :template.shape[-1]] = template
+            templates[i, :, :] = self.get_template(unit_id, mode=mode, quantile_value=quantile_value)
 
         return templates
 
