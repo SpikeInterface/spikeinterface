@@ -197,7 +197,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
-                        similarity_bins=np.linspace(0, 1, 11), show_legend=False, ylim=(0.5, 1),
+                        similarity_bins=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
                         good_only=True,
                         ncols=3, axes=None, cmap='winter'):
         
@@ -295,7 +295,7 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
-                        similarity_ranges=np.linspace(0, 1, 11), show_legend=False, ylim=(0.5, 1),
+                        similarity_ranges=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
                         good_only=True, ax=None, show_std=False):
         
         BaseWidget.__init__(self, None, ax)

@@ -12,8 +12,8 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
-                        similarity_bins=np.linspace(0, 1, 11), show_legend=False,
-                        ncols=3, axes=None, cmap='winter'):
+                        similarity_bins=np.linspace(-0.4, 1, 8), show_legend=False,
+                        ncols=3, axes=None, cmap='winter', ylim=(0,0.5)):
         
         if axes is None:
             num_axes = len(study.sorter_names)
@@ -27,6 +27,7 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
         self.metric = metric
         self.similarity_bins = np.asarray(similarity_bins)
         self.show_legend = show_legend
+        self.ylim = ylim
 
     def plot(self):
 
@@ -39,7 +40,7 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
             
-            result = self.get_error_profile_over_similarity_bins(similarity_bins, sorter_name)
+            result = self.study.get_error_profile_over_similarity_bins(self.similarity_bins, sorter_name)
 
             # plot by similarity bins
             ax = self.axes.flatten()[sorter_ind]
@@ -48,7 +49,6 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
             
             for i in range(self.similarity_bins.size - 1):
                 cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
-                amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
                 ax.plot(time_axis, result[(cmin, cmax)], label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
             
@@ -62,16 +62,16 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
             if self.show_legend:
                 ax.legend()
 
-            #if self.ylim is not None:
-            #    ax.set_ylim(self.ylim)
+            if self.ylim is not None:
+                ax.set_ylim(self.ylim)
 
 
 class StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
-                        similarity_ranges=np.linspace(0, 1, 11), show_legend=False,
-                        ax=None, show_std=False, ylim = None):
+                        similarity_ranges=np.linspace(-0.4, 1, 8), show_legend=False,
+                        ax=None, show_std=False, ylim = (0,0.5)):
         
         BaseWidget.__init__(self, None, ax)
 
