@@ -283,19 +283,15 @@ class WaveformExtractor:
         mask = index_ar['segment_index'] == segment_index
         return wfs[mask, :, :]
     
-    def precompute_templates(self, modes=('average', ), quantile_value=None):
+    def precompute_templates(self, modes=('average', 'std')):
         """
         Precompute all template for different "modes":
           * average
           * std
           * median
-          * quantile
         
         The results is cache in memory as 3d ndarray (nunits, nsamples, nchans)
         and also saved as npy file in the folder to avoid recomputation each time.
-        
-        Quantile is cached in memory but not persistent on the disk.
-        
         """
         # TODO : run this in parralel
         
@@ -305,11 +301,7 @@ class WaveformExtractor:
         
         for mode in modes:
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
-            if mode ==  'quantile':
-                key = (mode, quantile_value)
-            else:
-                key = mode
-            self._template_cache[key] = templates
+            self._template_cache[mode] = templates
 
         for i, unit_id in enumerate(unit_ids):
             wfs = self.get_waveforms(unit_id)
@@ -320,27 +312,17 @@ class WaveformExtractor:
                     arr = np.average(wfs, axis=0)
                 elif mode == 'std':
                     arr = np.std(wfs, axis=0)
-                elif mode == 'quantile':
-                    assert quantile_value is not None
-                    arr = np.quantile(wfs, quantile_value, axis=0)
                 else:
-                    raise ValueError('mode must in median/average/std/quantile')
+                    raise ValueError('mode must in median/average/std')
 
-                if mode ==  'quantile':
-                    key = (mode, quantile_value)
-                else:
-                    key = mode
-                self._template_cache[key][i, :, :] = arr
+                self._template_cache[mode][i, :, :] = arr
 
         for mode in modes:
-            if mode ==  'quantile':
-                # not cahced to disk
-                continue
             templates = self._template_cache[mode]
             template_file = self.folder / f'templates_{mode}.npy'
             np.save(template_file, templates)
 
-    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5):
+    def get_all_templates(self, unit_ids=None, mode='average'):
         """
         Return  templates (average waveform) for multiple units.
 
@@ -349,24 +331,17 @@ class WaveformExtractor:
         unit_ids: list or None
             Unit ids to retrieve waveforms for
         mode: str
-            'mean' or 'median' (default), 'std', 'quantile'
-        quantile_value: float
-            quantile value as argument to np.quantile
+            'average' (default) or 'median' , 'std'
 
         Returns
         -------
         templates: np.array
             The returned templates (num_units, num_samples, num_channels)
         """
-        if mode ==  'quantile':
-            key = (mode, quantile_value)
-        else:
-            key = mode
-
-        if key not in self._template_cache:
-            self.precompute_templates(modes=[mode], quantile_value=quantile_value)
+        if mode not in self._template_cache:
+            self.precompute_templates(modes=[mode])
         
-        templates = self._template_cache[key]
+        templates = self._template_cache[mode]
 
         if unit_ids is not None:
             unit_indices = self.sorting.ids_to_indices(unit_ids)
@@ -374,7 +349,7 @@ class WaveformExtractor:
 
         return templates
 
-    def get_template(self, unit_id, mode='average', quantile_value=None, sparsity=None):
+    def get_template(self, unit_id, mode='average', sparsity=None):
         """
         Return template (average waveform).
 
@@ -383,9 +358,7 @@ class WaveformExtractor:
         unit_id: int or str
             Unit id to retrieve waveforms for
         mode: str
-            'average' (default), 'median' , 'std'(standard deviation), 'quantile'
-        quantile_value: float
-            quantile value for argument to np.quantile
+            'average' (default), 'median' , 'std'(standard deviation)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by index as values.
             The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
@@ -396,17 +369,14 @@ class WaveformExtractor:
         template: np.array
             The returned template (num_samples, num_channels)
         """
-        assert mode in ('median', 'average', 'std', 'quantile')
+        assert mode in ('median', 'average', 'std', )
         assert unit_id in self.sorting.unit_ids
 
-        if mode ==  'quantile':
-            key = (mode, quantile_value)
-        else:
-            key = mode
+        key = mode
         
-        if key in self._template_cache:
+        if mode in self._template_cache:
             # already in the global cache
-            templates = self._template_cache[key]
+            templates = self._template_cache[mode]
             unit_ind = self.sorting.id_to_index(unit_id)
             template = templates[unit_ind, :, :]
             if sparsity is not None:
@@ -422,12 +392,9 @@ class WaveformExtractor:
             template = np.average(wfs, axis=0)
         elif mode == 'std':
             template = np.std(wfs, axis=0)
-        elif mode == 'quantile':
-            assert quantile_value is not None, 'enter quantile value'
-            template = np.quantile(wfs, quantile_value, axis=0)
         return template
 
-    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median',
+    def get_template_segment(self, unit_id, segment_index, mode='average',
                              sparsity=None):
         """
         Return template for the specified unit id computed from waveforms of a specific segment.
@@ -439,9 +406,7 @@ class WaveformExtractor:
         segment_index: int
             The segment index to retrieve template from
         mode: str
-            'mean', 'median' (default), 'std'(standard deviation), 'quantile'
-        quantile_value: float
-            quantile value for argument to np.quantile
+            'average'  (default), 'median', 'std'(standard deviation)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by index as values.
             The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
@@ -453,7 +418,7 @@ class WaveformExtractor:
             The returned template (num_samples, num_channels)
 
         """
-        assert mode in ('median', 'average', 'std', 'quantile')
+        assert mode in ('median', 'average', 'std', )
         assert unit_id in self.sorting.unit_ids
         waveforms_segment = self.get_waveforms_segment(segment_index, unit_id,
                                                        sparsity=sparsity)
@@ -463,9 +428,6 @@ class WaveformExtractor:
             return np.mean(waveforms_segment, axis=0)
         elif mode == 'std':
             return np.std(waveforms_segment, axis=0)
-        elif mode == 'quantile':
-            assert quantile_value is not None, 'enter quantile value'
-            return np.quantile(waveforms_segment, quantile_value, axis=0)
 
     def sample_spikes(self):
         nbefore = self.nbefore
