@@ -9,6 +9,7 @@ from .base import load_extractor
 from .core_tools import check_json
 from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 
+_possible_template_modes = ('average', 'std', 'median')
 
 class WaveformExtractor:
     """
@@ -37,7 +38,7 @@ class WaveformExtractor:
     
     >>> # Compute
     >>> we = we.set_params(...)
-    >>> we = we.run(...)
+    >>> we = we.run_extract_waveforms(...)
     
     >>> # Retrieve
     >>> waveforms = we.get_waveforms(unit_id)
@@ -61,13 +62,12 @@ class WaveformExtractor:
         self.recording = recording
         self.sorting = sorting
         self.folder = Path(folder)
-
+        
+        
+        
         # cache in memory
         self._waveforms = {}
-        self._template_std = {}
-        self._template_average = {}
-        self._template_median = {}
-        self._template_quantile = {}
+        self._template_cache = {}
         self._params = {}
 
         if (self.folder / 'params.json').is_file():
@@ -91,6 +91,13 @@ class WaveformExtractor:
         recording = load_extractor(folder / 'recording.json')
         sorting = load_extractor(folder / 'sorting.json')
         we = cls(recording, sorting, folder)
+
+        for mode in _possible_template_modes:
+            # load cached templates
+            template_file = folder / f'templates_{mode}.npy'
+            if template_file.is_file():
+                we._template_cache[mode] = np.load(template_file)
+
         return we
 
     @classmethod
@@ -112,15 +119,17 @@ class WaveformExtractor:
 
     def _reset(self):
         self._waveforms = {}
-        self._template_std = {}
-        self._template_average = {}
-        self._template_median = {}
-        self._template_quantile = {}
+        self._template_cache = {}
         self._params = {}
 
         waveform_folder = self.folder / 'waveforms'
         if waveform_folder.is_dir():
             shutil.rmtree(waveform_folder)
+        for mode in _possible_template_modes:
+            template_file = self.folder / f'templates_{mode}.npy'
+            if template_file.is_file():
+                template_file.unlink()
+
         waveform_folder.mkdir()
 
     def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
@@ -217,7 +226,7 @@ class WaveformExtractor:
         if wfs is None:
             waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
             if not waveform_file.is_file():
-                raise Exception('waveforms not extracted yet : please do WaveformExtractor.run() fisrt')
+                raise Exception('waveforms not extracted yet : please do WaveformExtractor.run_extract_waveforms() fisrt')
 
             wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs
@@ -272,10 +281,76 @@ class WaveformExtractor:
             The returned waveform (num_spikes, num_samples, num_channels)
         """
         wfs, index_ar = self.get_waveforms(unit_id, with_index=True, sparsity=sparsity)
-        segment_index_ar = np.array([i[1] for i in index_ar])
-        return wfs[segment_index_ar == segment_index, :, :]
+        mask = index_ar['segment_index'] == segment_index
+        return wfs[mask, :, :]
+    
+    def precompute_templates(self, modes=('average', 'std')):
+        """
+        Precompute all template for different "modes":
+          * average
+          * std
+          * median
+        
+        The results is cache in memory as 3d ndarray (nunits, nsamples, nchans)
+        and also saved as npy file in the folder to avoid recomputation each time.
+        """
+        # TODO : run this in parralel
+        
+        dtype = self._params['dtype']
+        unit_ids = self.sorting.unit_ids
+        num_chans = self.recording.get_num_channels()
+        
+        for mode in modes:
+            templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
+            self._template_cache[mode] = templates
 
-    def get_template(self, unit_id, mode='median', quantile_value=0.5, sparsity=None):
+        for i, unit_id in enumerate(unit_ids):
+            wfs = self.get_waveforms(unit_id)
+            for mode in modes:
+                if mode == 'median':
+                    arr = np.median(wfs, axis=0)
+                elif mode == 'average':
+                    arr = np.average(wfs, axis=0)
+                elif mode == 'std':
+                    arr = np.std(wfs, axis=0)
+                else:
+                    raise ValueError('mode must in median/average/std')
+
+                self._template_cache[mode][i, :, :] = arr
+
+        for mode in modes:
+            templates = self._template_cache[mode]
+            template_file = self.folder / f'templates_{mode}.npy'
+            np.save(template_file, templates)
+
+    def get_all_templates(self, unit_ids=None, mode='average'):
+        """
+        Return  templates (average waveform) for multiple units.
+
+        Parameters
+        ----------
+        unit_ids: list or None
+            Unit ids to retrieve waveforms for
+        mode: str
+            'average' (default) or 'median' , 'std'
+
+        Returns
+        -------
+        templates: np.array
+            The returned templates (num_units, num_samples, num_channels)
+        """
+        if mode not in self._template_cache:
+            self.precompute_templates(modes=[mode])
+        
+        templates = self._template_cache[mode]
+
+        if unit_ids is not None:
+            unit_indices = self.sorting.ids_to_indices(unit_ids)
+            templates = templates[unit_indices, :, :]
+
+        return templates
+
+    def get_template(self, unit_id, mode='average', sparsity=None):
         """
         Return template (average waveform).
 
@@ -284,9 +359,7 @@ class WaveformExtractor:
         unit_id: int or str
             Unit id to retrieve waveforms for
         mode: str
-            'mean', 'median' (default), 'std'(standard deviation), 'quantile'
-        quantile_value: float
-            quantile value for argument to np.quantile
+            'average' (default), 'median' , 'std'(standard deviation)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by index as values.
             The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
@@ -297,80 +370,32 @@ class WaveformExtractor:
         template: np.array
             The returned template (num_samples, num_channels)
         """
-        assert mode in ('median', 'average', 'std', 'quantile')
+        assert mode in _possible_template_modes
         assert unit_id in self.sorting.unit_ids
 
+        key = mode
+        
+        if mode in self._template_cache:
+            # already in the global cache
+            templates = self._template_cache[mode]
+            unit_ind = self.sorting.id_to_index(unit_id)
+            template = templates[unit_ind, :, :]
+            if sparsity is not None:
+                chan_inds = self.recording.ids_to_indices(sparsity[unit_id])
+                template = template[:, chan_inds]
+            return template
+        
+        # compute from waveforms
+        wfs = self.get_waveforms(unit_id, sparsity=sparsity)
         if mode == 'median':
-            if unit_id in self._template_median and sparsity is None:
-                return self._template_median[unit_id]
-            else:
-                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
-                template = np.median(wfs, axis=0)
-                if sparsity is None:
-                    self._template_median[unit_id] = template
-                return template
+            template = np.median(wfs, axis=0)
         elif mode == 'average':
-            if unit_id in self._template_average and sparsity is None:
-                return self._template_average[unit_id]
-            else:
-                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
-                template = np.average(wfs, axis=0)
-                if sparsity is None:
-                    self._template_average[unit_id] = template
-                return template
+            template = np.average(wfs, axis=0)
         elif mode == 'std':
-            if unit_id in self._template_std and sparsity is None:
-                return self._template_std[unit_id]
-            else:
-                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
-                template = np.std(wfs, axis=0)
-                if sparsity is None:
-                    self._template_std[unit_id] = template
-                return template
-        elif mode == 'quantile':
-            if quantile_value in self._template_quantile and unit_id in self._template_quantile[quantile_value]\
-                    and sparsity is None:
-                return self._template_quantile[quantile_value][unit_id]
-            else:
-                wfs = self.get_waveforms(unit_id, sparsity=sparsity)
-                template = np.quantile(wfs, quantile_value, axis=0)
-                if sparsity is None:
-                    if quantile_value not in self._template_quantile:
-                        self._template_quantile[quantile_value] = dict()
-                    self._template_quantile[quantile_value][unit_id] = template
-                return template
+            template = np.std(wfs, axis=0)
+        return template
 
-    def get_all_templates(self, unit_ids=None, mode='median', quantile_value=0.5):
-        """
-        Return  templates (average waveform) for multiple units.
-
-        Parameters
-        ----------
-        unit_ids: list or None
-            Unit ids to retrieve waveforms for
-        mode: str
-            'mean' or 'median' (default), 'std', 'quantile'
-        quantile_value: float
-            quantile value as argument to np.quantile
-
-        Returns
-        -------
-        templates: np.array
-            The returned templates (num_units, num_samples, num_channels)
-        """
-        if unit_ids is None:
-            unit_ids = self.sorting.unit_ids
-        num_chans = self.recording.get_num_channels()
-
-        dtype = self._params['dtype']
-        templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
-
-        for i, unit_id in enumerate(unit_ids):
-            templates[i, :, :] = self.get_template(unit_id, mode=mode, quantile_value=quantile_value)
-
-        return templates
-
-    def get_template_segment(self, unit_id, segment_index, quantile_value=None, mode='median',
+    def get_template_segment(self, unit_id, segment_index, mode='average',
                              sparsity=None):
         """
         Return template for the specified unit id computed from waveforms of a specific segment.
@@ -382,9 +407,7 @@ class WaveformExtractor:
         segment_index: int
             The segment index to retrieve template from
         mode: str
-            'mean', 'median' (default), 'std'(standard deviation), 'quantile'
-        quantile_value: float
-            quantile value for argument to np.quantile
+            'average'  (default), 'median', 'std'(standard deviation)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by index as values.
             The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
@@ -396,7 +419,7 @@ class WaveformExtractor:
             The returned template (num_samples, num_channels)
 
         """
-        assert mode in ('median', 'average', 'std', 'quantile')
+        assert mode in ('median', 'average', 'std', )
         assert unit_id in self.sorting.unit_ids
         waveforms_segment = self.get_waveforms_segment(segment_index, unit_id,
                                                        sparsity=sparsity)
@@ -406,9 +429,6 @@ class WaveformExtractor:
             return np.mean(waveforms_segment, axis=0)
         elif mode == 'std':
             return np.std(waveforms_segment, axis=0)
-        elif mode == 'quantile':
-            assert quantile_value is not None, 'enter quantile value'
-            return np.quantile(waveforms_segment, quantile_value, axis=0)
 
     def sample_spikes(self):
         nbefore = self.nbefore
@@ -433,7 +453,7 @@ class WaveformExtractor:
 
         return selected_spikes
 
-    def run(self, **job_kwargs):
+    def run_extract_waveforms(self, **job_kwargs):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
         num_chans = self.recording.get_num_channels()
@@ -607,6 +627,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
 def extract_waveforms(recording, sorting, folder,
                       load_if_exists=False,
+                      precompute_template=('average', ),
                       ms_before=3., ms_after=4.,
                       max_spikes_per_unit=500,
                       overwrite=False,
@@ -628,6 +649,8 @@ def extract_waveforms(recording, sorting, folder,
     load_if_exists: bool
         If True and waveforms have already been extracted in the specified folder, they are loaded
         and not recomputed.
+    precompute_template: None or list
+        Precompute average/std/median for template. If None not precompute.
     ms_before: float
         Time in ms to cut before spike peak
     ms_after: float
@@ -642,6 +665,7 @@ def extract_waveforms(recording, sorting, folder,
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
+
 
     {}
 
@@ -661,7 +685,10 @@ def extract_waveforms(recording, sorting, folder,
         we = WaveformExtractor.create(recording, sorting, folder)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
                       return_scaled=return_scaled)
-        we.run(**job_kwargs)
+        we.run_extract_waveforms(**job_kwargs)
+
+        if precompute_template is not None:
+            we.precompute_templates(modes=precompute_template)
 
     return we
 

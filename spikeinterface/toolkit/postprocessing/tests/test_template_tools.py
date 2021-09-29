@@ -26,7 +26,7 @@ def setup_module():
 
     we = WaveformExtractor.create(recording, sorting, 'toy_waveforms')
     we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
-    we.run(n_jobs=1, chunk_size=30000)
+    we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
 
 
 def test_get_template_amplitudes():
