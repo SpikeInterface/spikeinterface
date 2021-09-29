@@ -31,7 +31,7 @@ def get_template_amplitudes(waveform_extractor, peak_sign='neg', mode='extremum'
     peak_values = {}
 
     for unit_id in unit_ids:
-        template = waveform_extractor.get_template(unit_id)
+        template = waveform_extractor.get_template(unit_id, mode='average')
 
         if mode == 'extremum':
             if peak_sign == 'both':
@@ -214,7 +214,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
         chan_id = extremum_channels_ids[unit_id]
         chan_ind = recording.id_to_index(chan_id)
 
-        template = waveform_extractor.get_template(unit_id)
+        template = waveform_extractor.get_template(unit_id, mode='average')
 
         if peak_sign == 'both':
             peak_pos = np.argmax(np.abs(template[:, chan_ind]))
@@ -252,7 +252,7 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign='neg'):
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
-        template = waveform_extractor.get_template(unit_id)
+        template = waveform_extractor.get_template(unit_id, mode='average')
         chan_id = extremum_channels_ids[unit_id]
         chan_ind = waveform_extractor.recording.id_to_index(chan_id)
         unit_amplitudes[unit_id] = template[before, chan_ind]

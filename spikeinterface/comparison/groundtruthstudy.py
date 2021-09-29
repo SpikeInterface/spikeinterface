@@ -209,7 +209,7 @@ class GroundTruthStudy:
             shutil.rmtree(waveform_folder)
         we = WaveformExtractor.create(rec, gt_sorting, waveform_folder)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
-        we.run(n_jobs=n_jobs, total_memory=total_memory)
+        we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
 
         # metrics
         metrics = compute_quality_metrics(we, metric_names=metric_names)
