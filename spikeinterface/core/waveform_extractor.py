@@ -9,6 +9,7 @@ from .base import load_extractor
 from .core_tools import check_json
 from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 
+_possible_template_modes = ('average', 'std', 'median')
 
 class WaveformExtractor:
     """
@@ -91,7 +92,7 @@ class WaveformExtractor:
         sorting = load_extractor(folder / 'sorting.json')
         we = cls(recording, sorting, folder)
 
-        for mode in ['average', 'std', 'mad']:
+        for mode in _possible_template_modes:
             # load cached templates
             template_file = folder / f'templates_{mode}.npy'
             if template_file.is_file():
@@ -124,7 +125,7 @@ class WaveformExtractor:
         waveform_folder = self.folder / 'waveforms'
         if waveform_folder.is_dir():
             shutil.rmtree(waveform_folder)
-        for mode in ['average', 'std', 'mad']:
+        for mode in _possible_template_modes:
             template_file = self.folder / f'templates_{mode}.npy'
             if template_file.is_file():
                 template_file.unlink()
@@ -369,7 +370,7 @@ class WaveformExtractor:
         template: np.array
             The returned template (num_samples, num_channels)
         """
-        assert mode in ('median', 'average', 'std', )
+        assert mode in _possible_template_modes
         assert unit_id in self.sorting.unit_ids
 
         key = mode
