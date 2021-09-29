@@ -374,7 +374,7 @@ class WaveformExtractor:
 
         return templates
 
-    def get_template(self, unit_id, mode='median', quantile_value=None, sparsity=None):
+    def get_template(self, unit_id, mode='average', quantile_value=None, sparsity=None):
         """
         Return template (average waveform).
 
@@ -383,7 +383,7 @@ class WaveformExtractor:
         unit_id: int or str
             Unit id to retrieve waveforms for
         mode: str
-            'mean', 'median' (default), 'std'(standard deviation), 'quantile'
+            'average' (default), 'median' , 'std'(standard deviation), 'quantile'
         quantile_value: float
             quantile value for argument to np.quantile
         sparsity: dict or None
