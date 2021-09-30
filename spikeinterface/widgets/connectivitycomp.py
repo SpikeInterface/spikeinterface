@@ -101,10 +101,8 @@ class StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(BaseWidget):
             for i in range(self.similarity_ranges.size - 1):
                 cmin, cmax = self.similarity_ranges[i], self.similarity_ranges[i + 1]
                 amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
-                value = np.mean(all_errors[amin:amax])
-                mean_rerrors += [np.nan_to_num(value)]
-                value = np.std(all_errors[amin:amax])
-                std_errors += [np.nan_to_num(value)]
+                mean_rerrors += [np.nanmean(all_errors[amin:amax])]
+                std_errors += [np.nanstd(all_errors[amin:amax])]
             
             xaxis = np.diff(self.similarity_ranges)/2 + self.similarity_ranges[:-1]
 

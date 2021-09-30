@@ -66,8 +66,7 @@ class CollisionGtStudy(GroundTruthStudy):
         all_similarities = all_similarities[order]
         all_recall_scores = all_recall_scores[order, :]
 
-        mean_recall_scores = np.mean(all_recall_scores, axis=0)
-        mean_recall_scores = np.nan_to_num(mean_recall_scores)
+        mean_recall_scores = np.nanmean(all_recall_scores, axis=0)
 
         return mean_recall_scores
 
@@ -85,7 +84,7 @@ class CollisionGtStudy(GroundTruthStudy):
         for i in range(similarity_bins.size - 1):
             cmin, cmax = similarity_bins[i], similarity_bins[i + 1]
             amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
-            mean_recall_scores = np.mean(all_recall_scores[amin:amax], axis=0)
-            result[(cmin, cmax)] = np.nan_to_num(mean_recall_scores)
+            mean_recall_scores = np.nanmean(all_recall_scores[amin:amax], axis=0)
+            result[(cmin, cmax)] = mean_recall_scores
 
         return result

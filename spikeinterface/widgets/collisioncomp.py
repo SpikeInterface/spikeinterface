@@ -328,10 +328,8 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
             for i in range(self.similarity_ranges.size - 1):
                 cmin, cmax = self.similarity_ranges[i], self.similarity_ranges[i + 1]
                 amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
-                value = np.mean(all_recall_scores[amin:amax])
-                mean_recall_scores += [np.nan_to_num(value)]
-                value = np.std(all_recall_scores[amin:amax])
-                std_recall_scores += [np.nan_to_num(value)]
+                mean_recall_scores += [np.nanmean(all_recall_scores[amin:amax])]
+                std_recall_scores += [np.nanstd(all_recall_scores[amin:amax])]
 
             xaxis = np.diff(self.similarity_ranges)/2 + self.similarity_ranges[:-1]
 

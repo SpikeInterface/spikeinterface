@@ -73,8 +73,14 @@ class ConnectivityGTComparison(GroundTruthComparison):
             amin = self._center - int(window_ms/self.bin_ms)
             amax = self._center + int(window_ms/self.bin_ms) + 1
 
-        return np.abs((1 - self.correlograms['estimated']/self.correlograms['true'])[:,:,amin:amax])
-        
+
+        res = np.nan * np.ones((self.nb_cells, self.nb_cells, amax - amin))
+
+        indices = np.where(self.correlograms['true'][:,:,amin:amax] > 0)
+        res[indices] = np.abs(1 - self.correlograms['estimated'][:,:,amin:amax]/self.correlograms['true'][:,:,amin:amax])[indices]
+
+        return res
+
     def error(self, window_ms=None):
         data = self._get_slice(window_ms)
         res = data.reshape(self.nb_cells**2, data.shape[2])

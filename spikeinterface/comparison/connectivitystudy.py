@@ -47,11 +47,10 @@ class ConnectivityGtStudy(GroundTruthStudy):
                     try:  
                         comp = self.comparisons[(rec_name, sorter_name)]
                         similarities, errors = comp.compute_connectivity_by_similarity(similarity_matrix[rec_name])
+                        all_similarities.append(similarities)
+                        all_errors.append(errors)
                     except Exception:
                         pass
-
-                    all_similarities.append(similarities)
-                    all_errors.append(errors)
                 
                 self.all_similarities[sorter_name] = np.concatenate(all_similarities, axis=0)
                 self.all_errors[sorter_name] = np.concatenate(all_errors, axis=0)
@@ -70,7 +69,7 @@ class ConnectivityGtStudy(GroundTruthStudy):
         for i in range(similarity_bins.size - 1):
             cmin, cmax = similarity_bins[i], similarity_bins[i + 1]
             amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
-            mean_errors = np.mean(all_errors[amin:amax], axis=0)
-            result[(cmin, cmax)] = np.nan_to_num(mean_errors)
+            mean_errors = np.nanmean(all_errors[amin:amax], axis=0)
+            result[(cmin, cmax)] = mean_errors
 
         return result
