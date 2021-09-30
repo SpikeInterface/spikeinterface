@@ -113,8 +113,8 @@ class TridesclousSorter(BaseSorter):
         tdc_dataio = tdc.DataIO(dirname=str(output_folder))
 
         tdc_dataio.set_data_source(type='RawData', filenames=file_paths,
-                                   dtype=dtype, sample_rate=sr,
-                                   total_channel=num_chan, offset=file_offset)
+                                   dtype=dtype, sample_rate=float(sr),
+                                   total_channel=int(num_chan), offset=int(file_offset))
         tdc_dataio.set_probe_file(str(prb_file))
         if verbose:
             print(tdc_dataio)
