@@ -316,3 +316,429 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
     
     nearest_neighbor_isolation = np.min(isolation)
     return nearest_neighbor_isolation
+
+def nearest_neighbors_noise_overlap(all_pcs, all_labels, this_unit_id, max_spikes_for_nn, n_neighbors, seed):
+    """ Calculates unit noise overlap based on NearestNeighbors search in PCA space
+
+    Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
+
+    Rough logic
+    -----------
+    1) Generate a noise cluster by randomly sampling from recording
+    2) Compute the isolation function between noise cluster and target cluster
+    
+    Implementation
+    --------------
+    Note that the noise cluster must have the same number of spikes as the target cluster
+    Let A and B be clusters from sorting. 
+    
+    See docstring for nearest_neighbors_isolation for definition of isolation function.
+    
+    Parameters:
+    -----------
+    all_pcs: array_like, (num_spikes, PCs)
+        2D array of PCs for all spikes
+    all_labels: array_like, (num_spikes, )
+        1D array of cluster labels for all spikes
+    this_unit_id: int
+        ID of unit for which this metric will be calculated
+    max_spikes_for_nn: int
+        max number of spikes to use per cluster
+    n_neighbors: int
+        number of neighbors to check membership of
+    seed: int
+        seed for random subsampling of spikes
+
+    Outputs:
+    --------
+    nearest_neighbor_isolation : float
+    
+    """
+
+    # set random seed
+    rng = np.random.default_rng(seed=seed)
+    
+    
+
+    n_waveforms_per_unit = np.array([len(wf) for wf in waveforms])
+    n_spikes_per_unit = np.array([len(self._metric_data._sorting.get_unit_spike_train(u)) for u in self._metric_data._unit_ids])
+
+    if np.all(n_waveforms_per_unit < max_spikes_per_unit_for_noise_overlap):
+        # in this case it means that waveforms have been computed on
+        # less spikes than max_spikes_per_unit_for_noise_overlap --> recompute
+        kwargs['recompute_info'] = True
+        waveforms = st.postprocessing.get_unit_waveforms(
+                self._metric_data._recording,
+                self._metric_data._sorting,
+                unit_ids = self._metric_data._unit_ids,
+                # max_spikes_per_unit = max_spikes_per_unit_for_noise_overlap,
+                **kwargs)
+    elif np.all(n_waveforms_per_unit >= max_spikes_per_unit_for_noise_overlap):
+        # waveforms computed on more spikes than needed --> sample
+        for i_w, wfs in enumerate(waveforms):
+            if len(wfs) > max_spikes_per_unit_for_noise_overlap:
+                selecte_idxs = np.random.permutation(len(wfs))[:max_spikes_per_unit_for_noise_overlap]
+                waveforms[i_w] = wfs[selecte_idxs]
+
+    # get channel idx and locations
+    channel_idx = np.arange(self._metric_data._recording.get_num_channels())
+    channel_locations = self._metric_data._channel_locations
+
+    if num_channels_to_compare > len(channel_idx):
+        num_channels_to_compare = len(channel_idx)
+
+    # get noise snippets
+    min_time = min([self._metric_data._sorting.get_unit_spike_train(unit_id=unit)[0]
+                for unit in self._metric_data._sorting.get_unit_ids()])
+    max_time = max([self._metric_data._sorting.get_unit_spike_train(unit_id=unit)[-1]
+                for unit in self._metric_data._sorting.get_unit_ids()])
+    max_spikes = np.max([len(self._metric_data._sorting.get_unit_spike_train(u)) for u in self._metric_data._unit_ids])
+    if max_spikes < max_spikes_per_unit_for_noise_overlap:
+        max_spikes_per_unit_for_noise_overlap = max_spikes
+    times_control = np.random.choice(np.arange(min_time, max_time),
+                size=max_spikes_per_unit_for_noise_overlap, replace=False)
+    clip_size = waveforms[0].shape[-1]
+    # np.array, (n_spikes, n_channels, n_timepoints)
+    clips_control_max = np.stack(self._metric_data._recording.get_snippets(snippet_len=clip_size,
+                                                                            reference_frames=times_control))
+
+    noise_overlaps = []
+    for i_u, unit in enumerate(self._metric_data._unit_ids):
+        # show progress bar
+        if self._metric_data.verbose:
+            printProgressBar(i_u + 1, len(self._metric_data._unit_ids))
+
+        # get spike and noise snippets
+        # np.array, (n_spikes, n_channels, n_timepoints)
+        clips = waveforms[i_u]
+        clips_control = clips_control_max
+
+        # make noise snippets size equal to number of spikes
+        if len(clips) < max_spikes_per_unit_for_noise_overlap:
+            selected_idxs = np.random.choice(np.arange(max_spikes_per_unit_for_noise_overlap),
+                                            size=len(clips), replace=False)
+            clips_control = clips_control[selected_idxs]
+        else:
+            selected_idxs = np.random.choice(np.arange(len(clips)),
+                                            size=max_spikes_per_unit_for_noise_overlap,
+                                            replace=False)
+            clips = clips[selected_idxs]
+
+        num_clips = len(clips)
+
+        # compute weight for correcting noise snippets
+        template = np.median(clips, axis=0)
+        chmax, tmax = np.unravel_index(np.argmax(np.abs(template)), template.shape)
+        max_val = template[chmax, tmax]
+        weighted_clips_control = np.zeros(clips_control.shape)
+        weights = np.zeros(num_clips)
+        for j in range(num_clips):
+            clip0 = clips_control[j, :, :]
+            val0 = clip0[chmax, tmax]
+            weight0 = val0 * max_val
+            weights[j] = weight0
+            weighted_clips_control[j, :, :] = clip0 * weight0
+
+        noise_template = np.sum(weighted_clips_control, axis=0)
+        noise_template = noise_template / np.sum(np.abs(noise_template)) * np.sum(np.abs(template))
+
+        # subtract it out
+        for j in range(num_clips):
+            clips[j, :, :] = _subtract_clip_component(clips[j, :, :], noise_template)
+            clips_control[j, :, :] = _subtract_clip_component(clips_control[j, :, :], noise_template)
+
+        # use only subsets of channels that are closest to peak channel
+        channels_to_use = find_neighboring_channels(chmax, channel_idx,
+                                num_channels_to_compare, channel_locations)
+        channels_to_use = np.sort(channels_to_use)
+        clips = clips[:,channels_to_use,:]
+        clips_control = clips_control[:,channels_to_use,:]
+
+        all_clips = np.concatenate([clips, clips_control], axis=0)
+        num_channels_wfs = all_clips.shape[1]
+        num_samples_wfs = all_clips.shape[2]
+        all_features = _compute_pca_features(all_clips.reshape((num_clips * 2,
+                                                                num_channels_wfs * num_samples_wfs)), num_features)
+        num_all_clips=len(all_clips)
+        distances, indices = NearestNeighbors(n_neighbors=min(num_knn + 1, num_all_clips - 1), algorithm='auto').fit(
+            all_features.T).kneighbors()
+
+        group_id = np.zeros((num_clips * 2))
+        group_id[0:num_clips] = 1
+        group_id[num_clips:] = 2
+        num_match = 0
+        total = 0
+        for j in range(num_clips * 2):
+            for k in range(1, min(num_knn + 1, num_all_clips - 1)):
+                ind = indices[j][k]
+                if group_id[j] == group_id[ind]:
+                    num_match = num_match + 1
+                total = total + 1
+        pct_match = num_match / total
+        noise_overlap = 1 - pct_match
+        noise_overlaps.append(noise_overlap)
+    noise_overlaps = np.asarray(noise_overlaps)
+    if save_property_or_features:
+        self.save_property_or_features(self._metric_data._sorting, noise_overlaps, self._metric_name)
+    return noise_overlaps
+
+def compute_noise_overlaps(
+        sorting,
+        recording,
+        num_channels_to_compare=NoiseOverlap.params['num_channels_to_compare'],
+        num_features=NoiseOverlap.params['num_features'],
+        num_knn=NoiseOverlap.params['num_knn'],
+        max_spikes_per_unit_for_noise_overlap=NoiseOverlap.params['max_spikes_per_unit_for_noise_overlap'],
+        unit_ids=None,
+        **kwargs
+):
+    """
+    Computes and returns the noise overlaps in the sorted dataset.
+    Noise overlap estimates the fraction of ‘‘noise events’’ in a cluster, i.e., above-threshold events not associated
+    with true firings of this or any of the other clustered units. A large noise overlap implies a high false-positive
+    rate.
+
+    Implementation from ml_ms4alg. For more information see https://doi.org/10.1016/j.neuron.2017.08.030
+
+    Parameters
+    ----------
+    sorting: SortingExtractor
+        The sorting result to be evaluated.
+    recording: RecordingExtractor
+        The given recording extractor from which to extract amplitudes
+    num_features: int
+        Number of features to use for PCA
+    num_knn: int
+        Number of nearest neighbors
+    max_spikes_per_unit_for_noise_overlap: int
+        Number of waveforms to use for noise overlaps estimation
+    unit_ids: list
+        List of unit ids to compute metric for. If not specified, all units are used
+    **kwargs: keyword arguments
+        Keyword arguments among the following:
+            method: str
+                If 'absolute' (default), amplitudes are absolute amplitudes in uV are returned.
+                If 'relative', amplitudes are returned as ratios between waveform amplitudes and template amplitudes
+            peak: str
+                If maximum channel has to be found among negative peaks ('neg'), positive ('pos') or
+                both ('both' - default)
+            frames_before: int
+                Frames before peak to compute amplitude
+            frames_after: int
+                Frames after peak to compute amplitude
+            apply_filter: bool
+                If True, recording is bandpass-filtered
+            freq_min: float
+                High-pass frequency for optional filter (default 300 Hz)
+            freq_max: float
+                Low-pass frequency for optional filter (default 6000 Hz)
+            grouping_property: str
+                Property to group channels. E.g. if the recording extractor has the 'group' property and
+                'grouping_property' is 'group', then waveforms are computed group-wise.
+            ms_before: float
+                Time period in ms to cut waveforms before the spike events
+            ms_after: float
+                Time period in ms to cut waveforms after the spike events
+            dtype: dtype
+                The numpy dtype of the waveforms
+            compute_property_from_recording: bool
+                If True and 'grouping_property' is given, the property of each unit is assigned as the corresponding
+                property of the recording extractor channel on which the average waveform is the largest
+            max_channels_per_waveforms: int or None
+                Maximum channels per waveforms to return. If None, all channels are returned
+            n_jobs: int
+                Number of parallel jobs (default 1)
+            memmap: bool
+                If True, waveforms are saved as memmap object (recommended for long recordings with many channels)
+            save_property_or_features: bool
+                If true, it will save features in the sorting extractor
+            recompute_info: bool
+                    If True, waveforms are recomputed
+            max_spikes_per_unit: int
+                The maximum number of spikes to extract per unit
+            seed: int
+                Random seed for reproducibility
+            verbose: bool
+                If True, will be verbose in metric computation
+
+    Returns
+    ----------
+    noise_overlaps: np.ndarray
+        The noise_overlaps of the sorted units.
+    """
+    params_dict = update_all_param_dicts_with_kwargs(kwargs)
+
+    if unit_ids is None:
+        unit_ids = sorting.get_unit_ids()
+
+    md = MetricData(sorting=sorting, sampling_frequency=recording.get_sampling_frequency(), recording=recording,
+                    apply_filter=params_dict["apply_filter"], freq_min=params_dict["freq_min"],
+                    duration_in_frames=None, freq_max=params_dict["freq_max"], unit_ids=unit_ids,
+                    verbose=params_dict['verbose'])
+
+    noise_overlap = NoiseOverlap(metric_data=md)
+    noise_overlaps = noise_overlap.compute_metric(num_channels_to_compare,
+                                                  max_spikes_per_unit_for_noise_overlap,
+                                                  num_features, num_knn, **kwargs)
+    return noise_overlaps
+
+class NoiseOverlap(QualityMetric):
+    installed = True  # check at class level if installed or not
+    installation_mesg = ""  # err
+    params = OrderedDict([('num_channels_to_compare', 13),
+                          ('max_spikes_per_unit_for_noise_overlap', 1000),
+                          ('num_features', 10),
+                          ('num_knn', 6)])
+    curator_name = "ThresholdNoiseOverlaps"
+
+    def __init__(self, metric_data):
+        QualityMetric.__init__(self, metric_data, metric_name="noise_overlap")
+
+        if not metric_data.has_recording():
+            raise ValueError("MetricData object must have a recording")
+
+    def compute_metric(self, num_channels_to_compare, max_spikes_per_unit_for_noise_overlap,
+                        num_features, num_knn, **kwargs):
+
+        # Make sure max_spikes_per_unit_for_noise_overlap is not None
+        assert max_spikes_per_unit_for_noise_overlap is not None, "'max_spikes_per_unit_for_noise_overlap' must be an integer."
+
+        # update keyword arg in case it's already specified to something
+        kwargs['max_spikes_per_unit'] = max_spikes_per_unit_for_noise_overlap
+        params_dict = update_all_param_dicts_with_kwargs(kwargs)
+        save_property_or_features = params_dict['save_property_or_features']
+        seed = params_dict['seed']
+
+        # set random seed
+        if seed is not None:
+            np.random.seed(seed)
+
+        # first, get waveform snippets of every unit (at most n spikes)
+        # waveforms = List (units,) of np.array (n_spikes, n_channels, n_timepoints)
+        waveforms = st.postprocessing.get_unit_waveforms(
+            self._metric_data._recording,
+            self._metric_data._sorting,
+            unit_ids=self._metric_data._unit_ids,
+            **kwargs)
+
+        n_waveforms_per_unit = np.array([len(wf) for wf in waveforms])
+        n_spikes_per_unit = np.array([len(self._metric_data._sorting.get_unit_spike_train(u)) for u in self._metric_data._unit_ids])
+
+        if np.all(n_waveforms_per_unit < max_spikes_per_unit_for_noise_overlap):
+            # in this case it means that waveforms have been computed on
+            # less spikes than max_spikes_per_unit_for_noise_overlap --> recompute
+            kwargs['recompute_info'] = True
+            waveforms = st.postprocessing.get_unit_waveforms(
+                    self._metric_data._recording,
+                    self._metric_data._sorting,
+                    unit_ids = self._metric_data._unit_ids,
+                    # max_spikes_per_unit = max_spikes_per_unit_for_noise_overlap,
+                    **kwargs)
+        elif np.all(n_waveforms_per_unit >= max_spikes_per_unit_for_noise_overlap):
+            # waveforms computed on more spikes than needed --> sample
+            for i_w, wfs in enumerate(waveforms):
+                if len(wfs) > max_spikes_per_unit_for_noise_overlap:
+                    selecte_idxs = np.random.permutation(len(wfs))[:max_spikes_per_unit_for_noise_overlap]
+                    waveforms[i_w] = wfs[selecte_idxs]
+
+        # get channel idx and locations
+        channel_idx = np.arange(self._metric_data._recording.get_num_channels())
+        channel_locations = self._metric_data._channel_locations
+
+        if num_channels_to_compare > len(channel_idx):
+            num_channels_to_compare = len(channel_idx)
+
+        # get noise snippets
+        min_time = min([self._metric_data._sorting.get_unit_spike_train(unit_id=unit)[0]
+                    for unit in self._metric_data._sorting.get_unit_ids()])
+        max_time = max([self._metric_data._sorting.get_unit_spike_train(unit_id=unit)[-1]
+                    for unit in self._metric_data._sorting.get_unit_ids()])
+        max_spikes = np.max([len(self._metric_data._sorting.get_unit_spike_train(u)) for u in self._metric_data._unit_ids])
+        if max_spikes < max_spikes_per_unit_for_noise_overlap:
+            max_spikes_per_unit_for_noise_overlap = max_spikes
+        times_control = np.random.choice(np.arange(min_time, max_time),
+                    size=max_spikes_per_unit_for_noise_overlap, replace=False)
+        clip_size = waveforms[0].shape[-1]
+        # np.array, (n_spikes, n_channels, n_timepoints)
+        clips_control_max = np.stack(self._metric_data._recording.get_snippets(snippet_len=clip_size,
+                                                                               reference_frames=times_control))
+
+        noise_overlaps = []
+        for i_u, unit in enumerate(self._metric_data._unit_ids):
+            # show progress bar
+            if self._metric_data.verbose:
+                printProgressBar(i_u + 1, len(self._metric_data._unit_ids))
+
+            # get spike and noise snippets
+            # np.array, (n_spikes, n_channels, n_timepoints)
+            clips = waveforms[i_u]
+            clips_control = clips_control_max
+
+            # make noise snippets size equal to number of spikes
+            if len(clips) < max_spikes_per_unit_for_noise_overlap:
+                selected_idxs = np.random.choice(np.arange(max_spikes_per_unit_for_noise_overlap),
+                                                size=len(clips), replace=False)
+                clips_control = clips_control[selected_idxs]
+            else:
+                selected_idxs = np.random.choice(np.arange(len(clips)),
+                                                size=max_spikes_per_unit_for_noise_overlap,
+                                                replace=False)
+                clips = clips[selected_idxs]
+
+            num_clips = len(clips)
+
+            # compute weight for correcting noise snippets
+            template = np.median(clips, axis=0)
+            chmax, tmax = np.unravel_index(np.argmax(np.abs(template)), template.shape)
+            max_val = template[chmax, tmax]
+            weighted_clips_control = np.zeros(clips_control.shape)
+            weights = np.zeros(num_clips)
+            for j in range(num_clips):
+                clip0 = clips_control[j, :, :]
+                val0 = clip0[chmax, tmax]
+                weight0 = val0 * max_val
+                weights[j] = weight0
+                weighted_clips_control[j, :, :] = clip0 * weight0
+
+            noise_template = np.sum(weighted_clips_control, axis=0)
+            noise_template = noise_template / np.sum(np.abs(noise_template)) * np.sum(np.abs(template))
+
+            # subtract it out
+            for j in range(num_clips):
+                clips[j, :, :] = _subtract_clip_component(clips[j, :, :], noise_template)
+                clips_control[j, :, :] = _subtract_clip_component(clips_control[j, :, :], noise_template)
+
+            # use only subsets of channels that are closest to peak channel
+            channels_to_use = find_neighboring_channels(chmax, channel_idx,
+                                    num_channels_to_compare, channel_locations)
+            channels_to_use = np.sort(channels_to_use)
+            clips = clips[:,channels_to_use,:]
+            clips_control = clips_control[:,channels_to_use,:]
+
+            all_clips = np.concatenate([clips, clips_control], axis=0)
+            num_channels_wfs = all_clips.shape[1]
+            num_samples_wfs = all_clips.shape[2]
+            all_features = _compute_pca_features(all_clips.reshape((num_clips * 2,
+                                                                    num_channels_wfs * num_samples_wfs)), num_features)
+            num_all_clips=len(all_clips)
+            distances, indices = NearestNeighbors(n_neighbors=min(num_knn + 1, num_all_clips - 1), algorithm='auto').fit(
+                all_features.T).kneighbors()
+
+            group_id = np.zeros((num_clips * 2))
+            group_id[0:num_clips] = 1
+            group_id[num_clips:] = 2
+            num_match = 0
+            total = 0
+            for j in range(num_clips * 2):
+                for k in range(1, min(num_knn + 1, num_all_clips - 1)):
+                    ind = indices[j][k]
+                    if group_id[j] == group_id[ind]:
+                        num_match = num_match + 1
+                    total = total + 1
+            pct_match = num_match / total
+            noise_overlap = 1 - pct_match
+            noise_overlaps.append(noise_overlap)
+        noise_overlaps = np.asarray(noise_overlaps)
+        if save_property_or_features:
+            self.save_property_or_features(self._metric_data._sorting, noise_overlaps, self._metric_name)
+        return noise_overlaps
