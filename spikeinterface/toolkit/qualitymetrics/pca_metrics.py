@@ -5,6 +5,7 @@ import scipy.stats
 import scipy.spatial.distance
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import NearestNeighbors
+from ..utils import get_random_data_chunks
 
 from ..postprocessing import WaveformPrincipalComponent
 
@@ -64,7 +65,21 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neig
             nn_isolation = nearest_neighbors_isolation(pcs_flat, labels, unit_id, 
                                                        max_spikes_for_nn, n_neighbors, seed)
             pc_metrics['nn_isolation'][unit_id] = nn_isolation
-    
+
+        if 'nearest_neighbor_noise_overlap' in metric_names:
+            # get random snippets from the recording to create a noise cluster
+            recording = pca.waveform_extractor.recording()
+            random_data_chunks = get_random_data_chunks(recording, num_chunks_per_segment=max_spikes_for_nn,
+                                                        chunk_size=10000, seed=seed)
+            # correct for bias
+
+            # project onto same PCs
+            # eigenvectors = pca.get_eigenvectors()
+            # noise_pcs = project(random_data_chunks, eigenvectors)
+            # noise_pcs_flat = noise_pcs.reshape(noise_pcs.shape[0], -1)
+            nn_noise_overlap = nearest_neighbors_noise_overlap(pcs_flat, labels, unit_id, 
+                                                               max_spikes_for_nn, noise_pcs_flat, n_neighbors, seed)
+            pc_metrics['nn_noise_overlap'][unit_id] = nn_noise_overlap
     return pc_metrics
 
 
@@ -317,7 +332,7 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
     nearest_neighbor_isolation = np.min(isolation)
     return nearest_neighbor_isolation
 
-def nearest_neighbors_noise_overlap(all_pcs, all_labels, this_unit_id, max_spikes_for_nn, n_neighbors, seed):
+def nearest_neighbors_noise_overlap(all_pcs, all_labels, this_unit_id, noise_pcs, max_spikes_for_nn, n_neighbors, seed):
     """ Calculates unit noise overlap based on NearestNeighbors search in PCA space
 
     Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
@@ -357,8 +372,6 @@ def nearest_neighbors_noise_overlap(all_pcs, all_labels, this_unit_id, max_spike
 
     # set random seed
     rng = np.random.default_rng(seed=seed)
-    
-    
 
     n_waveforms_per_unit = np.array([len(wf) for wf in waveforms])
     n_spikes_per_unit = np.array([len(self._metric_data._sorting.get_unit_spike_train(u)) for u in self._metric_data._unit_ids])
