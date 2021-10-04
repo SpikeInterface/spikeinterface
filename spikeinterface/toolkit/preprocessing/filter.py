@@ -1,3 +1,4 @@
+import numpy as np
 import scipy.signal
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -63,32 +64,41 @@ class FilterRecording(BasePreprocessor):
         # self.coeff is 'sos' or 'ab' style
         coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
 
-        BasePreprocessor.__init__(self, recording, dtype=dtype)
-        dtype_base = self.get_dtype()
+        if dtype is None:
+            dtype_base = recording.get_dtype()
+        else:
+            dtype_base = dtype
+        dtype_base, force_traces_dtype = _correct_uint(dtype_base)
+
+        BasePreprocessor.__init__(self, recording, dtype=dtype_base)
         self.annotate(is_filtered=True)
 
         margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, filter_mode, margin,
-                                                              dtype_base))
+                                                              dtype_base, force_traces_dtype))
 
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
                             filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin_ms=margin_ms)
 
 
 class FilterRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, coeff, filter_mode, margin, dtype):
+    def __init__(self, parent_recording_segment, coeff, filter_mode, margin, dtype, force_traces_dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.coeff = coeff
         self.filter_mode = filter_mode
         self.margin = margin
         self.dtype = dtype
+        self.force_traces_dtype = force_traces_dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
                                                                         start_frame, end_frame, channel_indices,
                                                                         self.margin)
+
+        if self.force_traces_dtype is not None:
+            traces_chunk = traces_chunk.astype(self.force_traces_dtype)
 
         if self.filter_mode == 'sos':
             filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
@@ -157,14 +167,20 @@ class NotchFilterRecording(BasePreprocessor):
         fn = 0.5 * float(recording.get_sampling_frequency())
         coeff = scipy.signal.iirnotch(freq / fn, q)
 
+        if dtype is None:
+            dtype_base = recording.get_dtype()
+        else:
+            dtype_base = dtype
+        dtype_base, force_traces_dtype = _correct_uint(dtype_base)
+
         BasePreprocessor.__init__(self, recording, dtype=dtype)
-        dtype_base = self.get_dtype()
         self.annotate(is_filtered=True)
 
         sf = recording.get_sampling_frequency()
         margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', margin, dtype_base))
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', margin, dtype_base,
+                                                              force_traces_dtype))
 
         self._kwargs = dict(recording=recording.to_dict(), freq=freq, q=q, margin_ms=margin_ms)
 
@@ -194,3 +210,15 @@ def notch_filter(*args, **kwargs):
 
 
 notch_filter.__doc__ = NotchFilterRecording.__doc__.format(_common_filter_docs)
+
+
+def _correct_uint(dtype):
+    dtype = np.dtype(dtype)
+
+    force_traces_dtype = None
+    # if uint --> force int
+    if dtype.kind == "u":
+        dtype = np.dtype(dtype.str.replace("u", "i"))
+        force_traces_dtype = dtype
+
+    return dtype, force_traces_dtype
