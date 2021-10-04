@@ -115,33 +115,32 @@ class MultiSortingComparison(BaseComparison):
             sg_units.append(sorter_units)
         return sg_sorter_names, sg_units
 
-    def dump(self, save_folder):
+    def save_to_folder(self, save_folder):
+        for sorting in self.sorting_list:
+            assert sorting.check_if_dumpable(), 'MultiSortingComparison.save_to_folder() need dumpable sortings'
+        
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
         filename = str(save_folder / 'multicomparison.gpickle')
         nx.write_gpickle(self.graph, filename)
-        kwargs = {'delta_time': self.delta_time, 'sampling_frequency': self.sampling_frequency,
-                  'match_score': self.match_score, 'chance_score': self.chance_score,
-                  'n_jobs': self._n_jobs, 'verbose': self._verbose}
+        kwargs = {'delta_time': float(self.delta_time),
+                  'match_score': float(self.match_score), 'chance_score': float(self.chance_score)}
         with (save_folder / 'kwargs.json').open('w') as f:
             json.dump(kwargs, f)
         sortings = {}
-        for (name, sort) in zip(self.name_list, self.sorting_list):
-            if sort.check_if_dumpable():
-                sortings[name] = sort.make_serialized_dict()
-            else:
-                print(f'Skipping {name} because it is not dumpable')
+        for (name, sorting) in zip(self.name_list, self.sorting_list):
+            sortings[name] = sorting.to_dict()
         with (save_folder / 'sortings.json').open('w') as f:
             json.dump(sortings, f)
 
     @staticmethod
-    def load_multicomparison(folder_path):
+    def load_from_folder(folder_path):
         folder_path = Path(folder_path)
         with (folder_path / 'kwargs.json').open() as f:
             kwargs = json.load(f)
         with (folder_path / 'sortings.json').open() as f:
             dict_sortings = json.load(f)
-        name_list = dict_sortings.keys()
+        name_list = list(dict_sortings.keys())
         sorting_list = [load_extractor(v) for v in dict_sortings.values()]
         mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(name_list), do_matching=False, **kwargs)
         mcmp.graph = nx.read_gpickle(str(folder_path / 'multicomparison.gpickle'))

@@ -3,14 +3,21 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from spikeinterface.extractors import NumpySorting
-from spikeinterface.comparison import compare_multiple_sorters
+from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
 
+
+def setup_module():
+    if os.path.exists('saved_multisorting_comparison'):
+        shutil.rmtree(study_folder)
 
 def make_sorting(times1, labels1, times2, labels2, times3, labels3):
     sampling_frequency = 30000.
     sorting1 = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
     sorting2 = NumpySorting.from_times_labels([times2], [labels2], sampling_frequency)
     sorting3 = NumpySorting.from_times_labels([times3], [labels3], sampling_frequency)
+    sorting1 = sorting1.save()
+    sorting2 = sorting2.save()
+    sorting3 = sorting3.save()
     return sorting1, sorting2, sorting3
 
 
@@ -42,6 +49,18 @@ def test_compare_multiple_sorters():
     assert len(msc.get_agreement_sorting().get_unit_ids()) == len(msc_shuffle.get_agreement_sorting().get_unit_ids())
     agreement_2 = msc.get_agreement_sorting(minimum_agreement_count=2, minimum_agreement_count_only=True)
     assert np.all([agreement_2.get_unit_property(u, 'agreement_number')] == 2 for u in agreement_2.get_unit_ids())
+    
+    msc.save_to_folder('saved_multisorting_comparison')
+    
+    msc = MultiSortingComparison.load_from_folder('saved_multisorting_comparison')
+    
+    import spikeinterface.widgets  as sw
+    import matplotlib.pyplot as plt
+    sw.plot_multicomp_graph(msc)
+    sw.plot_multicomp_agreement(msc)
+    sw.plot_multicomp_agreement_by_sorter(msc)
+    
+    plt.show()
 
 
 if __name__ == '__main__':
