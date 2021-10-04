@@ -1,4 +1,4 @@
-import copy
+from packaging import version
 from pathlib import Path
 
 from spikeinterface.toolkit import bandpass_filter, whiten
@@ -92,6 +92,13 @@ class Mountainsort4Sorter(BaseSorter):
     def _run_from_folder(cls, output_folder, params, verbose):
         import mountainsort4
 
+        ms4_version = version.parse(mountainsort4.__version)
+
+        if ms4_version >= version.parse("1.1.0"):
+            new_api = True
+        else:
+            new_api = False
+
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
         # alias to params
@@ -111,12 +118,16 @@ class Mountainsort4Sorter(BaseSorter):
                 print('whitenning')
             recording = whiten(recording=recording)
 
-        print('Mountainsort4 use the OLD spikeextractors mapped with RecordingExtractorOldAPI')
-        old_api_recording = RecordingExtractorOldAPI(recording)
+        if new_api:
+            recording_to_ms4 = recording
+        else:
+            print('mountainsort4 version < 1.1 uses the OLD spikeextractors with RecordingExtractorOldAPI.\n'
+                  'Consider updating mountainsort4 (pip install mountainsort4>=1.1')
+            recording_to_ms4 = RecordingExtractorOldAPI(recording)
 
         # Check location no more needed done in basesorter
-        old_api_sorting = mountainsort4.mountainsort4(
-            recording=old_api_recording,
+        sorting = mountainsort4.mountainsort4(
+            recording=recording_to_ms4,
             detect_sign=p['detect_sign'],
             adjacency_radius=p['adjacency_radius'],
             clip_size=p['clip_size'],
@@ -137,10 +148,10 @@ class Mountainsort4Sorter(BaseSorter):
         #     )
 
         # convert sorting to new API and save it
-        unit_ids = old_api_sorting.get_unit_ids()
-        units_dict_list = [{u: old_api_sorting.get_unit_spike_train(u) for u in unit_ids}]
-        new_api_sorting = NumpySorting.from_dict(units_dict_list, samplerate)
-        NpzSortingExtractor.write_sorting(new_api_sorting, str(output_folder / 'firings.npz'))
+        # unit_ids = old_api_sorting.get_unit_ids()
+        # units_dict_list = [{u: old_api_sorting.get_unit_spike_train(u) for u in unit_ids}]
+        # new_api_sorting = NumpySorting.from_dict(units_dict_list, samplerate)
+        NpzSortingExtractor.write_sorting(sorting, str(output_folder / 'firings.npz'))
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
