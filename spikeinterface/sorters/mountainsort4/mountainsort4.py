@@ -92,7 +92,7 @@ class Mountainsort4Sorter(BaseSorter):
     def _run_from_folder(cls, output_folder, params, verbose):
         import mountainsort4
 
-        ms4_version = version.parse(mountainsort4.__version)
+        ms4_version = version.parse(mountainsort4.__version__)
 
         if ms4_version >= version.parse("1.1.0"):
             new_api = True

@@ -147,7 +147,7 @@ class HerdingspikesSorter(BaseSorter):
         import herdingspikes as hs
         import spikeinterface.toolkit as st
 
-        hs_version = version.parse(hs.__version)
+        hs_version = version.parse(hs.__version__)
 
         if hs_version >= version.parse("0.4.0"):
             new_api = True
