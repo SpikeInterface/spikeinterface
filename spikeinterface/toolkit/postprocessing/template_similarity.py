@@ -9,7 +9,12 @@ def compute_template_similarity(waveform_extractor, method='cosine_similarity'):
     waveform_extractor: WaveformExtractor
         A waveform extractor object
     method: str
-        Method name
+        Method name ('cosine_similarity')
+
+    Returns
+    -------
+    similarity: np.array
+        The similarity matrix
     """
     import sklearn.metrics.pairwise
 

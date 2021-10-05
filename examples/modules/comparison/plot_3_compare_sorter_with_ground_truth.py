@@ -60,26 +60,26 @@ sw.plot_agreement_matrix(cmp_gt_HS, ordered=True)
 ##############################################################################
 # This function first matches the ground-truth and spike sorted units, and
 # then it computes several performance metrics.
-# 
-# Once the spike trains are matched, each spike is labelled as: 
-# 
+#
+# Once the spike trains are matched, each spike is labeled as:
+#
 # - true positive (tp): spike found both in :code:`gt_sorting` and :code:`tested_sorting`
-# - false negative (fn): spike found in :code:`gt_sorting`, but not in :code:`tested_sorting` 
-# - false positive (fp): spike found in :code:`tested_sorting`, but not in :code:`gt_sorting` 
-# 
+# - false negative (fn): spike found in :code:`gt_sorting`, but not in :code:`tested_sorting`
+# - false positive (fp): spike found in :code:`tested_sorting`, but not in :code:`gt_sorting`
+#
 # From the counts of these labels the following performance measures are
 # computed:
-# 
+#
 # -  accuracy: #tp / (#tp+ #fn + #fp)
 # -  recall: #tp / (#tp + #fn)
 # -  precision: #tp / (#tp + #fn)
 # -  miss rate: #fn / (#tp + #fn1)
 # -  false discovery rate: #fp / (#tp + #fp)
-# 
+#
 # The :code:`get_performance` method a pandas dataframe (or a dictionary if
 # :code:`output='dict'`) with the comparison metrics. By default, these are
 # calculated for each spike train of :code:`sorting1:code:`, the results can be
-# pooles by average (average of the metrics) and by sum (all counts are
+# pooled by average (average of the metrics) and by sum (all counts are
 # summed and the metrics are computed then).
 
 perf = cmp_gt_HS.get_performance()

@@ -217,31 +217,7 @@ class GroundTruthStudy:
             shutil.rmtree(waveform_folder)
         we = WaveformExtractor.create(rec, sorting, waveform_folder)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
-        we.run(n_jobs=n_jobs, total_memory=total_memory)
-    
-    def get_waveform_extractor(self, rec_name, sorter_name=None):
-        if sorter_name is None:
-            name = 'GroundTruth'
-        else:
-            name = sorter_name
-        waveform_folder = self.study_folder / 'waveforms' / f'waveforms_{name}_{rec_name}'
-        
-        we = WaveformExtractor.load_from_folder(waveform_folder)
-        return we
-        
-    
-    def get_templates(self, rec_name, sorter_name=None, mode='median'):
-        """
-        Get template for a given recording.
-        
-        If sorter_name=None then template are from the ground truth.
-        
-        """
-        we = self.get_waveform_extractor(rec_name, sorter_name=sorter_name)
-        templates = we.get_all_templates(mode=mode)
-        return templates
-    
-
+        we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
 
     def compute_metrics(self, rec_name, metric_names=['snr']):
         we = self.get_waveform_extractor(rec_name)

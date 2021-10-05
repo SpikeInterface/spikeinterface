@@ -25,6 +25,24 @@ def check_nwb_install():
     assert HAVE_NWB, NwbRecordingExtractor.installation_mesg
 
 
+def get_electrical_series(nwbfile, electrical_series_name):
+    if electrical_series_name is not None:
+        es_dict = {i.name: i for i in nwbfile.all_children() if isinstance(i, ElectricalSeries)}
+        assert electrical_series_name in es_dict, 'electrical series name not present in nwbfile'
+        es = es_dict[electrical_series_name]
+    else:
+        es_list = []
+        for name, series in nwbfile.acquisition.items():
+            if isinstance(series, ElectricalSeries):
+                es_list.append(series)
+        if len(es_list) > 1:
+            raise ValueError("More than one acquisition found! You must specify 'electrical_series_name'.")
+        if len(es_list) == 0:
+            raise ValueError("No acquisitions found in the .nwb file.")
+        es = es_list[0]
+    return es
+
+
 class NwbRecordingExtractor(BaseRecording):
     """Primary class for interfacing between NWBFiles and RecordingExtractors."""
 
@@ -47,18 +65,10 @@ class NwbRecordingExtractor(BaseRecording):
         """
         assert HAVE_NWB, self.installation_mesg
         self._file_path = str(file_path)
-        with NWBHDF5IO(self._file_path, 'r') as io:
+        self._electrical_series_name = electrical_series_name
+        with NWBHDF5IO(self._file_path, mode='r',load_namespaces=True) as io:
             nwbfile = io.read()
-            if electrical_series_name is not None:
-                electrical_series_name = electrical_series_name
-            else:
-                a_names = list(nwbfile.acquisition)
-                if len(a_names) > 1:
-                    raise ValueError("More than one acquisition found! You must specify 'electrical_series_name'.")
-                if len(a_names) == 0:
-                    raise ValueError("No acquisitions found in the .nwb file.")
-                electrical_series_name = a_names[0]
-            es = nwbfile.acquisition[electrical_series_name]
+            es = get_electrical_series(nwbfile,self._electrical_series_name)
             if hasattr(es, 'timestamps') and es.timestamps:
                 sampling_frequency = 1. / np.median(np.diff(es.timestamps))
                 recording_start_time = es.timestamps[0]
@@ -87,7 +97,7 @@ class NwbRecordingExtractor(BaseRecording):
             dtype = es.data.dtype
 
             BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
-            recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=electrical_series_name,
+            recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=self._electrical_series_name,
                                                     num_frames=num_frames)
             self.add_recording_segment(recording_segment)
 
@@ -103,7 +113,7 @@ class NwbRecordingExtractor(BaseRecording):
                         properties['location'] = np.zeros((self.get_num_channels(), 2), dtype=float)
                     properties['location'][es_ind, 0] = nwbfile.electrodes['rel_x'][electrode_table_index]
                     if 'rel_y' in nwbfile.electrodes:
-                        properties['location'][es_ind, 1] = nwbfile.electrodes['rel_x'][electrode_table_index]
+                        properties['location'][es_ind, 1] = nwbfile.electrodes['rel_y'][electrode_table_index]
 
                 for col in nwbfile.electrodes.colnames:
                     if isinstance(nwbfile.electrodes[col][electrode_table_index], ElectrodeGroup):
@@ -135,16 +145,16 @@ class NwbRecordingExtractor(BaseRecording):
                 if prop_name == "location":
                     self.set_dummy_probe_from_locations(values)
                 elif prop_name == "group":
-                    if np.isscalar(val):
-                        groups = [val] * len(channel_ids)
+                    if np.isscalar(values):
+                        groups = [values] * len(channel_ids)
                     else:
-                        groups = val
+                        groups = values
                     self.set_channel_groups(groups)
                 else:
                     self.set_property(prop_name, values)
 
             self._kwargs = {'file_path': str(Path(file_path).absolute()),
-                            'electrical_series_name': electrical_series_name}
+                            'electrical_series_name': self._electrical_series_name}
 
 
 class NwbRecordingSegment(BaseRecordingSegment):
@@ -168,9 +178,9 @@ class NwbRecordingSegment(BaseRecordingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        with NWBHDF5IO(self._path, 'r') as io:
+        with NWBHDF5IO(self._path, mode='r', load_namespaces=True) as io:
             nwbfile = io.read()
-            es = nwbfile.acquisition[self._electrical_series_name]
+            es = get_electrical_series(nwbfile,self._electrical_series_name)
 
             if isinstance(channel_indices, slice):
                 traces = es.data[start_frame:end_frame, channel_indices]
@@ -206,20 +216,13 @@ class NwbSortingExtractor(BaseSorting):
         """
         assert self.installed, self.installation_mesg
         self._file_path = str(file_path)
-        with NWBHDF5IO(self._file_path, 'r') as io:
+        self._electrical_series_name = electrical_series_name
+        with NWBHDF5IO(self._file_path, mode='r', load_namespaces=True) as io:
             nwbfile = io.read()
             if sampling_frequency is None:
                 # defines the electrical series from where the sorting came from
                 # important to know the sampling_frequency
-                if electrical_series_name is None:
-                    if len(nwbfile.acquisition) > 1:
-                        raise Exception('More than one acquisition found. You must specify electrical_series_name.')
-                    if len(nwbfile.acquisition) == 0:
-                        raise Exception("No acquisitions found in the .nwb file from which to read sampling frequency. \
-                                         Please, specify 'sampling_frequency' parameter.")
-                    es = list(nwbfile.acquisition.values())[0]
-                else:
-                    es = electrical_series_name
+                es = get_electrical_series(nwbfile, self._electrical_series_name)
                 # get rate
                 if es.rate is not None:
                     sampling_frequency = es.rate
@@ -260,7 +263,7 @@ class NwbSortingExtractor(BaseSorting):
         for prop_name, values in properties.items():
             self.set_property(prop_name, values)
 
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'electrical_series_name': electrical_series_name,
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'electrical_series_name': self._electrical_series_name,
                         'sampling_frequency': sampling_frequency}
 
 
@@ -281,7 +284,7 @@ class NwbSortingSegment(BaseSortingSegment):
         if end_frame is None:
             end_frame = np.inf
         check_nwb_install()
-        with NWBHDF5IO(self._path, 'r') as io:
+        with NWBHDF5IO(self._path, mode='r', load_namespaces=True) as io:
             nwbfile = io.read()
             # chosen unit and interval
             times = nwbfile.units['spike_times'][list(nwbfile.units.id[:]).index(unit_id)][:]

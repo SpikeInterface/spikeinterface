@@ -47,7 +47,7 @@ plot_probe(recording_2_shanks.get_probe())
 
 ###############################################################################
 # Now let's check what we have loaded. The `group_mode='by_shank'` automatically
-# seta the 'group' property depending on the shank id.
+# set the 'group' property depending on the shank id.
 # We can use this information to split the recording in two sub recordings:
 
 print(recording_2_shanks)

@@ -24,6 +24,9 @@ from .unitsselectionsorting import UnitsSelectionSorting
 from .frameslicerecording import FrameSliceRecording
 from .frameslicesorting import FrameSliceSorting
 
+from .channelsaggregationrecording import ChannelsAggregationRecording, aggregate_channels
+from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
+
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
 from .segmentutils import (
     append_recordings, AppendSegmentRecording,
