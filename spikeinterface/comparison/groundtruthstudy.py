@@ -223,8 +223,14 @@ class GroundTruthStudy:
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
 
-    def compute_metrics(self, rec_name, metric_names=['snr']):
+
+    def compute_metrics(self, rec_name, metric_names=['snr'],
+                ms_before=3., ms_after=4., max_spikes_per_unit=500,
+                n_jobs=-1, total_memory='1G'):
+
         we = self.get_waveform_extractor(rec_name)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
+        we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
         
         # metrics
         metrics = compute_quality_metrics(we, metric_names=metric_names)
