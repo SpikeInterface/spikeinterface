@@ -9,5 +9,5 @@ from .multisortingcomparison import compare_multiple_sorters, MultiSortingCompar
 from .collisioncomparison import CollisionGTComparison
 from .correlogramcomparison import CorrelogramGTComparison
 from .groundtruthstudy import GroundTruthStudy
-from .collisionstudy import CollisionGtStudy
+from .collisionstudy import CollisionGTStudy
 from .correlogramstudy import CorrelogramGtStudy

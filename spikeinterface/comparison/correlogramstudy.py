@@ -17,9 +17,9 @@ class CorrelogramGtStudy(GroundTruthStudy):
         self.exhaustive_gt = exhaustive_gt
 
     @property
-    def time_axis(self):
+    def time_bins(self):
         for key, value in self.comparisons.items():
-            return value.time_axis
+            return value.time_bins
 
     def precompute_scores_by_similarities(self, good_only=True):
 

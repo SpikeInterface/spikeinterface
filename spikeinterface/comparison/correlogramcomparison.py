@@ -30,11 +30,11 @@ class CorrelogramGTComparison(GroundTruthComparison):
         self.compute_correlograms()
 
     @property
-    def time_axis(self):
+    def time_bins(self):
         return np.linspace(-self.window_ms/2, self.window_ms/2, self.nb_timesteps)
     
     def compute_correlograms(self):
-        import sklearn
+
         correlograms_1, bins = compute_correlograms(self.sorting1, **self.compute_kwargs)        
         correlograms_2, bins = compute_correlograms(self.sorting2, **self.compute_kwargs)        
         
@@ -54,10 +54,10 @@ class CorrelogramGTComparison(GroundTruthComparison):
             correlograms_2 = correlograms_2[self.good_idx_sorting, :, :]
             self.correlograms['estimated'] = correlograms_2[:, self.good_idx_sorting, :]
 
-        try:
+        if len(self.good_idx_gt) > 0:
             self.nb_cells = self.correlograms['true'].shape[0]
             self.nb_timesteps = self.correlograms['true'].shape[2]
-        except Exception:
+        else:
             self.nb_cells = 0
             self.nb_timesteps = 11
             self.correlograms['true'] = np.zeros((0, 0, self.nb_timesteps))

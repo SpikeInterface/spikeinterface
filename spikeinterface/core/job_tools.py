@@ -74,12 +74,10 @@ def ensure_n_jobs(recording, n_jobs=1):
     elif n_jobs is None:
         n_jobs = 1
 
-    try:
-        test_executor = ProcessPoolExecutor(max_workers=1, initializer=list)
-    except Exception:
-        import sys
-        version = sys.version
-        print(f"Python {version} does not support parallel processing")
+    version = sys.version_info
+
+    if (n_jobs != 1) and not (version.major >= 3 and version.minor >= 7):
+        print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
     if not recording.is_dumpable:

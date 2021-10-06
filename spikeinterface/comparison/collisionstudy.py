@@ -5,7 +5,7 @@ from .collisioncomparison import CollisionGTComparison
 
 import numpy as np
 
-class CollisionGtStudy(GroundTruthStudy):
+class CollisionGTStudy(GroundTruthStudy):
 
     def run_comparisons(self, exhaustive_gt=True, collision_lag=2.0, nbins=11, **kwargs):
         self.comparisons = {}
