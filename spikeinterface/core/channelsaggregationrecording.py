@@ -111,10 +111,17 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
                    channel_indices: Union[List, None] = None,
                    ) -> np.ndarray:
 
+        return_all_channels = False
+        if channel_indices is None:
+            return_all_channels = True
+        elif isinstance(channel_indices, slice):
+            if channel_indices == slice(None, None, None):
+                return_all_channels = True
+
         traces = []
-        if channel_indices is not None and channel_indices != slice(None, None, None):
+        if not return_all_channels:
             if isinstance(channel_indices, slice):
-                # incas channel_indices is slice, it has step 1
+                # in case channel_indices is slice, it has step 1
                 step = channel_indices.step if channel_indices.step is not None else 1
                 channel_indices = list(range(channel_indices.start, channel_indices.stop, step))
             for channel_idx in channel_indices:
