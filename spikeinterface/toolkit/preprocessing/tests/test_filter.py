@@ -1,8 +1,9 @@
-import unittest
+import pytest
 import pytest
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface import NumpyRecording
 
 from spikeinterface.toolkit.preprocessing import filter, bandpass_filter, notch_filter
 
@@ -24,18 +25,27 @@ def test_filter():
     trace1 = rec2_cached1.get_traces(segment_index=0)
 
     # other filtering types
-    rec3 = filter(rec, band=[40., 60.], btype='bandstop')
-    rec4 = filter(rec, band=500., btype='highpass', filter_mode='ba', filter_order=2)
+    rec3 = filter(rec, band=500., btype='highpass', filter_mode='ba', filter_order=2)
 
-    rec5 = notch_filter(rec, freq=3000, q=30, margin_ms=5.)
+    rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.)
 
-    # import matplotlib.pyplot as plt
-    # from spikeinterface.widgets import plot_timeseries
-    # plot_timeseries(rec, segment_index=0)
-    # plot_timeseries(rec2, segment_index=0)
-    # plot_timeseries(rec3, segment_index=0)
-    # plot_timeseries(rec4, segment_index=0)
-    # plt.show()
+
+def test_filter_unsigned():
+    traces = np.random.randint(1, 1000, (5000, 4), dtype="uint16")
+    rec = NumpyRecording(traces_list=traces, sampling_frequency=1000)
+    rec = rec.save()
+
+    rec2 = bandpass_filter(rec, freq_min=10., freq_max=300.)
+    assert not np.issubdtype(rec2.get_dtype(), np.unsignedinteger)
+    traces2 = rec2.get_traces()
+    assert not np.issubdtype(traces2.dtype, np.unsignedinteger)
+
+    # notch filter note supported for unsigned
+    with pytest.raises(TypeError):
+        rec3 = notch_filter(rec, freq=300., q=10)
+
+    # this is ok
+    rec3 = notch_filter(rec, freq=300., q=10, dtype="float32")
 
 
 @pytest.mark.skip('OpenCL not tested')
@@ -70,4 +80,4 @@ def test_filter_opencl():
 
 if __name__ == '__main__':
     # test_filter()
-    test_filter_opencl()
+    test_filter_unsigned()
