@@ -196,10 +196,7 @@ class GroundTruthStudy:
 
         return dataframes
     
-    def compute_waveforms(self, rec_name, sorter_name=None, 
-                ms_before=3., ms_after=4., max_spikes_per_unit=500,
-                n_jobs=-1, total_memory='1G'):
-
+    def get_waveform_extractor(self, rec_name, sorter_name=None):
         rec = self.get_recording(rec_name)
         if sorter_name is None:
             sorting = self.get_ground_truth(rec_name)
@@ -216,6 +213,13 @@ class GroundTruthStudy:
         if waveform_folder.is_dir():
             shutil.rmtree(waveform_folder)
         we = WaveformExtractor.create(rec, sorting, waveform_folder)
+        return we
+
+    def compute_waveforms(self, rec_name, sorter_name=None, 
+                ms_before=3., ms_after=4., max_spikes_per_unit=500,
+                n_jobs=-1, total_memory='1G'):
+
+        we = self.get_waveform_extractor(rec_name, sorter_name)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
 
