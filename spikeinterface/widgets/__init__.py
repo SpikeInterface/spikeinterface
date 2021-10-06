@@ -51,6 +51,6 @@ from .gtstudy import (StudyComparisonRunTimesWidget, plot_gt_study_run_times,
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
-# connectivity comparison
-from .connectivitycomp import (StudyComparisonConnectivityBySimilarityWidget, plot_study_comparison_connectivity_by_similarity,
-    StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget, plot_study_comparison_connectivity_by_similarity_ranges_mean_error)
+# correlogram comparison
+from .correlogramcomp import (StudyComparisonCorrelogramBySimilarityWidget, plot_study_comparison_correlogram_by_similarity,
+    StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget, plot_study_comparison_correlogram_by_similarity_ranges_mean_error)

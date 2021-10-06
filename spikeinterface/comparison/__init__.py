@@ -7,7 +7,7 @@ from .symmetricsortingcomparison import compare_two_sorters, SymmetricSortingCom
 from .groundtruthcomparison import compare_sorter_to_ground_truth, GroundTruthComparison
 from .multisortingcomparison import compare_multiple_sorters, MultiSortingComparison
 from .collisioncomparison import CollisionGTComparison
-from .connectivitycomparison import ConnectivityGTComparison
+from .correlogramcomparison import CorrelogramGTComparison
 from .groundtruthstudy import GroundTruthStudy
 from .collisionstudy import CollisionGtStudy
-from .connectivitystudy import ConnectivityGtStudy
+from .correlogramstudy import CorrelogramGtStudy
