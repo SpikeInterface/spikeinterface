@@ -167,7 +167,14 @@ class NotchFilterRecording(BasePreprocessor):
         fn = 0.5 * float(recording.get_sampling_frequency())
         coeff = scipy.signal.iirnotch(freq / fn, q)
 
-        dtype = fix_dtype(recording, dtype)
+        if dtype is None:
+            dtype = recording.get_dtype()
+        dtype = np.dtype(dtype)
+
+        # if uint --> unsupported
+        if dtype.kind == "u":
+            raise TypeError("The notch filter only supports signed types. Use the 'dtype' argument"
+                            "to specify a signed type (e.g. 'int16', 'float32'")
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         self.annotate(is_filtered=True)

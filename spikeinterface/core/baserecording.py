@@ -136,7 +136,9 @@ class BaseRecording(BaseExtractor):
             # TODO save propreties as npz!!!!!
             folder = save_kwargs['folder']
             file_paths = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
-            dtype = save_kwargs.get('dtype', 'float32')
+            dtype = save_kwargs.get('dtype', None)
+            if dtype is None:
+                dtype = self.get_dtype()
 
             job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
