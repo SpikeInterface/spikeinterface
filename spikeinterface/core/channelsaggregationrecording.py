@@ -69,6 +69,9 @@ class ChannelsAggregationRecording(BaseRecording):
                             break
 
         for prop_name, prop_values in property_dict.items():
+            if prop_name == "contact_vector":
+                # remap device channel indices correctly
+                prop_values["device_channel_indices"] = np.arange(self.get_num_channels())
             self.set_property(key=prop_name, values=prop_values)
 
         # if locations are present, check that they are all different!
