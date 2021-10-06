@@ -8,7 +8,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors
 
 
-class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
+class StudyComparisonCorrelogramBySimilarityWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
@@ -66,7 +66,7 @@ class StudyComparisonConnectivityBySimilarityWidget(BaseWidget):
                 ax.set_ylim(self.ylim)
 
 
-class StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(BaseWidget):
+class StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget(BaseWidget):
 
 
     def __init__(self, study, metric='cosine_similarity', 
@@ -121,21 +121,21 @@ class StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(BaseWidget):
             self.ax.set_ylim(self.ylim)
 
 
-def plot_study_comparison_connectivity_by_similarity(*args, **kwargs):
-    W = StudyComparisonConnectivityBySimilarityWidget(*args, **kwargs)
+def plot_study_comparison_correlogram_by_similarity(*args, **kwargs):
+    W = StudyComparisonCorrelogramBySimilarityWidget(*args, **kwargs)
     W.plot()
     return W
-plot_study_comparison_connectivity_by_similarity.__doc__ = StudyComparisonConnectivityBySimilarityWidget.__doc__
+plot_study_comparison_correlogram_by_similarity.__doc__ = StudyComparisonCorrelogramBySimilarityWidget.__doc__
 
-# def plot_study_comparison_connectivity_by_similarity_range(*args, **kwargs):
-#     W = StudyComparisonConnectivityBySimilarityRangeWidget(*args, **kwargs)
+# def plot_study_comparison_Correlogram_by_similarity_range(*args, **kwargs):
+#     W = StudyComparisonCorrelogramBySimilarityRangeWidget(*args, **kwargs)
 #     W.plot()
 #     return W
-# plot_study_comparison_connectivity_by_similarity_range.__doc__ = StudyComparisonConnectivityBySimilarityRangeWidget.__doc__
+# plot_study_comparison_Correlogram_by_similarity_range.__doc__ = StudyComparisonCorrelogramBySimilarityRangeWidget.__doc__
 
 
-def plot_study_comparison_connectivity_by_similarity_ranges_mean_error(*args, **kwargs):
-    W = StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget(*args, **kwargs)
+def plot_study_comparison_correlogram_by_similarity_ranges_mean_error(*args, **kwargs):
+    W = StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget(*args, **kwargs)
     W.plot()
     return W
-plot_study_comparison_connectivity_by_similarity_ranges_mean_error.__doc__ = StudyComparisonConnectivityBySimilarityRangesMeanErrorWidget.__doc__
+plot_study_comparison_correlogram_by_similarity_ranges_mean_error.__doc__ = StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget.__doc__

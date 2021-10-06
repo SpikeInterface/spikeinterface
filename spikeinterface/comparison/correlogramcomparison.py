@@ -4,7 +4,7 @@ from .groundtruthcomparison import GroundTruthComparison
 from spikeinterface.toolkit import compute_correlograms
 
 
-class ConnectivityGTComparison(GroundTruthComparison):
+class CorrelogramGTComparison(GroundTruthComparison):
     """
     This class is an extention of GroundTruthComparison by focusing
     to benchmark correlation reconstruction
@@ -86,7 +86,7 @@ class ConnectivityGTComparison(GroundTruthComparison):
         res = data.reshape(self.nb_cells**2, data.shape[2])
         return np.mean(res, 0)
 
-    def compute_connectivity_by_similarity(self, similarity_matrix, window_ms=None):
+    def compute_correlogram_by_similarity(self, similarity_matrix, window_ms=None):
         
         errors = []
         similarities = []
