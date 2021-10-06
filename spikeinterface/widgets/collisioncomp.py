@@ -237,7 +237,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
             for i in range(self.similarity_bins.size - 1):
                 cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
-                ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, curves[(cmin, cmax)], label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
+                ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, curves[(cmin, cmax)], label='CS in [%g,%g]' %(cmin, cmax), c=colorVal)
             
             if np.mod(sorter_ind, self.ncols) == 0:
                 ax.set_ylabel('collision accuracy')

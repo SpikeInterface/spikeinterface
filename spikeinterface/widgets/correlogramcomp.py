@@ -50,7 +50,7 @@ class StudyComparisonCorrelogramBySimilarityWidget(BaseWidget):
             for i in range(self.similarity_bins.size - 1):
                 cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
-                ax.plot(time_axis, result[(cmin, cmax)], label='$CC \in [%g,%g]$' %(cmin, cmax), c=colorVal)
+                ax.plot(time_axis, result[(cmin, cmax)], label='CS in [%g,%g]' %(cmin, cmax), c=colorVal)
             
             if np.mod(sorter_ind, self.ncols) == 0:
                 ax.set_ylabel('cc error')
