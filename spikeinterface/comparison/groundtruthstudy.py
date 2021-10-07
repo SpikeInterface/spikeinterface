@@ -223,6 +223,16 @@ class GroundTruthStudy:
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
 
+    def get_templates(self, rec_name, sorter_name=None, mode='median'):
+        """
+        Get template for a given recording.
+        
+        If sorter_name=None then template are from the ground truth.
+        
+        """
+        we = self.get_waveform_extractor(rec_name, sorter_name=sorter_name)
+        templates = we.get_all_templates(mode=mode)
+        return templates
 
     def compute_metrics(self, rec_name, metric_names=['snr'],
                 ms_before=3., ms_after=4., max_spikes_per_unit=500,
