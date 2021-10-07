@@ -13,7 +13,7 @@ Step:
    https://github.com/SpikeInterface/spikeinterface/tree/master/installation_tips
    and put it in "Documents" folder
 4. Then open "anaconda powershell" (make a serach in your application).
-5. Then run this: `conda env create --name si_env --file full_spikeinterface_environment.yml`
+5. Then run this: `conda env create --file full_spikeinterface_environment.yml`
 
 
 Then for before running a script you will need "select" this "environment" with `conda activate si_env`.
