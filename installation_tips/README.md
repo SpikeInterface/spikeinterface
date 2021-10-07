@@ -4,6 +4,12 @@ You are not (yet) an expert in python installation. (conda vs pip, mananging env
 
 Here we propose a simple recipe to install spikeinterface and several sorter inside a anaconda environment for windows/mac user.
 
+This environement will install:
+ * spikeinterface full option
+ * spikeinterface-gui
+ * spyking-circus
+ * tridesclous
+
 
 Step:
 
@@ -18,12 +24,18 @@ Step:
 
 Then for before running a script you will need "select" this "environment" with `conda activate si_env`.
 
+If you want a first try you can download "check_your_install.py" and run it:
+```
+conda activate si_env
+python check_your_install.py
+```
 
-This environement will install:
- * spikeinterface full option
- * spikeinterface-gui
- * spyking-circus
- * tridesclous
+This script:
+  * try to import spikeinterface
+  * run tridesclous
+  * run spyking-circus
+  * open spikeinterface-gui
+ 
  
 
 
