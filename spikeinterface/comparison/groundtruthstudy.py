@@ -195,24 +195,24 @@ class GroundTruthStudy:
                 df.to_csv(str(tables_folder / (name + '.csv')), sep='\t', index=False)
 
         return dataframes
-    
+
     def get_waveform_extractor(self, rec_name, sorter_name=None):
         rec = self.get_recording(rec_name)
+
         if sorter_name is None:
-            sorting = self.get_ground_truth(rec_name)
             name = 'GroundTruth'
+            sorting = self.get_ground_truth(rec_name)
         else:
             assert sorter_name in self.sorter_names
             name = sorter_name
             sorting = self.get_sorting(sorter_name, rec_name)
 
-
-        # waveform extractor
         waveform_folder = self.study_folder / 'waveforms' / f'waveforms_{name}_{rec_name}'
 
         if waveform_folder.is_dir():
-            shutil.rmtree(waveform_folder)
-        we = WaveformExtractor.create(rec, sorting, waveform_folder)
+            we = WaveformExtractor.load_from_folder(waveform_folder)
+        else:
+            we = WaveformExtractor.create(rec, sorting, waveform_folder)
         return we
 
     def compute_waveforms(self, rec_name, sorter_name=None, 
