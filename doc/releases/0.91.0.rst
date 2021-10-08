@@ -1,4 +1,4 @@
-.. _release0.90.1:
+.. _release0.91.0:
 
 SpikeInterface 0.91.0 release notes
 -----------------------------------
