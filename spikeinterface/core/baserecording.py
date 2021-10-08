@@ -122,6 +122,13 @@ class BaseRecording(BaseExtractor):
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
+    
+    def get_times(self, segment_index=None):
+        
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        times = rs.get_times()
+        return times
 
     _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
 
@@ -452,9 +459,33 @@ class BaseRecordingSegment(BaseSegment):
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
 
-    def __init__(self):
-        BaseSegment.__init__(self)
+    def __init__(self, sampling_rate=None, t_start=0., time_vector=None):
+        # sampling_rate and time_vector are exclussive
+        if sampling_rate is None:
+            assert time_vector is not None
+            assert time_vector.ndim ==1
+            # check this maybe init is not terminated yet
+            #assert time_vector.shape[0] == self.get_num_samples()
 
+        if time_vector is None:
+            assert sampling_rate is None
+        
+        self.sampling_rate = sampling_rate
+        self.t_start = t_start
+        self.time_vector = time_vector
+
+        BaseSegment.__init__(self)
+    
+    def get_times(self):
+        if self.time_vector is not None:
+            return self.time_vector
+        else:
+            time_vector = np.arange(self.get_num_samples(), dtype='float64')
+            time_vector /= self.sampling_rate
+            if self.t_start != 0:
+                time_vector += self.t_start
+            return time_vector
+    
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment
 
