@@ -18,11 +18,13 @@ dependencies:
   - loky
   - hdbscan
   - numba
-  - jupyter
+#  - jupyter
+  - mpi
   - mpi4py
   - compilers
+  - pyqt
   - pip:
-    - PyQt5
+#    - PyQt5
     - ephyviewer
     - neo>=0.10.0
     - elephant>=0.10.0
@@ -31,8 +33,6 @@ dependencies:
     - spikeinterface[full]
     - spikeinterface-gui
     - tridesclous>=1.6.3
-    - spyking-circus>=1.0.9
-    
-#    - herdingspikes
-#    - isosplit5
-#    - mountainsort4>=1.0.0
+    - phy==2.0b5
+    - herdingspikes
+    - mountainsort4>=1.0.0
