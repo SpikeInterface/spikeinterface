@@ -27,7 +27,7 @@ Version 0.90.0
 * Small improvements for spikeinterface-gui
 
 
-Version 0.90.1
+Version 0.91.0
 ==============
 
 * Minor release  - bug fixes
