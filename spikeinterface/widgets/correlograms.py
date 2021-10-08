@@ -9,7 +9,6 @@ class CrossCorrelogramsWidget(BaseWidget):
     """
     Plots spike train cross-correlograms.
     The diagonal is auto-correlogram.
-
     Parameters
     ----------
     sorting: SortingExtractor
@@ -69,7 +68,6 @@ plot_crosscorrelograms.__doc__ = CrossCorrelogramsWidget.__doc__
 class AutoCorrelogramsWidget(BaseWidget):
     """
     Plots spike train auto-correlograms.
-
     Parameters
     ----------
     sorting: SortingExtractor
