@@ -10,7 +10,7 @@ from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComp
 
 def setup_module():
     if os.path.exists('saved_multisorting_comparison'):
-        shutil.rmtree(study_folder)
+        shutil.rmtree('saved_multisorting_comparison')
 
 def make_sorting(times1, labels1, times2, labels2, times3, labels3):
     sampling_frequency = 30000.

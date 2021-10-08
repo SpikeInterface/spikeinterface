@@ -34,8 +34,23 @@ from .multicompgraph import (
     plot_multicomp_agreement_by_sorter, MultiCompAgreementBySorterWidget)
 from .collisioncomp import (
     plot_comparison_collision_pair_by_pair, ComparisonCollisionPairByPairWidget,
-    plot_comparison_collision_by_similarity, ComparisonCollisionBySimilarityWidget)
+    plot_comparison_collision_by_similarity,ComparisonCollisionBySimilarityWidget,
+    plot_study_comparison_collision_by_similarity, StudyComparisonCollisionBySimilarityWidget,
+    plot_study_comparison_collision_by_similarity_range, StudyComparisonCollisionBySimilarityRangeWidget,
+    StudyComparisonCollisionBySimilarityRangesWidget, plot_study_comparison_collision_by_similarity_ranges)
+
 from .sortingperformance import plot_sorting_performance
+
+# ground truth study (=comparison over sorter)
+from .gtstudy import (StudyComparisonRunTimesWidget, plot_gt_study_run_times,
+    StudyComparisonUnitCountWidget, plot_gt_study_unit_counts,
+    plot_gt_study_performences, plot_gt_study_performences_averages, StudyComparisonPerformencesWidget,
+    StudyComparisonPerformencesAveragesWidget,
+    plot_gt_study_performences_by_template_similarity, StudyComparisonPerformencesByTemplateSimilarity,)
 
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
+
+# correlogram comparison
+from .correlogramcomp import (StudyComparisonCorrelogramBySimilarityWidget, plot_study_comparison_correlogram_by_similarity,
+    StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget, plot_study_comparison_correlogram_by_similarity_ranges_mean_error)
