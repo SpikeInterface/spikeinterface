@@ -58,6 +58,8 @@ def test_BaseRecording():
     rec.set_property('quality', [1., 3.3, np.nan])
     values = rec.get_property('quality')
     assert np.all(values[:2] == [1., 3.3, ])
+    
+    times0 = rec.get_times(segment_index=0)
 
     # dump/load dict
     d = rec.to_dict()
@@ -163,6 +165,8 @@ def test_BaseRecording():
     rec_int16.set_property('offset_to_uV', [0.] * 5)
     traces_float32 = rec_int16.get_traces(return_scaled=True)
     assert traces_float32.dtype == 'float32'
+    
+    
 
 
 if __name__ == '__main__':
