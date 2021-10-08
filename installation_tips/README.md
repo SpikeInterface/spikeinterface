@@ -1,16 +1,19 @@
 ## Installation tips
 
 If you are not (yet) an expert in Python installations (conda vs pip, mananging environements, etc.), 
-here we propose a simple recipe to install :code:`spikeinterface` and several sorters inside a anaconda 
+here we propose a simple recipe to install `spikeinterface` and several sorters inside a anaconda 
 environment for windows/mac user.
 
 This environment will install:
  * spikeinterface full option
  * spikeinterface-gui
  * phy
- * spyking-circus
  * tridesclous
+ * spyking-circus (not on mac)
+ * herdinspikes (not on windows)
 
+kilosort, ironclust and hdsort are matplot based and need to be installed by source.
+klusta do not work anymore with python3.8 you should create a similar environment with python3.6
 
 ### Quick installation
 
@@ -18,14 +21,18 @@ Steps:
 
 1. Download anaconda individual edition [here](https://www.anaconda.com/products/individual)
 2. Run the installer. Check the box “Add anaconda3 to my Path environment variable”. It makes life easier for beginners.
-3. Download with right click + save the file [`full_spikeinterface_environment_*.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/full_spikeinterface_environment.yml)
-    
-   and put it in "Documents" folder (choose the `windows` or `linux-mac` file depending on your operating system)
+3. Download with right click + save the file corresponding to your OS, and put it in "Documents" folder
+    * [`full_spikeinterface_environment_windows.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/full_spikeinterface_environment_windows.yml)
+    * [`full_spikeinterface_environment_mac.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/full_spikeinterface_environment_mac.yml)
 4. Then open the "Anaconda Command Prompt" (search in your applications)
-5. Then run this: `conda env create --file full_spikeinterface_environment_*.yml`
+5. Then run this depending your OS:
+    * `conda env create --file full_spikeinterface_environment_windows.yml`
+    * `conda env create --file full_spikeinterface_environment_mac.yml`
 
 
 Done! Before running a spikeinterface script you will need "select" this "environment" with `conda activate si_env`.
+
+Note for **linux** users : this conda recipe should work but we recommand strongly to use **pip + virtualenv**.
 
 
 ### Check the installation
@@ -47,12 +54,8 @@ If you want a first try you can:
 This script tests the following:
   * import spikeinterface
   * run tridesclous
-  * run spyking-circus
+  * run spyking-circus (not on mac)
+  * run herdinspikes (not on windows)
   * open spikeinterface-gui
   * export to Phy
   * run Phy
-
-
-
-
-
