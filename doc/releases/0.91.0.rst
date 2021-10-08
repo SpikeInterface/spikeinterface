@@ -7,9 +7,8 @@ SpikeInterface 0.91.0 release notes
 
 
 
-Many improvements.
-Some bug fixes.
-Small improvements for spikeinterface-gui
+Major improvements and bug-fixes.
+Improvements for spikeinterface-gui.
 
 
 core:
@@ -18,23 +17,24 @@ core:
   * add aggregate_units
   * add aggregate_channels
   * implement waveform retrieval with sparsity
-  * fix spikes on border for waveform extarctor
-  * Force dtype to be np.dtype in waveform extractor
-  * refactor waveform template cache : add disk persistency
+  * fix spikes on border for waveform extractor
+  * force dtype to be np.dtype in waveform extractor
+  * refactor waveform template cache: add disk persistence
   * fix cast frame slice frames to ints and tdc
   * fix device indices in aggregate_channel probe
 
 extractors:
  * fix yass extractor
  * electrical series arg handle in nwbextractors
- * Load maxwell electrode as property 
- * Fix reading of legacy OpenEphys recording format
+ * load maxwell electrode as property
+ * add maxwell event extractor
+ * fix reading of legacy OpenEphys recording format
  * fix location in NWB
 
 sorters:
-  * improve runsort in docker
+  * improve run sorter in docker
   * run_sorters() can use docker images
-  * run_sorter_by_property
+  * add run_sorter_by_property
   * add read_sorter_folder()
 
 toolkit:
