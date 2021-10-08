@@ -160,8 +160,8 @@ def enforce_refractory_period(times_in, refr):
 
 
 def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
-                                upsample_factor=13, timeshift_factor=3, average_peak_amplitude=-10,
-                                distance_um=20, seed=None):
+                                upsample_factor=13, timeshift_factor=0, average_peak_amplitude=-10,
+                                distance_um=40, seed=None):
     if seed is not None:
         np.random.seed(seed)
         seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
@@ -173,11 +173,11 @@ def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
     rand_durations_stdev = [10, 4, 6, 20]
     rand_amps_stdev = [0.2, 3, 0.5, 0]
     rand_amp_factor_range = [0.5, 1]
-    geom_spread_coef1 = 0.2
-    geom_spread_coef2 = 1
+    geom_spread_coef1 = 1
+    geom_spread_coef2 =  0.1
 
     geometry = np.zeros((num_channels, 2))
-    geometry[:, 0] = np.arange(num_channels) * distance_um
+    geometry[:, 1] = np.arange(num_channels) * distance_um
 
     avg_durations = np.array(avg_durations)
     avg_amps = np.array(avg_amps)
@@ -204,7 +204,8 @@ def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
             waveform0 = np.roll(waveform0, int(timeshift_factor * dist * upsample_factor))
             waveform0 = waveform0 * np.random.RandomState(seed=seeds[i]).uniform(rand_amp_factor_range[0],
                                                                                  rand_amp_factor_range[1])
-            WW[m, :, k] = waveform0 / (geom_spread_coef1 + dist * geom_spread_coef2)
+            factor = (geom_spread_coef1 + dist * geom_spread_coef2)
+            WW[m, :, k] = waveform0 / factor
 
     peaks = np.max(np.abs(WW), axis=(0, 1))
     WW = WW / np.mean(peaks) * average_peak_amplitude
