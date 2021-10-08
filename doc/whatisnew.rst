@@ -22,9 +22,8 @@ NEW API
 Version 0.90.0
 ==============
 
-* Many improvement.
-* Some bug fix.
-* Small improvements for spikeinterface-gui
+* Major improvements and bug-fixes.
+* Improvements for spikeinterface-gui.
 
 
 Version 0.91.0
