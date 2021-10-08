@@ -23,10 +23,17 @@ def test_toy_example():
     probe = rec.get_probe()
     print(probe)
 
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # ax.plot(rec.get_traces())
-    # plt.show()
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # ax.plot(rec.get_traces())
+    # from spikeinterface.core import extract_waveforms
+    # from spikeinterface.widgets import plot_unit_templates
+    # we = extract_waveforms(rec, sorting, 'toy_waveforms',
+    #                         n_jobs=1, total_memory="10M", max_spikes_per_unit=100,
+    #                         return_scaled=False)
+    # print(we)
+    # plot_unit_templates(we)
+    #  plt.show()
 
 
 if __name__ == '__main__':
