@@ -459,18 +459,18 @@ class BaseRecordingSegment(BaseSegment):
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
 
-    def __init__(self, sampling_rate=None, t_start=0., time_vector=None):
-        # sampling_rate and time_vector are exclussive
-        if sampling_rate is None:
+    def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
+        # sampling_frequency and time_vector are exclussive
+        if sampling_frequency is None:
             assert time_vector is not None
             assert time_vector.ndim ==1
             # check this maybe init is not terminated yet
             #assert time_vector.shape[0] == self.get_num_samples()
 
         if time_vector is None:
-            assert sampling_rate is None
+            assert sampling_frequency is not None
         
-        self.sampling_rate = sampling_rate
+        self.sampling_frequency = sampling_frequency
         self.t_start = t_start
         self.time_vector = time_vector
 
@@ -481,11 +481,43 @@ class BaseRecordingSegment(BaseSegment):
             return self.time_vector
         else:
             time_vector = np.arange(self.get_num_samples(), dtype='float64')
-            time_vector /= self.sampling_rate
-            if self.t_start != 0:
+            time_vector /= self.sampling_frequency
+            if self.t_start is not None:
                 time_vector += self.t_start
             return time_vector
+
+    def get_times_kwargs(self):
+        # usefull for other internal RecordingSegment
+        d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start,
+                        time_vector=self.time_vector)
+        return d
     
+    # alessio : I prefer sample_index_to_time over the old frame_to_time
+    def sample_index_to_time(self, sample_ind):
+        """
+        Transform sample index into time in second
+        """
+        if self.time_vector is None:
+            time_s = sample_ind / self.sampling_frequency
+            if self.t_start is not None:
+                time_s += self.t_start
+        else:
+            time_s = self.time_vector[sample_ind]
+        return time_s
+    
+    def time_to_sample_index(self, time_s):
+        """
+        Transform time in second into sample index
+        """
+        if self.time_vector is None:
+            if self.t_start is None:
+                sample_index = time_s * self.sampling_frequency
+            else:
+                sample_index = (time_s - self.t_start) * self.sampling_frequency
+        else:
+            sample_index = np.searchsorted(self.time_vector, time_s, side='right') - 1
+        return sample_index
+
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment
 

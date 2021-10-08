@@ -16,13 +16,16 @@ class NumpyRecording(BaseRecording):
 
     sampling_frequency: float
         The ssampling frequency in Hz
+
+    t_starts: None or list of float
+        time of the first sample for each segment
     
     channel_ids: list
         An optional list of channel_ids. If None, linear channels are assumed
     """
     is_writable = False
 
-    def __init__(self, traces_list, sampling_frequency, channel_ids=None):
+    def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
             assert all(isinstance(e, np.ndarray) for e in traces_list), 'must give a list of numpy array'
         else:
@@ -39,20 +42,28 @@ class NumpyRecording(BaseRecording):
             assert channel_ids.size == traces_list[0].shape[1]
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
+        if t_starts is not None:
+            assert len(t_starts) == len(traces_list), 't_starts must be a list of same size than traces_list'
+            t_starts = [float(t_start) for t_start in t_starts]
+
         self.is_dumpable = False
 
-        for traces in traces_list:
-            rec_segment = NumpyRecordingSegment(traces)
+        for i, traces in enumerate(traces_list):
+            if t_starts is None:
+                t_start = None
+            else:
+                t_start = t_starts[i]
+            rec_segment = NumpyRecordingSegment(traces, sampling_frequency, t_start)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = {'traces_list': traces_list,
+        self._kwargs = {'traces_list': traces_list, 't_starts': t_starts,
                         'sampling_frequency': sampling_frequency,
                         }
 
 
 class NumpyRecordingSegment(BaseRecordingSegment):
-    def __init__(self, traces):
-        BaseRecordingSegment.__init__(self)
+    def __init__(self, traces, sampling_frequency, t_start):
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self._traces = traces
 
     def get_num_samples(self):

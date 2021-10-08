@@ -25,7 +25,9 @@ def test_channelsaggregationrecording():
     recording_agg = aggregate_channels([recording1, recording2, recording3])
     print(recording_agg)
     assert len(recording_agg.get_channel_ids()) == 3 * num_channels
-
+    
+    assert np.allclose(recording_agg.get_times(0), recording1.get_times(0))
+    
     # test traces
     channel_ids = recording1.get_channel_ids()
 

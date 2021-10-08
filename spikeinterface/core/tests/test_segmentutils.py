@@ -15,7 +15,7 @@ def test_append_concatenate_recordings():
     sampling_frequency = 30000
     rec0 = NumpyRecording([traces] * 3, sampling_frequency)
     rec1 = NumpyRecording([traces] * 2, sampling_frequency)
-
+    
     # append
     rec = append_recordings([rec0, rec1])
     #  print(rec)
@@ -29,6 +29,7 @@ def test_append_concatenate_recordings():
     #  print(rec)
     assert rec.get_num_samples(0) == 5 * 1000
     assert rec.get_num_segments() == 1
+    assert rec.get_times(0).size == 5000
 
     # case one segment
     traces = rec.get_traces(start_frame=0, end_frame=15)
@@ -69,5 +70,5 @@ def test_append_sortings():
 
 
 if __name__ == '__main__':
-    # ~ test_append_concatenate_recordings()
+    test_append_concatenate_recordings()
     test_append_sortings()

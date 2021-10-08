@@ -58,7 +58,7 @@ class AppendSegmentRecording(BaseRecording):
 
 class ProxyAppendRecordingSegment(BaseRecordingSegment):
     def __init__(self, parent_segment):
-        BaseRecordingSegment.__init__(self)
+        BaseRecordingSegment.__init__(self, **parent_segment.get_times_kwargs())
         self.parent_segment = parent_segment
 
     def get_num_samples(self):
@@ -83,6 +83,10 @@ class ConcatenateSegmentRecording(BaseRecording):
     For instance, given one recording with 2 segments and one recording with
     3 segments, this class will give one recording with 1 segment
 
+    The contrain here to concatenate segment is that all segment must:
+      * not have time_vector
+      * t_start=None
+
     Parameters
     ----------
     recording_list : list of BaseRecording
@@ -100,6 +104,9 @@ class ConcatenateSegmentRecording(BaseRecording):
         parent_segments = []
         for rec in recording_list:
             for parent_segment in rec._recording_segments:
+                d = parent_segment.get_times_kwargs()
+                assert d['time_vector'] is None, 'ConcatenateSegmentRecording do not handle time_vector'
+                assert d['t_start'] is None, 'ConcatenateSegmentRecording do not handle t_start'
                 parent_segments.append(parent_segment)
         rec_seg = ProxyConcatenateRecordingSegment(parent_segments)
         self.add_recording_segment(rec_seg)
@@ -109,7 +116,8 @@ class ConcatenateSegmentRecording(BaseRecording):
 
 class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
     def __init__(self, parent_segments):
-        BaseRecordingSegment.__init__(self)
+        d = parent_segments[0].get_times_kwargs()
+        BaseRecordingSegment.__init__(self, **d)
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
         self.cumsum_length = np.cumsum([0] + self.all_length)
