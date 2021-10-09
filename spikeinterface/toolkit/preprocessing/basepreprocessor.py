@@ -24,7 +24,7 @@ class BasePreprocessor(BaseRecording):
 
 class BasePreprocessorSegment(BaseRecordingSegment):
     def __init__(self, parent_recording_segment):
-        BaseRecordingSegment.__init__(self)
+        BaseRecordingSegment.__init__(self, **parent_recording_segment.get_times_kwargs())
         self.parent_recording_segment = parent_recording_segment
 
     def get_num_samples(self):

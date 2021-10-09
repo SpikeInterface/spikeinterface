@@ -28,6 +28,8 @@ def test_filter():
     rec3 = filter(rec, band=500., btype='highpass', filter_mode='ba', filter_order=2)
 
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.)
+    
+    assert np.allclose(rec.get_times(0), rec2.get_times(0))
 
 
 def test_filter_unsigned():
@@ -79,5 +81,5 @@ def test_filter_opencl():
 
 
 if __name__ == '__main__':
-    # test_filter()
+    test_filter()
     test_filter_unsigned()
