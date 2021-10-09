@@ -14,7 +14,7 @@ def check_import_si_full():
 
 def _create_recording():
     import spikeinterface.full as si
-    rec, sorting = si.toy_example(num_segments=1, duration=200, seed=1)
+    rec, sorting = si.toy_example(num_segments=1, duration=200, seed=1, num_channels=16, num_columns=2)
     rec.save(folder='./toy_example_recording')
 
 
