@@ -516,7 +516,7 @@ class BaseRecordingSegment(BaseSegment):
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
         else:
             sample_index = np.searchsorted(self.time_vector, time_s, side='right') - 1
-        return sample_index
+        return int(sample_index)
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment
