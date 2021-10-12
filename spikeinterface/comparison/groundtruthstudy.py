@@ -154,11 +154,11 @@ class GroundTruthStudy:
         index = pd.MultiIndex.from_tuples(self.computed_names, names=['rec_name', 'sorter_name'])
 
         count_units = pd.DataFrame(index=index, columns=['num_gt', 'num_sorter', 'num_well_detected', 'num_redundant',
-                                                         'num_overmerged'])
+                                                         'num_overmerged'], dtype=int)
 
         if self.exhaustive_gt:
-            count_units['num_false_positive'] = None
-            count_units['num_bad'] = None
+            count_units['num_false_positive'] = pd.Series(dtype=int)
+            count_units['num_bad'] = pd.Series(dtype=int)
 
         for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
             gt_sorting = self.get_ground_truth(rec_name)
@@ -196,29 +196,62 @@ class GroundTruthStudy:
 
         return dataframes
 
-    def compute_metrics(self, rec_name, metric_names=['snr'],
-                        ms_before=3., ms_after=4., max_spikes_per_unit=500,
-                        n_jobs=-1, total_memory='1G', **snr_kwargs):
-
+    def get_waveform_extractor(self, rec_name, sorter_name=None):
         rec = self.get_recording(rec_name)
-        gt_sorting = self.get_ground_truth(rec_name)
 
-        # waveform extractor
-        waveform_folder = self.study_folder / 'metrics' / f'waveforms_{rec_name}'
+        if sorter_name is None:
+            name = 'GroundTruth'
+            sorting = self.get_ground_truth(rec_name)
+        else:
+            assert sorter_name in self.sorter_names
+            name = sorter_name
+            sorting = self.get_sorting(sorter_name, rec_name)
+
+        waveform_folder = self.study_folder / 'waveforms' / f'waveforms_{name}_{rec_name}'
+
         if waveform_folder.is_dir():
-            shutil.rmtree(waveform_folder)
-        we = WaveformExtractor.create(rec, gt_sorting, waveform_folder)
+            we = WaveformExtractor.load_from_folder(waveform_folder)
+        else:
+            we = WaveformExtractor.create(rec, sorting, waveform_folder)
+        return we
+
+    def compute_waveforms(self, rec_name, sorter_name=None, 
+                ms_before=3., ms_after=4., max_spikes_per_unit=500,
+                n_jobs=-1, total_memory='1G'):
+
+        we = self.get_waveform_extractor(rec_name, sorter_name)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
 
+    def get_templates(self, rec_name, sorter_name=None, mode='median'):
+        """
+        Get template for a given recording.
+        
+        If sorter_name=None then template are from the ground truth.
+        
+        """
+        we = self.get_waveform_extractor(rec_name, sorter_name=sorter_name)
+        templates = we.get_all_templates(mode=mode)
+        return templates
+
+    def compute_metrics(self, rec_name, metric_names=['snr'],
+                ms_before=3., ms_after=4., max_spikes_per_unit=500,
+                n_jobs=-1, total_memory='1G'):
+
+        we = self.get_waveform_extractor(rec_name)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
+        we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
+        
         # metrics
         metrics = compute_quality_metrics(we, metric_names=metric_names)
         filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
         metrics.to_csv(filename, sep='\t', index=True)
 
-        return metrics
+        return metrics    
+        
 
     def get_metrics(self, rec_name=None, **metric_kwargs):
+
         """
         Load or compute units metrics  for a given recording.
         """
@@ -254,5 +287,5 @@ class GroundTruthStudy:
             df = df.reset_index()
             snr.append(df)
         snr = pd.concat(snr)
-        snr = snr.set_index(['rec_name', 'gt_unit_id'])
+        snr = snr.set_index(['rec_name', 'unit_id'])
         return snr

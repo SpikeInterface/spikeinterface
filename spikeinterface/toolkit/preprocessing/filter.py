@@ -1,3 +1,4 @@
+import numpy as np
 import scipy.signal
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -28,10 +29,10 @@ class FilterRecording(BasePreprocessor):
     recording: Recording
         The recording extractor to be re-referenced
     band: float or list
-        If float, cutoff frequency in Hz for 'lowpass' and 'highpass' filter types
-        If list. band (low, high) in Hz for 'bandpass' and 'bandstop' filter types
+        If float, cutoff frequency in Hz for 'highpass' filter type
+        If list. band (low, high) in Hz for 'bandpass' filter type
     btype: str
-        Type of the filter ('bandpass', 'lowpass', 'highpass', 'bandstop')
+        Type of the filter ('bandpass', 'highpass')
     margin_ms: float
         Margin in ms on border to avoid border effect
     dtype: dtype or None
@@ -49,7 +50,7 @@ class FilterRecording(BasePreprocessor):
                  filter_order=5, ftype='butter', filter_mode='sos', margin_ms=5.0,
                  dtype=None):
 
-        assert btype in ('bandpass', 'lowpass', 'highpass', 'bandstop')
+        assert btype in ('bandpass', 'highpass')
         assert filter_mode in ('sos', 'ba')
 
         # coefficient
@@ -63,14 +64,18 @@ class FilterRecording(BasePreprocessor):
         # self.coeff is 'sos' or 'ab' style
         coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
 
+        dtype = fix_dtype(recording, dtype)
+
         BasePreprocessor.__init__(self, recording, dtype=dtype)
-        dtype_base = self.get_dtype()
         self.annotate(is_filtered=True)
+
+        if "offset_to_uV" in self.get_property_keys():
+            self.set_channel_offsets(0)
 
         margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, filter_mode, margin,
-                                                              dtype_base))
+                                                              dtype))
 
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
                             filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin_ms=margin_ms)
@@ -89,6 +94,11 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
                                                                         start_frame, end_frame, channel_indices,
                                                                         self.margin)
+
+        traces_dtype = traces_chunk.dtype
+        # if uint --> force int
+        if traces_dtype.kind == "u":
+            traces_chunk = traces_chunk.astype("float32")
 
         if self.filter_mode == 'sos':
             filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
@@ -157,14 +167,22 @@ class NotchFilterRecording(BasePreprocessor):
         fn = 0.5 * float(recording.get_sampling_frequency())
         coeff = scipy.signal.iirnotch(freq / fn, q)
 
+        if dtype is None:
+            dtype = recording.get_dtype()
+        dtype = np.dtype(dtype)
+
+        # if uint --> unsupported
+        if dtype.kind == "u":
+            raise TypeError("The notch filter only supports signed types. Use the 'dtype' argument"
+                            "to specify a signed type (e.g. 'int16', 'float32'")
+
         BasePreprocessor.__init__(self, recording, dtype=dtype)
-        dtype_base = self.get_dtype()
         self.annotate(is_filtered=True)
 
         sf = recording.get_sampling_frequency()
         margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', margin, dtype_base))
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', margin, dtype))
 
         self._kwargs = dict(recording=recording.to_dict(), freq=freq, q=q, margin_ms=margin_ms)
 
@@ -194,3 +212,15 @@ def notch_filter(*args, **kwargs):
 
 
 notch_filter.__doc__ = NotchFilterRecording.__doc__.format(_common_filter_docs)
+
+
+def fix_dtype(recording, dtype):
+    if dtype is None:
+        dtype = recording.get_dtype()
+    dtype = np.dtype(dtype)
+
+    # if uint --> force int
+    if dtype.kind == "u":
+        dtype = np.dtype(dtype.str.replace("u", "i"))
+
+    return dtype
