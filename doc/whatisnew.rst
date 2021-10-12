@@ -19,14 +19,14 @@ Release notes
 NEW API
 -------
 
-Version 0.90.0
+Version 0.91.0
 ==============
 
 * Major improvements and bug-fixes.
 * Improvements for spikeinterface-gui.
 
 
-Version 0.91.0
+Version 0.90.1
 ==============
 
 * Minor release  - bug fixes
