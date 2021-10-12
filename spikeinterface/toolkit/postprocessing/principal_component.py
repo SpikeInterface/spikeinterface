@@ -116,7 +116,7 @@ class WaveformPrincipalComponent:
 
     def get_components(self, unit_id):
         warnings.warn("The 'get_components()' function has been substituted by the 'get_projections()' "
-                      "function and it will be removed in the next release", warnings.DeprecationWarning)
+                      "function and it will be removed in the next release", DeprecationWarning)
         return self.get_projections(unit_id)
 
     def get_pca_model(self):
@@ -174,7 +174,7 @@ class WaveformPrincipalComponent:
 
     def get_all_components(self, channel_ids=None, unit_ids=None, outputs='id'):
         warnings.warn("The 'get_all_components()' function has been substituted by the 'get_all_projections()' "
-                      "function and it will be removed in the next release", warnings.DeprecationWarning)
+                      "function and it will be removed in the next release", DeprecationWarning)
         return self.get_all_projections(channel_ids=channel_ids, unit_ids=unit_ids, outputs=outputs)
 
     def project_new(self, new_waveforms):
