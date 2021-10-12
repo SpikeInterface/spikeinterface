@@ -39,11 +39,12 @@ def run_herdingspikes():
 
 
 def open_sigui():
-    import spikeinterface as si
+    import spikeinterface.full as si
     import spikeinterface_gui
     app = spikeinterface_gui.mkQApp()
     waveform_forlder = 'tridesclous_waveforms'
     we = si.WaveformExtractor.load_from_folder(waveform_forlder)
+    pc = si.compute_principal_components(we, n_components=3, mode='by_channel_local', whiten=True, dtype='float32')
     win = spikeinterface_gui.MainWindow(we)
     win.show()
     app.exec_()
@@ -103,4 +104,4 @@ if __name__ == '__main__':
             done = '...Fail'
         print(label, done)
 
-    _clean()
+    # _clean()

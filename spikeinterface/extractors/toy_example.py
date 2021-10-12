@@ -178,10 +178,8 @@ def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
     else:
         assert num_channels % num_columns == 0, 'Invalid num_columns'
         num_contact_per_column = num_channels // num_columns
-        print(num_contact_per_column)
         j = 0
         for i in range(num_columns):
-            print(j, j+num_contact_per_column)
             geometry[j:j+num_contact_per_column, 0] = i * contact_spacing_um
             geometry[j:j+num_contact_per_column, 1] = np.arange(num_contact_per_column) * contact_spacing_um
             j += num_contact_per_column
