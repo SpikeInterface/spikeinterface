@@ -114,13 +114,14 @@ class WaveformPrincipalComponent:
         return proj
 
     def get_components(self, unit_id):
-        comp_file = self.folder / 'PCA' / f'comp_{unit_id}.npy'
-        comp_file = np.load(comp_file)
-        return comp_file
+        raise DeprecationWarning()
+        return self.get_projections(unit_id)
 
     def get_pca_model(self, unit_id):
-        model_file = self.folder / 'PCA' / f'model_{unit_id}.pkl'
-        model = pickle.loads(model_file)
+        mode = self._params["mode"]
+        if mode == "":
+            model_file = self.folder / 'PCA' / f'model_{unit_id}.pkl'
+            model = pickle.loads(model_file)
         return model
 
     def get_all_projections(self, channel_ids=None, unit_ids=None, outputs='id'):
@@ -261,6 +262,11 @@ class WaveformPrincipalComponent:
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca = all_pca[chan_ind]
                 pca.partial_fit(wfs[:, :, chan_ind])
+        for chan_ind, chan_id in enumerate(channel_ids):
+            pca = all_pca[chan_ind]
+            mode = self._params["mode"]
+            with (self.folder / f"pca_model_{mode}_{chan_id}.pkl").open("wb") as f:
+                pickle.dump(f, pca)
 
         return all_pca
 
@@ -304,6 +310,9 @@ class WaveformPrincipalComponent:
                 continue
             for chan_ind, chan_id in enumerate(channel_ids):
                 one_pca.partial_fit(wfs[:, :, chan_ind])
+        mode = self._params["mode"]
+        with (self.folder / f"pca_model_{mode}.pkl").open("wb") as f:
+            pickle.dump(f, one_pca)
 
         return one_pca
 
@@ -348,6 +357,9 @@ class WaveformPrincipalComponent:
             wfs = we.get_waveforms(unit_id)
             wfs_fat = wfs.reshape(wfs.shape[0], -1)
             pca.partial_fit(wfs_fat)
+        mode = self._params["mode"]
+        with (self.folder / f"pca_model_{mode}.pkl").open("wb") as f:
+            pickle.dump(f, pca)
 
         # transform
         for unit_id in unit_ids:
