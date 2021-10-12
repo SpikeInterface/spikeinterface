@@ -236,16 +236,17 @@ class NwbSortingExtractor(BaseSorting):
             units_ids = list(nwbfile.units.id[:])
 
             # store units properties and spike features to dictionaries
+            properties = dict()
+
             all_pr_ft = list(nwbfile.units.colnames)
             all_names = [i.name for i in nwbfile.units.columns]
             for item in all_pr_ft:
                 if item == 'spike_times':
                     continue
                 # test if item is a unit_property or a spike_feature
-                if item + '_index' in all_names:  # if it has index, it is a spike_feature
+                if item + '_index' in all_names:  # if it has index, it is a spike_feature, so skip
                     pass
                 else:  # if it is unit_property
-                    properties = dict()
                     for u_id in units_ids:
                         ind = list(units_ids).index(u_id)
                         if isinstance(nwbfile.units[item][ind], pd.DataFrame):
@@ -256,7 +257,7 @@ class NwbSortingExtractor(BaseSorting):
                         if item not in properties:
                             properties[item] = np.zeros(len(units_ids), dtype=type(prop_value))
 
-        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, units_ids=units_ids)
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=units_ids)
         sorting_segment = NwbSortingSegment(path=self._file_path, sampling_frequency=sampling_frequency)
         self.add_sorting_segment(sorting_segment)
 
@@ -290,7 +291,7 @@ class NwbSortingSegment(BaseSortingSegment):
             times = nwbfile.units['spike_times'][list(nwbfile.units.id[:]).index(unit_id)][:]
             # spike times are measured in samples
             # TODO if present, use times from file
-            frames = np.round(times * self._sampling_frequency()).astype('int64')
+            frames = np.round(times * self._sampling_frequency).astype('int64')
         return frames[(frames > start_frame) & (frames < end_frame)]
 
 

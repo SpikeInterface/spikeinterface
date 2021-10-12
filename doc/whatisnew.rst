@@ -6,6 +6,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.91.0.rst
   releases/0.90.1.rst
   releases/0.90.0.rst
   releases/0.13.0.rst
@@ -17,6 +18,13 @@ Release notes
 
 NEW API
 -------
+
+Version 0.91.0
+==============
+
+* Major improvements and bug-fixes.
+* Improvements for spikeinterface-gui.
+
 
 Version 0.90.1
 ==============

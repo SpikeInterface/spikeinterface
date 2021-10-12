@@ -33,6 +33,7 @@ class BaseWidget:
                     ax = None
                     axes = None
                 elif num_axes == 1:
+                    self.figure = plt.figure()
                     ax = self.figure.add_subplot(111)
                     axes = np.array([[ax]])
                 else:

@@ -271,7 +271,7 @@ class GroundTruthComparison(BaseTwoSorterComparison):
         """
         Return units list of "well detected units" from tested_sorting.
 
-        "well detected units" ara defined as units in tested that
+        "well detected units" are defined as units in tested that
         are well matched to GT units.
 
         Parameters

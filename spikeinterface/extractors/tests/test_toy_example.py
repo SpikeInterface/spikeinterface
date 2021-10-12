@@ -12,7 +12,7 @@ def test_toy_example():
     # print(rec)
     # print(sorting)
 
-    rec, sorting = toy_example(num_segments=1)
+    rec, sorting = toy_example(num_segments=1, num_channels=16, num_columns=2)
     assert rec.get_num_segments() == 1
     assert sorting.get_num_segments() == 1
     print(rec)
@@ -24,8 +24,17 @@ def test_toy_example():
     print(probe)
 
     # import matplotlib.pyplot as plt
+    # rec = rec.save(folder='toy_rec')
+    # sorting = sorting.save(folder='toy_sorting')
     # fig, ax = plt.subplots()
     # ax.plot(rec.get_traces())
+    # from spikeinterface.core import extract_waveforms
+    # from spikeinterface.widgets import plot_unit_templates
+    # we = extract_waveforms(rec, sorting, 'toy_waveforms',
+                            # n_jobs=1, total_memory="10M", max_spikes_per_unit=100,
+                            # return_scaled=False)
+    # print(we)
+    # plot_unit_templates(we)
     # plt.show()
 
 

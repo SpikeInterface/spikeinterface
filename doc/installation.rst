@@ -3,12 +3,29 @@ Installation
 
 :code:`spikeinterface` is a Python package.
 
-The actual "new API" (v0.90.0) is not released on pypi yet.
-It will be released in July 2021.
+From PyPi
+---------
+
+.. code-block:: bash
+
+   pip install spikeinterface[full]
+
+The :code:`[full]` option installs all the dependencies for all the different modules. If you wish to only
+install the :code:`core` module, you can use:
+
+.. code-block:: bash
+
+   pip install spikeinterface[full]
 
 
-To use it now, you have to install :code:`spikeinterface` work-in-progress
-from source. You also need :code:`neo` and :code:`probeinterface`:
+From source
+-----------
+
+As :code:`spikeinterface` is undergoing a heavy development phase, it is sometimes convenient to install from source
+to get latest bug fixes and improvements.
+
+It is also recommended in that case to also install :code:`neo` and :code:`probeinterface` from source,
+as :code:`spikeinterface` strongly relies on these packages to interface with various formats and handle probes.
 
 
 .. code-block:: bash
@@ -29,12 +46,19 @@ from source. You also need :code:`neo` and :code:`probeinterface`:
     cd ..
 
 
+For beginners
+-------------
+
+We provide here some installation tips for beginners in Python here:
+
+https://github.com/SpikeInterface/spikeinterface/tree/master/installation_tips
+
 
 
 Requirements
 ------------
 
-spikeinterface.core itself has only a few dependencies:
+:code:`spikeinterface.core` itself has only a few dependencies:
 
   * numpy
   * neo>=0.9.0
@@ -42,7 +66,7 @@ spikeinterface.core itself has only a few dependencies:
   * probeinterface
   * tqdm
 
-Some sub-modules have more dependencies, so you should also install:
+Sub-modules have more dependencies, so you should also install:
 
   * scipy
   * h5py

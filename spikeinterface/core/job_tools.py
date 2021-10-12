@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 
 import joblib
+import sys
 from tqdm import tqdm
 
 # import loky
@@ -72,6 +73,12 @@ def ensure_n_jobs(recording, n_jobs=1):
     elif n_jobs == 0:
         n_jobs = 1
     elif n_jobs is None:
+        n_jobs = 1
+
+    version = sys.version_info
+
+    if (n_jobs != 1) and not (version.major >= 3 and version.minor >= 7):
+        print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
     if not recording.is_dumpable:
