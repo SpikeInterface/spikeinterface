@@ -104,4 +104,4 @@ if __name__ == '__main__':
             done = '...Fail'
         print(label, done)
 
-    # _clean()
+    _clean()
