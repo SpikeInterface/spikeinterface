@@ -49,19 +49,16 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         cluster_info_files = [p for p in phy_folder.iterdir() if p.suffix in ['.csv', '.tsv']
                               and "cluster_info" in p.name]
 
-        if len(cluster_info_files) == 0:
-            cluster_info = pd.DataFrame({'id' : unit_ids})
-            cluster_info['group'] = ['unsorted']*len(unit_ids)
-
-        elif len(cluster_info_files) == 1:
+        if len(cluster_info_files) == 1:
+            # load properties from cluster_info file
             cluster_info_file = cluster_info_files[0]
             if cluster_info_file.suffix == ".tsv":
                 delimeter = "\t"
             else:
                 delimeter = ","
             cluster_info = pd.read_csv(cluster_info_file, delimiter=delimeter)
-
         else:
+            # load properties from other tsv/csv files
             all_property_files = [p for p in phy_folder.iterdir() if p.suffix in ['.csv', '.tsv']]
 
             cluster_info = None
@@ -76,9 +73,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 else:
                     cluster_info = pd.merge(cluster_info, new_property, on='cluster_id')
 
-            cluster_info["id"] = cluster_info["cluster_id"]
-
-            del cluster_info["cluster_id"]
+        # in case no tsv/csv files are found populate cluster info with minimal info
+        if cluster_info is None:
+            cluster_info = pd.DataFrame({'cluster_id': unit_ids})
+            cluster_info['group'] = ['unsorted'] * len(unit_ids)
 
         if exclude_cluster_groups is not None:
             if isinstance(exclude_cluster_groups, str):
@@ -90,18 +88,21 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         if keep_good_only and "KSLabel" in cluster_info.columns:
             cluster_info = cluster_info.query(f"KSLabel != 'good'")
-        unit_ids = cluster_info["id"].values
+        unit_ids = cluster_info["cluster_id"].values
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
+        del cluster_info["cluster_id"]
         for prop_name in cluster_info.columns:
             if prop_name in ['chan_grp', 'ch_group']:
                 self.set_property(key="group", values=cluster_info[prop_name])
             elif prop_name != "group":
                 self.set_property(key=prop_name, values=cluster_info[prop_name])
+            elif prop_name == "group":
+                # rename group property to 'quality'
+                self.set_property(key="quality", values=cluster_info[prop_name])
 
         self.add_sorting_segment(PhySortingSegment(spike_times, spike_clusters))
-
 
 
 class PhySortingSegment(BaseSortingSegment):
