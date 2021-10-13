@@ -196,7 +196,6 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         sg_names, sg_units = self._msc.compute_subgraphs()
         # fraction of units with agreement > threshold
         for i, name in enumerate(name_list):
-            # ~ ax = self.get_tiled_ax(i, ncols=len(name_list), nrows=1)
             ax = self.axes[i]
             v, c = np.unique([len(np.unique(sn)) for sn in sg_names if name in sn], return_counts=True)
             if self._type == 'pie':
@@ -220,8 +219,6 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
             max_yval = np.max(ylims)
             for ax_single in self.axes:
                 ax_single.set_ylim([0, max_yval])
-        # ~ if self._use_gs:
-        # ~ self.figure.set_size_inches((len(name_list) * 2, 2.4))
 
 
 def _getabs(pct, allvals):
