@@ -56,10 +56,13 @@ class MultiCompGraphWidget(BaseWidget):
         for e in g.edges(data=True):
             n1, n2, d = e
             edge_col.append(d['weight'])
-        nodes_col = np.array([])
-        for i, sort in enumerate(self._msc.sorting_list):
-            nodes_col = np.concatenate((nodes_col, np.array([i] * len(sort.get_unit_ids()))))
-        nodes_col = nodes_col / len(self._msc.sorting_list)
+        nodes_col_dict = {}
+        for i, sort_name in enumerate(self._msc.name_list):
+            nodes_col_dict[sort_name] = i
+        nodes_col = []
+        for node in sorted(g.nodes):
+            nodes_col.append(nodes_col_dict[node[0]])
+        nodes_col = np.array(nodes_col) / len(self._msc.name_list)
 
         _ = plt.set_cmap(self._node_cmap)
         _ = nx.draw_networkx_nodes(g, pos=nx.circular_layout(sorted(g)), nodelist=sorted(g.nodes),
@@ -69,8 +72,15 @@ class MultiCompGraphWidget(BaseWidget):
                                    edge_cmap=plt.cm.get_cmap(self._edge_cmap), edge_vmin=self._msc.match_score,
                                    edge_vmax=1, ax=self.ax)
         if self._draw_labels:
-            labels = {key: key[0] for key in sorted(g.nodes)}
-            _ = nx.draw_networkx_labels(g, pos=nx.circular_layout((sorted(g))), labels=labels, ax=self.ax)
+            labels = {key: f"{key[0]}_{key[1]}" for key in sorted(g.nodes)}
+            pos = nx.circular_layout(sorted(g))
+            # extend position radially
+            pos_extended = {}
+            for node, pos in pos.items():
+                pos_new = pos + 0.1 * pos
+                pos_extended[node] = pos_new
+            _ = nx.draw_networkx_labels(g, pos=pos_extended, labels=labels, ax=self.ax)
+
         if self._colorbar:
             norm = matplotlib.colors.Normalize(vmin=self._msc.match_score, vmax=1)
             cmap = plt.cm.get_cmap(self._edge_cmap)
@@ -155,7 +165,7 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         and figure parameters are ignored.
     show_legend: bool
         Show the legend in the last axes (default True).
-        
+
     Returns
     -------
     W: MultiCompGraphWidget
@@ -176,8 +186,6 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
             fig, axes = plt.subplots(nrows=1, ncols=ncols, sharex=True, sharey=True)
         BaseWidget.__init__(self, None, None, axes)
 
-
-
     def plot(self):
         self._do_plot()
 
@@ -188,7 +196,7 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         sg_names, sg_units = self._msc.compute_subgraphs()
         # fraction of units with agreement > threshold
         for i, name in enumerate(name_list):
-            #~ ax = self.get_tiled_ax(i, ncols=len(name_list), nrows=1)
+            # ~ ax = self.get_tiled_ax(i, ncols=len(name_list), nrows=1)
             ax = self.axes[i]
             v, c = np.unique([len(np.unique(sn)) for sn in sg_names if name in sn], return_counts=True)
             if self._type == 'pie':
@@ -212,8 +220,8 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
             max_yval = np.max(ylims)
             for ax_single in self.axes:
                 ax_single.set_ylim([0, max_yval])
-        #~ if self._use_gs:
-            #~ self.figure.set_size_inches((len(name_list) * 2, 2.4))
+        # ~ if self._use_gs:
+        # ~ self.figure.set_size_inches((len(name_list) * 2, 2.4))
 
 
 def _getabs(pct, allvals):
