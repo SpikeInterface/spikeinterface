@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python=3.8
   - pip>=21.0
-  - numpy
+  - numpy==1.20
   - joblib
   - tqdm
   - pillow
@@ -21,7 +21,7 @@ dependencies:
   - pyqt=5
   - loky
   - pip:
-    - git+https://github.com/NeuralEnsemble/python-neo.git
+    - neo>=0.10.0
     - probeinterface
     - MEArec>=1.7.1
     - isosplit5
