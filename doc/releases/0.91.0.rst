@@ -1,0 +1,61 @@
+.. _release0.91.0:
+
+SpikeInterface 0.91.0 release notes
+-----------------------------------
+
+8th October 2021
+
+
+
+Major improvements and bug-fixes.
+Improvements for spikeinterface-gui.
+
+
+core:
+  * frame slice for sorting
+  * add segment option for get_template
+  * add aggregate_units
+  * add aggregate_channels
+  * implement waveform retrieval with sparsity
+  * fix spikes on border for waveform extractor
+  * force dtype to be np.dtype in waveform extractor
+  * refactor waveform template cache: add disk persistence
+  * fix cast frame slice frames to ints and tdc
+  * fix device indices in aggregate_channel probe
+
+extractors:
+ * fix yass extractor
+ * electrical series arg handle in nwbextractors
+ * load maxwell electrode as property
+ * add maxwell event extractor
+ * fix reading of legacy OpenEphys recording format
+ * fix location in NWB
+
+sorters:
+  * improve run sorter in docker
+  * run_sorters() can use docker images
+  * add run_sorter_by_property
+  * add read_sorter_folder()
+
+toolkit:
+  * add nn_isolation metrics
+  * add dtype option in filters and improved docstrings
+  * implement sparsity with threshold
+  * fix filtering for uint signals
+  
+comparison:
+  * fix and rename MultiSortingComparison.save_to_folder()/load_from_folder()
+  * improve the collision comparison and study framework
+  
+widgets:
+ * add plot_probe kwargs in plot_probe_map
+ * add widget collisions
+ * add widget for study
+
+export:
+  * improve export_to_phy
+  * add sparsity option to export_to_phy
+
+doc:
+  * fix typos and grammar
+  
