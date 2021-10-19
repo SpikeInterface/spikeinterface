@@ -16,7 +16,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         cluster_classes = self._getfield("cluster_class")
         classes = cluster_classes[:, 0]
         spike_times = cluster_classes[:, 1]
-        sampling_frequency = float("par/sr")
+        sampling_frequency = float(self._getfield("par/sr"))
         unit_ids = np.unique(classes).astype('int')
         if keep_good_only:
             unit_ids = unit_ids[unit_ids > 0]
