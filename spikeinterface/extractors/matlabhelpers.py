@@ -69,22 +69,11 @@ class MatlabHelper:
                 return d[keys.popleft()]
             else:
                 return _drill(d[keys.popleft()], keys)
-        def _h52dict(h5group):
-            dout = {}
-            for fieldname in h5group:
-                if isinstance(h5group[fieldname], h5py.Group):
-                    dout[fieldname] = _h52dict(h5group)
-                else:
-                    dout[fieldname] = h5group[fieldname][()]
-            return dout
 
         if self._old_style_mat:
             return _drill(self._data, deque(fieldname.split("/")))
         else:
-            if isinstance(self._data[fieldname], h5py.Group):
-                return _h52dict(self._data[fieldname])
-            else:
-                return self._data[fieldname][()]
+            return self._data[fieldname][()]
 
     @classmethod
     def write_dict_to_mat(cls, mat_file_path, dict_to_write, version='7.3'):  # field must be a dict
