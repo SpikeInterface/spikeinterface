@@ -44,9 +44,9 @@ from .sortingperformance import plot_sorting_performance
 # ground truth study (=comparison over sorter)
 from .gtstudy import (StudyComparisonRunTimesWidget, plot_gt_study_run_times,
     StudyComparisonUnitCountWidget, plot_gt_study_unit_counts,
-    plot_gt_study_performances, plot_gt_study_performances_averages, StudyComparisonperformancesWidget,
-    StudyComparisonperformancesAveragesWidget,
-    plot_gt_study_performances_by_template_similarity, StudyComparisonperformancesByTemplateSimilarity,)
+    plot_gt_study_performances, plot_gt_study_performances_averages, StudyComparisonPerformancesWidget,
+    StudyComparisonPerformancesAveragesWidget,
+    plot_gt_study_performances_by_template_similarity, StudyComparisonPerformancesByTemplateSimilarity,)
 
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
