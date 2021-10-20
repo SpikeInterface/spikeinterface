@@ -140,7 +140,7 @@ def plot_gt_study_unit_counts(*args, **kwargs):
 plot_gt_study_unit_counts.__doc__ = StudyComparisonUnitCountWidget.__doc__
 
 
-class StudyComparisonPerformencesWidget(BaseWidget):
+class StudyComparisonperformancesWidget(BaseWidget):
     """
     Plot run times for a study.
 
@@ -259,7 +259,7 @@ class StudyComparisonTemplateSimilarityWidget(BaseWidget):
         ax.set_xlim(0, sorter_names.size + 1)
 
 
-class StudyComparisonPerformencesAveragesWidget(BaseWidget):
+class StudyComparisonperformancesAveragesWidget(BaseWidget):
     """
     Plot run times for a study.
 
@@ -330,7 +330,7 @@ class StudyComparisonPerformencesAveragesWidget(BaseWidget):
         
 
 
-class StudyComparisonPerformencesByTemplateSimilarity(BaseWidget):
+class StudyComparisonperformancesByTemplateSimilarity(BaseWidget):
     """
     Plot run times for a study.
 
@@ -425,21 +425,21 @@ class StudyComparisonPerformencesByTemplateSimilarity(BaseWidget):
 
 
 
-def plot_gt_study_performences(*args, **kwargs):
-    W = StudyComparisonPerformencesWidget(*args, **kwargs)
+def plot_gt_study_performances(*args, **kwargs):
+    W = StudyComparisonperformancesWidget(*args, **kwargs)
     W.plot()
     return W
-plot_gt_study_performences.__doc__ = StudyComparisonPerformencesWidget.__doc__
+plot_gt_study_performances.__doc__ = StudyComparisonperformancesWidget.__doc__
 
-def plot_gt_study_performences_averages(*args, **kwargs):
-    W = StudyComparisonPerformencesAveragesWidget(*args, **kwargs)
+def plot_gt_study_performances_averages(*args, **kwargs):
+    W = StudyComparisonperformancesAveragesWidget(*args, **kwargs)
     W.plot()
     return W
-plot_gt_study_performences_averages.__doc__ = StudyComparisonPerformencesAveragesWidget.__doc__
+plot_gt_study_performances_averages.__doc__ = StudyComparisonperformancesAveragesWidget.__doc__
 
 
-def plot_gt_study_performences_by_template_similarity(*args, **kwargs):
-    W = StudyComparisonPerformencesByTemplateSimilarity(*args, **kwargs)
+def plot_gt_study_performances_by_template_similarity(*args, **kwargs):
+    W = StudyComparisonperformancesByTemplateSimilarity(*args, **kwargs)
     W.plot()
     return W
-plot_gt_study_performences_by_template_similarity.__doc__ = StudyComparisonPerformencesByTemplateSimilarity.__doc__
+plot_gt_study_performances_by_template_similarity.__doc__ = StudyComparisonperformancesByTemplateSimilarity.__doc__
