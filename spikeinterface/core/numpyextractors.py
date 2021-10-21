@@ -18,7 +18,7 @@ class NumpyRecording(BaseRecording):
         The ssampling frequency in Hz
 
     t_starts: None or list of float
-        time of the first sample for each segment
+        Times in seconds of the first sample for each segment
     
     channel_ids: list
         An optional list of channel_ids. If None, linear channels are assumed

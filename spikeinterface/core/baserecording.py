@@ -128,40 +128,42 @@ class BaseRecording(BaseExtractor):
         """
         Get time vector for a recording segment.
         
-        If it handle a time_vector then it is return otherwise
-        a time_vector is constructed on the fly with frequency_sampling (and t_start if not None)
+        If the segment has a time_vector, then it is returned. Otherwise
+        a time_vector is constructed on the fly with sampling frequency.
+        If t_start is defined and the time vector is constructed on the fly, 
+        the first time will be t_start. Otherwise it will start from 0.
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
         times = rs.get_times()
         return times
     
-    def have_time_vector(self, segment_index=None):
+    def has_time_vector(self, segment_index=None):
         """
-        Check if the segment of the recording have a time vector.
+        Check if the segment of the recording has a time vector.
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
         d = rs.get_times_kwargs()
         return d['time_vector'] is not None
     
-    def set_time_vector(self, times, segment_index=None, with_warning=True):
+    def set_times(self, times, segment_index=None, with_warning=True):
         """
-        
+        Set times for a recording segment.         
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
         
         assert times.ndim == 1, 'Time must have ndim=1'
-        assert rs.get_num_samples() == times.shape[0], 'times have wring shape'
+        assert rs.get_num_samples() == times.shape[0], 'times have wrong shape'
         
         rs.t_start = None
         rs.time_vector = times.astype('float64')
         
         if with_warning:
-            warnings.warn('Setting times with Recording.set_time_vector() is not recommended because '
+            warnings.warn('Setting times with Recording.set_times() is not recommended because '
                 'times are not always propagated to accross preprocessing'
-                'Use use this carrfully!')
+                'Use use this carefully!')
 
     _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
 
@@ -172,15 +174,15 @@ class BaseRecording(BaseExtractor):
         We plan to add other engines, such as zarr and NWB.
         """
         
-        # handlet_starts
+        # handle t_starts
         t_starts = []
-        have_time_vectors = []
+        has_time_vectors = []
         for segment_index, rs in enumerate(self._recording_segments):
             d = rs.get_times_kwargs()
             t_starts.append(d['t_start'])
-            have_time_vectors.append(d['time_vector'] is not None)
+            has_time_vectors.append(d['time_vector'] is not None)
         
-        if all( t_start is None for t_start in t_starts):
+        if all(t_start is None for t_start in t_starts):
             t_starts = None
         
         if format == 'binary':
@@ -206,7 +208,8 @@ class BaseRecording(BaseExtractor):
             traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
             from .numpyextractors import NumpyRecording
 
-            cached = NumpyRecording(traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids)
+            cached = NumpyRecording(traces_list, self.get_sampling_frequency(), t_starts=t_starts, 
+                                    channel_ids=self.channel_ids)
 
         elif format == 'zarr':
             # TODO implement a format based on zarr
@@ -526,13 +529,11 @@ class BaseRecordingSegment(BaseSegment):
     def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
         # sampling_frequency and time_vector are exclussive
         if sampling_frequency is None:
-            assert time_vector is not None
-            assert time_vector.ndim ==1
-            # check this maybe init is not terminated yet
-            #assert time_vector.shape[0] == self.get_num_samples()
+            assert time_vector is not None, "Pass either 'sampling_frequency' or 'time_vector'"
+            assert time_vector.ndim == 1, "time_vector should be a 1D array"
 
         if time_vector is None:
-            assert sampling_frequency is not None
+            assert sampling_frequency is not None, "Pass either 'sampling_frequency' or 'time_vector'"
         
         self.sampling_frequency = sampling_frequency
         self.t_start = t_start
@@ -551,15 +552,14 @@ class BaseRecordingSegment(BaseSegment):
             return time_vector
 
     def get_times_kwargs(self):
-        # usefull for other internal RecordingSegment
+        # useful for other internal RecordingSegment
         d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start,
                         time_vector=self.time_vector)
         return d
     
-    # alessio : I prefer sample_index_to_time over the old frame_to_time
     def sample_index_to_time(self, sample_ind):
         """
-        Transform sample index into time in second
+        Transform sample index into time in seconds
         """
         if self.time_vector is None:
             time_s = sample_ind / self.sampling_frequency
@@ -571,7 +571,7 @@ class BaseRecordingSegment(BaseSegment):
     
     def time_to_sample_index(self, time_s):
         """
-        Transform time in second into sample index
+        Transform time in seconds into sample index
         """
         if self.time_vector is None:
             if self.t_start is None:
