@@ -104,7 +104,8 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
                 assert ps.get_times_kwargs()['time_vector'] is None, "All segment should not have times set"
         else:
             for ps in parent_segments:
-                assert ps.get_times_kwargs()['t_start'] == times_kargs0['t_start'], "All segment should have the same t_start"
+                assert ps.get_times_kwargs()['t_start'] == times_kargs0['t_start'], "All segment should have the same "\
+                                                                                    "t_start"
             
         BaseRecordingSegment.__init__(self, **times_kargs0)
         self._channel_map = channel_map
