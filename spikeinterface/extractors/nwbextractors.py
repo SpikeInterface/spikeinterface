@@ -54,7 +54,7 @@ class NwbRecordingExtractor(BaseRecording):
     mode = 'file'
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
-    def __init__(self, file_path: PathType, electrical_series_name: str = None):
+    def __init__(self, file_path: PathType, electrical_series_name: str = None, load_time_vector=False):
         """
         Load an NWBFile as a RecordingExtractor.
 
@@ -71,13 +71,18 @@ class NwbRecordingExtractor(BaseRecording):
             es = get_electrical_series(nwbfile,self._electrical_series_name)
             if hasattr(es, 'timestamps') and es.timestamps:
                 sampling_frequency = 1. / np.median(np.diff(es.timestamps))
-                recording_start_time = es.timestamps[0]
+                t_start = es.timestamps[0]
+                if load_time_vector:
+                    times_kwargs = dict(time_vector=es.timestamps)
+                else:
+                    times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
             else:
                 sampling_frequency = es.rate
                 if hasattr(es, 'starting_time'):
-                    recording_start_time = es.starting_time
+                    t_start = es.starting_time
                 else:
-                    recording_start_time = 0.
+                    t_start = 0.
+                times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
 
             num_frames = int(es.data.shape[0])
             num_channels = len(es.electrodes.data)
@@ -98,7 +103,7 @@ class NwbRecordingExtractor(BaseRecording):
 
             BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
             recording_segment = NwbRecordingSegment(path=self._file_path, electrical_series_name=self._electrical_series_name,
-                                                    num_frames=num_frames)
+                                                    num_frames=num_frames, times_kwargs=times_kwargs)
             self.add_recording_segment(recording_segment)
 
             # If gains are not 1, set has_scaled to True
@@ -158,8 +163,8 @@ class NwbRecordingExtractor(BaseRecording):
 
 
 class NwbRecordingSegment(BaseRecordingSegment):
-    def __init__(self, path: PathType, electrical_series_name, num_frames):
-        BaseRecordingSegment.__init__(self)
+    def __init__(self, path: PathType, electrical_series_name, num_frames, times_kwargs):
+        BaseRecordingSegment.__init__(self, **times_kwargs)
         self._path = path
         self._electrical_series_name = electrical_series_name
         self._num_samples = num_frames

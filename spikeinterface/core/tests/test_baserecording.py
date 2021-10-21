@@ -58,6 +58,8 @@ def test_BaseRecording():
     rec.set_property('quality', [1., 3.3, np.nan])
     values = rec.get_property('quality')
     assert np.all(values[:2] == [1., 3.3, ])
+    
+    times0 = rec.get_times(segment_index=0)
 
     # dump/load dict
     d = rec.to_dict()
@@ -163,6 +165,29 @@ def test_BaseRecording():
     rec_int16.set_property('offset_to_uV', [0.] * 5)
     traces_float32 = rec_int16.get_traces(return_scaled=True)
     assert traces_float32.dtype == 'float32'
+    
+    # test with t_start
+    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype, t_starts=np.arange(num_seg)*10.)
+    times1 = rec.get_times(1)
+    folder = cache_folder / 'recording_with_t_start'
+    rec2 = rec.save(folder=folder)
+    assert np.allclose(times1, rec2.get_times(1))
+    
+    # test with time_vector
+    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec.set_times(np.arange(num_samples) / sampling_frequency + 30., segment_index=0)
+    rec.set_times(np.arange(num_samples) / sampling_frequency + 40., segment_index=1)
+    times1 = rec.get_times(1)
+    folder = cache_folder / 'recording_with_times'
+    rec2 = rec.save(folder=folder)
+    assert np.allclose(times1, rec2.get_times(1))
+    rec3 = load_extractor(folder)
+    assert np.allclose(times1, rec3.get_times(1))
+    
+    
+
+
+    
 
 
 if __name__ == '__main__':

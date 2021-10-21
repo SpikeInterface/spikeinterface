@@ -85,7 +85,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
 class NeoRecordingSegment(BaseRecordingSegment):
     def __init__(self, neo_reader, segment_index, stream_index):
-        BaseRecordingSegment.__init__(self)
+        sampling_frequency = neo_reader.get_signal_sampling_rate(stream_index=stream_index)
+        t_start = neo_reader.get_signal_t_start(0, segment_index, stream_index=stream_index)
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.stream_index = stream_index
