@@ -105,8 +105,8 @@ class ConcatenateSegmentRecording(BaseRecording):
         for rec in recording_list:
             for parent_segment in rec._recording_segments:
                 d = parent_segment.get_times_kwargs()
-                assert d['time_vector'] is None, 'ConcatenateSegmentRecording do not handle time_vector'
-                assert d['t_start'] is None, 'ConcatenateSegmentRecording do not handle t_start'
+                assert d['time_vector'] is None, 'ConcatenateSegmentRecording does not handle time_vector'
+                assert d['t_start'] is None, 'ConcatenateSegmentRecording does not handle t_start'
                 parent_segments.append(parent_segment)
         rec_seg = ProxyConcatenateRecordingSegment(parent_segments)
         self.add_recording_segment(rec_seg)
