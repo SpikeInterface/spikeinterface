@@ -31,9 +31,10 @@ class MdaRecordingExtractor(BaseRecording):
         num_channels = self._diskreadmda.N1()
         assert geom.shape[0] == self._diskreadmda.N1(), f'Incompatible dimensions between geom.csv and timeseries ' \
                                                         f'file: {geom.shape[0]} <> {self._diskreadmda.N1()}'
-        BaseRecording.__init__(self, sampling_frequency=self._dataset_params['samplerate'] * 1.0,
+        sampling_frequency=float(self._dataset_params['samplerate'])
+        BaseRecording.__init__(self, sampling_frequency=sampling_frequency,
                                channel_ids=np.arange(num_channels), dtype=dtype)
-        rec_segment = MdaRecordingSegment(self._diskreadmda)
+        rec_segment = MdaRecordingSegment(self._diskreadmda, sampling_frequency)
         self.add_recording_segment(rec_segment)
         self.set_dummy_probe_from_locations(geom)
         self._kwargs = {'folder_path': str(Path(folder_path).absolute()),
@@ -105,9 +106,9 @@ class MdaRecordingExtractor(BaseRecording):
 
 
 class MdaRecordingSegment(BaseRecordingSegment):
-    def __init__(self, diskreadmda):
+    def __init__(self, diskreadmda, sampling_frequency):
         self._diskreadmda = diskreadmda
-        BaseRecordingSegment.__init__(self)
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
         self._num_samples = self._diskreadmda.N2()
 
     def get_num_samples(self):

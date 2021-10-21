@@ -33,6 +33,8 @@ def test_NumpyRecording():
 
     rec = NumpyRecording(timeseries_list, sampling_frequency)
     print(rec)
+    
+    times1 = rec.get_times(1)
 
     rec.save(folder=cache_folder / 'test_NumpyRecording')
 
@@ -109,6 +111,6 @@ def test_NumpyEvent():
 
 if __name__ == '__main__':
     _clean_all()
-    # ~ test_NumpyRecording()
-    # ~ test_NumpySorting()
+    test_NumpyRecording()
+    test_NumpySorting()
     test_NumpyEvent()

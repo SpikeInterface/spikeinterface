@@ -37,7 +37,9 @@ def test_ChannelSliceRecording():
     assert traces.shape[1] == 2
     traces = rec_sliced.get_traces(segment_index=1, channel_ids=[2, 0])
     assert traces.shape[1] == 2
-
+    
+    assert np.allclose(rec_sliced.get_times(0), rec.get_times(0))
+    
     # with channel ids renaming
     rec_sliced2 = ChannelSliceRecording(rec, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
     assert np.all(rec_sliced2.get_channel_ids() == [3, 4])
