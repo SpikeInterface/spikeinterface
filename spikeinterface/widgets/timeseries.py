@@ -77,6 +77,9 @@ class TimeseriesWidget(BaseWidget):
         else:
             self.order = None
 
+        if channel_ids is None:
+            channel_ids = recording.get_channel_ids()
+
         fs = recording.get_sampling_frequency()
         if time_range is None:
             time_range = (0, 1.)
@@ -84,7 +87,7 @@ class TimeseriesWidget(BaseWidget):
 
         assert mode in ('auto', 'line', 'map'), 'Mode must be in auto/line/map'
         if mode == 'auto':
-            if recording.get_num_channels() <= 64:
+            if len(channel_ids) <= 64:
                 mode = 'line'
             else:
                 mode = 'map'
