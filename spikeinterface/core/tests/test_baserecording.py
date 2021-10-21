@@ -175,8 +175,8 @@ def test_BaseRecording():
     
     # test with time_vector
     rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
-    rec.set_time_vector(np.arange(num_samples) / sampling_frequency + 30., segment_index=0)
-    rec.set_time_vector(np.arange(num_samples) / sampling_frequency + 40., segment_index=1)
+    rec.set_times(np.arange(num_samples) / sampling_frequency + 30., segment_index=0)
+    rec.set_times(np.arange(num_samples) / sampling_frequency + 40., segment_index=1)
     times1 = rec.get_times(1)
     folder = cache_folder / 'recording_with_times'
     rec2 = rec.save(folder=folder)

@@ -27,7 +27,7 @@ class BinaryRecordingExtractor(BaseRecording):
     time_axis: int
         The axis of the time dimension (default 0: F order)
     t_starts: None or list of float
-        time of the first sample for each segment
+        Times in seconds of the first sample for each segment
     channel_ids: list (optional)
         A list of channel ids
     file_offset: int (optional)

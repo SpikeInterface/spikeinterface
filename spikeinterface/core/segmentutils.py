@@ -82,10 +82,10 @@ class ConcatenateSegmentRecording(BaseRecording):
     
     For instance, given one recording with 2 segments and one recording with
     3 segments, this class will give one recording with 1 segment
-
-    The contrain here to concatenate segment is that all segment must:
-      * not have time_vector
-      * t_start=None
+    
+    You can only concatenate segments if:
+      * all segments DO NOT have times
+      * all segment have t_start=None
 
     Parameters
     ----------
