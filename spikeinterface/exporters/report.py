@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 def export_report(waveform_extractor, output_folder, remove_if_exists=False, format="png",
-                  metrics=None, amplitudes=None, **job_wargs):
+                  metrics=None, amplitudes=None, show_figures=False, **job_wargs):
     """
     Exports a SI spike sorting report. The report includes summary figures of the spike sorting output
     (e.g. amplitude distributions, unit localization and depth VS amplitude) as well as unit-specific reports,
@@ -31,6 +31,8 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     amplitudes: dict or None
         Amplitudes 'by_unit' as returned by the st.postprocessing.get_spike_amplitudes(..., output="by_unit") function.
         If None, amplitudes are computed.
+    show_figures: bool
+        If True, figures are shown. If False (default), figures are closed after saving.
     {}
     """
     we = waveform_extractor
@@ -72,14 +74,20 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     fig = plt.figure(figsize=(20, 10))
     w = sw.plot_unit_localization(we, figure=fig, unit_colors=unit_colors)
     fig.savefig(output_folder / f'unit_localization.{format}')
+    if not show_figures:
+        plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(20, 10))
     sw.plot_units_depth_vs_amplitude(we, ax=ax, unit_colors=unit_colors)
     fig.savefig(output_folder / f'units_depth_vs_amplitude.{format}')
+    if not show_figures:
+        plt.close(fig)
 
     fig = plt.figure(figsize=(20, 10))
     sw.plot_amplitudes_distribution(we, amplitudes=amplitudes, figure=fig, unit_colors=unit_colors)
     fig.savefig(output_folder / f'amplitudes_distribution.{format}')
+    if not show_figures:
+        plt.close(fig)
 
     # units
     units_folder = output_folder / 'units'
@@ -90,6 +98,8 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         sw.plot_unit_summary(we, unit_id, amplitudes, figure=fig)
         fig.suptitle(f'unit {unit_id}')
         fig.savefig(units_folder / f'{unit_id}.{format}')
+        if not show_figures:
+            plt.close(fig)
 
 
 export_report.__doc__ = export_report.__doc__.format(_shared_job_kwargs_doc)
