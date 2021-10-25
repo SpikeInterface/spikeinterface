@@ -1,5 +1,6 @@
 from typing import List, Union
 from pathlib import Path
+import warnings
 
 import numpy as np
 
@@ -122,6 +123,47 @@ class BaseRecording(BaseExtractor):
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
+    
+    def get_times(self, segment_index=None):
+        """
+        Get time vector for a recording segment.
+        
+        If the segment has a time_vector, then it is returned. Otherwise
+        a time_vector is constructed on the fly with sampling frequency.
+        If t_start is defined and the time vector is constructed on the fly, 
+        the first time will be t_start. Otherwise it will start from 0.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        times = rs.get_times()
+        return times
+    
+    def has_time_vector(self, segment_index=None):
+        """
+        Check if the segment of the recording has a time vector.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        d = rs.get_times_kwargs()
+        return d['time_vector'] is not None
+    
+    def set_times(self, times, segment_index=None, with_warning=True):
+        """
+        Set times for a recording segment.         
+        """
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        
+        assert times.ndim == 1, 'Time must have ndim=1'
+        assert rs.get_num_samples() == times.shape[0], 'times have wrong shape'
+        
+        rs.t_start = None
+        rs.time_vector = times.astype('float64')
+        
+        if with_warning:
+            warnings.warn('Setting times with Recording.set_times() is not recommended because '
+                'times are not always propagated to accross preprocessing'
+                'Use use this carefully!')
 
     _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
 
@@ -131,7 +173,18 @@ class BaseRecording(BaseExtractor):
         for caching a results. At the moment only 'binary' with memmap is supported.
         We plan to add other engines, such as zarr and NWB.
         """
-
+        
+        # handle t_starts
+        t_starts = []
+        has_time_vectors = []
+        for segment_index, rs in enumerate(self._recording_segments):
+            d = rs.get_times_kwargs()
+            t_starts.append(d['t_start'])
+            has_time_vectors.append(d['time_vector'] is not None)
+        
+        if all(t_start is None for t_start in t_starts):
+            t_starts = None
+        
         if format == 'binary':
             # TODO save propreties as npz!!!!!
             folder = save_kwargs['folder']
@@ -146,7 +199,7 @@ class BaseRecording(BaseExtractor):
             from .binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
                                               num_chan=self.get_num_channels(), dtype=dtype,
-                                              channel_ids=self.get_channel_ids(), time_axis=0,
+                                              t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
                                               file_offset=0, gain_to_uV=self.get_channel_gains(),
                                               offset_to_uV=self.get_channel_offsets())
 
@@ -155,7 +208,8 @@ class BaseRecording(BaseExtractor):
             traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
             from .numpyextractors import NumpyRecording
 
-            cached = NumpyRecording(traces_list, self.get_sampling_frequency(), channel_ids=self.channel_ids)
+            cached = NumpyRecording(traces_list, self.get_sampling_frequency(), t_starts=t_starts, 
+                                    channel_ids=self.channel_ids)
 
         elif format == 'zarr':
             # TODO implement a format based on zarr
@@ -171,6 +225,12 @@ class BaseRecording(BaseExtractor):
         if self.get_property('contact_vector') is not None:
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
+
+        for segment_index, rs in enumerate(self._recording_segments):
+            d = rs.get_times_kwargs()
+            time_vector = d['time_vector']
+            if time_vector is not None:
+                cached._recording_segments[segment_index].time_vector = time_vector
         
         return cached
 
@@ -180,12 +240,26 @@ class BaseRecording(BaseExtractor):
         if (folder / 'probe.json').is_file():
             probegroup = read_probeinterface(folder / 'probe.json')
             self.set_probegroup(probegroup, in_place=True)
-    
+        
+        # load time vector if any
+        for segment_index, rs in enumerate(self._recording_segments):
+            time_file = folder / f'times_cached_seg{segment_index}.npy'
+            if time_file.is_file():
+                time_vector = np.load(time_file)
+                rs.time_vector = time_vector
+
     def _extra_metadata_to_folder(self, folder):
         # save probe
         if self.get_property('contact_vector') is not None:
             probegroup = self.get_probegroup()
             write_probeinterface(folder / 'probe.json', probegroup)
+
+        # save time vector if any
+        for segment_index, rs in enumerate(self._recording_segments):
+            d = rs.get_times_kwargs()
+            time_vector = d['time_vector']
+            if time_vector is not None:
+                np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
 
     def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """
@@ -452,8 +526,61 @@ class BaseRecordingSegment(BaseSegment):
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
 
-    def __init__(self):
+    def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
+        # sampling_frequency and time_vector are exclussive
+        if sampling_frequency is None:
+            assert time_vector is not None, "Pass either 'sampling_frequency' or 'time_vector'"
+            assert time_vector.ndim == 1, "time_vector should be a 1D array"
+
+        if time_vector is None:
+            assert sampling_frequency is not None, "Pass either 'sampling_frequency' or 'time_vector'"
+        
+        self.sampling_frequency = sampling_frequency
+        self.t_start = t_start
+        self.time_vector = time_vector
+
         BaseSegment.__init__(self)
+    
+    def get_times(self):
+        if self.time_vector is not None:
+            return self.time_vector
+        else:
+            time_vector = np.arange(self.get_num_samples(), dtype='float64')
+            time_vector /= self.sampling_frequency
+            if self.t_start is not None:
+                time_vector += self.t_start
+            return time_vector
+
+    def get_times_kwargs(self):
+        # useful for other internal RecordingSegment
+        d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start,
+                        time_vector=self.time_vector)
+        return d
+    
+    def sample_index_to_time(self, sample_ind):
+        """
+        Transform sample index into time in seconds
+        """
+        if self.time_vector is None:
+            time_s = sample_ind / self.sampling_frequency
+            if self.t_start is not None:
+                time_s += self.t_start
+        else:
+            time_s = self.time_vector[sample_ind]
+        return time_s
+    
+    def time_to_sample_index(self, time_s):
+        """
+        Transform time in seconds into sample index
+        """
+        if self.time_vector is None:
+            if self.t_start is None:
+                sample_index = time_s * self.sampling_frequency
+            else:
+                sample_index = (time_s - self.t_start) * self.sampling_frequency
+        else:
+            sample_index = np.searchsorted(self.time_vector, time_s, side='right') - 1
+        return int(sample_index)
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment

@@ -50,7 +50,13 @@ class FrameSliceRecording(BaseRecording):
 
 class FrameSliceRecordingSegment(BaseRecordingSegment):
     def __init__(self, parent_recording_segment, start_frame, end_frame):
-        BaseRecordingSegment.__init__(self)
+        d = parent_recording_segment.get_times_kwargs()
+        d = d.copy()
+        if d['time_vector'] is None:
+            d['t_start'] = parent_recording_segment.sample_index_to_time(start_frame)
+        else:
+            d['time_vector'] = d['time_vector'][start_frame:end_frame]
+        BaseRecordingSegment.__init__(self, **d)
         self._parent_recording_segment = parent_recording_segment
         self.start_frame = start_frame
         self.end_frame = end_frame
