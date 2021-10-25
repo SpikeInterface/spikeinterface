@@ -31,7 +31,7 @@ loky
 tridesclous>=1.6.3
 
 # shybrid
-shybrid
+# shybrid
 
 ## spyking-circus
 spyking-circus

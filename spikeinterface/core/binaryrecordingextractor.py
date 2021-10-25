@@ -26,6 +26,8 @@ class BinaryRecordingExtractor(BaseRecording):
         The dtype of the binary file
     time_axis: int
         The axis of the time dimension (default 0: F order)
+    t_starts: None or list of float
+        Times in seconds of the first sample for each segment
     channel_ids: list (optional)
         A list of channel ids
     file_offset: int (optional)
@@ -49,7 +51,7 @@ class BinaryRecordingExtractor(BaseRecording):
     mode = 'file'
     installation_mesg = ""  # error message when not installed
 
-    def __init__(self, file_paths, sampling_frequency, num_chan, dtype, channel_ids=None,
+    def __init__(self, file_paths, sampling_frequency, num_chan, dtype, t_starts=None, channel_ids=None,
                  time_axis=0, file_offset=0, gain_to_uV=None, offset_to_uV=None,
                  is_filtered=None):
 
@@ -66,11 +68,19 @@ class BinaryRecordingExtractor(BaseRecording):
         else:
             # one segment
             datfiles = [Path(file_paths)]
+        
+        if t_starts is not None:
+            assert len(t_starts) == len(datfiles), 't_starts must be a list of same size than file_paths'
+            t_starts = [float(t_start) for t_start in t_starts]
 
         dtype = np.dtype(dtype)
 
-        for datfile in datfiles:
-            rec_segment = BinaryRecordingSegment(datfile, num_chan, dtype, time_axis, file_offset)
+        for i, datfile in enumerate(datfiles):
+            if t_starts is None:
+                t_start = None
+            else:
+                t_start = t_starts[i]
+            rec_segment = BinaryRecordingSegment(datfile, sampling_frequency, t_start, num_chan, dtype, time_axis, file_offset)
             self.add_recording_segment(rec_segment)
 
         if is_filtered is not None:
@@ -84,6 +94,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
         self._kwargs = {'file_paths': [str(e.absolute()) for e in datfiles],
                         'sampling_frequency': sampling_frequency,
+                        't_starts': t_starts,
                         'num_chan': num_chan, 'dtype': dtype.str,
                         'channel_ids': channel_ids, 'time_axis': time_axis, 'file_offset': file_offset,
                         'gain_to_uV': gain_to_uV, 'offset_to_uV': offset_to_uV,
@@ -113,8 +124,8 @@ BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.writ
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
-    def __init__(self, datfile, num_chan, dtype, time_axis, file_offset):
-        BaseRecordingSegment.__init__(self)
+    def __init__(self, datfile, sampling_frequency, t_start, num_chan, dtype, time_axis, file_offset):
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self._timeseries = read_binary_recording(datfile, num_chan, dtype, time_axis, file_offset)
 
     def get_num_samples(self) -> int:
