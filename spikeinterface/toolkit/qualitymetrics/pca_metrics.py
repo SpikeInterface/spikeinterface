@@ -64,7 +64,8 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000, n_neig
             nn_isolation = nearest_neighbors_isolation(pcs_flat, labels, unit_id, 
                                                        max_spikes_for_nn, n_neighbors, seed)
             pc_metrics['nn_isolation'][unit_id] = nn_isolation
-    
+
+        
     return pc_metrics
 
 
@@ -359,10 +360,7 @@ def nearest_neighbors_noise_overlap(all_pcs, all_labels, this_unit_id, max_spike
     rng = np.random.default_rng(seed=seed)
     
     
-
-    n_waveforms_per_unit = np.array([len(wf) for wf in waveforms])
-    n_spikes_per_unit = np.array([len(self._metric_data._sorting.get_unit_spike_train(u)) for u in self._metric_data._unit_ids])
-
+    
     if np.all(n_waveforms_per_unit < max_spikes_per_unit_for_noise_overlap):
         # in this case it means that waveforms have been computed on
         # less spikes than max_spikes_per_unit_for_noise_overlap --> recompute
@@ -427,19 +425,28 @@ def nearest_neighbors_noise_overlap(all_pcs, all_labels, this_unit_id, max_spike
         num_clips = len(clips)
 
         # compute weight for correcting noise snippets
+        # take median waveform
         template = np.median(clips, axis=0)
+        # find max channel and timepoint of abs of template
         chmax, tmax = np.unravel_index(np.argmax(np.abs(template)), template.shape)
+        # get the value at the max channel and timepoint of the median  
         max_val = template[chmax, tmax]
         weighted_clips_control = np.zeros(clips_control.shape)
         weights = np.zeros(num_clips)
         for j in range(num_clips):
+            # take a waveform
             clip0 = clips_control[j, :, :]
+            # take its value at max channel and timepoint of the template
             val0 = clip0[chmax, tmax]
+            # multiply by value at max channel and timeopint of the template
             weight0 = val0 * max_val
             weights[j] = weight0
+            # multiple with the waevform
             weighted_clips_control[j, :, :] = clip0 * weight0
-
+        #  do this for all waveform
+        #  then add them all up
         noise_template = np.sum(weighted_clips_control, axis=0)
+        # then divide by 
         noise_template = noise_template / np.sum(np.abs(noise_template)) * np.sum(np.abs(template))
 
         # subtract it out
