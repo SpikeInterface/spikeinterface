@@ -13,11 +13,11 @@ def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segmen
     recording: BaseRecording
         The recording to get random chunks from
     return_scaled: bool
-        If True, returned chunks are scaled ti uV
+        If True, returned chunks are scaled to uV
     num_chunks_per_segment: int
         Number of chunks per segment
     chunk_size: int
-        Size of a chink in number of frames
+        Size of a chunk in number of frames
     seed: int
         Random seed
 
