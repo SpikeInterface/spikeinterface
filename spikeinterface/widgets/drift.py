@@ -50,7 +50,8 @@ class DriftOverTimeWidget(BaseWidget):
 
     def __init__(self, recording, peaks=None, detect_peaks_kwargs={},
                  mode='heatmap',
-                 probe_axis=1, weight_with_amplitudes=True, bin_duration_s=60.,
+                 probe_axis=1, weight_with_amplitudes=False, 
+                 bin_duration_s=60.,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
@@ -103,7 +104,7 @@ class DriftOverTimeWidget(BaseWidget):
                 depths = positions[peaks['channel_ind'][mask], self.probe_axis]
 
                 if self.weight_with_amplitudes:
-                    count, bins = np.histogram(depths, bins=depth_bins, weights=np.abs(peaks['channel_ind'][mask]))
+                    count, bins = np.histogram(depths, bins=depth_bins, weights=np.abs(peaks['amplitude'][mask]))
                 else:
                     count, bins = np.histogram(depths, bins=depth_bins)
                 peak_density[:, i] = count
