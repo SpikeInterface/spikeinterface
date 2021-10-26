@@ -20,7 +20,7 @@ class CrossCorrelogramsWidget(BaseWidget):
     window_ms: float
         Window duration in ms
     symmetrize: bool default False
-        Make symetric CCG
+        Make symmetric CCG
     """
 
     def __init__(self, sorting, unit_ids=None,

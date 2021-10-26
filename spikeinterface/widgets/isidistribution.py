@@ -33,17 +33,17 @@ class ISIDistributionWidget(BaseWidget):
 
     def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0,
                  ncols=5, axes=None):
-        
+
         self._sorting = sorting
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
         self._unit_ids = unit_ids
-        
+
         self._sampling_frequency = sorting.get_sampling_frequency()
         self.window_ms = window_ms
         self.bin_ms = bin_ms
         self.name = 'ISIDistribution'
-        
+
         if axes is None:
             num_axes = len(unit_ids)
         else:
@@ -62,7 +62,7 @@ class ISIDistributionWidget(BaseWidget):
         num_ax = 0
         for i, unit_id in enumerate(unit_ids):
             ax = self.axes.flatten()[i]
-            
+
             bins = np.arange(0, self.window_ms, self.bin_ms)
             bin_counts = None
             for segment_index in range(num_seg):
@@ -71,13 +71,13 @@ class ISIDistributionWidget(BaseWidget):
                            / float(self._sampling_frequency) * 1000.
                 #  bin_counts, bin_edges = compute_isi_dist(times, bins=self._bins, maxwindow=self._window)
                 isi = np.diff(times_ms)
-                
+
                 bin_counts_, bin_edges = np.histogram(isi, bins=bins, density=True)
                 if segment_index == 0:
                     bin_counts = bin_counts_
                 else:
                     bin_counts += bin_counts_
-                    # TODO handle sensity when several semgent
+                    # TODO handle sensity when several segments
 
             ax.bar(x=bin_edges[:-1], height=bin_counts, width=self.bin_ms, color='gray', align='edge')
 
