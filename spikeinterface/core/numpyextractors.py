@@ -13,13 +13,10 @@ class NumpyRecording(BaseRecording):
     ----------
     traces_list:  list of array or array (if mono segment)
         The traces to instantiate a mono or multisegment Recording
-
     sampling_frequency: float
-        The ssampling frequency in Hz
-
+        The sampling frequency in Hz
     t_starts: None or list of float
         Times in seconds of the first sample for each segment
-    
     channel_ids: list
         An optional list of channel_ids. If None, linear channels are assumed
     """
@@ -87,7 +84,7 @@ class NumpySorting(BaseSorting):
     @staticmethod
     def from_extractor(source_sorting):
         """
-        Create a numpy sorting from another exatractor
+        Create a numpy sorting from another extractor
         """
         unit_ids = source_sorting.get_unit_ids()
         nseg = source_sorting.get_num_segments()
@@ -108,7 +105,7 @@ class NumpySorting(BaseSorting):
     def from_times_labels(times_list, labels_list, sampling_frequency):
         """
         Construct sorting extractor from:
-          * an array of spike times (in frames) 
+          * an array of spike times (in frames)
           * an array of spike labels and adds all the
         In case of multisegment, it is a list of array.
 
@@ -118,7 +115,6 @@ class NumpySorting(BaseSorting):
             An array of spike times (in frames).
         labels_list: list of array (or array)
             An array of spike labels corresponding to the given times.
-        
         """
 
         if isinstance(times_list, np.ndarray):
@@ -169,12 +165,12 @@ class NumpySorting(BaseSorting):
     def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None):
         """
         Construct a sorting with a neo spiketrain list.
-        
+
         If this is a list of list, it is multi segment.
-        
+
         Parameters
         ----------
-        
+
         """
         import neo
 
