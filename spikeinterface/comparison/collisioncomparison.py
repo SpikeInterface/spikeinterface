@@ -156,4 +156,3 @@ class CollisionGTComparison(GroundTruthComparison):
             pair_names = pair_names[valid_indices]
 
         return similarities, recall_scores, pair_names
-

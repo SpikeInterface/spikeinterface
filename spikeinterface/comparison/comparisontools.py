@@ -115,22 +115,17 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
     ----------
     sorting1: SortingExtractor
         The first sorting extractor
-
     sorting2: SortingExtractor
         The second sorting extractor
-
     delta_frames: int
         Number of frames to consider spikes coincident
-
     n_jobs: int
         Number of jobs to run in parallel
 
     Returns
     -------
-
     match_event_count: array (int64)
         Matrix of match count spike
-
     """
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
@@ -156,27 +151,21 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     Note : this computation is symmetric.
     Inverting sorting1 and sorting2 give the transposed matrix.
 
-
     Parameters
     ----------
     sorting1: SortingExtractor
         The first sorting extractor
-
     sorting2: SortingExtractor
         The second sorting extractor
-
     delta_frames: int
         Number of frames to consider spikes coincident
-
     n_jobs: int
         Number of jobs to run in parallel
 
     Returns
     -------
-
     agreement_scores: array (float)
         The agreement score matrix.
-
     """
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
@@ -200,9 +189,7 @@ def make_agreement_scores_from_count(match_event_count, event_counts1, event_cou
 
     Parameters
     ----------
-
     match_event_count
-
 
     """
 
@@ -225,7 +212,6 @@ def make_possible_match(agreement_scores, min_score):
 
     Note : this is symmetric.
 
-
     Parameters
     ----------
     agreement_scores: pd.DataFrame
@@ -234,7 +220,7 @@ def make_possible_match(agreement_scores, min_score):
 
 
     Returns
-    -----------
+    -------
     best_match_12: pd.Series
 
     best_match_21: pd.Series
@@ -275,11 +261,10 @@ def make_best_match(agreement_scores, min_score):
 
 
     Returns
-    -----------
+    -------
     best_match_12: pd.Series
 
     best_match_21: pd.Series
-
 
     """
     unit1_ids = np.array(agreement_scores.index)
@@ -320,7 +305,7 @@ def make_hungarian_match(agreement_scores, min_score):
 
 
     Returns
-    -----------
+    -------
     hungarian_match_12: pd.Series
 
     hungarian_match_21: pd.Series
@@ -514,7 +499,7 @@ def do_confusion_matrix(event_counts1, event_counts2, match_12, match_event_coun
         The match count matrix given by make_match_count_matrix
 
     Returns
-    ------
+    -------
     confusion_matrix: pd.DataFrame
         The confusion matrix
         index are units1 reordered
@@ -708,7 +693,6 @@ def make_collision_events(sorting, delta):
     ----------
     sorting: SortingExtractor
         The sorting extractor object for counting collision events
-
     delta: int
         Number of frames for considering collision events
 
@@ -719,7 +703,6 @@ def make_collision_events(sorting, delta):
                 ('index2', 'int64'), ('unit_id2', 'int64'),
                 ('delta', 'int64')]
         1d of all collision
-
     """
     unit_ids = np.array(sorting.get_unit_ids())
     dtype = [

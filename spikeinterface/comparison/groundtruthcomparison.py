@@ -60,13 +60,11 @@ class GroundTruthComparison(BaseTwoSorterComparison):
         If True, misclassifications are computed at instantiation (default False)
     verbose: bool
         If True, output is verbose
+
     Returns
     -------
     sorting_comparison: SortingComparison
         The SortingComparison object
-
-
-
     """
 
     def __init__(self, gt_sorting, tested_sorting, gt_name=None, tested_name=None,
