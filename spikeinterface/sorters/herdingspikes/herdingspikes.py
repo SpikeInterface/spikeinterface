@@ -1,5 +1,6 @@
 from pathlib import Path
 import copy
+from packaging import version
 
 from ..basesorter import BaseSorter
 from ..utils import RecordingExtractorOldAPI
@@ -146,6 +147,13 @@ class HerdingspikesSorter(BaseSorter):
     def _run_from_folder(cls, output_folder, params, verbose):
         import herdingspikes as hs
         import spikeinterface.toolkit as st
+
+        hs_version = version.parse(hs.__version__)
+
+        if hs_version >= version.parse("0.4.0"):
+            new_api = True
+        else:
+            new_api = False
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
