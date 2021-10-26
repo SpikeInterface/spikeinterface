@@ -29,7 +29,7 @@ class TimeseriesWidget(BaseWidget):
             * 'auto' : auto switch depending the channel count <32ch
     cmap: str dfault 'RdBu'
         matplotlib colormap used in mode 'map'
-    show_channel_ids: 
+    show_channel_ids: bool
         Set yticks with channel ids
     color_groups: bool
         If True groups are plotted with different colors
@@ -77,6 +77,9 @@ class TimeseriesWidget(BaseWidget):
         else:
             self.order = None
 
+        if channel_ids is None:
+            channel_ids = recording.get_channel_ids()
+
         fs = recording.get_sampling_frequency()
         if time_range is None:
             time_range = (0, 1.)
@@ -84,7 +87,7 @@ class TimeseriesWidget(BaseWidget):
 
         assert mode in ('auto', 'line', 'map'), 'Mode must be in auto/line/map'
         if mode == 'auto':
-            if recording.get_num_channels() <= 64:
+            if len(channel_ids) <= 64:
                 mode = 'line'
             else:
                 mode = 'map'
@@ -154,7 +157,6 @@ class TimeseriesWidget(BaseWidget):
             self._plot_offsets = {}
             offset0 = self._vspacing * (n - 1)
             times = np.arange(self._frame_range[0], self._frame_range[1]) / self._sampling_frequency
-
             for im, m in enumerate(self.visible_channel_ids):
                 self._plot_offsets[m] = offset0
                 if self._color_groups:
