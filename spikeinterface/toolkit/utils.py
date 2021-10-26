@@ -52,7 +52,6 @@ def get_channel_distances(recording):
     channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
     return channel_distances
 
-
 def get_closest_channels(recording, channel_ids=None, num_channels=None):
     """Get closest channels + distances
 
@@ -63,7 +62,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     channel_ids: list or int
         list of channels id to compute there near neighborhood
     num_channels: int, optional
-        Maximum number of neighborhood channel to return
+        Maximum number of neighborhood channels to return
 
     Returns
     -------
@@ -72,7 +71,6 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     : array (2d)
         distance in ascending order for each channel id given in input
     """
-    closest_channels_id = []
 
     locations = recording.get_channel_locations(channel_ids=channel_ids)
 
@@ -81,11 +79,10 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     for i in range(locations.shape[0]):
         distances = np.linalg.norm(locations[i, :] - locations, axis=1)
         order = np.argsort(distances)
-        closest_channels_inds.append(order[1:num_channels])
-        dist.append(distances[order][1:num_channels])
+        closest_channels_inds.append(order[1:num_channels+1])
+        dist.append(distances[order][1:num_channels+1])
 
     return np.array(closest_channels_inds), np.array(dist)
-
 
 def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     """
