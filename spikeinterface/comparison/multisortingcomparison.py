@@ -12,7 +12,7 @@ import networkx as nx
 
 
 class MultiSortingComparison(BaseComparison):
-    '''
+    """
     Compares multiple spike sorter outputs.
 
     - Pair-wise comparisons are made
@@ -46,7 +46,7 @@ class MultiSortingComparison(BaseComparison):
     -------
     multi_sorting_comparison: MultiSortingComparison
         MultiSortingComparison object with the multiple sorter comparison
-    '''
+    """
 
     def __init__(self, sorting_list, name_list=None, delta_time=0.4,  # sampling_frequency=None,
                  match_score=0.5, chance_score=0.1, n_jobs=-1, spiketrain_mode='union', verbose=False,
@@ -64,7 +64,7 @@ class MultiSortingComparison(BaseComparison):
             self._do_agreement()
 
     def get_agreement_sorting(self, minimum_agreement_count=1, minimum_agreement_count_only=False):
-        '''
+        """
         Returns AgreementSortingExtractor with units with a 'minimum_matching' agreement.
 
         Parameters
@@ -79,7 +79,7 @@ class MultiSortingComparison(BaseComparison):
         -------
         agreement_sorting: AgreementSortingExtractor
             The output AgreementSortingExtractor
-        '''
+        """
         assert minimum_agreement_count > 0, "'minimum_agreement_count' should be greater than 0"
         sorting = AgreementSortingExtractor(self.sampling_frequency, self,
                                             min_agreement_count=minimum_agreement_count,
@@ -87,7 +87,7 @@ class MultiSortingComparison(BaseComparison):
         return sorting
 
     def compute_subgraphs(self):
-        '''
+        """
         Computes subgraphs of connected components.
 
         Returns
@@ -96,7 +96,7 @@ class MultiSortingComparison(BaseComparison):
             List of sorter names for each node in the connected component subgraph
         sg_units: list
             List of unit ids for each node in the connected component subgraph
-        '''
+        """
         if self.clean_graph is not None:
             g = self.clean_graph
         else:
