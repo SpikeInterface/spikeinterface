@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
 import json
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -454,7 +455,15 @@ class WaveformExtractor:
 
         return selected_spikes
 
-    def run_extract_waveforms(self, **job_kwargs):
+    def run_extract_waveforms(self, unit_ids=[], **job_kwargs):
+        assert isinstance(unit_ids, Iterable), "unit_ids should be an iterable containing the units' id."
+
+        if len(unit_ids) == 0:
+            unit_ids = self.sorting.unit_ids
+            sorting = self.sorting
+        else:
+            sorting = self.sorting.select_units(unit_ids, renamed_unit_ids=None)
+
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
         num_chans = self.recording.get_num_channels()
@@ -468,16 +477,16 @@ class WaveformExtractor:
 
         # get spike times
         selected_spike_times = {}
-        for unit_id in self.sorting.unit_ids:
+        for unit_id in sorting.unit_ids:
             selected_spike_times[unit_id] = []
-            for segment_index in range(self.sorting.get_num_segments()):
-                spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            for segment_index in range(sorting.get_num_segments()):
+                spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sel = selected_spikes[unit_id][segment_index]
                 selected_spike_times[unit_id].append(spike_times[sel])
 
         # prepare memmap
         wfs_memmap = {}
-        for unit_id in self.sorting.unit_ids:
+        for unit_id in unit_ids:
             file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
             n_spikes = np.sum([e.size for e in selected_spike_times[unit_id]])
             shape = (n_spikes, self.nsamples, num_chans)
@@ -490,9 +499,9 @@ class WaveformExtractor:
         func = _waveform_extractor_chunk
         init_func = _init_worker_waveform_extractor
         if n_jobs == 1:
-            init_args = (self.recording, self.sorting,)
+            init_args = (self.recording, sorting,)
         else:
-            init_args = (self.recording.to_dict(), self.sorting.to_dict(),)
+            init_args = (self.recording.to_dict(), sorting.to_dict(),)
         init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter, return_scaled)
         processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, job_name='extract waveforms',
                                            **job_kwargs)
