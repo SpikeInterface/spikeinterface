@@ -35,11 +35,11 @@ class SymmetricSortingComparison(BaseTwoSorterComparison):
         Number of cores to use in parallel. Uses all available if -1
     verbose: bool
         If True, output is verbose
+
     Returns
     -------
     sorting_comparison: SortingComparison
         The SortingComparison object
-    
     """
 
     def __init__(self, sorting1, sorting2, sorting1_name=None, sorting2_name=None,

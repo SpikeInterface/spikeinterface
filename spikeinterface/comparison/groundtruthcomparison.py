@@ -11,19 +11,19 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     Compares a sorter to a ground truth.
 
     This class can:
-      * compute a "macth between gt_sorting and tested_sorting
+      * compute a "match between gt_sorting and tested_sorting
       * compute optionally the score label (TP, FN, CL, FP) for each spike
-      * count by unit of GT the total of each (TP, FN, CL, FP) into a Dataframe 
+      * count by unit of GT the total of each (TP, FN, CL, FP) into a Dataframe
         GroundTruthComparison.count
       * compute the confusion matrix .get_confusion_matrix()
-      * compute some performance metric with several strategy based on 
+      * compute some performance metric with several strategy based on
         the count score by unit
       * count well detected units
-      * count false positve detected units
+      * count false positive detected units
       * count redundant units
       * count overmerged units
       * summary all this
-    
+
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ class GroundTruthComparison(BaseTwoSorterComparison):
         GT have all possible units. It allows more performance measurement.
         For instance, MEArec simulated dataset have exhaustive_gt=True
     match_mode: 'hungarian', or 'best'
-        What is match used for counting : 'hugarian' or 'best match'.
+        What is match used for counting : 'hungarian' or 'best match'.
     n_jobs: int
         Number of cores to use in parallel. Uses all available if -1
     compute_labels: bool
@@ -65,7 +65,7 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     sorting_comparison: SortingComparison
         The SortingComparison object
 
-    
+
 
     """
 
@@ -134,9 +134,8 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     def _do_count(self):
         """
         Do raw count into a dataframe.
-        
-        Internally use hugarian match or best match.
-        
+
+        Internally use hungarian match or best match.
         """
         if self.match_mode == 'hungarian':
             match_12 = self.hungarian_match_12
@@ -245,7 +244,7 @@ class GroundTruthComparison(BaseTwoSorterComparison):
         Print a global performance summary that depend on the context:
           * exhaustive= True/False
           * how many gt units (one or several)
-        
+
         This summary mix several performance metrics.
         """
         txt = _template_summary_part1
@@ -304,10 +303,10 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     def get_false_positive_units(self, redundant_score=None):
         """
         Return units list of "false positive units" from tested_sorting.
-        
-        "false positive units" ara defined as units in tested that
+
+        "false positive units" are defined as units in tested that
         are not matched at all in GT units.
-        
+
         Need exhaustive_gt=True
 
         Parameters
@@ -344,13 +343,12 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     def get_redundant_units(self, redundant_score=None):
         """
         Return "redundant units"
-        
-        
+
         "redundant units" are defined as units in tested
         that match a GT units with a big agreement score
         but it is not the best match.
         In other world units in GT that detected twice or more.
-        
+
         Parameters
         ----------
         redundant_score=None: float (default 0.2)
@@ -383,14 +381,13 @@ class GroundTruthComparison(BaseTwoSorterComparison):
         """
         Return "overmerged units"
 
-
         "overmerged units" are defined as units in tested
         that match more than one GT unit with an agreement score larger than overmerged_score.
 
         Parameters
         ----------
         overmerged_score: float (default 0.4)
-            Tested units with 2 or more agrement scores above 'overmerged_score'
+            Tested units with 2 or more agreement scores above 'overmerged_score'
             are counted as "overmerged".
         """
         assert self.exhaustive_gt, 'overmerged_units list is valid only if exhaustive_gt=True'
@@ -415,12 +412,12 @@ class GroundTruthComparison(BaseTwoSorterComparison):
     def get_bad_units(self):
         """
         Return units list of "bad units".
-        
+
         "bad units" are defined as units in tested that are not
         in the best match list of GT units.
-        
+
         So it is the union of "false positive units" + "redundant units".
-        
+
         Need exhaustive_gt=True
         """
         assert self.exhaustive_gt, 'bad_units list is valid only if exhaustive_gt=True'
@@ -454,7 +451,7 @@ _template_summary_part1 = """SUMMARY
 -------
 GT num_units: {num_gt}
 TESTED num_units: {num_tested}
-num_well_detected: {num_well_detected} 
+num_well_detected: {num_well_detected}
 num_redundant: {num_redundant}
 num_overmerged: {num_overmerged}
 """
