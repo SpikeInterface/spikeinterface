@@ -21,7 +21,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         base_local_folder = get_global_dataset_folder()
         base_local_folder.mkdir(exist_ok=True)
         #  if not is_set_global_dataset_folder():
-        #  print(f'Local folder is {base_local_folder}, Use set_global_dataset_folder() to set it globaly')
+        #  print(f'Local folder is {base_local_folder}, Use set_global_dataset_folder() to set it globally')
         local_folder = base_local_folder / repo.split('/')[-1]
 
     if local_folder.exists():

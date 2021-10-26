@@ -1,5 +1,5 @@
 """
-Some utils to handle parral jobs on top of job and/or loky
+Some utils to handle parallel jobs on top of job and/or loky
 """
 from pathlib import Path
 import numpy as np
@@ -92,15 +92,15 @@ def ensure_n_jobs(recording, n_jobs=1):
 def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memory=None, n_jobs=1, **other_kwargs):
     """
     'chunk_size' is the traces.shape[0] for each worker.
-    
+
     Flexible chunk_size setter with 3 ways:
         * "chunk_size": is the length in sample for each chunk independently of channel count and dtype.
         * "chunk_memory": total memory per chunk per worker
         * "total_memory": total memory over all workers.
-    
+
     If chunk_size/chunk_memory/total_memory are all None then there is no chunk computing
     and the full trace is retrieved at once.
-    
+
     Parameters
     ----------
     chunk_size: int or None
@@ -140,7 +140,7 @@ def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memor
 class ChunkRecordingExecutor:
     """
     Core class for parallel processing to run a "function" over chunks on a recording.
-    
+
     It supports running a function:
         * in loop with chunk processing (low RAM usage)
         * at once if chunk_size is None (high RAM usage)
@@ -252,7 +252,7 @@ class ChunkRecordingExecutor:
 
 
 # see
-# https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool 
+# https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool
 # the tricks is : theses 2 variables are global per worker
 # so they are not share in the same process
 global _worker_ctx

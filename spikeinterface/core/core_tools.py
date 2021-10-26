@@ -243,8 +243,8 @@ def write_binary_recording_file_handle(recording, file_handle=None,
                                        time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs):
     """
     Old variant version of write_binary_recording with one file handle.
-    Can be usefull in some case ???
-    Not used naymore at the moment.
+    Can be useful in some case ???
+    Not used anymore at the moment.
 
     @ SAM useful for writing with time_axis=1!
     """
@@ -261,7 +261,7 @@ def write_binary_recording_file_handle(recording, file_handle=None,
         chunk_size = None
 
     if chunk_size is None:
-        # no chunkking
+        # no chunking
         traces = recording.get_traces(segment_index=0)
         if time_axis == 1:
             traces = traces.T
@@ -412,7 +412,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
     dataset_path: str
-        Path to dataset in h5 filee (e.g. '/dataset')
+        Path to dataset in h5 file (e.g. '/dataset')
     segment_index: int
         index of segment
     save_path: str
@@ -431,7 +431,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         Number of chunks to save the file in. This avoid to much memory consumption for big files.
         If None and 'chunk_memory' is given, the file is saved in chunks of 'chunk_memory' MB (default 500MB)
     chunk_memory: None or str
-        Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M') 
+        Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M')
     verbose: bool
         If True, output is verbose (when chunks are used)
     """
