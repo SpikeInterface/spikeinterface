@@ -455,10 +455,10 @@ class WaveformExtractor:
 
         return selected_spikes
 
-    def run_extract_waveforms(self, unit_ids=[], **job_kwargs):
-        assert isinstance(unit_ids, Iterable), "unit_ids should be an iterable containing the units' id."
+    def run_extract_waveforms(self, unit_ids=None, **job_kwargs):
+        assert isinstance(unit_ids, Iterable) or unit_ids is None, "unit_ids should be an iterable containing the units' id."
 
-        if len(unit_ids) == 0:
+        if unit_ids is None or len(unit_ids) == 0:
             unit_ids = self.sorting.unit_ids
             sorting = self.sorting
         else:
@@ -479,8 +479,8 @@ class WaveformExtractor:
         selected_spike_times = {}
         for unit_id in sorting.unit_ids:
             selected_spike_times[unit_id] = []
-            for segment_index in range(sorting.get_num_segments()):
-                spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            for segment_index in range(self.sorting.get_num_segments()):
+                spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sel = selected_spikes[unit_id][segment_index]
                 selected_spike_times[unit_id].append(spike_times[sel])
 
