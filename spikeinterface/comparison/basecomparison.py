@@ -9,7 +9,7 @@ class BaseComparison:
        * GroundTruthComparison
        * MultiSortingComparison
        * SymmetricSortingComparison
-    
+
     Mainly deals with:
       * sampling_frequency
       * sorting names
@@ -36,8 +36,8 @@ class BaseComparison:
         sf0 = sampling_freqs[0]
         if not np.all(sf0 == sampling_freqs):
             delta_freq_ratio = np.abs(sampling_freqs - sf0) / sf0
-            # tolerence of 0.1%
-            assert np.all(delta_freq_ratio < 0.001), "Inconsintent sampling frequency among sorting list"
+            # tolerance of 0.1%
+            assert np.all(delta_freq_ratio < 0.001), "Inconsistent sampling frequency among sorting list"
 
         self.sampling_frequency = sf0
         self.delta_time = delta_time

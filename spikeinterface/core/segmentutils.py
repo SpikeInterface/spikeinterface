@@ -20,7 +20,7 @@ class AppendSegmentRecording(BaseRecording):
     """
     Return a recording that "appends" all segments from all recording
     into one recording multi segment.
-    
+
     For instance, given one recording with 2 segments and one recording with
     3 segments, this class will give one recording with 5 segments
 
@@ -38,7 +38,7 @@ class AppendSegmentRecording(BaseRecording):
         channel_ids = rec0.channel_ids
         self.recording_list = recording_list
 
-        # check same carracteristics
+        # check same characteristics
         ok1 = all(sampling_frequency == rec.get_sampling_frequency() for rec in recording_list)
         ok2 = all(dtype == rec.get_dtype() for rec in recording_list)
         ok3 = all(np.array_equal(channel_ids, rec.channel_ids) for rec in recording_list)
@@ -79,10 +79,10 @@ class ConcatenateSegmentRecording(BaseRecording):
     """
     Return a recording that "concatenates" all segments from all recording
     into one recording mono segment. The operation is lazy.
-    
+
     For instance, given one recording with 2 segments and one recording with
     3 segments, this class will give one recording with 1 segment
-    
+
     You can only concatenate segments if:
       * all segments DO NOT have times
       * all segment have t_start=None
@@ -145,7 +145,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
             seg_start = self.cumsum_length[i0]
             traces = rec_seg.get_traces(start_frame - seg_start, end_frame - seg_start, channel_indices)
         else:
-            #  sveral segments
+            #  several segments
             all_traces = []
             for i in range(i0, i1 + 1):
                 if i == len(self.parent_segments):
@@ -183,7 +183,7 @@ class AppendSegmentSorting(BaseSorting):
     """
     Return a sorting that "append" all segments from all sorting
     into one sorting multi segment.
-    
+
     Parameters
     ----------
     sorting_list : list of BaseSorting
@@ -197,7 +197,7 @@ class AppendSegmentSorting(BaseSorting):
         unit_ids = sorting0.unit_ids
         self.sorting_list = sorting_list
 
-        # check same carracteristics
+        # check same characteristics
         ok1 = all(sampling_frequency == sorting.get_sampling_frequency() for sorting in sorting_list)
         ok2 = all(np.array_equal(unit_ids, sorting.unit_ids) for sorting in sorting_list)
         if not (ok1 and ok2):

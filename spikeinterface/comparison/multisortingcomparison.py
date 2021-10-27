@@ -12,7 +12,7 @@ import networkx as nx
 
 
 class MultiSortingComparison(BaseComparison):
-    '''
+    """
     Compares multiple spike sorter outputs.
 
     - Pair-wise comparisons are made
@@ -33,7 +33,7 @@ class MultiSortingComparison(BaseComparison):
     chance_score: float
         Minimum agreement score to for a possible match (default 0.1)
     n_jobs: int
-       Number of cores to use in parallel. Uses all availible if -1
+       Number of cores to use in parallel. Uses all available if -1
     spiketrain_mode: str
         Mode to extract agreement spike trains:
             - 'union': spike trains are the union between the spike trains of the best matching two sorters
@@ -44,10 +44,9 @@ class MultiSortingComparison(BaseComparison):
 
     Returns
     -------
-
     multi_sorting_comparison: MultiSortingComparison
         MultiSortingComparison object with the multiple sorter comparison
-    '''
+    """
 
     def __init__(self, sorting_list, name_list=None, delta_time=0.4,  # sampling_frequency=None,
                  match_score=0.5, chance_score=0.1, n_jobs=-1, spiketrain_mode='union', verbose=False,
@@ -65,7 +64,7 @@ class MultiSortingComparison(BaseComparison):
             self._do_agreement()
 
     def get_agreement_sorting(self, minimum_agreement_count=1, minimum_agreement_count_only=False):
-        '''
+        """
         Returns AgreementSortingExtractor with units with a 'minimum_matching' agreement.
 
         Parameters
@@ -80,7 +79,7 @@ class MultiSortingComparison(BaseComparison):
         -------
         agreement_sorting: AgreementSortingExtractor
             The output AgreementSortingExtractor
-        '''
+        """
         assert minimum_agreement_count > 0, "'minimum_agreement_count' should be greater than 0"
         sorting = AgreementSortingExtractor(self.sampling_frequency, self,
                                             min_agreement_count=minimum_agreement_count,
@@ -88,16 +87,16 @@ class MultiSortingComparison(BaseComparison):
         return sorting
 
     def compute_subgraphs(self):
-        '''
+        """
         Computes subgraphs of connected components.
 
         Returns
         -------
         sg_sorter_names: list
-            List of sorter names for each node in the connected component subrgaph
+            List of sorter names for each node in the connected component subgraph
         sg_units: list
-            List of unit ids for each node in the connected component subrgaph
-        '''
+            List of unit ids for each node in the connected component subgraph
+        """
         if self.clean_graph is not None:
             g = self.clean_graph
         else:
@@ -118,7 +117,7 @@ class MultiSortingComparison(BaseComparison):
     def save_to_folder(self, save_folder):
         for sorting in self.sorting_list:
             assert sorting.check_if_dumpable(), 'MultiSortingComparison.save_to_folder() need dumpable sortings'
-        
+
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
         filename = str(save_folder / 'multicomparison.gpickle')
@@ -171,7 +170,7 @@ class MultiSortingComparison(BaseComparison):
 
     def _do_graph(self):
         if self._verbose:
-            print('Multicomaprison step 2: make graph')
+            print('Multicomparison step 2: make graph')
 
         self.graph = nx.Graph()
         # nodes
@@ -197,7 +196,7 @@ class MultiSortingComparison(BaseComparison):
     def _do_agreement(self):
         # extract agreement from graph
         if self._verbose:
-            print('Multicomaprison step 4: extract agreement from graph')
+            print('Multicomparison step 4: extract agreement from graph')
 
         self._new_units = {}
         self._spiketrains = []
