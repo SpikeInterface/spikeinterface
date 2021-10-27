@@ -4,6 +4,8 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kw
 from spikeinterface.toolkit import get_noise_levels, get_channel_distances
 
 
+import scipy.optimize
+
 def localize_peaks(recording, peaks, method='center_of_mass',
                    local_radius_um=150, ms_before=0.3, ms_after=0.6,
                    **job_kwargs):
@@ -32,7 +34,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',
     peak_locations: np.array
         Array with estimated x-y location for each spike
     """
-    assert method in ('center_of_mass',)
+    assert method in ('center_of_mass', 'lsq_optimize')
 
     # find channel neighbours
     assert local_radius_um is not None
@@ -107,6 +109,8 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     if method == 'center_of_mass':
         peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask)
+    elif method == 'lsq_optimize':
+        peak_locations = localize_peaks_lsq_optimize(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
 
     return peak_locations
 
@@ -126,5 +130,57 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
         com = np.sum(amps[:, np.newaxis] * contact_locations[chan_inds, :], axis=0) / np.sum(amps)
 
         peak_locations[i, :] = com
+
+    return peak_locations
+
+
+def _minimize_dist(vec, wf, local_contact_locations):
+    # vec dims ar (x, z, y, amplitude_factor)
+    # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
+    ptp_estimated = vec[3] / (((local_contact_locations - vec[np.newaxis, :2])**2).sum(axis=1) + vec[2]**2)**0.5
+    err = wf.ptp(axis=0) - ptp_estimated
+    return err
+
+
+def localize_peaks_lsq_optimize(traces, local_peak, contact_locations, neighbours_mask, nbefore, nafter):
+    #ndim = contact_locations.shape[1]
+    ndim = 3
+    peak_locations = np.zeros((local_peak.size, ndim), dtype='float64')
+
+    # TODO find something faster
+    for i, peak in enumerate(local_peak):
+        chan_mask = neighbours_mask[peak['channel_ind'], :]
+        chan_inds, = np.nonzero(chan_mask)
+
+        local_contact_locations = contact_locations[chan_inds, :]
+
+        # wf is (nsample, nchan) - chann is only nieghboor
+        wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
+
+        # initial guess is the center of mass
+        amps = wf.ptp(axis=0)
+        com = np.sum(amps[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(amps)
+        x0 = np.zeros(4, dtype='float32')
+        x0[:2] = com
+        x0[2] = 20
+        x0[3] = 1000
+        
+
+        # bounds depend on geometry
+        bounds = ([x0[0] - 100, x0[1]-100, 1, 1], x0  + [x0[0] + 100,  x0[1] + 100, 500, 10000])
+        # print('x0', x0)
+        # print('bounds',bounds)
+
+
+        # 
+        # print('z_initial', z_initial)
+        args = (wf, local_contact_locations)
+        output = scipy.optimize.least_squares(_minimize_dist, x0=x0, bounds=bounds, args = args)
+        # print('i', com, output['x'][:2])
+        # print('yep')
+        # print('output', output)
+        # print('output', output['x'].shape, output['x'])
+
+        peak_locations[i, :] = output['x'][:3]
 
     return peak_locations
