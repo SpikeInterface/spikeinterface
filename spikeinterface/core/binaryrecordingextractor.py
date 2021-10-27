@@ -19,7 +19,7 @@ class BinaryRecordingExtractor(BaseRecording):
     file_paths: str or Path or list
         Path to the binary file
     sampling_frequency: float
-        The sampling frequncy
+        The sampling frequency
     num_chan: int
         Number of channels
     dtype: str or dtype
@@ -68,7 +68,7 @@ class BinaryRecordingExtractor(BaseRecording):
         else:
             # one segment
             datfiles = [Path(file_paths)]
-        
+
         if t_starts is not None:
             assert len(t_starts) == len(datfiles), 't_starts must be a list of same size than file_paths'
             t_starts = [float(t_start) for t_start in t_starts]
@@ -153,7 +153,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-# For backward compatibity (old good time)
+# For backward compatibility (old good time)
 BinDatRecordingExtractor = BinaryRecordingExtractor
 
 
