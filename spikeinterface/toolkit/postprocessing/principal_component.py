@@ -134,18 +134,21 @@ class WaveformPrincipalComponent:
         if self._pca_model is None:
             if mode == "by_channel_local":
                 pca_model = []
-                for chan_id in self.waveform_extractor.recording.channel_ids:
+                for chan_ind, chan_id in enumerate(self.waveform_extractor.recording.channel_ids):
                     pca_file = self.folder / "PCA" / f"pca_model_{mode}_{chan_id}.pkl"
-                    assert pca_file.is_file()
+                    if not pca_file.is_file() and chan_ind == 0:
+                        _ = self._fit_by_channel_local()
                     pca = pickle.load(pca_file.open("rb"))
                     pca_model.append(pca)
             elif mode == "by_channel_global":
                 pca_file = self.folder / "PCA" / f"pca_model_{mode}.pkl"
-                assert pca_file.is_file()
+                if not pca_file.is_file():
+                    _ = self._fit_by_channel_global()
                 pca_model = pickle.load(pca_file.open("rb"))
             elif mode == "concatenated":
                 pca_file = self.folder / "PCA" / f"pca_model_{mode}.pkl"
-                assert pca_file.is_file()
+                if not pca_file.is_file():
+                    _ = self._fit_concatenated()
                 pca_model = pickle.load(pca_file.open("rb"))
             self._pca_model = pca_model
         else:
@@ -448,12 +451,8 @@ class WaveformPrincipalComponent:
             for chan_ind, chan_id in enumerate(channel_ids):
                 proj = pca_model.transform(wfs[:, :, chan_ind])
                 projection_memmap[unit_id][:, :, chan_ind] = proj
-
-    def _run_concatenated(self, projection_memmap):
-        """
-        In this mode the waveforms are concatenated and there is
-        a global fit_transform at once.
-        """
+                
+    def _fit_concatenated(self):
         we = self.waveform_extractor
         p = self._params
 
@@ -472,6 +471,21 @@ class WaveformPrincipalComponent:
         mode = p["mode"]
         with (self.folder / "PCA" / f"pca_model_{mode}.pkl").open("wb") as f:
             pickle.dump(pca_model, f)
+
+        return pca_model
+
+    def _run_concatenated(self, projection_memmap):
+        """
+        In this mode the waveforms are concatenated and there is
+        a global fit_transform at once.
+        """
+        we = self.waveform_extractor
+        p = self._params
+
+        unit_ids = we.sorting.unit_ids
+
+        # there is one unique PCA accross channels
+        pca_model = self._fit_concatenated()
 
         # transform
         for unit_id in unit_ids:
