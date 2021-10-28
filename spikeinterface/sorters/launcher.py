@@ -31,8 +31,9 @@ def _run_one(arg_list):
 
     if docker_image is None:
 
-        run_sorter_local(sorter_name, recording, output_folder, remove_existing_folder,
-                         delete_output_folder, verbose, raise_error, with_output, **sorter_params)
+        run_sorter_local(sorter_name, recording, output_folder=output_folder,
+                         remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+                         verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
     else:
 
         run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
@@ -217,7 +218,6 @@ def run_sorters(sorter_list,
     docker_images: dict
         A dictionary {sorter_name : docker_image} to specify is some sorters
         should use docker images
-        
 
     Returns
     -------
