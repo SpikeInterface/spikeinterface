@@ -322,7 +322,7 @@ class WaveformPrincipalComponent:
         max_channels_per_template = min(max_channels_per_template, we.recording.get_num_channels())
 
         best_channels_index = get_template_channel_sparsity(we, outputs="index", peak_sign=peak_sign,
-                                                            max_channels_per_template=max_channels_per_template)
+                                                            num_channels=max_channels_per_template)
 
         unit_channels = [best_channels_index[unit_id] for unit_id in sorting.unit_ids]
 
