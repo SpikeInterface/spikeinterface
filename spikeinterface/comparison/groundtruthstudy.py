@@ -32,7 +32,7 @@ class GroundTruthStudy:
         self.exhaustive_gt = None
 
     def __repr__(self):
-        t = 'Groud truth study\n'
+        t = 'Ground truth study\n'
         t += '  ' + str(self.study_folder) + '\n'
         t += '  recordings: {} {}\n'.format(len(self.rec_names), self.rec_names)
         if len(self.sorter_names):
@@ -215,7 +215,7 @@ class GroundTruthStudy:
             we = WaveformExtractor.create(rec, sorting, waveform_folder)
         return we
 
-    def compute_waveforms(self, rec_name, sorter_name=None, 
+    def compute_waveforms(self, rec_name, sorter_name=None,
                 ms_before=3., ms_after=4., max_spikes_per_unit=500,
                 n_jobs=-1, total_memory='1G'):
 
@@ -226,9 +226,9 @@ class GroundTruthStudy:
     def get_templates(self, rec_name, sorter_name=None, mode='median'):
         """
         Get template for a given recording.
-        
+
         If sorter_name=None then template are from the ground truth.
-        
+
         """
         we = self.get_waveform_extractor(rec_name, sorter_name=sorter_name)
         templates = we.get_all_templates(mode=mode)
@@ -241,17 +241,16 @@ class GroundTruthStudy:
         we = self.get_waveform_extractor(rec_name)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
-        
+
         # metrics
         metrics = compute_quality_metrics(we, metric_names=metric_names)
         filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
         metrics.to_csv(filename, sep='\t', index=True)
 
-        return metrics    
-        
+        return metrics
+
 
     def get_metrics(self, rec_name=None, **metric_kwargs):
-
         """
         Load or compute units metrics  for a given recording.
         """
@@ -268,14 +267,14 @@ class GroundTruthStudy:
             metrics = self.compute_metrics(rec_name, **metric_kwargs)
 
         metrics.index.name = 'unit_id'
-        #  add rec name columns 
+        #  add rec name columns
         metrics['rec_name'] = rec_name
 
         return metrics
 
     def get_units_snr(self, rec_name=None, **metric_kwargs):
         """
-        
+
         """
         metric = self.get_metrics(rec_name=rec_name, **metric_kwargs)
         return metric['snr']

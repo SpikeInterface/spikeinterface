@@ -54,7 +54,7 @@ def test_run_sorter_by_property():
     sorter_name = 'tridesclous'
 
     sorting = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
-                                     engine='loop', verbose=False, with_output=False)
+                                     engine='loop', verbose=False)
     assert "group" in sorting.get_property_keys()
 
 
