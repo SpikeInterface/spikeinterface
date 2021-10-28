@@ -63,7 +63,7 @@ class BaseSorting(BaseExtractor):
         """
         if format == 'npz':
             folder = save_kwargs.pop('folder')
-            # TODO save propreties/features as npz!!!!!
+            # TODO save properties/features as npz!!!!!
             from .npzsortingextractor import NpzSortingExtractor
             save_path = folder / 'sorting_cached.npz'
             NpzSortingExtractor.write_sorting(self, save_path)

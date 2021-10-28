@@ -9,7 +9,7 @@ from ..toolkit import get_template_channel_sparsity
 class UnitWaveformDensityMapWidget(BaseWidget):
     """
     Plots unit waveforms using heat map density.
-    
+
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
@@ -59,9 +59,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         self.unit_colors = unit_colors
 
         if radius_um is not None:
-            assert max_channels is None, 'radius_um and max_channels are mutually exclussive'
+            assert max_channels is None, 'radius_um and max_channels are mutually exclusive'
         if max_channels is not None:
-            assert radius_um is None, 'radius_um and max_channels are mutually exclussive'
+            assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
 
         self.radius_um = radius_um
         self.max_channels = max_channels

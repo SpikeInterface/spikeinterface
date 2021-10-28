@@ -6,13 +6,13 @@ from .comparisontools import make_collision_events
 
 class CollisionGTComparison(GroundTruthComparison):
     """
-    This class is an extention of GroundTruthComparison by focusing
+    This class is an extension of GroundTruthComparison by focusing
     to benchmark spike in collision
-    
-    
-    collision_lag: float 
+
+
+    collision_lag: float
         Collision lag in ms.
-    
+
     """
 
     def __init__(self, gt_sorting, tested_sorting, collision_lag=2.0, nbins=11, **kwargs):
@@ -24,7 +24,7 @@ class CollisionGTComparison(GroundTruthComparison):
 
         self.collision_lag = collision_lag
         self.nbins = nbins
-        
+
         self.detect_gt_collision()
         self.compute_all_pair_collision_bins()
 
@@ -56,9 +56,9 @@ class CollisionGTComparison(GroundTruthComparison):
         return score_label1, score_label2, delta
 
     def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, bins):
-        
+
         score_label1, score_label2, delta = self.get_label_for_collision(gt_unit_id1, gt_unit_id2)
-        
+
 
         tp_count1 = np.zeros(bins.size - 1)
         fn_count1 = np.zeros(bins.size - 1)
@@ -85,7 +85,7 @@ class CollisionGTComparison(GroundTruthComparison):
         d = int(self.collision_lag / 1000 * self.sampling_frequency)
         bins = np.linspace(-d, d, self.nbins+1)
         self.bins = bins
-        
+
         unit_ids = self.sorting1.unit_ids
         n = len(unit_ids)
 
@@ -93,7 +93,7 @@ class CollisionGTComparison(GroundTruthComparison):
         all_fn_count1 = []
         all_tp_count2 = []
         all_fn_count2 = []
-        
+
         self.all_tp = np.zeros((n, n, self.nbins), dtype='int64')
         self.all_fn = np.zeros((n, n, self.nbins), dtype='int64')
 
@@ -101,20 +101,20 @@ class CollisionGTComparison(GroundTruthComparison):
             for j in range(i+1, n):
                 u1 = unit_ids[i]
                 u2 = unit_ids[j]
-                
+
                 tp_count1, fn_count1, tp_count2, fn_count2 = self.get_label_count_per_collision_bins(u1, u2, bins)
-                
+
                 self.all_tp[i, j, :] = tp_count1
                 self.all_tp[j, i, :] = tp_count2
                 self.all_fn[i, j, :] = fn_count1
                 self.all_fn[j, i, :] = fn_count2
-    
+
     def compute_collision_by_similarity(self, similarity_matrix, unit_ids=None, good_only=False):
         if unit_ids is None:
             unit_ids = self.sorting1.unit_ids
-        
+
         n = len(unit_ids)
-        
+
         recall_scores = []
         similarities = []
         pair_names = []
@@ -125,7 +125,7 @@ class CollisionGTComparison(GroundTruthComparison):
                 u2 = unit_ids[c]
                 ind1 = self.sorting1.id_to_index(u1)
                 ind2 = self.sorting1.id_to_index(u2)
-                
+
                 tp1 = self.all_tp[ind1, ind2, :]
                 fn1 = self.all_fn[ind1, ind2, :]
                 recall1 = tp1 / (tp1 + fn1)
@@ -138,17 +138,17 @@ class CollisionGTComparison(GroundTruthComparison):
                 recall2 = tp2 / (tp2 + fn2)
                 recall_scores.append(recall2)
                 similarities.append(similarity_matrix[r, c])
-                pair_names.append(f'{u2} {u1}')                
-                
+                pair_names.append(f'{u2} {u1}')
+
         recall_scores = np.array(recall_scores)
         similarities = np.array(similarities)
         pair_names = np.array(pair_names)
-        
+
         order = np.argsort(similarities)
         similarities = similarities[order]
         recall_scores = recall_scores[order, :]
         pair_names = pair_names[order]
-        
+
         if good_only:
             valid_indices, = np.nonzero(recall_scores.sum(axis=1) > 0)
             similarities = similarities[valid_indices]
@@ -156,4 +156,3 @@ class CollisionGTComparison(GroundTruthComparison):
             pair_names = pair_names[valid_indices]
 
         return similarities, recall_scores, pair_names
-
