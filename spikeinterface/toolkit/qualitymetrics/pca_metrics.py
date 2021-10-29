@@ -234,31 +234,28 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
 
     return hit_rate, miss_rate
 
-def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_for_nn, n_neighbors, seed):
+def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id:int,
+                                max_spikes_for_nn:int, n_neighbors:int, seed:int):
     """ Calculates unit isolation based on NearestNeighbors search in PCA space
 
     Based on isolation metric described in Chung et al. (2017) Neuron 95: 1381-1394.
 
-    Rough logic
-    -----------
+    Rough logic:
+    ------------
     1) Choose a cluster
-    2) Compute the isolation function with every other cluster
-    3) Isolation score is defined as the min of (2)
+    2) Compute the isolation score with every other cluster
+    3) Isolation score is defined as the min of (2) (i.e. 'worst-case measure')
     
-    Implementation
-    --------------
-    Let A and B be clusters from sorting. 
+    Implementation details:
+    -----------------------
+    Let A and B be two clusters from sorting. 
     
     We set |A| = |B|:
         If max_spikes_for_nn < |A| and max_spikes_for_nn < |B|, then randomly subsample max_spikes_for_nn samples from A and B.
         If max_spikes_for_nn > min(|A|, |B|) (e.g. |A| > max_spikes_for_nn > |B|), then randomly subsample min(|A|, |B|) samples from A and B.
         This is because the metric is affected by the size of the clusters being compared independently of how well-isolated they are.
         
-    Isolation function:
-        Isolation(A, B) = 1/k \sum_{j=1}^k |{x \in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
-            where \rho(x) is the cluster x belongs to (in this case, either A or B)
-        Note that this definition implies that the isolation funciton  (1) ranges from 0 to 1; and 
-                                                                       (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
+    See docstring for `_compute_isolation` for the definition of isolation score.
 
     Parameters:
     -----------
@@ -267,7 +264,7 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
     all_labels: array_like, (num_spikes, )
         1D array of cluster labels for all spikes
     this_unit_id: int
-        ID of unit for which thiss metric will be calculated
+        ID of unit for which this metric will be calculated
     max_spikes_for_nn: int
         max number of spikes to use per cluster
     n_neighbors: int
@@ -278,7 +275,6 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
     Outputs:
     --------
     nn_isolation : float
-    
     """
     
     rng = np.random.default_rng(seed=seed)
@@ -313,44 +309,41 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
 def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor, 
                                     this_unit_id: int, max_spikes_for_nn: int=1000,
                                     n_neighbors: int=5, n_components: int=10, seed: int=0):
-    """ Calculates unit noise overlap based on NearestNeighbors search in PCA space
+    """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
     Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
 
-    Rough logic
-    -----------
-    1) Generate a noise cluster by randomly sampling from recording
-    2) Subtract a weighted average of noise snippets from both the target and noise clusters 
-       to correct for bias in sampling
-    3) Compute the isolation score between noise cluster and target cluster
+    Rough logic:
+    ------------
+    1) Generate a noise cluster by randomly sampling voltage snippets from recording.
+    2) Subtract projection onto the weighted average of noise snippets
+       of both the target and noise clusters to correct for bias in sampling.
+    3) Compute the isolation score between the noise cluster and the target cluster.
     
-    Implementation
-    --------------
-    As with nn_isolation, the clusters that are compared (target and noise clusters) have
-    the same number of spikes 
+    Implementation details:
+    -----------------------
+    As with nn_isolation, the clusters that are compared (target and noise clusters)
+    have the same number of spikes.
     
-    See docstring for nearest_neighbors_isolation for definition of isolation function.
+    See docstring for `_compute_isolation` for the definition of isolation score.
     
     Parameters:
     -----------
     we: si.WaveformExtractor
     this_unit_id: int
         ID of unit for which this metric will be calculated
-    noise_cluster: np.array, (snippet, samples, channels)
-        random snippets from recording to compare with the target cluster
     max_spikes_for_nn: int
         max number of spikes to use per cluster
-    n_components: int
-        number of PC components to project the snippets
     n_neighbors: int
         number of neighbors to check membership of
+    n_components: int
+        number of PC components to project the snippets
     seed: int
         seed for random subsampling of spikes
 
     Outputs:
     --------
-    nearest_neighbor_isolation : float
-    
+    nn_noise_overlap : float
     """
 
     # set random seed
@@ -393,7 +386,7 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     weights = weights / np.sum(weights)
     weighted_noise_snippet = np.sum(weights * noise_cluster.swapaxes(0,2), axis=2).swapaxes(0,1)
     
-    # subtract from waveforms
+    # subtract projection onto weighted noise snippet
     for snippet in range(n_snippets):
         waveforms[snippet, :, :] = _subtract_clip_component(waveforms[snippet, :, :], weighted_noise_snippet)
         noise_cluster[snippet, :, :] = _subtract_clip_component(noise_cluster[snippet, :, :], weighted_noise_snippet)
@@ -417,14 +410,19 @@ def _subtract_clip_component(clip1, component):
     return V1.reshape(clip1.shape)
 
 def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors:int):
-    """
-    Computes the isolation score used for nn_isolation and nn_noise_overlap
+    """Computes the isolation score used for nn_isolation and nn_noise_overlap
+
+    Definition of isolation score:
+        Isolation(A, B) = 1/k \sum_{j=1}^k |{x \in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
+            where \rho(x) is the cluster x belongs to (in this case, either A or B)
+        Note that this definition implies that the isolation score (1) ranges from 0 to 1; and 
+                                                                   (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
 
     Parameters
     ----------
     pcs_target_unit: np.array, (n_spikes, n_components)
         PCA projection of the spikes in the target cluster
-    pcs_other_unit: np.array, (n_spikes, n_features)
+    pcs_other_unit: np.array, (n_spikes, n_components)
         PCA projection of the spikes in the other cluster
     n_neighbors: int
         number of nearest neighbors to check membership of
