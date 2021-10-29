@@ -458,7 +458,7 @@ class WaveformExtractor:
     def run_extract_waveforms(self, unit_ids=None, **job_kwargs):
         assert isinstance(unit_ids, Iterable) or unit_ids is None, "unit_ids should be an iterable containing the units' id."
 
-        if unit_ids is None or len(unit_ids) == 0:
+        if unit_ids is None:
             unit_ids = self.sorting.unit_ids
             sorting = self.sorting
         else:
