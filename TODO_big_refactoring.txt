@@ -3,15 +3,12 @@ Here the TODO list for the NEW spikeinterface API
 core:
     * add kachery extractor (jeremy)
     * save features as np (sam)
-    * waveform_extractor improve cache option
-    * time vector
     * binary_interface()
     * rescaler / dtype
 
 
 extractors:
 
-    * nwb: reader/writer (with multi segment) (ben?)
     * BiocamRecordingExtractor  : need to be done in neo
     * OpenEphysSortingExtractor : need to be done in neo
 
@@ -43,9 +40,6 @@ sorters:
   * install all files *.m, *.prm
 
 
-widgets:
-  * fix plot_multicomp_graph()
-
 
 examples:
 
@@ -66,7 +60,6 @@ doc:
 
 Linked projects:
 
-  * herdingspikes: new API transpose and multi segment (cole)
   * mountainsort4: new API transpose and multi segment (jeremy)
   * spikeforest: new API transpose and multi segment (jeremy)
   * tridesclous integrate recording extractor
