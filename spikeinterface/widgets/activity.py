@@ -78,10 +78,10 @@ class PeakActivityMapWidget(BaseWidget):
         fs = rec.get_sampling_frequency()
         duration = rec.get_total_duration()
 
-        probe = rec.get_probe()
+        probegroup = rec.get_probegroup()
 
         if self.bin_duration_s is None:
-            self._plot_one_bin(rec, probe, peaks, duration)
+            self._plot_one_bin(rec, probegroup, peaks, duration)
         else:
             bin_size = int(self.bin_duration_s * fs)
             num_frames = int(duration / self.bin_duration_s)
@@ -90,13 +90,13 @@ class PeakActivityMapWidget(BaseWidget):
                 i0 = np.searchsorted(peaks['sample_ind'], bin_size * i)
                 i1 = np.searchsorted(peaks['sample_ind'], bin_size * (i + 1))
                 local_peaks = peaks[i0:i1]
-                artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
+                artists = self._plot_one_bin(rec, probegroup, local_peaks, self.bin_duration_s)
                 return artists
 
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
                                            interval=100, blit=True)
 
-    def _plot_one_bin(self, rec, probe, peaks, duration):
+    def _plot_one_bin(self, rec, probegroup, peaks, duration):
 
         # TODO: @alessio weight_with_amplitudes is not implemented yet
         rates = np.zeros(rec.get_num_channels(), dtype='float64')
@@ -106,19 +106,25 @@ class PeakActivityMapWidget(BaseWidget):
             rates[chan_ind] = num_spike / duration
 
         artists = ()
-        if self.with_contact_color:
-            poly, poly_contour = plot_probe(probe, ax=self.ax, contacts_values=rates,
-                                            probe_shape_kwargs={'facecolor': 'w', 'alpha': .1},
-                                            contacts_kargs={'alpha': 1.}
-                                            )
-            artists = artists + (poly, poly_contour)
+        
+        # contacts are sorted based on device indices, so we can just loop through them for multiple probes
+        chan_start_idx = 0
+        for probe in probegroup.probes:
+            num_channels = probe.get_contact_count()
+            values = rates[chan_start_idx:chan_start_idx + num_channels]
+            
+            if self.with_contact_color:
+                poly, poly_contour = plot_probe(probe, ax=self.ax, contacts_values=values,
+                                                probe_shape_kwargs={'facecolor': 'w', 'alpha': .1},
+                                                contacts_kargs={'alpha': 1.})
+                artists = artists + (poly, poly_contour)
 
-        if self.with_interpolated_map:
-            image, xlims, ylims = probe.to_image(rates, pixel_size=0.5,
-                                                 num_pixel=None, method='linear',
-                                                 xlims=None, ylims=None)
-            im = self.ax.imshow(image, extent=xlims + ylims, origin='lower', alpha=0.5)
-            artists = artists + (im,)
+            if self.with_interpolated_map:
+                image, xlims, ylims = probe.to_image(values, pixel_size=0.5,
+                                                     num_pixel=None, method='linear',
+                                                     xlims=None, ylims=None)
+                im = self.ax.imshow(image, extent=xlims + ylims, origin='lower', alpha=0.5)
+                artists = artists + (im,)
 
         return artists
 

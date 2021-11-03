@@ -3,7 +3,7 @@ import matplotlib.pylab as plt
 
 from .basewidget import BaseWidget
 
-from probeinterface.plotting import plot_probe
+from probeinterface.plotting import plot_probe, plot_probe_group
 
 
 class ProbeMapWidget(BaseWidget):
@@ -35,14 +35,14 @@ class ProbeMapWidget(BaseWidget):
         if channel_ids is not None:
             recording = recording.channel_slice(channel_ids)
         self._recording = recording
-        self._probe = recording.get_probe()
+        self._probegroup = recording.get_probegroup()
         self._plot_probe_kwargs = plot_probe_kwargs
 
     def plot(self):
         self._do_plot()
 
     def _do_plot(self):
-        plot_probe(self._probe, ax=self.ax, **self._plot_probe_kwargs)
+        plot_probe_group(self._probegroup, ax=self.ax, **self._plot_probe_kwargs)
 
 
 def plot_probe_map(*args, **kwargs):

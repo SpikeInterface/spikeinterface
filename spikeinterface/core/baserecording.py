@@ -433,8 +433,9 @@ class BaseRecording(BaseExtractor):
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
         if self.get_property('contact_vector') is not None:
-            probe = self.get_probe()
-            return probe.contact_positions[channel_indices]
+            contact_vector = self.get_property('contact_vector')
+            positions = np.array([contact_vector["x"], contact_vector["y"]]).T
+            return positions
         else:
             location = self.get_property('location')
             if location is None:

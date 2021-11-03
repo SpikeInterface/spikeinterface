@@ -51,7 +51,7 @@ class UnitProbeMapWidget(BaseWidget):
 
     def plot(self):
         we = self.waveform_extractor
-        probe = we.recording.get_probe()
+        probegroup = we.recording.get_probegroup()
 
         probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
 
@@ -64,18 +64,26 @@ class UnitProbeMapWidget(BaseWidget):
                 contacts_values = np.zeros(template.shape[1])
             else:
                 contacts_values = np.max(np.abs(template), axis=0)
-            poly_contact, poly_contour = plot_probe(probe, contacts_values=contacts_values,
-                                                    ax=ax, probe_shape_kwargs=probe_shape_kwargs)
+            
+            # contacts are sorted based on device indices, so we can just loop through them for multiple probes
+            chan_start_idx = 0
+            for probe in probegroup.probes:    
+                num_channels = probe.get_contact_count()
+                values = contacts_values[chan_start_idx:chan_start_idx + num_channels]
+                poly_contact, poly_contour = plot_probe(probe, 
+                                                        contacts_values=values,
+                                                        ax=ax, probe_shape_kwargs=probe_shape_kwargs)
 
-            poly_contact.set_zorder(2)
-            if poly_contour is not None:
-                poly_contour.set_zorder(1)
+                poly_contact.set_zorder(2)
+                if poly_contour is not None:
+                    poly_contour.set_zorder(1)
 
-            if self.colorbar:
-                self.figure.colorbar(poly_contact, ax=ax)
+                if self.colorbar:
+                    self.figure.colorbar(poly_contact, ax=ax)
 
-            poly_contact.set_clim(0, np.max(np.abs(template)))
-            all_poly_contact.append(poly_contact)
+                poly_contact.set_clim(0, np.max(np.abs(template)))
+                all_poly_contact.append(poly_contact)
+                chan_start_idx += num_channels
 
             ax.set_title(str(unit_id))
 
