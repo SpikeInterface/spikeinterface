@@ -35,18 +35,18 @@ class WaveformExtractor:
 
     >>> # Instantiate
     >>> we = WaveformExtractor.create(recording, sorting, folder)
-    
+
     >>> # Compute
     >>> we = we.set_params(...)
     >>> we = we.run_extract_waveforms(...)
-    
+
     >>> # Retrieve
     >>> waveforms = we.get_waveforms(unit_id)
     >>> template = we.get_template(unit_id, mode='median')
-    
+
     >>> # Load  from folder (in another session)
     >>> we = WaveformExtractor.load_from_folder(folder)
-    
+
     """
 
     def __init__(self, recording, sorting, folder):
@@ -62,9 +62,9 @@ class WaveformExtractor:
         self.recording = recording
         self.sorting = sorting
         self.folder = Path(folder)
-        
-        
-        
+
+
+
         # cache in memory
         self._waveforms = {}
         self._template_cache = {}
@@ -284,23 +284,23 @@ class WaveformExtractor:
         wfs, index_ar = self.get_waveforms(unit_id, with_index=True, sparsity=sparsity)
         mask = index_ar['segment_index'] == segment_index
         return wfs[mask, :, :]
-    
+
     def precompute_templates(self, modes=('average', 'std')):
         """
         Precompute all template for different "modes":
           * average
           * std
           * median
-        
+
         The results is cache in memory as 3d ndarray (nunits, nsamples, nchans)
         and also saved as npy file in the folder to avoid recomputation each time.
         """
         # TODO : run this in parralel
-        
+
         dtype = self._params['dtype']
         unit_ids = self.sorting.unit_ids
         num_chans = self.recording.get_num_channels()
-        
+
         for mode in modes:
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
             self._template_cache[mode] = templates
@@ -342,7 +342,7 @@ class WaveformExtractor:
         """
         if mode not in self._template_cache:
             self.precompute_templates(modes=[mode])
-        
+
         templates = self._template_cache[mode]
 
         if unit_ids is not None:
@@ -375,7 +375,7 @@ class WaveformExtractor:
         assert unit_id in self.sorting.unit_ids
 
         key = mode
-        
+
         if mode in self._template_cache:
             # already in the global cache
             templates = self._template_cache[mode]
@@ -385,7 +385,7 @@ class WaveformExtractor:
                 chan_inds = self.recording.ids_to_indices(sparsity[unit_id])
                 template = template[:, chan_inds]
             return template
-        
+
         # compute from waveforms
         wfs = self.get_waveforms(unit_id, sparsity=sparsity)
         if mode == 'median':
@@ -502,7 +502,7 @@ class WaveformExtractor:
 def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None):
     """
     Uniform random selection of spike across segment per units.
-    
+
     This function does not select spikes near border if nbefore/nafter are not None.
     """
     unit_ids = sorting.unit_ids
@@ -589,7 +589,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     unit_cum_sum = worker_ctx['unit_cum_sum']
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
-    
+
     to_extract = {}
     for unit_id in sorting.unit_ids:
         spike_times = selected_spike_times[unit_id][segment_index]
@@ -597,14 +597,14 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
         i1 = np.searchsorted(spike_times, end_frame)
         if i0 != i1:
             # protect from spikes on border :  spike_time<0 or spike_time>seg_size
-            # usefull only when max_spikes_per_unit is not None
+            # useful only when max_spikes_per_unit is not None
             # waveform will not be extracted and a zeros will be left in the memmap file
             while (spike_times[i0] - nbefore) < 0 and (i0!=i1):
                 i0 = i0 + 1
             while (spike_times[i1-1] + nafter) > seg_size and (i0!=i1):
                 i1 = i1 - 1
 
-        if i0 != i1:            
+        if i0 != i1:
             to_extract[unit_id] = i0, i1, spike_times[i0:i1]
 
     if len(to_extract) > 0:
@@ -661,7 +661,7 @@ def extract_waveforms(recording, sorting, folder,
         Use None to extract waveforms for all spikes
     overwrite: bool
         If True and 'folder' exists, the folder is removed and waveforms are recomputed.
-        Othewise an error is raised.
+        Otherwise an error is raised.
     return_scaled: bool
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None

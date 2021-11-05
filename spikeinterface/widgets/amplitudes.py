@@ -40,10 +40,9 @@ class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
-    
+
     amplitudes: None or pre computed amplitudes
-        If None then apmlitudes are recomputed
-    
+        If None then amplitudes are recomputed
     peak_sign: 'neg', 'pos', 'both'
         In case of recomputing amplitudes.
 
@@ -89,10 +88,9 @@ class AmplitudeDistributionWidget(AmplitudeBaseWidget):
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
-    
+
     amplitudes: None or pre computed amplitudes
-        If None then apmlitudes are recomputed
-    
+        If None then amplitudes are recomputed
     peak_sign: 'neg', 'pos', 'both'
         In case of recomputing amplitudes.
 

@@ -31,8 +31,9 @@ def _run_one(arg_list):
 
     if docker_image is None:
 
-        run_sorter_local(sorter_name, recording, output_folder, remove_existing_folder,
-                         delete_output_folder, verbose, raise_error, with_output)
+        run_sorter_local(sorter_name, recording, output_folder=output_folder,
+                         remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+                         verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
     else:
 
         run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
@@ -140,10 +141,12 @@ def run_sorter_by_property(sorter_name,
     for (output_name, sorting) in sorting_output.items():
         prop_name, sorter_name = output_name
         sorting_list.append(sorting)
-        grouping_property_values = np.concatenate((grouping_property_values, [prop_name] * len(sorting.get_unit_ids())))
+        grouping_property_values = np.concatenate(
+            (grouping_property_values, [prop_name] * len(sorting.get_unit_ids())))
 
     aggregate_sorting = aggregate_units(sorting_list)
-    aggregate_sorting.set_property(key=grouping_property, values=grouping_property_values)
+    aggregate_sorting.set_property(
+        key=grouping_property, values=grouping_property_values)
 
     return aggregate_sorting
 
@@ -157,7 +160,7 @@ def run_sorters(sorter_list,
                 engine_kwargs={},
                 verbose=False,
                 with_output=True,
-                docker_images={}
+                docker_images={},
                 ):
     """
     This run several sorter on several recording.
@@ -205,7 +208,7 @@ def run_sorters(sorter_list,
             * 'loop' : no kwargs
             * 'joblib' : {'n_jobs' : } number of processes
             * 'dask' : {'client':} the dask client for submiting task
-            
+
     verbose: bool
         default True
 
@@ -215,13 +218,6 @@ def run_sorters(sorter_list,
     docker_images: dict
         A dictionary {sorter_name : docker_image} to specify is some sorters
         should use docker images
-
-    run_sorter_kwargs: dict
-        This contains kwargs specific to run_sorter function:\
-            * 'raise_error' :  bool
-            * 'parallel' : bool
-            * 'n_jobs' : int
-            * 'joblib_backend' : 'loky' / 'multiprocessing' / 'threading'
 
     Returns
     -------
@@ -247,7 +243,8 @@ def run_sorters(sorter_list,
 
     if isinstance(recording_dict_or_list, list):
         # in case of list
-        recording_dict = {'recording_{}'.format(i): rec for i, rec in enumerate(recording_dict_or_list)}
+        recording_dict = {'recording_{}'.format(
+            i): rec for i, rec in enumerate(recording_dict_or_list)}
     elif isinstance(recording_dict_or_list, dict):
         recording_dict = recording_dict_or_list
     else:
@@ -263,7 +260,7 @@ def run_sorters(sorter_list,
             if output_folder.is_dir():
                 # sorter folder exists
                 if mode_if_folder_exists == 'raise':
-                    raise (Exception('output folder already exists for {} {}'.format(rec_name, sorter_name)))
+                    raise Exception(f'output folder already exists for {rec_name} {sorter_name}')
                 elif mode_if_folder_exists == 'overwrite':
                     shutil.rmtree(str(output_folder))
                 elif mode_if_folder_exists == 'keep':
@@ -277,12 +274,14 @@ def run_sorters(sorter_list,
 
             if need_dump:
                 if not recording.is_dumpable:
-                    raise Exception('recording not dumpable call recording.save() before')
+                    raise Exception(
+                        'recording not dumpable call recording.save() before')
                 recording_arg = recording.to_dict()
             else:
                 recording_arg = recording
 
-            task_args = (sorter_name, recording_arg, output_folder, verbose, params, docker_image, with_output)
+            task_args = (sorter_name, recording_arg, output_folder,
+                         verbose, params, docker_image, with_output)
             task_args_list.append(task_args)
 
     if engine == 'loop':
@@ -311,8 +310,8 @@ def run_sorters(sorter_list,
 
     if with_output:
         if engine == 'dask':
-            print('Warning!! With engine="dask" you cannot have directly output results\n' \
-                  'Use : run_sorters(..., with_output=False)\n' \
+            print('Warning!! With engine="dask" you cannot have directly output results\n'
+                  'Use : run_sorters(..., with_output=False)\n'
                   'And then: results = collect_sorting_outputs(output_folders)')
             return
 

@@ -11,35 +11,29 @@ from .utils import get_unit_colors
 
 class UnitLocalizationWidget(BaseWidget):
     """
-    Plot unit localisation on probe.
+    Plot unit localization on probe.
 
     Parameters
     ----------
     waveform_extractor: WaveformaExtractor
         WaveformaExtractorr object
-    
     peaks: None or numpy array
         Optionally can give already detected peaks
         to avoid multiple computation.
-    
-    unit_localisation: None or 2d arrar
+    unit_localisation: None or 2d array
         If None then it is computed with 'method' option
-
     method: str default 'center_of_mass'
-        Method used to estimate unit localisartion if 'unit_localisation' is None
-    
+        Method used to estimate unit localization if 'unit_localisation' is None
     method_kwargs: dict
         Option for the method
-
     unit_colors: None or dict
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used.
-    
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
-    
+
     Returns
     -------
     W: ProbeMapWidget
@@ -73,7 +67,7 @@ class UnitLocalizationWidget(BaseWidget):
                 coms = compute_unit_centers_of_mass(we, **self.method_kwargs)
                 localisation = np.array([e for e in coms.values()])
             else:
-                raise ValueError('UnitLocalizationWidget: method not implemenetd')
+                raise ValueError('UnitLocalizationWidget: method not implemented.')
 
         ax = self.ax
         probe = we.recording.get_probe()
