@@ -5,6 +5,7 @@ import scipy.stats
 import scipy.spatial.distance
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import NearestNeighbors
+from sklearn.decomposition import IncrementalPCA
 import spikeinterface as si
 from ..utils import get_random_data_chunks, get_closest_channels
 
@@ -233,31 +234,28 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
 
     return hit_rate, miss_rate
 
-def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_for_nn, n_neighbors, seed):
+def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id:int,
+                                max_spikes_for_nn:int, n_neighbors:int, seed:int):
     """ Calculates unit isolation based on NearestNeighbors search in PCA space
 
     Based on isolation metric described in Chung et al. (2017) Neuron 95: 1381-1394.
 
-    Rough logic
-    -----------
+    Rough logic:
+    ------------
     1) Choose a cluster
-    2) Compute the isolation function with every other cluster
-    3) Isolation score is defined as the min of (2)
+    2) Compute the isolation score with every other cluster
+    3) Isolation score is defined as the min of (2) (i.e. 'worst-case measure')
     
-    Implementation
-    --------------
-    Let A and B be clusters from sorting. 
+    Implementation details:
+    -----------------------
+    Let A and B be two clusters from sorting. 
     
     We set |A| = |B|:
         If max_spikes_for_nn < |A| and max_spikes_for_nn < |B|, then randomly subsample max_spikes_for_nn samples from A and B.
         If max_spikes_for_nn > min(|A|, |B|) (e.g. |A| > max_spikes_for_nn > |B|), then randomly subsample min(|A|, |B|) samples from A and B.
         This is because the metric is affected by the size of the clusters being compared independently of how well-isolated they are.
         
-    Isolation function:
-        Isolation(A, B) = 1/k \sum_{j=1}^k |{x \in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
-            where \rho(x) is the cluster x belongs to (in this case, either A or B)
-        Note that this definition implies that the isolation funciton  (1) ranges from 0 to 1; and 
-                                                                       (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
+    See docstring for `_compute_isolation` for the definition of isolation score.
 
     Parameters:
     -----------
@@ -266,7 +264,7 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
     all_labels: array_like, (num_spikes, )
         1D array of cluster labels for all spikes
     this_unit_id: int
-        ID of unit for which thiss metric will be calculated
+        ID of unit for which this metric will be calculated
     max_spikes_for_nn: int
         max number of spikes to use per cluster
     n_neighbors: int
@@ -276,8 +274,7 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
 
     Outputs:
     --------
-    nearest_neighbor_isolation : float
-    
+    nn_isolation : float
     """
     
     rng = np.random.default_rng(seed=seed)
@@ -304,68 +301,56 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id, max_spikes_fo
             pcs_other_unit_idx = rng.choice(np.arange(n_spikes_other_unit), size=spikes_for_nn_actual)
             pcs_other_unit = pcs_other_unit[pcs_other_unit_idx]
 
-        pcs_concat = np.concatenate((pcs_target_unit, pcs_other_unit), axis=0)
-        label_concat = np.concatenate((np.zeros(spikes_for_nn_actual),np.ones(spikes_for_nn_actual)))
-        
-        # if n_neighbors is greater than the number of spikes in both clusters, then set it to max possible
-        if n_neighbors > len(label_concat):
-            n_neighbors_adjusted = len(label_concat)-1
-        else:
-            n_neighbors_adjusted = n_neighbors
-        
-        _, membership_ind = NearestNeighbors(n_neighbors=n_neighbors_adjusted, algorithm='auto').fit(pcs_concat).kneighbors()
-        
-        target_nn_in_target = np.sum(label_concat[membership_ind[:spikes_for_nn_actual]]==0)
-        other_nn_in_other = np.sum(label_concat[membership_ind[spikes_for_nn_actual:]]==1) 
-
-        isolation[other_unit_id==other_units_ids] = (target_nn_in_target + other_nn_in_other) / (2*spikes_for_nn_actual) / n_neighbors_adjusted
+        isolation[other_unit_id==other_units_ids] = _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors)
     
-    nearest_neighbor_isolation = np.min(isolation)
-    return nearest_neighbor_isolation
+    nn_isolation = np.min(isolation)
+    return nn_isolation
 
 def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor, 
-                                    this_unit_id, max_spikes_for_nn, n_components, n_neighbors, seed):
-    """ Calculates unit noise overlap based on NearestNeighbors search in PCA space
+                                    this_unit_id: int, max_spikes_for_nn: int=1000,
+                                    n_neighbors: int=5, n_components: int=10, seed: int=0):
+    """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
     Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
 
-    Rough logic
-    -----------
-    1) Generate a noise cluster by randomly sampling from recording
-    2) Compute the isolation function between noise cluster and target cluster
+    Rough logic:
+    ------------
+    1) Generate a noise cluster by randomly sampling voltage snippets from recording.
+    2) Subtract projection onto the weighted average of noise snippets
+       of both the target and noise clusters to correct for bias in sampling.
+    3) Compute the isolation score between the noise cluster and the target cluster.
     
-    Implementation
-    --------------
-    Note that the noise cluster must have the same number of spikes as the target cluster
-    Let A and B be clusters from sorting. 
+    Implementation details:
+    -----------------------
+    As with nn_isolation, the clusters that are compared (target and noise clusters)
+    have the same number of spikes.
     
-    See docstring for nearest_neighbors_isolation for definition of isolation function.
+    See docstring for `_compute_isolation` for the definition of isolation score.
     
     Parameters:
     -----------
-    we: WaveformExtractor
+    we: si.WaveformExtractor
     this_unit_id: int
         ID of unit for which this metric will be calculated
-    noise_cluster: np.array, (snippet, samples, channels)
-        random snippets from recording to compare with the target cluster
     max_spikes_for_nn: int
         max number of spikes to use per cluster
     n_neighbors: int
         number of neighbors to check membership of
+    n_components: int
+        number of PC components to project the snippets
     seed: int
         seed for random subsampling of spikes
 
     Outputs:
     --------
-    nearest_neighbor_isolation : float
-    
+    nn_noise_overlap : float
     """
 
     # set random seed
     rng = np.random.default_rng(seed=seed)
     
     # get random snippets from the recording to create a noise cluster
-    recording = waveform_extractor.recording()
+    recording = waveform_extractor.recording
     noise_cluster = get_random_data_chunks(recording, return_scaled=True,
                                            num_chunks_per_segment=max_spikes_for_nn,
                                            chunk_size=waveform_extractor.nsamples, seed=seed)
@@ -387,39 +372,36 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         n_snippets = max_spikes_for_nn
 
     # restrict to channels with significant signal
-    mean_waveform = np.mean(waveforms, axis=0)
-    chmax, tmax = np.unravel_index(np.argmax(np.abs(mean_waveform)), mean_waveform.shape)
-    closest_chans_idx, _ = get_closest_channels(channel_ids=chmax, num_channels=5)
-    waveforms = waveforms[:,:,closest_chans_idx]
-    noise_cluster = noise_cluster[:,:,closest_chans_idx]
+    median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode='median')
+    tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)    
+    closest_chans_idx, _ = get_closest_channels(recording, num_channels=5) # using nearest 5 chans, should this be a param?
+    waveforms = waveforms[:,:,closest_chans_idx[chmax]]
+    noise_cluster = noise_cluster[:,:,closest_chans_idx[chmax]]
     
     # compute weighted noise snippet (Z)
-    weights = [noise_cluster[noise_clip_idx, tmax, chmax] for noise_clip_idx in range(noise_cluster.shape[0])]
+    median_waveform = median_waveform[:, closest_chans_idx]
+    tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)   
+    weights = [noise_clip[tmax, chmax] for noise_clip in noise_cluster]
     weights = np.asarray(weights)
     weights = weights / np.sum(weights)
     weighted_noise_snippet = np.sum(weights * noise_cluster.swapaxes(0,2), axis=2).swapaxes(0,1)
     
-    # subtract from waveforms
+    # subtract projection onto weighted noise snippet
     for snippet in range(n_snippets):
         waveforms[snippet, :, :] = _subtract_clip_component(waveforms[snippet, :, :], weighted_noise_snippet)
         noise_cluster[snippet, :, :] = _subtract_clip_component(noise_cluster[snippet, :, :], weighted_noise_snippet)
         
     # compute principal components after concatenation
-    all_snippets = np.concatenate([waveforms, noise_cluster], axis=0)
-    all_features = _compute_pca_features(all_snippets.reshape((n_snippets*2,-1)), n_components)
-    
-    # TODO
-    # project to PCs
-    # pcs_target = np.dot(waveforms, all_features)
-    # pcs_noise  = np.dot(noise_cluster, all_features)
+    all_snippets = np.concatenate([waveforms.reshape((n_snippets, -1)), noise_cluster.reshape((n_snippets, -1))], axis=0)
+    pca = IncrementalPCA(n_components=n_components)
+    pca.partial_fit(all_snippets)
+    projected_snippets = pca.transform(all_snippets)
     
     # compute overlap
-    nn_noise_overlap = 1 - _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors)
+    nn_noise_overlap = 1 - _compute_isolation(projected_snippets[:n_snippets,:],
+                                              projected_snippets[n_snippets:,:],
+                                              n_neighbors)
     return nn_noise_overlap
-
-def _compute_pca_features(X, num_components):
-    u, s, vt = np.linalg.svd(X)
-    return u[:, :num_components].T
 
 def _subtract_clip_component(clip1, component):
     V1 = clip1.flatten()
@@ -427,12 +409,30 @@ def _subtract_clip_component(clip1, component):
     V1 = V1 - V2 * np.dot(V1, V2) / np.dot(V2, V2)
     return V1.reshape(clip1.shape)
 
-def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors):
-    
+def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors:int):
+    """Computes the isolation score used for nn_isolation and nn_noise_overlap
+
+    Definition of isolation score:
+        Isolation(A, B) = 1/k \sum_{j=1}^k |{x \in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
+            where \rho(x) is the cluster x belongs to (in this case, either A or B)
+        Note that this definition implies that the isolation score (1) ranges from 0 to 1; and 
+                                                                   (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
+
+    Parameters
+    ----------
+    pcs_target_unit: np.array, (n_spikes, n_components)
+        PCA projection of the spikes in the target cluster
+    pcs_other_unit: np.array, (n_spikes, n_components)
+        PCA projection of the spikes in the other cluster
+    n_neighbors: int
+        number of nearest neighbors to check membership of
+    """
+
+    # get lengths
     n_spikes_target = pcs_target_unit.shape[0]
     n_spikes_other = pcs_other_unit.shape[0]
     
-    # compute the overlap index from n_neighbors
+    # concatenate
     pcs_concat = np.concatenate((pcs_target_unit, pcs_other_unit), axis=0)
     label_concat = np.concatenate((np.zeros(n_spikes_target),np.ones(n_spikes_other)))
         
@@ -447,6 +447,6 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors):
     target_nn_in_target = np.sum(label_concat[membership_ind[:n_spikes_target]]==0)
     other_nn_in_other = np.sum(label_concat[membership_ind[n_spikes_target:]]==1) 
 
-    overlap = (target_nn_in_target + other_nn_in_other) / (n_spikes_target+n_spikes_other) / n_neighbors_adjusted
+    isolation = (target_nn_in_target + other_nn_in_other) / (n_spikes_target+n_spikes_other) / n_neighbors_adjusted
     
-    return overlap
+    return isolation
