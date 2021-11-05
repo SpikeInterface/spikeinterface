@@ -372,15 +372,15 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         n_snippets = max_spikes_for_nn
 
     # restrict to channels with significant signal
-    mean_waveform = np.mean(waveforms, axis=0)
-    tmax,chmax = np.unravel_index(np.argmax(np.abs(mean_waveform)), mean_waveform.shape)    
+    median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode='median')
+    tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)    
     closest_chans_idx, _ = get_closest_channels(recording, num_channels=5) # using nearest 5 chans, should this be a param?
     waveforms = waveforms[:,:,closest_chans_idx[chmax]]
     noise_cluster = noise_cluster[:,:,closest_chans_idx[chmax]]
     
     # compute weighted noise snippet (Z)
-    mean_waveform = np.mean(waveforms, axis=0)
-    tmax,chmax = np.unravel_index(np.argmax(np.abs(mean_waveform)), mean_waveform.shape)   
+    median_waveform = median_waveform[:, closest_chans_idx]
+    tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)   
     weights = [noise_clip[tmax, chmax] for noise_clip in noise_cluster]
     weights = np.asarray(weights)
     weights = weights / np.sum(weights)
