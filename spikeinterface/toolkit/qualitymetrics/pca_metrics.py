@@ -7,7 +7,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import IncrementalPCA
 import spikeinterface as si
-from ..utils import get_random_data_chunks, get_closest_channels
+from ..utils import get_random_data_chunks
+from ..postprocessing import get_template_channel_sparsity
 
 from ..postprocessing import WaveformPrincipalComponent
 
@@ -308,7 +309,8 @@ def nearest_neighbors_isolation(all_pcs, all_labels, this_unit_id:int,
 
 def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor, 
                                     this_unit_id: int, max_spikes_for_nn: int=1000,
-                                    n_neighbors: int=5, n_components: int=10, seed: int=0):
+                                    n_neighbors: int=5, n_components: int=10,
+                                    radius_um: float=100, seed: int=0):
     """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
     Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
@@ -338,6 +340,9 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         number of neighbors to check membership of
     n_components: int
         number of PC components to project the snippets
+    radius_um: float
+        only the channels within this radius of the peak channel
+        are used to compute the metric
     seed: int
         seed for random subsampling of spikes
 
@@ -372,14 +377,14 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         n_snippets = max_spikes_for_nn
 
     # restrict to channels with significant signal
-    median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode='median')
-    tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)    
-    closest_chans_idx, _ = get_closest_channels(recording, num_channels=5) # using nearest 5 chans, should this be a param?
-    waveforms = waveforms[:,:,closest_chans_idx[chmax]]
-    noise_cluster = noise_cluster[:,:,closest_chans_idx[chmax]]
+    closest_chans_idx = get_template_channel_sparsity(waveform_extractor, method='radius',
+                                                      outputs='index', peak_sign='both', radius_um=radius_um)
+    waveforms = waveforms[:,:,closest_chans_idx[this_unit_id]]
+    noise_cluster = noise_cluster[:,:,closest_chans_idx[this_unit_id]]
     
     # compute weighted noise snippet (Z)
-    median_waveform = median_waveform[:, closest_chans_idx]
+    median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode='median')
+    median_waveform = median_waveform[:, closest_chans_idx[this_unit_id]]
     tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)   
     weights = [noise_clip[tmax, chmax] for noise_clip in noise_cluster]
     weights = np.asarray(weights)
