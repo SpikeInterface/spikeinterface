@@ -11,37 +11,29 @@ class DriftOverTimeWidget(BaseWidget):
     Plot "y" (=depth) (or "x") drift over time.
     The use peak detection on channel and make histogram
     of peak activity over time bins.
-    
 
     Parameters
     ----------
     recording: RecordingExtractor
         The recordng extractor object
-    
     peaks: None or numpy array
         Optionally can give already detected peaks
         to avoid multiple computation.
-    
     detect_peaks_kwargs: None or dict
         If peaks is None here the kwargs for detect_peak function.
-    
     mode: str 'heatmap' or 'scatter'
         plot mode
-
     probe_axis: 0 or 1
         Axis of the probe 0=x 1=y
-    
     weight_with_amplitudes: bool False by default
         Peak are weighted by amplitude
-    
     bin_duration_s: float (default 60.)
         Bin duration in second
-    
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
-    
+
     Returns
     -------
     W: ProbeMapWidget
@@ -50,7 +42,8 @@ class DriftOverTimeWidget(BaseWidget):
 
     def __init__(self, recording, peaks=None, detect_peaks_kwargs={},
                  mode='heatmap',
-                 probe_axis=1, weight_with_amplitudes=True, bin_duration_s=60.,
+                 probe_axis=1, weight_with_amplitudes=False,
+                 bin_duration_s=60.,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
@@ -103,7 +96,7 @@ class DriftOverTimeWidget(BaseWidget):
                 depths = positions[peaks['channel_ind'][mask], self.probe_axis]
 
                 if self.weight_with_amplitudes:
-                    count, bins = np.histogram(depths, bins=depth_bins, weights=np.abs(peaks['channel_ind'][mask]))
+                    count, bins = np.histogram(depths, bins=depth_bins, weights=np.abs(peaks['amplitude'][mask]))
                 else:
                     count, bins = np.histogram(depths, bins=depth_bins)
                 peak_density[:, i] = count
