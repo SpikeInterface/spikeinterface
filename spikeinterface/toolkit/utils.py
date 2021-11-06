@@ -13,11 +13,11 @@ def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segmen
     recording: BaseRecording
         The recording to get random chunks from
     return_scaled: bool
-        If True, returned chunks are scaled ti uV
+        If True, returned chunks are scaled to uV
     num_chunks_per_segment: int
         Number of chunks per segment
     chunk_size: int
-        Size of a chink in number of frames
+        Size of a chunk in number of frames
     seed: int
         Random seed
 
@@ -52,7 +52,6 @@ def get_channel_distances(recording):
     channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
     return channel_distances
 
-
 def get_closest_channels(recording, channel_ids=None, num_channels=None):
     """Get closest channels + distances
 
@@ -63,7 +62,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     channel_ids: list
         List of channels ids to compute there near neighborhood
     num_channels: int, optional
-        Maximum number of neighborhood channel to return
+        Maximum number of neighborhood channels to return
 
     Returns
     -------
@@ -88,7 +87,6 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
         dists.append(distances[order][1:num_channels + 1])
 
     return np.array(closest_channels_inds), np.array(dists)
-
 
 def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     """
