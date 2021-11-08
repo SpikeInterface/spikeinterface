@@ -66,13 +66,13 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
             pc_metrics['nn_hit_rate'][unit_id] = nn_hit_rate
             pc_metrics['nn_miss_rate'][unit_id] = nn_miss_rate
             
-        if 'nearest_neighbor_isolation' in metric_names:
+        if 'nn_isolation' in metric_names:
             nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
                                                        n_neighbors, n_components,
                                                        radius_um, seed)
             pc_metrics['nn_isolation'][unit_id] = nn_isolation
 
-        if 'nearest_neighbor_noise_overlap' in metric_names:
+        if 'nn_noise_overlap' in metric_names:
             nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
                                                                n_neighbors, n_components,
                                                                radius_um, seed)
@@ -296,8 +296,8 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     
     # find units whose closest channels overlap with closest channels of target cluster
     closest_chans_all = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                          outputs='index', peak_sign='both', 
-                                                          radius_um=radius_um)
+                                                      outputs='index', peak_sign='both', 
+                                                      radius_um=radius_um)
     closest_chans_target_unit = closest_chans_all[this_unit_id]
     other_units_ids = [unit_id for unit_id in other_units_ids if np.any(np.in1d(closest_chans_all[unit_id],
                                                                                 closest_chans_target_unit))]
@@ -317,11 +317,13 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
             # make the two clusters equal in terms of:
             # - number of spikes
             # - channels with signal
-            waveforms_target_unit_idx = rng.choice(n_spikes_target_unit, size=n_snippets)
-            waveforms_target_unit_sampled = waveforms_target_unit[waveforms_target_unit_idx,:,closest_chans_target_unit]
-            
-            waveforms_other_unit_idx = rng.choice(n_spikes_other_unit, size=n_snippets)
-            waveforms_other_unit_sampled = waveforms_other_unit[waveforms_other_unit_idx,:,closest_chans_target_unit]
+            waveforms_target_unit_idx = rng.choice(n_spikes_target_unit, size=n_snippets, replace=False)
+            waveforms_target_unit_sampled = waveforms_target_unit[waveforms_target_unit_idx]
+            waveforms_target_unit_sampled = waveforms_target_unit_sampled[:, :, closest_chans_target_unit]
+
+            waveforms_other_unit_idx = rng.choice(n_spikes_other_unit, size=n_snippets, replace=False)
+            waveforms_other_unit_sampled = waveforms_other_unit[waveforms_other_unit_idx]
+            waveforms_other_unit_sampled = waveforms_other_unit_sampled[:, :, closest_chans_target_unit]
 
             # compute principal components after concatenation
             all_snippets = np.concatenate([waveforms_target_unit_sampled.reshape((n_snippets, -1)),
@@ -329,12 +331,10 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
             pca = IncrementalPCA(n_components=n_components)
             pca.partial_fit(all_snippets)
             projected_snippets = pca.transform(all_snippets)
-            
             # compute isolation
             isolation[other_unit_id==other_units_ids] = _compute_isolation(projected_snippets[:n_snippets,:],
                                                                            projected_snippets[n_snippets:,:],
                                                                            n_neighbors)
-        
         nn_isolation = np.min(isolation)
     return nn_isolation
 
