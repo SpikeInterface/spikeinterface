@@ -387,9 +387,10 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     
     # get random snippets from the recording to create a noise cluster
     recording = waveform_extractor.recording
-    noise_cluster = get_random_data_chunks(recording, return_scaled=True,
+    noise_cluster = get_random_data_chunks(recording, return_scaled=waveform_extractor.return_scaled,
                                            num_chunks_per_segment=max_spikes_for_nn,
                                            chunk_size=waveform_extractor.nsamples, seed=seed)
+    
     noise_cluster = np.reshape(noise_cluster, (max_spikes_for_nn, waveform_extractor.nsamples, -1))
     
     # get waveforms for target cluster
