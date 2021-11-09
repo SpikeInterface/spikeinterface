@@ -73,7 +73,7 @@ class NwbRecordingExtractor(BaseRecording):
                 sampling_frequency = 1. / np.median(np.diff(es.timestamps))
                 t_start = es.timestamps[0]
                 if load_time_vector:
-                    times_kwargs = dict(time_vector=es.timestamps)
+                    times_kwargs = dict(time_vector=np.array(es.timestamps[:]))
                 else:
                     times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
             else:
@@ -165,7 +165,8 @@ class NwbRecordingExtractor(BaseRecording):
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, path: PathType, electrical_series_name, num_frames, times_kwargs):
         BaseRecordingSegment.__init__(self, **times_kwargs)
-        self._path = path
+        io = NWBHDF5IO(path, mode='r', load_namespaces=True)
+        self._nwbfile = io.read()
         self._electrical_series_name = electrical_series_name
         self._num_samples = num_frames
 
@@ -183,23 +184,21 @@ class NwbRecordingSegment(BaseRecordingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        with NWBHDF5IO(self._path, mode='r', load_namespaces=True) as io:
-            nwbfile = io.read()
-            es = get_electrical_series(nwbfile,self._electrical_series_name)
+        es = get_electrical_series(self._nwbfile, self._electrical_series_name)
 
-            if isinstance(channel_indices, slice):
-                traces = es.data[start_frame:end_frame, channel_indices]
+        if isinstance(channel_indices, slice):
+            traces = es.data[start_frame:end_frame, channel_indices]
+        else:
+            # channel_indices is np.ndarray
+            if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
+                # get around h5py constraint that it does not allow datasets
+                # to be indexed out of order
+                sorted_channel_indices = np.sort(channel_indices)
+                resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
+                recordings = es.data[start_frame:end_frame, sorted_channel_indices]
+                traces = recordings[:, resorted_indices]
             else:
-                # channel_indices is np.ndarray
-                if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
-                    # get around h5py constraint that it does not allow datasets
-                    # to be indexed out of order
-                    sorted_channel_indices = np.sort(channel_indices)
-                    resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
-                    recordings = es.data[start_frame:end_frame, sorted_channel_indices]
-                    traces = recordings[:, resorted_indices]
-                else:
-                    traces = es.data[start_frame:end_frame, channel_indices]
+                traces = es.data[start_frame:end_frame, channel_indices]
 
         return traces
 
@@ -276,7 +275,8 @@ class NwbSortingExtractor(BaseSorting):
 class NwbSortingSegment(BaseSortingSegment):
     def __init__(self, path, sampling_frequency):
         BaseSortingSegment.__init__(self)
-        self._path = path
+        io = NWBHDF5IO(path, mode='r', load_namespaces=True)
+        self._nwbfile = io.read()
         self._sampling_frequency = sampling_frequency
 
     def get_unit_spike_train(self,
@@ -289,14 +289,10 @@ class NwbSortingSegment(BaseSortingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = np.inf
-        check_nwb_install()
-        with NWBHDF5IO(self._path, mode='r', load_namespaces=True) as io:
-            nwbfile = io.read()
-            # chosen unit and interval
-            times = nwbfile.units['spike_times'][list(nwbfile.units.id[:]).index(unit_id)][:]
-            # spike times are measured in samples
-            # TODO if present, use times from file
-            frames = np.round(times * self._sampling_frequency).astype('int64')
+        times = self._nwbfile.units['spike_times'][list(self._nwbfile.units.id[:]).index(unit_id)][:]
+        # spike times are measured in samples
+        # TODO if present, use times from file
+        frames = np.round(times * self._sampling_frequency).astype('int64')
         return frames[(frames > start_frame) & (frames < end_frame)]
 
 
