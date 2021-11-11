@@ -58,12 +58,13 @@ def run_sorter(sorter_name, recording, output_folder=None,
         sorting = run_sorter_local(sorter_name, recording, output_folder=output_folder,
                                    remove_existing_folder=remove_existing_folder,
                                    delete_output_folder=delete_output_folder,
-                                   verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
+                                   verbose=verbose, raise_error=raise_error, with_output=with_output, 
+                                   **sorter_params)
     else:
         sorting = run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
                                     remove_existing_folder=remove_existing_folder,
                                     delete_output_folder=delete_output_folder,
-                                    verbose=verbose, raise_error=raise_error, 
+                                    verbose=verbose, raise_error=raise_error,
                                     with_output=with_output, **sorter_params)
     return sorting
 
@@ -72,13 +73,16 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
                      remove_existing_folder=True, delete_output_folder=False,
                      verbose=False, raise_error=True, with_output=True, **sorter_params):
     if isinstance(recording, list):
-        raise Exception('You you want to run several sorters/recordings use run_sorters(...)')
+        raise Exception(
+            'You you want to run several sorters/recordings use run_sorters(...)')
 
     SorterClass = sorter_dict[sorter_name]
 
-    # only classmethod call not instance (stateless at instance level but state is in folder) 
-    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
-    SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
+    # only classmethod call not instance (stateless at instance level but state is in folder)
+    output_folder = SorterClass.initialize_folder(
+        recording, output_folder, verbose, remove_existing_folder)
+    SorterClass.set_params_to_folder(
+        recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
     if with_output:
@@ -127,18 +131,18 @@ def find_recording_folder(d):
                         else:
                             assert folder_to_mount == abs_path.parent
                 else:
-                    raise ValueError(f'{k} key for path  must be str or list[str]')
+                    raise ValueError(
+                        f'{k} key for path  must be str or list[str]')
             return folder_to_mount
-
-
 
 
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
                       remove_existing_folder=True, delete_output_folder=False,
                       verbose=False, raise_error=True, with_output=True, **sorter_params):
     import docker
-    
-    assert platform.system() in ('Linux', 'Darwin'), 'run_sorter() with docker is supported only on linux/macos platform '
+
+    assert platform.system() in ('Linux',
+                                 'Darwin'), 'run_sorter() with docker is supported only on linux/macos platform '
 
     if output_folder is None:
         output_folder = sorter_name + '_output'
@@ -151,7 +155,7 @@ def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
     recording_input_folder = find_recording_folder(rec_dict)
-    
+
     # create 3 files for communication with docker
     # recordonc dict inside
     (parent_folder / 'in_docker_recording.json').write_text(
@@ -182,20 +186,22 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
 
     volumes = {}
-    volumes[str(recording_input_folder)] = {'bind': str(recording_input_folder), 'mode': 'ro'}
+    volumes[str(recording_input_folder)] = {
+        'bind': str(recording_input_folder), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder), 'mode': 'rw'}
 
     extra_kwargs = {}
     if SorterClass.docker_requires_gpu:
-        extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
-    
+        extra_kwargs["device_requests"] = [
+            docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+
     client = docker.from_env()
-    
-    container = client.containers.create(docker_image, tty=True,  volumes=volumes, **extra_kwargs)
+
+    container = client.containers.create(
+        docker_image, tty=True,  volumes=volumes, **extra_kwargs)
     if verbose:
         print('Starting container')
     container.start()
-    
 
     # check if docker contains spikeinertace already
     cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
@@ -205,7 +211,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     if need_si_install:
         if 'dev' in si_version:
             if verbose:
-                print(f"Installing spikeinterface from sources in {docker_image}")
+                print(
+                    f"Installing spikeinterface from sources in {docker_image}")
             # TODO later check output
             cmd = 'pip install --upgrade --force MEArec'
             res = container.exec_run(cmd)
@@ -215,14 +222,14 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             res = container.exec_run(cmd)
         else:
             if verbose:
-                print(f"Installing spikeinterface=={si_version} in {docker_image}")
+                print(
+                    f"Installing spikeinterface=={si_version} in {docker_image}")
             cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
             res = container.exec_run(cmd)
     else:
         # TODO version checking
         if verbose:
             print(f'spikeinterface is already installed in {docker_image}')
-
 
     # run sorter on folder
     if verbose:
@@ -235,17 +242,17 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     uid = os.getuid()
     cmd = f'chown {uid}:{uid} -R "{output_folder}"'
     res = container.exec_run(cmd)
-    
+
     if verbose:
         print('Stopping container')
     container.stop()
-    
+
     # clean useless files
     os.remove(parent_folder / 'in_docker_recording.json')
     os.remove(parent_folder / 'in_docker_params.json')
-    os.remove(parent_folder / 'in_docker_sorter_script.py')    
-    
-    # check error 
+    os.remove(parent_folder / 'in_docker_sorter_script.py')
+
+    # check error
     output_folder = Path(output_folder)
     log_file = output_folder / 'spikeinterface_log.json'
     if not log_file.is_file():
@@ -254,20 +261,20 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         with log_file.open('r', encoding='utf8') as f:
             log = json.load(f)
         run_error = bool(log['error'])
-    
+
     sorting = None
     if run_error:
         if raise_error:
-            raise SpikeSortingError(f"Spike sorting in docker failed with the following error:\n{run_sorter_output}")
+            raise SpikeSortingError(
+                f"Spike sorting in docker failed with the following error:\n{run_sorter_output}")
     else:
         if with_output:
             sorting = SorterClass.get_result_from_folder(output_folder)
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
-    
+
     return sorting
-    
 
 
 _common_run_doc = """
@@ -282,20 +289,22 @@ def read_sorter_folder(output_folder, raise_error=True):
     """
     output_folder = Path(output_folder)
     log_file = output_folder / 'spikeinterface_log.json'
-    
+
     if not log_file.is_file():
-        raise Exception(f'This folder {output_folder} does not have spikeinterface_log.json')
+        raise Exception(
+            f'This folder {output_folder} does not have spikeinterface_log.json')
 
     with log_file.open('r', encoding='utf8') as f:
         log = json.load(f)
-    
+
     run_error = bool(log['error'])
     if run_error:
         if raise_error:
-            raise SpikeSortingError(f"Spike sorting failed for {output_folder}")
+            raise SpikeSortingError(
+                f"Spike sorting failed for {output_folder}")
         else:
             return
-    
+
     sorter_name = log['sorter_name']
     SorterClass = sorter_dict[sorter_name]
     sorting = SorterClass.get_result_from_folder(output_folder)

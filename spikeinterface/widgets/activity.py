@@ -9,42 +9,33 @@ from probeinterface.plotting import plot_probe
 
 class PeakActivityMapWidget(BaseWidget):
     """
-    Plots spike rate (estimated estimated with detect_peaks()) as 2D activity map.
-    
+    Plots spike rate (estimated with detect_peaks()) as 2D activity map.
+
     Can be static (bin_duration_s=None) or animated (bin_duration_s=60.)
 
     Parameters
     ----------
     recording: RecordingExtractor
-        The recordng extractor object
-    
+        The recording extractor object.
     peaks: None or numpy array
         Optionally can give already detected peaks
         to avoid multiple computation.
-    
     detect_peaks_kwargs: None or dict
         If peaks is None here the kwargs for detect_peak function.
-
     weight_with_amplitudes: bool False by default
         Peak are weighted by amplitude
-    
-    
     bin_duration_s: None or float
         If None then static image
         If not None then it is an animation per bin.
-    
-    with_contact_color: bool (defaul True)
+    with_contact_color: bool (default True)
         Plot rates with contact colors
-    
-    with_interpolated_map: bool (defaul True)
+    with_interpolated_map: bool (default True)
         Plot rates with interpolated map
-    
-    
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
-    
+
     Returns
     -------
     W: ProbeMapWidget

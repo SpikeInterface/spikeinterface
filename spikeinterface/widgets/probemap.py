@@ -13,15 +13,15 @@ class ProbeMapWidget(BaseWidget):
     Parameters
     ----------
     recording: RecordingExtractor
-        The recordng extractor object
+        The recording extractor object
     channel_ids: list
         The channel ids to display
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
         The axis to be used. If not given an axis is created
-    **plot_probe_kwargs: keyword arguments for probeinterface.plottin.plot_probe() function
-    
+    **plot_probe_kwargs: keyword arguments for probeinterface.plotting.plot_probe() function
+
     Returns
     -------
     W: ProbeMapWidget

@@ -28,9 +28,9 @@ class ChannelSliceRecording(BaseRecording):
         # some checks
         assert all(chan_id in parents_chan_ids for chan_id in self._channel_ids), 'channel ids are not all in parents'
         assert len(self._channel_ids) == len(self._renamed_channel_ids), 'renamed channel_ids must be the same size'
-        
+
         sampling_frequency = parent_recording.get_sampling_frequency()
-        
+
         BaseRecording.__init__(self,
                                sampling_frequency=sampling_frequency,
                                channel_ids=self._renamed_channel_ids,
