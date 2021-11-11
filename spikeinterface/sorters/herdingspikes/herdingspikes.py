@@ -1,5 +1,6 @@
 from pathlib import Path
 import copy
+from packaging import version
 
 from ..basesorter import BaseSorter
 from ..utils import RecordingExtractorOldAPI
@@ -147,6 +148,13 @@ class HerdingspikesSorter(BaseSorter):
         import herdingspikes as hs
         import spikeinterface.toolkit as st
 
+        hs_version = version.parse(hs.__version__)
+
+        if hs_version >= version.parse("0.3.99"):
+            new_api = True
+        else:
+            new_api = False
+
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
         p = params
@@ -162,12 +170,16 @@ class HerdingspikesSorter(BaseSorter):
                 median=0.0, q1=0.05, q2=0.95
             )
 
-        print('Herdingspikes use the OLD spikeextractors with RecordingExtractorOldAPI')
-        old_api_recording = RecordingExtractorOldAPI(recording)
+        if new_api:
+            recording_to_hs = recording
+        else:
+            print('herdingspikes version<0.3.99 uses the OLD spikeextractors with RecordingExtractorOldAPI.\n'
+                  'Consider updating herdingspikes (pip install herdingspikes>=0.3.99)')
+            recording_to_hs = RecordingExtractorOldAPI(recording)
 
         # this should have its name changed
         Probe = hs.probe.RecordingExtractor(
-            old_api_recording,
+            recording_to_hs,
             masked_channels=p['probe_masked_channels'],
             inner_radius=p['probe_inner_radius'],
             neighbor_radius=p['probe_neighbor_radius'],
