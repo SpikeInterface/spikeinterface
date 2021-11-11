@@ -28,16 +28,15 @@ def test_detect_peaks():
                                                                 )
 
     # DEBUG
-    # import matplotlib.pyplot as plt
-    # import spikeinterface.widgets as sw
-    # chan_offset = 500
-    # traces = recording.get_traces()
-    # traces += np.arange(traces.shape[1])[None, :] * chan_offset
-    # print(traces.shape)
-    # fig, ax = plt.subplots()
-    # ax.plot(traces, color='k')
-    # ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
-    # plt.show()
+    #~ import matplotlib.pyplot as plt
+    #~ import spikeinterface.widgets as sw
+    #~ chan_offset = 500
+    #~ traces = recording.get_traces()
+    #~ traces += np.arange(traces.shape[1])[None, :] * chan_offset
+    #~ fig, ax = plt.subplots()
+    #~ ax.plot(traces, color='k')
+    #~ ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
+    #~ plt.show()
 
 
 if __name__ == '__main__':
