@@ -4,7 +4,6 @@ import numpy as np
 import spikeinterface as si
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment)
-import spikeextractors as se
 
 class SpikeSortingError(RuntimeError):
     """Raised whenever spike sorting fails"""
@@ -65,65 +64,90 @@ class RecordingExtractorOldAPI:
         v = values[ind[0]]
         return v
 
-class NewAPIRecordingExtractor(BaseRecording):
-    """Wrapper class to convert old RecordingExtractor to
-    new Recording (> si v0.90)
+class OldToNewRecording(BaseRecording):
+    """Wrapper class to convert old RecordingExtractor to a
+    new Recording in spikeinterface > v0.90
+    
+    Parameters
+    ----------
+    oldapi_recording_extractor : se.RecordingExtractor
+        recording extractor from spikeinterface < v0.90
     """
     
-    def __init__(self, recording: se.RecordingExtractor):
+    def __init__(self, oldapi_recording_extractor):
+        BaseRecording.__init__(self, oldapi_recording_extractor.get_sampling_frequency(),
+                               oldapi_recording_extractor.get_channel_ids(),
+                               oldapi_recording_extractor.get_dtype())
         
-        BaseRecording.__init__(self, recording.get_sampling_frequency(),
-                               recording.get_channel_ids(),
-                               recording.get_dtype())
-        
-        self.is_dumpable = recording.is_dumpable
-        self.annotate(is_filtered=recording.is_filtered)
+        # get properties from old recording
+        self.is_dumpable = oldapi_recording_extractor.is_dumpable
+        self.annotate(is_filtered=oldapi_recording_extractor.is_filtered)
         
         # add old recording as a recording segment
-        recording_segment = NewAPIRecordingSegment(recording)
+        recording_segment = OldToNewRecordingSegment(oldapi_recording_extractor)
         self.add_recording_segment(recording_segment)
-        self.set_channel_locations(recording.get_channel_locations())
-        
-class NewAPIRecordingSegment(BaseRecordingSegment):
-    def __init__(self, recording: se.RecordingExtractor):
-        BaseRecordingSegment.__init__(self, sampling_frequency=recording.get_sampling_frequency(),
-                                      t_start=None, time_vector=None)
-        self._recording = recording
-        self._channel_ids = np.array(recording.get_channel_ids())
+        self.set_channel_locations(oldapi_recording_extractor.get_channel_locations())
 
-    def get_num_samples(self) -> int:
-        return self._recording.get_num_frames()
+class OldToNewRecordingSegment(BaseRecordingSegment):
+    """Wrapper class to convert old RecordingExtractor to a
+    RecordingSegment in spikeinterface > v0.90
+
+    Parameters
+    ----------
+    oldapi_recording_extractor : se.RecordingExtractor
+        recording extractor from spikeinterface < v0.90
+    """
+    def __init__(self, oldapi_recording_extractor):
+        BaseRecordingSegment.__init__(self, sampling_frequency=oldapi_recording_extractor.get_sampling_frequency(),
+                                      t_start=None, time_vector=None)
+        self._oldapi_recording_extractor = oldapi_recording_extractor
+        self._channel_ids = np.array(oldapi_recording_extractor.get_channel_ids())
+
+    def get_num_samples(self):
+        return self._oldapi_recording_extractor.get_num_frames()
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
             channel_ids = self._channel_ids
         else:
             channel_ids = self._channel_ids[channel_indices]
-        return self._recording.get_traces(channel_ids=channel_ids,
-                                          start_frame=start_frame,
-                                          end_frame=end_frame).T
+        return self._oldapi_recording_extractor.get_traces(channel_ids=channel_ids,
+                                                           start_frame=start_frame,
+                                                           end_frame=end_frame).T
         
-def create_recording_from_old_extractor(recording: se.RecordingExtractor)->NewAPIRecordingExtractor:
-    R = NewAPIRecordingExtractor(recording)
-    return R
+def create_recording_from_old_extractor(oldapi_recording_extractor)->OldToNewRecording:
+    new_recording = OldToNewRecording(oldapi_recording_extractor)
+    return new_recording
 
-class NewAPISortingExtractor(BaseSorting):
-    """Wrapper class to convert old SortingExtractor to
-    new Sorting (> si v0.90)
+class OldToNewSorting(BaseSorting):
+    """Wrapper class to convert old SortingExtractor to a
+    new Sorting in spikeinterface > v0.90
+    
+    Parameters
+    ----------
+    oldapi_sorting_extractor : se.SortingExtractor
+        sorting extractor from spikeinterface < v0.90
     """
     
-    def __init__(self, sorting: se.SortingExtractor):
-        
-        BaseSorting.__init__(self, sampling_frequency=sorting.get_sampling_frequency(),
-                             unit_ids=sorting.get_unit_ids())
+    def __init__(self, oldapi_sorting_extractor):
+        BaseSorting.__init__(self, sampling_frequency=oldapi_sorting_extractor.get_sampling_frequency(),
+                             unit_ids=oldapi_sorting_extractor.get_unit_ids())
                
-        sorting_segment = NewAPISortingSegment(sorting)
+        sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)
         self.add_sorting_segment(sorting_segment)
         
-class NewAPISortingSegment(BaseSortingSegment):
-    def __init__(self, sorting: se.SortingExtractor):
+class OldToNewSortingSegment(BaseSortingSegment):
+    """Wrapper class to convert old SortingExtractor to a
+    SortingSegment in spikeinterface > v0.90
+    
+    Parameters
+    ----------
+    oldapi_sorting_extractor : se.SortingExtractor
+        sorting extractor from spikeinterface < v0.90
+    """
+    def __init__(self, oldapi_sorting_extractor):
         BaseSortingSegment.__init__(self)
-        self._sorting = sorting
+        self._old_api_sorting_extractor = oldapi_sorting_extractor
         
     def get_unit_spike_train(self,
                              unit_id,
@@ -131,10 +155,10 @@ class NewAPISortingSegment(BaseSortingSegment):
                              end_frame: Union[int, None] = None,
                              ) -> np.ndarray:
         
-        return self._sorting.get_unit_spike_train(unit_id=unit_id, 
+        return self._oldapi_sorting_extractor.get_unit_spike_train(unit_id=unit_id, 
                                                   start_frame=start_frame,
                                                   end_frame=end_frame)
         
-def create_sorting_from_old_extractor(sorting: se.SortingExtractor)->NewAPISortingExtractor:
-    S = NewAPISortingExtractor(sorting)
-    return S
+def create_sorting_from_old_extractor(oldapi_sorting_extractor)->OldToNewSorting:
+    new_sorting = OldToNewSorting(oldapi_sorting_extractor)
+    return new_sorting
