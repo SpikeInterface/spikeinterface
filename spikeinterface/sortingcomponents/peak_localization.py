@@ -7,11 +7,28 @@ import scipy.optimize
 
 from ..toolkit import get_chunk_with_margin
 
+_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation')
+
+dtype_localize_by_method = {
+    'center_of_mass':  [('x', 'float64'), ('z', 'float64')],
+    'monopolar_triangulation': [('x', 'float64'),  ('z', 'float64'), ('y', 'float64'), ('alpha', 'float64')],
+}
+
+_possible_localization_methods = list(dtype_localize_by_method.keys())
+
 def localize_peaks(recording, peaks, method='center_of_mass',
                    local_radius_um=150, ms_before=0.1, ms_after=0.3,
                    **job_kwargs):
     """
-    Localize peak (spike) in 2D or 3D depending the probe.ndim of the recording.
+    Localize peak (spike) in 2D or 3D depending the method.
+    When a probe is 2D then:
+       * axis 0 is X
+       * axis 1 is Z
+    Y will be orthogonal to the probe
+    
+    
+    
+    
 
     Parameters
     ----------
@@ -33,9 +50,13 @@ def localize_peaks(recording, peaks, method='center_of_mass',
     Returns
     -------
     peak_locations: np.array
-        Array with estimated x-y location for each spike
+        Array with estimated location for each spike
+        The dtype depend on the method.
+        Please notte that for "monopolar_triangulation" method the order is (X, Z, Y, alpha)
+        
+        
     """
-    assert method in ('center_of_mass', 'monopolar_triangulation')
+    assert method in _possible_localization_methods
 
     # find channel neighbours
     assert local_radius_um is not None
@@ -118,11 +139,18 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     local_peaks['sample_ind'] -= (start_frame - left_margin)
 
     
+    peak_locations = np.zeros(local_peaks.size, dtype=dtype_localise_by_method[method])
     
     if method == 'center_of_mass':
-        peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask)
+        out = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask)
+        peak_locations['x'] = out[:, 0]
+        peak_locations['z'] = out[:, 1]
     elif method == 'monopolar_triangulation':
-        peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
+        out = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
+        peak_locations['x'] = out[:, 0]
+        peak_locations['z'] = out[:, 1]
+        peak_locations['y'] = out[:, 2]
+        peak_locations['alpha'] = out[:, 3]
 
     return peak_locations
 
@@ -205,6 +233,6 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
         # print('output', output)
         # print('output', output['x'].shape, output['x'])
 
-        peak_locations[i, :] = output['x'][:3]
+        peak_locations[i, :] = output['x']
 
     return peak_locations
