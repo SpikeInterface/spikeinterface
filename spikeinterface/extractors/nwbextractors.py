@@ -90,7 +90,7 @@ class NwbRecordingExtractor(BaseRecording):
         if hasattr(self._es, 'starting_time'):
             t_start = self._es.starting_time
         else:
-            t_start = 0.
+            t_start = None
         
         timestamps = None
         if hasattr(self._es, 'timestamps'):
