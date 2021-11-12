@@ -39,6 +39,10 @@ class UnitProbeMapWidget(BaseWidget):
 
         self.animated = animated
         self.colorbar = colorbar
+        
+        probes = waveform_extractor.recording.get_probes()
+        assert len(probes) == 1, "Unit probe map is only available for a single probe. If you have a probe group, "\
+                                 "consider splitting the recording from different probes"
 
         # layout
         n = len(unit_ids)
