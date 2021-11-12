@@ -13,7 +13,7 @@ class TimeseriesWidget(BaseWidget):
     Parameters
     ----------
     recording: RecordingExtractor
-        The recordng extractor object
+        The recording extractor object
     segment_index: None or int
         The segment index.
     channel_ids: list
@@ -27,7 +27,7 @@ class TimeseriesWidget(BaseWidget):
             * 'line' : classical for low channel count
             * 'map' : for high channel count use color heat map
             * 'auto' : auto switch depending the channel count <32ch
-    cmap: str dfault 'RdBu'
+    cmap: str default 'RdBu'
         matplotlib colormap used in mode 'map'
     show_channel_ids: bool
         Set yticks with channel ids

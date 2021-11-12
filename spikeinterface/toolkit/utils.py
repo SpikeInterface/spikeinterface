@@ -13,11 +13,11 @@ def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segmen
     recording: BaseRecording
         The recording to get random chunks from
     return_scaled: bool
-        If True, returned chunks are scaled ti uV
+        If True, returned chunks are scaled to uV
     num_chunks_per_segment: int
         Number of chunks per segment
     chunk_size: int
-        Size of a chink in number of frames
+        Size of a chunk in number of frames
     seed: int
         Random seed
 
@@ -52,40 +52,41 @@ def get_channel_distances(recording):
     channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
     return channel_distances
 
-
 def get_closest_channels(recording, channel_ids=None, num_channels=None):
     """Get closest channels + distances
 
     Parameters
     ----------
     recording: RecordingExtractor
-        The recording extractor to be re-referenced
-    channel_ids: list or int
-        list of channels id to compute there near neighborhood
+        The recording extractor to get closest channels
+    channel_ids: list
+        List of channels ids to compute there near neighborhood
     num_channels: int, optional
-        Maximum number of neighborhood channel to return
+        Maximum number of neighborhood channels to return
 
     Returns
     -------
-    : array (2d)
-        closest channel indices in ascending order for each channel id given in input
-    : array (2d)
-        distance in ascending order for each channel id given in input
+    closest_channels_inds : array (2d)
+        Closest channel indices in ascending order for each channel id given in input
+    dists: array (2d)
+        Distance in ascending order for each channel id given in input
     """
-    closest_channels_id = []
+    if channel_ids is None:
+        channel_ids = recording.get_channel_ids()
+    if num_channels is None:
+        num_channels = len(channel_ids) - 1
 
     locations = recording.get_channel_locations(channel_ids=channel_ids)
 
     closest_channels_inds = []
-    dist = []
+    dists = []
     for i in range(locations.shape[0]):
         distances = np.linalg.norm(locations[i, :] - locations, axis=1)
         order = np.argsort(distances)
-        closest_channels_inds.append(order[1:num_channels])
-        dist.append(distances[order][1:num_channels])
+        closest_channels_inds.append(order[1:num_channels + 1])
+        dists.append(distances[order][1:num_channels + 1])
 
-    return np.array(closest_channels_inds), np.array(dist)
-
+    return np.array(closest_channels_inds), np.array(dists)
 
 def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     """

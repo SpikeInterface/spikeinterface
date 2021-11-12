@@ -25,14 +25,12 @@ class UnitWaveformsWidget(BaseWidget):
     max_channels : None or int
         If not None only max_channels are displayed per units.
         Incompatible with with `radius_um`
-        
-    
     set_title: bool
         Create a plot title with the unit number if True.
     plot_channels: bool
         Plot channel locations below traces.
     axis_equal: bool
-        Equal aspext ratio for x and y axis, to visualise the array geometry to scale
+        Equal aspect ratio for x and y axis, to visualize the array geometry to scale.
     lw: float
         Line width for the traces.
     unit_colors: None or dict
@@ -75,9 +73,9 @@ class UnitWaveformsWidget(BaseWidget):
         self._plot_channels = plot_channels
 
         if radius_um is not None:
-            assert max_channels is None, 'radius_um and max_channels are mutually exclussive'
+            assert max_channels is None, 'radius_um and max_channels are mutually exclusive'
         if max_channels is not None:
-            assert radius_um is None, 'radius_um and max_channels are mutually exclussive'
+            assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
 
         self.radius_um = radius_um
         self.max_channels = max_channels
@@ -122,7 +120,7 @@ class UnitWaveformsWidget(BaseWidget):
             channel_inds = {unit_id: slice(None) for unit_id in unit_ids}
 
         for i, unit_id in enumerate(unit_ids):
-            
+
             ax = self.axes.flatten()[i]
             color = self.unit_colors[unit_id]
 
@@ -145,7 +143,7 @@ class UnitWaveformsWidget(BaseWidget):
                 ax.plot(xvectors_flat, template.T.flatten(), lw=1, color=color)
                 template_label = unit_ids[i]
                 ax.set_title(f'template {template_label}')
-            
+
             # plot channels
             if self._plot_channels:
                 # TODO enhance this

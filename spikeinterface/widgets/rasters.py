@@ -60,7 +60,7 @@ class RasterWidget(BaseWidget):
         if self._visible_trange is None:
             self._visible_trange = [0, self._max_frame]
         else:
-            assert len(time_range) == 2, "'trange' should be a list with start and end time in seconds"
+            assert len(time_range) == 2, "'time_range' should be a list with start and end time in seconds"
             self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
 
         self._visible_trange = self._fix_trange(self._visible_trange)

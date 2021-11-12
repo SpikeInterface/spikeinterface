@@ -3,7 +3,7 @@ High level tools to run many ground-truth comparison with
 many sorter on many recordings and then collect and aggregate results
 in an easy way.
 
-The all mechanism is based on an intrinsic organisation
+The all mechanism is based on an intrinsic organization
 into a "study_folder" with several subfolder:
   * raw_files : contain a copy in binary format of recordings
   * sorter_folders : contains output of sorters
@@ -32,12 +32,10 @@ def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
     """
     Based on a dict of (recording, sorting) create the study folder.
 
-
     Parameters
     ----------
     study_folder: str
         The study folder.
-
     gt_dict : a dict of tuple (recording, sorting_gt)
         Dict of tuple that contain recording and sorting ground truth
     """
@@ -76,10 +74,9 @@ def get_rec_names(study_folder):
         The study folder.
 
     Returns
-    ----------
-
+    -------
     rec_names: list
-        LIst of names.
+        List of names.
     """
     study_folder = Path(study_folder)
     with open(study_folder / 'names.txt', mode='r', encoding='utf8') as f:
@@ -99,11 +96,9 @@ def get_recordings(study_folder):
         The study folder.
 
     Returns
-    ----------
-
+    -------
     recording_dict: dict
-        Dict of rexording.
-
+        Dict of recording.
     """
     study_folder = Path(study_folder)
 
@@ -128,11 +123,9 @@ def get_ground_truths(study_folder):
         The study folder.
 
     Returns
-    ----------
-
+    -------
     ground_truths: dict
-        Dict of sorintg_gt.
-
+        Dict of sorting_gt.
     """
     study_folder = Path(study_folder)
     rec_names = get_rec_names(study_folder)
@@ -165,7 +158,7 @@ def iter_computed_sorting(study_folder):
 
 def collect_run_times(study_folder):
     """
-    Collect run times in a working folder and sotre it in CVS files.
+    Collect run times in a working folder and store it in CVS files.
 
     The output is list of (rec_name, sorter_name, run_time)
     """
@@ -202,7 +195,7 @@ def aggregate_sorting_comparison(study_folder, exhaustive_gt=False):
         The study folder.
     exhaustive_gt: bool (default True)
         Tell if the ground true is "exhaustive" or not. In other world if the
-        GT have all possible units. It allows more performance measurment.
+        GT have all possible units. It allows more performance measurement.
         For instance, MEArec simulated dataset have exhaustive_gt=True
 
     Returns
@@ -233,21 +226,19 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
       * run_times: run times per recordingXsorter
       * perf_pooled_with_sum: GroundTruthComparison.see get_performance
       * perf_pooled_with_average: GroundTruthComparison.see get_performance
-      * count_units: given some threhold count how many units : 'well_detected', 'redundant', 'false_postive_units, 'bad'
+      * count_units: given some threshold count how many units : 'well_detected', 'redundant', 'false_postive_units, 'bad'
 
     Parameters
     ----------
     study_folder: str
         The study folder.
-
     karg_thresh: dict
-        Threholds paramerts used for the "count_units" table.
+        Threshold parameters used for the "count_units" table.
 
     Returns
-    ----------
-
+    -------
     dataframes: a dict of DataFrame
-        Return several usefull DataFrame to compare all results.
+        Return several useful DataFrame to compare all results.
         Note that count_units depend on karg_thresh.
     """
     study_folder = Path(study_folder)

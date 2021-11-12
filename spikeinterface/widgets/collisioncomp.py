@@ -28,7 +28,7 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
     -------
     W: MultiCompGraphWidget
         The output widget
-    """    
+    """
     def __init__(self, comp, unit_ids=None, figure=None, ax=None):
 
         BaseWidget.__init__(self, figure, ax)
@@ -66,22 +66,22 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
 
         lags = self.comp.bins / fs * 1000
         width = lags[1] - lags[0]
-        
+
         for r in range(n):
             for c in range(r+1, n):
-                                
+
                 ax = axs[r, c]
-                
+
                 u1 = self.unit_ids[r]
                 u2 = self.unit_ids[c]
                 ind1 = self.comp.sorting1.id_to_index(u1)
                 ind2 = self.comp.sorting1.id_to_index(u2)
-                
+
                 tp = self.comp.all_tp[ind1, ind2, :]
                 fn = self.comp.all_fn[ind1, ind2, :]
                 ax.bar(lags[:-1], tp, width=width,  color='g', align='edge')
                 ax.bar(lags[:-1], fn, width=width, bottom=tp, color='r', align='edge')
-                
+
                 ax = axs[c, r]
                 tp = self.comp.all_tp[ind2, ind1, :]
                 fn = self.comp.all_fn[ind2, ind1, :]
@@ -124,7 +124,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
     def __init__(self, comp, templates, unit_ids=None, metric='cosine_similarity',figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
-        
+
         if unit_ids is None:
             # take all units
             unit_ids = comp.sorting1.get_unit_ids()
@@ -138,11 +138,11 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         self._do_plot()
 
     def _do_plot(self):
-        
+
         import sklearn
 
         # compute similarity
-        # take index of temmplate (respect unit_ids order)
+        # take index of template (respect unit_ids order)
         all_unit_ids = list(self.comp.sorting1.get_unit_ids())
         template_inds = [all_unit_ids.index(u) for u in self.unit_ids]
 
@@ -152,10 +152,10 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
             similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
         else:
             raise NotImplementedError('metric=...')
-        
+
         fs = self.comp.sorting1.get_sampling_frequency()
         lags = self.comp.bins / fs * 1000
-        
+
         n = len(self.unit_ids)
 
         similarities, recall_scores, pair_names = self.comp.compute_collision_by_similarity(similarity_matrix, unit_ids=self.unit_ids, good_only=False)
@@ -164,14 +164,14 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
         for ax in fig.axes:
             ax.remove()
-        
+
         n_pair = len(similarities)
 
         ax0 = fig.add_axes([0.1, 0.1, .25, 0.8])
         ax1 = fig.add_axes([0.4, 0.1, .5, 0.8], sharey=ax0)
 
         plt.setp(ax1.get_yticklabels(), visible=False)
-        
+
         im = ax1.imshow(recall_scores[::-1, :],
                     cmap='viridis',
                     aspect='auto',
@@ -196,11 +196,11 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
 
-    def __init__(self, study, metric='cosine_similarity', 
-                        similarity_bins=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
-                        good_only=True,
-                        ncols=3, axes=None, cmap='winter'):
-        
+    def __init__(self, study, metric='cosine_similarity',
+                 similarity_bins=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
+                 good_only=True,
+                 ncols=3, axes=None, cmap='winter'):
+
         if axes is None:
             num_axes = len(study.sorter_names)
         else:
@@ -223,22 +223,22 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
         self.study.precompute_scores_by_similarities(self.good_only)
-        lags = self.study.get_lags() 
+        lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-            
-            curves = self.study.get_lag_profile_over_similarity_bins(self.similarity_bins, sorter_name) 
-            
+
+            curves = self.study.get_lag_profile_over_similarity_bins(self.similarity_bins, sorter_name)
+
             # plot by similarity bins
             ax = self.axes.flatten()[sorter_ind]
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
-            
+
             for i in range(self.similarity_bins.size - 1):
                 cmin, cmax = self.similarity_bins[i], self.similarity_bins[i + 1]
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
                 ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, curves[(cmin, cmax)], label='CS in [%g,%g]' %(cmin, cmax), c=colorVal)
-            
+
             if np.mod(sorter_ind, self.ncols) == 0:
                 ax.set_ylabel('collision accuracy')
 
@@ -257,10 +257,10 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
 
 
-    def __init__(self, study, metric='cosine_similarity', 
-                        similarity_range=[0, 1], show_legend=False, ylim=(0.5, 1),
-                        good_only=True, ax=None):
-        
+    def __init__(self, study, metric='cosine_similarity',
+                 similarity_range=[0, 1], show_legend=False, ylim=(0.5, 1),
+                 good_only=True, ax=None):
+
         BaseWidget.__init__(self, None, ax)
 
         self.study = study
@@ -274,13 +274,13 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
     def plot(self):
 
         self.study.precompute_scores_by_similarities(self.good_only)
-        lags = self.study.get_lags()    
+        lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-            
+
             mean_recall_scores = self.study.get_mean_over_similarity_range(self.similarity_range, sorter_name)
             self.ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label=sorter_name, c='C%d' %sorter_ind)
-            
+
         self.ax.set_ylabel('collision accuracy')
         self.ax.set_xlabel('lags (ms)')
 
@@ -294,10 +294,10 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
 class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
 
 
-    def __init__(self, study, metric='cosine_similarity', 
-                        similarity_ranges=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
-                        good_only=True, ax=None, show_std=False):
-        
+    def __init__(self, study, metric='cosine_similarity',
+                 similarity_ranges=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
+                 good_only=True, ax=None, show_std=False):
+
         BaseWidget.__init__(self, None, ax)
 
         self.study = study
@@ -315,7 +315,7 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-            
+
             all_similarities = self.study.all_similarities[sorter_name]
             all_recall_scores = self.study.all_recall_scores[sorter_name]
 
