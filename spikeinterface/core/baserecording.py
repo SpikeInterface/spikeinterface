@@ -439,8 +439,8 @@ class BaseRecording(BaseExtractor):
                 all_probes = self.get_probes()
                 all_positions = []
                 for i in range(len(all_probes)):
+                    probe_i = all_probes[i]
                     for j in range(i + 1, len(all_probes)):
-                        probe_i = all_probes[i]
                         probe_j = all_probes[j]
                         
                         # check that all positions in probe_j are outside probe_i boundaries
