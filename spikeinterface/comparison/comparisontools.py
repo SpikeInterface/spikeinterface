@@ -70,7 +70,7 @@ def do_count_event(sorting):
     ----------
     sorting: SortingExtractor
         A sorting extractor
-    
+
     Returns
     -------
     event_count: pd.Series
@@ -110,27 +110,22 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
     Make the match_event_count matrix.
     Basically it count the match event for all given pair of spike train from
     sorting1 and sorting2.
-    
+
     Parameters
     ----------
     sorting1: SortingExtractor
         The first sorting extractor
-
     sorting2: SortingExtractor
         The second sorting extractor
-
     delta_frames: int
         Number of frames to consider spikes coincident
-
     n_jobs: int
         Number of jobs to run in parallel
 
     Returns
     -------
-    
     match_event_count: array (int64)
         Matrix of match count spike
-    
     """
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
@@ -152,31 +147,25 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     """
     Make the agreement matrix.
     No threshold (min_score) is applied at this step.
-    
-    Note : this computation is symetric.
+
+    Note : this computation is symmetric.
     Inverting sorting1 and sorting2 give the transposed matrix.
-    
 
     Parameters
     ----------
     sorting1: SortingExtractor
         The first sorting extractor
-
     sorting2: SortingExtractor
         The second sorting extractor
-
     delta_frames: int
         Number of frames to consider spikes coincident
-
     n_jobs: int
         Number of jobs to run in parallel
 
     Returns
     -------
-    
     agreement_scores: array (float)
         The agreement score matrix.
-    
     """
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
@@ -197,13 +186,11 @@ def make_agreement_scores_from_count(match_event_count, event_counts1, event_cou
     """
     See make_agreement_scores.
     Other signature here to avoid to recompute match_event_count matrix.
-    
+
     Parameters
     ----------
-    
     match_event_count
-    
-    
+
     """
 
     # numpy broadcast style
@@ -222,23 +209,22 @@ def make_possible_match(agreement_scores, min_score):
     """
     Given an agreement matrix and a min_score threshold.
     Return as a dict all possible match for each spiketrain in each side.
-    
+
     Note : this is symmetric.
-    
 
     Parameters
     ----------
     agreement_scores: pd.DataFrame
-    
+
     min_score: float
-    
-    
+
+
     Returns
-    -----------
+    -------
     best_match_12: pd.Series
-    
-    best_match_21: pd.Series    
-    
+
+    best_match_21: pd.Series
+
     """
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
@@ -264,23 +250,22 @@ def make_best_match(agreement_scores, min_score):
     """
     Given an agreement matrix and a min_score threshold.
     return a dict a best match for each units independently of others.
-    
+
     Note : this is symmetric.
 
     Parameters
     ----------
     agreement_scores: pd.DataFrame
-    
+
     min_score: float
-    
-    
+
+
     Returns
-    -----------
+    -------
     best_match_12: pd.Series
-    
+
     best_match_21: pd.Series
-    
-    
+
     """
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
@@ -310,21 +295,21 @@ def make_hungarian_match(agreement_scores, min_score):
     """
     Given an agreement matrix and a min_score threshold.
     return the "optimal" match with the "hungarian" algo.
-    This use internally the scipy.optimze.linear_sum_assignment implementation.
-    
+    This use internally the scipy.optimize.linear_sum_assignment implementation.
+
     Parameters
     ----------
     agreement_scores: pd.DataFrame
-    
+
     min_score: float
-    
-    
+
+
     Returns
-    -----------
+    -------
     hungarian_match_12: pd.Series
-    
+
     hungarian_match_21: pd.Series
-    
+
     """
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
@@ -466,14 +451,13 @@ def compare_spike_trains(spiketrain1, spiketrain2, delta_frames=10):
 
     Parameters
     ----------
-    spiketrain1,spiketrain2: numpy.array
+    spiketrain1, spiketrain2: numpy.array
         Times of spikes for the 2 spike trains.
 
     Returns
     -------
     lab_st1, lab_st2: numpy.array
         Label of score for each spike
-
     """
     lab_st1 = np.array(['UNPAIRED'] * len(spiketrain1))
     lab_st2 = np.array(['UNPAIRED'] * len(spiketrain2))
@@ -513,9 +497,9 @@ def do_confusion_matrix(event_counts1, event_counts2, match_12, match_event_coun
         Can be the hungarian or best match.
     match_event_count: pd.DataFrame
         The match count matrix given by make_match_count_matrix
-        
+
     Returns
-    ------
+    -------
     confusion_matrix: pd.DataFrame
         The confusion matrix
         index are units1 reordered
@@ -559,7 +543,7 @@ def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
     """
     For each ground truth units count how many:
     'tp', 'fn', 'cl', 'fp', 'num_gt', 'num_tested', 'tested_id'
-    
+
     Parameters
     ----------
     event_counts1: pd.Series
@@ -571,8 +555,9 @@ def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
         Can be the hungarian or best match.
     match_event_count: pd.DataFrame
         The match count matrix given by make_match_count_matrix
+
     Returns
-    ----------
+    -------
     count_score: pd.DataFrame
         A table with one line per GT units and columns
         are tp/fn/fp/...
@@ -614,9 +599,9 @@ def compute_performance(count_score):
     this trick here is that it works both on pd.Series and pd.Dataframe
     line by line.
     This it is internally used by perf by psiketrain and poll_with_sum.
-    
+
     https://en.wikipedia.org/wiki/Sensitivity_and_specificity
-    
+
     Note :
       * we don't have TN because it do not make sens here.
       * 'accuracy' = 'tp_rate' because TN=0
@@ -660,8 +645,6 @@ def make_matching_events(times1, times2, delta):
     -------
     matching_event: numpy array dtype = ['index1', 'index2', 'delta']
         1d of collision
-        
-        
     """
     times_concat = np.concatenate((times1, times2))
     membership = np.concatenate((np.ones(times1.shape) * 1, np.ones(times2.shape) * 2))
@@ -710,7 +693,6 @@ def make_collision_events(sorting, delta):
     ----------
     sorting: SortingExtractor
         The sorting extractor object for counting collision events
-        
     delta: int
         Number of frames for considering collision events
 
@@ -721,7 +703,6 @@ def make_collision_events(sorting, delta):
                 ('index2', 'int64'), ('unit_id2', 'int64'),
                 ('delta', 'int64')]
         1d of all collision
-
     """
     unit_ids = np.array(sorting.get_unit_ids())
     dtype = [
