@@ -44,6 +44,7 @@ class DriftOverTimeWidget(BaseWidget):
                  mode='heatmap',
                  probe_axis=1, weight_with_amplitudes=False,
                  bin_duration_s=60.,
+                 scatter_plot_kwargs={}, imshow_kwargs={},
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
@@ -60,6 +61,8 @@ class DriftOverTimeWidget(BaseWidget):
         self.probe_axis = probe_axis
         self.weight_with_amplitudes = weight_with_amplitudes
         self.bin_duration_s = bin_duration_s
+        self.scatter_plot_kwargs = scatter_plot_kwargs
+        self.imshow_kwargs = imshow_kwargs
 
     def plot(self):
         self._do_plot()
@@ -82,6 +85,7 @@ class DriftOverTimeWidget(BaseWidget):
         positions = probe.contact_positions
 
         all_depth = np.unique(positions[:, self.probe_axis])
+        all_depth = np.sort(all_depth)
 
         if self.mode == 'heatmap':
             ndepth = all_depth.size
@@ -103,20 +107,26 @@ class DriftOverTimeWidget(BaseWidget):
 
             extent = (0, self.bin_duration_s * nchunk, depth_bins[0], depth_bins[-1])
 
+            kwargs = dict()
+            kwargs.update(self.imshow_kwargs)
             im = self.ax.imshow(peak_density, interpolation='nearest',
-                                origin='lower', aspect='auto', extent=extent)
+                                origin='lower', aspect='auto', extent=extent, **kwargs)
+            
         elif self.mode == 'scatter':
             times = peaks['sample_ind'] / fs
             depths = positions[peaks['channel_ind'], self.probe_axis]
             # add fake depth jitter
             factor = np.min(np.diff(all_depth))
             depths += np.random.randn(depths.size) * factor * 0.15
-            self.ax.scatter(times, depths, alpha=0.4, s=1, color='k')
+
+            kwargs = dict(alpha=0.4, s=1, color='k')
+            kwargs.update(self.scatter_plot_kwargs)
+            self.ax.scatter(times, depths, **kwargs)
 
         self.ax.set_xlabel('time (s)')
         txt_axis = ['x', 'y'][self.probe_axis]
         self.ax.set_ylabel(f'{txt_axis} (um)')
-
+        
 
 def plot_drift_over_time(*args, **kwargs):
     W = DriftOverTimeWidget(*args, **kwargs)
