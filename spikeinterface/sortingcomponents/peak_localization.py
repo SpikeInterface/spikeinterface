@@ -195,19 +195,21 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
         wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
         wf_ptp = wf.ptp(axis=0)
 
+        # constant for initial guess and bounds
+        max_border = 300
+        max_distance = 1000
+        max_alpha = max(wf_ptp) * max_distance
+
         # initial guess is the center of mass
         com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
         x0 = np.zeros(4, dtype='float32')
         x0[:2] = com
         x0[2] = 20
-        x0[3] = 1000
+        x0[3] = max_alpha / 50.
         
-
         # bounds depend on geometry
-        max_border = 300
-        max_distance = 1000
-        max_alpha = max(wf_ptp) * max_distance
-        bounds = ([x0[0] - max_border, x0[1] - max_border, 1, 0], x0  + [x0[0] + max_border,  x0[1] + max_border, 500, max_alpha])
+        bounds = ([x0[0] - max_border, x0[1] - max_border, 1, 0],
+                  [x0[0] + max_border,  x0[1] + max_border, max_border*10, max_alpha])
         # print('x0', x0)
         # print('bounds',bounds)
 
@@ -216,6 +218,8 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
         # print('z_initial', z_initial)
         
         args = (wf_ptp, local_contact_locations)
+        # print('x0', x0)
+        # print('bounds', bounds)
         output = scipy.optimize.least_squares(_minimize_dist, x0=x0, bounds=bounds, args = args)
         #~ print(output['x'][3],  max(wf_ptp) * max_distance)
         # print('i', com, output['x'][:2])
