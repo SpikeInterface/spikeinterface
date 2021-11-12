@@ -138,8 +138,21 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, n_shi
     worker_ctx['n_shifts'] = n_shifts
     worker_ctx['neighbours_mask'] = neighbours_mask
     worker_ctx['extra_margin'] = extra_margin
-    
     worker_ctx['localization_dict'] = localization_dict
+    
+    if localization_dict is not None:
+        worker_ctx['contact_locations'] = recording.get_channel_locations()
+        channel_distance = get_channel_distances(recording)
+        worker_ctx['localization_dict']['neighbours_mask'] = channel_distance < localization_dict['local_radius_um']
+        ms_before = worker_ctx['localization_dict']['ms_before']
+        ms_after = worker_ctx['localization_dict']['ms_after']
+        worker_ctx['localization_dict']['nbefore'] = int(ms_before * recording.get_sampling_frequency() / 1000.)
+        worker_ctx['localization_dict']['nafter'] = int(ms_after * recording.get_sampling_frequency() / 1000.)
+    
+    #~ neighbours_mask, nbefore, nafter
+    
+    
+    
     
     return worker_ctx
 
@@ -153,6 +166,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     method = worker_ctx['method']
     extra_margin =  worker_ctx['extra_margin']
     localization_dict = worker_ctx['localization_dict']
+    
     
     margin = n_shifts + extra_margin
 
@@ -194,18 +208,21 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     peaks['segment_ind'] = segment_index
     
     if localization_dict is not None:
-        contact_locations = recording.get_channel_locations()
+        contact_locations = worker_ctx['contact_locations']
+        neighbours_mask_for_loc = worker_ctx['localization_dict']['neighbours_mask']
+        nbefore = worker_ctx['localization_dict']['nbefore']
+        nafter = worker_ctx['localization_dict']['nafter']
+        
         # TO BE CONTINUED here
-        #~ if localization_dict['method'] == 'center_of_mass':
-            #~ out = localize_peaks_center_of_mass(traces, peaks, contact_locations, neighbours_mask)
-            #~ peak_locations['x'] = out[:, 0]
-            #~ peak_locations['z'] = out[:, 1]
-        #~ elif localization_dict['method'] == 'monopolar_triangulation':
-            #~ out = localize_peaks_monopolar_triangulation(traces, peaks, contact_locations, neighbours_mask, nbefore, nafter)
-            #~ peak_locations['x'] = out[:, 0]
-            #~ peak_locations['z'] = out[:, 1]
-            #~ peak_locations['y'] = out[:, 2]
-            #~ peak_locations['alpha'] = out[:, 3]
+        if localization_dict['method'] == 'center_of_mass':
+            peak_locations = localize_peaks_center_of_mass(traces, peaks, contact_locations, neighbours_mask_for_loc)
+
+        elif localization_dict['method'] == 'monopolar_triangulation':
+            peak_locations = localize_peaks_monopolar_triangulation(traces, peaks, contact_locations, neighbours_mask_for_loc, nbefore, nafter)
+        
+        for k in peak_locations.dtype.fields:
+            peaks[k] = peak_locations[k]
+
 
     # make absolut sample index
     peaks['sample_ind'] += (start_frame - left_margin)

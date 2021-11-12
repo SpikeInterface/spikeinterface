@@ -132,32 +132,22 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     i1 = np.searchsorted(peak_in_segment['sample_ind'], end_frame)
     local_peaks = peak_in_segment[i0:i1]
     
-    print('_localize_peaks_chunk', start_frame, end_frame, local_peaks.size, peaks.size)
-    
+
     # make sample index local to traces
     local_peaks.copy()
     local_peaks['sample_ind'] -= (start_frame - left_margin)
 
     
-    peak_locations = np.zeros(local_peaks.size, dtype=dtype_localise_by_method[method])
-    
     if method == 'center_of_mass':
-        out = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask)
-        peak_locations['x'] = out[:, 0]
-        peak_locations['z'] = out[:, 1]
+        peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask)
     elif method == 'monopolar_triangulation':
-        out = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
-        peak_locations['x'] = out[:, 0]
-        peak_locations['z'] = out[:, 1]
-        peak_locations['y'] = out[:, 2]
-        peak_locations['alpha'] = out[:, 3]
+        peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
 
     return peak_locations
 
 
 def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbours_mask):
-    ndim = contact_locations.shape[1]
-    peak_locations = np.zeros((local_peak.size, ndim), dtype='float64')
+    peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
 
     # TODO find something faster
     for i, peak in enumerate(local_peak):
@@ -169,7 +159,8 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
         amps = np.abs(amps)
         com = np.sum(amps[:, np.newaxis] * contact_locations[chan_inds, :], axis=0) / np.sum(amps)
 
-        peak_locations[i, :] = com
+        peak_locations['x'][i] = com[0]
+        peak_locations['z'][i] = com[1]
 
     return peak_locations
 
@@ -189,9 +180,8 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
     https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1
     But without denoise of the spike waveform.
     """
-    #ndim = contact_locations.shape[1]
-    ndim = 3
-    peak_locations = np.zeros((local_peak.size, ndim), dtype='float64')
+    peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['monopolar_triangulation'])
+
 
     # TODO find something faster
     for i, peak in enumerate(local_peak):
@@ -232,7 +222,7 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
         # print('yep')
         # print('output', output)
         # print('output', output['x'].shape, output['x'])
-
-        peak_locations[i, :] = output['x']
+        
+        peak_locations[i] = tuple(output['x'])
 
     return peak_locations
