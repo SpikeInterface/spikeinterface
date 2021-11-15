@@ -6,16 +6,21 @@ Installation
 From PyPi
 ---------
 
-.. code-block:: bash
-
-   pip install spikeinterface[full]
-
-The :code:`[full]` option installs all the dependencies for all the different modules. If you wish to only
-install the :code:`core` module, you can use:
+To install the current release version, you can use:
 
 .. code-block:: bash
 
    pip install spikeinterface[full]
+
+The :code:`[full]` option installs all the extra dependencies for all the different sub-modules. 
+
+Note that if using Z shell (:code:`zsh` - the default shell on mac), you will need to use quotes (:code:`pip install "spikeinterface[full]"`).
+
+If you wish to only install the :code:`core` module, without optional dependencies, you can use:
+
+.. code-block:: bash
+
+   pip install spikeinterface
 
 
 From source
