@@ -37,8 +37,8 @@ class FilterRecording(BasePreprocessor):
         Margin in ms on border to avoid border effect
     filter_mode: str 'sos' or 'ba'
         Filter form of the filter coefficients:
-        - second-order sections (default): ‘sos’
-        - numerator/denominator: ‘ba’
+        - second-order sections (default): 'sos'
+        - numerator/denominator: 'ba'
     coef: ndarray or None
         Filter coefficients in the filter_mode form. 
     dtype: dtype or None
@@ -54,10 +54,10 @@ class FilterRecording(BasePreprocessor):
 
     def __init__(self, recording, band=[300., 6000.], btype='bandpass',
                  filter_order=5, ftype='butter', filter_mode='sos', margin_ms=5.0,
-                 coef=None, dtype=None):
+                 coeff=None, dtype=None):
 
         assert filter_mode in ('sos', 'ba')
-        if coef is None:
+        if coeff is None:
             assert btype in ('bandpass', 'highpass')
             # coefficient
             sf = recording.get_sampling_frequency()
