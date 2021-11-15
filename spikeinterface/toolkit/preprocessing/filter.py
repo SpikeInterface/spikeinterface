@@ -35,6 +35,12 @@ class FilterRecording(BasePreprocessor):
         Type of the filter ('bandpass', 'highpass')
     margin_ms: float
         Margin in ms on border to avoid border effect
+    filter_mode: str 'sos' or 'ba'
+        Filter form of the filter coefficients:
+        - second-order sections (default): ‘sos’
+        - numerator/denominator: ‘ba’
+    coef: ndarray or None
+        Filter coefficients in the filter_mode form. 
     dtype: dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
@@ -48,21 +54,21 @@ class FilterRecording(BasePreprocessor):
 
     def __init__(self, recording, band=[300., 6000.], btype='bandpass',
                  filter_order=5, ftype='butter', filter_mode='sos', margin_ms=5.0,
-                 dtype=None):
+                 coef=None, dtype=None):
 
-        assert btype in ('bandpass', 'highpass')
         assert filter_mode in ('sos', 'ba')
-
-        # coefficient
-        sf = recording.get_sampling_frequency()
-        if btype in ('bandpass', 'bandstop'):
-            assert len(band) == 2
-            Wn = [e / sf * 2 for e in band]
-        else:
-            Wn = float(band) / sf * 2
-        N = filter_order
-        # self.coeff is 'sos' or 'ab' style
-        coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
+        if coef is None:
+            assert btype in ('bandpass', 'highpass')
+            # coefficient
+            sf = recording.get_sampling_frequency()
+            if btype in ('bandpass', 'bandstop'):
+                assert len(band) == 2
+                Wn = [e / sf * 2 for e in band]
+            else:
+                Wn = float(band) / sf * 2
+            N = filter_order
+            # self.coeff is 'sos' or 'ab' style
+            coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
 
         dtype = fix_dtype(recording, dtype)
 
