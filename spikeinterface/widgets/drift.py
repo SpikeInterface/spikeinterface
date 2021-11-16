@@ -81,8 +81,7 @@ class DriftOverTimeWidget(BaseWidget):
 
         total_size = rec.get_num_samples(segment_index=0)
 
-        probe = rec.get_probe()
-        positions = probe.contact_positions
+        positions = rec.get_channel_locations()
 
         all_depth = np.unique(positions[:, self.probe_axis])
         all_depth = np.sort(all_depth)
