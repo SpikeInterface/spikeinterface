@@ -169,7 +169,7 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
     # ~ test = MearecSortingTest()
-    # ~ test = SpikeGLXRecordingTest()
+    test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     # ~ test = OpenEphysLegacyRecordingTest()
     #~ test = OpenEphysBinaryEventTest()
