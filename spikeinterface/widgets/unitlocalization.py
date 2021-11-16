@@ -65,7 +65,7 @@ class UnitLocalizationWidget(BaseWidget):
 
             if self.method == 'center_of_mass':
                 coms = compute_unit_centers_of_mass(we, **self.method_kwargs)
-                localisation = np.array([e for e in coms.values()])
+                unit_localisation = np.array([e for e in coms.values()])
             else:
                 raise ValueError('UnitLocalizationWidget: method not implemented.')
 
@@ -85,7 +85,8 @@ class UnitLocalizationWidget(BaseWidget):
         ax.set_title('')
 
         color = np.array([self.unit_colors[unit_id] for unit_id in unit_ids])
-        loc = ax.scatter(localisation[:, 0], localisation[:, 1], marker='1', color=color, s=80, lw=3)
+        loc = ax.scatter(
+            unit_localisation[:, 0], unit_localisation[:, 1], marker='1', color=color, s=80, lw=3)
         loc.set_zorder(3)
 
 

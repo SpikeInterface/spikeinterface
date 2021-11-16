@@ -440,15 +440,15 @@ class BaseRecording(BaseExtractor):
                 all_positions = []
                 for i in range(len(all_probes)):
                     probe_i = all_probes[i]
+                    # check that all positions in probe_j are outside probe_i boundaries
+                    x_bounds_i = [np.min(probe_i.contact_positions[:, 0]),
+                                  np.max(probe_i.contact_positions[:, 0])]
+                    y_bounds_i = [np.min(probe_i.contact_positions[:, 1]),
+                                  np.max(probe_i.contact_positions[:, 1])]
+
                     for j in range(i + 1, len(all_probes)):
                         probe_j = all_probes[j]
-                        
-                        # check that all positions in probe_j are outside probe_i boundaries
-                        x_bounds_i = [np.min(probe_i.contact_positions[:, 0]), 
-                                      np.max(probe_i.contact_positions[:, 0])]
-                        y_bounds_i = [np.min(probe_i.contact_positions[:, 1]), 
-                                      np.max(probe_i.contact_positions[:, 1])]
-                        
+
                         if np.any(np.array([x_bounds_i[0] < cp[0] < x_bounds_i[1] and 
                                             y_bounds_i[0] < cp[1] < y_bounds_i[1]
                                             for cp in probe_j.contact_positions])):
