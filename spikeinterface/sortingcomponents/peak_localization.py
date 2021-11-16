@@ -42,7 +42,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',
     nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
     nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
 
-    contact_locations = recording.get_probe().contact_positions
+    contact_locations = recording.get_channel_locations()
 
     # TODO
     #  make a memmap for peaks to avoid serilisation

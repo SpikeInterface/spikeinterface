@@ -25,9 +25,9 @@ class UnitsDepthAmplitudeWidget(BaseWidget):
         unit_ids = we.sorting.unit_ids
 
         channels_index = get_template_extremum_channel(we, peak_sign=self.peak_sign, outputs='index')
-        probe = we.recording.get_probe()
+        contact_positions = we.recording.get_channel_locations()
 
-        channel_depth = probe.contact_positions[:, self.depth_axis]
+        channel_depth = contact_positions[:, self.depth_axis]
         unit_depth = [channel_depth[channels_index[unit_id]] for unit_id in unit_ids]
 
         unit_amplitude = get_template_extremum_amplitude(we, peak_sign=self.peak_sign)
