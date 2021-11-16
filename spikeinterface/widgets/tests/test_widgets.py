@@ -113,7 +113,8 @@ class TestWidgets(unittest.TestCase):
                                 weight_with_amplitudes=True, mode='heatmap')
         sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.,
                                 weight_with_amplitudes=False, mode='heatmap')
-        sw.plot_drift_over_time(self._rec, peaks=peaks, weight_with_amplitudes=False, mode='scatter')
+        sw.plot_drift_over_time(self._rec, peaks=peaks, weight_with_amplitudes=False, mode='scatter',
+                                scatter_plot_kwargs={'color':'r'})
 
     def test_plot_peak_activity_map(self):
         sw.plot_peak_activity_map(self._rec)
@@ -165,7 +166,7 @@ if __name__ == '__main__':
     #~ mytest.test_crosscorrelogram()
     #~ mytest.test_isi_distribution()
 
-    #  mytest.test_plot_drift_over_time()
+    mytest.test_plot_drift_over_time()
     #  mytest.test_plot_peak_activity_map()
 
     # mytest.test_confusion()
@@ -173,6 +174,6 @@ if __name__ == '__main__':
     #~ mytest.test_multicomp_graph()
     #  mytest.test_sorting_performance()
 
-    mytest.test_plot_unit_summary()
+    # mytest.test_plot_unit_summary()
 
     plt.show()
