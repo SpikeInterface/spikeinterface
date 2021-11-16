@@ -3,7 +3,7 @@ import copy
 from packaging import version
 
 from ..basesorter import BaseSorter
-from ..utils import RecordingExtractorOldAPI
+from spikeinterface.core.old_api_utils import RecordingExtractorOldAPI
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import HerdingspikesSortingExtractor

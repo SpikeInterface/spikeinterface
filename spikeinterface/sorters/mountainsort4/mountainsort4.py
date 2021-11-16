@@ -4,7 +4,7 @@ from pathlib import Path
 from spikeinterface.toolkit import bandpass_filter, whiten
 
 from ..basesorter import BaseSorter
-from ..utils import RecordingExtractorOldAPI
+from spikeinterface.core.old_api_utils import RecordingExtractorOldAPI
 from spikeinterface.core import load_extractor
 
 from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
