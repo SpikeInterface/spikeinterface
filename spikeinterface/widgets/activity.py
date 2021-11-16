@@ -69,7 +69,10 @@ class PeakActivityMapWidget(BaseWidget):
         fs = rec.get_sampling_frequency()
         duration = rec.get_total_duration()
 
-        probe = rec.get_probe()
+        probes = rec.get_probes()
+        assert len(probes) == 1, "Activity map is only available for a single probe. If you have a probe group, "\
+                                 "consider splitting the recording from different probes"
+        probe = probes[0]
 
         if self.bin_duration_s is None:
             self._plot_one_bin(rec, probe, peaks, duration)
