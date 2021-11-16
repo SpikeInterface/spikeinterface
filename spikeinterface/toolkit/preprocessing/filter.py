@@ -57,10 +57,10 @@ class FilterRecording(BasePreprocessor):
                  coeff=None, dtype=None):
 
         assert filter_mode in ('sos', 'ba')
+        sf = recording.get_sampling_frequency()
         if coeff is None:
             assert btype in ('bandpass', 'highpass')
             # coefficient
-            sf = recording.get_sampling_frequency()
             if btype in ('bandpass', 'bandstop'):
                 assert len(band) == 2
                 Wn = [e / sf * 2 for e in band]
@@ -84,7 +84,8 @@ class FilterRecording(BasePreprocessor):
                                                               dtype))
 
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
-                            filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin_ms=margin_ms)
+                            filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, coeff=coeff,
+                            margin_ms=margin_ms)
 
 
 class FilterRecordingSegment(BasePreprocessorSegment):
