@@ -431,14 +431,37 @@ class BaseRecording(BaseExtractor):
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
         if self.get_property('contact_vector') is not None:
-            probe = self.get_probe()
-            return probe.contact_positions[channel_indices]
+            if len(self.get_probes()) == 1:
+                probe = self.get_probe()
+                positions = probe.contact_positions[channel_indices]
+            else:
+                # check that multiple probes are non-overlapping
+                all_probes = self.get_probes()
+                all_positions = []
+                for i in range(len(all_probes)):
+                    probe_i = all_probes[i]
+                    # check that all positions in probe_j are outside probe_i boundaries
+                    x_bounds_i = [np.min(probe_i.contact_positions[:, 0]),
+                                  np.max(probe_i.contact_positions[:, 0])]
+                    y_bounds_i = [np.min(probe_i.contact_positions[:, 1]),
+                                  np.max(probe_i.contact_positions[:, 1])]
+
+                    for j in range(i + 1, len(all_probes)):
+                        probe_j = all_probes[j]
+
+                        if np.any(np.array([x_bounds_i[0] < cp[0] < x_bounds_i[1] and 
+                                            y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                                            for cp in probe_j.contact_positions])):
+                            raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
+                all_positions = np.vstack([probe.contact_positions for probe in all_probes])
+                positions = all_positions[channel_indices]  
+            return positions
         else:
-            location = self.get_property('location')
-            if location is None:
-                raise Exception('there is no channel location')
-            location = np.asarray(location)[channel_indices]
-            return location
+            locations = self.get_property('location')
+            if locations is None:
+                raise Exception('There are no channel locations')
+            locations = np.asarray(locations)[channel_indices]
+            return locations
 
     def clear_channel_locations(self, channel_ids=None):
         if channel_ids is None:
@@ -450,7 +473,7 @@ class BaseRecording(BaseExtractor):
 
     def set_channel_groups(self, groups, channel_ids=None):
         if 'probes' in self._annotations:
-            warn('set_channel_groups(..) destroys the probe description. Using set_probe(...) is preferable')
+            warn('set_channel_groups() destroys the probe description. Using set_probe() is preferable')
             self._annotations.pop('probes')
         self.set_property('group', groups, ids=channel_ids)
 
@@ -541,7 +564,10 @@ class BaseRecordingSegment(BaseSegment):
 
     def get_times(self):
         if self.time_vector is not None:
-            return self.time_vector
+            if isinstance(self.time_vector, np.ndarray):
+                return self.time_vector
+            else:
+                return self.time_vector.asarray()
         else:
             time_vector = np.arange(self.get_num_samples(), dtype='float64')
             time_vector /= self.sampling_frequency

@@ -65,25 +65,28 @@ class UnitLocalizationWidget(BaseWidget):
 
             if self.method == 'center_of_mass':
                 coms = compute_unit_centers_of_mass(we, **self.method_kwargs)
-                localisation = np.array([e for e in coms.values()])
+                unit_localisation = np.array([e for e in coms.values()])
             else:
                 raise ValueError('UnitLocalizationWidget: method not implemented.')
 
         ax = self.ax
-        probe = we.recording.get_probe()
+        probegroup = we.recording.get_probegroup()
         probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
         contacts_kargs = dict(alpha=1., edgecolor='k', lw=0.5)
-        poly_contact, poly_contour = plot_probe(probe, ax=ax,
-                                                contacts_colors='w', contacts_kargs=contacts_kargs,
-                                                probe_shape_kwargs=probe_shape_kwargs)
-        poly_contact.set_zorder(2)
-        if poly_contour is not None:
-            poly_contour.set_zorder(1)
+        
+        for probe in probegroup.probes:
+            poly_contact, poly_contour = plot_probe(probe, ax=ax,
+                                                    contacts_colors='w', contacts_kargs=contacts_kargs,
+                                                    probe_shape_kwargs=probe_shape_kwargs)
+            poly_contact.set_zorder(2)
+            if poly_contour is not None:
+                poly_contour.set_zorder(1)
 
         ax.set_title('')
 
         color = np.array([self.unit_colors[unit_id] for unit_id in unit_ids])
-        loc = ax.scatter(localisation[:, 0], localisation[:, 1], marker='1', color=color, s=80, lw=3)
+        loc = ax.scatter(
+            unit_localisation[:, 0], unit_localisation[:, 1], marker='1', color=color, s=80, lw=3)
         loc.set_zorder(3)
 
 
