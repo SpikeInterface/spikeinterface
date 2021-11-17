@@ -69,7 +69,11 @@ class FilterRecording(BasePreprocessor):
             N = filter_order
             # self.coeff is 'sos' or 'ab' style
             coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
-
+        if not isinstance(coeff, list):
+            if filter_mode == 'ba':
+                coeff = [c.tolist() for c in coeff]
+            else:
+                coeff = coeff.tolist()
         dtype = fix_dtype(recording, dtype)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
