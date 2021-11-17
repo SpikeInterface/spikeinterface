@@ -16,4 +16,4 @@ from .spike_amplitudes import get_spike_amplitudes
 from .correlograms import compute_correlograms
 
 
-from .template_localization import compute_unit_centers_of_mass
+from .template_localization import localize_template, compute_center_of_mass
