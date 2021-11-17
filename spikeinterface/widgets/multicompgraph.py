@@ -7,12 +7,12 @@ from .basewidget import BaseWidget
 
 class MultiCompGraphWidget(BaseWidget):
     """
-    Plots multi sorting comparison graph.
+    Plots multi comparison graph.
 
     Parameters
     ----------
-    multi_sorting_comparison: MultiSortingComparison
-        The multi sorting comparison object
+    multi__comparison: BaseMultiComparison
+        The multi comparison object
     draw_labels: bool
         If True unit labels are shown
     node_cmap: matplotlib colormap
@@ -34,10 +34,10 @@ class MultiCompGraphWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, multi_sorting_comparison, draw_labels=False, node_cmap='viridis',
+    def __init__(self, multi_comparison, draw_labels=False, node_cmap='viridis',
                  edge_cmap='hot', alpha_edges=0.5, colorbar=False, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
-        self._msc = multi_sorting_comparison
+        self._msc = multi_comparison
         self._draw_labels = draw_labels
         self._node_cmap = node_cmap
         self._edge_cmap = edge_cmap
@@ -92,12 +92,12 @@ class MultiCompGraphWidget(BaseWidget):
 
 class MultiCompGlobalAgreementWidget(BaseWidget):
     """
-    Plots multi sorting comparison agreement as pie or bar plot.
+    Plots multi comparison agreement as pie or bar plot.
 
     Parameters
     ----------
-    multi_sorting_comparison: MultiSortingComparison
-        The multi sorting comparison object
+    multi_comparison: BaseMultiComparison
+        The multi comparison object
     plot_type: str
         'pie' or 'bar'
     cmap: matplotlib colormap
@@ -113,10 +113,10 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, multi_sorting_comparison, plot_type='pie', cmap='YlOrRd', fs=10,
+    def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=10,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
-        self._msc = multi_sorting_comparison
+        self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
         self._fs = fs
@@ -150,12 +150,12 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
 
 class MultiCompAgreementBySorterWidget(BaseWidget):
     """
-    Plots multi sorting comparison agreement as pie or bar plot.
+    Plots multi comparison agreement as pie or bar plot.
 
     Parameters
     ----------
-    multi_sorting_comparison: MultiSortingComparison
-        The multi sorting comparison object
+    multi_comparison: BaseMultiComparison
+        The multi comparison object
     plot_type: str
         'pie' or 'bar'
     cmap: matplotlib colormap
@@ -172,9 +172,9 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, multi_sorting_comparison, plot_type='pie', cmap='YlOrRd', fs=9,
+    def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=9,
                  axes=None, show_legend=True):
-        self._msc = multi_sorting_comparison
+        self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
         self._fs = fs
