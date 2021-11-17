@@ -68,12 +68,14 @@ class FilterRecording(BasePreprocessor):
                 Wn = float(band) / sf * 2
             N = filter_order
             # self.coeff is 'sos' or 'ab' style
-            coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
-        if not isinstance(coeff, list):
-            if filter_mode == 'ba':
-                coeff = [c.tolist() for c in coeff]
-            else:
-                coeff = coeff.tolist()
+            filter_coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
+        else:
+            filter_coeff = coeff
+            if not isinstance(coeff, list):
+                if filter_mode == 'ba':
+                    coeff = [c.tolist() for c in coeff]
+                else:
+                    coeff = coeff.tolist()
         dtype = fix_dtype(recording, dtype)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
@@ -84,7 +86,7 @@ class FilterRecording(BasePreprocessor):
 
         margin = int(margin_ms * sf / 1000.)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, filter_mode, margin,
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, filter_coeff, filter_mode, margin,
                                                               dtype))
 
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
