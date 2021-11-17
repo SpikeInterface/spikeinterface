@@ -6,12 +6,23 @@ class BaseComparison:
     """
     Base class for all comparisons (SpikeTrain and Template)
     """
-    def __init__(self, n_jobs=-1, verbose=False):
-        self._n_jobs = n_jobs
+
+    def __init__(self, name_list,
+                 match_score=0.5, chance_score=0.1,
+                 verbose=False):
+        self.name_list = name_list
         self._verbose = verbose
+        self.match_score = match_score
+        self.chance_score = chance_score
         self.possible_match_12, self.possible_match_21 = None, None
         self.best_match_12, self.best_match_21 = None, None
         self.hungarian_match_12, self.hungarian_match_21 = None, None
+
+    def _do_agreement(self):
+        NotImplementedError
+
+    def _do_matching(self):
+        NotImplementedError
 
 
 class BaseSpikeTrainComparison(BaseComparison):
@@ -26,14 +37,16 @@ class BaseSpikeTrainComparison(BaseComparison):
       * sorting names
       * delta_time to delta_frames
     """
-
-    def __init__(self, sorting_list, name_list=None, delta_time=0.4,  # sampling_frequency=None,
+    def __init__(self, sorting_list, name_list=None, delta_time=0.4,
                  match_score=0.5, chance_score=0.1, n_jobs=-1, verbose=False):
-
-        BaseComparison.__init__(self, n_jobs=n_jobs, verbose=verbose)
         self.sorting_list = sorting_list
         if name_list is None:
-            name_list = ['sorting{}'.format(i + 1) for i in range(len(sorting_list))]
+            name_list = ['sorting{}'.format(i + 1)
+                         for i in range(len(sorting_list))]
+        BaseComparison.__init__(self, name_list=name_list,
+                                match_score=match_score, chance_score=chance_score,
+                                verbose=verbose)
+
         self.name_list = name_list
         if np.any(['_' in name for name in name_list]):
             raise ValueError("Sorter names in 'name_list' cannot contain '_'")
@@ -54,8 +67,7 @@ class BaseSpikeTrainComparison(BaseComparison):
         self.sampling_frequency = sf0
         self.delta_time = delta_time
         self.delta_frames = int(self.delta_time / 1000 * self.sampling_frequency)
-        self.match_score = match_score
-        self.chance_score = chance_score
+        self._n_jobs = n_jobs
 
 
 class BaseTwoSorterComparison(BaseSpikeTrainComparison):
@@ -76,10 +88,8 @@ class BaseTwoSorterComparison(BaseSpikeTrainComparison):
         name_list = [sorting1_name, sorting2_name]
 
         BaseSpikeTrainComparison.__init__(self, sorting_list, name_list=name_list, delta_time=delta_time,
-                                          match_score=match_score, chance_score=chance_score, verbose=verbose, 
+                                          match_score=match_score, chance_score=chance_score, verbose=verbose,
                                           n_jobs=n_jobs)
-        # sampling_frequency=sampling_frequency,
-
         self.unit1_ids = self.sorting1.get_unit_ids()
         self.unit2_ids = self.sorting2.get_unit_ids()
 

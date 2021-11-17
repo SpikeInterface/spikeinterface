@@ -6,6 +6,8 @@ from .comparisontools import (count_matching_events, compute_agreement_score, co
 from .symmetricsortingcomparison import compare_two_sorters, SymmetricSortingComparison
 from .groundtruthcomparison import compare_sorter_to_ground_truth, GroundTruthComparison
 from .multisortingcomparison import compare_multiple_sorters, MultiSortingComparison
+from .templatecomparison import compare_templates, TemplateComparison
+from .multitemplatecomparison import compare_multiple_templates, MultiTemplateComparison
 from .collisioncomparison import CollisionGTComparison
 from .correlogramcomparison import CorrelogramGTComparison
 from .groundtruthstudy import GroundTruthStudy

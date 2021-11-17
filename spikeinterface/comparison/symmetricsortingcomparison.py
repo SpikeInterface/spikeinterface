@@ -55,7 +55,8 @@ class SymmetricSortingComparison(BaseTwoSorterComparison):
         if self._verbose:
             print("Matching...")
 
-        self.possible_match_12, self.possible_match_21 = make_possible_match(self.agreement_scores, self.chance_score)
+        self.possible_match_12, self.possible_match_21 = make_possible_match(self.agreement_scores, 
+                                                                             self.chance_score)
         self.best_match_12, self.best_match_21 = make_best_match(self.agreement_scores, self.chance_score)
         self.hungarian_match_12, self.hungarian_match_21 = make_hungarian_match(self.agreement_scores,
                                                                                 self.match_score)
