@@ -564,7 +564,10 @@ class BaseRecordingSegment(BaseSegment):
 
     def get_times(self):
         if self.time_vector is not None:
-            return self.time_vector
+            if isinstance(self.time_vector, np.ndarray):
+                return self.time_vector
+            else:
+                return self.time_vector.asarray()
         else:
             time_vector = np.arange(self.get_num_samples(), dtype='float64')
             time_vector /= self.sampling_frequency
