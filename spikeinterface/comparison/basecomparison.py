@@ -1,9 +1,20 @@
 import numpy as np
-import pandas as pd
 from .comparisontools import (do_count_event, make_match_count_matrix, make_agreement_scores_from_count)
 
 
 class BaseComparison:
+    """
+    Base class for all comparisons (SpikeTrain and Template)
+    """
+    def __init__(self, n_jobs=-1, verbose=False):
+        self._n_jobs = n_jobs
+        self._verbose = verbose
+        self.possible_match_12, self.possible_match_21 = None, None
+        self.best_match_12, self.best_match_21 = None, None
+        self.hungarian_match_12, self.hungarian_match_21 = None, None
+
+
+class BaseSpikeTrainComparison(BaseComparison):
     """
     Base class for all comparison classes:
        * GroundTruthComparison
@@ -19,6 +30,7 @@ class BaseComparison:
     def __init__(self, sorting_list, name_list=None, delta_time=0.4,  # sampling_frequency=None,
                  match_score=0.5, chance_score=0.1, n_jobs=-1, verbose=False):
 
+        BaseComparison.__init__(self, n_jobs=n_jobs, verbose=verbose)
         self.sorting_list = sorting_list
         if name_list is None:
             name_list = ['sorting{}'.format(i + 1) for i in range(len(sorting_list))]
@@ -44,11 +56,9 @@ class BaseComparison:
         self.delta_frames = int(self.delta_time / 1000 * self.sampling_frequency)
         self.match_score = match_score
         self.chance_score = chance_score
-        self._n_jobs = n_jobs
-        self._verbose = verbose
 
 
-class BaseTwoSorterComparison(BaseComparison):
+class BaseTwoSorterComparison(BaseSpikeTrainComparison):
     """
     Base class shared by SortingComparison and GroundTruthComparison
     """
@@ -65,9 +75,9 @@ class BaseTwoSorterComparison(BaseComparison):
             sorting2_name = 'sorting2'
         name_list = [sorting1_name, sorting2_name]
 
-        BaseComparison.__init__(self, sorting_list, name_list=name_list, delta_time=delta_time,
-                                match_score=match_score,
-                                chance_score=chance_score, verbose=verbose, n_jobs=n_jobs)
+        BaseSpikeTrainComparison.__init__(self, sorting_list, name_list=name_list, delta_time=delta_time,
+                                          match_score=match_score, chance_score=chance_score, verbose=verbose, 
+                                          n_jobs=n_jobs)
         # sampling_frequency=sampling_frequency,
 
         self.unit1_ids = self.sorting1.get_unit_ids()
