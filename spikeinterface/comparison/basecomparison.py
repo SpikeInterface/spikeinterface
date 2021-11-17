@@ -1,5 +1,6 @@
 import numpy as np
-from .comparisontools import (do_count_event, make_match_count_matrix, make_agreement_scores_from_count)
+from .comparisontools import (make_possible_match, make_best_match, make_hungarian_match,
+                              do_count_event, make_match_count_matrix, make_agreement_scores_from_count)
 
 
 class BaseComparison:
@@ -19,10 +20,16 @@ class BaseComparison:
         self.hungarian_match_12, self.hungarian_match_21 = None, None
 
     def _do_agreement(self):
+        # populate self.agreement_scores
         NotImplementedError
 
     def _do_matching(self):
-        NotImplementedError
+        if self._verbose:
+            print("Matching...")
+
+        self.possible_match_12, self.possible_match_21 = make_possible_match(self.agreement_scores, self.chance_score)
+        self.best_match_12, self.best_match_21 = make_best_match(self.agreement_scores, self.chance_score)
+        self.hungarian_match_12, self.hungarian_match_21 = make_hungarian_match(self.agreement_scores, self.match_score)
 
 
 class BaseSpikeTrainComparison(BaseComparison):
@@ -128,10 +135,6 @@ class BaseTwoSorterComparison(BaseSpikeTrainComparison):
         # agreement matrix score for each pair
         self.agreement_scores = make_agreement_scores_from_count(self.match_event_count, self.event_counts1,
                                                                  self.event_counts2)
-
-    def _do_matching(self):
-        # must be implemented in subclass
-        raise NotImplementedError
 
     def get_ordered_agreement_scores(self):
         # order rows

@@ -1,8 +1,6 @@
 import numpy as np
 
 from .basecomparison import BaseTwoSorterComparison
-from .comparisontools import make_possible_match, make_best_match, make_hungarian_match
-
 
 class SymmetricSortingComparison(BaseTwoSorterComparison):
     """
@@ -50,16 +48,6 @@ class SymmetricSortingComparison(BaseTwoSorterComparison):
                                          delta_time=delta_time,
                                          match_score=match_score, chance_score=chance_score,
                                          n_jobs=n_jobs, verbose=verbose)
-
-    def _do_matching(self):
-        if self._verbose:
-            print("Matching...")
-
-        self.possible_match_12, self.possible_match_21 = make_possible_match(self.agreement_scores, 
-                                                                             self.chance_score)
-        self.best_match_12, self.best_match_21 = make_best_match(self.agreement_scores, self.chance_score)
-        self.hungarian_match_12, self.hungarian_match_21 = make_hungarian_match(self.agreement_scores,
-                                                                                self.match_score)
 
     def get_matching(self):
         return self.hungarian_match_12, self.hungarian_match_21

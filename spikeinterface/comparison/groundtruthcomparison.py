@@ -120,15 +120,6 @@ class GroundTruthComparison(BaseTwoSorterComparison):
         else:
             raise Exception("Unit_id is not a valid unit")
 
-    def _do_matching(self):
-        if self._verbose:
-            print("Matching...")
-
-        self.possible_match_12, self.possible_match_21 = make_possible_match(self.agreement_scores, self.chance_score)
-        self.best_match_12, self.best_match_21 = make_best_match(self.agreement_scores, self.chance_score)
-        self.hungarian_match_12, self.hungarian_match_21 = make_hungarian_match(self.agreement_scores,
-                                                                                self.match_score)
-
     def _do_count(self):
         """
         Do raw count into a dataframe.
