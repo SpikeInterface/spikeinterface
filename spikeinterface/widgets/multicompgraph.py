@@ -11,7 +11,7 @@ class MultiCompGraphWidget(BaseWidget):
 
     Parameters
     ----------
-    multi__comparison: BaseMultiComparison
+    multi_comparison: BaseMultiComparison
         The multi comparison object
     draw_labels: bool
         If True unit labels are shown
