@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment)
 
-class RecordingExtractorOldAPI:
+class NewToOldRecording:
     """
     This class mimic the old API of spikeextractors with:
       * reversed shape (channels, samples):
