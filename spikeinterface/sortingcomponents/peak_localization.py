@@ -7,8 +7,6 @@ import scipy.optimize
 
 from ..toolkit import get_chunk_with_margin
 
-_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation')
-
 dtype_localize_by_method = {
     'center_of_mass':  [('x', 'float64'), ('z', 'float64')],
     'monopolar_triangulation': [('x', 'float64'),  ('z', 'float64'), ('y', 'float64'), ('alpha', 'float64')],
