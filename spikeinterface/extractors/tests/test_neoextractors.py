@@ -167,6 +167,15 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+@pytest.mark.skip(reason='Biocam not merged into neo yet')
+class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = BiocamRecordingExtractor
+    downloads = ['biocam/test_biocam.brw']
+    entities = [
+        'biocam/test_biocam.brw'
+    ]
+
+
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
     # ~ test = MearecSortingTest()
