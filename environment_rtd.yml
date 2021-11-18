@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python=3.8
   - pip>=21.0
-  - numpy==1.20
+  - numpy=1.20
   - joblib
   - tqdm
   - pillow
@@ -20,6 +20,7 @@ dependencies:
   - pybind11
   - pyqt=5
   - loky
+  - numba
   - pip:
     - neo>=0.10.0
     - probeinterface
@@ -27,7 +28,7 @@ dependencies:
     - isosplit5
     - mountainsort4>=1.0.0
     - hdbscan
-    - tridesclous>=1.6.2
+    - tridesclous>=1.6.3
     - herdingspikes
 
 # Notes need to be modified when neo 0.10.0 is out
