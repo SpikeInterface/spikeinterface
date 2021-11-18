@@ -13,7 +13,7 @@ dtype_localize_by_method = {
 _possible_localization_methods = list(dtype_localize_by_method.keys())
 
 
-def localize_template(waveform_extractor, method='center_of_mass', output='numpy', **method_kwargs):
+def localize_unit(waveform_extractor, method='center_of_mass', output='numpy', **method_kwargs):
     assert method in _possible_localization_methods
     
     if method == 'center_of_mass':
@@ -39,7 +39,7 @@ def _minimize_dist(vec, wf_ptp, local_contact_locations):
     return err
     
 
-def compute_monopolar_triangulation(waveform_extractor, radius_um=150):
+def compute_monopolar_triangulation(waveform_extractor, radius_um=100):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard
