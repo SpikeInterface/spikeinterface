@@ -160,7 +160,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         that signal it do not make sens to have spikes at 50kHz sample
         when the sig is 10kHz.
         neo handle this but not spieinterface
-        
+
         In neo spikes can have diffrents sampling rate than signals so conversion from
         signals frames to times is format dependent
         """
