@@ -14,3 +14,4 @@ from .ced import CedRecordingExtractor, read_ced
 from .maxwell import MaxwellRecordingExtractor, read_maxwell, MaxwellEventExtractor, read_maxwell_event
 from .nix import NixRecordingExtractor, read_nix
 from .spikegadgets import SpikeGadgetsRecordingExtractor, read_spikegadgets
+from .biocam import BiocamRecordingExtractor, read_biocam

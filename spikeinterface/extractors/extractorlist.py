@@ -18,7 +18,7 @@ from .neoextractors import (
     MaxwellRecordingExtractor, read_maxwell, MaxwellEventExtractor, read_maxwell_event,
     NixRecordingExtractor, read_nix,
     SpikeGadgetsRecordingExtractor, read_spikegadgets,
-
+    BiocamRecordingExtractor, read_biocam,
 )
 
 # NWB sorting/recording/event
