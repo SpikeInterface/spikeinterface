@@ -6,7 +6,7 @@ import pytest
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
 from spikeinterface.extractors import toy_example
-from spikeinterface.toolkit.postprocessing import localize_template
+from spikeinterface.toolkit.postprocessing import localize_unit
 
 
 def setup_module():
@@ -30,13 +30,13 @@ def setup_module():
 def test_compute_unit_center_of_mass():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
 
-    unit_location = localize_template(we, method='center_of_mass',  num_channels=4)
+    unit_location = localize_unit(we, method='center_of_mass',  num_channels=4)
     print(unit_location)
 
 
 def test_compute_monopolar_triangulation():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
-    unit_location = localize_template(we, method='monopolar_triangulation', radius_um=150)
+    unit_location = localize_unit(we, method='monopolar_triangulation', radius_um=150)
     print(unit_location)
 
 
