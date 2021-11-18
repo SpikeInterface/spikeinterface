@@ -170,9 +170,9 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 @pytest.mark.skip(reason='Biocam not merged into neo yet')
 class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BiocamRecordingExtractor
-    downloads = ['biocam/test_biocam.brw']
+    downloads = ['biocam/biocam_hw3.0_fw1.6.brw']
     entities = [
-        'biocam/test_biocam.brw'
+        'biocam/biocam_hw3.0_fw1.6.brw'
     ]
 
 
