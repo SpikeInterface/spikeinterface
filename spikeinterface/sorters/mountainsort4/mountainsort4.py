@@ -4,7 +4,7 @@ from pathlib import Path
 from spikeinterface.toolkit import bandpass_filter, whiten
 
 from ..basesorter import BaseSorter
-from ..utils import RecordingExtractorOldAPI
+from spikeinterface.core.old_api_utils import NewToOldRecording
 from spikeinterface.core import load_extractor
 
 from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
@@ -111,8 +111,8 @@ class Mountainsort4Sorter(BaseSorter):
                 print('whitenning')
             recording = whiten(recording=recording)
 
-        print('Mountainsort4 use the OLD spikeextractors mapped with RecordingExtractorOldAPI')
-        old_api_recording = RecordingExtractorOldAPI(recording)
+        print('Mountainsort4 use the OLD spikeextractors mapped with NewToOldRecording')
+        old_api_recording = NewToOldRecording(recording)
 
         # Check location no more needed done in basesorter
         old_api_sorting = mountainsort4.mountainsort4(
