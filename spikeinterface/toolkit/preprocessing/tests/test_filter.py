@@ -6,7 +6,7 @@ from spikeinterface.core.testing_tools import generate_recording
 from spikeinterface import NumpyRecording
 
 from spikeinterface.toolkit.preprocessing import filter, bandpass_filter, notch_filter
-
+from scipy.signal import iirfilter
 
 def test_filter():
     rec = generate_recording()
@@ -29,6 +29,16 @@ def test_filter():
 
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.)
     
+    # filter from coefficients
+    coeff = iirfilter(8, [0.02, 0.4], rs=30, btype='band', analog=False, ftype='cheby2', output='sos')
+    rec5 = filter(rec, coeff=coeff, filter_mode='sos')
+
+    # compute by chunk
+    rec5_cached0 = rec5.save(chunk_size=100000, verbose=False, progress_bar=True)
+
+    trace50 = rec5.get_traces(segment_index=0)
+    trace51 = rec5_cached0.get_traces(segment_index=0)
+
     assert np.allclose(rec.get_times(0), rec2.get_times(0))
 
 
