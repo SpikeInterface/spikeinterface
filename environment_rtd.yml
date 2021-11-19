@@ -4,7 +4,6 @@ channels:
 dependencies:
   - python=3.8
   - pip>=21.0
-  - numpy=1.20
   - joblib
   - tqdm
   - pillow
@@ -30,5 +29,4 @@ dependencies:
     - hdbscan
     - tridesclous>=1.6.3
     - herdingspikes
-
-# Notes need to be modified when neo 0.10.0 is out
+    - numpy==1.20
