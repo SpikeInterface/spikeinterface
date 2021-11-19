@@ -10,7 +10,7 @@ dtype_localize_by_method = {
     'monopolar_triangulation': [('x', 'float64'),  ('y', 'float64'), ('z', 'float64'), ('alpha', 'float64')],
 }
 
-_possible_localization_methods = list(dtype_localize_by_method.keys())
+possible_localization_methods = list(dtype_localize_by_method.keys())
 
 
 def localize_unit(waveform_extractor, method='center_of_mass', output='numpy', **method_kwargs):
@@ -33,7 +33,7 @@ def localize_unit(waveform_extractor, method='center_of_mass', output='numpy', *
     unit_location: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
-    assert method in _possible_localization_methods
+    assert method in possible_localization_methods
     
     if method == 'center_of_mass':
         unit_location = compute_center_of_mass(waveform_extractor,  **method_kwargs)

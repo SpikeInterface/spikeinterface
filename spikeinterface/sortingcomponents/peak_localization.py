@@ -8,11 +8,10 @@ import scipy.optimize
 from ..toolkit import get_chunk_with_margin
 
 from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method,
-    _possible_localization_methods, 
+    possible_localization_methods, 
     estimate_distance_error
     )
 
-_possible_localization_methods = list(dtype_localize_by_method.keys())
 
 def init_kwargs_dict(method, method_kwargs):
     if method == 'center_of_mass':
@@ -63,7 +62,7 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3,
         Array with estimated location for each spike
         The dtype depend on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha')
     """
-    assert method in _possible_localization_methods
+    assert method in possible_localization_methods
     
     # handle default method_kwargs
     method_kwargs = init_kwargs_dict(method, method_kwargs)
