@@ -4,23 +4,22 @@ channels:
 dependencies:
   - python=3.8
   - pip>=21.0
-  - joblib
-  - tqdm
-  - pillow
-  - sphinx-gallery
-  - numpydoc
-  - matplotlib
-  - h5py
-  - pandas
-  - scikit-learn
-  - networkx
   - git-annex
   - datalad
-  - pybind11
   - pyqt=5
-  - loky
-  - numba
   - pip:
+    - numpy==1.20
+    - joblib
+    - tqdm
+    - pillow
+    - matplotlib
+    - h5py
+    - pandas
+    - scikit-learn
+    - networkx
+    - pybind11
+    - loky
+    - numba
     - neo>=0.10.0
     - probeinterface
     - MEArec>=1.7.1
@@ -29,4 +28,5 @@ dependencies:
     - hdbscan
     - tridesclous>=1.6.3
     - herdingspikes
-    - numpy==1.20
+    - sphinx-gallery
+    - numpydoc
