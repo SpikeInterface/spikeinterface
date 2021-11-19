@@ -14,7 +14,9 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('amplitud
 
 from ..toolkit import get_chunk_with_margin
 
-from .peak_localization import dtype_localize_by_method, localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation
+from .peak_localization import (dtype_localize_by_method, init_kwargs_dict,
+    localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation)
+
 
 def detect_peaks(recording, method='by_channel',
                  peak_sign='neg', detect_threshold=5, n_shifts=2,
@@ -92,22 +94,13 @@ def detect_peaks(recording, method='by_channel',
     else:
         assert isinstance(localization_dict, dict)
         assert localization_dict['method'] in dtype_localize_by_method.keys()
-
-        # find channel neighbours
-        assert local_radius_um is not None
-        channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < localization_dict['local_radius_um']
+        localization_dict = init_kwargs_dict(localization_dict['method'], localization_dict)
 
         nbefore = int(localization_dict['ms_before'] * recording.get_sampling_frequency() / 1000.)
         nafter = int(localization_dict['ms_after'] * recording.get_sampling_frequency() / 1000.)
-
-        
-        
         extra_margin = max(nbefore, nafter)
 
 
-        
-    
     # and run
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
@@ -143,11 +136,17 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, n_shi
     if localization_dict is not None:
         worker_ctx['contact_locations'] = recording.get_channel_locations()
         channel_distance = get_channel_distances(recording)
-        worker_ctx['localization_dict']['neighbours_mask'] = channel_distance < localization_dict['local_radius_um']
+        
         ms_before = worker_ctx['localization_dict']['ms_before']
         ms_after = worker_ctx['localization_dict']['ms_after']
         worker_ctx['localization_dict']['nbefore'] = int(ms_before * recording.get_sampling_frequency() / 1000.)
         worker_ctx['localization_dict']['nafter'] = int(ms_after * recording.get_sampling_frequency() / 1000.)
+        # channel sparsity
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance < localization_dict['local_radius_um']
+        worker_ctx['localization_dict']['neighbours_mask'] = neighbours_mask
+        
+        
     
     #~ neighbours_mask, nbefore, nafter
     
@@ -215,10 +214,11 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         
         # TO BE CONTINUED here
         if localization_dict['method'] == 'center_of_mass':
-            peak_locations = localize_peaks_center_of_mass(traces, peaks, contact_locations, neighbours_mask_for_loc)
+            peak_locations = localize_peaks_center_of_mass(traces, peaks, contact_locations, neighbours_mask_for_loc, nbefore, nafter)
 
         elif localization_dict['method'] == 'monopolar_triangulation':
-            peak_locations = localize_peaks_monopolar_triangulation(traces, peaks, contact_locations, neighbours_mask_for_loc, nbefore, nafter)
+            max_distance_um = worker_ctx['localization_dict']['max_distance_um']
+            peak_locations = localize_peaks_monopolar_triangulation(traces, peaks, contact_locations, neighbours_mask_for_loc, nbefore, nafter, max_distance_um)
         
         for k in peak_locations.dtype.fields:
             peaks[k] = peak_locations[k]

@@ -32,8 +32,8 @@ def test_detect_peaks():
                          method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
                          chunk_size=10000, verbose=1, progress_bar=True,
-                         #localization_dict=dict(method='center_of_mass', local_radius_um=150, ms_before=0.1, ms_after=0.3),
-                         localization_dict=dict(method='monopolar_triangulation', local_radius_um=150, ms_before=0.1, ms_after=0.3),
+                         localization_dict=dict(method='center_of_mass', local_radius_um=150, ms_before=0.1, ms_after=0.3),
+                         #~ localization_dict=dict(method='monopolar_triangulation', local_radius_um=150, ms_before=0.1, ms_after=0.3, max_distance_um=1000),
                          )
     assert 'x' in peaks.dtype.fields
 
