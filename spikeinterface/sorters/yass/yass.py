@@ -55,12 +55,12 @@ class YassSorter(BaseSorter):
 
         # Params for deconv stage
         'update_templates': 0,  # update templates during deconvolution step
-        'neuron_discover': 0,  # recluster during deconvlution and search for new stable neurons;
-        'template_update_time': 300,  # if tempaltes being udpated, time (in sec) of segment in which to search for
+        'neuron_discover': 0,  # recluster during deconvolution and search for new stable neurons;
+        'template_update_time': 300,  # if templates being updated, time (in sec) of segment in which to search for
         # new clusters
 
         # Defatul params for converting raw data to required formats.
-        'total_memory': '500M',  # 
+        'total_memory': '500M',  #
         'n_jobs_bin': 1  # number of cores?
     }
 
@@ -90,10 +90,10 @@ class YassSorter(BaseSorter):
 
         # Params for deconv stage
         'update_templates': '0; update templates during deconvolution step 1; do not update 0',
-        'neuron_discover': '0, recluster during deconvlution and search for new stable neurons: 1; do not recluser 0',
+        'neuron_discover': '0, recluster during deconvolution and search for new stable neurons: 1; do not recluster 0',
         'template_update_time': '300; if reculstiner on, time (in sec) of segment in which to search for new clusters ',
 
-        # Defatul params for converting raw data to required formats.
+        # Default params for converting raw data to required formats.
         'total_memory': '500M; chunk of data to be processed by a single core',
         'n_jobs_bin': '1; number of cores to do data conversion',
 
@@ -185,7 +185,7 @@ class YassSorter(BaseSorter):
         with open(fname_config, 'w') as file:
             documents = yaml.dump(merge_params, file)
 
-        # RunNN training on exisiting
+        # RunNN training on existing
         neural_nets_path = p['neural_nets_path']
 
         if retrain:
@@ -198,7 +198,7 @@ class YassSorter(BaseSorter):
             #   load previous NNs
             if verbose:
                 print("USING PREVIOUSLY TRAINED NNs FROM THIS LOCATION: ", params['neural_nets_path'])
-            # use previuosly trained NN folder location
+            # use previously trained NN folder location
             neural_nets_path = Path(params['neural_nets_path'])
 
         merge_params['neuralnetwork']['denoise']['filename'] = str(neural_nets_path.absolute() / 'denoise.pt')
@@ -288,7 +288,7 @@ class YassSorter(BaseSorter):
 
 
 def merge_params_dict(yass_params, params):
-    ''' This function merges params with yass_params (default) 
+    ''' This function merges params with yass_params (default)
         to make a larger exposed params dictionary
     '''
     # self.params

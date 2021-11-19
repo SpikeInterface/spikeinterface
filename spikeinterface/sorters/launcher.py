@@ -1,5 +1,5 @@
 """
-Utils functions to launch several sorter on several recording in parralell or not.
+Utils functions to launch several sorter on several recording in parallel or not.
 """
 import os
 from pathlib import Path
@@ -65,55 +65,40 @@ def run_sorter_by_property(sorter_name,
 
     Parameters
     ----------
-
     sorter_name: str
         The sorter name
-
     recording: BaseRecording
         The recording to be sorted
-
     grouping_property: object
         Property to split by before sorting
-
     working_folder: str
         The working directory.
-
-    sorter_params: dict of dict with sorter_name as key
-        This allow to overwrite default params for sorter.
-
     mode_if_folder_exists: 'raise_if_exists' or 'overwrite' or 'keep'
         The mode when the subfolder of recording/sorter already exists.
             * 'raise' : raise error if subfolder exists
             * 'overwrite' : delete and force recompute
             * 'keep' : do not compute again if f=subfolder exists and log is OK
-
     engine: str
         'loop', 'joblib', or 'dask'
-
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
             * 'loop' : no kwargs
             * 'joblib' : {'n_jobs' : } number of processes
-            * 'dask' : {'client':} the dask client for submiting task
-
+            * 'dask' : {'client':} the dask client for submitting task
     verbose: bool
         default True
-
     docker_image: None or str
         If str run the sorter inside a container (docker) using the docker package.
-
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
     Returns
     -------
-
     sorting : UnitsAggregationSorting
         The aggregated SortingExtractor.
 
     Examples
     --------
-
     This example shows how to run spike sorting split by group using the 'joblib' backend with 4 jobs for parallel
     processing.
 
@@ -180,51 +165,39 @@ def run_sorters(sorter_list,
 
     Parameters
     ----------
-
     sorter_list: list of str
         List of sorter name.
-
     recording_dict_or_list: dict or list
         A dict of recording. The key will be the name of the recording.
         In a list is given then the name will be recording_0, recording_1, ...
-
     working_folder: str
         The working directory.
-
     sorter_params: dict of dict with sorter_name as key
         This allow to overwrite default params for sorter.
-
     mode_if_folder_exists: 'raise_if_exists' or 'overwrite' or 'keep'
         The mode when the subfolder of recording/sorter already exists.
             * 'raise' : raise error if subfolder exists
             * 'overwrite' : delete and force recompute
             * 'keep' : do not compute again if f=subfolder exists and log is OK
-
     engine: str
         'loop', 'joblib', or 'dask'
-
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
             * 'loop' : no kwargs
             * 'joblib' : {'n_jobs' : } number of processes
-            * 'dask' : {'client':} the dask client for submiting task
-
+            * 'dask' : {'client':} the dask client for submitting task
     verbose: bool
         default True
-
     with_output: bool
         return the output.
-
     docker_images: dict
         A dictionary {sorter_name : docker_image} to specify is some sorters
         should use docker images
 
     Returns
     -------
-
     results : dict
         The output is nested dict[(rec_name, sorter_name)] of SortingExtractor.
-
     """
     working_folder = Path(working_folder)
 

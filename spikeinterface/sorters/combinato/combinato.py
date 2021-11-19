@@ -84,9 +84,9 @@ class CombinatoSorter(BaseSorter):
         'chunk_memory': 'Chunk size in Mb to write h5 file (default 500Mb)'
     }
 
-    sorter_description = """Combinato is a complete data-analysis framework for spike sorting in noisy recordings 
-    lasting twelve hours or more. It combines a wavelet-based feature extraction and paramagnetic clustering with 
-    multiple stages of template-matching. includes software for artifact rejection, automatic spike sorting, 
+    sorter_description = """Combinato is a complete data-analysis framework for spike sorting in noisy recordings
+    lasting twelve hours or more. It combines a wavelet-based feature extraction and paramagnetic clustering with
+    multiple stages of template-matching. includes software for artifact rejection, automatic spike sorting,
     manual optimization, and efficient visualization of results.
     For more information see https://doi:10.1371/journal.pone.0166598"""
 

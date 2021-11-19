@@ -18,7 +18,7 @@ from probeinterface import write_prb
 
 class TridesclousSorter(BaseSorter):
     """
-    tridesclous is one of the more convinient, fast and elegant
+    tridesclous is one of the more convenient, fast and elegant
     spike sorter.
     Everyone should test it.
     """
@@ -49,7 +49,7 @@ class TridesclousSorter(BaseSorter):
         'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
-    sorter_description = """Tridesclous is a template-matching spike sorter with a real-time engine. 
+    sorter_description = """Tridesclous is a template-matching spike sorter with a real-time engine.
     For more information see https://tridesclous.readthedocs.io"""
 
     installation_mesg = """\nTo use Tridesclous run:\n
@@ -104,7 +104,7 @@ class TridesclousSorter(BaseSorter):
         else:
             if verbose:
                 print('Local copy of recording')
-            # save binary file (chunk by hcunk) into a new file
+            # save binary file (chunk by chunk) into a new file
             num_chan = recording.get_num_channels()
             dtype = recording.get_dtype().str
             file_paths = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]

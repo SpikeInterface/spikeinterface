@@ -18,20 +18,20 @@ ops.fshigh = {freq_min};
 % threshold on projections (like in Kilosort1, can be different for last pass like [9 ])
 ops.Th = {projection_threshold};
 
-% how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot) 
-ops.lam = 20;  
+% how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
+ops.lam = 20;
 
 % splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-ops.AUCsplit = 0.8; 
+ops.AUCsplit = 0.8;
 
 % minimum firing rate on a "good" channel (0 to skip)
-ops.minfr_goodchannels = {minfr_goodchannels}; 
+ops.minfr_goodchannels = {minfr_goodchannels};
 
 % minimum spike rate (Hz), if a cluster falls below this for too long it gets removed (1/50)
-ops.minFR = {minFR}; 
+ops.minFR = {minFR};
 
 % spatial constant in um for computing residual variance of spike (30)
-ops.sigmaMask = {sigmaMask}; 
+ops.sigmaMask = {sigmaMask};
 
 % threshold crossings for pre-clustering (in PCA projection space) (8)
 ops.ThPre = {preclust_threshold};
@@ -47,7 +47,7 @@ ops.CAR             = {use_car}; % perform CAR
 %% danger, changing these settings can lead to fatal errors
 % options for determining PCs
 ops.spkTh           = -{detect_threshold};      % spike threshold in standard deviations (-6)
-ops.reorder         = 1;       % whether to reorder batches for drift correction. 
+ops.reorder         = 1;       % whether to reorder batches for drift correction.
 ops.nskip           = 25;  % how many batches to skip for determining spike PCs
 ops.GPU                 = 1; % has to be 1, no CPU version yet, sorry
 % ops.Nfilt             = 1024; % max number of clusters
