@@ -20,8 +20,8 @@ from .utils import SpikeSortingError
 
 
 class BaseSorter:
-    sorter_name = ''  # convinience for reporting
-    SortingExtractor_Class = None  # convinience to get the extractor
+    sorter_name = ''  # convenience for reporting
+    SortingExtractor_Class = None  # convenience to get the extractor
     requires_locations = False
     docker_requires_gpu = False
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': True}
@@ -52,7 +52,7 @@ class BaseSorter:
 
     def run(self, raise_error=True):
         """
-        Main function keept for backward compatibility.
+        Main function kept for backward compatibility.
         This should not be used anymore but still works.
         """
         # setup recording
@@ -101,7 +101,7 @@ class BaseSorter:
             if remove_existing_folder:
                 shutil.rmtree(str(output_folder))
             else:
-                raise ValueError(f'Folder {output_folder} already exsits')
+                raise ValueError(f'Folder {output_folder} already exists')
 
         output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -131,7 +131,7 @@ class BaseSorter:
     def set_params_to_folder(cls, recording, output_folder, new_params, verbose):
         params = cls.default_params()
 
-        # verify paarms are in list
+        # verify params are in list
         bad_params = []
         for p in new_params.keys():
             if p not in params.keys():
@@ -141,7 +141,7 @@ class BaseSorter:
 
         params.update(new_params)
 
-        # custum check params
+        # custom check params
         params = cls._check_params(recording, output_folder, params)
         # common check : filter warning
         if recording.is_filtered and cls._check_apply_filter_in_params(params) and verbose:
@@ -239,10 +239,10 @@ class BaseSorter:
     @classmethod
     def get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
-        # check erros in log file
+        # check errors in log file
         log_file = output_folder / 'spikeinterface_log.json'
         if not log_file.is_file():
-            raise SpikeSortingError('get reult error: the folder do not contain spikeinterface_log.json')
+            raise SpikeSortingError('get result error: the folder do not contain spikeinterface_log.json')
 
         with log_file.open('r', encoding='utf8') as f:
             log = json.load(f)
@@ -256,7 +256,7 @@ class BaseSorter:
 
     #############################################
 
-    # Zone to be implemeneted
+    # Zone to be implemented
     # by design all are implemented with class method.
     # No instance!!
     # So "self" is not available. Everything is folder based.
@@ -270,14 +270,14 @@ class BaseSorter:
     @classmethod
     def _check_params(cls, recording, output_folder, params):
         # optional
-        # can be implemented in subclass for custum checks
+        # can be implemented in subclass for custom checks
         return params
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
         # need be implemented in subclass
         # this setup ONE recording (or SubExtractor)
-        # this must copy (or not) the trace in the appropirate format
+        # this must copy (or not) the trace in the appropriate format
         # this must take care of geometry file (PRB, CSV, ...)
         # this must generate all needed script
         raise NotImplementedError
@@ -291,7 +291,7 @@ class BaseSorter:
     def _check_apply_filter_in_params(cls, params):
         return False
         #   optional
-        # can be implemented in subclass to check if the filter will be apllied
+        # can be implemented in subclass to check if the filter will be applied
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):

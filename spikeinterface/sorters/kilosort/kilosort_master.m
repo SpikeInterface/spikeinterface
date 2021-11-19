@@ -29,6 +29,3 @@ catch
     quit(1);
 end
 quit(0);
-
-
-

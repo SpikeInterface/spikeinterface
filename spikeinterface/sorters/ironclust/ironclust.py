@@ -111,8 +111,8 @@ class IronClustSorter(BaseSorter):
         'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
-    sorter_descrpition = """Ironclust is a density-based spike sorter designed for high-density probes 
-    (e.g. Neuropixels). It uses features and spike location estimates for clustering, and it performs a drift 
+    sorter_descrpition = """Ironclust is a density-based spike sorter designed for high-density probes
+    (e.g. Neuropixels). It uses features and spike location estimates for clustering, and it performs a drift
     correction. For more information see https://doi.org/10.1101/101030"""
 
     installation_mesg = """\nTo use IronClust run:\n
