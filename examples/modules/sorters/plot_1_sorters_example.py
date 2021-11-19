@@ -46,18 +46,18 @@ pprint(default_TDC_params)
 default_TDC_params['detect_threshold'] = 5
 
 # parameters set by params dictionary
-sorting_TDC = ss.run_tridesclous(recording=recording, output_folder='tmp_TDC_5',
+sorting_TDC_5 = ss.run_tridesclous(recording=recording, output_folder='tmp_TDC_5',
                                    **default_TDC_params, )
 ##############################################################################
 
 # parameters set by params dictionary
 sorting_TDC_8 = ss.run_tridesclous(recording=recording, output_folder='tmp_TDC_8',
-                            detect_threshold=8.)
+                                   detect_threshold=8.)
 
 
 ##############################################################################
 
-print('Units found with threshold = 4:', sorting_TDC.get_unit_ids())
+print('Units found with threshold = 5:', sorting_TDC_5.get_unit_ids())
 print('Units found with threshold = 8:', sorting_TDC_8.get_unit_ids())
 
 ##############################################################################
