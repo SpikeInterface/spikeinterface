@@ -56,7 +56,25 @@ def estimate_distance_error(vec, wf_ptp, local_contact_locations):
     ptp_estimated = vec[3] / dist
     err = wf_ptp  - ptp_estimated
     return err
+
+def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um):
+
+    # constant for initial guess and bounds
+    max_alpha = max(wf_ptp) * max_distance_um
+
+    # initial guess is the center of mass
+    com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
+    x0 = np.zeros(4, dtype='float32')
+    x0[:2] = com
+    x0[2] = 20
+    x0[3] = max_alpha / 50.
     
+    # bounds depend on initial guess
+    bounds = ([x0[0] - max_distance_um, x0[1] - max_distance_um, 1, 0],
+                [x0[0] + max_distance_um,  x0[1] + max_distance_um, max_distance_um*10, max_alpha])
+
+    return x0, bounds
+
 
 def compute_monopolar_triangulation(waveform_extractor, radius_um=50,
         max_distance_um=1000, return_alpha=False):
@@ -93,41 +111,29 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50,
     contact_locations = recording.get_channel_locations()
 
     channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius', 
-                                                                                                    radius_um=radius_um, outputs='index')
-    
+                                                     radius_um=radius_um, outputs='index')
+
     templates = waveform_extractor.get_all_templates(mode='average')
 
     unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
-    
+
         chan_inds = channel_sparsity[unit_id]
-    
+
         local_contact_locations = contact_locations[chan_inds, :]
 
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
-        # constant for initial guess and bounds
-        max_alpha = max(wf_ptp) * max_distance_um
+        x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
 
-        # initial guess is the center of mass
-        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
-        x0 = np.zeros(4, dtype='float32')
-        x0[:2] = com
-        x0[2] = 20
-        x0[3] = max_alpha / 50.
-        
-        # bounds depend on geometry
-        bounds = ([x0[0] - max_distance_um, x0[1] - max_distance_um, 1, 0],
-                  [x0[0] + max_distance_um,  x0[1] + max_distance_um, max_distance_um*10, max_alpha])
-        
         # run optimization
         args = (wf_ptp, local_contact_locations)
         output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
 
         unit_location[i] = tuple(output['x'])
-    
+
     if not return_alpha:
         unit_location =unit_location[:, :3]
 
