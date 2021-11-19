@@ -28,8 +28,7 @@ def check_if_installed(ironclust_path: Union[str, None]):
 
 
 class IronClustSorter(BaseSorter):
-    """
-    """
+    """IronClust Sorter object."""
 
     sorter_name: str = 'ironclust'
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)

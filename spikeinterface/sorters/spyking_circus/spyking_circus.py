@@ -13,8 +13,7 @@ from probeinterface import write_prb
 
 
 class SpykingcircusSorter(BaseSorter):
-    """
-    """
+    """SpykingCircus Sorter object."""
 
     sorter_name = 'spykingcircus'
     requires_locations = False

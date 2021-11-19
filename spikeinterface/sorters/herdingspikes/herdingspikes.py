@@ -10,6 +10,8 @@ from spikeinterface.extractors import HerdingspikesSortingExtractor
 
 
 class HerdingspikesSorter(BaseSorter):
+    """HerdingSpikes Sorter object."""
+
     sorter_name = 'herdingspikes'
 
     requires_locations = True

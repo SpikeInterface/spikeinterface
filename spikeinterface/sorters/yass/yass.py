@@ -13,8 +13,7 @@ from spikeinterface.extractors import YassSortingExtractor
 
 
 class YassSorter(BaseSorter):
-    """
-    """
+    """YASS Sorter object."""
 
     sorter_name = 'yass'
     requires_locations = False

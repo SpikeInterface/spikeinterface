@@ -11,9 +11,7 @@ from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
 
 
 class Mountainsort4Sorter(BaseSorter):
-    """
-    Mountainsort
-    """
+    """Mountainsort4 Sorter object."""
 
     sorter_name = 'mountainsort4'
     requires_locations = False

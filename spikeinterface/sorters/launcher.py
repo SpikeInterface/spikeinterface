@@ -55,7 +55,7 @@ def run_sorter_by_property(sorter_name,
                            docker_image=None,
                            **sorter_params):
     """
-    Generic function to run a sorter on a recording after splitting by a 'goruping_property' (e.g. 'group').
+    Generic function to run a sorter on a recording after splitting by a 'grouping_property' (e.g. 'group').
 
     Internally, the function works as follows:
         * the recording is split based on the provided 'grouping_property' (using the 'split_by' function)
@@ -73,13 +73,13 @@ def run_sorter_by_property(sorter_name,
         Property to split by before sorting
     working_folder: str
         The working directory.
-    mode_if_folder_exists: 'raise_if_exists' or 'overwrite' or 'keep'
+    mode_if_folder_exists: {'raise', 'overwrite', 'keep'}
         The mode when the subfolder of recording/sorter already exists.
             * 'raise' : raise error if subfolder exists
             * 'overwrite' : delete and force recompute
             * 'keep' : do not compute again if f=subfolder exists and log is OK
-    engine: str
-        'loop', 'joblib', or 'dask'
+    engine: {'loop', 'joblib', 'dask'}
+        Which engine to use to run sorter.
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
             * 'loop' : no kwargs
@@ -147,52 +147,38 @@ def run_sorters(sorter_list,
                 with_output=True,
                 docker_images={},
                 ):
-    """
-    This run several sorter on several recording.
-    Simple implementation are nested loops or with multiprocessing.
-
-    sorter_list: list of str (sorter names)
-    recording_dict_or_list: a dict (or a list) of recording
-    working_folder : str
-
-    engine = None ( = 'loop') or 'multiprocessing'
-    processes = only if 'multiprocessing' if None then processes=os.cpu_count()
-    verbose=True/False to control sorter verbosity
-
-    Note: engine='multiprocessing' use the python multiprocessing module.
-    This do not allow to have subprocess in subprocess.
-    So sorter that already use internally multiprocessing, this will fail.
+    """Run several sorter on several recordings.
 
     Parameters
     ----------
     sorter_list: list of str
-        List of sorter name.
+        List of sorter names.
     recording_dict_or_list: dict or list
-        A dict of recording. The key will be the name of the recording.
-        In a list is given then the name will be recording_0, recording_1, ...
+        If a dict of recording, each key should be the name of the recording.
+        If a list, the names should be recording_0, recording_1, etc.
     working_folder: str
         The working directory.
     sorter_params: dict of dict with sorter_name as key
         This allow to overwrite default params for sorter.
-    mode_if_folder_exists: 'raise_if_exists' or 'overwrite' or 'keep'
+    mode_if_folder_exists: {'raise', 'overwrite', 'keep'}
         The mode when the subfolder of recording/sorter already exists.
             * 'raise' : raise error if subfolder exists
             * 'overwrite' : delete and force recompute
             * 'keep' : do not compute again if f=subfolder exists and log is OK
-    engine: str
-        'loop', 'joblib', or 'dask'
+    engine: {'loop', 'joblib', 'dask'}
+        Which engine to use to run sorter.
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
             * 'loop' : no kwargs
             * 'joblib' : {'n_jobs' : } number of processes
             * 'dask' : {'client':} the dask client for submitting task
     verbose: bool
-        default True
+        Controls sorter verboseness.
     with_output: bool
-        return the output.
+        Whether to return the output.
     docker_images: dict
-        A dictionary {sorter_name : docker_image} to specify is some sorters
-        should use docker images
+        A dictionary {sorter_name : docker_image} to specify if some sorters
+        should use docker images.
 
     Returns
     -------
@@ -318,10 +304,7 @@ def iter_output_folders(output_folders):
 
 
 def iter_sorting_output(output_folders):
-    """
-    Iterator over output_folder to retrieve all triplets
-    (rec_name, sorter_name, sorting)
-    """
+    """Iterator over output_folder to retrieve all triplets of (rec_name, sorter_name, sorting)."""
     for rec_name, sorter_name, output_folder in iter_output_folders(output_folders):
         SorterClass = sorter_dict[sorter_name]
         sorting = SorterClass.get_result_from_folder(output_folder)
@@ -329,8 +312,7 @@ def iter_sorting_output(output_folders):
 
 
 def collect_sorting_outputs(output_folders):
-    """
-    Collect results in a output_folders.
+    """Collect results in a output_folders.
 
     The output is a  dict with double key access results[(rec_name, sorter_name)] of SortingExtractor.
     """

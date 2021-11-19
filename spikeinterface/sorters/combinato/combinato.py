@@ -35,8 +35,7 @@ def check_if_installed(combinato_path: Union[str, None]):
 
 
 class CombinatoSorter(BaseSorter):
-    """
-    """
+    """Combinato Sorter object."""
 
     sorter_name: str = 'combinato'
     combinato_path: Union[str, None] = os.getenv('COMBINATO_PATH', None)
