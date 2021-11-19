@@ -49,7 +49,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         # check channel groups
         chan_ids = signal_channels['id']
-        raw_dtypes = signal_channels['dtype']
 
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
         dtype = signal_channels['dtype'][0]
@@ -76,6 +75,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         self.set_property('gain_to_uV', final_gains)
         self.set_property('offset_to_uV', final_offsets)
+        self.set_property('channel_name', signal_channels["name"])
 
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
