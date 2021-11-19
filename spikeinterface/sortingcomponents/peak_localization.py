@@ -43,7 +43,7 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3,
     ms_after: float
         The left window before a peak in millisecond
     method: str
-        Method to be used ('center_of_mass')
+        Method to be used ('center_of_mass' or 'monopolar_triangulation')
     method_kwargs: dict of kwargs method
         'center_of_mass':
             * local_radius_um: float
@@ -60,7 +60,7 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3,
         Array with estimated location for each spike
         The dtype depend on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha')
     """
-    assert method in possible_localization_methods
+    assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
     
     # handle default method_kwargs
     method_kwargs = init_kwargs_dict(method, method_kwargs)
