@@ -20,7 +20,7 @@ from .peak_localization import (dtype_localize_by_method, init_kwargs_dict,
 
 def detect_peaks(recording, method='by_channel',
                  peak_sign='neg', detect_threshold=5, n_shifts=2,
-                 local_radius_um=100,
+                 local_radius_um=50,
                  noise_levels=None,
                  random_chunk_kwargs={},
                  outputs='numpy_compact',
