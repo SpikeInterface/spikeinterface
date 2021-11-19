@@ -63,8 +63,8 @@ def detect_peaks(recording, method='by_channel',
         The type of the output. By default "numpy_compact"
         give a vector with complex dtype.
     localization_dict : None or dict
-        Can optionally localisation peak at the same time.
-        This avoid to run localize_peaks separatly and re read the entire datasets.
+        Can optionally do peak localisation at the same time as detection.
+        This avoids to run localize_peaks separately and re read the entire dataset.
     
     job_kwargs: dict
         Parameters for ChunkRecordingExecutor
