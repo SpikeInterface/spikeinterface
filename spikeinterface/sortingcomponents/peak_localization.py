@@ -14,6 +14,15 @@ from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method
 
 _possible_localization_methods = list(dtype_localize_by_method.keys())
 
+def init_kwargs_dict(method, method_kwargs):
+    if method == 'center_of_mass':
+        method_kwargs_ = dict(local_radius_um=150)
+    elif method == 'monopolar_triangulation':
+        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000)
+    method_kwargs_.update(method_kwargs)
+    return method_kwargs_
+    
+
 def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3,
     method='center_of_mass', method_kwargs={},
     **job_kwargs):
@@ -57,12 +66,7 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3,
     assert method in _possible_localization_methods
     
     # handle default method_kwargs
-    if method == 'center_of_mass':
-        method_kwargs_ = dict(local_radius_um=150)
-    elif method == 'monopolar_triangulation':
-        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000)
-    method_kwargs_.update(method_kwargs)
-    
+    method_kwargs = init_kwargs_dict(method, method_kwargs)
     
     nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
     nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
@@ -78,7 +82,7 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3,
     # and run
     func = _localize_peaks_chunk
     init_func = _init_worker_localize_peaks
-    init_args = (recording.to_dict(), peaks, method, method_kwargs_, nbefore, nafter, contact_locations, margin)
+    init_args = (recording.to_dict(), peaks, method, method_kwargs, nbefore, nafter, contact_locations, margin)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True,
                                        job_name='localize peaks', **job_kwargs)
     peak_locations = processor.run()
