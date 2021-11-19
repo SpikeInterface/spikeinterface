@@ -265,15 +265,16 @@ class NwbSortingExtractor(BaseSorting):
         check_nwb_install()
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
-        
+
         io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
         self._nwbfile = io.read()
+        
+        timestamps = None
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
             self._es = get_electrical_series(self._nwbfile, self._electrical_series_name)
             # get rate
-            timestamps = None
             if self._es.rate is not None:
                 sampling_frequency = self._es.rate
             else:
@@ -296,7 +297,7 @@ class NwbSortingExtractor(BaseSorting):
                 continue
             # if it is unit_property
             property_values = self._nwbfile.units[column][:]
-            
+
             # only load columns with same shape for all units
             if np.all(p.shape == property_values[0].shape for p in property_values):
                 properties[column] = property_values
