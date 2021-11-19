@@ -3,7 +3,7 @@ import copy
 from packaging import version
 
 from ..basesorter import BaseSorter
-from ..utils import RecordingExtractorOldAPI
+from spikeinterface.core.old_api_utils import NewToOldRecording
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import HerdingspikesSortingExtractor
@@ -173,9 +173,9 @@ class HerdingspikesSorter(BaseSorter):
         if new_api:
             recording_to_hs = recording
         else:
-            print('herdingspikes version<0.3.99 uses the OLD spikeextractors with RecordingExtractorOldAPI.\n'
+            print('herdingspikes version<0.3.99 uses the OLD spikeextractors with NewToOldRecording.\n'
                   'Consider updating herdingspikes (pip install herdingspikes>=0.3.99)')
-            recording_to_hs = RecordingExtractorOldAPI(recording)
+            recording_to_hs = NewToOldRecording(recording)
 
         # this should have its name changed
         Probe = hs.probe.RecordingExtractor(
