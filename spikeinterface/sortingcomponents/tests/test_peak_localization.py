@@ -45,7 +45,7 @@ def test_localize_peaks():
     #~ probe = recording.get_probe()
     #~ fig, ax = plt.subplots()
     #~ plot_probe(probe, ax=ax)
-    #~ ax.scatter(peak_locations['x'], peak_locations['z'], color='k', s=1, alpha=0.5)
+    #~ ax.scatter(peak_locations['x'], peak_locations['y'], color='k', s=1, alpha=0.5)
     #~ # MEArec is "yz" in 2D
     #~ ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
     #~ plt.show()

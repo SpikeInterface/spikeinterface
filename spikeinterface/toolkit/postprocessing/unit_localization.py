@@ -59,7 +59,7 @@ def estimate_distance_error(vec, wf_ptp, local_contact_locations):
     
 
 def compute_monopolar_triangulation(waveform_extractor, radius_um=100,
-        max_border = 300, max_distance = 1000, return_alpha=False):
+        max_distance_um=1000, return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard
@@ -77,10 +77,8 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=100,
         A waveform extractor object
     radius_um: float
         For channel sparsiry
-    max_border: float
-        to make bounddary around initial guess (com)
-    max_distance: float
-        to make bounddary for alpha
+    max_distance_um: float
+        to make bounddary in x, y, z and also for alpha
 
     Returns
     -------
@@ -111,7 +109,7 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=100,
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         # constant for initial guess and bounds
-        max_alpha = max(wf_ptp) * max_distance
+        max_alpha = max(wf_ptp) * max_distance_um
 
         # initial guess is the center of mass
         com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
@@ -121,8 +119,8 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=100,
         x0[3] = max_alpha / 50.
         
         # bounds depend on geometry
-        bounds = ([x0[0] - max_border, x0[1] - max_border, 1, 0],
-                  [x0[0] + max_border,  x0[1] + max_border, max_border*10, max_alpha])
+        bounds = ([x0[0] - max_distance_um, x0[1] - max_distance_um, 1, 0],
+                  [x0[0] + max_distance_um,  x0[1] + max_distance_um, max_distance_um*10, max_alpha])
         
         # run optimization
         args = (wf_ptp, local_contact_locations)

@@ -7,26 +7,24 @@ import scipy.optimize
 
 from ..toolkit import get_chunk_with_margin
 
-dtype_localize_by_method = {
-    'center_of_mass':  [('x', 'float64'), ('z', 'float64')],
-    'monopolar_triangulation': [('x', 'float64'),  ('z', 'float64'), ('y', 'float64'), ('alpha', 'float64')],
-}
+from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method,
+    _possible_localization_methods, 
+    estimate_distance_error
+    )
 
 _possible_localization_methods = list(dtype_localize_by_method.keys())
 
-def localize_peaks(recording, peaks, method='center_of_mass',
-                   local_radius_um=150, ms_before=0.1, ms_after=0.3,
-                   **job_kwargs):
+def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3,
+    method='center_of_mass', method_kwargs={},
+    **job_kwargs):
+                   #~ local_radius_um=150, 
+
     """
     Localize peak (spike) in 2D or 3D depending the method.
     When a probe is 2D then:
-       * axis 0 is X
-       * axis 1 is Z
-    Y will be orthogonal to the probe
-    
-    
-    
-    
+       * X is axis 0 of the probe
+       * Y is axis 1 of the probe
+       * Z is orthogonal to the plane of the probe
 
     Parameters
     ----------
@@ -34,33 +32,38 @@ def localize_peaks(recording, peaks, method='center_of_mass',
         The recording extractor object
     peaks: numpy
         peak vector given by detect_peaks() in "compact_numpy" way.
-    method: str
-        Method to be used ('center_of_mass')
-    local_radius_um: float
-        Radius in micrometer to make neihgborhood for channel
-        around the peak
     ms_before: float
         The left window before a peak in millisecond
     ms_after: float
         The left window before a peak in millisecond
-    {}
+    method: str
+        Method to be used ('center_of_mass')
+    method_kwargs: dict of kwargs method
+        'center_of_mass':
+            * local_radius_um: float
+                For channel sparsity
+        'monopolar_triangulation' also have:
+            * local_radius_um: float
+                For channel sparsity
+            * max_distance_um: float default 1000
+                boundary for distance estimation
 
     Returns
     -------
     peak_locations: np.array
         Array with estimated location for each spike
-        The dtype depend on the method.
-        Please notte that for "monopolar_triangulation" method the order is (X, Z, Y, alpha)
-        
-        
+        The dtype depend on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha')
     """
     assert method in _possible_localization_methods
-
-    # find channel neighbours
-    assert local_radius_um is not None
-    channel_distance = get_channel_distances(recording)
-    neighbours_mask = channel_distance < local_radius_um
-
+    
+    # handle default method_kwargs
+    if method == 'center_of_mass':
+        method_kwargs_ = dict(local_radius_um=150)
+    elif method == 'monopolar_triangulation':
+        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000)
+    method_kwargs_.update(method_kwargs)
+    
+    
     nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
     nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
 
@@ -75,7 +78,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',
     # and run
     func = _localize_peaks_chunk
     init_func = _init_worker_localize_peaks
-    init_args = (recording.to_dict(), peaks, method, nbefore, nafter, neighbours_mask, contact_locations, margin)
+    init_args = (recording.to_dict(), peaks, method, method_kwargs_, nbefore, nafter, contact_locations, margin)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True,
                                        job_name='localize peaks', **job_kwargs)
     peak_locations = processor.run()
@@ -88,7 +91,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',
 localize_peaks.__doc__ = localize_peaks.__doc__.format(_shared_job_kwargs_doc)
 
 
-def _init_worker_localize_peaks(recording, peaks, method, nbefore, nafter, neighbours_mask, contact_locations, margin):
+def _init_worker_localize_peaks(recording, peaks, method, method_kwargs, nbefore, nafter, contact_locations, margin):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -97,11 +100,24 @@ def _init_worker_localize_peaks(recording, peaks, method, nbefore, nafter, neigh
     worker_ctx['recording'] = recording
     worker_ctx['peaks'] = peaks
     worker_ctx['method'] = method
+    worker_ctx['method_kwargs'] = method_kwargs
     worker_ctx['nbefore'] = nbefore
     worker_ctx['nafter'] = nafter
-    worker_ctx['neighbours_mask'] = neighbours_mask
+    
     worker_ctx['contact_locations'] = contact_locations
     worker_ctx['margin'] = margin
+    
+    
+    if method in ('center_of_mass', 'monopolar_triangulation'):
+        # handle sparsity
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance < method_kwargs['local_radius_um']
+        worker_ctx['neighbours_mask'] = neighbours_mask
+
+    #~ if method == 'center_of_mass':
+        #~ pass
+    #~ elif method == 'monopolar_triangulation':
+        #~ pass
     
     return worker_ctx
 
@@ -132,58 +148,47 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     
 
     # make sample index local to traces
-    local_peaks.copy()
+    local_peaks = local_peaks.copy()
     local_peaks['sample_ind'] -= (start_frame - left_margin)
 
     
     if method == 'center_of_mass':
-        peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask)
+        peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
     elif method == 'monopolar_triangulation':
-        peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
+        max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
+        peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter, max_distance_um)
 
     return peak_locations
 
 
-def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbours_mask):
+def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbours_mask, nbefore, nafter):
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
 
-    # TODO find something faster
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
         chan_inds, = np.nonzero(chan_mask)
+        
+        local_contact_locations = contact_locations[chan_inds, :]
 
-        # TODO find the max between nbefore/nafter
-        amps = traces[peak['sample_ind'], chan_inds]
-        amps = np.abs(amps)
-        com = np.sum(amps[:, np.newaxis] * contact_locations[chan_inds, :], axis=0) / np.sum(amps)
+        wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
+        wf_ptp = wf.ptp(axis=0)
+        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
 
         peak_locations['x'][i] = com[0]
-        peak_locations['z'][i] = com[1]
+        peak_locations['y'][i] = com[1]
 
     return peak_locations
 
 
-def _minimize_dist(vec, wf_ptp, local_contact_locations):
-    # vec dims ar (x, z, y, amplitude_factor)
-    # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
-    dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2])**2).sum(axis=1) + vec[2]**2)
-    ptp_estimated = vec[3] / dist
-    err = wf_ptp  - ptp_estimated
-    return err
 
-
-def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations, neighbours_mask, nbefore, nafter):
+def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations, neighbours_mask, nbefore, nafter, max_distance_um):
     """
-    This method is from Julien Boussard
-    https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1
-    But without denoise of the spike waveform.
+    This method is from Julien Boussard see spikeinterface.toolki.postprocessing.unit_localization
     """
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['monopolar_triangulation'])
 
 
-    # TODO find something faster
     for i, peak in enumerate(local_peak):
-        #~ print('i', i)
         chan_mask = neighbours_mask[peak['channel_ind'], :]
         chan_inds, = np.nonzero(chan_mask)
 
@@ -194,36 +199,23 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
         wf_ptp = wf.ptp(axis=0)
 
         # constant for initial guess and bounds
-        max_border = 300
-        max_distance = 1000
-        max_alpha = max(wf_ptp) * max_distance
+        max_alpha = max(wf_ptp) * max_distance_um
+        initial_alpha = max(wf_ptp) * 20
 
         # initial guess is the center of mass
         com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
         x0 = np.zeros(4, dtype='float32')
         x0[:2] = com
         x0[2] = 20
-        x0[3] = max_alpha / 50.
+        x0[3] = initial_alpha
         
         # bounds depend on geometry
-        bounds = ([x0[0] - max_border, x0[1] - max_border, 1, 0],
-                  [x0[0] + max_border,  x0[1] + max_border, max_border*10, max_alpha])
-        # print('x0', x0)
-        # print('bounds',bounds)
-
-
-        # 
-        # print('z_initial', z_initial)
+        bounds = ([x0[0] - max_distance_um, x0[1] - max_distance_um, 1, 0],
+                  [x0[0] + max_distance_um,  x0[1] + max_distance_um, max_distance_um*10, max_alpha])
+                  
         
         args = (wf_ptp, local_contact_locations)
-        # print('x0', x0)
-        # print('bounds', bounds)
-        output = scipy.optimize.least_squares(_minimize_dist, x0=x0, bounds=bounds, args = args)
-        #~ print(output['x'][3],  max(wf_ptp) * max_distance)
-        # print('i', com, output['x'][:2])
-        # print('yep')
-        # print('output', output)
-        # print('output', output['x'].shape, output['x'])
+        output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
         
         peak_locations[i] = tuple(output['x'])
 
