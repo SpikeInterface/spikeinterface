@@ -29,8 +29,7 @@ def check_if_installed(hdsort_path: Union[str, None]):
 
 
 class HDSortSorter(BaseSorter):
-    """
-    """
+    """HDSort Sorter object."""
 
     sorter_name: str = 'hdsort'
     hdsort_path: Union[str, None] = os.getenv('HDSORT_PATH', None)
@@ -70,7 +69,7 @@ class HDSortSorter(BaseSorter):
         'chunk_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
     }
 
-    sorter_description = """HDSort is a template-matching spike sorter designed for high density micro-electrode arrays. 
+    sorter_description = """HDSort is a template-matching spike sorter designed for high density micro-electrode arrays.
     For more information see https://doi.org/10.1152/jn.00803.2017"""
 
     installation_mesg = """\nTo use HDSort run:\n

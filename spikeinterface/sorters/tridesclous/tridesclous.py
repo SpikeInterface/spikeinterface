@@ -17,11 +17,7 @@ from probeinterface import write_prb
 
 
 class TridesclousSorter(BaseSorter):
-    """
-    tridesclous is one of the more convenient, fast and elegant
-    spike sorter.
-    Everyone should test it.
-    """
+    """Tridesclous Sorter object."""
 
     sorter_name = 'tridesclous'
     requires_locations = False

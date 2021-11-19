@@ -20,6 +20,8 @@ from .utils import SpikeSortingError
 
 
 class BaseSorter:
+    """Base Sorter object."""
+
     sorter_name = ''  # convenience for reporting
     SortingExtractor_Class = None  # convenience to get the extractor
     requires_locations = False
