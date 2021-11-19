@@ -8,9 +8,7 @@ import scipy.optimize
 from ..toolkit import get_chunk_with_margin
 
 from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method,
-    possible_localization_methods, 
-    estimate_distance_error
-    )
+    possible_localization_methods,  estimate_distance_error, make_initial_guess_and_bounds)
 
 
 def init_kwargs_dict(method, method_kwargs):
@@ -201,20 +199,7 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
         wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
         wf_ptp = wf.ptp(axis=0)
 
-        # constant for initial guess and bounds
-        max_alpha = max(wf_ptp) * max_distance_um
-        initial_alpha = max(wf_ptp) * 20
-
-        # initial guess is the center of mass
-        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
-        x0 = np.zeros(4, dtype='float32')
-        x0[:2] = com
-        x0[2] = 20
-        x0[3] = initial_alpha
-        
-        # bounds depend on geometry
-        bounds = ([x0[0] - max_distance_um, x0[1] - max_distance_um, 1, 0],
-                  [x0[0] + max_distance_um,  x0[1] + max_distance_um, max_distance_um*10, max_alpha])
+        x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
                   
         
         args = (wf_ptp, local_contact_locations)
