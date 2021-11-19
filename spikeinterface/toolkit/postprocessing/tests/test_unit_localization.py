@@ -31,13 +31,33 @@ def test_compute_unit_center_of_mass():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
 
     unit_location = localize_unit(we, method='center_of_mass',  num_channels=4)
-    print(unit_location)
+    print(unit_location.dtype)
+    print(unit_location.shape)
+
+    import matplotlib.pyplot as plt
+    from probeinterface.plotting import plot_probe
+    fig, ax = plt.subplots()
+    plot_probe(we.recording.get_probe(), ax=ax)
+    ax.scatter(unit_location[:, 0], unit_location[:, 1])
+    plt.show()
+
 
 
 def test_compute_monopolar_triangulation():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
     unit_location = localize_unit(we, method='monopolar_triangulation', radius_um=150)
     print(unit_location)
+    
+    #~ import matplotlib.pyplot as plt
+    #~ from probeinterface.plotting import plot_probe
+    #~ fig, ax = plt.subplots()
+    #~ plot_probe(we.recording.get_probe(), ax=ax)
+    #~ ax.scatter(unit_location[:, 0], unit_location[:, 1])
+    #~ fig = plt.figure()
+    #~ ax = fig.add_subplot(1, 1, 1, projection='3d')
+    #~ plot_probe(we.recording.get_probe().to_3d(plane='xy'), ax=ax)
+    #~ ax.scatter(unit_location[:, 0], unit_location[:, 1], unit_location[:, 2])
+    #~ plt.show()
 
 
 
@@ -46,3 +66,4 @@ if __name__ == '__main__':
 
     test_compute_unit_center_of_mass()
     test_compute_monopolar_triangulation()
+

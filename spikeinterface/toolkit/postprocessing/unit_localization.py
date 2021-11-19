@@ -6,14 +6,33 @@ from .template_tools import get_template_channel_sparsity, get_template_amplitud
 
 
 dtype_localize_by_method = {
-    'center_of_mass':  [('x', 'float64'), ('z', 'float64')],
-    'monopolar_triangulation': [('x', 'float64'),  ('z', 'float64'), ('y', 'float64'), ('alpha', 'float64')],
+    'center_of_mass':  [('x', 'float64'), ('y', 'float64')],
+    'monopolar_triangulation': [('x', 'float64'),  ('y', 'float64'), ('z', 'float64'), ('alpha', 'float64')],
 }
 
 _possible_localization_methods = list(dtype_localize_by_method.keys())
 
 
 def localize_unit(waveform_extractor, method='center_of_mass', output='numpy', **method_kwargs):
+    """
+    Localise units in 2D or 3D with several methods given the template.
+    
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        A waveform extractor object
+    method: str
+        'center_of_mass' / 'monopolar_triangulation'
+    output: str 
+        'numpy' (default) / 'numpy_dtype' / 'dict'
+    method_kwargs: 
+        other kwargs method dependant
+
+    Returns
+    -------
+    unit_location: np.array
+        unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
+    """
     assert method in _possible_localization_methods
     
     if method == 'center_of_mass':
@@ -22,16 +41,16 @@ def localize_unit(waveform_extractor, method='center_of_mass', output='numpy', *
         unit_location = compute_monopolar_triangulation(waveform_extractor,  **method_kwargs)
     
     # handle some outputs
-    if output == 'dict':
-        return dict(zip(unit_ids, coms))
-    elif output == 'numpy':
+    if output == 'numpy':
         return unit_location
-    
-    
+    elif output == 'dict':
+        return dict(zip(unit_ids, coms))
+    elif output == 'numpy_dtype':
+        raise NotImplementedError
 
 
-def _minimize_dist(vec, wf_ptp, local_contact_locations):
-    # vec dims ar (x, z, y, amplitude_factor)
+def estimate_distance_error(vec, wf_ptp, local_contact_locations):
+    # vec dims ar (x, y, z amplitude_factor)
     # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
     dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2])**2).sum(axis=1) + vec[2]**2)
     ptp_estimated = vec[3] / dist
@@ -39,26 +58,48 @@ def _minimize_dist(vec, wf_ptp, local_contact_locations):
     return err
     
 
-def compute_monopolar_triangulation(waveform_extractor, radius_um=100):
+def compute_monopolar_triangulation(waveform_extractor, radius_um=100,
+        max_border = 300, max_distance = 1000, return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard
     https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1
-    '''
+    
+    Important note about axis:
+      * x/y are dimmension on the probe plane (dim0, dim1)
+      * y is the dpeth by convention
+      * z it the orthogonal axis to the probe plan
+      * 
 
+    Parameters
+    ----------
+    waveform_extractor:WaveformExtractor
+        A waveform extractor object
+    radius_um: float
+        For channel sparsiry
+    max_border: float
+        to make bounddary around initial guess (com)
+    max_distance: float
+        to make bounddary for alpha
+
+    Returns
+    -------
+    unit_location: np.array
+        3d or 4d, x, y, z, alpha
+        alpha is the amplitude at source estimation
+    '''
 
     unit_ids = waveform_extractor.sorting.unit_ids
 
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius', radius_um=radius_um,
-                                                                                                    outputs='index')
+    channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius', 
+                                                                                                    radius_um=radius_um, outputs='index')
     
     templates = waveform_extractor.get_all_templates(mode='average')
-    #~ amplitudes = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
 
-    unit_location = np.zeros((unit_ids.size, 3), dtype='float64')
+    unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
     
         chan_inds = channel_sparsity[unit_id]
@@ -70,8 +111,6 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=100):
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         # constant for initial guess and bounds
-        max_border = 300
-        max_distance = 1000
         max_alpha = max(wf_ptp) * max_distance
 
         # initial guess is the center of mass
@@ -84,25 +123,16 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=100):
         # bounds depend on geometry
         bounds = ([x0[0] - max_border, x0[1] - max_border, 1, 0],
                   [x0[0] + max_border,  x0[1] + max_border, max_border*10, max_alpha])
-        # print('x0', x0)
-        # print('bounds',bounds)
-
-
-        # 
-        # print('z_initial', z_initial)
         
+        # run optimization
         args = (wf_ptp, local_contact_locations)
-        # print('x0', x0)
-        # print('bounds', bounds)
-        output = scipy.optimize.least_squares(_minimize_dist, x0=x0, bounds=bounds, args = args)
-        #~ print(output['x'][3],  max(wf_ptp) * max_distance)
-        # print('i', com, output['x'][:2])
-        # print('yep')
-        # print('output', output)
-        # print('output', output['x'].shape, output['x'])
-        
-        unit_location[i] = tuple(output['x'][:3])
-        
+        output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
+
+        unit_location[i] = tuple(output['x'])
+    
+    if not return_alpha:
+        unit_location =unit_location[:, :3]
+
     return unit_location
 
 
@@ -121,32 +151,28 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
 
     Returns
     -------
-    centers_of_mass: dict of np.array
-        Dictionary with unit ids as keys and centers of mass as values
+    unit_location: np.array
     '''
     unit_ids = waveform_extractor.sorting.unit_ids
 
     recording = waveform_extractor.recording
-    if num_channels is None:
-        num_channels = recording.get_num_channels()
-    locations = recording.get_channel_locations()
+    contact_locations = recording.get_channel_locations()
 
-    best_channel_ids = get_template_channel_sparsity(waveform_extractor, method='best_channels',
-                                                     peak_sign=peak_sign, num_channels=num_channels, outputs='id')
-
-    amplitudes = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
-
-    coms = np.zeros((unit_ids.size, 2), dtype='float64')
+    channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='best_channels', 
+                                                                                                    num_channels=num_channels, outputs='index')
+    
+    templates = waveform_extractor.get_all_templates(mode='average')
+    
+    unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
-        chan_ids = best_channel_ids[unit_id]
-        chan_inds = recording.ids_to_indices(chan_ids)
+        chan_inds = channel_sparsity[unit_id]
+        local_contact_locations = contact_locations[chan_inds, :]
+        
+        wf = templates[i, :, :]
+        wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
-        amps = amplitudes[unit_id][chan_inds]
-        amps = np.abs(amps)
-        com = np.sum(amps[:, np.newaxis] * locations[chan_inds, :], axis=0) / np.sum(amps)
-        coms[i, :] = com
-        #~ coms.append(com)
+        # center of mass
+        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
+        unit_location[i, :] = com
 
-    #~ coms = dict(zip(unit_ids, coms))
-
-    return coms
+    return unit_location
