@@ -58,16 +58,20 @@ def estimate_distance_error(vec, wf_ptp, local_contact_locations):
     return err
 
 def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um):
-
     # constant for initial guess and bounds
-    max_alpha = max(wf_ptp) * max_distance_um
-
+    initial_z = 20
+    
+    ind_max = np.argmax(wf_ptp)
+    max_ptp = wf_ptp[ind_max]
+    max_alpha = max_ptp * max_distance_um
+    
     # initial guess is the center of mass
     com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
     x0 = np.zeros(4, dtype='float32')
     x0[:2] = com
-    x0[2] = 20
-    x0[3] = max_alpha / 50.
+    x0[2] = initial_z
+    initial_alpha = np.sqrt(np.sum((com - local_contact_locations[ind_max, :])**2) + initial_z**2) * max_ptp
+    x0[3] = initial_alpha
     
     # bounds depend on initial guess
     bounds = ([x0[0] - max_distance_um, x0[1] - max_distance_um, 1, 0],
