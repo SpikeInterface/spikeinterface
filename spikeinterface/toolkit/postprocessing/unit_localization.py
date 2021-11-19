@@ -58,7 +58,7 @@ def estimate_distance_error(vec, wf_ptp, local_contact_locations):
     return err
     
 
-def compute_monopolar_triangulation(waveform_extractor, radius_um=100,
+def compute_monopolar_triangulation(waveform_extractor, radius_um=50,
         max_distance_um=1000, return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
