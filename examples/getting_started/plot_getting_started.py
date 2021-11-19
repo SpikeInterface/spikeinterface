@@ -175,7 +175,7 @@ print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 
 we_TDC = si.WaveformExtractor.create(recording_preprocessed, sorting_TDC, 'waveforms', remove_if_exists=True)
 we_TDC.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
-we_TDC.run(n_jobs=-1, chunk_size=30000)
+we_TDC.run_extract_waveforms(n_jobs=-1, chunk_size=30000)
 print(we_TDC)
 
 unit_id0 = sorting_TDC.unit_ids[0]
