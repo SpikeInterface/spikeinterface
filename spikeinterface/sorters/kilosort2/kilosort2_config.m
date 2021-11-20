@@ -18,27 +18,27 @@ ops.minfr_goodchannels = {minfr_goodchannels};
 % threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
 ops.Th = {projection_threshold};
 
-% how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot) 
-ops.lam = 10;  
+% how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
+ops.lam = 10;
 
 % splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-ops.AUCsplit = 0.9; 
+ops.AUCsplit = 0.9;
 
 % minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
 ops.minFR = {minFR};
 
-% number of samples to average over (annealed from first to second value) 
-ops.momentum = [20 400]; 
+% number of samples to average over (annealed from first to second value)
+ops.momentum = [20 400];
 
 % spatial constant in um for computing residual variance of spike
-ops.sigmaMask = {sigmaMask}; 
+ops.sigmaMask = {sigmaMask};
 
 % threshold crossings for pre-clustering (in PCA projection space)
 ops.ThPre = {preclust_threshold};
 %% danger, changing these settings can lead to fatal errors
 % options for determining PCs
 ops.spkTh           = -{kilo_thresh};      % spike threshold in standard deviations (-6)
-ops.reorder         = 1;       % whether to reorder batches for drift correction. 
+ops.reorder         = 1;       % whether to reorder batches for drift correction.
 ops.nskip           = 25;  % how many batches to skip for determining spike PCs
 
 ops.CAR             = {use_car}; % perform CAR

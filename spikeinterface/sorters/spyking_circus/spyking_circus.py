@@ -13,8 +13,7 @@ from probeinterface import write_prb
 
 
 class SpykingcircusSorter(BaseSorter):
-    """
-    """
+    """SpykingCircus Sorter object."""
 
     sorter_name = 'spykingcircus'
     requires_locations = False
@@ -46,7 +45,7 @@ class SpykingcircusSorter(BaseSorter):
         'clustering_max_elts': "Max number of events per electrode for clustering",
     }
 
-    sorter_description = """Spyking Circus uses a smart clustering and a greedy template matching approach for 
+    sorter_description = """Spyking Circus uses a smart clustering and a greedy template matching approach for
     spike sorting. For more information see https://doi.org/10.7554/eLife.34518"""
 
     installation_mesg = """\nTo use Spyking-Circus run:\n
