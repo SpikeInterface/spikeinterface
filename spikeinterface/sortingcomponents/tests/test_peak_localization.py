@@ -8,24 +8,23 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 
 
 def test_localize_peaks():
+
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
 
-    peaks = detect_peaks(recording,
-                         method='locally_exclusive',
+    peaks = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
-                         chunk_size=10000, verbose=False, progress_bar=False,
-                         )
+                         chunk_size=10000, verbose=False, progress_bar=False)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                    chunk_size=10000, verbose=True, progress_bar=False, )
+                                    chunk_size=10000, verbose=True, progress_bar=False)
     assert peaks.size == peak_locations.shape[0]
 
 
     peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation',
-                                    n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True, )
+                                    n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
     assert peaks.size == peak_locations.shape[0]
 
 
