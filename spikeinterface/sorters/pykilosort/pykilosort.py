@@ -15,8 +15,7 @@ except ImportError:
 
 
 class PyKilosortSorter(BaseSorter):
-    """
-    """
+    """Pykilosort Sorter object."""
 
     sorter_name = 'pykilosort'
     requires_locations = False
@@ -38,7 +37,7 @@ class PyKilosortSorter(BaseSorter):
        >>> pip install cupy
         >>> git clone https://github.com/MouseLand/pykilosort
         >>> cd pykilosort
-        >>>python setup.py install    
+        >>>python setup.py install
     More info at https://github.com/MouseLand/pykilosort#installation
     """
 

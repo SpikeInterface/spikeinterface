@@ -21,8 +21,7 @@ except ImportError:
 
 
 class KlustaSorter(BaseSorter):
-    """
-    """
+    """Klusta Sorter object."""
 
     sorter_name = 'klusta'
 
@@ -86,7 +85,7 @@ class KlustaSorter(BaseSorter):
 
         experiment_name = output_folder / 'recording'
 
-        # save prb file 
+        # save prb file
         prb_file = output_folder / 'probe.prb'
         probegroup = recording.get_probegroup()
         write_prb(prb_file, probegroup, radius=p['adjacency_radius'])

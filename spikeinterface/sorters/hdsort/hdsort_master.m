@@ -31,7 +31,7 @@ try
     % The preprocessor loads data from the file in chunks, filters it, and saves
     % the filtered data into a new hdf5 file that is standardized for all types
     % of input data.
-    % If further performs a couple of operation for each local electrode group
+    % It further performs a couple of operations for each local electrode group
     % (LEG) such as spike detection, spike waveform cutting and noise
     % estimation. The result is a folder named group000x for each LEG that
     % contains the data necessary to perform the parallel parts of the sorting.
@@ -49,7 +49,7 @@ try
     % HDSorting.sort('sortingMode', 'local'); % for loop over each LEG
     % HDSorting.sort('sortingMode', 'grid'); % requires a computer grid architecture
 
-    %% Combine the resutls of each LEG in the postprocessing step:
+    %% Combine the results of each LEG in the postprocessing step:
     HDSorting.postprocess()
 
     %% Export the results in an easy to read format:
