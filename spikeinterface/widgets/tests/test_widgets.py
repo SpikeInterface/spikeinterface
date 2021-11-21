@@ -92,6 +92,7 @@ class TestWidgets(unittest.TestCase):
 
     def test_plot_unit_localization(self):
         sw.plot_unit_localization(self._we)
+        sw.plot_unit_localization(self._we, method='monopolar_triangulation')
 
     def test_autocorrelograms(self):
         unit_ids = self._sorting.unit_ids[:4]
@@ -160,13 +161,13 @@ if __name__ == '__main__':
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
     #~ mytest.test_principal_component()
-    #~ mytest.test_plot_unit_localization()
+    mytest.test_plot_unit_localization()
 
     #~ mytest.test_autocorrelograms()
     #~ mytest.test_crosscorrelogram()
     #~ mytest.test_isi_distribution()
 
-    mytest.test_plot_drift_over_time()
+    #~ mytest.test_plot_drift_over_time()
     #  mytest.test_plot_peak_activity_map()
 
     # mytest.test_confusion()
