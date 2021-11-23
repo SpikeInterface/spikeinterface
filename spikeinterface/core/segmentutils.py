@@ -110,8 +110,8 @@ class ConcatenateSegmentRecording(BaseRecording):
                 assert d['time_vector'] is None, 'ConcatenateSegmentRecording does not handle time_vector'
                 if d['t_start'] is not None:
                     reset_t_start = True
-                parent_segments.append(parent_segment, reset_t_start)
-        rec_seg = ProxyConcatenateRecordingSegment(parent_segments)
+                parent_segments.append(parent_segment)
+        rec_seg = ProxyConcatenateRecordingSegment(parent_segments, reset_t_start=reset_t_start)
         self.add_recording_segment(rec_seg)
 
         self._kwargs = {'recording_list': [rec.to_dict() for rec in recording_list]}
