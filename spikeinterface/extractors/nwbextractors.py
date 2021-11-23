@@ -271,12 +271,12 @@ class NwbSortingExtractor(BaseSorting):
         
         self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
         self._nwbfile = self.io.read()
+        timestamps = None
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
             self._es = get_electrical_series(self._nwbfile, self._electrical_series_name)
             # get rate
-            timestamps = None
             if self._es.rate is not None:
                 sampling_frequency = self._es.rate
             else:
