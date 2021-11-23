@@ -10,11 +10,9 @@ For instance:
 
 """
 import numpy as np
-import warnings
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
-from .baseevent import BaseEvent, BaseEventSegment
 
 
 class AppendSegmentRecording(BaseRecording):
@@ -113,10 +111,6 @@ class ConcatenateSegmentRecording(BaseRecording):
                                                       "Use ignore_times=True to ignore time information.")
                     assert d['t_start'] is None, ("ConcatenateSegmentRecording does not handle t_start. "
                                                   "Use ignore_times=True to ignore time information.")
-                else:
-                    if d['time_vector'] is not None or d['t_start'] is not None:
-                        warnings.warn("Time information (t_start/time_vector) are not known. They will be ignored for "
-                                      "concatenation")
                 parent_segments.append(parent_segment)
         rec_seg = ProxyConcatenateRecordingSegment(parent_segments, ignore_times=ignore_times)
         self.add_recording_segment(rec_seg)
