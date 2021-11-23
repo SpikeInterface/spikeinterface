@@ -4,7 +4,7 @@ Some of then come from (or the old implementation) :
   * https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
   * https://github.com/SpikeInterface/spikemetrics
 
-They have been re work to support the multi segment API of spikeinterface.
+They have been re-worked to support the multi segment API of spikeinterface.
 
 """
 from collections import namedtuple
