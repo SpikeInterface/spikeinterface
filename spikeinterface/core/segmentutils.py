@@ -10,6 +10,7 @@ For instance:
 
 """
 import numpy as np
+import warnings
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
@@ -102,12 +103,14 @@ class ConcatenateSegmentRecording(BaseRecording):
         self.recording_list = recording_list
 
         parent_segments = []
+        reset_t_start = False
         for rec in recording_list:
             for parent_segment in rec._recording_segments:
                 d = parent_segment.get_times_kwargs()
                 assert d['time_vector'] is None, 'ConcatenateSegmentRecording does not handle time_vector'
-                assert d['t_start'] is None, 'ConcatenateSegmentRecording does not handle t_start'
-                parent_segments.append(parent_segment)
+                if d['t_start'] is not None:
+                    reset_t_start = True
+                parent_segments.append(parent_segment, reset_t_start)
         rec_seg = ProxyConcatenateRecordingSegment(parent_segments)
         self.add_recording_segment(rec_seg)
 
@@ -115,8 +118,12 @@ class ConcatenateSegmentRecording(BaseRecording):
 
 
 class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
-    def __init__(self, parent_segments):
+    def __init__(self, parent_segments, reset_t_start=False):
+        # get time kwargs
         d = parent_segments[0].get_times_kwargs()
+        if reset_t_start:
+            warnings.warn('ConcatenateSegmentRecording does not handle t_start. It will be set to None')
+            d["t_start"] = None
         BaseRecordingSegment.__init__(self, **d)
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
