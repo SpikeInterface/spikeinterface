@@ -269,8 +269,8 @@ class NwbSortingExtractor(BaseSorting):
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
         
-        io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
-        self._nwbfile = io.read()
+        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
+        self._nwbfile = self.io.read()
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
@@ -318,6 +318,9 @@ class NwbSortingExtractor(BaseSorting):
                         'electrical_series_name': self._electrical_series_name,
                         'sampling_frequency': sampling_frequency,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
+
+    def __del__(self):
+        self.io.close()
 
 
 class NwbSortingSegment(BaseSortingSegment):
