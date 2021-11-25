@@ -153,6 +153,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     isi_threshold_s = isi_threshold_ms / 1000
     min_isi_s = min_isi_ms / 1000
+    isi_threshold_samples = int(isi_threshold_s * fs)
 
     isi_violations_rate = {}
 
@@ -161,10 +162,10 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
         num_violations = 0
         num_spikes = 0
         for segment_index in range(num_segs):
-            spike_train_s = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index) * fs
-            isis = np.diff(spike_train_s)
-            num_spikes += len(spike_train_s)
-            num_violations += sum(isis < isi_threshold_s)
+            spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            isis = np.diff(spike_train)
+            num_spikes += len(spike_train)
+            num_violations += np.sum(isis < isi_threshold_samples)
         violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
         total_rate = num_spikes / total_duraion
         violation_rate = num_violations / violation_time
