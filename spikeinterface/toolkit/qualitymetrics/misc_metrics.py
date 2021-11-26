@@ -10,6 +10,8 @@ They have been refactored to support the multi-segment API of spikeinterface.
 import numpy as np
 import scipy.ndimage
 
+from collections import namedtuple
+
 from ..utils import get_noise_levels
 from ..postprocessing import (
     get_template_extremum_channel,
@@ -123,9 +125,14 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
 def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0):
     """
     Calculate Inter-Spike Interval (ISI) violations for a spike train.
-    Based on metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
-    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
-    Converted to Python by Daniel Denman
+
+    It computes several metrics related to isi violations:
+        * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are generating the ISI 
+                                violations. Described in [1]. See Notes.
+        * isi_violation_rate: number of ISI violations divided by total rate
+        * isi_violation_count: number of ISI violations
+
+    [1] Hill et al. (2011) J Neurosci 31: 8699-8705
 
     Parameters
     ----------
@@ -133,14 +140,24 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
         The waveforme xtractor object
     isi_threshold_ms : float
         Threshold for classifying adjacent spikes as an ISI violation. This is the biophysical refractory period
+        (default=1.5)
     min_isi_ms : float
-        Minimum possible inter-spike interval (default = 0). This is the artificial refractory period enforced
+        Minimum possible inter-spike interval (default=0). This is the artificial refractory period enforced
         by the data acquisition system or post-processing algorithms
 
     Returns
     -------
     isi_violations_rate : float
         Rate of contaminating spikes as a fraction of overall rate. Higher values indicate more contamination
+
+    Notes
+    -----
+    You can interpret an ISI violations ratio value of 0.5 as meaning that contamining spikes are occurring at roughly
+    half the rate of "true" spikes for that unit. In cases of highly contaminated units, the ISI violations value can
+    sometimes be even greater than 1.
+
+    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality) and 
+    converted to Python by Daniel Denman.
     """
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -149,13 +166,15 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     fs = recording.get_sampling_frequency()
 
     seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duraion = np.sum(seg_durations)
+    total_duration = np.sum(seg_durations)
 
     isi_threshold_s = isi_threshold_ms / 1000
     min_isi_s = min_isi_ms / 1000
     isi_threshold_samples = int(isi_threshold_s * fs)
 
     isi_violations_rate = {}
+    isi_violations_count = {}
+    isi_violations_ratio = {}
 
     # all units converted to seconds
     for unit_id in unit_ids:
@@ -167,13 +186,15 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             num_spikes += len(spike_train)
             num_violations += np.sum(isis < isi_threshold_samples)
         violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
-        total_rate = num_spikes / total_duraion
+        total_rate = num_spikes / total_duration
         violation_rate = num_violations / violation_time
-        isi_rate = violation_rate / total_rate
 
-        isi_violations_rate[unit_id] = isi_rate
+        isi_violations_ratio[unit_id] = violation_rate / total_rate
+        isi_violations_rate[unit_id] = num_violations / total_duration
+        isi_violations_count[unit_id] = num_violations
 
-    return isi_violations_rate
+    res = namedtuple('isi_violaion', ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
+    return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
 
 
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
