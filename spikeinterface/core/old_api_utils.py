@@ -44,6 +44,10 @@ class NewToOldRecording:
         v = values[ind[0]]
         return v
 
+def create_extractor_from_new_recording(new_recording):
+    old_recording = NewToOldRecording(new_recording)
+    return old_recording
+
 class OldToNewRecording(BaseRecording):
     """Wrapper class to convert old RecordingExtractor to a
     new Recording in spikeinterface > v0.90

@@ -23,14 +23,14 @@ _common_param_doc = """
     output_folder: str or Path
         Path to output folder
     remove_existing_folder: bool
-        Tf True and output_folder exists yet then delete.
+        If True and output_folder exists yet then delete.
     delete_output_folder: bool
         If True, output folder is deleted (default False)
     verbose: bool
         If True, output is verbose
     raise_error: bool
-        If True, an error is raised if spike sorting fails (default). If False, the process continues and the error is
-        logged in the log file.
+        If True, an error is raised if spike sorting fails (default).
+        If False, the process continues and the error is logged in the log file.
     docker_image: None or str
         If str run the sorter inside a container (docker) using the docker package.
     **sorter_params: keyword args
@@ -40,7 +40,6 @@ _common_param_doc = """
     -------
     sortingextractor: SortingExtractor
         The spike sorted data
-
     """
 
 
@@ -58,7 +57,7 @@ def run_sorter(sorter_name, recording, output_folder=None,
         sorting = run_sorter_local(sorter_name, recording, output_folder=output_folder,
                                    remove_existing_folder=remove_existing_folder,
                                    delete_output_folder=delete_output_folder,
-                                   verbose=verbose, raise_error=raise_error, with_output=with_output, 
+                                   verbose=verbose, raise_error=raise_error, with_output=with_output,
                                    **sorter_params)
     else:
         sorting = run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
@@ -170,7 +169,7 @@ import json
 from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
-# load recorsding in docker
+# load recording in docker
 recording = load_extractor('{parent_folder}/in_docker_recording.json')
 
 # load params in docker
@@ -203,7 +202,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         print('Starting container')
     container.start()
 
-    # check if docker contains spikeinertace already
+    # check if docker contains spikeinterface already
     cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
     res = container.exec_run(cmd)
     need_si_install = b'ModuleNotFoundError' in res.output
