@@ -1,0 +1,52 @@
+.. _release0.91.0:
+
+SpikeInterface 0.92.0 release notes
+-----------------------------------
+
+1rt December 2021
+
+* many improvement in toolkit
+* spike unit localization
+* handle time vector
+
+
+core:
+  * Handle time vector for recording
+  * Wrapper classes to/from convert old API
+  * Fix get_channel_locations when multiple probes are present
+  * Relax requirement on t_start for concatenate_recordings 
+
+extractors:
+  * improve toy example
+  * fix/improve NWB
+  * fix PhyKiloSort
+  * add spikeglx for neuropixel2
+  
+sorters:
+  * fix wav_clust
+  * HS2 in new API (version>=0.3.99)
+  
+toolkit:
+  * Refactor WaveformComponentExtractor
+  * Add nearest neighbor noise overlap to pc metrics
+  * Fix get_closest_channels logic
+  * Update nearest neighbor isolation metric
+  * Allow any filter in spikeinterface
+  * ISI violation ratio as in Hill2011 
+  
+comparison:
+  
+widgets:
+  * Fix auto mode in plot_timeseries
+  * Improve plot_drift_over_time 
+
+export:
+  * fix show figure
+
+sortingcomponents:
+  *peak localisation and unit localization
+  
+doc:
+  * add installtion tips and conda env
+  * typos and gramar
+  * Fix RTD with numpy==1.20 
