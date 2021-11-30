@@ -142,5 +142,7 @@ def mask_out_artifacts(recording, by_property=None, *args, **kwargs):
     if by_property is None:
         rec = MaskOutArtifactsRecording(recording, *args, **kwargs)
     else:
-        rec = ChannelsAggregationRecording([MaskOutArtifactsRecording(r, *args, **kwargs) for r in recording.split_by(property=by_property, outputs='list')])
+        rec_list = [MaskOutArtifactsRecording(r, *args, **kwargs) for r in recording.split_by(property=by_property, outputs='list')]
+        rec_list_ids = np.concatenate([r.get_channel_ids() for r in rec_list])
+        rec = ChannelsAggregationRecording(rec_list, rec_list_ids)
     return rec
