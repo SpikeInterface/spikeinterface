@@ -52,7 +52,8 @@ def estimate_motion(recording, peaks, peak_locations=None, direction='y', bin_du
     return motion
 
 
-def make_motion_histogram(recording, peaks, peak_locations=None, direction='y', bin_duration_s=1., bin_um=2., margin_um=50):
+def make_motion_histogram(recording, peaks, peak_locations=None,
+        weight_with_amplitude=False, direction='y', bin_duration_s=1., bin_um=2., margin_um=50):
     """
     Generate motion histogram 
     
@@ -61,8 +62,6 @@ def make_motion_histogram(recording, peaks, peak_locations=None, direction='y', 
         peak_locations = get_location_from_fields(peaks)
     else:
         peak_locations = get_location_from_fields(peak_locations)
-        
-        
     
     fs = recording.get_sampling_frequency()
     num_sample = recording.get_num_samples(segment_index=0)
@@ -84,7 +83,11 @@ def make_motion_histogram(recording, peaks, peak_locations=None, direction='y', 
     arr[:, 0] = peaks['sample_ind']
     arr[:, 1] = peak_locations[:, dim]
     
-    motion_histogram, edges = np.histogramdd(arr, bins=(sample_bins, spatial_bins))
+    if weight_with_amplitude:
+        weights = np.abs(peaks['amplitude'])
+    else:
+        weights = None
+    motion_histogram, edges = np.histogramdd(arr, bins=(sample_bins, spatial_bins), weights=weights)
     
     
     return motion_histogram, temporal_bins, spatial_bins
