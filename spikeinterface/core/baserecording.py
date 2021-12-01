@@ -578,7 +578,7 @@ class BaseRecordingSegment(BaseSegment):
     def get_times_kwargs(self):
         # useful for other internal RecordingSegment
         d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start,
-                        time_vector=self.time_vector)
+                 time_vector=self.time_vector)
         return d
 
     def sample_index_to_time(self, sample_ind):
