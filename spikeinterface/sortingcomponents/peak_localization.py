@@ -3,14 +3,15 @@
 import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from spikeinterface.toolkit import get_noise_levels, get_channel_distances
+from spikeinterface.toolkit import get_channel_distances
 
 import scipy.optimize
 
 from ..toolkit import get_chunk_with_margin
 
-from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method,
-    possible_localization_methods,  estimate_distance_error, make_initial_guess_and_bounds)
+from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method, 
+                                                        possible_localization_methods,  estimate_distance_error, 
+                                                        make_initial_guess_and_bounds)
 
 
 def init_kwargs_dict(method, method_kwargs):
@@ -45,7 +46,7 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center
         The left window, before a peak, in milliseconds.
     ms_after: float
         The right window, after a peak, in milliseconds.
-    method: {'center_of_mass' or 'monopolar_triangulation'}
+    method: 'center_of_mass' or 'monopolar_triangulation'
         Method to use.
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
@@ -57,8 +58,7 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center
                     For channel sparsity.
                 * max_distance_um: float, default: 1000
                     Boundary for distance estimation.
-    job_kwargs: dict
-        Parameters for ChunkRecordingExecutor.
+    {}
 
     Returns
     -------
@@ -125,11 +125,6 @@ def _init_worker_localize_peaks(recording, peaks, method, method_kwargs,
         neighbours_mask = channel_distance < method_kwargs['local_radius_um']
         worker_ctx['neighbours_mask'] = neighbours_mask
 
-    #~ if method == 'center_of_mass':
-        #~ pass
-    #~ elif method == 'monopolar_triangulation':
-        #~ pass
-
     return worker_ctx
 
 
@@ -144,14 +139,14 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     nafter = worker_ctx['nafter']
     neighbours_mask = worker_ctx['neighbours_mask']
     contact_locations = worker_ctx['contact_locations']
-    margin =  worker_ctx['margin']
+    margin = worker_ctx['margin']
 
     # load trace in memory
     # traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
     #                               segment_index=segment_index)
     recording_segment = recording._recording_segments[segment_index]
-    traces, left_margin, right_margin = get_chunk_with_margin(\
-        recording_segment, start_frame, end_frame, None, margin, add_zeros=True)
+    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame, 
+                                                              None, margin, add_zeros=True)
 
     # get local peaks (sgment + start_frame/end_frame)
     i0 = np.searchsorted(peaks['segment_ind'], segment_index)
@@ -166,12 +161,12 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     local_peaks['sample_ind'] -= (start_frame - left_margin)
 
     if method == 'center_of_mass':
-        peak_locations = localize_peaks_center_of_mass(\
-            traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
+        peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations,
+                                                       neighbours_mask, nbefore, nafter)
     elif method == 'monopolar_triangulation':
         max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
-        peak_locations = localize_peaks_monopolar_triangulation(\
-            traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter, max_distance_um)
+        peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations,
+                                                                neighbours_mask, nbefore, nafter, max_distance_um)
 
     return peak_locations
 
