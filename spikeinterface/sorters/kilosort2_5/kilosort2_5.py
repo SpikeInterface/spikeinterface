@@ -32,8 +32,7 @@ def check_if_installed(kilosort2_5_path: Union[str, None]):
 
 
 class Kilosort2_5Sorter(KilosortBase, BaseSorter):
-    """
-    """
+    """Kilosort2.5 Sorter object."""
 
     sorter_name: str = 'kilosort2_5'
     kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
@@ -80,13 +79,13 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
-    sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its 
-    predecessor Kilosort, it implements a drift-correction strategy. Kilosort2.5 improves on Kilosort2 primarily in the 
-    type of drift correction we use. Where Kilosort2 modified templates as a function of time/drift (a drift tracking 
-    approach), Kilosort2.5 corrects the raw data directly via a sub-pixel registration process (a drift correction 
-    approach). Kilosort2.5 has not been as broadly tested as Kilosort2, but is expected to work out of the box on 
-    Neuropixels 1.0 and 2.0 probes, as well as other probes with vertical pitch <=40um. For other recording methods, 
-    like tetrodes or single-channel recordings, you should test empirically if v2.5 or v2.0 works better for you (use 
+    sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
+    predecessor Kilosort, it implements a drift-correction strategy. Kilosort2.5 improves on Kilosort2 primarily in the
+    type of drift correction we use. Where Kilosort2 modified templates as a function of time/drift (a drift tracking
+    approach), Kilosort2.5 corrects the raw data directly via a sub-pixel registration process (a drift correction
+    approach). Kilosort2.5 has not been as broadly tested as Kilosort2, but is expected to work out of the box on
+    Neuropixels 1.0 and 2.0 probes, as well as other probes with vertical pitch <=40um. For other recording methods,
+    like tetrodes or single-channel recordings, you should test empirically if v2.5 or v2.0 works better for you (use
     the "releases" on the github page to download older versions).
     For more information see https://github.com/MouseLand/Kilosort"""
 

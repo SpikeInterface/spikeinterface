@@ -78,8 +78,8 @@ class NwbRecordingExtractor(BaseRecording):
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
         
-        io =  NWBHDF5IO(self._file_path, mode='r',load_namespaces=True)
-        self._nwbfile = io.read()
+        self.io =  NWBHDF5IO(self._file_path, mode='r',load_namespaces=True)
+        self._nwbfile = self.io.read()
         self._es = get_electrical_series(
             self._nwbfile, self._electrical_series_name)
         
@@ -192,6 +192,9 @@ class NwbRecordingExtractor(BaseRecording):
                         'load_time_vector': load_time_vector,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
 
+    def __del__(self):
+        self.io.close()
+
 
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, nwbfile, electrical_series_name, num_frames, times_kwargs):
@@ -266,14 +269,14 @@ class NwbSortingExtractor(BaseSorting):
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
         
-        io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
-        self._nwbfile = io.read()
+        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
+        self._nwbfile = self.io.read()
+        timestamps = None
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
             self._es = get_electrical_series(self._nwbfile, self._electrical_series_name)
             # get rate
-            timestamps = None
             if self._es.rate is not None:
                 sampling_frequency = self._es.rate
             else:
@@ -315,6 +318,9 @@ class NwbSortingExtractor(BaseSorting):
                         'electrical_series_name': self._electrical_series_name,
                         'sampling_frequency': sampling_frequency,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
+
+    def __del__(self):
+        self.io.close()
 
 
 class NwbSortingSegment(BaseSortingSegment):

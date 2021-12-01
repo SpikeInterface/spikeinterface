@@ -38,8 +38,7 @@ def check_if_installed(waveclus_path: Union[str, None]):
 
 
 class WaveClusSorter(BaseSorter):
-    """
-    """
+    """WaveClus Sorter object."""
 
     sorter_name: str = 'waveclus'
     waveclus_path: Union[str, None] = os.getenv('WAVECLUS_PATH', None)
@@ -104,8 +103,8 @@ class WaveClusSorter(BaseSorter):
         'chunk_memory': 'Chunk size in Mb to write h5 file (default 500Mb)'
     }
 
-    sorter_description = """Wave Clus combines a wavelet-based feature extraction and paramagnetic clustering with a 
-    template-matching approach. It is mainly designed for monotrodes and low-channel count probes. 
+    sorter_description = """Wave Clus combines a wavelet-based feature extraction and paramagnetic clustering with a
+    template-matching approach. It is mainly designed for monotrodes and low-channel count probes.
     For more information see https://doi.org/10.1152/jn.00339.2018"""
 
     installation_mesg = """\nTo use WaveClus run:\n

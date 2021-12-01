@@ -3,13 +3,15 @@ import copy
 from packaging import version
 
 from ..basesorter import BaseSorter
-from ..utils import RecordingExtractorOldAPI
+from spikeinterface.core.old_api_utils import NewToOldRecording
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import HerdingspikesSortingExtractor
 
 
 class HerdingspikesSorter(BaseSorter):
+    """HerdingSpikes Sorter object."""
+
     sorter_name = 'herdingspikes'
 
     requires_locations = True
@@ -63,7 +65,7 @@ class HerdingspikesSorter(BaseSorter):
 
     _params_description = {
         # core params
-        'clustering_bandwidth': "Meanshift bandwidth, average spatiel extent of spike clusters (um)",
+        'clustering_bandwidth': "Meanshift bandwidth, average spatial extent of spike clusters (um)",
         'clustering_alpha': "Scalar for the waveform PC features when clustering.",
         'clustering_n_jobs': "Number of cores to use for clustering.",
         'clustering_bin_seeding': "Enable clustering bin seeding.",
@@ -78,7 +80,7 @@ class HerdingspikesSorter(BaseSorter):
         'probe_inner_radius': "Radius of area around probe channel for localization",
         'probe_neighbor_radius': "Radius of area around probe channel for neighbor classification.",
         'probe_event_length': "Duration of a spike event (ms)",
-        'probe_peak_jitter': "Maxmimum peak misalignment for synchronous spike (ms)",
+        'probe_peak_jitter': "Maximum peak misalignment for synchronous spike (ms)",
 
         # extra detection params
         't_inc': "Number of samples per chunk during detection.",
@@ -109,7 +111,7 @@ class HerdingspikesSorter(BaseSorter):
     }
 
     sorter_description = """Herding Spikes is a density-based spike sorter designed for high-density retinal recordings.
-    It uses both PCA features and an estimate of the spike location to cluster different units. 
+    It uses both PCA features and an estimate of the spike location to cluster different units.
     For more information see https://doi.org/10.1016/j.jneumeth.2016.06.006"""
 
     installation_mesg = """\nTo use HerdingSpikes run:\n
@@ -140,7 +142,7 @@ class HerdingspikesSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        # nothing to copy inside the folder : Herdingspikes used nativelly spikeinterface
+        # nothing to copy inside the folder : Herdingspikes used natively spikeinterface
         pass
 
     @classmethod
@@ -173,9 +175,9 @@ class HerdingspikesSorter(BaseSorter):
         if new_api:
             recording_to_hs = recording
         else:
-            print('herdingspikes version<0.3.99 uses the OLD spikeextractors with RecordingExtractorOldAPI.\n'
+            print('herdingspikes version<0.3.99 uses the OLD spikeextractors with NewToOldRecording.\n'
                   'Consider updating herdingspikes (pip install herdingspikes>=0.3.99)')
-            recording_to_hs = RecordingExtractorOldAPI(recording)
+            recording_to_hs = NewToOldRecording(recording)
 
         # this should have its name changed
         Probe = hs.probe.RecordingExtractor(
