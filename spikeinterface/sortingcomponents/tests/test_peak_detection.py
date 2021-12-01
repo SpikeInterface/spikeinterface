@@ -8,36 +8,32 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 
 
 def test_detect_peaks():
+
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-    
+
     # by_channel
-    peaks = detect_peaks(recording,
-                         method='by_channel',
+    peaks = detect_peaks(recording, method='by_channel',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
-                         chunk_size=10000, verbose=1, progress_bar=False,
-                         )
+                         chunk_size=10000, verbose=1, progress_bar=False)
 
     # locally_exclusive
-    peaks = detect_peaks(recording,
-                         method='locally_exclusive',
+    peaks = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
-                         chunk_size=10000, verbose=1, progress_bar=False,
-                         )
-    
+                         chunk_size=10000, verbose=1, progress_bar=False)
+
     # locally_exclusive + localization
-    peaks = detect_peaks(recording,
-                         method='locally_exclusive',
+    peaks = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
                          chunk_size=10000, verbose=1, progress_bar=True,
                          localization_dict=dict(method='center_of_mass', local_radius_um=150, ms_before=0.1, ms_after=0.3),
-                         #~ localization_dict=dict(method='monopolar_triangulation', local_radius_um=150, ms_before=0.1, ms_after=0.3, max_distance_um=1000),
+                         #localization_dict=dict(method='monopolar_triangulation', local_radius_um=150,
+                         #                       ms_before=0.1, ms_after=0.3, max_distance_um=1000)
                          )
     assert 'x' in peaks.dtype.fields
 
-    
 
     # DEBUG
     #~ sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
@@ -69,7 +65,6 @@ def test_detect_peaks():
         #~ soma_positions[i, :] = st.annotations['soma_position']
     #~ ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
     #~ plt.show()
-
 
 
 if __name__ == '__main__':
