@@ -1,16 +1,18 @@
+.. _release0.92.0:
+
 SpikeInterface 0.92.0 release notes
 -----------------------------------
 
-1rt December 2021
+1st December 2021
 
-* many improvement in toolkit
-* spike unit localization
-* handle time vector
+* many improvements in toolkit module
+* added spike unit localization
+* handle time vector in base recording
 
 
 core:
   * Handle time vector for recording
-  * Wrapper classes to/from convert old API
+  * Wrapper classes for old/new API conversion
   * Fix get_channel_locations when multiple probes are present
   * Relax requirement on t_start for concatenate_recordings 
 
@@ -18,10 +20,10 @@ extractors:
   * improve toy example
   * fix/improve NWB
   * fix PhyKiloSort
-  * add spikeglx for neuropixel2
+  * add SpikeGLX for Neuropixels2
   
 sorters:
-  * fix wav_clust
+  * fix wave_clus
   * HS2 in new API (version>=0.3.99)
   
 toolkit:
@@ -42,7 +44,7 @@ export:
   * fix show figure
 
 sortingcomponents:
-  *peak localisation and unit localization
+  * peak localisation and unit localization
   
 doc:
   * add installtion tips and conda env
