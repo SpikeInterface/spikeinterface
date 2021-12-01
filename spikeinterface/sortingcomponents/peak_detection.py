@@ -77,7 +77,7 @@ def detect_peaks(recording, method='by_channel',
         raise ModuleNotFoundError('"locally_exclusive" need numba which is not installed')
 
     if noise_levels is None:
-        noise_levels = get_noise_levels(recording, **random_chunk_kwargs)
+        noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
 
     abs_threholds = noise_levels * detect_threshold
 
