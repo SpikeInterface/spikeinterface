@@ -30,8 +30,7 @@ def check_if_installed(kilosort2_path: Union[str, None]):
 
 
 class Kilosort2Sorter(KilosortBase, BaseSorter):
-    """
-    """
+    """Kilosort2 Sorter object."""
 
     sorter_name: str = 'kilosort2'
     kilosort2_path: Union[str, None] = os.getenv('KILOSORT2_PATH', None)
@@ -74,7 +73,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
-    sorter_description = """Kilosort2 is a GPU-accelerated and efficient template-matching spike sorter. On top of its 
+    sorter_description = """Kilosort2 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
     predecessor Kilosort, it implements a drift-correction strategy.
     For more information see https://github.com/MouseLand/Kilosort2"""
 

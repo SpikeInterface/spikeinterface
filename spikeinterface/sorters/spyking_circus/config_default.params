@@ -21,7 +21,7 @@ peaks          = {}         # Can be negative (default), positive or both
 [filtering]
 cut_off        = 300, auto  # Min and Max (auto=nyquist) cut off frequencies for the band pass butterworth filter [Hz]
 filter         = {}         # If True, then a low-pass filtering is performed
-remove_median  = False      # If True, median over all channels is substracted to each channels (movement artifacts)
+remove_median  = False      # If True, median over all channels is subtracted to each channels (movement artifacts)
 
 [triggers]
 trig_file      =            # External stimuli to be considered as putative artefacts [in trig units] (see documentation)
