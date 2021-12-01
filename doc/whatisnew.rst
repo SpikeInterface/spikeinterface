@@ -23,9 +23,9 @@ NEW API
 Version 0.92.0
 ==============
 
-* many improvement in toolkit
-* spike unit localization
-* handle time vector
+* many improvements in toolkit module
+* added spike unit localization
+* handle time vector in base recording
 
 Version 0.91.0
 ==============
