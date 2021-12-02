@@ -73,7 +73,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     This peak detection ported from tridesclous into spikeinterface.
     """
 
-    assert method in ('by_channel', 'locally_exclusive')
+    assert method in ('by_channel', 'locally_exclusive','by_channel_rm_dup')
     assert peak_sign in ('both', 'neg', 'pos')
     assert outputs in ('numpy_compact', 'numpy_split', 'sorting')
 
@@ -193,7 +193,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     if method == 'by_channel':
         peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(trace_detection, peak_sign, abs_threholds, n_shifts)
     elif method == 'locally_exclusive':
-         peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(trace_detection, peak_sign, abs_threholds, 
+        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(trace_detection, peak_sign, abs_threholds, 
                                                                        n_shifts, worker_ctx['neighbours_mask'])
     elif method == 'by_channel_rm_dup':
         peak_sample_ind, peak_chan_ind = detect_peaks_by_channel_rm_dup(trace_detection, peak_sign, abs_threholds, n_shifts,

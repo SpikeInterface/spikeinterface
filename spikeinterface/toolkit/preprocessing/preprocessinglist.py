@@ -7,7 +7,6 @@ from .normalize_scale import (
     ScaleRecording, scale,
     CenterRecording, center)
 from .whiten import WhitenRecording, whiten
-from .mask_out_artifacts import MaskOutArtifactsRecording, mask_out_artifacts
 from .rectify import RectifyRecording, rectify
 from .clip import (
     BlankSaturationRecording, blank_staturation,
@@ -38,7 +37,7 @@ preprocessers_full_list = [
     BlankSaturationRecording,
     RemoveArtifactsRecording,
     RemoveBadChannelsRecording,
-    MaskOutArtifactsRecording
+
     # TODO: @alessio this one  is for you
     # ResampleRecording,
 
