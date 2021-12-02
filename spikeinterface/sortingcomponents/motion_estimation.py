@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal
 
+from tqdm import tqdm
 
 possible_motion_estimation_methods = ['decentralized_registration', ]
 
@@ -18,9 +19,9 @@ def init_kwargs_dict(method, method_kwargs):
     
 
 def estimate_motion(recording, peaks, peak_locations=None,
-                    direction='y', bin_duration_s=1., bin_um=2.,
-                    method='decentralized', method_kwargs={},
-                    non_rigid_kwargs=None,):
+                    direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
+                    method='decentralized_registration', method_kwargs={},
+                    non_rigid_kwargs=None, progress_bar=False, verbose=False):
     """
     Estimation motion given peaks and threre localization.
     
@@ -42,6 +43,9 @@ def estimate_motion(recording, peaks, peak_locations=None,
     method: 
         'decentralized_registration'
     method_kwargs: dict
+        Specific options for choosen methods.
+        * 'decentralized_registration'
+           
 
 
 
@@ -60,44 +64,76 @@ def estimate_motion(recording, peaks, peak_locations=None,
     method_kwargs = init_kwargs_dict(method, method_kwargs)
     
     
-    if peak_locations is None:
-        peak_locations = get_location_from_fields(peaks)
-    else:
-        peak_locations = get_location_from_fields(peak_locations)
+    # if peak_locations is None:
+    #     peak_locations = get_location_from_fields(peaks)
+    # else:
+    #     peak_locations = get_location_from_fields(peak_locations)
 
     
 
     if method =='decentralized_registration':
         # make 2D histogram raster
-        motion_histogram, temporal_bins, spatial_bins = make_motion_histogram(recording, peaks,
-                                    peak_locations=peak_locations, bin_duration_s=1., bin_um=2.)
+        if verbose:
+            print('make_motion_histogram')
+        motion_histogram, temporal_bins, spatial_hist_bins = make_motion_histogram(recording, peaks,
+                                    peak_locations=peak_locations, 
+                                    bin_duration_s=bin_duration_s, bin_um=bin_um,
+                                    margin_um=margin_um)
 
         # rigid or non rigid is handle with a family of gaussian windows
         windows = []
         if non_rigid_kwargs is None:
-            # one unique block
-            windows = [np.ones(spatial_bins.size, dtype='float64')]
+            # one unique block for all depth
+            windows = [np.ones(motion_histogram.shape[1] , dtype='float64')]
+            spatial_bins = None
         else:
-            # todo make gaussian block for non rigid 
-            raise NotImplementedError
+            # TODO kwargs checker
+
+            probe = recording.get_probe()
+            dim = ['x', 'y', 'z'].index(direction)
+            contact_pos = probe.contact_positions[:, dim]
+            
+            bin_step_um = non_rigid_kwargs['bin_step_um']
+            min_ = np.min(contact_pos) - margin_um
+            max_ = np.max(contact_pos) + margin_um
+            spatial_bins = np.arange(min_, max_+bin_um, bin_um)
+            num_win = int(np.ceil((max_ - min_) / bin_step_um))
+            win_centers = np.arange(num_win) * bin_step_um + bin_step_um/2.
+
+            # todo check this gaussian with julien
+            for win_center in win_centers:
+                sigma = bin_step_um
+                win = np.exp(-(spatial_hist_bins[:-1] - win_center) ** 2 / (2 * sigma ** 2))
+                windows.append(win)
+            spatial_bins = win_centers
+
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+            for win in windows:
+                ax.plot(spatial_hist_bins[:-1], win)
+
         
-        
-        motion_per_block = []
+        motion = []
         for i, win in enumerate(windows):
             print(i)
             motion_hist = win[np.newaxis, :] * motion_histogram
-            pairwise_displacement = compute_pairwise_displacement(motion_hist,
+            if verbose:
+                print('compute_pairwise_displacement',i)
+
+            pairwise_displacement = compute_pairwise_displacement(motion_hist, bin_um,
                                             method=method_kwargs['pairwise_displacement_method'],
-                                            maximum_displacement_um=method_kwargs['maximum_displacement_um'])
+                                            progress_bar=progress_bar)
+                                            # maximum_displacement_um=method_kwargs['maximum_displacement_um'])
 
-            motion = compute_global_displacement(pairwise_displacement)
-            motion_per_block.append(motion)
+            if verbose:
+                print('compute_global_displacement', i)
 
-
-
+            one_motion = compute_global_displacement(pairwise_displacement)
+            motion.append(one_motion[:, np.newaxis])
+        motion = np.concatenate(motion, axis=1)
 
     
-    return motion
+    return motion, temporal_bins, spatial_bins
 
 
 def get_location_from_fields(peaks_or_locations):
@@ -149,7 +185,7 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
     return motion_histogram, temporal_bins, spatial_bins
 
 
-def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d'): # maximum_displacement_um=400
+def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress_bar=False): # maximum_displacement_um=400
 
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype='float32')
@@ -161,8 +197,11 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d'): # maxi
 
         
         # todo find something faster
-        for i in range(size):
-            print(i, size)
+        loop = range(size)
+        if progress_bar:
+            loop = tqdm(loop)
+        for i in loop:
+            # print(i, size)
             for j in range(size):
                 conv = np.convolve(motion_hist[i, :], motion_hist[j, ::-1], mode='same')
                 ind_max = np.argmax(conv)
