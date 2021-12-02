@@ -23,7 +23,7 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
 
 def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, n_shifts=2,
                  local_radius_um=50, noise_levels=None, random_chunk_kwargs={},
-                 outputs='numpy_compact', localization_dict=None, rm_dup_n=0.99,
+                 outputs='numpy_compact', localization_dict=None, rm_dup_n=0.9,
                  rm_dup_win=2, **job_kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
@@ -196,8 +196,9 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(trace_detection, peak_sign, abs_threholds, 
                                                                        n_shifts, worker_ctx['neighbours_mask'])
     elif method == 'by_channel_rm_dup':
-        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel_rm_dup(trace_detection, peak_sign, abs_threholds, n_shifts,
-                                                                        worker_ctx['rm_dup_n'],worker_ctx['rm_dup_win'])
+        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel_rm_dup(trace_detection, peak_sign, abs_threholds, 
+                                                                        n_shifts,worker_ctx['rm_dup_n'],
+                                                                        worker_ctx['rm_dup_win'])
 
 
     if extra_margin > 0:
