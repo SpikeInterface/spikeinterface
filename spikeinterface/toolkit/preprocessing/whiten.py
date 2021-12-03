@@ -66,7 +66,7 @@ def whiten(recording, by_property=None, **kwargs):
     recording: RecordingExtractor
         The recording extractor to be whitened.
     by_property: None or str
-        This paramter is used to split the recording in groups for whitening. If None, all the channles are whiten togheter 
+        This parameter is used to split the recording in groups for whitening. If None, all the channels are whiten together.
     **random_chunk_kwargs
     Returns
     -------
@@ -80,5 +80,3 @@ def whiten(recording, by_property=None, **kwargs):
         rec_list_ids = np.concatenate([r.get_channel_ids() for r in rec_list])
         rec = ChannelsAggregationRecording(rec_list, rec_list_ids) 
     return rec
-
-
