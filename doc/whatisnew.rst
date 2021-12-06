@@ -6,6 +6,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.92.0.rst
   releases/0.91.0.rst
   releases/0.90.1.rst
   releases/0.90.0.rst
@@ -19,12 +20,18 @@ Release notes
 NEW API
 -------
 
+Version 0.92.0
+==============
+
+* many improvements in toolkit module
+* added spike unit localization
+* handle time vector in base recording
+
 Version 0.91.0
 ==============
 
 * Major improvements and bug-fixes.
 * Improvements for spikeinterface-gui.
-
 
 Version 0.90.1
 ==============
