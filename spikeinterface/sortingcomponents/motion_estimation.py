@@ -15,16 +15,15 @@ def init_kwargs_dict(method, method_kwargs):
 
 
 
-    
-    
 
 def estimate_motion(recording, peaks, peak_locations=None,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
                     method='decentralized_registration', method_kwargs={},
-                    non_rigid_kwargs=None, progress_bar=False, verbose=False):
+                    non_rigid_kwargs=None, output_extra_check=False, progress_bar=False,
+                    verbose=False):
     """
     Estimation motion given peaks and threre localization.
-    
+
     Parameters
     ----------
     recording: RecordingExtractor
@@ -45,14 +44,16 @@ def estimate_motion(recording, peaks, peak_locations=None,
     method_kwargs: dict
         Specific options for choosen methods.
         * 'decentralized_registration'
-           
-
-
-
     non_rigid_kwargs: None or dict.
         If None then the motion is consider as rigid.
         If dict then the motion is estimated in non rigid manner.
-
+    output_extra_check: bool
+        If True then return an extra dict that contain some array
+        to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
+    progress_bar: bool
+        Display progress bar or not.
+    verbose: bool
+        Verbosity
     Returns
     -------
     motion: numpy array
@@ -62,14 +63,9 @@ def estimate_motion(recording, peaks, peak_locations=None,
 
     assert method in possible_motion_estimation_methods
     method_kwargs = init_kwargs_dict(method, method_kwargs)
-    
-    
-    # if peak_locations is None:
-    #     peak_locations = get_location_from_fields(peaks)
-    # else:
-    #     peak_locations = get_location_from_fields(peak_locations)
 
-    
+    if output_extra_check:
+        extra_check = {}
 
     if method =='decentralized_registration':
         # make 2D histogram raster
@@ -79,12 +75,16 @@ def estimate_motion(recording, peaks, peak_locations=None,
                                     peak_locations=peak_locations, 
                                     bin_duration_s=bin_duration_s, bin_um=bin_um,
                                     margin_um=margin_um)
+        if output_extra_check:
+            extra_check['motion_histogram'] = motion_histogram
+            extra_check['temporal_bins'] = temporal_bins
+            extra_check['spatial_hist_bins'] = spatial_hist_bins
 
-        # rigid or non rigid is handle with a family of gaussian windows
-        windows = []
+        # rigid or non rigid is handle with a family of gaussian non_rigid_windows
+        non_rigid_windows = []
         if non_rigid_kwargs is None:
             # one unique block for all depth
-            windows = [np.ones(motion_histogram.shape[1] , dtype='float64')]
+            non_rigid_windows = [np.ones(motion_histogram.shape[1] , dtype='float64')]
             spatial_bins = None
         else:
             # TODO kwargs checker
@@ -96,44 +96,45 @@ def estimate_motion(recording, peaks, peak_locations=None,
             bin_step_um = non_rigid_kwargs['bin_step_um']
             min_ = np.min(contact_pos) - margin_um
             max_ = np.max(contact_pos) + margin_um
-            spatial_bins = np.arange(min_, max_+bin_um, bin_um)
+
             num_win = int(np.ceil((max_ - min_) / bin_step_um))
-            win_centers = np.arange(num_win) * bin_step_um + bin_step_um/2.
+            spatial_bins = np.arange(num_win) * bin_step_um + bin_step_um/2. + min_
 
             # todo check this gaussian with julien
-            for win_center in win_centers:
+            for win_center in spatial_bins:
                 sigma = bin_step_um
                 win = np.exp(-(spatial_hist_bins[:-1] - win_center) ** 2 / (2 * sigma ** 2))
-                windows.append(win)
-            spatial_bins = win_centers
+                non_rigid_windows.append(win)
+            
+            if output_extra_check:
+                extra_check['non_rigid_windows'] = non_rigid_windows
 
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            for win in windows:
-                ax.plot(spatial_hist_bins[:-1], win)
 
-        
+        if output_extra_check:
+            extra_check['pairwise_displacement_list'] = []
+
         motion = []
-        for i, win in enumerate(windows):
-            print(i)
+        for i, win in enumerate(non_rigid_windows):
             motion_hist = win[np.newaxis, :] * motion_histogram
             if verbose:
-                print('compute_pairwise_displacement',i)
+                print('compute_pairwise_displacement', i, 'on', len(non_rigid_windows))
 
             pairwise_displacement = compute_pairwise_displacement(motion_hist, bin_um,
                                             method=method_kwargs['pairwise_displacement_method'],
                                             progress_bar=progress_bar)
-                                            # maximum_displacement_um=method_kwargs['maximum_displacement_um'])
+            extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
             if verbose:
                 print('compute_global_displacement', i)
-
             one_motion = compute_global_displacement(pairwise_displacement)
             motion.append(one_motion[:, np.newaxis])
+
         motion = np.concatenate(motion, axis=1)
 
-    
-    return motion, temporal_bins, spatial_bins
+    if output_extra_check:
+        return motion, temporal_bins, spatial_bins, extra_check
+    else:
+        return motion, temporal_bins, spatial_bins
 
 
 def get_location_from_fields(peaks_or_locations):
