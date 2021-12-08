@@ -231,25 +231,22 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
     return pairwise_displacement
 
 
-def compute_global_displacement(pairwise_displacement, method='??', max_iter=1000):
+def compute_global_displacement(pairwise_displacement, method='gradient_descent', max_iter=1000):
     """
 
     """
 
 
-
-    if method == '??':
+    if method == 'gradient_descent':
         size = pairwise_displacement.shape[0]
         displacement = np.zeros(size, dtype='float64')
 
 
         # use variable name from paper
         # DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
-        # Erdem Varol1, Julien Boussard
+        # Erdem Varol1, Julien Boussard, Hyun Dong Lee
         D = pairwise_displacement
         p = displacement
-
-
         p_prev = p.copy()
         for i in range(max_iter):
             # print(i)
