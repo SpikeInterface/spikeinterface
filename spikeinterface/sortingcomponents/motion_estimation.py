@@ -24,6 +24,8 @@ def estimate_motion(recording, peaks, peak_locations=None,
     """
     Estimation motion given peaks and threre localization.
 
+    Location of peaks can be be include in peaks or given separatly in peak_locations.
+
     Parameters
     ----------
     recording: RecordingExtractor
@@ -122,7 +124,8 @@ def estimate_motion(recording, peaks, peak_locations=None,
             pairwise_displacement = compute_pairwise_displacement(motion_hist, bin_um,
                                             method=method_kwargs['pairwise_displacement_method'],
                                             progress_bar=progress_bar)
-            extra_check['pairwise_displacement_list'].append(pairwise_displacement)
+            if output_extra_check:
+                extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
             if verbose:
                 print('compute_global_displacement', i)
