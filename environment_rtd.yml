@@ -4,30 +4,30 @@ channels:
 dependencies:
   - python=3.8
   - pip>=21.0
-  - numpy==1.20
-  - joblib
-  - tqdm
-  - pillow
-  - sphinx-gallery
-  - numpydoc
-  - matplotlib
-  - h5py
-  - pandas
-  - scikit-learn
-  - networkx
   - git-annex
   - datalad
-  - pybind11
   - pyqt=5
-  - loky
+  - numpy=1.20
   - pip:
+    - numpy==1.20
+    - joblib
+    - tqdm
+    - pillow
+    - matplotlib
+    - h5py
+    - pandas
+    - scikit-learn
+    - networkx
+    - pybind11
+    - loky
+    - numba
     - neo>=0.10.0
     - probeinterface
     - MEArec>=1.7.1
     - isosplit5
     - mountainsort4>=1.0.0
     - hdbscan
-    - tridesclous>=1.6.2
+    - tridesclous>=1.6.3
     - herdingspikes
-
-# Notes need to be modified when neo 0.10.0 is out
+    - sphinx-gallery
+    - numpydoc
