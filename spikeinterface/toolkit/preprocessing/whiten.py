@@ -3,7 +3,7 @@ import numpy as np
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..utils import get_random_data_chunks
-
+from spikeinterface import ChannelsAggregationRecording
 
 class WhitenRecording(BasePreprocessor):
     """
@@ -57,8 +57,26 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-def whiten(*args, **kwargs):
-    return WhitenRecording(*args, **kwargs)
+def whiten(recording, by_property=None, **kwargs):
+    """
+    Whitens the recording extractor traces.
 
-
-whiten.__doc__ = WhitenRecording.__doc__
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor to be whitened.
+    by_property: None or str
+        This parameter is used to split the recording in groups for whitening. If None, all the channels are whiten together.
+    **random_chunk_kwargs
+    Returns
+    -------
+    whitened_recording: WhitenRecording
+        The whitened recording extractor
+    """
+    if by_property is None:
+        rec = WhitenRecording(recording, **kwargs)
+    else:
+        rec_list = [WhitenRecording(r, **kwargs) for r in recording.split_by(property=by_property, outputs='list')]
+        rec_list_ids = np.concatenate([r.get_channel_ids() for r in rec_list])
+        rec = ChannelsAggregationRecording(rec_list, rec_list_ids) 
+    return rec
