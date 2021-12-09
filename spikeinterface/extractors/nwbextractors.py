@@ -78,8 +78,8 @@ class NwbRecordingExtractor(BaseRecording):
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
         
-        io =  NWBHDF5IO(self._file_path, mode='r',load_namespaces=True)
-        self._nwbfile = io.read()
+        self.io =  NWBHDF5IO(self._file_path, mode='r',load_namespaces=True)
+        self._nwbfile = self.io.read()
         self._es = get_electrical_series(
             self._nwbfile, self._electrical_series_name)
         
@@ -192,6 +192,9 @@ class NwbRecordingExtractor(BaseRecording):
                         'load_time_vector': load_time_vector,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
 
+    def __del__(self):
+        self.io.close()
+
 
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, nwbfile, electrical_series_name, num_frames, times_kwargs):
@@ -265,10 +268,9 @@ class NwbSortingExtractor(BaseSorting):
         check_nwb_install()
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
-
-        io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
-        self._nwbfile = io.read()
         
+        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
+        self._nwbfile = self.io.read()
         timestamps = None
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
@@ -297,7 +299,7 @@ class NwbSortingExtractor(BaseSorting):
                 continue
             # if it is unit_property
             property_values = self._nwbfile.units[column][:]
-
+            
             # only load columns with same shape for all units
             if np.all(p.shape == property_values[0].shape for p in property_values):
                 properties[column] = property_values
@@ -316,6 +318,9 @@ class NwbSortingExtractor(BaseSorting):
                         'electrical_series_name': self._electrical_series_name,
                         'sampling_frequency': sampling_frequency,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
+
+    def __del__(self):
+        self.io.close()
 
 
 class NwbSortingSegment(BaseSortingSegment):
