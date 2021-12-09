@@ -2,6 +2,7 @@ import numpy as np
 
 from .basecomparison import BaseTwoSorterComparison
 
+
 class SymmetricSortingComparison(BaseTwoSorterComparison):
     """
     Compares two spike sorter outputs.
