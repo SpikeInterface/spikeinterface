@@ -85,5 +85,12 @@ sw.plot_amplitudes_timeseries(we)
 
 sw.plot_units_depth_vs_amplitude(we)
 
+##############################################################################
+# plot_unit_localization()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+sw.plot_unit_localization(we, method='center_of_mass')
+
+
 
 plt.show()

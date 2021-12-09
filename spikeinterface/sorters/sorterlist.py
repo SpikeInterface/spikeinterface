@@ -37,21 +37,20 @@ sorter_dict = {s.sorter_name: s for s in sorter_full_list}
 
 
 def available_sorters():
-    '''
-    Lists available sorters.
-    '''
+    """Lists available sorters."""
+
     return sorted(list(sorter_dict.keys()))
 
 
 def installed_sorters():
-    '''
-    Lists installed sorters.
-    '''
-    l = sorted([s.sorter_name for s in sorter_full_list if s.is_installed()])
-    return l
+    """Lists installed sorters."""
+
+    return sorted([s.sorter_name for s in sorter_full_list if s.is_installed()])
 
 
 def print_sorter_versions():
+    """"Prints the versions of the installed sorters."""
+
     txt = ''
     for name in installed_sorters():
         version = sorter_dict[name].get_sorter_version()
@@ -61,20 +60,19 @@ def print_sorter_versions():
 
 
 def get_default_params(sorter_name_or_class):
-    '''
-    Returns default parameters for the specified sorter.
+    """Returns default parameters for the specified sorter.
 
     Parameters
     ----------
     sorter_name_or_class: str or SorterClass
-        The sorter to retrieve default parameters from
+        The sorter to retrieve default parameters from.
 
     Returns
     -------
     default_params: dict
-        Dictionary with default params for the specified sorter
+        Dictionary with default params for the specified sorter.
+    """
 
-    '''
     if isinstance(sorter_name_or_class, str):
         SorterClass = sorter_dict[sorter_name_or_class]
     elif sorter_name_or_class in sorter_full_list:
@@ -86,20 +84,19 @@ def get_default_params(sorter_name_or_class):
 
 
 def get_params_description(sorter_name_or_class):
-    '''
-    Returns a description of the parameters for the specified sorter.
+    """Returns a description of the parameters for the specified sorter.
 
     Parameters
     ----------
     sorter_name_or_class: str or SorterClass
-        The sorter to retrieve parameters description from
+        The sorter to retrieve parameters description from.
 
     Returns
     -------
     params_description: dict
         Dictionary with parameter description
+    """
 
-    '''
     if isinstance(sorter_name_or_class, str):
         SorterClass = sorter_dict[sorter_name_or_class]
     elif sorter_name_or_class in sorter_full_list:
@@ -111,20 +108,19 @@ def get_params_description(sorter_name_or_class):
 
 
 def get_sorter_description(sorter_name_or_class):
-    '''
-    Returns a brief description of the of the specified sorter.
+    """Returns a brief description for the specified sorter.
 
     Parameters
     ----------
     sorter_name_or_class: str or SorterClass
-        The sorter to retrieve description from
+        The sorter to retrieve description from.
 
     Returns
     -------
     params_description: dict
-        Dictionary with parameter description
+        Dictionary with parameter description.
+    """
 
-    '''
     if isinstance(sorter_name_or_class, str):
         SorterClass = sorter_dict[sorter_name_or_class]
     elif sorter_name_or_class in sorter_full_list:

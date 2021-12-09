@@ -10,7 +10,7 @@ from spikeinterface.toolkit.postprocessing import (get_template_amplitudes,
                                                    get_template_extremum_channel,
                                                    get_template_extremum_channel_peak_shift,
                                                    get_template_extremum_amplitude,
-                                                   compute_unit_centers_of_mass, get_template_channel_sparsity)
+                                                   get_template_channel_sparsity)
 
 
 def setup_module():
@@ -97,13 +97,6 @@ def test_get_template_extremum_amplitude():
     print(extremum_channels_ids)
 
 
-def test_compute_unit_centers_of_mass():
-    we = WaveformExtractor.load_from_folder('toy_waveforms')
-
-    coms = compute_unit_centers_of_mass(we, num_channels=4)
-    print(coms)
-
-
 if __name__ == '__main__':
     # ~ setup_module()
 
@@ -112,4 +105,3 @@ if __name__ == '__main__':
     # ~ test_get_template_extremum_channel_peak_shift()
     test_get_template_channel_sparsity()
     # ~ test_get_template_extremum_amplitude()
-    # ~ test_compute_unit_centers_of_mass()
