@@ -20,19 +20,20 @@ function p_waveclus(vcDir_temp, par_input)
         end
     end
     if nch==1
-        % Run waveclus batch mode. supply parameter file (set sampling rate)
+        % Run waveclus batch mode.
         Get_spikes(vcFile_mat{1}, 'par', S_par);
         vcFile_spikes = strrep(vcFile_mat{1}, '.h5', '_spikes.mat');
         Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false);
         [vcDir_, vcFile_, ~] = fileparts(vcFile_mat{1});
         vcFile_cluster = fullfile(vcDir_, ['times_', vcFile_, '.mat']);
     else
-        % Run waveclus batch mode. supply parameter file (set sampling rate)
+        % Run waveclus batch mode.
         pol_file = fopen('polytrode1.txt','w');
         cellfun(@(x) fprintf(pol_file ,'%s\n',x),vcFile_mat);
         fclose(pol_file);
         Get_spikes_pol(1, 'par', S_par);
-        Do_clustering('polytrode1_spikes.mat', 'make_plots', false,'save_spikes',false);
+        vcFile_spikes = 'polytrode1_spikes.mat';
+        Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false);
         [vcDir_, ~, ~] = fileparts(vcFile_mat{1});
         vcFile_cluster = fullfile(vcDir_, ['times_polytrode1', '.mat']);
     end
@@ -40,7 +41,8 @@ function p_waveclus(vcDir_temp, par_input)
     if exist(vcFile_cluster,'file')
         movefile(vcFile_cluster,newfile,'f');
     else
-        par=S_par;
+        load(vcFile_spikes,'par');
+        par = update_parameters(S_par, par, 'relevant');
         cluster_class = zeros(0,2);
         save(newfile,'cluster_class','par');
     end
