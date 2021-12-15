@@ -146,7 +146,7 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     #                               segment_index=segment_index)
     recording_segment = recording._recording_segments[segment_index]
     traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame, 
-                                                              None, margin, add_zeros=True)
+                                                              slice(None), margin, add_zeros=True)
 
     # get local peaks (sgment + start_frame/end_frame)
     i0 = np.searchsorted(peaks['segment_ind'], segment_index)
