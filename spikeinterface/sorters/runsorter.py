@@ -46,7 +46,8 @@ _common_param_doc = """
 
 def run_sorter(sorter_name, recording, output_folder=None,
                remove_existing_folder=True, delete_output_folder=False,
-               verbose=False, raise_error=True, docker_image=None,
+               verbose=False, raise_error=True,
+               docker_image=None, singularity_image=None,
                with_output=True, **sorter_params):
     """
     Generic function to run a sorter via function approach.
@@ -54,18 +55,24 @@ def run_sorter(sorter_name, recording, output_folder=None,
     >>> sorting = run_sorter('tridesclous', recording)
     """ + _common_param_doc
 
-    if docker_image is None:
+    if docker_image is None and singularity_image is None:
         sorting = run_sorter_local(sorter_name, recording, output_folder=output_folder,
                                    remove_existing_folder=remove_existing_folder,
                                    delete_output_folder=delete_output_folder,
                                    verbose=verbose, raise_error=raise_error, with_output=with_output, 
                                    **sorter_params)
-    else:
-        sorting = run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
-                                    remove_existing_folder=remove_existing_folder,
-                                    delete_output_folder=delete_output_folder,
-                                    verbose=verbose, raise_error=raise_error,
-                                    with_output=with_output, **sorter_params)
+    elif docker_image is not None:
+        sorting = run_sorter_container(sorter_name, recording, 'docker', docker_image,
+                                output_folder=output_folder,
+                                remove_existing_folder=remove_existing_folder,
+                                delete_output_folder=delete_output_folder, verbose=verbose,
+                                raise_error=raise_error, with_output=with_output, **sorter_params)
+    elif singularity_image is not None:
+        sorting = run_sorter_container(sorter_name, recording, 'singularity', singularity_image,
+                                output_folder=output_folder,
+                                remove_existing_folder=remove_existing_folder,
+                                delete_output_folder=delete_output_folder, verbose=verbose,
+                                raise_error=raise_error, with_output=with_output, **sorter_params)
     return sorting
 
 
@@ -167,32 +174,43 @@ class ContainerClient:
 
             if not Path(self.singularity_image).exists():
                 raise FileNotFoundError(f'Unable to locate container image {container_image}')
+            
+            singularity_bind = ','.join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
+            self.client_instance = Client.instance(self.singularity_image, start=False, options=['--bind', singularity_bind])
+
 
             # parse volume options
-            self.singularity_options = []
-            for volume_src, volume in volumes.items():
-                volume_options = ['--bind', f'{volume_src}:{volume["bind"]}:{volume["mode"]}']
-                self.singularity_options.extend(volume_options)
+            # self.singularity_options = []
+            # for volume_src, volume in volumes.items():
+            #     volume_options = ['--bind', f'{volume_src}:{volume["bind"]}:{volume["mode"]}']
+            #     self.singularity_options.extend(volume_options)
+            # read only by default on singularity
+            
+            # print(volumes)
+            # volume_options = ['--bind', vols]
+            # print(volume_options)
+            # exit()
+            # self.singularity_options.extend(volume_options)
     
     def start(self):
         if self.mode =='docker':
             self.docker_container.start()
         elif self.mode =='singularity':
-            pass
+            self.client_instance.start()
     
     def stop(self):
         if self.mode =='docker':
             self.docker_container.stop()
         elif self.mode =='singularity':
-            pass
+            self.client_instance.stop()
 
     def run_command(self, command):
-        from spython.main import Client
         if self.mode =='docker':
             res = self.docker_container.exec_run(command)
             return str(res.output)
         elif self.mode =='singularity':
-            res = Client.execute(self.singularity_image, command, options=self.singularity_options)
+            from spython.main import Client
+            res = Client.execute(self.client_instance, command)
             if isinstance(res, dict):
                 res = res['message']
             return res
@@ -261,7 +279,10 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     container_client.start()
 
     # check if container contains spikeinterface already
-    cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
+    # this do not work with singularity:
+    # cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
+    # this approach is better
+    cmd = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
     res_output = container_client.run_command(cmd)
     need_si_install = 'ModuleNotFoundError' in res_output
 
@@ -291,13 +312,20 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     # run sorter on folder
     if verbose:
         print(f'Running {sorter_name} sorter inside {container_image}')
-    cmd = 'python "{}"'.format(parent_folder/'in_docker_sorter_script.py')
+
+    # this do not work with singularity:
+    # cmd = 'python "{}"'.format(parent_folder/'in_docker_sorter_script.py')
+    # this approach is better
+    cmd = ['python', '{}'.format(parent_folder/'in_docker_sorter_script.py')]
     res_output = container_client.run_command(cmd)
     run_sorter_output = res_output
 
     # chown folder to user uid
     uid = os.getuid()
-    cmd = f'chown {uid}:{uid} -R "{output_folder}"'
+    # this do not work with singularity:
+    # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
+    # this approach is better
+    cmd = ['chown', f'{uid}:{uid}', '-R', '{output_folder}']
     res_output = container_client.run_command(cmd)
 
     if verbose:
@@ -335,7 +363,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
 
 
 
-
+# we can keep this while but this this now unecessary
 def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
                       remove_existing_folder=True, delete_output_folder=False,
                       verbose=False, raise_error=True, with_output=True, **sorter_params):
