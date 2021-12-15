@@ -177,20 +177,6 @@ class ContainerClient:
             
             singularity_bind = ','.join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
             self.client_instance = Client.instance(self.singularity_image, start=False, options=['--bind', singularity_bind])
-
-
-            # parse volume options
-            # self.singularity_options = []
-            # for volume_src, volume in volumes.items():
-            #     volume_options = ['--bind', f'{volume_src}:{volume["bind"]}:{volume["mode"]}']
-            #     self.singularity_options.extend(volume_options)
-            # read only by default on singularity
-            
-            # print(volumes)
-            # volume_options = ['--bind', vols]
-            # print(volume_options)
-            # exit()
-            # self.singularity_options.extend(volume_options)
     
     def start(self):
         if self.mode =='docker':
@@ -363,158 +349,15 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
 
 
 
-# we can keep this while but this this now unecessary
-def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
-                      remove_existing_folder=True, delete_output_folder=False,
-                      verbose=False, raise_error=True, with_output=True, **sorter_params):
-    return run_sorter_container(sorter_name, recording, 'docker', docker_image,
-                                output_folder=output_folder,
-                                remove_existing_folder=remove_existing_folder,
-                                delete_output_folder=delete_output_folder, verbose=verbose,
-                                raise_error=raise_error, with_output=with_output, **sorter_params)
-
-
-
-
-#~ def run_sorter_docker_old(sorter_name, recording, docker_image, output_folder=None,
-                      #~ remove_existing_folder=True, delete_output_folder=False,
-                      #~ verbose=False, raise_error=True, with_output=True, **sorter_params):
-    #~ import docker
-
-    #~ assert platform.system() in ('Linux',
-                                 #~ 'Darwin'), 'run_sorter() with docker is supported only on linux/macos platform '
-
-    #~ if output_folder is None:
-        #~ output_folder = sorter_name + '_output'
-
-    #~ SorterClass = sorter_dict[sorter_name]
-    #~ output_folder = Path(output_folder).absolute()
-    #~ parent_folder = output_folder.parent
-    #~ folder_name = output_folder.stem
-
-    #~ # find input folder of recording for folder bind
-    #~ rec_dict = recording.to_dict()
-    #~ recording_input_folder = find_recording_folder(rec_dict)
-
-    #~ # create 3 files for communication with docker
-    #~ # recordonc dict inside
-    #~ (parent_folder / 'in_docker_recording.json').write_text(
-        #~ json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
-    #~ # need to share specific parameters
-    #~ (parent_folder / 'in_docker_params.json').write_text(
-        #~ json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
-    #~ # the py script
-
-    #~ py_script = f"""
-#~ import json
-#~ from spikeinterface import load_extractor
-#~ from spikeinterface.sorters import run_sorter_local
-
-#~ # load recorsding in docker
-#~ recording = load_extractor('{parent_folder}/in_docker_recording.json')
-
-#~ # load params in docker
-#~ with open('{parent_folder}/in_docker_params.json', encoding='utf8', mode='r') as f:
-    #~ sorter_params = json.load(f)
-
-#~ # run in docker
-#~ output_folder = '{output_folder}'
-#~ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
-            #~ remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-            #~ verbose={verbose}, raise_error={raise_error}, **sorter_params)
-#~ """
-    #~ (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
-
-    #~ volumes = {}
-    #~ volumes[str(recording_input_folder)] = {
-        #~ 'bind': str(recording_input_folder), 'mode': 'ro'}
-    #~ volumes[str(parent_folder)] = {'bind': str(parent_folder), 'mode': 'rw'}
-
-    #~ extra_kwargs = {}
-    #~ if SorterClass.docker_requires_gpu:
-        #~ extra_kwargs["device_requests"] = [
-            #~ docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
-
-    #~ client = docker.from_env()
-
-    #~ container = client.containers.create(
-        #~ docker_image, tty=True,  volumes=volumes, **extra_kwargs)
-    #~ if verbose:
-        #~ print('Starting container')
-    #~ container.start()
-
-    #~ # check if docker contains spikeinertace already
-    #~ cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
-    #~ res = container_client.run_command(cmd)
-    #~ need_si_install = b'ModuleNotFoundError' in res.output
-
-    #~ if need_si_install:
-        #~ if 'dev' in si_version:
-            #~ if verbose:
-                #~ print(
-                    #~ f"Installing spikeinterface from sources in {docker_image}")
-            #~ # TODO later check output
-            #~ cmd = 'pip install --upgrade --force MEArec'
-            #~ res = container_client.run_command(cmd)
-            #~ cmd = 'pip install -e git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
-            #~ res = container_client.run_command(cmd)
-            #~ cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
-            #~ res = container_client.run_command(cmd)
-        #~ else:
-            #~ if verbose:
-                #~ print(
-                    #~ f"Installing spikeinterface=={si_version} in {docker_image}")
-            #~ cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
-            #~ res = container_client.run_command(cmd)
-    #~ else:
-        #~ # TODO version checking
-        #~ if verbose:
-            #~ print(f'spikeinterface is already installed in {docker_image}')
-
-    #~ # run sorter on folder
-    #~ if verbose:
-        #~ print(f'Running {sorter_name} sorter inside {docker_image}')
-    #~ cmd = 'python "{}"'.format(parent_folder/'in_docker_sorter_script.py')
-    #~ res = container_client.run_command(cmd)
-    #~ run_sorter_output = res.output
-
-    #~ # chown folder to user uid
-    #~ uid = os.getuid()
-    #~ cmd = f'chown {uid}:{uid} -R "{output_folder}"'
-    #~ res = container_client.run_command(cmd)
-
-    #~ if verbose:
-        #~ print('Stopping container')
-    #~ container.stop()
-
-    #~ # clean useless files
-    #~ os.remove(parent_folder / 'in_docker_recording.json')
-    #~ os.remove(parent_folder / 'in_docker_params.json')
-    #~ os.remove(parent_folder / 'in_docker_sorter_script.py')
-
-    #~ # check error
-    #~ output_folder = Path(output_folder)
-    #~ log_file = output_folder / 'spikeinterface_log.json'
-    #~ if not log_file.is_file():
-        #~ run_error = True
-    #~ else:
-        #~ with log_file.open('r', encoding='utf8') as f:
-            #~ log = json.load(f)
-        #~ run_error = bool(log['error'])
-
-    #~ sorting = None
-    #~ if run_error:
-        #~ if raise_error:
-            #~ raise SpikeSortingError(
-                #~ f"Spike sorting in docker failed with the following error:\n{run_sorter_output}")
-    #~ else:
-        #~ if with_output:
-            #~ sorting = SorterClass.get_result_from_folder(output_folder)
-
-    #~ if delete_output_folder:
-        #~ shutil.rmtree(output_folder)
-
-    #~ return sorting
+# we could keep this while but this this now unecessary
+# def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
+#                       remove_existing_folder=True, delete_output_folder=False,
+#                       verbose=False, raise_error=True, with_output=True, **sorter_params):
+#     return run_sorter_container(sorter_name, recording, 'docker', docker_image,
+#                                 output_folder=output_folder,
+#                                 remove_existing_folder=remove_existing_folder,
+#                                 delete_output_folder=delete_output_folder, verbose=verbose,
+#                                 raise_error=raise_error, with_output=with_output, **sorter_params)
 
 
 _common_run_doc = """
