@@ -564,8 +564,11 @@ class BaseRecordingSegment(BaseSegment):
 
     def get_times(self):
         if self.time_vector is not None:
+            import h5py
             if isinstance(self.time_vector, np.ndarray):
                 return self.time_vector
+            elif isinstance(self.time_vector, h5py.Dataset):
+                return self.time_vector[:]
             else:
                 return self.time_vector.asarray()
         else:
