@@ -103,7 +103,7 @@ class NwbRecordingExtractor(BaseRecording):
             assert timestamps is not None, "Could not find rate information as both 'rate' and "\
                                            "'timestamps' are missing from the file. "\
                                            "Use the 'sampling_frequency' argument."
-            sampling_frequency = 1. / np.median(np.diff(timestamps[samples_for_rate_estimation]))
+            sampling_frequency = 1. / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
         
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=self._es.timestamps)
