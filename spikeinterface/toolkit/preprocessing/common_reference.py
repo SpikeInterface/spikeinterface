@@ -115,7 +115,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         # need input trace
         all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
-        _channel_indices = np.arange(all_traces.shape[1])[channel_indices]
+        _channel_indices = np.arange(all_traces.shape[1])[channel_indices].flatten()
 
         if self.reference == 'global':
             out_traces = np.hstack([
