@@ -63,9 +63,20 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, 
         peaks_indices[channel] = np.where(peaks['channel_ind'] == channel)[0]
 
     if method == 'random':
+
+        ## This method will randomly select max_peaks_per_channel peaks per channels
         for channel in np.unique(peaks['channel_ind']):
-            selected_peaks += [np.random.permutation(peaks_indices[channel])[:max_peaks_per_channel]]
+            selected_peaks += [np.random.choice(peaks_indices[channel].size, size=max_peaks_per_channel, replace=False)]
     elif method == 'smart_sampling':
+
+        ## This method will try to select around max_peaks_per_channel but in a non uniform manner
+        ## First, it will look at the distribution of the peaks amplitudes, per channel. 
+        ## Once this distribution is known, it will sample from the peaks with a rejection probability
+        ## such that the final distribution of the amplitudes, for the selected peaks, will be as
+        ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
+        ## from the space of all the peaks, using the amplitude as a discriminative criteria
+        ## To do so, one must provide the noise_levels, detect_threshold used to detect the peaks, the 
+        ## sign of the peaks, and the number of bins for the probability density histogram
 
         params = {'detect_threshold' : 5, 
                   'peak_sign' : 'neg',
@@ -283,7 +294,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # load trace in memory
     recording_segment = recording._recording_segments[segment_index]
     traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame, 
-                                                              slice(None), margin, add_zeros=True)
+                                                              None, margin, add_zeros=True)
 
     if extra_margin > 0:
         # remove extra margin for detection step
