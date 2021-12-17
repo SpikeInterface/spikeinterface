@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 from spikeinterface import download_dataset
 from spikeinterface.extractors import read_mearec
@@ -20,36 +21,44 @@ def test_run_sorter_local():
 
 @pytest.mark.skip('Docker test no run with pytest : do it manually')
 def test_run_sorter_docker():
-    local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
-    recording, sorting_true = read_mearec(local_path)
+    mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
+
+    base_folder = Path('/data_local/DataSpikeSorting/mearec')
+    mearec_filename = base_folder / 'recordings_collision_10cells_Neuronexus-32_180s.h5'
+    recording, sorting_true = read_mearec(mearec_filename)
 
     sorter_params = {'detect_threshold': 4.9}
 
-    docker_image = 'spikeinterface/tridesclous-base:1.6.3'
+    docker_image = 'spikeinterface/tridesclous-base:1.6.4'
 
-    sorting = run_sorter('tridesclous', recording, output_folder='sorting_tdc_docker',
+    sorting = run_sorter('tridesclous', recording, output_folder=base_folder/'sorting_tdc_docker',
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, docker_image=docker_image,
                          **sorter_params)
     print(sorting)
 
-# @pytest.mark.skip('Singularity test no run with pytest : do it manually')
+
+@pytest.mark.skip('Singularity test no run with pytest : do it manually')
 def test_run_sorter_singularity():
-    local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
-    recording, sorting_true = read_mearec(local_path)
+    #mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
+
+    base_folder = Path('/mnt/data/sam/DataSpikeSorting/mearec')
+    mearec_filename = base_folder / 'recordings_collision_10cells_Neuronexus-32_180s.h5'
+
+    recording, sorting_true = read_mearec(mearec_filename)
 
     sorter_params = {'detect_threshold': 4.9}
 
-    image = 'spikeinterface/tridesclous-base:1.6.3'
+    singularity_image = 'spikeinterface/tridesclous-base:1.6.4'
 
-    sorting = run_sorter_container('tridesclous', recording, 'singularity', image,
-                                   output_folder='sorting_tdc_docker',
-                                   remove_existing_folder=True, delete_output_folder=False,
-                                   verbose=True, raise_error=True,
-                                   **sorter_params)
+    sorting = run_sorter('tridesclous', recording, output_folder=base_folder/'sorting_tdc_singularity',
+                         remove_existing_folder=True, delete_output_folder=False,
+                         verbose=True, raise_error=True, singularity_image=singularity_image,
+                         **sorter_params)
     print(sorting)
 
 
 if __name__ == '__main__':
-    # ~ test_run_sorter_local()
-    test_run_sorter_docker()
+    # test_run_sorter_local()
+    # test_run_sorter_docker()
+    test_run_sorter_singularity()

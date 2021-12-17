@@ -10,12 +10,13 @@ import json
 from spikeinterface.core import load_extractor, aggregate_units
 
 from .sorterlist import sorter_dict
-from .runsorter import run_sorter_local, run_sorter_docker, _common_param_doc, run_sorter
+from .runsorter import run_sorter, _common_param_doc, run_sorter
 
 
 def _run_one(arg_list):
     # the multiprocessing python module force to have one unique tuple argument
-    sorter_name, recording, output_folder, verbose, sorter_params, docker_image, with_output = arg_list
+    (sorter_name, recording, output_folder, verbose, sorter_params,
+        docker_image, singularity_image, with_output) = arg_list
 
     if isinstance(recording, dict):
         recording = load_extractor(recording)
@@ -29,16 +30,25 @@ def _run_one(arg_list):
     # because we won't want the loop/worker to break
     raise_error = False
 
-    if docker_image is None:
+    # if docker_image is None:
 
-        run_sorter_local(sorter_name, recording, output_folder=output_folder,
-                         remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
-                         verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
-    else:
+    #     run_sorter_local(sorter_name, recording, output_folder=output_folder,
+    #                      remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+    #                      verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
+    # else:
 
-        run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
-                          remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
-                          verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
+    #     run_sorter_docker(sorter_name, recording, docker_image, output_folder=output_folder,
+    #                       remove_existing_folder=remove_existing_folder, delete_output_folder=delete_output_folder,
+    #                       verbose=verbose, raise_error=raise_error, with_output=with_output, **sorter_params)
+
+    run_sorter(sorter_name, recording, output_folder=output_folder,
+               remove_existing_folder=remove_existing_folder,
+               delete_output_folder=delete_output_folder,
+               verbose=verbose, raise_error=raise_error,
+               docker_image=docker_image, singularity_image=singularity_image,
+               with_output=with_output, **sorter_params)
+
+
 
 
 _implemented_engine = ('loop', 'joblib', 'dask')
@@ -161,6 +171,7 @@ def run_sorters(sorter_list,
                 verbose=False,
                 with_output=True,
                 docker_images={},
+                singularity_images={},
                 ):
     """
     This run several sorter on several recording.
@@ -219,6 +230,10 @@ def run_sorters(sorter_list,
         A dictionary {sorter_name : docker_image} to specify is some sorters
         should use docker images
 
+    singularity_images: dict
+        A dictionary {sorter_name : singularity_image} to specify is some sorters
+        should use singularity images
+
     Returns
     -------
 
@@ -271,6 +286,7 @@ def run_sorters(sorter_list,
 
             params = sorter_params.get(sorter_name, {})
             docker_image = docker_images.get(sorter_name, None)
+            singularity_image = singularity_images.get(sorter_name, None)
 
             if need_dump:
                 if not recording.is_dumpable:
@@ -281,7 +297,7 @@ def run_sorters(sorter_list,
                 recording_arg = recording
 
             task_args = (sorter_name, recording_arg, output_folder,
-                         verbose, params, docker_image, with_output)
+                         verbose, params, docker_image, singularity_image, with_output)
             task_args_list.append(task_args)
 
     if engine == 'loop':
