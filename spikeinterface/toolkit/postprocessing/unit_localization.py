@@ -144,7 +144,7 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10, hanning_filtering=False):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
@@ -156,6 +156,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     num_channels: int
         Number of channels used to compute COM
+    hanning_filtering: bool
+        If True, waveforms are convolved with an Hanning window to reduce influence of the borders
 
     Returns
     -------
@@ -165,6 +167,9 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
 
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
+
+    if hanning_filtering:
+        w_hanning = np.hanning(waveform_extractor.nbefore + waveform_extractor.nafter)[:, np.newaxis]
 
     channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='best_channels',
                                                      num_channels=num_channels, outputs='index')
@@ -177,6 +182,9 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
         local_contact_locations = contact_locations[chan_inds, :]
 
         wf = templates[i, :, :]
+        if hanning_filtering:
+            wf *= w_hanning
+
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         # center of mass

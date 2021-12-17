@@ -18,7 +18,7 @@ def init_kwargs_dict(method, method_kwargs):
     """Initialize a dictionary of keyword arguments."""
 
     if method == 'center_of_mass':
-        method_kwargs_ = dict(local_radius_um=150)
+        method_kwargs_ = dict(local_radius_um=150, hanning_filtering=False)
     elif method == 'monopolar_triangulation':
         method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000)
 
@@ -53,6 +53,8 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center
             'center_of_mass':
                 * local_radius_um: float
                     For channel sparsity.
+                * hanning_filtering: bool
+                    To reduce the influence of the borders
             'monopolar_triangulation':
                 * local_radius_um: float
                     For channel sparsity.
@@ -125,6 +127,9 @@ def _init_worker_localize_peaks(recording, peaks, method, method_kwargs,
         neighbours_mask = channel_distance < method_kwargs['local_radius_um']
         worker_ctx['neighbours_mask'] = neighbours_mask
 
+    if method in 'center_of_mass':
+        worker_ctx['hanning_filtering'] = method_kwargs['hanning_filtering']
+
     return worker_ctx
 
 
@@ -140,6 +145,7 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     neighbours_mask = worker_ctx['neighbours_mask']
     contact_locations = worker_ctx['contact_locations']
     margin = worker_ctx['margin']
+    hanning_filtering = worker_ctx['hanning_filtering']
 
     # load trace in memory
     # traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
@@ -162,7 +168,7 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     if method == 'center_of_mass':
         peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations,
-                                                       neighbours_mask, nbefore, nafter)
+                                                       neighbours_mask, nbefore, nafter, hanning_filtering)
     elif method == 'monopolar_triangulation':
         max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
         peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations,
@@ -172,10 +178,13 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbours_mask,
-                                  nbefore, nafter):
+                                  nbefore, nafter, hanning_filtering=False):
     """Localize peaks using the center of mass method."""
 
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
+
+    if hanning_filtering is True:
+        w_hanning = np.hanning(nbefore + nafter)[:, np.newaxis]
 
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
@@ -184,6 +193,8 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
         local_contact_locations = contact_locations[chan_inds, :]
 
         wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
+        if hanning_filtering is True:
+            wf *= w_hanning
         wf_ptp = wf.ptp(axis=0)
         com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
 
