@@ -92,6 +92,7 @@ class TestWidgets(unittest.TestCase):
 
     def test_plot_unit_localization(self):
         sw.plot_unit_localization(self._we)
+        sw.plot_unit_localization(self._we, method='monopolar_triangulation')
 
     def test_autocorrelograms(self):
         unit_ids = self._sorting.unit_ids[:4]
@@ -113,7 +114,8 @@ class TestWidgets(unittest.TestCase):
                                 weight_with_amplitudes=True, mode='heatmap')
         sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.,
                                 weight_with_amplitudes=False, mode='heatmap')
-        sw.plot_drift_over_time(self._rec, peaks=peaks, weight_with_amplitudes=False, mode='scatter')
+        sw.plot_drift_over_time(self._rec, peaks=peaks, weight_with_amplitudes=False, mode='scatter',
+                                scatter_plot_kwargs={'color':'r'})
 
     def test_plot_peak_activity_map(self):
         sw.plot_peak_activity_map(self._rec)
@@ -159,13 +161,13 @@ if __name__ == '__main__':
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
     #~ mytest.test_principal_component()
-    #~ mytest.test_plot_unit_localization()
+    mytest.test_plot_unit_localization()
 
     #~ mytest.test_autocorrelograms()
     #~ mytest.test_crosscorrelogram()
     #~ mytest.test_isi_distribution()
 
-    #  mytest.test_plot_drift_over_time()
+    #~ mytest.test_plot_drift_over_time()
     #  mytest.test_plot_peak_activity_map()
 
     # mytest.test_confusion()
@@ -173,6 +175,6 @@ if __name__ == '__main__':
     #~ mytest.test_multicomp_graph()
     #  mytest.test_sorting_performance()
 
-    mytest.test_plot_unit_summary()
+    # mytest.test_plot_unit_summary()
 
     plt.show()

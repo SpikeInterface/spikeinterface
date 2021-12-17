@@ -227,7 +227,8 @@ class WaveformExtractor:
         if wfs is None:
             waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
             if not waveform_file.is_file():
-                raise Exception('waveforms not extracted yet : please do WaveformExtractor.run_extract_waveforms() fisrt')
+                raise Exception('Waveforms not extracted yet: '
+                                'please do WaveformExtractor.run_extract_waveforms() first')
 
             wfs = np.load(waveform_file)
             self._waveforms[unit_id] = wfs

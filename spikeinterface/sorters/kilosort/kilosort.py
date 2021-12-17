@@ -29,8 +29,7 @@ def check_if_installed(kilosort_path: Union[str, None]):
 
 
 class KilosortSorter(KilosortBase, BaseSorter):
-    """
-    """
+    """Kilosort Sorter object."""
 
     sorter_name: str = 'kilosort'
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
@@ -64,7 +63,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
-    sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter. 
+    sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter.
     For more information see https://papers.nips.cc/paper/6326-fast-and-accurate-spike-sorting-of-high-channel-count-probes-with-kilosort"""
 
     installation_mesg = """\nTo use Kilosort run:\n
