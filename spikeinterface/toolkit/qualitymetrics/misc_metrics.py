@@ -1,20 +1,18 @@
 """
-Various common metrics.
-Some of then come from (or the old implementation) :
+Various common quality metrics.
+Some of then come from or the old implementation:
   * https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
   * https://github.com/SpikeInterface/spikemetrics
 
-They have been re work to support the multi segment API of spikeinterface.
+They have been refactored to support the multi-segment API of spikeinterface.
 
 """
-from collections import namedtuple
 import numpy as np
-import pandas as pd
-
 import scipy.ndimage
 
-from ..utils import get_noise_levels
+from collections import namedtuple
 
+from ..utils import get_noise_levels
 from ..postprocessing import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
@@ -67,9 +65,9 @@ def compute_firing_rate(waveform_extractor, **kwargs):
 def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     """
     Calculate fraction of time the unit is is firing for epochs.
-    
+
     The total duration over segment is divide into "num_bins".
-    
+
     For the computation spiketrain over segment are concatenated to mimic a on-unique-segment,
     before spltting into epochs
 
@@ -79,11 +77,9 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
-    fs = recording.get_sampling_frequency()
 
     seg_length = [recording.get_num_samples(i) for i in range(num_segs)]
     total_length = np.sum(seg_length)
-    seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
 
     presence_ratio = {}
     for unit_id in unit_ids:
@@ -126,9 +122,42 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
     return snrs
 
 
-def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5):
+def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0):
     """
-    Count ISI violation and ISI violation rate.
+    Calculate Inter-Spike Interval (ISI) violations for a spike train.
+
+    It computes several metrics related to isi violations:
+        * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are generating the ISI 
+                                violations. Described in [1]. See Notes.
+        * isi_violation_rate: number of ISI violations divided by total rate
+        * isi_violation_count: number of ISI violations
+
+    [1] Hill et al. (2011) J Neurosci 31: 8699-8705
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveforme xtractor object
+    isi_threshold_ms : float
+        Threshold for classifying adjacent spikes as an ISI violation. This is the biophysical refractory period
+        (default=1.5)
+    min_isi_ms : float
+        Minimum possible inter-spike interval (default=0). This is the artificial refractory period enforced
+        by the data acquisition system or post-processing algorithms
+
+    Returns
+    -------
+    isi_violations_rate : float
+        Rate of contaminating spikes as a fraction of overall rate. Higher values indicate more contamination
+
+    Notes
+    -----
+    You can interpret an ISI violations ratio value of 0.5 as meaning that contamining spikes are occurring at roughly
+    half the rate of "true" spikes for that unit. In cases of highly contaminated units, the ISI violations value can
+    sometimes be even greater than 1.
+
+    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality) and 
+    converted to Python by Daniel Denman.
     """
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -137,25 +166,35 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5):
     fs = recording.get_sampling_frequency()
 
     seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duraion = np.sum(seg_durations)
+    total_duration = np.sum(seg_durations)
 
-    isi_threshold = (isi_threshold_ms / 1000. * fs)
+    isi_threshold_s = isi_threshold_ms / 1000
+    min_isi_s = min_isi_ms / 1000
+    isi_threshold_samples = int(isi_threshold_s * fs)
 
-    isi_violations_count = {}
     isi_violations_rate = {}
+    isi_violations_count = {}
+    isi_violations_ratio = {}
 
+    # all units converted to seconds
     for unit_id in unit_ids:
         num_violations = 0
+        num_spikes = 0
         for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            isi = np.diff(st)
-            num_violations += np.sum(isi < isi_threshold)
+            spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            isis = np.diff(spike_train)
+            num_spikes += len(spike_train)
+            num_violations += np.sum(isis < isi_threshold_samples)
+        violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
+        total_rate = num_spikes / total_duration
+        violation_rate = num_violations / violation_time
 
+        isi_violations_ratio[unit_id] = violation_rate / total_rate
+        isi_violations_rate[unit_id] = num_violations / total_duration
         isi_violations_count[unit_id] = num_violations
-        isi_violations_rate[unit_id] = num_violations / total_duraion
 
-    res = namedtuple('isi_violaion', ['isi_violations_rate', 'isi_violations_count'])
-    return res(isi_violations_rate, isi_violations_count)
+    res = namedtuple('isi_violaion', ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
+    return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
 
 
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
@@ -168,16 +207,16 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     Assumes the amplitude histogram is symmetric (not valid in the presence of drift)
 
     Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
-    
-    
+
+
     Important note: here the amplitues are extrated from the waveform extractor.
     It means that the number of spike to estimate amplitude is low
     See:
     WaveformExtractor.set_params(max_spikes_per_unit=500)
-    
+
     @alessio @ cole @matthias
     # TODO make a fast ampltiude retriever ???
-    
+
     """
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting

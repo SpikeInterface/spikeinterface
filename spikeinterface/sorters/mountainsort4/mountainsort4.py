@@ -4,16 +4,14 @@ from pathlib import Path
 from spikeinterface.toolkit import bandpass_filter, whiten
 
 from ..basesorter import BaseSorter
-from ..utils import RecordingExtractorOldAPI
+from spikeinterface.core.old_api_utils import NewToOldRecording
 from spikeinterface.core import load_extractor
 
 from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
 
 
 class Mountainsort4Sorter(BaseSorter):
-    """
-    Mountainsort
-    """
+    """Mountainsort4 Sorter object."""
 
     sorter_name = 'mountainsort4'
     requires_locations = False
@@ -26,13 +24,13 @@ class Mountainsort4Sorter(BaseSorter):
         'freq_max': 6000,
         'filter': True,
         'whiten': True,  # Whether to do channel whitening as part of preprocessing
-        # 'curation': False, -- commented this becaues not implemented in mountainsort4 package (yet?)
+        # 'curation': False, -- commented this because not implemented in mountainsort4 package (yet?)
         # 'num_workers': None,
         'num_workers': 1,
         'clip_size': 50,
         'detect_threshold': 3,
         'detect_interval': 10,  # Minimum number of timepoints between events detected on the same channel
-        # 'noise_overlap_threshold': 0.15,  # Use None for no automated curation' -- commented this becaues not implemented in mountainsort4 package (yet?)
+        # 'noise_overlap_threshold': 0.15,  # Use None for no automated curation' -- commented this because not implemented in mountainsort4 package (yet?)
     }
 
     _params_description = {
@@ -46,15 +44,15 @@ class Mountainsort4Sorter(BaseSorter):
         'freq_max': "Low-pass filter cutoff frequency",
         'filter': "Enable or disable filter",
         'whiten': "Enable or disable whitening",
-        # 'curation': "Enable or disable curation", -- commented this becaues not implemented in mountainsort4 package (yet?)
+        # 'curation': "Enable or disable curation", -- commented this because not implemented in mountainsort4 package (yet?)
         'num_workers': "Number of workers (if None, half of the cpu number is used)",
         'clip_size': "Number of samples per waveform",
         'detect_threshold': "Threshold for spike detection",
         'detect_interval': "Minimum number of timepoints between events detected on the same channel",
-        # 'noise_overlap_threshold': "Noise overlap threshold for automatic curation", -- commented this becaues not implemented in mountainsort4 package (yet?)
+        # 'noise_overlap_threshold': "Noise overlap threshold for automatic curation", -- commented this because not implemented in mountainsort4 package (yet?)
     }
 
-    sorter_description = """Mountainsort4 is a fully automatic density-based spike sorter using the isosplit clustering 
+    sorter_description = """Mountainsort4 is a fully automatic density-based spike sorter using the isosplit clustering
     method and automatic curation procedures. For more information see https://doi.org/10.1016/j.neuron.2017.08.030"""
 
     installation_mesg = """\nTo use Mountainsort4 run:\n
@@ -111,8 +109,8 @@ class Mountainsort4Sorter(BaseSorter):
                 print('whitenning')
             recording = whiten(recording=recording)
 
-        print('Mountainsort4 use the OLD spikeextractors mapped with RecordingExtractorOldAPI')
-        old_api_recording = RecordingExtractorOldAPI(recording)
+        print('Mountainsort4 use the OLD spikeextractors mapped with NewToOldRecording')
+        old_api_recording = NewToOldRecording(recording)
 
         # Check location no more needed done in basesorter
         old_api_sorting = mountainsort4.mountainsort4(
@@ -126,7 +124,7 @@ class Mountainsort4Sorter(BaseSorter):
             verbose=verbose
         )
 
-        # Curate -- commented this becaues not implemented in mountainsort4 package (yet?)
+        # Curate -- commented this because not implemented in mountainsort4 package (yet?)
         # if p['noise_overlap_threshold'] is not None and p['curation'] is True:
         #     if verbose:
         #         print('Curating')

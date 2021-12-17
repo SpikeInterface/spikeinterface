@@ -28,7 +28,7 @@ import spikeinterface.full as si
 # Let's create a toy example with 4 channels (the :code:`dumpable=True` dumps the extractors to a file, which is
 # required for parallel sorting):
 
-recording_single, _ = si.toy_example(duration=10, num_channels=4, dumpable=True, num_segments=1)
+recording_single, _ = si.toy_example(duration=10, num_channels=4, seed=0, num_segments=1)
 print(recording_single)
 
 # make dumpable
