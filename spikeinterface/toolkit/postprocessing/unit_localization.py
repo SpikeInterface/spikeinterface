@@ -81,7 +81,7 @@ def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_
     return x0, bounds
 
 
-def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distance_um=1000, return_alpha=False):
+def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distance_um=1000, return_alpha=False, hanning_filtering=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard
@@ -101,6 +101,8 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
         For channel sparsiry
     max_distance_um: float
         to make bounddary in x, y, z and also for alpha
+    hanning_filtering: bool
+        If True, waveforms are convolved with an Hanning window to reduce influence of the borders
 
     Returns
     -------
@@ -113,6 +115,9 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
 
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
+
+    if hanning_filtering:
+        w_hanning = np.hanning(waveform_extractor.nbefore + waveform_extractor.nafter)[:, np.newaxis]
 
     channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius', 
                                                      radius_um=radius_um, outputs='index')
@@ -128,6 +133,10 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
 
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :]
+
+        if hanning_filtering:
+            wf *= w_hanning
+
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
