@@ -183,7 +183,7 @@ def test_collect_sorting_outputs():
 if __name__ == '__main__':
     # test_run_sorters_with_list()
 
-    test_run_sorter_by_property()
+    # test_run_sorter_by_property()
 
     # test_run_sorters_with_dict()
 

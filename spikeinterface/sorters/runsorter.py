@@ -175,8 +175,16 @@ class ContainerClient:
             if not Path(self.singularity_image).exists():
                 raise FileNotFoundError(f'Unable to locate container image {container_image}')
             
+            # bin options
             singularity_bind = ','.join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
-            self.client_instance = Client.instance(self.singularity_image, start=False, options=['--bind', singularity_bind])
+            options=['--bind', singularity_bind]
+
+            # gpu options
+            if extra_kwargs.get('requires_gpu', False):
+                # only nvidia at the moment
+                options += ['--nv']
+
+            self.client_instance = Client.instance(self.singularity_image, start=False, options=options)
     
     def start(self):
         if self.mode =='docker':
