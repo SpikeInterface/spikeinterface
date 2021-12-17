@@ -181,6 +181,7 @@ def test_collect_sorting_outputs():
 
 
 if __name__ == '__main__':
+    pass
     # test_run_sorters_with_list()
 
     # test_run_sorter_by_property()
