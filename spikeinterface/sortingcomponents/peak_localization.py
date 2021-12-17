@@ -20,7 +20,7 @@ def init_kwargs_dict(method, method_kwargs):
     if method == 'center_of_mass':
         method_kwargs_ = dict(local_radius_um=150, hanning_filtering=False)
     elif method == 'monopolar_triangulation':
-        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000)
+        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000, hanning_filtering=False)
 
     method_kwargs_.update(method_kwargs)
 
@@ -126,6 +126,7 @@ def _init_worker_localize_peaks(recording, peaks, method, method_kwargs,
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance < method_kwargs['local_radius_um']
         worker_ctx['neighbours_mask'] = neighbours_mask
+        worker_ctx['hanning_filtering'] = method_kwargs['hanning_filtering']
 
     if method in 'center_of_mass':
         worker_ctx['hanning_filtering'] = method_kwargs['hanning_filtering']
@@ -172,7 +173,7 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     elif method == 'monopolar_triangulation':
         max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
         peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations,
-                                                                neighbours_mask, nbefore, nafter, max_distance_um)
+                                                                neighbours_mask, nbefore, nafter, max_distance_um, hanning_filtering)
 
     return peak_locations
 
@@ -205,7 +206,7 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
 
 
 def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations, neighbours_mask,
-                                           nbefore, nafter, max_distance_um):
+                                           nbefore, nafter, max_distance_um, hanning_filtering=False):
     """Localize peaks using the monopolar triangulation method.
 
     Notes
@@ -215,6 +216,9 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
 
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['monopolar_triangulation'])
 
+    if hanning_filtering is True:
+        w_hanning = np.hanning(nbefore + nafter)[:, np.newaxis]
+
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
         chan_inds, = np.nonzero(chan_mask)
@@ -223,6 +227,8 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
 
         # wf is (nsample, nchan) - chan is only neighbor
         wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
+        if hanning_filtering is True:
+            wf *= w_hanning
         wf_ptp = wf.ptp(axis=0)
 
         x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
