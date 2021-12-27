@@ -131,7 +131,7 @@ class OldToNewSortingSegment(BaseSortingSegment):
     """
     def __init__(self, oldapi_sorting_extractor):
         BaseSortingSegment.__init__(self)
-        self._old_api_sorting_extractor = oldapi_sorting_extractor
+        self._oldapi_sorting_extractor = oldapi_sorting_extractor
         
     def get_unit_spike_train(self,
                              unit_id,
