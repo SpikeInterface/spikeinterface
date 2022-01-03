@@ -567,7 +567,7 @@ class BaseRecordingSegment(BaseSegment):
             if isinstance(self.time_vector, np.ndarray):
                 return self.time_vector
             else:
-                return self.time_vector.asarray()
+                return np.array(self.time_vector)
         else:
             time_vector = np.arange(self.get_num_samples(), dtype='float64')
             time_vector /= self.sampling_frequency
