@@ -60,6 +60,8 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center
                     For channel sparsity.
                 * max_distance_um: float, default: 1000
                     Boundary for distance estimation.
+                * hanning_filtering: bool
+                    To reduce the influence of the borders
     {}
 
     Returns
@@ -128,9 +130,6 @@ def _init_worker_localize_peaks(recording, peaks, method, method_kwargs,
         worker_ctx['neighbours_mask'] = neighbours_mask
         worker_ctx['hanning_filtering'] = method_kwargs['hanning_filtering']
 
-    if method in 'center_of_mass':
-        worker_ctx['hanning_filtering'] = method_kwargs['hanning_filtering']
-
     return worker_ctx
 
 
@@ -185,7 +184,8 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
 
     if hanning_filtering is True:
-        w_hanning = np.hanning(nbefore + nafter)[:, np.newaxis]
+        w_hanning = np.concatenate((np.hanning(2*nbefore)[:nbefore], np.hanning(2*nafter)[nafter:]))
+        w_hanning = w_hanning[:, np.newaxis]
 
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
@@ -217,7 +217,8 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['monopolar_triangulation'])
 
     if hanning_filtering is True:
-        w_hanning = np.hanning(nbefore + nafter)[:, np.newaxis]
+        w_hanning = np.concatenate((np.hanning(2*nbefore)[:nbefore], np.hanning(2*nafter)[nafter:]))
+        w_hanning = w_hanning[:, np.newaxis]
 
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
