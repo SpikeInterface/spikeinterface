@@ -63,14 +63,16 @@ class OldToNewRecording(BaseRecording):
                                oldapi_recording_extractor.get_channel_ids(),
                                oldapi_recording_extractor.get_dtype())
         
-        # get properties from old recording
-        self.is_dumpable = oldapi_recording_extractor.is_dumpable
+        # set is_dumpable to False to use dumping mechanism of old extractor
+        self.is_dumpable = False
         self.annotate(is_filtered=oldapi_recording_extractor.is_filtered)
         
         # add old recording as a recording segment
         recording_segment = OldToNewRecordingSegment(oldapi_recording_extractor)
         self.add_recording_segment(recording_segment)
         self.set_channel_locations(oldapi_recording_extractor.get_channel_locations())
+        
+        self._kwargs = {'oldapi_recording_extractor': oldapi_recording_extractor}
 
 class OldToNewRecordingSegment(BaseRecordingSegment):
     """Wrapper class to convert old RecordingExtractor to a
@@ -86,6 +88,8 @@ class OldToNewRecordingSegment(BaseRecordingSegment):
                                       t_start=None, time_vector=None)
         self._oldapi_recording_extractor = oldapi_recording_extractor
         self._channel_ids = np.array(oldapi_recording_extractor.get_channel_ids())
+        
+        self._kwargs = {'oldapi_recording_extractor': oldapi_recording_extractor}
 
     def get_num_samples(self):
         return self._oldapi_recording_extractor.get_num_frames()
@@ -120,6 +124,9 @@ class OldToNewSorting(BaseSorting):
         sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)
         self.add_sorting_segment(sorting_segment)
         
+        self.is_dumpable = False
+        self._kwargs = {'oldapi_sorting_extractor': oldapi_sorting_extractor}
+        
 class OldToNewSortingSegment(BaseSortingSegment):
     """Wrapper class to convert old SortingExtractor to a
     SortingSegment in spikeinterface > v0.90
@@ -132,6 +139,8 @@ class OldToNewSortingSegment(BaseSortingSegment):
     def __init__(self, oldapi_sorting_extractor):
         BaseSortingSegment.__init__(self)
         self._oldapi_sorting_extractor = oldapi_sorting_extractor
+        
+        self._kwargs = {'oldapi_sorting_extractor': oldapi_sorting_extractor}
         
     def get_unit_spike_train(self,
                              unit_id,
