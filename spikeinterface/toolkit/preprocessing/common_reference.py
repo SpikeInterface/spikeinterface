@@ -85,10 +85,12 @@ class CommonReferenceRecording(BasePreprocessor):
         # tranforms groups (ids) to groups (indices)
         if groups is not None:
             groups = [self.ids_to_indices(g) for g in groups]
+        if ref_channels is not None:
+            ref_channels_inds = self.ids_to_indices(ref_channels)
 
         for parent_segment in recording._recording_segments:
             rec_segment = CommonReferenceRecordingSegment(parent_segment,
-                                                          reference, operator, groups, ref_channels, local_radius,
+                                                          reference, operator, groups, ref_channels_inds, local_radius,
                                                           neighbors)
             self.add_recording_segment(rec_segment)
 
@@ -97,13 +99,13 @@ class CommonReferenceRecording(BasePreprocessor):
 
 
 class CommonReferenceRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, reference, operator, groups, ref_channels, local_radius, neighbors):
+    def __init__(self, parent_recording_segment, reference, operator, groups, ref_channels_inds, local_radius, neighbors):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.reference = reference
         self.operator = operator
         self.groups = groups
-        self.ref_channels = ref_channels
+        self.ref_channels_inds = ref_channels_inds
         self.local_radius = local_radius
         self.neighbors = neighbors
 
@@ -116,7 +118,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         # need input trace
         all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         _channel_indices = np.arange(all_traces.shape[1])[channel_indices]
-
         if self.reference == 'global':
             out_traces = np.hstack([
                 all_traces[:, chan_inds] - self.operator_func(all_traces[:, chan_group_inds])
@@ -124,7 +125,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             ])
         elif self.reference == 'single':
             out_traces = np.hstack([
-                all_traces[:, chan_inds] - all_traces[:, [self.ref_channels[i]]]
+                all_traces[:, chan_inds] - all_traces[:, [self.ref_channels_inds[i]]]
                 for i, (chan_inds, _) in enumerate(self._groups(_channel_indices))
             ])
         elif self.reference == 'local':
