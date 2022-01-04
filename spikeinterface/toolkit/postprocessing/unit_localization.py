@@ -117,7 +117,10 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
     contact_locations = recording.get_channel_locations()
 
     if hanning_filtering:
-        w_hanning = np.hanning(waveform_extractor.nbefore + waveform_extractor.nafter)[:, np.newaxis]
+        nbefore = waveform_extractor.nbefore
+        nafter = waveform_extractor.nafter
+        w_hanning = np.concatenate((np.hanning(2*nbefore)[:nbefore], np.hanning(2*nafter)[nafter:]))
+        w_hanning = w_hanning[:, np.newaxis]
 
     channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius', 
                                                      radius_um=radius_um, outputs='index')
@@ -178,7 +181,11 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10,
     contact_locations = recording.get_channel_locations()
 
     if hanning_filtering:
-        w_hanning = np.hanning(waveform_extractor.nbefore + waveform_extractor.nafter)[:, np.newaxis]
+        nbefore = waveform_extractor.nbefore
+        nafter = waveform_extractor.nafter
+        w_hanning = np.concatenate((np.hanning(2*nbefore)[:nbefore], np.hanning(2*nafter)[nafter:]))
+        w_hanning = w_hanning[:, np.newaxis]
+
 
     channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='best_channels',
                                                      num_channels=num_channels, outputs='index')
