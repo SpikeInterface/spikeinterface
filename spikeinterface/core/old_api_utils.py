@@ -99,7 +99,6 @@ class OldToNewRecording(BaseRecording):
 
                 if skip_if_value is not None:
                     if prop_value == skip_if_value:
-                        print("deleting", prop_name)
                         del properties[prop_name]
                         break
                 properties[prop_name]["ids"].append(ch)
