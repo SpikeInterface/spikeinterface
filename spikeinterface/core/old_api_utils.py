@@ -204,11 +204,10 @@ def copy_properties(oldapi_extractor, new_extractor, old_to_new_property_map={})
                 properties[prop_name] = dict()
                 properties[prop_name]["ids"] = []
                 properties[prop_name]["values"] = []
-
             if skip_if_value is not None:
                 if prop_value == skip_if_value:
                     del properties[prop_name]
-                    break
+                    continue
             properties[prop_name]["ids"].append(id)
             properties[prop_name]["values"].append(prop_value)
 
