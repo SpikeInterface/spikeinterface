@@ -70,7 +70,7 @@ class CommonReferenceRecording(BasePreprocessor):
                     assert len(ref_channel_ids) == 1, \
                         "'ref_channel_ids' with no 'groups' must be int or a list of one element"
                 ref_channel_ids = np.asarray(ref_channel_ids)
-                assert np.all([ch in self.get_channel_ids() for ch in ref_channel_ids]), "Some wrong 'ref_channel_ids'!"
+                assert np.all([ch in recording.get_channel_ids() for ch in ref_channel_ids]), "Some wrong 'ref_channel_ids'!"
         elif reference == 'local':
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)
@@ -87,6 +87,8 @@ class CommonReferenceRecording(BasePreprocessor):
             groups = [self.ids_to_indices(g) for g in groups]
         if ref_channel_ids is not None:
             ref_channel_inds = self.ids_to_indices(ref_channel_ids)
+        else:
+            ref_channel_inds = None
 
         for parent_segment in recording._recording_segments:
             rec_segment = CommonReferenceRecordingSegment(parent_segment,
