@@ -162,8 +162,8 @@ class BaseRecording(BaseExtractor):
 
         if with_warning:
             warnings.warn('Setting times with Recording.set_times() is not recommended because '
-                'times are not always propagated to across preprocessing'
-                'Use use this carefully!')
+                          'times are not always propagated to across preprocessing'
+                          'Use use this carefully!')
 
     _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
 
