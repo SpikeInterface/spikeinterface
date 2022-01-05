@@ -26,8 +26,8 @@ class CommonReferenceRecording(BasePreprocessor):
         List of lists containing the channel ids for splitting the reference. The CMR, CAR, or referencing with respect to
         single channels are applied group-wise. However, this is not applied for the local CAR.
         It is useful when dealing with different channel groups, e.g. multiple tetrodes.
-    ref_channels: list or int
-        If no 'groups' are specified, all channels are referenced to 'ref_channels'. If 'groups' is provided, then a
+    ref_channels_id: list or int
+        If no 'groups' are specified, all channels are referenced to 'ref_channels_id'. If 'groups' is provided, then a
         list of channels to be applied to each group is expected. If 'single' reference, a list of one channel  or an
         int is expected.
     local_radius: tuple(int, int)
@@ -45,7 +45,7 @@ class CommonReferenceRecording(BasePreprocessor):
 
     name = 'common_reference'
 
-    def __init__(self, recording, reference='global', operator='median', groups=None, ref_channels=None,
+    def __init__(self, recording, reference='global', operator='median', groups=None, ref_channels_id=None,
                  local_radius=(30, 55), verbose=False):
 
         num_chans = recording.get_num_channels()
@@ -59,18 +59,18 @@ class CommonReferenceRecording(BasePreprocessor):
         if reference == 'global':
             pass
         elif reference == 'single':
-            assert ref_channels is not None, "With 'single' reference, provide 'ref_channels'"
+            assert ref_channels_id is not None, "With 'single' reference, provide 'ref_channels_id'"
             if groups is not None:
-                assert len(ref_channels) == len(groups), \
-                    "'ref_channel' and 'groups' must have the same length"
+                assert len(ref_channels_id) == len(groups), \
+                    "'ref_channels_id' and 'groups' must have the same length"
             else:
-                if np.isscalar(ref_channels):
-                    ref_channels = [ref_channels]
+                if np.isscalar(ref_channels_id):
+                    ref_channels_id = [ref_channels_id]
                 else:
-                    assert len(ref_channels) == 1, \
-                        "'ref_channel' with no 'groups' can be int or a list of one element"
-                ref_channels = np.asarray(ref_channels)
-                assert ref_channels.dtype.kind == 'i', "'ref_channels' must be int"
+                    assert len(ref_channels_id) == 1, \
+                        "'ref_channels_id' with no 'groups' must be int or a list of one element"
+                ref_channels_id = np.asarray(ref_channels_id)
+                assert np.all([ch in self.get_channel_ids() for ch in ref_channels_id]), "Some wrong 'ref_channels_id'!"
         elif reference == 'local':
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)
@@ -85,27 +85,27 @@ class CommonReferenceRecording(BasePreprocessor):
         # tranforms groups (ids) to groups (indices)
         if groups is not None:
             groups = [self.ids_to_indices(g) for g in groups]
-        if ref_channels is not None:
-            ref_channels_inds = self.ids_to_indices(ref_channels)
+        if ref_channels_id is not None:
+            ref_channels_ind = self.ids_to_indices(ref_channels_id)
 
         for parent_segment in recording._recording_segments:
             rec_segment = CommonReferenceRecordingSegment(parent_segment,
-                                                          reference, operator, groups, ref_channels_inds, local_radius,
+                                                          reference, operator, groups, ref_channels_ind, local_radius,
                                                           neighbors)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups,
-                            ref_channels=ref_channels, local_radius=local_radius)
+                            ref_channels_id=ref_channels_id, local_radius=local_radius)
 
 
 class CommonReferenceRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, reference, operator, groups, ref_channels_inds, local_radius, neighbors):
+    def __init__(self, parent_recording_segment, reference, operator, groups, ref_channels_ind, local_radius, neighbors):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.reference = reference
         self.operator = operator
         self.groups = groups
-        self.ref_channels_inds = ref_channels_inds
+        self.ref_channels_ind = ref_channels_ind
         self.local_radius = local_radius
         self.neighbors = neighbors
 
@@ -125,7 +125,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             ])
         elif self.reference == 'single':
             out_traces = np.hstack([
-                all_traces[:, chan_inds] - all_traces[:, [self.ref_channels_inds[i]]]
+                all_traces[:, chan_inds] - all_traces[:, [self.ref_channels_ind[i]]]
                 for i, (chan_inds, _) in enumerate(self._groups(_channel_indices))
             ])
         elif self.reference == 'local':
