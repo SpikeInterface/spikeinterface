@@ -80,34 +80,8 @@ class OldToNewRecording(BaseRecording):
         self.set_channel_locations(oldapi_recording_extractor.get_channel_locations())
 
         # add old properties
-        properties = dict()
-        for ch in oldapi_recording_extractor.get_channel_ids():
-            properties_for_channel = oldapi_recording_extractor.get_channel_property_names(ch)
-            for prop in properties_for_channel:
-                prop_value = oldapi_recording_extractor.get_channel_property(ch, prop)
-                skip_if_value = None
-                if prop in _old_to_new_property_map:
-                    prop_name = _old_to_new_property_map[prop]["name"]
-                    skip_if_value = _old_to_new_property_map[prop]["skip_if_value"]
-                else:
-                    prop_name = prop
-
-                if prop_name not in properties:
-                    properties[prop_name] = dict()
-                    properties[prop_name]["ids"] = []
-                    properties[prop_name]["values"] = []
-
-                if skip_if_value is not None:
-                    if prop_value == skip_if_value:
-                        del properties[prop_name]
-                        break
-                properties[prop_name]["ids"].append(ch)
-                properties[prop_name]["values"].append(prop_value)
-
-        for property_name, prop_dict in properties.items():
-            property_ids = prop_dict["ids"]
-            property_values = prop_dict["values"]
-            self.set_property(key=property_name, values=property_values, ids=property_ids)
+        copy_properties(oldapi_extractor=oldapi_recording_extractor, new_extractor=self,
+                        old_to_new_property_map=_old_to_new_property_map)
 
         self._kwargs = {'oldapi_recording_extractor': oldapi_recording_extractor}
 
@@ -167,21 +141,7 @@ class OldToNewSorting(BaseSorting):
         self.is_dumpable = False
 
         # add old properties
-        properties = dict()
-        for unit in oldapi_sorting_extractor.get_unit_ids():
-            properties_for_unit = oldapi_sorting_extractor.get_unit_property_names(unit)
-            for prop in properties_for_unit:
-                if prop not in properties:
-                    properties[prop] = dict()
-                    properties[prop]["ids"] = []
-                    properties[prop]["values"] = []
-                properties[prop]["ids"].append(unit)
-                properties[prop]["values"].append(oldapi_sorting_extractor.get_unit_property(unit, prop))
-
-        for property_name, prop_dict in properties.items():
-            property_ids = prop_dict["ids"]
-            property_values = prop_dict["values"]
-            self.set_property(key=property_name, values=property_values, ids=property_ids)
+        copy_properties(oldapi_extractor=oldapi_sorting_extractor, new_extractor=self)
 
         self._kwargs = {'oldapi_sorting_extractor': oldapi_sorting_extractor}
 
@@ -215,3 +175,45 @@ class OldToNewSortingSegment(BaseSortingSegment):
 def create_sorting_from_old_extractor(oldapi_sorting_extractor) -> OldToNewSorting:
     new_sorting = OldToNewSorting(oldapi_sorting_extractor)
     return new_sorting
+
+
+def copy_properties(oldapi_extractor, new_extractor, old_to_new_property_map={}):
+    # add old properties
+    properties = dict()
+    if hasattr(oldapi_extractor, "get_channel_ids"):
+        get_ids = oldapi_extractor.get_channel_ids
+        get_property = oldapi_extractor.get_channel_property
+        get_property_names = oldapi_extractor.get_channel_property_names
+    else:
+        get_ids = oldapi_extractor.get_unit_ids
+        get_property = oldapi_extractor.get_unit_property
+        get_property_names = oldapi_extractor.get_unit_property_names
+
+    for id in get_ids():
+        properties_for_channel = get_property_names(id)
+        for prop in properties_for_channel:
+            prop_value = get_property(id, prop)
+            skip_if_value = None
+            if prop in old_to_new_property_map:
+                prop_name = old_to_new_property_map[prop]["name"]
+                skip_if_value = old_to_new_property_map[prop]["skip_if_value"]
+            else:
+                prop_name = prop
+
+            if prop_name not in properties:
+                properties[prop_name] = dict()
+                properties[prop_name]["ids"] = []
+                properties[prop_name]["values"] = []
+
+            if skip_if_value is not None:
+                if prop_value == skip_if_value:
+                    del properties[prop_name]
+                    break
+            properties[prop_name]["ids"].append(id)
+            properties[prop_name]["values"].append(prop_value)
+
+    for property_name, prop_dict in properties.items():
+        property_ids = prop_dict["ids"]
+        property_values = prop_dict["values"]
+        new_extractor.set_property(key=property_name,
+                                   values=property_values, ids=property_ids)
