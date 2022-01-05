@@ -10,14 +10,15 @@ import numpy as np
 
 def test_common_reference():
     rec = generate_recording(durations=[5.], num_channels=4)
+    rec._main_ids = np.array(['a', 'b', 'c', 'd'])
     rec = rec.save()
 
     # no groups
     rec_cmr = common_reference(rec, reference='global', operator='median')
     rec_car = common_reference(rec, reference='global', operator='average')
-    rec_sin = common_reference(rec, reference='single', ref_channels=0)
+    rec_sin = common_reference(rec, reference='single', ref_channel_ids=['a'])
     rec_local_car = common_reference(rec, reference='local', local_radius=(20, 65), operator='median')
-
+   
     rec_cmr.save(verbose=False)
     rec_car.save(verbose=False)
     rec_sin.save(verbose=False)
