@@ -153,7 +153,7 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     i1 = np.searchsorted(peaks['segment_ind'], segment_index + 1)
     peak_in_segment = peaks[i0:i1]
     i0 = np.searchsorted(peak_in_segment['sample_ind'], start_frame)
-    i1 = np.searchsorted(peak_in_segment['sample_ind'], end_frame)w<z
+    i1 = np.searchsorted(peak_in_segment['sample_ind'], end_frame)
     local_peaks = peak_in_segment[i0:i1]
 
     # make sample index local to traces
