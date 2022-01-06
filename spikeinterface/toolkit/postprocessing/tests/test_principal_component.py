@@ -72,6 +72,7 @@ def test_WaveformPrincipalComponent():
     assert we.is_extension('principal_component')
     pc = we.load_extension('principal_component')
     assert isinstance(pc, WaveformPrincipalComponent)
+    pc = WaveformPrincipalComponent.load_from_folder('toy_waveforms_2seg')
 
     # import matplotlib.pyplot as plt
     # cmap = plt.get_cmap('jet', len(unit_ids))

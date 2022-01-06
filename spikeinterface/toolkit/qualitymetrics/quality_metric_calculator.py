@@ -1,35 +1,71 @@
 from copy import deepcopy
 import pandas as pd
 
+from spikeinterface.core.waveform_extractor import WaveformExtractor, WaveformExtractorExtensionBase
+
 from .quality_metric_list import (_metric_name_to_func,
                                   calculate_pc_metrics, _possible_pc_metric_names)
 
 
-class QualityMetricCalculator:
+class QualityMetricCalculator(WaveformExtractorExtensionBase):
     """
     Class to compute quality metrics of spike sorting output.
-
+    
+    principal_component is loaded automatically if already computed.
+    
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor object
-    waveform_principal_component: WaveformPrincipalComponent
-        The principal component object (optional - only required if PC-based metrics need to be computed)
 
     Returns
     -------
     qmc: QualityMetricCalculator
 
     """
-
-    def __init__(self, waveform_extractor, waveform_principal_component=None):
-        self.waveform_extractor = waveform_extractor
-        self.waveform_principal_component = waveform_principal_component
+    
+    extension_name = 'quality_metrics'
+    
+    def __init__(self, waveform_extractor):
+        WaveformExtractorExtensionBase.__init__(self, waveform_extractor)
+        
+        if waveform_extractor.is_extension('principal_component'):
+            self.principal_component = waveform_extractor.load_extension('principal_component')
+        else:
+            self.principal_component = None
 
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting
+        
+        self._metrics = None
 
-    def compute_metrics(self, metric_names=None, **kwargs):
+    def _set_params(self, metric_names=None, peak_sign='neg',
+                max_spikes_for_nn = 2000, n_neighbors = 6, seed=None):
+
+        if metric_names is None:
+            # This is too slow
+            # metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
+            
+            # So by default we take all metrics and 3 metrics PCA based only
+            # 'nearest_neighbor' is really slow and not taken by default
+            metric_names = list(_metric_name_to_func.keys()) +  ['isolation_distance', 'l_ratio', 'd_prime']
+        
+        params = dict(
+            metric_names=[str(name) for name in metric_names],
+            peak_sign=peak_sign,
+            max_spikes_for_nn=int(max_spikes_for_nn),
+            n_neighbors=int(n_neighbors),
+            seed=int(seed) if seed is not None else None)
+        
+        return params
+
+    def _specific_load_from_folder(self):
+        self._metrics = pd.read_excel(self.extension_folder / 'metrics.xlsx')
+
+    def _reset(self):
+        self._metrics = None
+
+    def compute_metrics(self):
         """
         Computes quality metrics
 
@@ -50,25 +86,8 @@ class QualityMetricCalculator:
         metrics: pd.DataFrame
 
         """
-        if 'max_spikes_for_nn' in kwargs:
-            max_spikes_for_nn = kwargs['max_spikes_for_nn']
-        else:
-            max_spikes_for_nn = 2000
-        if 'n_neighbors' in kwargs:
-            n_neighbors = kwargs['n_neighbors']
-        else:
-            n_neighbors = 6
-        if 'seed' in kwargs:
-            seed = kwargs['seed']
-        else:
-            seed = None
-
-        if metric_names is None:
-            # metric_names = list(_metric_name_to_func.keys()) + _possible_pc_metric_names
-            
-            # By default we take all metrics and 3 metrics PCA based only
-            # 'nearest_neighbor' is really slow and not taken by default
-            metric_names = list(_metric_name_to_func.keys()) +  ['isolation_distance', 'l_ratio', 'd_prime']
+        
+        metric_names = self._params['metric_names']
 
         unit_ids = self.sorting.unit_ids
         metrics = pd.DataFrame(index=unit_ids)
@@ -78,6 +97,10 @@ class QualityMetricCalculator:
             if name in _possible_pc_metric_names:
                 continue
             func = _metric_name_to_func[name]
+            
+            # TODO add for params from differents functions
+            kwargs = {k: self._params[k] for k in ('peak_sign',)}
+            
             res = func(self.waveform_extractor, **kwargs)
             if isinstance(res, dict):
                 # res is a dict convert to series
@@ -91,34 +114,49 @@ class QualityMetricCalculator:
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names):
-            if self.waveform_principal_component is None:
+            if self.principal_component is None:
                 raise ValueError('waveform_principal_component must be provied')
-            pc_metrics = calculate_pc_metrics(self.waveform_principal_component, metric_names=pc_metric_names, 
-                                              max_spikes_for_nn=max_spikes_for_nn, n_neighbors=n_neighbors, seed=seed)
+            kwargs = {k: self._params[k] for k in ('max_spikes_for_nn', 'n_neighbors', 'seed')}
+            pc_metrics = calculate_pc_metrics(self.principal_component, metric_names=pc_metric_names, **kwargs)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
+        
+        self._metrics = metrics
+        
+        # save to folder
+        metrics.to_excel(self.extension_folder / 'metrics.xlsx')
 
-        return metrics
+
+WaveformExtractor.register_extension(QualityMetricCalculator)
 
 
-def compute_quality_metrics(waveform_extractor, metric_names=None, waveform_principal_component=None,
-                            **kwargs):
+def compute_quality_metrics(waveform_extractor, load_if_exists=False, 
+            metric_names=None, **params):
     """
 
     Parameters
     ----------
     waveform_extractor
     metric_names
-    waveform_principal_component
-    kwargs
+    params
 
     Returns
     -------
 
     """
-    qmc = QualityMetricCalculator(waveform_extractor, waveform_principal_component)
-    df = qmc.compute_metrics(metric_names, **kwargs)
-    return df
+    
+    folder = waveform_extractor.folder
+    ext_folder = folder / QualityMetricCalculator.extension_name
+    if load_if_exists and ext_folder.is_dir():
+        qmc = QualityMetricCalculator.load_from_folder(folder)
+    else:
+        qmc = QualityMetricCalculator(waveform_extractor)
+        qmc.set_params(metric_names=metric_names, **params)
+        qmc.compute_metrics()
+    
+    metrics = qmc._metrics
+    
+    return metrics
 
 
 def get_quality_metric_list():

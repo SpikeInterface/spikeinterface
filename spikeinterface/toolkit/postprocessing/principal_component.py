@@ -29,12 +29,8 @@ class WaveformPrincipalComponent(WaveformExtractorExtensionBase):
         WaveformExtractorExtensionBase.__init__(self, waveform_extractor)
 
         self._pca_model = None
-        self._params = {}
-        if (self.folder / 'params_pca.json').is_file():
-            with open(str(self.folder / 'params_pca.json'), 'r') as f:
-                self._params = json.load(f)
 
-    def _after_load_from_folder(self):
+    def _specific_load_from_folder(self):
         self.get_pca_model()
 
     @classmethod
@@ -594,7 +590,7 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
 
     folder = waveform_extractor.folder
     ext_folder = folder / WaveformPrincipalComponent.extension_name
-    if load_if_exists and folder.is_dir() and ext_folder.is_dir():
+    if load_if_exists and ext_folder.is_dir():
         pc = WaveformPrincipalComponent.load_from_folder(folder)
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)
