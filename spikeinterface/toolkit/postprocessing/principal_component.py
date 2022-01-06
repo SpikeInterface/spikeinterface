@@ -58,7 +58,6 @@ class WaveformPrincipalComponent(WaveformExtractorExtensionBase):
 
         assert mode in _possible_modes, "Invalid mode!"
         
-        print('n_components', n_components)
         params = dict(
             n_components=int(n_components),
             mode=str(mode),

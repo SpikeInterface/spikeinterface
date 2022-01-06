@@ -60,7 +60,7 @@ class QualityMetricCalculator(WaveformExtractorExtensionBase):
         return params
 
     def _specific_load_from_folder(self):
-        self._metrics = pd.read_excel(self.extension_folder / 'metrics.xlsx')
+        self._metrics = pd.read_excel(self.extension_folder / 'metrics.xlsx', index_col=0)
 
     def _reset(self):
         self._metrics = None
