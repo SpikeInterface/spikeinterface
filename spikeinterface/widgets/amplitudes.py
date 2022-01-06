@@ -8,19 +8,19 @@ from .utils import get_unit_colors
 
 
 class AmplitudeBaseWidget(BaseWidget):
-    def __init__(self, waveform_extractor, unit_ids=None, amplitudes=None, peak_sign='neg',
-                 unit_colors=None, figure=None, ax=None, **job_kwargs):
+    def __init__(self, waveform_extractor, unit_ids=None, 
+        compute_kwargs={},
+        unit_colors=None, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
         self.we = waveform_extractor
-        if amplitudes is not None:
-            # amplitudes must be a list of dict
-            assert isinstance(amplitudes, list)
-            assert all(isinstance(e, dict) for e in amplitudes)
-            self.amplitudes = amplitudes
+        
+        if self.we.is_extension('spike_amplitudes'):
+            sac = self.we.load_extension('spike_amplitudes')
+            self.amplitudes = sac.get_amplitude(outputs='by_unit')
         else:
-            self.amplitudes = compute_spike_amplitudes(self.we, peak_sign='neg', outputs='by_unit', **job_kwargs)
-
+            self.amplitudes = compute_spike_amplitudes(self.we, outputs='by_unit', **compute_kwargs)
+        
         if unit_ids is None:
             unit_ids = waveform_extractor.sorting.unit_ids
         self.unit_ids = unit_ids
@@ -72,7 +72,7 @@ class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
                 if i == len(self.unit_ids) - 1:
                     ax.set_xlabel('Times [s]')
                 if segment_index == 0:
-                    ax.set_ylabel(f'{unit_id}')
+                    ax.set_ylabel(f'Amplitude')
 
         ylims = ax.get_ylim()
         if np.max(ylims) < 0:
