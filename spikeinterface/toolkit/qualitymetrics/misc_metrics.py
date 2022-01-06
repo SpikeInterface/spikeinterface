@@ -122,7 +122,7 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
     return snrs
 
 
-def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0):
+def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0, **kwargs):
     """
     Calculate Inter-Spike Interval (ISI) violations for a spike train.
 

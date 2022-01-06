@@ -799,11 +799,11 @@ class WaveformExtractorExtensionBase:
         # make instance with params
         ext = cls(waveform_extractor)
         ext._params = params
-        ext._after_load_from_folder()
+        ext._specific_load_from_folder()
 
         return ext
 
-    def _after_load_from_folder(self):
+    def _specific_load_from_folder(self):
         # must be inherited in subclass
         raise NotImplementedError
     
