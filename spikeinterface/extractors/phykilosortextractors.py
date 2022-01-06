@@ -87,7 +87,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                         cluster_info = cluster_info.query(f"group != '{exclude_group}'")
 
         if keep_good_only and "KSLabel" in cluster_info.columns:
-            cluster_info = cluster_info.query("KSLabel != 'good'")
+            cluster_info = cluster_info.query("KSLabel == 'good'")
 
         if "cluster_id" not in cluster_info.columns:
             assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
