@@ -189,7 +189,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
-    This function is internally used by `get_spike_amplitudes()` to accurately retrieve the spike amplitudes.
+    This function is internally used by `compute_spike_amplitudes()` to accurately retrieve the spike amplitudes.
 
     Parameters
     ----------

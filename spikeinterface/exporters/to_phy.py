@@ -8,7 +8,7 @@ import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.toolkit import (get_template_channel_sparsity,
-                                    get_spike_amplitudes, compute_template_similarity,
+                                    compute_spike_amplitudes, compute_template_similarity,
                                     WaveformPrincipalComponent)
 
 
@@ -46,7 +46,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     remove_if_exists: bool
         If True and 'output_folder' exists, it is removed and overwritten
     peak_sign: 'neg', 'pos', 'both'
-        Used by get_spike_amplitudes
+        Used by compute_spike_amplitudes
     template_mode: str
         Parameter 'mode' to be given to WaveformExtractor.get_template()
     dtype: dtype or None
@@ -175,7 +175,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     np.save(str(output_folder / 'channel_groups.npy'), channel_groups)
 
     if compute_amplitudes:
-        amplitudes = get_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
+        amplitudes = compute_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
         # one segment only
         amplitudes = amplitudes[0][:, np.newaxis]
         np.save(str(output_folder / 'amplitudes.npy'), amplitudes)

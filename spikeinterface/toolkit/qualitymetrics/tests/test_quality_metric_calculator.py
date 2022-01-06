@@ -43,16 +43,16 @@ def test_compute_quality_metrics():
     assert 'isolation_distance' in metrics.columns
     print(metrics)
 
-    # relaod as an extension from we
+    # reload as an extension from we
     assert QualityMetricCalculator in we.get_extensions_class()
     assert we.is_extension('quality_metrics')
     qmc = we.load_extension('quality_metrics')
     assert isinstance(qmc, QualityMetricCalculator)
     assert qmc._metrics is not None
-    print(qmc._metrics)
+    # print(qmc._metrics)
     qmc = QualityMetricCalculator.load_from_folder('toy_waveforms')
     assert qmc._metrics is not None
-    print(qmc._metrics)
+    # print(qmc._metrics)
 
 
 

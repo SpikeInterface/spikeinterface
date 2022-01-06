@@ -22,7 +22,7 @@ class UnitSummaryWidget(BaseWidget):
     unit_id: into or str
         The unit id to plot the summary of
     amplitudes: dict or None
-        Amplitudes 'by_unit' as returned by the st.postprocessing.get_spike_amplitudes(..., output="by_unit") function
+        Amplitudes 'by_unit' as returned by the st.postprocessing.compute_spike_amplitudes(..., output="by_unit") function
     unit_colors: list or None
         Optional matplotlib color for the unit
     figure: matplotlib figure

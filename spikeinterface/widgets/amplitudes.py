@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
-from ..toolkit import get_spike_amplitudes
+from ..toolkit import compute_spike_amplitudes
 from .utils import get_unit_colors
 
 
@@ -19,7 +19,7 @@ class AmplitudeBaseWidget(BaseWidget):
             assert all(isinstance(e, dict) for e in amplitudes)
             self.amplitudes = amplitudes
         else:
-            self.amplitudes = get_spike_amplitudes(self.we, peak_sign='neg', outputs='by_unit', **job_kwargs)
+            self.amplitudes = compute_spike_amplitudes(self.we, peak_sign='neg', outputs='by_unit', **job_kwargs)
 
         if unit_ids is None:
             unit_ids = waveform_extractor.sorting.unit_ids

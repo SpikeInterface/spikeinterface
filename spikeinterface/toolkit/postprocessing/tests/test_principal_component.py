@@ -69,8 +69,8 @@ def test_WaveformPrincipalComponent():
     
     # relod as an extension from we
     assert WaveformPrincipalComponent in we.get_extensions_class()
-    assert we.is_extension('principal_component')
-    pc = we.load_extension('principal_component')
+    assert we.is_extension('principal_components')
+    pc = we.load_extension('principal_components')
     assert isinstance(pc, WaveformPrincipalComponent)
     pc = WaveformPrincipalComponent.load_from_folder('toy_waveforms_2seg')
 

@@ -29,7 +29,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     metrics: pandas.DataFrame or None
         Quality metrics to export to csv. If None, quality metrics are computed.
     amplitudes: dict or None
-        Amplitudes 'by_unit' as returned by the st.postprocessing.get_spike_amplitudes(..., output="by_unit") function.
+        Amplitudes 'by_unit' as returned by the st.postprocessing.compute_spike_amplitudes(..., output="by_unit") function.
         If None, amplitudes are computed.
     show_figures: bool
         If True, figures are shown. If False (default), figures are closed after saving.
@@ -44,7 +44,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
 
     if amplitudes is None:
         # compute amplituds if not provided
-        amplitudes = st.get_spike_amplitudes(we, peak_sign='neg', outputs='by_unit', **job_wargs)
+        amplitudes = st.compute_spike_amplitudes(we, peak_sign='neg', outputs='by_unit', **job_wargs)
 
     output_folder = Path(output_folder).absolute()
     if output_folder.is_dir():
