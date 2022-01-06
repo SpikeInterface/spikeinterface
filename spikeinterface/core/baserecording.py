@@ -162,8 +162,8 @@ class BaseRecording(BaseExtractor):
 
         if with_warning:
             warnings.warn('Setting times with Recording.set_times() is not recommended because '
-                'times are not always propagated to across preprocessing'
-                'Use use this carefully!')
+                          'times are not always propagated to across preprocessing'
+                          'Use use this carefully!')
 
     _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
 
@@ -567,7 +567,7 @@ class BaseRecordingSegment(BaseSegment):
             if isinstance(self.time_vector, np.ndarray):
                 return self.time_vector
             else:
-                return self.time_vector.asarray()
+                return np.array(self.time_vector)
         else:
             time_vector = np.arange(self.get_num_samples(), dtype='float64')
             time_vector /= self.sampling_frequency
