@@ -23,7 +23,7 @@ class WaveformPrincipalComponent(WaveformExtractorExtensionBase):
     Class to extract principal components from a WaveformExtractor object.
     """
     
-    extension_name = 'principal_component'
+    extension_name = 'principal_components'
     
     def __init__(self, waveform_extractor):
         WaveformExtractorExtensionBase.__init__(self, waveform_extractor)

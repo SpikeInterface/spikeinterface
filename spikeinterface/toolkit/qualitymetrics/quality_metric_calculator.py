@@ -29,7 +29,7 @@ class QualityMetricCalculator(WaveformExtractorExtensionBase):
     def __init__(self, waveform_extractor):
         WaveformExtractorExtensionBase.__init__(self, waveform_extractor)
         
-        if waveform_extractor.is_extension('principal_component'):
+        if waveform_extractor.is_extension('principal_components'):
             self.principal_component = waveform_extractor.load_extension('principal_component')
         else:
             self.principal_component = None

@@ -2,12 +2,13 @@ import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 
+from spikeinterface.core.waveform_extractor import WaveformExtractor, WaveformExtractorExtensionBase
+
 from .template_tools import (get_template_extremum_channel,
                              get_template_extremum_channel_peak_shift)
 
 
-def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatenated', return_scaled=True,
-                         **job_kwargs):
+class SpikeAmplitudesCalculator(WaveformExtractorExtensionBase):
     """
     Computes the spike amplitudes from a WaveformExtractor.
 
@@ -39,53 +40,130 @@ def get_spike_amplitudes(waveform_extractor, peak_sign='neg', outputs='concatena
         The spike amplitudes.
             - If 'concatenated' all amplitudes for all spikes and all units are concatenated
             - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
-    """
-    we = waveform_extractor
-    recording = we.recording
-    sorting = we.sorting
+    """    
+    extension_name = 'spike_amplitudes'
+    
+    def __init__(self, waveform_extractor):
+        WaveformExtractorExtensionBase.__init__(self, waveform_extractor)
 
-    all_spikes = sorting.get_all_spike_trains()
+        self._amplitudes = None
+        self._all_spikes = None
 
-    extremum_channels_index = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, outputs='index')
-    peak_shifts = get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg')
+    def _set_params(self, peak_sign='neg', return_scaled=True):
 
-    if return_scaled:
-        # check if has scaled values:
-        if not waveform_extractor.recording.has_scaled_traces():
-            print("Setting 'return_scaled' to False")
-            return_scaled = False
+        params = dict(
+            peak_sign=str(peak_sign),
+            return_scaled=bool(return_scaled))
+        return params        
+        
+    def _specific_load_from_folder(self):
+        recording = self.waveform_extractor.recording
 
-    # and run
-    func = _spike_amplitudes_chunk
-    init_func = _init_worker_spike_amplitudes
-    init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts, return_scaled)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       handle_returns=True, job_name='extract amplitudes', **job_kwargs)
-    out = processor.run()
-    amps, segments = zip(*out)
-    amps = np.concatenate(amps)
-    segments = np.concatenate(segments)
-
-    amplitudes = []
-    for segment_index in range(recording.get_num_segments()):
-        mask = segments == segment_index
-        amplitudes.append(amps[mask])
-
-    if outputs == 'concatenated':
-        return amplitudes
-    elif outputs == 'by_unit':
-        amplitudes_by_unit = []
+        self._amplitudes = []
         for segment_index in range(recording.get_num_segments()):
-            amplitudes_by_unit.append({})
-            for unit_id in sorting.unit_ids:
-                spike_times, spike_labels = all_spikes[segment_index]
-                mask = spike_labels == unit_id
-                amps = amplitudes[segment_index][mask]
-                amplitudes_by_unit[segment_index][unit_id] = amps
-        return amplitudes_by_unit
+            file_amps = self.extension_folder / f'amplitude_segment_{segment_index}.npy'
+            amps_seg = np.load(file_amps)
+            self._amplitudes.append(amps_seg)
+
+    def _reset(self):
+        self._amplitudes = None
+        self._all_spikes = None
+        
+    def compute_amplitudes(self, **job_kwargs):
+        
+        we = self.waveform_extractor
+        recording = we.recording
+        sorting = we.sorting
+
+        all_spikes = sorting.get_all_spike_trains()
+        self._all_spikes = all_spikes
+        
+        peak_sign = self._params['peak_sign']
+        return_scaled = self._params['return_scaled']
+
+        extremum_channels_index = get_template_extremum_channel(we, peak_sign=peak_sign, outputs='index')
+        peak_shifts = get_template_extremum_channel_peak_shift(we, peak_sign=peak_sign)
+
+        if return_scaled:
+            # check if has scaled values:
+            if not we.recording.has_scaled_traces():
+                print("Setting 'return_scaled' to False")
+                return_scaled = False
+
+        # and run
+        func = _spike_amplitudes_chunk
+        init_func = _init_worker_spike_amplitudes
+        init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts, return_scaled)
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
+                                           handle_returns=True, job_name='extract amplitudes', **job_kwargs)
+        out = processor.run()
+        amps, segments = zip(*out)
+        amps = np.concatenate(amps)
+        segments = np.concatenate(segments)
+
+        self._amplitudes = []
+        for segment_index in range(recording.get_num_segments()):
+            mask = segments == segment_index
+            amps_seg = amps[mask]
+            self._amplitudes.append(amps_seg)
+            
+            # save to folder
+            file_amps = self.extension_folder / f'amplitude_segment_{segment_index}.npy'
+            np.save(file_amps, amps_seg)
+        
+
+    
+    def get_amplitude(self, outputs='concatenated'):
+        we = self.waveform_extractor
+        recording = we.recording
+        sorting = we.sorting
+
+        if outputs == 'concatenated':
+            return self._amplitudes
+
+        elif outputs == 'by_unit':
+            amplitudes_by_unit = []
+            for segment_index in range(recording.get_num_segments()):
+                amplitudes_by_unit.append({})
+                for unit_id in sorting.unit_ids:
+                    spike_times, spike_labels = self._all_spikes[segment_index]
+                    mask = spike_labels == unit_id
+                    amps = self._amplitudes[segment_index][mask]
+                    amplitudes_by_unit[segment_index][unit_id] = amps
+            return amplitudes_by_unit
 
 
-get_spike_amplitudes.__doc__ = get_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
+SpikeAmplitudesCalculator.__doc__.format(_shared_job_kwargs_doc)
+
+WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
+
+
+def compute_spike_amplitudes(waveform_extractor, load_if_exists=False, 
+    peak_sign='neg', return_scaled=True,
+    outputs='concatenated',
+    **job_kwargs):
+
+    folder = waveform_extractor.folder
+    ext_folder = folder / SpikeAmplitudesCalculator.extension_name
+
+    if load_if_exists and ext_folder.is_dir():
+        sac = SpikeAmplitudesCalculator.load_from_folder(folder)
+    else:
+        sac = SpikeAmplitudesCalculator(waveform_extractor)
+        sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
+        sac.compute_amplitudes(**job_kwargs)
+    
+    amps = sac.get_amplitude(outputs=outputs)
+    return amps
+
+
+
+
+compute_spike_amplitudes.__doc__ = SpikeAmplitudesCalculator.__doc__
+
+# alias for backward compatibility
+get_spike_amplitudes = compute_spike_amplitudes
+
 
 
 def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
@@ -93,13 +171,17 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
+        # TODO : here this is buggy in multi processing
+        # find why!!!!!??????
         recording = load_extractor(recording)
     if isinstance(sorting, dict):
         from spikeinterface.core import load_extractor
         sorting = load_extractor(sorting)
+    
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
     worker_ctx['return_scaled'] = return_scaled
+    
     all_spikes = sorting.get_all_spike_trains()
     for segment_index in range(recording.get_num_segments()):
         spike_times, spike_labels = all_spikes[segment_index]
@@ -110,8 +192,10 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
         # reorder otherwise the chunk processing and searchsorted will not work
         order = np.argsort(spike_times)
         all_spikes[segment_index] = spike_times[order], spike_labels[order]
+
     worker_ctx['all_spikes'] = all_spikes
     worker_ctx['extremum_channels_index'] = extremum_channels_index
+
     return worker_ctx
 
 
@@ -145,5 +229,5 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     else:
         amplitudes = np.array([], dtype=recording.get_dtype())
     segments = np.zeros(amplitudes.size, dtype='int64') + segment_index
-
+    
     return amplitudes, segments

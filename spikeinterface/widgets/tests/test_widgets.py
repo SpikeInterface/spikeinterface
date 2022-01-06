@@ -28,7 +28,7 @@ class TestWidgets(unittest.TestCase):
         #  self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
         self._we = extract_waveforms(self._rec, self._sorting, './mearec_test', load_if_exists=True)
 
-        self._amplitudes = st.get_spike_amplitudes(self._we, peak_sign='neg', outputs='by_unit')
+        self._amplitudes = st.compute_spike_amplitudes(self._we, peak_sign='neg', outputs='by_unit')
         self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
 
     def tearDown(self):
