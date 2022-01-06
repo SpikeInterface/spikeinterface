@@ -48,7 +48,7 @@ class WaveformExtractor:
     >>> we = WaveformExtractor.load_from_folder(folder)
 
     """
-
+    extensions = []
     def __init__(self, recording, sorting, folder):
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             "The recording and sorting objects must have the same number of segments!"
@@ -117,6 +117,67 @@ class WaveformExtractor:
             sorting.dump(folder / 'sorting.json', relative_to=None)
 
         return cls(recording, sorting, folder)
+
+    @classmethod
+    def register_extension(cls, extension_class):
+        """
+        This maintain a list of possible extension that are available.
+        This depend on the imported submodule.
+        
+        For instance:
+        import spikeinterface as si
+        si.WaveformExtractor.extensions == []
+
+        import spikeinterface.toolkit
+        si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
+        
+        """
+        assert issubclass(extension_class, WaveformExtractorExtensionBase)
+        assert all(extension_class.extension_name != ext.extension_name for ext in cls.extensions), 'Extension name already exists'
+        cls.extensions.append(extension_class)
+
+    def get_extension_class(self, extension_name):
+        """
+        Get extension class from name and check if registered.
+        """
+        extensions_dict = {ext.extension_name: ext for ext in self.extensions}
+        assert extension_name in extensions_dict, \
+            'Extension is not registered, please import related module before'
+        ext_class = extensions_dict[extension_name]
+        return ext_class
+
+    def is_extension(self,  extension_name):
+        """
+        Check if the extension exists in the folder.
+        """
+        ext_class = self.get_extension_class(extension_name)
+        ext_folder = self.folder / ext_class.extension_name
+        params_file = ext_folder / 'params.json'
+        return ext_folder.is_dir() and params_file.is_file()
+
+    def load_extension(self, extension_name):
+        """
+        Load an extension from its name.
+        The module of the extension must be loaded and registered.
+        """
+        ext_class = self.get_extension_class(extension_name)
+        return ext_class.load_from_folder(self.folder)
+
+    def get_extensions_class(self):
+        """
+        Browse persistent extension in the folder.
+        Return list of class.
+        Then instances can be loaded with we.load_extension(extension_name)
+        
+        Importante note : extension module need to be loaded (and so registered)
+        before this call. Otherwise extension will be ignored even if the folder
+        exists.
+        """
+        extensions_in_folder =  []
+        for extension_class in self.extensions:
+            if self.is_extension(extension_class.extension_name):
+                extensions_in_folder.append(extension_class)
+        return extensions_in_folder
 
     def _reset(self):
         self._waveforms = {}
@@ -696,3 +757,86 @@ def extract_waveforms(recording, sorting, folder,
 
 
 extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_doc)
+
+
+
+class WaveformExtractorExtensionBase:
+    """
+    Baseclass to extend the waveform extractor and handle generic and persistent
+    to disk other computation related to a waveform extractor like PCE, quality metrics.
+    """
+    
+    # must be set in inherited in subclass 
+    extension_name = None
+    
+    def __init__(self, waveform_extractor):
+        self.waveform_extractor = waveform_extractor
+        
+        self.folder = self.waveform_extractor.folder
+        self.extension_folder = self.folder / self.extension_name
+
+        if not self.extension_folder.is_dir():
+            self.extension_folder.mkdir()        
+        self._params = None
+
+    @classmethod
+    def load_from_folder(cls, folder):
+        """
+        Load extension from folder.
+        folder is the waveformextractir folder.
+        """
+        ext_folder = Path(folder) / cls.extension_name
+        assert ext_folder.is_dir(), f'WaveformExtractor: extension {cls.extension_name} is not in folder {folder}'
+        
+        params_file = ext_folder / 'params.json'
+        assert params_file.is_file(), f'No params file in extension {cls.extension_name} folder'
+        
+        with open(str(params_file), 'r') as f:
+            params = json.load(f)
+
+        waveform_extractor = WaveformExtractor.load_from_folder(folder)
+        
+        # make instance with params
+        ext = cls(waveform_extractor)
+        ext._params = params
+        ext._after_load_from_folder()
+
+        return ext
+
+    def _after_load_from_folder(self):
+        # must be inherited in subclass
+        raise NotImplementedError
+    
+    def reset(self):
+        """
+        Reset the waveform extension.
+        Delete the sub folder and create a new empty one.
+        """
+        
+        self._reset()
+        
+        if self.extension_folder.is_dir():
+            shutil.rmtree(self.extension_folder)
+        self.extension_folder.mkdir()
+        
+        self._params = None
+    
+    def _reset(self):
+        # must be inherited in subclass
+        raise NotImplementedError
+    
+    def set_params(self, **params):
+        """
+        Set parameters for the extension and
+        make it persistent in json.
+        """
+        params = self._set_params(**params)
+        self._params = params
+        param_file = self.extension_folder / 'params.json'
+        param_file.write_text(json.dumps(check_json(self._params), indent=4), encoding='utf8')
+    
+    def _set_params(self, **params):
+        # must be inherited in subclass
+        # must return a cleaned version of params dict
+        raise NotImplementedError
+
