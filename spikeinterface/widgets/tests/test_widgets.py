@@ -81,11 +81,10 @@ class TestWidgets(unittest.TestCase):
     def test_amplitudes_timeseries(self):
         sw.plot_amplitudes_timeseries(self._we)
         unit_ids = self._sorting.unit_ids[:4]
-        sw.plot_amplitudes_timeseries(self._we, amplitudes=self._amplitudes, unit_ids=unit_ids)
+        sw.plot_amplitudes_timeseries(self._we, unit_ids=unit_ids)
 
     def test_amplitudes_distribution(self):
         sw.plot_amplitudes_distribution(self._we)
-        sw.plot_amplitudes_distribution(self._we, amplitudes=self._amplitudes)
 
     def test_principal_component(self):
         sw.plot_principal_component(self._we)
@@ -141,7 +140,7 @@ class TestWidgets(unittest.TestCase):
 
     def test_plot_unit_summary(self):
         unit_id = self._sorting.unit_ids[4]
-        sw.plot_unit_summary(self._we, unit_id, self._amplitudes)
+        sw.plot_unit_summary(self._we, unit_id)
 
 
 if __name__ == '__main__':
@@ -161,7 +160,7 @@ if __name__ == '__main__':
     #~ mytest.test_amplitudes_timeseries()
     #~ mytest.test_amplitudes_distribution()
     #~ mytest.test_principal_component()
-    mytest.test_plot_unit_localization()
+    #~ mytest.test_plot_unit_localization()
 
     #~ mytest.test_autocorrelograms()
     #~ mytest.test_crosscorrelogram()
@@ -175,6 +174,6 @@ if __name__ == '__main__':
     #~ mytest.test_multicomp_graph()
     #  mytest.test_sorting_performance()
 
-    # mytest.test_plot_unit_summary()
+    mytest.test_plot_unit_summary()
 
     plt.show()

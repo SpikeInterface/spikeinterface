@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, WaveformExtractorExtensionBase
 
@@ -58,6 +58,10 @@ class SpikeAmplitudesCalculator(WaveformExtractorExtensionBase):
         
     def _specific_load_from_folder(self):
         recording = self.waveform_extractor.recording
+        sorting = self.waveform_extractor.sorting
+
+        all_spikes = sorting.get_all_spike_trains()
+        self._all_spikes = all_spikes
 
         self._amplitudes = []
         for segment_index in range(recording.get_num_segments()):
@@ -67,7 +71,6 @@ class SpikeAmplitudesCalculator(WaveformExtractorExtensionBase):
 
     def _reset(self):
         self._amplitudes = None
-        self._all_spikes = None
         
     def compute_amplitudes(self, **job_kwargs):
         
@@ -93,7 +96,12 @@ class SpikeAmplitudesCalculator(WaveformExtractorExtensionBase):
         # and run
         func = _spike_amplitudes_chunk
         init_func = _init_worker_spike_amplitudes
-        init_args = (recording.to_dict(), sorting.to_dict(), extremum_channels_index, peak_shifts, return_scaled)
+        n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
+        if n_jobs == 1:
+            init_args = (recording, sorting)
+        else:
+            init_args = (recording.to_dict(), sorting.to_dict())
+        init_args = init_args + (extremum_channels_index, peak_shifts, return_scaled)
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                            handle_returns=True, job_name='extract amplitudes', **job_kwargs)
         out = processor.run()
