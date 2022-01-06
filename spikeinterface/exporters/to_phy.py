@@ -9,7 +9,7 @@ from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.toolkit import (get_template_channel_sparsity,
                                     compute_spike_amplitudes, compute_template_similarity,
-                                    WaveformPrincipalComponent)
+                                    compute_principal_components)
 
 
 def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
@@ -175,24 +175,30 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     np.save(str(output_folder / 'channel_groups.npy'), channel_groups)
 
     if compute_amplitudes:
-        amplitudes = compute_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
+        if waveform_extractor.is_extension('spike_amplitudes'):
+            sac = waveform_extractor.load_extension('spike_amplitudes')
+            amplitudes = sac.get_amplitude(outputs='concatenated')
+        else:
+            amplitudes = compute_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
         # one segment only
         amplitudes = amplitudes[0][:, np.newaxis]
         np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
 
     if compute_pc_features:
-        pc = WaveformPrincipalComponent(waveform_extractor)
-        pc.set_params(n_components=5, mode='by_channel_local')
+        if waveform_extractor.is_extension('principal_components'):
+            pc = waveform_extractor.load_extension('principal_components')
+        else:
+            pc = compute_principal_components(waveform_extractor, n_components=5, mode='by_channel_local')
+        
+        max_channels_per_template = min(max_channels_per_template, len(channel_ids))
         pc.run_for_all_spikes(output_folder / 'pc_features.npy',
                               max_channels_per_template=max_channels_per_template, peak_sign=peak_sign,
                               **job_kwargs)
 
-        max_channels_per_template = min(max_channels_per_template, len(channel_ids))
         pc_feature_ind = np.zeros((len(unit_ids), max_channels_per_template), dtype='int64')
         best_channels_index = get_template_channel_sparsity(waveform_extractor, method='best_channels',
                                                             peak_sign=peak_sign, num_channels=max_channels_per_template,
                                                             outputs='index')
-
         for u, unit_id in enumerate(sorting.unit_ids):
             pc_feature_ind[u, :] = best_channels_index[unit_id]
         np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
