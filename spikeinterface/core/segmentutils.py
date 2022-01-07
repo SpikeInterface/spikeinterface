@@ -15,6 +15,23 @@ from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
 
+def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
+    assert sampling_frequency_max_diff >= 0
+    freq_0 = sampling_frequency_list[0]
+    max_diff = max( abs(freq - freq_0) for freq in sampling_frequency_list)
+    if max_diff > sampling_frequency_max_diff:
+        raise ValueError(f"Sampling frequencies across datasets differ by `{max_diff}`Hz which is more than `sampling_frequency_max_diff`={sampling_frequency_max_diff}Hz")
+    elif max_diff > 0:
+        diff_sec = 24 * 3600 * max_diff / freq_0 
+        import warnings
+        warnings.warn(
+            "Inconsistent sampling frequency across datasets."
+            + f" Diff is below hard bound={sampling_frequency_max_diff}Hz: concatenating anyway."
+            + f" Expect ~{round(diff_sec, 5)}s shift over 24h dataset"
+        )
+
+
+
 class AppendSegmentRecording(BaseRecording):
     """
     Return a recording that "appends" all segments from all recording
@@ -27,9 +44,11 @@ class AppendSegmentRecording(BaseRecording):
     ----------
     recording_list : list of BaseRecording
         A list of recordings
+    sampling_frequency_max_diff : float
+        Maximum allowed difference of sampling frequencies across recordings (default 0)
     """
 
-    def __init__(self, recording_list):
+    def __init__(self, recording_list, sampling_frequency_max_diff=0):
 
         rec0 = recording_list[0]
         sampling_frequency = rec0.get_sampling_frequency()
@@ -38,11 +57,15 @@ class AppendSegmentRecording(BaseRecording):
         self.recording_list = recording_list
 
         # check same characteristics
-        ok1 = all(sampling_frequency == rec.get_sampling_frequency() for rec in recording_list)
-        ok2 = all(dtype == rec.get_dtype() for rec in recording_list)
-        ok3 = all(np.array_equal(channel_ids, rec.channel_ids) for rec in recording_list)
-        if not (ok1 and ok2 and ok3):
-            raise ValueError("Recording don't have the same sampling_frequency/dtype/channel_ids")
+        ok1 = all(dtype == rec.get_dtype() for rec in recording_list)
+        ok2 = all(np.array_equal(channel_ids, rec.channel_ids) for rec in recording_list)
+        if not (ok1 and ok2):
+            raise ValueError("Recording don't have the same dtype/channel_ids")
+        _check_sampling_frequencies(
+            [rec.get_sampling_frequency() for rec in recording_list],
+            sampling_frequency_max_diff
+        )
+        
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         rec0.copy_metadata(self)
@@ -92,11 +115,13 @@ class ConcatenateSegmentRecording(BaseRecording):
         A list of recordings
     ignore_times: bool
         If True (default), time information (t_start, time_vector) is ignored when concatenating recordings.
+    sampling_frequency_max_diff : float
+        Maximum allowed difference of sampling frequencies across recordings (default 0)
     """
 
-    def __init__(self, recording_list, ignore_times=True):
+    def __init__(self, recording_list, ignore_times=True, sampling_frequency_max_diff=0):
 
-        one_rec = append_recordings(recording_list)
+        one_rec = append_recordings(recording_list, sampling_frequency_max_diff=sampling_frequency_max_diff)
 
         BaseRecording.__init__(self, one_rec.get_sampling_frequency(), one_rec.channel_ids, one_rec.get_dtype())
         one_rec.copy_metadata(self)
@@ -196,9 +221,11 @@ class AppendSegmentSorting(BaseSorting):
     ----------
     sorting_list : list of BaseSorting
         A list of sortings
+    sampling_frequency_max_diff : float
+        Maximum allowed difference of sampling frequencies across sortings (default 0)
     """
 
-    def __init__(self, sorting_list):
+    def __init__(self, sorting_list, sampling_frequency_max_diff=0):
 
         sorting0 = sorting_list[0]
         sampling_frequency = sorting0.get_sampling_frequency()
@@ -206,10 +233,13 @@ class AppendSegmentSorting(BaseSorting):
         self.sorting_list = sorting_list
 
         # check same characteristics
-        ok1 = all(sampling_frequency == sorting.get_sampling_frequency() for sorting in sorting_list)
-        ok2 = all(np.array_equal(unit_ids, sorting.unit_ids) for sorting in sorting_list)
-        if not (ok1 and ok2):
-            raise ValueError("Sorting don't have the same sampling_frequency/unit_ids")
+        ok1 = all(np.array_equal(unit_ids, sorting.unit_ids) for sorting in sorting_list)
+        if not ok1:
+            raise ValueError("Sortings don't have the same unit_ids")
+        _check_sampling_frequencies(
+            [rec.get_sampling_frequency() for rec in sorting_list],
+            sampling_frequency_max_diff
+        )
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         sorting0.copy_metadata(self)
