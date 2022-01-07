@@ -56,6 +56,10 @@ jobs:
           pip install -r requirements_extractors.txt
           pip install -r requirements_test.txt
           pip install -e .
+      - name: pip list
+        run: |
+          source ~/test_env/bin/activate
+          pip list
       - name: Get ephy_testing_data current head hash
         # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
