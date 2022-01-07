@@ -1,13 +1,13 @@
 from copy import deepcopy
 import pandas as pd
 
-from spikeinterface.core.waveform_extractor import WaveformExtractor, WaveformExtractorExtensionBase
+from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 from .quality_metric_list import (_metric_name_to_func,
                                   calculate_pc_metrics, _possible_pc_metric_names)
 
 
-class QualityMetricCalculator(WaveformExtractorExtensionBase):
+class QualityMetricCalculator(BaseWaveformExtractorExtension):
     """
     Class to compute quality metrics of spike sorting output.
     
@@ -27,7 +27,7 @@ class QualityMetricCalculator(WaveformExtractorExtensionBase):
     extension_name = 'quality_metrics'
     
     def __init__(self, waveform_extractor):
-        WaveformExtractorExtensionBase.__init__(self, waveform_extractor)
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
         
         if waveform_extractor.is_extension('principal_components'):
             self.principal_component = waveform_extractor.load_extension('principal_components')
