@@ -101,7 +101,8 @@ class OldToNewRecordingSegment(BaseRecordingSegment):
             channel_ids = self._channel_ids[channel_indices]
         return self._oldapi_recording_extractor.get_traces(channel_ids=channel_ids,
                                                            start_frame=start_frame,
-                                                           end_frame=end_frame).T
+                                                           end_frame=end_frame,
+                                                           return_scaled=False).T
         
 def create_recording_from_old_extractor(oldapi_recording_extractor)->OldToNewRecording:
     new_recording = OldToNewRecording(oldapi_recording_extractor)
