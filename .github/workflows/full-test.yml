@@ -44,6 +44,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
           ##
+          # force install numpy 1.20 because of numba!!!!!
+          pip install numpy==1.20
           # Force install neo from github
           pip install git+https://github.com/NeuralEnsemble/python-neo.git
           # TODO remove it after neo release
