@@ -1,9 +1,8 @@
 from copy import deepcopy
 import pandas as pd
 
-from .quality_metric_list import (_metric_name_to_func,
-                                  calculate_pc_metrics, _possible_pc_metric_names)
-
+from .quality_metric_list import _metric_name_to_func
+from .pca_metrics import calculate_pc_metrics, _possible_pc_metric_names
 
 class QualityMetricCalculator:
     """
