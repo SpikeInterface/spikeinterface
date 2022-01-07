@@ -356,18 +356,6 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     return sorting
 
 
-
-# we could keep this while but this this now unecessary
-# def run_sorter_docker(sorter_name, recording, docker_image, output_folder=None,
-#                       remove_existing_folder=True, delete_output_folder=False,
-#                       verbose=False, raise_error=True, with_output=True, **sorter_params):
-#     return run_sorter_container(sorter_name, recording, 'docker', docker_image,
-#                                 output_folder=output_folder,
-#                                 remove_existing_folder=remove_existing_folder,
-#                                 delete_output_folder=delete_output_folder, verbose=verbose,
-#                                 raise_error=raise_error, with_output=with_output, **sorter_params)
-
-
 _common_run_doc = """
     Runs {} sorter
     """ + _common_param_doc
