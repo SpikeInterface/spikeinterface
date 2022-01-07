@@ -10,7 +10,7 @@ from sklearn.decomposition import IncrementalPCA
 
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
-from spikeinterface.core.waveform_extractor import WaveformExtractor, WaveformExtractorExtensionBase
+from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 from .template_tools import get_template_channel_sparsity
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
@@ -18,7 +18,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 _possible_modes = ['by_channel_local', 'by_channel_global', 'concatenated']
 
 
-class WaveformPrincipalComponent(WaveformExtractorExtensionBase):
+class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     """
     Class to extract principal components from a WaveformExtractor object.
     """
@@ -26,7 +26,7 @@ class WaveformPrincipalComponent(WaveformExtractorExtensionBase):
     extension_name = 'principal_components'
     
     def __init__(self, waveform_extractor):
-        WaveformExtractorExtensionBase.__init__(self, waveform_extractor)
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         self._pca_model = None
 

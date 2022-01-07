@@ -2,13 +2,13 @@ import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs
 
-from spikeinterface.core.waveform_extractor import WaveformExtractor, WaveformExtractorExtensionBase
+from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 from .template_tools import (get_template_extremum_channel,
                              get_template_extremum_channel_peak_shift)
 
 
-class SpikeAmplitudesCalculator(WaveformExtractorExtensionBase):
+class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     """
     Computes the spike amplitudes from a WaveformExtractor.
 
@@ -44,7 +44,7 @@ class SpikeAmplitudesCalculator(WaveformExtractorExtensionBase):
     extension_name = 'spike_amplitudes'
     
     def __init__(self, waveform_extractor):
-        WaveformExtractorExtensionBase.__init__(self, waveform_extractor)
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         self._amplitudes = None
         self._all_spikes = None

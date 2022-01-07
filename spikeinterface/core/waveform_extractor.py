@@ -132,7 +132,7 @@ class WaveformExtractor:
         si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
         
         """
-        assert issubclass(extension_class, WaveformExtractorExtensionBase)
+        assert issubclass(extension_class, BaseWaveformExtractorExtension)
         assert all(extension_class.extension_name != ext.extension_name for ext in cls.extensions), 'Extension name already exists'
         cls.extensions.append(extension_class)
 
@@ -760,7 +760,7 @@ extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_
 
 
 
-class WaveformExtractorExtensionBase:
+class BaseWaveformExtractorExtension:
     """
     Baseclass to extend the waveform extractor and handle generic and persistent
     to disk other computation related to a waveform extractor like PCE, quality metrics.
