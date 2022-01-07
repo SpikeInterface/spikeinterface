@@ -121,14 +121,14 @@ class WaveformExtractor:
     @classmethod
     def register_extension(cls, extension_class):
         """
-        This maintain a list of possible extension that are available.
+        This maintains a list of possible extensions that are available.
         This depend on the imported submodule.
         
         For instance:
         import spikeinterface as si
         si.WaveformExtractor.extensions == []
 
-        import spikeinterface.toolkit
+        from spikeinterface.toolkit import WaveformPrincipalComponent
         si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
         
         """
@@ -166,12 +166,12 @@ class WaveformExtractor:
 
     def get_extensions_class(self):
         """
-        Browse persistent extension in the folder.
-        Return list of class.
+        Browse persistent extensions in the folder.
+        Return a list of classes.
         Then instances can be loaded with we.load_extension(extension_name)
         
-        Importante note : extension module need to be loaded (and so registered)
-        before this call. Otherwise extension will be ignored even if the folder
+        Importante note: extension modules need to be loaded (and so registered)
+        before this call, otherwise extensions will be ignored even if the folder
         exists.
         """
         extensions_in_folder =  []
@@ -806,7 +806,7 @@ class BaseWaveformExtractorExtension:
     def load_from_folder(cls, folder):
         """
         Load extension from folder.
-        folder is the waveformextractir folder.
+        'folder' is the waveform extractor folder.
         """
         ext_folder = Path(folder) / cls.extension_name
         assert ext_folder.is_dir(), f'WaveformExtractor: extension {cls.extension_name} is not in folder {folder}'
