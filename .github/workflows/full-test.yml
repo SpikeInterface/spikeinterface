@@ -46,7 +46,7 @@ jobs:
           ##
           # force install numpy 1.19 because of numba and also hdbscan !!!!!
           pip install numpy==1.19
-          pip install hdbscan --no-binary hdbscan
+          pip install hdbscan --no-cache-dir --no-binary hdbscan
           # Force install neo from github
           pip install git+https://github.com/NeuralEnsemble/python-neo.git
           # TODO remove it after neo release
