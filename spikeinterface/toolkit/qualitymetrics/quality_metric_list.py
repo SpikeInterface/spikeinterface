@@ -21,11 +21,9 @@ _metric_name_to_func = {
     "snr": compute_snrs,
     "isi_violation": compute_isi_violations,
     "amplitude_cutoff": compute_amplitudes_cutoff,
-    'isolation_distance': mahalanobis_metrics,
-    'l_ratio': mahalanobis_metrics,
+    'mahalanobis_metrics': mahalanobis_metrics,
     'd_prime': lda_metrics,
-    'nn_hit_rate': nearest_neighbors_metrics,
-    'nn_miss_rate': nearest_neighbors_metrics,
+    'nearest_neighbor': nearest_neighbors_metrics,
     'nn_isolation': nearest_neighbors_isolation,
     'nn_noise_overlap': nearest_neighbors_noise_overlap
 }
@@ -33,6 +31,5 @@ _metric_name_to_func = {
 # TODO
 # @Cole @ Alessio
 # "silhouette_score",
-# "noise_overlap",
 # "max_drift",
 # "cumulative_drift",
