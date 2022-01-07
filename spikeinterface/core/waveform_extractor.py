@@ -140,6 +140,16 @@ class WaveformExtractor:
     def get_extension_class(self, extension_name):
         """
         Get extension class from name and check if registered.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+
+        Returns
+        -------
+        ext_class:
+            The class of the extension.
         """
         extensions_dict = {ext.extension_name: ext for ext in self.extensions}
         assert extension_name in extensions_dict, \
@@ -150,6 +160,16 @@ class WaveformExtractor:
     def is_extension(self,  extension_name):
         """
         Check if the extension exists in the folder.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+
+        Returns
+        -------
+        exists: bool
+            Exists or not
         """
         ext_class = self.get_extension_class(extension_name)
         ext_folder = self.folder / ext_class.extension_name
@@ -160,11 +180,22 @@ class WaveformExtractor:
         """
         Load an extension from its name.
         The module of the extension must be loaded and registered.
-        """
-        ext_class = self.get_extension_class(extension_name)
-        return ext_class.load_from_folder(self.folder)
 
-    def get_extensions_class(self):
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+
+        Returns
+        -------
+        ext_instanace: 
+            The loaded instance of the extension
+        """
+        if self.is_extension(extension_name):
+            ext_class = self.get_extension_class(extension_name)
+            return ext_class.load_from_folder(self.folder)
+
+    def explore_possible_extensions(self):
         """
         Browse persistent extension in the folder.
         Return list of class.
@@ -173,6 +204,13 @@ class WaveformExtractor:
         Importante note : extension module need to be loaded (and so registered)
         before this call. Otherwise extension will be ignored even if the folder
         exists.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A list of class of computed extension inthis folder
         """
         extensions_in_folder =  []
         for extension_class in self.extensions:
