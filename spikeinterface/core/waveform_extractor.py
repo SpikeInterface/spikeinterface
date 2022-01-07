@@ -133,6 +133,7 @@ class WaveformExtractor:
         
         """
         assert issubclass(extension_class, BaseWaveformExtractorExtension)
+        assert extension_class.extension_name is not None, 'extension_name must not be None'
         assert all(extension_class.extension_name != ext.extension_name for ext in cls.extensions), 'Extension name already exists'
         cls.extensions.append(extension_class)
 
@@ -762,8 +763,30 @@ extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_
 
 class BaseWaveformExtractorExtension:
     """
-    Baseclass to extend the waveform extractor and handle generic and persistent
-    to disk other computation related to a waveform extractor like PCE, quality metrics.
+    This the base class to extend the waveform extractor.
+    It handle generically persistency to disk any computations related
+    to a waveform extractor.
+    
+    For instance:
+      * principal components
+      * spike amplitudes
+      * quality metrics
+
+    The design is done via a `WaveformExtractor.register_extension(my_extension_class)`
+    So that only imported module can be used as *extension*.
+
+    It also enable any custum computation on top on waveform extractor to be implemented by end user.
+    
+    An extension need to inherits this class and implements some necessay methods:
+      * _specific_load_from_folder
+      * _reset
+      * _set_params
+    
+    The subclass must also in a freely maner save to `self.extension_folder` any file that need
+    to be reload when calling `_specific_load_from_folder`
+
+    The subclass must also set a `extension_name` attribute which is not existing.
+
     """
     
     # must be set in inherited in subclass 
