@@ -1,6 +1,7 @@
 """Sorting components: peak detection."""
 
 import numpy as np
+import scipy
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 from spikeinterface.toolkit import get_noise_levels, get_channel_distances
@@ -19,6 +20,126 @@ except ImportError:
 
 base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
+
+
+
+def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, **method_kwargs):
+
+    """Method to subsample all the found peaks before clustering
+
+    Parameters
+    ----------
+    peaks: the peaks that have been found
+    method: 'random', 'smart_sampling'
+        Method to use. Options:
+            * 'random' : a random subset is select from all the peaks
+            * 'smart_sampling' : peaks are selected by monte-carlo rejections
+    max_peaks_per_channel: int
+        The maximal number of peaks that should be kept per channel.
+    detect_threshold: float
+        Threshold, in median absolute deviations (MAD), to use to detect peaks.
+    seed: int
+        The seed for random generations
+    method_kwargs : dict
+        If the methods have particular parameters, they can be provided here
+    {}
+
+    Returns
+    -------
+    peaks: array
+        Detected peaks.
+
+    Notes
+    -----
+    This peak detection ported from tridesclous into spikeinterface.
+    """
+
+    selected_peaks = []
+    peaks_indices = {}
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    for channel in np.unique(peaks['channel_ind']):
+        peaks_indices[channel] = np.where(peaks['channel_ind'] == channel)[0]
+
+    if method == 'random':
+
+        ## This method will randomly select max_peaks_per_channel peaks per channels
+        for channel in np.unique(peaks['channel_ind']):
+            max_peaks = min(peaks_indices[channel].size, max_peaks_per_channel)
+            selected_peaks += [np.random.choice(peaks_indices[channel].size, size=max_peaks, replace=False)]
+    elif method == 'smart_sampling':
+
+        ## This method will try to select around max_peaks_per_channel but in a non uniform manner
+        ## First, it will look at the distribution of the peaks amplitudes, per channel. 
+        ## Once this distribution is known, it will sample from the peaks with a rejection probability
+        ## such that the final distribution of the amplitudes, for the selected peaks, will be as
+        ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
+        ## from the space of all the peaks, using the amplitude as a discriminative criteria
+        ## To do so, one must provide the noise_levels, detect_threshold used to detect the peaks, the 
+        ## sign of the peaks, and the number of bins for the probability density histogram
+        
+        def reject_rate(x, d, a, target, n_bins):
+            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
+
+        params = {'detect_threshold' : 5, 
+                  'peak_sign' : 'neg',
+                  'n_bins' : 50}
+
+        params.update(method_kwargs)
+        assert 'noise_levels' in params
+
+        abs_threholds = params['noise_levels']*params['detect_threshold']
+
+        histograms = {}
+        for channel in np.unique(peaks['channel_ind']):
+
+            sub_peaks = peaks[peaks_indices[channel]]
+
+            if params['peak_sign'] == 'neg':
+                bins = list(np.linspace(sub_peaks['amplitude'].min(), -abs_threholds[channel], params['n_bins']))
+            elif params['peak_sign'] == 'pos':
+                bins = list(abs_threholds[channel], np.linspace(sub_peaks['amplitude'].max(), params['n_bins']))
+            elif params['peak_sign'] == 'both':
+                if sub_peaks['amplitude'].max() > abs_threholds[channel]:
+                    pos_values = list(abs_threholds[channel], np.linspace(sub_peaks['amplitude'].max(), params['n_bins']//2))
+                else:
+                    pos_values = []
+                if sub_peaks['amplitude'].min() < -abs_threholds[channel]:
+                    neg_values = list(np.linspace(sub_peaks['amplitude'].min(), -abs_threholds[channel], params['n_bins']//2))
+                else:
+                    neg_values = []
+                bins = neg_values + pos_values
+
+            x, y = np.histogram(sub_peaks['amplitude'], bins=bins)
+            histograms[channel] = {'probability' : x/x.sum(), 'amplitudes' : y[1:]}
+
+            amplitudes = sub_peaks['amplitude']
+            indices = np.searchsorted(histograms[channel]['amplitudes'], amplitudes)
+
+            probabilities = histograms[channel]['probability']
+            z = probabilities[probabilities > 0]
+            c = 1.0 / np.min(z)
+            d = np.ones(len(probabilities))
+            d[probabilities > 0] = 1. / (c * z)
+            d = np.minimum(1, d)
+            d /= np.sum(d)
+            twist = np.sum(probabilities * d)
+            factor = twist * c
+
+            target_rejection = 1 - max_peaks_per_channel/len(indices)
+            res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, params['n_bins']), disp=False)
+            rejection_curve = np.clip(1 - d*res[0], 0, 1)
+
+            acceptation_threshold = rejection_curve[indices]
+            valid_indices = acceptation_threshold < np.random.rand(len(indices))
+            selected_peaks += [peaks_indices[channel][valid_indices]]
+
+    selected_peaks = peaks[np.concatenate(selected_peaks)]
+    selected_peaks = selected_peaks[np.argsort(selected_peaks['sample_ind'])]
+
+    return selected_peaks
 
 
 def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, n_shifts=2,

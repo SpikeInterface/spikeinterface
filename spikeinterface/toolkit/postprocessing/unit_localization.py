@@ -114,6 +114,7 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
+
     channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius', 
                                                      radius_um=radius_um, outputs='index')
 
@@ -128,6 +129,7 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
 
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :]
+
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
@@ -177,6 +179,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
         local_contact_locations = contact_locations[chan_inds, :]
 
         wf = templates[i, :, :]
+
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         # center of mass
