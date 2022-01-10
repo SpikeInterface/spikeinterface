@@ -90,5 +90,5 @@ def test_compute_spike_amplitudes_parallel():
 
 
 if __name__ == '__main__':
-    # test_compute_spike_amplitudes()
+    test_compute_spike_amplitudes()
     test_compute_spike_amplitudes_parallel()
