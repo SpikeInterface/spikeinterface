@@ -3,9 +3,10 @@ import pytest
 
 from spikeinterface import download_dataset
 from spikeinterface.extractors import read_mearec
-from spikeinterface.sorters import run_sorter, run_sorter_container
+from spikeinterface.sorters import run_sorter
 
-ON_GITHUB = os.getenv('GITHUB_ACTIONS')
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
+
 
 def test_run_sorter_local():
     local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
