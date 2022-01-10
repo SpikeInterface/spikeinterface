@@ -131,7 +131,7 @@ def test_pca_models_and_project_new():
                                              load_if_exists=True, mode="by_channel_global")
 
     all_pca = pc_global.get_pca_model()
-    assert isinstance(all_pca, IncrementalPCA)
+    assert all(isinstance(e, IncrementalPCA) for e in all_pca)
 
     # project
     new_waveforms = np.random.randn(100, n_samples, n_channels)
@@ -146,17 +146,17 @@ def test_pca_models_and_project_new():
                                                    load_if_exists=True, mode="concatenated")
 
     all_pca = pc_concatenated.get_pca_model()
-    assert isinstance(all_pca, IncrementalPCA)
+    assert all(isinstance(e, IncrementalPCA) for e in all_pca)
 
     # project
     new_waveforms = np.random.randn(100, n_samples, n_channels)
     new_proj = pc_concatenated.project_new(new_waveforms)
-
-    assert new_proj.shape == (100, n_components)
+    
+    assert new_proj.shape[:2] == (100, n_components)
 
 
 if __name__ == '__main__':
     setup_module()
     test_WaveformPrincipalComponent()
-    #~ test_compute_principal_components_for_all_spikes()
-    #~ test_pca_models_and_project_new()
+    test_compute_principal_components_for_all_spikes()
+    test_pca_models_and_project_new()
