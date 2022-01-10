@@ -23,6 +23,11 @@ class BaseComparison:
 
 
 class BaseMultiComparison(BaseComparison):
+    """
+    Base class for graph-based multi comparison classes.
+    
+    It handles graph operations, comparisons, and agreements.
+    """
     def __init__(self, object_list, name_list,
                  match_score=0.5, chance_score=0.1,
                  verbose=False):
@@ -192,6 +197,14 @@ class BaseMultiComparison(BaseComparison):
 
 
 class BasePairComparison(BaseComparison):
+    """
+    Base class for pair comparisons.
+    
+    It handles the matching procedurs.
+    
+    Agreement scores must be computed in inherited classes by overriding the 
+    '_do_agreement(self)' function
+    """
     def __init__(self, object1, object2, name1, name2, 
                  match_score=0.5, chance_score=0.1,
                  verbose=False):
@@ -243,15 +256,10 @@ class BasePairComparison(BaseComparison):
 
 class MixinSpikeTrainComparison:
     """
-    Base class for all comparison classes:
-       * GroundTruthComparison
-       * MultiSortingComparison
-       * SymmetricSortingComparison
-
-    Mainly deals with:
-      * sampling_frequency
-      * sorting names
-      * delta_time to delta_frames
+    Mixin for spike train comparisons to define:
+       * delta_time / delta_frames
+       * sampling frequency
+       * n_jobs
     """
     def __init__(self, delta_time=0.4, n_jobs=-1):
         self.delta_time = delta_time
@@ -282,6 +290,11 @@ class MixinSpikeTrainComparison:
 
 
 class MixinTemplateComparison:
+    """
+    Mixin for template comparisons to define:
+       * similarity method
+       * sparsity
+    """
     def __init__(self, similarity_method="cosine_similarity", sparsity_dict=None):
         self.similarity_method = similarity_method
         self.sparsity_dict = sparsity_dict
