@@ -59,7 +59,7 @@ def test_compute_spike_amplitudes():
 
 
     # reload as an extension from we
-    assert SpikeAmplitudesCalculator in we.explore_possible_extensions()
+    assert SpikeAmplitudesCalculator in we.get_available_extensions()
     assert we_scaled.is_extension('spike_amplitudes')
     sac = we.load_extension('spike_amplitudes')
     assert isinstance(sac, SpikeAmplitudesCalculator)

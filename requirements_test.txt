@@ -1,5 +1,22 @@
 pytest
 
+# some version are forced because of
+# numba and hdbscan and numpy internal API
+
+numpy==1.20
+git+https://github.com/scikit-learn-contrib/hdbscan.git
+numba==0.54.1
+
+# this also work but pynwb don't want numpy==1.22
+# numpy==1.22
+# git+https://github.com/numba/numba.git
+# hdbscan
+
+
+
+# neo is from master because of several IO (spikeglx, ...)
+git+https://github.com/NeuralEnsemble/python-neo.git
+
 # recent datalad need a too recent version for git-annex
 # so we use an old one here
 datalad==0.14.4
@@ -25,10 +42,10 @@ datalad==0.14.4
 # klustakwik2==0.2.7
 
 ## tridesclous
-# pyqt5
-# hdbscan
-# loky
-# tridesclous>=1.6.3
+pyqt5
+# hdbscan
+loky
+tridesclous>=1.6.4
 
 # shybrid
 # shybrid
