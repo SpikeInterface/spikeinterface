@@ -11,7 +11,7 @@ from .template_similarity import compute_template_similarity
 from .principal_component import (WaveformPrincipalComponent,
                                   compute_principal_components)
 
-from .spike_amplitudes import get_spike_amplitudes
+from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculator
 
 from .correlograms import compute_correlograms
 

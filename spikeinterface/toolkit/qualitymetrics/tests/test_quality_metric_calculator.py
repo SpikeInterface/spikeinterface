@@ -8,7 +8,7 @@ from spikeinterface import WaveformExtractor
 from spikeinterface.extractors import toy_example
 
 from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent
-from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics
+from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics, QualityMetricCalculator
 
 
 def setup_module():
@@ -31,16 +31,29 @@ def test_compute_quality_metrics():
 
     # without PC
     metrics = compute_quality_metrics(we, metric_names=['snr'])
+    assert 'snr' in metrics.columns
+    assert 'isolation_distance' not in metrics.columns
     print(metrics)
-    print(metrics.columns)
 
     # with PCs
     pca = WaveformPrincipalComponent(we)
     pca.set_params(n_components=5, mode='by_channel_local')
     pca.run()
-    metrics = compute_quality_metrics(we, waveform_principal_component=pca)
+    metrics = compute_quality_metrics(we)
+    assert 'isolation_distance' in metrics.columns
     print(metrics)
-    print(metrics.columns)
+
+    # reload as an extension from we
+    assert QualityMetricCalculator in we.explore_possible_extensions()
+    assert we.is_extension('quality_metrics')
+    qmc = we.load_extension('quality_metrics')
+    assert isinstance(qmc, QualityMetricCalculator)
+    assert qmc._metrics is not None
+    # print(qmc._metrics)
+    qmc = QualityMetricCalculator.load_from_folder('toy_waveforms')
+    assert qmc._metrics is not None
+    # print(qmc._metrics)
+
 
 
 if __name__ == '__main__':
