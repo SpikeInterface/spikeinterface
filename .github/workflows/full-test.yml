@@ -43,19 +43,17 @@ jobs:
           source ~/test_env/bin/activate
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
-          ##
-          # force install numpy 1.20 because of numba and also hdbscan !!!!!
-          pip install numpy==1.20
-          pip install hdbscan --no-cache-dir --no-binary hdbscan
-          pip install numba --no-cache-dir --no-binary numba
-          # Force install neo from github
-          pip install git+https://github.com/NeuralEnsemble/python-neo.git
+          ## clean some cache to avoid using old cache
+          pip cache remove numpy
+          pip cache remove hdbscan
+          pip cache remove numba
           # TODO remove it after neo release
-          ##
+          # because it force some version (numpy/numba/dhdbscan...)
+          pip install -r requirements_test.txt
           pip install -r requirements.txt
           pip install -r requirements_full.txt
           pip install -r requirements_extractors.txt
-          pip install -r requirements_test.txt
+          
           pip install -e .
       - name: pip list
         run: |
