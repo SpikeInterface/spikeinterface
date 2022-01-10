@@ -51,9 +51,8 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
     def _set_params(self, peak_sign='neg', return_scaled=True):
 
-        params = dict(
-            peak_sign=str(peak_sign),
-            return_scaled=bool(return_scaled))
+        params = dict(peak_sign=str(peak_sign),
+                      return_scaled=bool(return_scaled))
         return params        
         
     def _specific_load_from_folder(self):
@@ -121,7 +120,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         
 
     
-    def get_amplitude(self, outputs='concatenated'):
+    def get_amplitudes(self, outputs='concatenated'):
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -161,7 +160,7 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
         sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
         sac.compute_amplitudes(**job_kwargs)
     
-    amps = sac.get_amplitude(outputs=outputs)
+    amps = sac.get_amplitudes(outputs=outputs)
     return amps
 
 

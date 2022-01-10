@@ -17,7 +17,6 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     that include waveforms, templates, template maps, ISI distributions, and more.
     
     
-    
     Parameters
     ----------
     waveform_extractor: a WaveformExtractor or None
@@ -43,7 +42,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
 
     if we.is_extension('spike_amplitudes'):
         sac = we.load_extension('spike_amplitudes')
-        amplitudes = sac.get_amplitude(outputs='by_unit')
+        amplitudes = sac.get_amplitudes(outputs='by_unit')
     else:
         amplitudes = st.compute_spike_amplitudes(we, peak_sign=peak_sign, outputs='by_unit', **job_kwargs)
 
@@ -70,7 +69,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         # compute principal_components if not done
         if not we.is_extension('principal_components'):
             pca = st.compute_principal_components(we, load_if_exists=True,
-                                              n_components=5, mode='by_channel_local')
+                                                  n_components=5, mode='by_channel_local')
         metrics = st.compute_quality_metrics(we)
     metrics.to_csv(output_folder / 'quality metrics.csv')
 
