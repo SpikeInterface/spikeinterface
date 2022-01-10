@@ -43,16 +43,23 @@ jobs:
           source ~/test_env/bin/activate
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
-          ##
-          # Force install neo from github
-          pip install git+https://github.com/NeuralEnsemble/python-neo.git
+          ## clean some cache to avoid using old cache
+          pip cache remove numpy
+          pip cache remove hdbscan
+          pip cache remove numba
           # TODO remove it after neo release
-          ##
+          # because it force some version (numpy/numba/dhdbscan...)
+          pip install numpy==1.20
+          pip install -r requirements_test.txt
           pip install -r requirements.txt
           pip install -r requirements_full.txt
           pip install -r requirements_extractors.txt
-          pip install -r requirements_test.txt
+          
           pip install -e .
+      - name: pip list
+        run: |
+          source ~/test_env/bin/activate
+          pip list
       - name: Get ephy_testing_data current head hash
         # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
