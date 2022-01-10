@@ -25,10 +25,10 @@ datalad==0.14.4
 # klustakwik2==0.2.7
 
 ## tridesclous
-pyqt5
-hdbscan
-loky
-tridesclous>=1.6.3
+# pyqt5
+# hdbscan
+# loky
+# tridesclous>=1.6.3
 
 # shybrid
 # shybrid

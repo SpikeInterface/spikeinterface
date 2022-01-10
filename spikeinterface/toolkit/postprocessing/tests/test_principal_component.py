@@ -66,6 +66,13 @@ def test_WaveformPrincipalComponent():
             # print(comp.shape)
 
     all_labels, all_components = pc.get_all_components()
+    
+    # relod as an extension from we
+    assert WaveformPrincipalComponent in we.explore_possible_extensions()
+    assert we.is_extension('principal_components')
+    pc = we.load_extension('principal_components')
+    assert isinstance(pc, WaveformPrincipalComponent)
+    pc = WaveformPrincipalComponent.load_from_folder('toy_waveforms_2seg')
 
     # import matplotlib.pyplot as plt
     # cmap = plt.get_cmap('jet', len(unit_ids))
@@ -95,9 +102,8 @@ def test_compute_principal_components_for_all_spikes():
 
 def test_pca_models_and_project_new():
     from sklearn.decomposition import IncrementalPCA
-    if Path('toy_waveforms_1seg/PCA').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/PCA')
-        Path('toy_waveforms_1seg/params_pca.json').unlink()
+    if Path('toy_waveforms_1seg/principal_component').is_dir():
+        shutil.rmtree('toy_waveforms_1seg/principal_component')
     we = WaveformExtractor.load_from_folder('toy_waveforms_1seg')
 
     wfs0 = we.get_waveforms(unit_id=we.sorting.unit_ids[0])
@@ -119,9 +125,8 @@ def test_pca_models_and_project_new():
     assert new_proj.shape == (100, n_components, n_channels)
 
     # global
-    if Path('toy_waveforms_1seg/PCA').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/PCA')
-        Path('toy_waveforms_1seg/params_pca.json').unlink()
+    if Path('toy_waveforms_1seg/principal_component').is_dir():
+        shutil.rmtree('toy_waveforms_1seg/principal_component')
     pc_global = compute_principal_components(we, n_components=n_components,
                                              load_if_exists=True, mode="by_channel_global")
 
@@ -135,9 +140,8 @@ def test_pca_models_and_project_new():
     assert new_proj.shape == (100, n_components, n_channels)
 
     # concatenated
-    if Path('toy_waveforms_1seg/PCA').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/PCA')
-        Path('toy_waveforms_1seg/params_pca.json').unlink()
+    if Path('toy_waveforms_1seg/principal_component').is_dir():
+        shutil.rmtree('toy_waveforms_1seg/principal_component')
     pc_concatenated = compute_principal_components(we, n_components=n_components,
                                                    load_if_exists=True, mode="concatenated")
 
@@ -153,5 +157,6 @@ def test_pca_models_and_project_new():
 
 if __name__ == '__main__':
     setup_module()
-    # test_compute_principal_components_for_all_spikes()
-    test_pca_models_and_project_new()
+    test_WaveformPrincipalComponent()
+    #~ test_compute_principal_components_for_all_spikes()
+    #~ test_pca_models_and_project_new()
