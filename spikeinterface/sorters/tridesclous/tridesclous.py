@@ -66,6 +66,9 @@ class TridesclousSorter(BaseSorter):
             HAVE_TDC = True
         except ImportError:
             HAVE_TDC = False
+        except:
+            print('tridesclous is installed but have some depency problems, check numba or hdbscan')
+            HAVE_TDC = False
         return HAVE_TDC
 
     @classmethod
