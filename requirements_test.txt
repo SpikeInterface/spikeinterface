@@ -45,7 +45,7 @@ datalad==0.14.4
 pyqt5
 # hdbscan
 loky
-tridesclous>=1.6.3
+tridesclous>=1.6.4
 
 # shybrid
 # shybrid
@@ -55,3 +55,10 @@ spyking-circus
 
 ## herdingspikes
 herdingspikes
+
+## mearec
+mearec
+
+## container packages for local testing
+#docker
+#spython

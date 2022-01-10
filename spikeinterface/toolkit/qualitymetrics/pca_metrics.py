@@ -12,7 +12,7 @@ from ..postprocessing import get_template_channel_sparsity
 
 from ..postprocessing import WaveformPrincipalComponent
 
-_possible_pc_metric_names = ['mahalanobis_metrics', 'd_prime',
+_possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
                              'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
 
 
