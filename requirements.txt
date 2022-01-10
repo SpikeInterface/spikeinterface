@@ -1,6 +1,5 @@
-numpy<1.21
+numpy
 neo>=0.10.0
 joblib
 tqdm
-probeinterface>=0.2.3
-
+probeinterface>=0.2.6
