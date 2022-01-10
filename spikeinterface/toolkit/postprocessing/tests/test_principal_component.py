@@ -68,7 +68,7 @@ def test_WaveformPrincipalComponent():
     all_labels, all_components = pc.get_all_components()
     
     # relod as an extension from we
-    assert WaveformPrincipalComponent in we.explore_possible_extensions()
+    assert WaveformPrincipalComponent in we.get_available_extensions()
     assert we.is_extension('principal_components')
     pc = we.load_extension('principal_components')
     assert isinstance(pc, WaveformPrincipalComponent)
