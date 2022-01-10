@@ -62,16 +62,16 @@ def run_sorter(sorter_name, recording, output_folder=None,
                                    **sorter_params)
     elif docker_image is not None:
         sorting = run_sorter_container(sorter_name, recording, 'docker', docker_image,
-                                output_folder=output_folder,
-                                remove_existing_folder=remove_existing_folder,
-                                delete_output_folder=delete_output_folder, verbose=verbose,
-                                raise_error=raise_error, with_output=with_output, **sorter_params)
+                                      output_folder=output_folder,
+                                      remove_existing_folder=remove_existing_folder,
+                                      delete_output_folder=delete_output_folder, verbose=verbose,
+                                      raise_error=raise_error, with_output=with_output, **sorter_params)
     elif singularity_image is not None:
         sorting = run_sorter_container(sorter_name, recording, 'singularity', singularity_image,
-                                output_folder=output_folder,
-                                remove_existing_folder=remove_existing_folder,
-                                delete_output_folder=delete_output_folder, verbose=verbose,
-                                raise_error=raise_error, with_output=with_output, **sorter_params)
+                                      output_folder=output_folder,
+                                      remove_existing_folder=remove_existing_folder,
+                                      delete_output_folder=delete_output_folder, verbose=verbose,
+                                      raise_error=raise_error, with_output=with_output, **sorter_params)
     return sorting
 
 
@@ -145,7 +145,7 @@ def find_recording_folder(d):
 
 class ContainerClient:
     """
-    Small abstraction to run commands in:
+    Small abstraction class to run commands in:
       * docker with "docker" python package
       * singularity with  "spython" python package
     """
@@ -255,7 +255,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
             verbose={verbose}, raise_error={raise_error}, **sorter_params)
 """
-    (parent_folder / 'in_docker_sorter_script.py').write_text(py_script, encoding='utf8')
+    (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
     volumes = {}
     volumes[str(recording_input_folder)] = {
@@ -308,9 +308,9 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         print(f'Running {sorter_name} sorter inside {container_image}')
 
     # this do not work with singularity:
-    # cmd = 'python "{}"'.format(parent_folder/'in_docker_sorter_script.py')
+    # cmd = 'python "{}"'.format(parent_folder/'in_container_sorter_script.py')
     # this approach is better
-    cmd = ['python', '{}'.format(parent_folder/'in_docker_sorter_script.py')]
+    cmd = ['python', '{}'.format(parent_folder/'in_container_sorter_script.py')]
     res_output = container_client.run_command(cmd)
     run_sorter_output = res_output
 
@@ -329,7 +329,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     # clean useless files
     os.remove(parent_folder / 'in_container_recording.json')
     os.remove(parent_folder / 'in_container_params.json')
-    os.remove(parent_folder / 'in_docker_sorter_script.py')
+    os.remove(parent_folder / 'in_container_sorter_script.py')
 
     # check error
     output_folder = Path(output_folder)

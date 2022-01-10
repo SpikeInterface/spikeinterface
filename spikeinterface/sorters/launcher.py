@@ -52,6 +52,7 @@ def run_sorter_by_property(sorter_name,
                            engine_kwargs={},
                            verbose=False,
                            docker_image=None,
+                           singularity_image=None,
                            **sorter_params):
     """
     Generic function to run a sorter on a recording after splitting by a 'grouping_property' (e.g. 'group').
@@ -118,6 +119,7 @@ def run_sorter_by_property(sorter_name,
                                  verbose=verbose,
                                  with_output=True,
                                  docker_images={sorter_name: docker_image},
+                                 singularity_images={sorter_name: singularity_image},
                                  sorter_params={sorter_name: sorter_params})
 
     grouping_property_values = np.array([])
@@ -179,9 +181,8 @@ def run_sorters(sorter_list,
     docker_images: dict
         A dictionary {sorter_name : docker_image} to specify if some sorters
         should use docker images.
-
     singularity_images: dict
-        A dictionary {sorter_name : singularity_image} to specify is some sorters
+        A dictionary {sorter_name : singularity_image} to specify if some sorters
         should use singularity images
 
     Returns
@@ -235,6 +236,8 @@ def run_sorters(sorter_list,
             params = sorter_params.get(sorter_name, {})
             docker_image = docker_images.get(sorter_name, None)
             singularity_image = singularity_images.get(sorter_name, None)
+            _check_container_images(
+                docker_image, singularity_image, sorter_name)
 
             if need_dump:
                 if not recording.is_dumpable:
@@ -325,3 +328,11 @@ def collect_sorting_outputs(output_folders):
     for rec_name, sorter_name, sorting in iter_sorting_output(output_folders):
         results[(rec_name, sorter_name)] = sorting
     return results
+
+def _check_container_images(docker_image, singularity_image, sorter_name):
+    if docker_image is not None:
+        assert singularity_image is None, (f"Provide either a docker or a singularity image "
+                                           f"for sorter {sorter_name}")
+    if singularity_image is not None:
+        assert docker_image is None, (f"Provide either a docker or a singularity image "
+                                      f"for sorter {sorter_name}")

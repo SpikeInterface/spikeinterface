@@ -43,12 +43,12 @@ job in a docker or singularity container.
 We are maintaining a set of sorter-specific docker files in the `spikeinterface-dockerfiles repo <https://github.com/SpikeInterface/spikeinterface-dockerfiles>`_
 and most of the docker images are available on Docker Hub from the `SpikeInterface organization <https://hub.docker.com/orgs/spikeinterface/repositories>`_.
 
-singularity have an internal mechanism to convert docker images to singularity images.
+singularity has an internal mechanism to convert docker images to singularity images.
 
 singularity is often prefered because you don't need root privilege to run the container.
-docker need *almost  root* privilege
+docker needs *almost  root* privilege
 
-Running spike sorting in a docker/container container just requires to:
+Running spike sorting in a docker container container just requires to:
 
 1) have docker installed
 2) have docker python SDK installed (:code:`pip install docker`)
@@ -69,7 +69,7 @@ When docker is installed, you can simply run the sorter in a specified docker im
                                      output_folder="tridesclous_output",
                                      docker_image="spikeinterface/tridesclous-base:1.6.4")
 
-And the same from singularity:
+And the same goes for singularity:
 
 .. code-block:: python
 
