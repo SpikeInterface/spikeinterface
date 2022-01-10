@@ -102,8 +102,8 @@ def test_compute_principal_components_for_all_spikes():
 
 def test_pca_models_and_project_new():
     from sklearn.decomposition import IncrementalPCA
-    if Path('toy_waveforms_1seg/principal_component').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/principal_component')
+    if Path('toy_waveforms_1seg/principal_components').is_dir():
+        shutil.rmtree('toy_waveforms_1seg/principal_components')
     we = WaveformExtractor.load_from_folder('toy_waveforms_1seg')
 
     wfs0 = we.get_waveforms(unit_id=we.sorting.unit_ids[0])
@@ -123,40 +123,42 @@ def test_pca_models_and_project_new():
     new_proj = pc_local.project_new(new_waveforms)
 
     assert new_proj.shape == (100, n_components, n_channels)
-
+    
     # global
-    if Path('toy_waveforms_1seg/principal_component').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/principal_component')
+    if Path('toy_waveforms_1seg/principal_components').is_dir():
+        shutil.rmtree('toy_waveforms_1seg/principal_components')
+        
     pc_global = compute_principal_components(we, n_components=n_components,
                                              load_if_exists=True, mode="by_channel_global")
 
     all_pca = pc_global.get_pca_model()
-    assert all(isinstance(e, IncrementalPCA) for e in all_pca)
+    assert isinstance(all_pca, IncrementalPCA)
 
     # project
     new_waveforms = np.random.randn(100, n_samples, n_channels)
     new_proj = pc_global.project_new(new_waveforms)
 
     assert new_proj.shape == (100, n_components, n_channels)
-
+    
     # concatenated
-    if Path('toy_waveforms_1seg/principal_component').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/principal_component')
+    if Path('toy_waveforms_1seg/principal_components').is_dir():
+        shutil.rmtree('toy_waveforms_1seg/principal_components')
+    
     pc_concatenated = compute_principal_components(we, n_components=n_components,
                                                    load_if_exists=True, mode="concatenated")
 
     all_pca = pc_concatenated.get_pca_model()
-    assert all(isinstance(e, IncrementalPCA) for e in all_pca)
+    assert isinstance(all_pca, IncrementalPCA)
 
     # project
     new_waveforms = np.random.randn(100, n_samples, n_channels)
     new_proj = pc_concatenated.project_new(new_waveforms)
-    
-    assert new_proj.shape[:2] == (100, n_components)
+
+    assert new_proj.shape == (100, n_components)
 
 
 if __name__ == '__main__':
-    setup_module()
-    test_WaveformPrincipalComponent()
-    test_compute_principal_components_for_all_spikes()
+    #~ setup_module()
+    #~ test_WaveformPrincipalComponent()
+    #~ test_compute_principal_components_for_all_spikes()
     test_pca_models_and_project_new()
