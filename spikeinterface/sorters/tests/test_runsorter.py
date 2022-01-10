@@ -20,7 +20,7 @@ def test_run_sorter_local():
     print(sorting)
 
 
-@pytest.mark.skipif(ON_GITHUB, "Docker tests don't run on github: test locally")
+@pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
 def test_run_sorter_docker():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting_true = read_mearec(mearec_filename)
@@ -36,7 +36,7 @@ def test_run_sorter_docker():
     print(sorting)
 
 
-@pytest.mark.skipif(ON_GITHUB, "Singularity tests don't run on github: test it locally")
+@pytest.mark.skipif(ON_GITHUB, reason="Singularity tests don't run on github: test it locally")
 def test_run_sorter_singularity():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting_true = read_mearec(mearec_filename)
