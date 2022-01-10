@@ -1,6 +1,7 @@
 """Sorting components: peak detection."""
 
 import numpy as np
+import scipy
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 from spikeinterface.toolkit import get_noise_levels, get_channel_distances
@@ -78,6 +79,9 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, 
         ## from the space of all the peaks, using the amplitude as a discriminative criteria
         ## To do so, one must provide the noise_levels, detect_threshold used to detect the peaks, the 
         ## sign of the peaks, and the number of bins for the probability density histogram
+        
+        def reject_rate(x, d, a, target, n_bins):
+            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
         params = {'detect_threshold' : 5, 
                   'peak_sign' : 'neg',
@@ -87,11 +91,6 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, 
         assert 'noise_levels' in params
 
         abs_threholds = params['noise_levels']*params['detect_threshold']
-
-        import scipy
-
-        def reject_rate(x, d, a, target, n_bins):
-            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
         histograms = {}
         for channel in np.unique(peaks['channel_ind']):
