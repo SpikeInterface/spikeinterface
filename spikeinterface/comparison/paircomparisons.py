@@ -11,7 +11,7 @@ from .comparisontools import (do_count_event, make_match_count_matrix,
 
 class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
     """
-    Base class shared by SortingComparison and GroundTruthComparison
+    Base class shared by SymmetricSortingComparison and GroundTruthComparison
     """
 
     def __init__(self, sorting1, sorting2, sorting1_name=None, sorting2_name=None,
@@ -605,7 +605,8 @@ compare_sorter_to_ground_truth.__doc__ = GroundTruthComparison.__doc__
 
 
 class TemplateComparison(BasePairComparison):
-    """Class to match units based on template similarity
+    """
+    Compares units from different sessions based on template similarity
 
     Parameters
     ----------
@@ -629,7 +630,6 @@ class TemplateComparison(BasePairComparison):
     comparison : TemplateComparison
         The output TemplateComparison object
     """
-
     def __init__(self, we1, we2, we1_name=None, we2_name=None,
                  unit_ids1=None, unit_ids2=None,
                  match_score=0.7, chance_score=0.3,
