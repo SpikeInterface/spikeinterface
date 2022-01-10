@@ -10,7 +10,7 @@ from sklearn.decomposition import IncrementalPCA
 
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
-from spikeinterface.core import WaveformExtractor
+from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 from .template_tools import get_template_channel_sparsity
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
@@ -18,28 +18,20 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 _possible_modes = ['by_channel_local', 'by_channel_global', 'concatenated']
 
 
-class WaveformPrincipalComponent:
+class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     """
     Class to extract principal components from a WaveformExtractor object.
     """
+    
+    extension_name = 'principal_components'
+    
     def __init__(self, waveform_extractor):
-        self.waveform_extractor = waveform_extractor
-
-        self.folder = self.waveform_extractor.folder
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         self._pca_model = None
-        self._params = {}
-        if (self.folder / 'params_pca.json').is_file():
-            with open(str(self.folder / 'params_pca.json'), 'r') as f:
-                self._params = json.load(f)
 
-    @classmethod
-    def load_from_folder(cls, folder):
-        we = WaveformExtractor.load_from_folder(folder)
-        pc = WaveformPrincipalComponent(we)
-        # load PCA model
-        pc.get_pca_model()
-        return pc
+    def _specific_load_from_folder(self):
+        self.get_pca_model()
 
     @classmethod
     def create(cls, waveform_extractor):
@@ -59,42 +51,19 @@ class WaveformPrincipalComponent:
         return txt
 
     def _reset(self):
-        self._params = {}
         self._pca_model = None
 
-        pca_folder = self.folder / 'PCA'
-        if pca_folder.is_dir():
-            shutil.rmtree(pca_folder)
-        pca_folder.mkdir()
-
-    def set_params(self, n_components=5, mode='by_channel_local',
+    def _set_params(self, n_components=5, mode='by_channel_local',
                    whiten=True, dtype='float32'):
-        """
-        Set parameters for principal component extraction.
-
-        Parameters
-        ----------
-        n_components: int
-            Number of components for PCA model
-        mode: str
-            'by_channel_local' / 'by_channel_global' / 'concatenated'
-        whiten: bool
-            Params transmitted to sklearn.PCA
-        dtype: np.dtype
-            Dtype for pca projections
-        """
-        self._reset()
 
         assert mode in _possible_modes, "Invalid mode!"
-
-        self._params = dict(
-            n_components=int(n_components),
-            mode=str(mode),
-            whiten=bool(whiten),
-            dtype=np.dtype(dtype).str)
-
-        (self.folder / 'params_pca.json').write_text(
-            json.dumps(check_json(self._params), indent=4), encoding='utf8')
+        
+        params = dict(n_components=int(n_components),
+                      mode=str(mode),
+                      whiten=bool(whiten),
+                      dtype=np.dtype(dtype).str)
+        
+        return params
 
     def get_projections(self, unit_id):
         """
@@ -110,7 +79,7 @@ class WaveformPrincipalComponent:
         proj: np.array
             The PCA projections (num_waveforms, num_components, num_channels)
         """
-        proj_file = self.folder / 'PCA' / f'pca_{unit_id}.npy'
+        proj_file = self.extension_folder / f'pca_{unit_id}.npy'
         proj = np.load(proj_file)
         return proj
 
@@ -118,7 +87,32 @@ class WaveformPrincipalComponent:
         warnings.warn("The 'get_components()' function has been substituted by the 'get_projections()' "
                       "function and it will be removed in the next release", DeprecationWarning)
         return self.get_projections(unit_id)
-
+    
+    def load_pca_model(self):
+        """
+        Load PCA model from folder.
+        """
+        mode = self._params["mode"]
+        if mode == "by_channel_local":
+            pca_model = []
+            for chan_ind, chan_id in enumerate(self.waveform_extractor.recording.channel_ids):
+                pca_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
+                if not pca_file.is_file() and chan_ind == 0:
+                    _ = self._fit_by_channel_local()
+                pca = pickle.load(pca_file.open("rb"))
+                pca_model.append(pca)
+        elif mode == "by_channel_global":
+            pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
+            if not pca_file.is_file():
+                _ = self._fit_by_channel_global()
+            pca_model = pickle.load(pca_file.open("rb"))
+        elif mode == "concatenated":
+            pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
+            if not pca_file.is_file():
+                _ = self._fit_concatenated()
+            pca_model = pickle.load(pca_file.open("rb"))
+        self._pca_model = pca_model        
+    
     def get_pca_model(self):
         """
         Returns the scikit-learn PCA model objects.
@@ -129,31 +123,9 @@ class WaveformPrincipalComponent:
             * if mode is "by_channel_local", "pca_model" is a list of PCA model by channel
             * if mode is "by_channel_global" or "concatenated", "pca_model" is a single PCA model
         """
-        mode = self._params["mode"]
-        pca_model = None
         if self._pca_model is None:
-            if mode == "by_channel_local":
-                pca_model = []
-                for chan_ind, chan_id in enumerate(self.waveform_extractor.recording.channel_ids):
-                    pca_file = self.folder / "PCA" / f"pca_model_{mode}_{chan_id}.pkl"
-                    if not pca_file.is_file() and chan_ind == 0:
-                        _ = self._fit_by_channel_local()
-                    pca = pickle.load(pca_file.open("rb"))
-                    pca_model.append(pca)
-            elif mode == "by_channel_global":
-                pca_file = self.folder / "PCA" / f"pca_model_{mode}.pkl"
-                if not pca_file.is_file():
-                    _ = self._fit_by_channel_global()
-                pca_model = pickle.load(pca_file.open("rb"))
-            elif mode == "concatenated":
-                pca_file = self.folder / "PCA" / f"pca_model_{mode}.pkl"
-                if not pca_file.is_file():
-                    _ = self._fit_concatenated()
-                pca_model = pickle.load(pca_file.open("rb"))
-            self._pca_model = pca_model
-        else:
-            pca_model = self._pca_model
-        return pca_model
+            self.load_pca_model()
+        return self._pca_model
 
     def get_all_projections(self, channel_ids=None, unit_ids=None, outputs='id'):
         """
@@ -171,10 +143,10 @@ class WaveformPrincipalComponent:
 
         Returns
         -------
-        all_projections: np.array
-            The PCA projections (num_all_waveforms, num_components, num_channels)
         all_labels: np.array
             Array with labels (ids or indices based on 'outputs') of returned PCA projections
+        all_projections: np.array
+            The PCA projections (num_all_waveforms, num_components, num_channels)
         """
         recording = self.waveform_extractor.recording
 
@@ -260,7 +232,7 @@ class WaveformPrincipalComponent:
         
         The index of spikes come from the WaveformExtarctor.
         This will be cached in the same folder than WaveformExtarctor
-        in 'PCA' subfolder.
+        in extension subfolder.
         """
         p = self._params
         we = self.waveform_extractor
@@ -271,7 +243,7 @@ class WaveformPrincipalComponent:
         unit_ids = we.sorting.unit_ids
         for unit_id in unit_ids:
             n_spike = we.get_waveforms(unit_id).shape[0]
-            projection_file = self.folder / 'PCA' / f'pca_{unit_id}.npy'
+            projection_file = self.extension_folder / f'pca_{unit_id}.npy'
             if p['mode'] in ('by_channel_local', 'by_channel_global'):
                 shape = (n_spike, p['n_components'], num_chans)
             elif p['mode'] == 'concatenated':
@@ -376,7 +348,7 @@ class WaveformPrincipalComponent:
         mode = p["mode"]
         for chan_ind, chan_id in enumerate(channel_ids):
             pca = pca_model[chan_ind]
-            with (self.folder / "PCA" / f"pca_model_{mode}_{chan_id}.pkl").open("wb") as f:
+            with (self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl").open("wb") as f:
                 pickle.dump(pca, f)
 
         return pca_model
@@ -424,7 +396,7 @@ class WaveformPrincipalComponent:
 
         # save
         mode = p["mode"]
-        with (self.folder / "PCA" / f"pca_model_{mode}.pkl").open("wb") as f:
+        with (self.extension_folder / f"pca_model_{mode}.pkl").open("wb") as f:
             pickle.dump(pca_model, f)
 
         return pca_model
@@ -469,7 +441,7 @@ class WaveformPrincipalComponent:
 
         # save
         mode = p["mode"]
-        with (self.folder / "PCA" / f"pca_model_{mode}.pkl").open("wb") as f:
+        with (self.extension_folder / f"pca_model_{mode}.pkl").open("wb") as f:
             pickle.dump(pca_model, f)
 
         return pca_model
@@ -566,6 +538,8 @@ def _init_work_all_pc_extractor(recording, all_pcs_args, spike_times, spike_labe
 WaveformPrincipalComponent.run_for_all_spikes.__doc__ = WaveformPrincipalComponent.run_for_all_spikes.__doc__.format(
     _shared_job_kwargs_doc)
 
+WaveformExtractor.register_extension(WaveformPrincipalComponent)
+
 
 def compute_principal_components(waveform_extractor, load_if_exists=False,
                                  n_components=5, mode='by_channel_local',
@@ -613,7 +587,8 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
     """
 
     folder = waveform_extractor.folder
-    if load_if_exists and folder.is_dir() and (folder / 'PCA').is_dir():
+    ext_folder = folder / WaveformPrincipalComponent.extension_name
+    if load_if_exists and ext_folder.is_dir():
         pc = WaveformPrincipalComponent.load_from_folder(folder)
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)
