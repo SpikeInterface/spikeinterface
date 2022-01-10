@@ -126,5 +126,5 @@ def test_export_to_phy_by_sparsity():
 
 
 if __name__ == '__main__':
-    # test_export_to_phy_by_property()
+    test_export_to_phy_by_property()
     test_export_to_phy_by_sparsity()
