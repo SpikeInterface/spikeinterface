@@ -604,7 +604,7 @@ def compare_sorter_to_ground_truth(*args, **kwargs):
 compare_sorter_to_ground_truth.__doc__ = GroundTruthComparison.__doc__
 
 
-class TemplateComparison(BasePairComparison):
+class TemplateComparison(BasePairComparison, MixinTemplateComparison):
     """
     Compares units from different sessions based on template similarity
 
