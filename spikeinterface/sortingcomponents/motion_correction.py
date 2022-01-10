@@ -8,7 +8,6 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
         motion, temporal_bins, spatial_bins,
         direction='y', progress_bar=False):
     """
-    
     Given the output of estimate_motion() apply inverse motion on peak location.
 
     Parameters
@@ -25,15 +24,13 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
                         equal temporal_bins.shape[0] when "none rigid"
     temporal_bins: np.array
         Temporal bins in second.
-
     spatial_bins: None or np.array
-        None when "rigid" motion 
+        Bins for non-rigid motion. If None, rigid motion is used 
 
     Returns
     -------
-    corrected_peak_locations
-
-
+    corrected_peak_locations: np.array
+        Motion-corrected peak locations
     """
     corrected_peak_locations = peak_locations.copy()
 
@@ -56,12 +53,11 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
     return corrected_peak_locations
 
 
-
 def correct_motion_on_traces(traces, channel_locations, motion, temporal_bins, spatial_bins):
     """
-    Apply correction inverse motion with spatial interpolation on traces.
+    Apply inverse motion with spatial interpolation on traces.
 
-    Traces can be full traces but also waveforms snipets.
+    Traces can be full traces, but also waveforms snippets.
 
     Parameters
     ----------
