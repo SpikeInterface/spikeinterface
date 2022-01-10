@@ -1,10 +1,11 @@
+import os
 import pytest
-from pathlib import Path
 
 from spikeinterface import download_dataset
 from spikeinterface.extractors import read_mearec
 from spikeinterface.sorters import run_sorter, run_sorter_container
 
+ON_GITHUB = os.getenv('GITHUB_ACTIONS')
 
 def test_run_sorter_local():
     local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
@@ -19,7 +20,7 @@ def test_run_sorter_local():
     print(sorting)
 
 
-@pytest.mark.skip("Docker tests don't run with pytest : test it manually")
+@pytest.mark.skipif(ON_GITHUB, "Docker tests don't run on github: test locally")
 def test_run_sorter_docker():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
 
@@ -38,7 +39,7 @@ def test_run_sorter_docker():
     print(sorting)
 
 
-@pytest.mark.skip("Singularity tests don't run with pytest : test it manually")
+@pytest.mark.skipif(ON_GITHUB, "Singularity tests don't run on github: test it locally")
 def test_run_sorter_singularity():
     #mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
 
