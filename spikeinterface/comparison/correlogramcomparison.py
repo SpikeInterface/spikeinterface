@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from .groundtruthcomparison import GroundTruthComparison
+from .paircomparisons import GroundTruthComparison
 from spikeinterface.toolkit import compute_correlograms
 
 
