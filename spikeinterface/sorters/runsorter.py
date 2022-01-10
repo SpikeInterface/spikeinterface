@@ -285,7 +285,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     cmd_2 = ['python', '-c', 'from spikeinterface.sorters import run_sorter_local']
     res_output = ''
     for cmd in [cmd_1, cmd_2]:
-        res_output += container_client.run_command(cmd)
+        res_output += str(container_client.run_command(cmd))
     need_si_install = 'ModuleNotFoundError' in res_output
 
     if need_si_install:
