@@ -25,7 +25,7 @@ from spikeinterface.sorters import sorter_dict
 from spikeinterface.sorters.launcher import iter_output_folders, iter_sorting_output
 
 from .comparisontools import _perf_keys
-from .groundtruthcomparison import compare_sorter_to_ground_truth
+from .paircomparisons import compare_sorter_to_ground_truth
 
 
 def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
