@@ -44,7 +44,7 @@ def test_compute_quality_metrics():
     print(metrics)
 
     # reload as an extension from we
-    assert QualityMetricCalculator in we.explore_possible_extensions()
+    assert QualityMetricCalculator in we.get_available_extensions()
     assert we.is_extension('quality_metrics')
     qmc = we.load_extension('quality_metrics')
     assert isinstance(qmc, QualityMetricCalculator)
