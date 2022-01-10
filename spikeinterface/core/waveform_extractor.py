@@ -122,7 +122,7 @@ class WaveformExtractor:
     def register_extension(cls, extension_class):
         """
         This maintains a list of possible extensions that are available.
-        This depend on the imported submodule.
+        It depends on the imported submodules (e.g. for toolkit module).
         
         For instance:
         import spikeinterface as si
@@ -134,7 +134,8 @@ class WaveformExtractor:
         """
         assert issubclass(extension_class, BaseWaveformExtractorExtension)
         assert extension_class.extension_name is not None, 'extension_name must not be None'
-        assert all(extension_class.extension_name != ext.extension_name for ext in cls.extensions), 'Extension name already exists'
+        assert all(extension_class.extension_name != ext.extension_name for ext in cls.extensions), \
+            'Extension name already exists'
         cls.extensions.append(extension_class)
 
     def get_extension_class(self, extension_name):
@@ -157,7 +158,7 @@ class WaveformExtractor:
         ext_class = extensions_dict[extension_name]
         return ext_class
 
-    def is_extension(self,  extension_name):
+    def is_extension(self, extension_name):
         """
         Check if the extension exists in the folder.
 
@@ -169,7 +170,7 @@ class WaveformExtractor:
         Returns
         -------
         exists: bool
-            Exists or not
+            Whether the extension exists or not
         """
         ext_class = self.get_extension_class(extension_name)
         ext_folder = self.folder / ext_class.extension_name
@@ -195,7 +196,7 @@ class WaveformExtractor:
             ext_class = self.get_extension_class(extension_name)
             return ext_class.load_from_folder(self.folder)
 
-    def explore_possible_extensions(self):
+    def get_available_extensions(self):
         """
         Browse persistent extensions in the folder.
         Return a list of classes.
@@ -205,11 +206,9 @@ class WaveformExtractor:
         before this call, otherwise extensions will be ignored even if the folder
         exists.
 
-        Parameters
-        ----------
-
         Returns
         -------
+        extensions_in_folder: list
             A list of class of computed extension inthis folder
         """
         extensions_in_folder =  []
@@ -217,6 +216,28 @@ class WaveformExtractor:
             if self.is_extension(extension_class.extension_name):
                 extensions_in_folder.append(extension_class)
         return extensions_in_folder
+    
+    def get_available_extension_names(self):
+        """
+        Browse persistent extensions in the folder.
+        Return a list of extensions by name.
+        Then instances can be loaded with we.load_extension(extension_name)
+        
+        Importante note: extension modules need to be loaded (and so registered)
+        before this call, otherwise extensions will be ignored even if the folder
+        exists.
+
+        Returns
+        -------
+        extension_names_in_folder: list
+            A list of names of computed extension in this folder
+        """
+        extension_names_in_folder = []
+        for extension_class in self.extensions:
+            if self.is_extension(extension_class.extension_name):
+                extension_names_in_folder.append(
+                    extension_class.extension_name)
+        return extension_names_in_folder
 
     def _reset(self):
         self._waveforms = {}
@@ -802,7 +823,7 @@ extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_
 class BaseWaveformExtractorExtension:
     """
     This the base class to extend the waveform extractor.
-    It handle generically persistency to disk any computations related
+    It handles persistency to disk any computations related
     to a waveform extractor.
     
     For instance:
@@ -810,21 +831,20 @@ class BaseWaveformExtractorExtension:
       * spike amplitudes
       * quality metrics
 
-    The design is done via a `WaveformExtractor.register_extension(my_extension_class)`
-    So that only imported module can be used as *extension*.
+    The design is done via a `WaveformExtractor.register_extension(my_extension_class)`,
+    so that only imported modules can be used as *extension*.
 
-    It also enable any custum computation on top on waveform extractor to be implemented by end user.
+    It also enables any custum computation on top on waveform extractor to be implemented by the user.
     
-    An extension need to inherits this class and implements some necessay methods:
+    An extension needs to inherit from this class and implement some abstract methods:
       * _specific_load_from_folder
       * _reset
       * _set_params
     
-    The subclass must also in a freely maner save to `self.extension_folder` any file that need
-    to be reload when calling `_specific_load_from_folder`
+    The subclass must also save to the `self.extension_folder` any file that needs
+    to be reloaded when calling `_specific_load_from_folder`
 
-    The subclass must also set a `extension_name` attribute which is not existing.
-
+    The subclass must also set an `extension_name` attribute which is not None by default.
     """
     
     # must be set in inherited in subclass 
@@ -865,7 +885,7 @@ class BaseWaveformExtractorExtension:
         return ext
 
     def _specific_load_from_folder(self):
-        # must be inherited in subclass
+        # must be implemented in subclass
         raise NotImplementedError
     
     def reset(self):
@@ -883,7 +903,7 @@ class BaseWaveformExtractorExtension:
         self._params = None
     
     def _reset(self):
-        # must be inherited in subclass
+        # must be implemented in subclass
         raise NotImplementedError
     
     def set_params(self, **params):
@@ -897,7 +917,7 @@ class BaseWaveformExtractorExtension:
         param_file.write_text(json.dumps(check_json(self._params), indent=4), encoding='utf8')
     
     def _set_params(self, **params):
-        # must be inherited in subclass
+        # must be implemented in subclass
         # must return a cleaned version of params dict
         raise NotImplementedError
 

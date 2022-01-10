@@ -58,11 +58,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         assert mode in _possible_modes, "Invalid mode!"
         
-        params = dict(
-            n_components=int(n_components),
-            mode=str(mode),
-            whiten=bool(whiten),
-            dtype=np.dtype(dtype).str)
+        params = dict(n_components=int(n_components),
+                      mode=str(mode),
+                      whiten=bool(whiten),
+                      dtype=np.dtype(dtype).str)
         
         return params
 
@@ -144,10 +143,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         Returns
         -------
-        all_projections: np.array
-            The PCA projections (num_all_waveforms, num_components, num_channels)
         all_labels: np.array
             Array with labels (ids or indices based on 'outputs') of returned PCA projections
+        all_projections: np.array
+            The PCA projections (num_all_waveforms, num_components, num_channels)
         """
         recording = self.waveform_extractor.recording
 

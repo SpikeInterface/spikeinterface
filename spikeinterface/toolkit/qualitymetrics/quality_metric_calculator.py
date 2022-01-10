@@ -42,7 +42,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         self._metrics = None
 
     def _set_params(self, metric_names=None, peak_sign='neg',
-                max_spikes_for_nn = 2000, n_neighbors = 6, seed=None):
+                    max_spikes_for_nn = 2000, n_neighbors = 6, seed=None):
 
         if metric_names is None:
             # This is too slow
@@ -50,19 +50,20 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             
             # So by default we take all metrics and 3 metrics PCA based only
             # 'nearest_neighbor' is really slow and not taken by default
-            metric_names = list(_metric_name_to_func.keys()) +  ['isolation_distance', 'l_ratio', 'd_prime']
+            metric_names = list(_metric_name_to_func.keys()) 
+            if self.principal_component is not None:
+                metric_names += ['isolation_distance', 'l_ratio', 'd_prime']
         
-        params = dict(
-            metric_names=[str(name) for name in metric_names],
-            peak_sign=peak_sign,
-            max_spikes_for_nn=int(max_spikes_for_nn),
-            n_neighbors=int(n_neighbors),
-            seed=int(seed) if seed is not None else None)
+        params = dict(metric_names=[str(name) for name in metric_names],
+                      peak_sign=peak_sign,
+                      max_spikes_for_nn=int(max_spikes_for_nn),
+                      n_neighbors=int(n_neighbors),
+                      seed=int(seed) if seed is not None else None)
         
         return params
 
     def _specific_load_from_folder(self):
-        self._metrics = pd.read_excel(self.extension_folder / 'metrics.xlsx', index_col=0)
+        self._metrics = pd.read_csv(self.extension_folder / 'metrics.csv', index_col=0)
 
     def _reset(self):
         self._metrics = None
@@ -125,25 +126,33 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         self._metrics = metrics
         
         # save to folder
-        metrics.to_excel(self.extension_folder / 'metrics.xlsx')
+        metrics.to_csv(self.extension_folder / 'metrics.csv')
+        
+    def get_metrics(self):
+        assert self._metrics is not None, "Quality metrics are not computed. Use the 'compute_metrics()' function."
+        return self._metrics
 
 
 WaveformExtractor.register_extension(QualityMetricCalculator)
 
 
 def compute_quality_metrics(waveform_extractor, load_if_exists=False, 
-            metric_names=None, **params):
+                            metric_names=None, **params):
     """
-
+    Compute quality metrics on waveform extractor.
+    
     Parameters
     ----------
-    waveform_extractor
-    metric_names
-    params
+    waveform_extractor: WaveformExtractor
+        The waveform extractor to comput metrics on
+    metric_names: list or None
+        List of quality metrics to compute. 
+    params: keyword arguments for quality metrics
 
     Returns
     -------
-
+    metrics: pandas.DataFrame
+        Data frame with the computed metrics
     """
     
     folder = waveform_extractor.folder
@@ -155,7 +164,7 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         qmc.set_params(metric_names=metric_names, **params)
         qmc.compute_metrics()
     
-    metrics = qmc._metrics
+    metrics = qmc.get_metrics()
     
     return metrics
 
