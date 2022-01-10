@@ -3,7 +3,7 @@ pytest
 # some version are forced because of
 # numba and hdbscan and numpy internal API
 
-numpy==1.20
+numpy==1.21.0
 git+https://github.com/scikit-learn-contrib/hdbscan.git
 numba==0.54.1
 
