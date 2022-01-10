@@ -7,6 +7,8 @@ from .quality_metric_list import (_metric_name_to_func,
                                   calculate_pc_metrics, _possible_pc_metric_names)
 
 
+
+
 class QualityMetricCalculator(BaseWaveformExtractorExtension):
     """
     Class to compute quality metrics of spike sorting output.
@@ -86,7 +88,6 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         metrics: pd.DataFrame
 
         """
-        
         metric_names = self._params['metric_names']
 
         unit_ids = self.sorting.unit_ids
