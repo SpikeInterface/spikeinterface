@@ -19,7 +19,7 @@ def test_run_sorter_local():
     print(sorting)
 
 
-@pytest.mark.skip('Docker test no run with pytest : do it manually')
+@pytest.mark.skip("Docker tests don't run with pytest : test it manually")
 def test_run_sorter_docker():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
 
@@ -38,7 +38,7 @@ def test_run_sorter_docker():
     print(sorting)
 
 
-@pytest.mark.skip('Singularity test no run with pytest : do it manually')
+@pytest.mark.skip("Singularity tests don't run with pytest : test it manually")
 def test_run_sorter_singularity():
     #mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5')
 
