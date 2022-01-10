@@ -7,13 +7,11 @@ possible_motion_estimation_methods = ['decentralized_registration', ]
 
 
 def init_kwargs_dict(method, method_kwargs):
-    # handle kwargs method by method
+    # handle kwargs by method
     if method == 'decentralized_registration':
         method_kwargs_ = dict(pairwise_displacement_method='conv2d') # , maximum_displacement_um=400
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
-
-
 
 
 def estimate_motion(recording, peaks, peak_locations=None,
@@ -22,40 +20,45 @@ def estimate_motion(recording, peaks, peak_locations=None,
                     non_rigid_kwargs=None, output_extra_check=False, progress_bar=False,
                     verbose=False):
     """
-    Estimation motion given peaks and threre localization.
+    Estimate motion given peaks and their localization.
 
-    Location of peaks can be be include in peaks or given separatly in peak_locations.
+    Location of peaks can be be included in peaks or given separately in 'peak_locations' argument.
 
     Parameters
     ----------
     recording: RecordingExtractor
-        The recording.
+        The recording extractor
     peaks: numpy array
         Peak vector (complex dtype)
-        Can also contain the x/y/z fields
+        It can also contain the x/y/z fields
     peak_locations: numpy array
-        If not in peaks already contain the x/y/z field of spike location
+        If not already contained in 'peaks', the x/y/z field of spike location
     direction: 'x', 'y', 'z'
-        Dimension on which the motion is estiomated
+        Dimension on which the motion is estimated
     bin_duration_s: float
         Bin duration in second
     bin_um: float
         Spatial bin size in micro meter
-    method: 
-        'decentralized_registration'
+    margin_um: float
+        Margin in um to exclude from histogram estimation and 
+        non-rigid smoothing functions to avoid edge effects
+    method: str
+        The method to be used ('decentralized_registration')
     method_kwargs: dict
-        Specific options for choosen methods.
-        * 'decentralized_registration'
+        Specific options for the chosen method.
+        * 'decentralized_registration': 
     non_rigid_kwargs: None or dict.
         If None then the motion is consider as rigid.
-        If dict then the motion is estimated in non rigid manner.
+        If dict then the motion is estimated in non rigid manner with fields:
+        * bin_step_um: step in um to construct overlapping gaussian smoothing functions
     output_extra_check: bool
-        If True then return an extra dict that contain some array
+        If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
     progress_bar: bool
         Display progress bar or not.
     verbose: bool
-        Verbosity
+        If True, output is verbose
+        
     Returns
     -------
     motion: numpy array
@@ -72,25 +75,25 @@ def estimate_motion(recording, peaks, peak_locations=None,
     if method =='decentralized_registration':
         # make 2D histogram raster
         if verbose:
-            print('make_motion_histogram')
+            print('Computing motion histogram')
         motion_histogram, temporal_bins, spatial_hist_bins = make_motion_histogram(recording, peaks,
-                                    peak_locations=peak_locations, 
-                                    bin_duration_s=bin_duration_s, bin_um=bin_um,
-                                    margin_um=margin_um)
+                                                                                   peak_locations=peak_locations, 
+                                                                                   bin_duration_s=bin_duration_s, 
+                                                                                   bin_um=bin_um,
+                                                                                   margin_um=margin_um)
         if output_extra_check:
             extra_check['motion_histogram'] = motion_histogram
             extra_check['temporal_bins'] = temporal_bins
             extra_check['spatial_hist_bins'] = spatial_hist_bins
 
-        # rigid or non rigid is handle with a family of gaussian non_rigid_windows
+        # rigid or non rigid is handled with a family of gaussian non_rigid_windows
         non_rigid_windows = []
         if non_rigid_kwargs is None:
             # one unique block for all depth
             non_rigid_windows = [np.ones(motion_histogram.shape[1] , dtype='float64')]
             spatial_bins = None
         else:
-            # TODO kwargs checker
-
+            assert 'bin_step_um' in non_rigid_kwargs, "'non_rigid_kwargs' needs to specify the 'bin_step_um' field"
             probe = recording.get_probe()
             dim = ['x', 'y', 'z'].index(direction)
             contact_pos = probe.contact_positions[:, dim]
@@ -100,9 +103,9 @@ def estimate_motion(recording, peaks, peak_locations=None,
             max_ = np.max(contact_pos) + margin_um
 
             num_win = int(np.ceil((max_ - min_) / bin_step_um))
-            spatial_bins = np.arange(num_win) * bin_step_um + bin_step_um/2. + min_
+            spatial_bins = np.arange(num_win) * bin_step_um + bin_step_um / 2. + min_
 
-            # todo check this gaussian with julien
+            # TODO check this gaussian with julien
             for win_center in spatial_bins:
                 sigma = bin_step_um
                 win = np.exp(-(spatial_hist_bins[:-1] - win_center) ** 2 / (2 * sigma ** 2))
@@ -119,16 +122,17 @@ def estimate_motion(recording, peaks, peak_locations=None,
         for i, win in enumerate(non_rigid_windows):
             motion_hist = win[np.newaxis, :] * motion_histogram
             if verbose:
-                print('compute_pairwise_displacement', i, 'on', len(non_rigid_windows))
+                print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
             pairwise_displacement = compute_pairwise_displacement(motion_hist, bin_um,
-                                            method=method_kwargs['pairwise_displacement_method'],
-                                            progress_bar=progress_bar)
+                                                                  method=method_kwargs['pairwise_displacement_method'],
+                                                                  progress_bar=progress_bar)
             if output_extra_check:
                 extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
             if verbose:
-                print('compute_global_displacement', i)
+                print(f'Computing global displacement: {i + 1} / {len(non_rigid_windows)}')
+
             one_motion = compute_global_displacement(pairwise_displacement)
             motion.append(one_motion[:, np.newaxis])
 
@@ -149,10 +153,10 @@ def get_location_from_fields(peaks_or_locations):
 
 
 def make_motion_histogram(recording, peaks, peak_locations=None,
-        weight_with_amplitude=False, direction='y', bin_duration_s=1., bin_um=2., margin_um=50):
+                          weight_with_amplitude=False, direction='y', 
+                          bin_duration_s=1., bin_um=2., margin_um=50):
     """
     Generate motion histogram 
-    
     """
     if peak_locations is None:
         peak_locations = get_location_from_fields(peaks)
@@ -190,7 +194,9 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
 
 
 def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress_bar=False): # maximum_displacement_um=400
-
+    """
+    Compute pairwise displacement
+    """
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype='float32')
 
@@ -200,7 +206,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
         possible_displacement -= possible_displacement[n]
 
         
-        # todo find something faster
+        # TODO find something faster
         loop = range(size)
         if progress_bar:
             loop = tqdm(loop)
@@ -219,7 +225,10 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
 
 
     elif method == 'phase_cross_correlation':
-        import skimage.registration
+        try:
+            import skimage.registration
+        except ImportError:
+            raise ImportError("To use 'phase_cross_correlation' method install scikit-image")
 
         for i in range(size):
             print(i, size)
@@ -236,14 +245,11 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
 
 def compute_global_displacement(pairwise_displacement, method='gradient_descent', max_iter=1000):
     """
-
+    Compute global displacement
     """
-
-
     if method == 'gradient_descent':
         size = pairwise_displacement.shape[0]
         displacement = np.zeros(size, dtype='float64')
-
 
         # use variable name from paper
         # DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
@@ -287,8 +293,4 @@ def compute_global_displacement(pairwise_displacement, method='gradient_descent'
     else:
         raise ValueError(f'method do not exists for compute_global_displacement {method}')
 
-
     return displacement
-
-
-
