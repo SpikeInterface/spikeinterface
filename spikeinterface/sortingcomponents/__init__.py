@@ -1,4 +1,5 @@
 from .peak_detection import detect_peaks
+from .peak_detection import select_peaks
 from .peak_localization import localize_peaks
 from .motion_estimation import (estimate_motion,
     make_motion_histogram, compute_pairwise_displacement, compute_global_displacement)
