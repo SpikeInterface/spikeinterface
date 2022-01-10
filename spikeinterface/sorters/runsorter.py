@@ -160,6 +160,15 @@ class ContainerClient:
                 extra_kwargs.pop('requires_gpu')
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+
+            # check if the image is already present locally
+            repo_tags = []
+            for image in client.images.list():
+                repo_tags.extend(image.attrs['RepoTags'])
+
+            if container_image not in repo_tags:
+                client.images.pull(container_image)
+
             self.docker_container = client.containers.create(
                     container_image, tty=True,  volumes=volumes, **extra_kwargs)
 
@@ -272,13 +281,12 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     container_client.start()
 
     # check if container contains spikeinterface already
-    # this do not work with singularity:
-    # cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
-    # this approach is better
-    cmd = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
-    res_output = container_client.run_command(cmd)
+    cmd_1 = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
+    cmd_2 = ['python', '-c', 'from spikeinterface.sorters import run_sorter_local']
+    res_output = []
+    for cmd in [cmd_1, cmd_2]:
+        res_output += container_client.run_command(cmd)
     need_si_install = 'ModuleNotFoundError' in res_output
-
 
     if need_si_install:
         if 'dev' in si_version:
