@@ -15,6 +15,8 @@ from .pca_metrics import (
     nearest_neighbors_isolation,
     nearest_neighbors_noise_overlap)
 
+from .pca_metrics import _possible_pc_metric_names
+
 # list of all available metrics and mapping to function
 # this list MUST NOT contain pca metrics
 # the list is handle separatly

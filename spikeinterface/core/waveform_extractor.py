@@ -48,7 +48,7 @@ class WaveformExtractor:
     >>> we = WaveformExtractor.load_from_folder(folder)
 
     """
-
+    extensions = []
     def __init__(self, recording, sorting, folder):
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             "The recording and sorting objects must have the same number of segments!"
@@ -117,6 +117,127 @@ class WaveformExtractor:
             sorting.dump(folder / 'sorting.json', relative_to=None)
 
         return cls(recording, sorting, folder)
+
+    @classmethod
+    def register_extension(cls, extension_class):
+        """
+        This maintains a list of possible extensions that are available.
+        It depends on the imported submodules (e.g. for toolkit module).
+        
+        For instance:
+        import spikeinterface as si
+        si.WaveformExtractor.extensions == []
+
+        from spikeinterface.toolkit import WaveformPrincipalComponent
+        si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
+        
+        """
+        assert issubclass(extension_class, BaseWaveformExtractorExtension)
+        assert extension_class.extension_name is not None, 'extension_name must not be None'
+        assert all(extension_class.extension_name != ext.extension_name for ext in cls.extensions), \
+            'Extension name already exists'
+        cls.extensions.append(extension_class)
+
+    def get_extension_class(self, extension_name):
+        """
+        Get extension class from name and check if registered.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+
+        Returns
+        -------
+        ext_class:
+            The class of the extension.
+        """
+        extensions_dict = {ext.extension_name: ext for ext in self.extensions}
+        assert extension_name in extensions_dict, \
+            'Extension is not registered, please import related module before'
+        ext_class = extensions_dict[extension_name]
+        return ext_class
+
+    def is_extension(self, extension_name):
+        """
+        Check if the extension exists in the folder.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+
+        Returns
+        -------
+        exists: bool
+            Whether the extension exists or not
+        """
+        ext_class = self.get_extension_class(extension_name)
+        ext_folder = self.folder / ext_class.extension_name
+        params_file = ext_folder / 'params.json'
+        return ext_folder.is_dir() and params_file.is_file()
+
+    def load_extension(self, extension_name):
+        """
+        Load an extension from its name.
+        The module of the extension must be loaded and registered.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+
+        Returns
+        -------
+        ext_instanace: 
+            The loaded instance of the extension
+        """
+        if self.is_extension(extension_name):
+            ext_class = self.get_extension_class(extension_name)
+            return ext_class.load_from_folder(self.folder)
+
+    def get_available_extensions(self):
+        """
+        Browse persistent extensions in the folder.
+        Return a list of classes.
+        Then instances can be loaded with we.load_extension(extension_name)
+        
+        Importante note: extension modules need to be loaded (and so registered)
+        before this call, otherwise extensions will be ignored even if the folder
+        exists.
+
+        Returns
+        -------
+        extensions_in_folder: list
+            A list of class of computed extension inthis folder
+        """
+        extensions_in_folder =  []
+        for extension_class in self.extensions:
+            if self.is_extension(extension_class.extension_name):
+                extensions_in_folder.append(extension_class)
+        return extensions_in_folder
+    
+    def get_available_extension_names(self):
+        """
+        Browse persistent extensions in the folder.
+        Return a list of extensions by name.
+        Then instances can be loaded with we.load_extension(extension_name)
+        
+        Importante note: extension modules need to be loaded (and so registered)
+        before this call, otherwise extensions will be ignored even if the folder
+        exists.
+
+        Returns
+        -------
+        extension_names_in_folder: list
+            A list of names of computed extension in this folder
+        """
+        extension_names_in_folder = []
+        for extension_class in self.extensions:
+            if self.is_extension(extension_class.extension_name):
+                extension_names_in_folder.append(
+                    extension_class.extension_name)
+        return extension_names_in_folder
 
     def _reset(self):
         self._waveforms = {}
@@ -696,3 +817,107 @@ def extract_waveforms(recording, sorting, folder,
 
 
 extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_doc)
+
+
+
+class BaseWaveformExtractorExtension:
+    """
+    This the base class to extend the waveform extractor.
+    It handles persistency to disk any computations related
+    to a waveform extractor.
+    
+    For instance:
+      * principal components
+      * spike amplitudes
+      * quality metrics
+
+    The design is done via a `WaveformExtractor.register_extension(my_extension_class)`,
+    so that only imported modules can be used as *extension*.
+
+    It also enables any custum computation on top on waveform extractor to be implemented by the user.
+    
+    An extension needs to inherit from this class and implement some abstract methods:
+      * _specific_load_from_folder
+      * _reset
+      * _set_params
+    
+    The subclass must also save to the `self.extension_folder` any file that needs
+    to be reloaded when calling `_specific_load_from_folder`
+
+    The subclass must also set an `extension_name` attribute which is not None by default.
+    """
+    
+    # must be set in inherited in subclass 
+    extension_name = None
+    
+    def __init__(self, waveform_extractor):
+        self.waveform_extractor = waveform_extractor
+        
+        self.folder = self.waveform_extractor.folder
+        self.extension_folder = self.folder / self.extension_name
+
+        if not self.extension_folder.is_dir():
+            self.extension_folder.mkdir()        
+        self._params = None
+
+    @classmethod
+    def load_from_folder(cls, folder):
+        """
+        Load extension from folder.
+        'folder' is the waveform extractor folder.
+        """
+        ext_folder = Path(folder) / cls.extension_name
+        assert ext_folder.is_dir(), f'WaveformExtractor: extension {cls.extension_name} is not in folder {folder}'
+        
+        params_file = ext_folder / 'params.json'
+        assert params_file.is_file(), f'No params file in extension {cls.extension_name} folder'
+        
+        with open(str(params_file), 'r') as f:
+            params = json.load(f)
+
+        waveform_extractor = WaveformExtractor.load_from_folder(folder)
+        
+        # make instance with params
+        ext = cls(waveform_extractor)
+        ext._params = params
+        ext._specific_load_from_folder()
+
+        return ext
+
+    def _specific_load_from_folder(self):
+        # must be implemented in subclass
+        raise NotImplementedError
+    
+    def reset(self):
+        """
+        Reset the waveform extension.
+        Delete the sub folder and create a new empty one.
+        """
+        
+        self._reset()
+        
+        if self.extension_folder.is_dir():
+            shutil.rmtree(self.extension_folder)
+        self.extension_folder.mkdir()
+        
+        self._params = None
+    
+    def _reset(self):
+        # must be implemented in subclass
+        raise NotImplementedError
+    
+    def set_params(self, **params):
+        """
+        Set parameters for the extension and
+        make it persistent in json.
+        """
+        params = self._set_params(**params)
+        self._params = params
+        param_file = self.extension_folder / 'params.json'
+        param_file.write_text(json.dumps(check_json(self._params), indent=4), encoding='utf8')
+    
+    def _set_params(self, **params):
+        # must be implemented in subclass
+        # must return a cleaned version of params dict
+        raise NotImplementedError
+
