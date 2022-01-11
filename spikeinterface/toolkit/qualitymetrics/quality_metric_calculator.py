@@ -70,17 +70,11 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
     def _reset(self):
         self._metrics = None
         
-    def _filter_units(self, unit_ids, new_waveforms_folder):
-        # creaste new extension folder
-        new_qm_folder = new_waveforms_folder / self.extension_name
-        new_qm_folder.mkdir()
-        # copy parameter file
-        shutil.copyfile(self.extension_folder / "params.json",
-                        new_qm_folder / "params.json")
-
+    def filter_units(self, unit_ids, new_waveforms_folder):
+        super().filter_units(unit_ids, new_waveforms_folder)
         # filter metrics dataframe
         new_metrics = self._metrics.loc[np.array(unit_ids)]
-        new_metrics.to_csv(new_qm_folder / 'metrics.csv')
+        new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
         
     def compute_metrics(self):
         """
