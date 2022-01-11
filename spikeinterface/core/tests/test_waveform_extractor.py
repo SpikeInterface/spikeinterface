@@ -8,8 +8,10 @@ from spikeinterface import WaveformExtractor, extract_waveforms
 
 def _clean_all():
     folders = ["wf_rec1", "wf_rec2", "wf_rec3", "wf_sort2", "wf_sort3",
-               "test_waveform_extractor",
-               "test_extract_waveforms_1job", "test_extract_waveforms_2job"]
+               "test_waveform_extractor", "we_filt",
+               "test_extract_waveforms_1job", "test_extract_waveforms_2job",
+               "test_extract_waveforms_returnscaled",
+               "test_extract_waveforms_sparsity"]
     for folder in folders:
         if Path(folder).exists():
             shutil.rmtree(folder)
@@ -74,6 +76,15 @@ def test_WaveformExtractor():
     wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
     assert wf_segment.shape == (210, 2)
     assert wf_segment.shape == (210, 2)
+    
+    
+    # test filter units
+    keep_units = sorting.get_unit_ids()[::2]
+    wf_filt = we.filter_units(keep_units, "we_filt")
+    for unit in wf_filt.sorting.get_unit_ids():
+        assert unit in keep_units
+    filtered_templates = wf_filt.get_all_templates()
+    assert len(filtered_templates) == len(keep_units)
 
 
 def test_extract_waveforms():
