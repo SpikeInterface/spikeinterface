@@ -85,6 +85,12 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
         extremum_channels_index = get_template_extremum_channel(we, peak_sign=peak_sign, outputs='index')
         peak_shifts = get_template_extremum_channel_peak_shift(we, peak_sign=peak_sign)
+        
+        # put extremum_channels_index and peak_shifts in vector way
+        extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
+        peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
+        
+        
 
         if return_scaled:
             # check if has scaled values:
@@ -178,8 +184,6 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-        # TODO : here this is buggy in multi processing
-        # find why!!!!!??????
         recording = load_extractor(recording)
     if isinstance(sorting, dict):
         from spikeinterface.core import load_extractor
@@ -192,21 +196,12 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx['sorting'] = sorting
     worker_ctx['return_scaled'] = return_scaled
     worker_ctx['peak_shifts'] = peak_shifts
-    worker_ctx['min_shift'] = min(peak_shifts.values())
-    worker_ctx['max_shifts'] = max(peak_shifts.values())
+    worker_ctx['min_shift'] = np.min(peak_shifts)
+    worker_ctx['max_shifts'] = np.max(peak_shifts)
+
     
     
     all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
-    #~ for segment_index in range(recording.get_num_segments()):
-        #~ spike_times, spike_labels = all_spikes[segment_index]
-        #~ for unit_index, unit_id in enumerate(sorting.unit_ids):
-            #~ if peak_shifts[unit_id] != 0:
-                #~ mask = spike_labels == unit_index
-                #~ spike_times[mask] += peak_shifts[unit_id]
-        #~ # reorder otherwise the chunk processing and searchsorted will not work
-        #~ order = np.argsort(spike_times)
-        #~ spike_times, spike_labels = spike_times[order], spike_labels[order]
-        #~ all_spikes[segment_index] = spike_times, spike_labels
 
     worker_ctx['all_spikes'] = all_spikes
     worker_ctx['extremum_channels_index'] = extremum_channels_index
@@ -239,17 +234,14 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
         extremum_channels_index = worker_ctx['extremum_channels_index']
 
-
         sample_inds = spike_times[i0:i1].copy()
         labels = spike_labels[i0:i1]
         
-        # TODO : think of a vectorize version of this
-        # get channel_ind and sample with applying the shift
-        chan_inds = np.zeros(sample_inds.size, dtype='int64')
-        for i, unit_index in enumerate(labels):
-            unit_id = unit_ids[unit_index]
-            chan_inds[i] = extremum_channels_index[unit_id]
-            sample_inds[i] += peak_shifts[unit_id]
+        # apply shifts  per spike
+        sample_inds += peak_shifts[labels]
+        
+        # get channels per spike
+        chan_inds = extremum_channels_index[labels]
         
         # prevent border accident due to shift
         sample_inds[sample_inds < 0] = 0
