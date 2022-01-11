@@ -963,8 +963,13 @@ class BaseWaveformExtractorExtension:
         shutil.copyfile(self.extension_folder / "params.json",
                         new_ext_folder / "params.json")
         # specific files must be copied in subclass
+        self._specific_filter_units(unit_ids=unit_ids, 
+                                    new_waveforms_folder=new_waveforms_folder)
+        
+    def _specific_filter_units(self, unit_ids, new_waveforms_folder):
+        # must be implemented in subclass
+        raise NotImplementedError
 
-    
     def set_params(self, **params):
         """
         Set parameters for the extension and

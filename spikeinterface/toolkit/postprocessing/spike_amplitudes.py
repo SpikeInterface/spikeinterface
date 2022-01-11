@@ -72,8 +72,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     def _reset(self):
         self._amplitudes = None
     
-    def filter_units(self, unit_ids, new_waveforms_folder):
-        super().filter_units(unit_ids, new_waveforms_folder)
+    def _filter_units(self, unit_ids, new_waveforms_folder):
         # load filter and save amplitude files
         for seg_index in range(self.waveform_extractor.recording.get_num_segments()):
             amp_file_name = f"amplitude_segment_{seg_index}.npy"
