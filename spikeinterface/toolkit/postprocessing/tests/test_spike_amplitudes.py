@@ -81,14 +81,14 @@ def test_compute_spike_amplitudes_parallel():
                            ms_before=1., ms_after=2., max_spikes_per_unit=None,
                            n_jobs=1, chunk_size=30000, load_if_exists=True)
 
-    amplitudes1 = compute_spike_amplitudes(we, peak_sign='neg', outputs='concatenated', chunk_size=10000, n_jobs=1)
+    amplitudes1 = compute_spike_amplitudes(we, peak_sign='neg', load_if_exists=False, outputs='concatenated', chunk_size=10000, n_jobs=1)
     # TODO : fix multi processing for spike amplitudes!!!!!!!
-    # amplitudes2 = compute_spike_amplitudes(we, peak_sign='neg', outputs='concatenated', chunk_size=10000, n_jobs=2)
-
-    # assert np.array_equal(amplitudes1, amplitudes2)
+    amplitudes2 = compute_spike_amplitudes(we, peak_sign='neg', load_if_exists=False, outputs='concatenated', chunk_size=10000, n_jobs=2)
+    
+    assert np.array_equal(amplitudes1[0], amplitudes2[0])
     # shutil.rmtree(folder)
 
 
 if __name__ == '__main__':
-    # test_compute_spike_amplitudes()
+    test_compute_spike_amplitudes()
     test_compute_spike_amplitudes_parallel()

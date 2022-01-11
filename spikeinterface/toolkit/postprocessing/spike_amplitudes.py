@@ -59,7 +59,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         recording = self.waveform_extractor.recording
         sorting = self.waveform_extractor.sorting
 
-        all_spikes = sorting.get_all_spike_trains()
+        all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
         self._all_spikes = all_spikes
 
         self._amplitudes = []
@@ -77,7 +77,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         recording = we.recording
         sorting = we.sorting
 
-        all_spikes = sorting.get_all_spike_trains()
+        all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
         self._all_spikes = all_spikes
         
         peak_sign = self._params['peak_sign']
@@ -85,6 +85,12 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
         extremum_channels_index = get_template_extremum_channel(we, peak_sign=peak_sign, outputs='index')
         peak_shifts = get_template_extremum_channel_peak_shift(we, peak_sign=peak_sign)
+        
+        # put extremum_channels_index and peak_shifts in vector way
+        extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
+        peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
+        
+        
 
         if return_scaled:
             # check if has scaled values:
@@ -132,9 +138,9 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             amplitudes_by_unit = []
             for segment_index in range(recording.get_num_segments()):
                 amplitudes_by_unit.append({})
-                for unit_id in sorting.unit_ids:
+                for unit_index, unit_id in enumerate(sorting.unit_ids):
                     spike_times, spike_labels = self._all_spikes[segment_index]
-                    mask = spike_labels == unit_id
+                    mask = spike_labels == unit_index
                     amps = self._amplitudes[segment_index][mask]
                     amplitudes_by_unit[segment_index][unit_id] = amps
             return amplitudes_by_unit
@@ -178,27 +184,24 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-        # TODO : here this is buggy in multi processing
-        # find why!!!!!??????
         recording = load_extractor(recording)
     if isinstance(sorting, dict):
         from spikeinterface.core import load_extractor
         sorting = load_extractor(sorting)
     
+    
+    
+    
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
     worker_ctx['return_scaled'] = return_scaled
+    worker_ctx['peak_shifts'] = peak_shifts
+    worker_ctx['min_shift'] = np.min(peak_shifts)
+    worker_ctx['max_shifts'] = np.max(peak_shifts)
+
     
-    all_spikes = sorting.get_all_spike_trains()
-    for segment_index in range(recording.get_num_segments()):
-        spike_times, spike_labels = all_spikes[segment_index]
-        for unit_id in sorting.unit_ids:
-            if peak_shifts[unit_id] != 0:
-                mask = spike_labels == unit_id
-                spike_times[mask] += peak_shifts[unit_id]
-        # reorder otherwise the chunk processing and searchsorted will not work
-        order = np.argsort(spike_times)
-        all_spikes[segment_index] = spike_times[order], spike_labels[order]
+    
+    all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
     worker_ctx['all_spikes'] = all_spikes
     worker_ctx['extremum_channels_index'] = extremum_channels_index
@@ -211,6 +214,10 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     all_spikes = worker_ctx['all_spikes']
     recording = worker_ctx['recording']
     return_scaled = worker_ctx['return_scaled']
+    peak_shifts = worker_ctx['peak_shifts']
+    
+    seg_size = recording.get_num_samples(segment_index=segment_index)
+    unit_ids = worker_ctx['sorting'].unit_ids
 
     spike_times, spike_labels = all_spikes[segment_index]
     d = np.diff(spike_times)
@@ -218,23 +225,39 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     i0 = np.searchsorted(spike_times, start_frame)
     i1 = np.searchsorted(spike_times, end_frame)
-
+    
+    n_spike = i1 - i0
+    amplitudes = np.zeros(n_spike, dtype=recording.get_dtype())
+    
     if i0 != i1:
         # some spike in the chunk
 
         extremum_channels_index = worker_ctx['extremum_channels_index']
 
+        sample_inds = spike_times[i0:i1].copy()
+        labels = spike_labels[i0:i1]
+        
+        # apply shifts  per spike
+        sample_inds += peak_shifts[labels]
+        
+        # get channels per spike
+        chan_inds = extremum_channels_index[labels]
+        
+        # prevent border accident due to shift
+        sample_inds[sample_inds < 0] = 0
+        sample_inds[sample_inds >= seg_size] = seg_size
+        
+        first = np.min(sample_inds)
+        last = np.max(sample_inds)
+        sample_inds -= first
+        
         # load trace in memory
-        traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+        traces = recording.get_traces(start_frame=first, end_frame=last+1, segment_index=segment_index,
                                       return_scaled=return_scaled)
-
-        st = spike_times[i0:i1]
-        st = st - start_frame
-        # TODO : think of a vectorize version of this
-        chan_inds = [extremum_channels_index[unit_id] for unit_id in spike_labels[i0:i1]]
-        amplitudes = traces[st, chan_inds]
-    else:
-        amplitudes = np.array([], dtype=recording.get_dtype())
+        
+        # and get amplitudes
+        amplitudes = traces[sample_inds, chan_inds]
+    
     segments = np.zeros(amplitudes.size, dtype='int64') + segment_index
     
     return amplitudes, segments
