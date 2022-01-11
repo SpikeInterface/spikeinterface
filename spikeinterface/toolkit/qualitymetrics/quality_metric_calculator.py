@@ -1,5 +1,7 @@
-from copy import deepcopy
+import numpy as np
 import pandas as pd
+import shutil
+from copy import deepcopy
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
@@ -67,7 +69,12 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
     def _reset(self):
         self._metrics = None
-
+        
+    def _specific_filter_units(self, unit_ids, new_waveforms_folder):
+        # filter metrics dataframe
+        new_metrics = self._metrics.loc[np.array(unit_ids)]
+        new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
+        
     def compute_metrics(self):
         """
         Computes quality metrics

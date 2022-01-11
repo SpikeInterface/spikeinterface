@@ -12,7 +12,7 @@ from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics, Quali
 
 
 def setup_module():
-    for folder in ('toy_rec', 'toy_sorting', 'toy_waveforms'):
+    for folder in ('toy_rec', 'toy_sorting', 'toy_waveforms', 'toy_waveforms_filt'):
         if Path(folder).is_dir():
             shutil.rmtree(folder)
 
@@ -55,6 +55,13 @@ def test_compute_quality_metrics():
     # print(qmc._metrics)
 
 
+def test_filter_units():
+    we = WaveformExtractor.load_from_folder('toy_waveforms')
+    qm = compute_quality_metrics(we, load_if_exists=True)
+
+    keep_units = we.sorting.get_unit_ids()[::2]
+    we_filt = we.filter_units(keep_units, 'toy_waveforms_filt')
+    assert "quality_metrics" in we_filt.get_available_extension_names()
 
 if __name__ == '__main__':
     setup_module()
