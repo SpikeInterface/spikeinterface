@@ -64,6 +64,22 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                       dtype=np.dtype(dtype).str)
         
         return params
+    
+    def _specific_filter_units(self, unit_ids, new_waveforms_folder):
+        # populate folder
+        pca_files = [f for f in (
+            self.extension_folder).iterdir() if f.suffix == ".npy"]
+        pca_model_files = [f for f in (
+            self.extension_folder).iterdir() if f.suffix == ".pkl"]
+        for unit in unit_ids:
+            for pca_file in pca_files:
+                if f"{unit}" in pca_file.name:
+                    shutil.copyfile(pca_file, new_waveforms_folder / 
+                                    self.extension_name / pca_file.name)
+        for pca_model_file in pca_model_files:
+            shutil.copyfile(pca_model_file, new_waveforms_folder /
+                            self.extension_name / pca_model_file.name)
+                
 
     def get_projections(self, unit_id):
         """

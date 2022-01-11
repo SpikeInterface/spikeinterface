@@ -2,13 +2,14 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-from spikeinterface import download_dataset, extract_waveforms
+from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
 import spikeinterface.extractors as se
 from spikeinterface.toolkit import compute_spike_amplitudes, SpikeAmplitudesCalculator
 
 
 def _clean_all():
-    folders = ["mearec_waveforms", "mearec_waveforms_scaled", "mearec_waveforms_all"]
+    folders = ["mearec_waveforms", "mearec_waveforms_scaled", "mearec_waveforms_all",
+               "mearec_waveforms_filt"]
     for folder in folders:
         if Path(folder).exists():
             shutil.rmtree(folder)
@@ -51,7 +52,7 @@ def test_compute_spike_amplitudes():
                                   overwrite=True, return_scaled=True)
 
     amplitudes_scaled = compute_spike_amplitudes(we_scaled, peak_sign='neg', outputs='concatenated', chunk_size=10000, n_jobs=1,
-                                             return_scaled=True)
+                                                 return_scaled=True)
     amplitudes_unscaled = compute_spike_amplitudes(we_scaled, peak_sign='neg', outputs='concatenated', chunk_size=10000,
                                                n_jobs=1, return_scaled=False)
 
@@ -88,6 +89,14 @@ def test_compute_spike_amplitudes_parallel():
     assert np.array_equal(amplitudes1[0], amplitudes2[0])
     # shutil.rmtree(folder)
 
+
+def test_filter_units():
+    we = WaveformExtractor.load_from_folder('mearec_waveforms')
+    amps = compute_spike_amplitudes(we, load_if_exists=True)
+
+    keep_units = we.sorting.get_unit_ids()[::2]
+    we_filt = we.filter_units(keep_units, 'mearec_waveforms_filt')
+    assert "spike_amplitudes" in we_filt.get_available_extension_names()
 
 if __name__ == '__main__':
     test_compute_spike_amplitudes()
