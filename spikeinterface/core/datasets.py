@@ -12,7 +12,8 @@ except:
     HAVE_DATALAD = False
 
 
-def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False):
+def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False,
+                     unlock=False):
     assert HAVE_DATALAD, 'You need to install datalad'
 
     if repo is None:
@@ -30,8 +31,9 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         dataset = datalad.api.Dataset(path=local_folder)
         # make sure git repo is in clean state
         repo = dataset.repo
-        repo.call_git(['checkout', '--force', 'master'])
-        dataset.update(merge=True)
+        if update_if_exists:
+            repo.call_git(['checkout', '--force', 'master'])
+            dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder,
                                       source=repo)
@@ -45,6 +47,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
     dataset.get(remote_path)
 
     # unlocking is necessary for binding volume to containers
-    dataset.unlock(remote_path, recursive=True)
+    if unlock:
+        dataset.unlock(remote_path, recursive=True)
 
     return local_path
