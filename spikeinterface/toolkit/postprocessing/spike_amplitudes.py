@@ -1,4 +1,5 @@
 import numpy as np
+import shutil
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs
 
@@ -70,6 +71,24 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
     def _reset(self):
         self._amplitudes = None
+        
+    def _filter_units(self, unit_ids, new_waveforms_folder):
+        # creaste new extension folder
+        new_amp_folder = new_waveforms_folder / self.extension_name
+        new_amp_folder.mkdir()
+        # copy parameter file
+        shutil.copyfile(self.extension_folder / "params.json",
+                        new_amp_folder / "params.json")
+
+        # load filter and save amplitude files
+        for seg_index in range(self.waveform_extractor.recording.get_num_segments()):
+            amp_file_name = f"amplitude_segment_{seg_index}.npy"
+            amps = np.load(self.extension_folder / amp_file_name)
+            _, all_labels = self.waveform_extractor.sorting.get_all_spike_trains()[seg_index]
+            filtered_idxs = np.in1d(all_labels, np.array(unit_ids)).nonzero()
+            np.save(new_waveforms_folder / self.extension_name /
+                    amp_file_name, amps[filtered_idxs])
+    
         
     def compute_amplitudes(self, **job_kwargs):
         
