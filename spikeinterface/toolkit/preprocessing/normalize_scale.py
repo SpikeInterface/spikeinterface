@@ -119,6 +119,7 @@ class ScaleRecording(BasePreprocessor):
             gain = np.ones((1, num_chans)) * gain
         else:
             gain = np.asarray(gain)
+        if gain.ndim == 1:
             gain = gain[None, :]
         gain = gain.astype(dtype)
         assert gain.shape == (1, num_chans)
@@ -127,6 +128,7 @@ class ScaleRecording(BasePreprocessor):
             offset = np.ones((1, num_chans)) * offset
         else:
             offset = np.asarray(offset)
+        if offset.ndim == 1:
             offset = offset[None, :]
         offset = offset.astype(dtype)
         assert offset.shape == (1, num_chans)
