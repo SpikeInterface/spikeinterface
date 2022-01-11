@@ -11,7 +11,8 @@ from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent, co
 
 def setup_module():
     for folder in ('toy_rec_1seg', 'toy_sorting_1seg', 'toy_waveforms_1seg',
-                   'toy_rec_2seg', 'toy_sorting_2seg', 'toy_waveforms_2seg'):
+                   'toy_rec_2seg', 'toy_sorting_2seg', 'toy_waveforms_2seg',
+                   'toy_waveforms_1seg_filt'):
         if Path(folder).is_dir():
             shutil.rmtree(folder)
 
@@ -155,7 +156,15 @@ def test_pca_models_and_project_new():
     new_proj = pc_concatenated.project_new(new_waveforms)
 
     assert new_proj.shape == (100, n_components)
+    
 
+def test_filter_units():
+    we = WaveformExtractor.load_from_folder('toy_waveforms_1seg')
+    pc = compute_principal_components(we, load_if_exists=True)
+
+    keep_units = we.sorting.get_unit_ids()[::2]
+    we_filt = we.filter_units(keep_units, 'toy_waveforms_1seg_filt')
+    assert "principal_components" in we_filt.get_available_extension_names()
 
 if __name__ == '__main__':
     #~ setup_module()
