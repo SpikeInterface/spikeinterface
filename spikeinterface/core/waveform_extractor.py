@@ -299,6 +299,57 @@ class WaveformExtractor:
 
         (self.folder / 'params.json').write_text(
             json.dumps(check_json(self._params), indent=4), encoding='utf8')
+        
+    def filter_units(self, unit_ids, new_folder):
+        """
+        Filters units by creating a new waveform extractor object in a new folder.
+        
+        Extensions are also updated to filter the selected unit ids.
+
+        Parameters
+        ----------
+        unit_ids : list or array
+            The unit ids to keep in the new WaveformExtractor object
+        new_folder : Path
+            The new folder where selected waveforms are copied
+            
+        Return
+        ------
+        we :  WaveformExtractor
+            The newly create waveform extractor with the selected units
+        """
+        new_folder = Path(new_folder)
+        assert not new_folder.is_dir(), f"{new_folder} already exists!"
+        new_folder.mkdir(parents=True)
+        
+        sorting = self.sorting.select_units(unit_ids)
+        # create new waveform extractor folder
+        shutil.copyfile(self.folder / "params.json", 
+                        new_folder / "params.json")
+        shutil.copyfile(self.folder / "recording.json",
+                        new_folder / "recording.json")
+        sorting.dump(new_folder / 'sorting.json', relative_to=None)
+        
+        # create and populate waveforms folder
+        new_waveforms_folder = new_folder / "waveforms"
+        new_waveforms_folder.mkdir()
+        
+        waveforms_files = [f for f in (self.folder / "waveforms").iterdir() if f.suffix == ".npy"]
+        for unit in sorting.get_unit_ids():
+            for wf_file in waveforms_files:
+                if f"{unit}" in wf_file.name:
+                    shutil.copyfile(
+                        wf_file, new_waveforms_folder / wf_file.name)
+        
+        for ext_name in self.get_available_extension_names():
+            ext = self.load_extension(ext_name)
+            ext._filter_units(unit_ids, new_folder)
+                    
+        we = WaveformExtractor.load_from_folder(new_folder)
+        for ext_name in self.get_available_extension_names():
+            we.load_extension(ext_name)
+        return we
+            
 
     @property
     def nbefore(self):
@@ -903,6 +954,10 @@ class BaseWaveformExtractorExtension:
         self._params = None
     
     def _reset(self):
+        # must be implemented in subclass
+        raise NotImplementedError
+    
+    def _filter_units(self, unit_ids, new_waveforms_folder):
         # must be implemented in subclass
         raise NotImplementedError
     
