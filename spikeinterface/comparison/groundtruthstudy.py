@@ -12,7 +12,7 @@ from spikeinterface import WaveformExtractor
 from spikeinterface.toolkit import compute_quality_metrics
 
 from .comparisontools import _perf_keys
-from .groundtruthcomparison import compare_sorter_to_ground_truth
+from .paircomparisons import compare_sorter_to_ground_truth
 
 from .studytools import (setup_comparison_study, get_rec_names, get_recordings,
                          iter_output_folders, iter_computed_names, iter_computed_sorting, collect_run_times)

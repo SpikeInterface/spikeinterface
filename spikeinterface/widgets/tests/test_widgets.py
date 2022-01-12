@@ -131,7 +131,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_multicomp_graph(msc, edge_cmap='viridis', node_cmap='rainbow', draw_labels=False)
         sw.plot_multicomp_agreement(msc)
         sw.plot_multicomp_agreement_by_sorter(msc)
-        fig, axes = plt.subplots(len(msc.sorting_list), 1)
+        fig, axes = plt.subplots(len(msc.object_list), 1)
         sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
 
     def test_sorting_performance(self):
