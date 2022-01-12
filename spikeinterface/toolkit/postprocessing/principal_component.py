@@ -73,7 +73,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             self.extension_folder).iterdir() if f.suffix == ".pkl"]
         for unit in unit_ids:
             for pca_file in pca_files:
-                if f"{unit}" in pca_file.name:
+                if f"pca_{unit}.npy" in pca_file.name:
                     shutil.copyfile(pca_file, new_waveforms_folder / 
                                     self.extension_name / pca_file.name)
         for pca_model_file in pca_model_files:
