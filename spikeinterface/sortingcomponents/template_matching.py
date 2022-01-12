@@ -11,12 +11,13 @@ import numpy as np
 
 from spikeinterface.core import WaveformExtractor
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
-from spikeinterface.toolkit import get_noise_levels, get_channel_distances
+from spikeinterface.toolkit import get_noise_levels, get_channel_distances, get_chunk_with_margin
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive
 
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
+
 
 
 def find_spike_from_templates(recording, method='simple', method_kwargs={}, 
@@ -53,6 +54,9 @@ def find_spike_from_templates(recording, method='simple', method_kwargs={},
     
     # initialize
     method_kwargs = method_class.initialize_and_check_kwargs(recording, method_kwargs)
+    
+    # add 
+    method_kwargs['margin'] = method_class.get_margin(recording, method_kwargs)
     
     # serialiaze for worker
     method_kwargs = method_class.serialize_method_kwargs(method_kwargs)
@@ -99,16 +103,24 @@ def _find_spike_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     method = worker_ctx['method']
     method_kwargs = worker_ctx['method_kwargs']
+    margin = method_kwargs['margin']
     
-    # load trace in memory
-    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
-                                  segment_index=segment_index)
+    # load trace in memory given some margin
+    recording_segment = recording._recording_segments[segment_index]
+    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment,
+                start_frame, end_frame, None, margin, add_zeros=True)
+
     
     function = worker_ctx['function']
      
     spikes = function(traces, method_kwargs)
     
-    spikes['sample_ind'] += start_frame
+    # remove spikes in margin
+    if margin > 0:
+        keep = (spikes['sample_ind']  >= margin) & (spikes['sample_ind']  < (traces.shape[0] - margin))
+        spikes = spikes[keep]
+
+    spikes['sample_ind'] += (start_frame - margin)
     spikes['segment_ind'] = segment_index
 
     return spikes
@@ -131,7 +143,22 @@ class TemplateMatchingEngineBase:
         # need to be overwrite in subclass
         raise NotImplementedError
         # this in worker at init to unserialize some wkargs if necessary
-        
+
+    @classmethod
+    def get_margin(cls, recording, kwargs):
+        # need to be overwrite in subclass
+        raise NotImplementedError
+        # this must return number of sample for margin
+
+
+    @classmethod
+    def main_function(cls, traces, method_kwargs):
+        # need to be overwrite in subclass
+        raise NotImplementedError
+        # this is the main function to detect and label spikes
+        # this return spikes in traces chunk
+
+
     
 
 ##########
@@ -139,18 +166,26 @@ class TemplateMatchingEngineBase:
 ##########
 
 
-
 class NaiveMatching(TemplateMatchingEngineBase):
+    """
+    This is a naive template matching that do not resolve collision
+    and do not take in account sparsity.
+    It just minimize the dist to templates for detected peaks.
+
+    It is implemented for benchmarking against this low quality template matching.
+    And also as an example how to deal with methods_kwargs, margin, intit, func, ...
+    """
     default_params = {
         'waveform_extractor': None,
         'peak_sign': 'neg',
-        'n_shifts': 2,
+        'n_shifts': 10,
         'detect_threshold': 5,
         'noise_levels': None,
         'local_radius_um': 100,
         'random_chunk_kwargs': {},
     }
     
+
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
         """Check keyword arguments for the simple matching method."""
@@ -174,6 +209,11 @@ class NaiveMatching(TemplateMatchingEngineBase):
         d['nafter'] = we.nafter        
 
         return d
+    
+    @classmethod
+    def get_margin(cls, recording, kwargs):
+        margin = max(kwargs['nbefore'], kwargs['nafter'])
+        return margin
 
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
@@ -210,28 +250,29 @@ class NaiveMatching(TemplateMatchingEngineBase):
         nbefore = method_kwargs['nbefore']
         nafter = method_kwargs['nafter']
         
-        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, n_shifts, neighbours_mask)
+        margin = method_kwargs['margin']
+        
+        if margin > 0:
+            peak_traces = traces[margin:-margin, :]
+        else:
+            peak_traces = traces
+        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(peak_traces, peak_sign, abs_threholds, n_shifts, neighbours_mask)
+        peak_sample_ind += margin
 
-        # this wrong at the moment this ios for debug only!!!!
+
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
         spikes['sample_ind'] = peak_sample_ind
-        spikes['channel_ind'] = peak_chan_ind  # need to put the channel from template
+        spikes['channel_ind'] = peak_chan_ind  # TODO need to put the channel from template
         
         # naively take the closest template
         for i in range(peak_sample_ind.size):
             i0 = peak_sample_ind[i] - nbefore
             i1 = peak_sample_ind[i] + nafter
-            if i0 < 0:
-                print('left border')
-                continue
-            if i1 >= traces.shape[0]:
-                print('right border')
-                continue
             
             wf = traces[i0:i1, :]
             dist = np.sum(np.sum((templates - wf[None, : , :])**2, axis=1), axis=1)
             cluster_ind = np.argmin(dist)
-            
+
             spikes['cluster_ind'][i] = cluster_ind
             spikes['amplitude'][i] = 0.
 
