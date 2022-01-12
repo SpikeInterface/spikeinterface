@@ -20,7 +20,9 @@ def test_find_spike_from_templates():
                            ms_before=1, ms_after=2., max_spikes_per_unit=500,
                            n_jobs=1, chunk_size=30000)
 
-    spikes = find_spike_from_templates(recording, we, method='simple')
+    method_kwargs = {'waveform_extractor' : we}
+    spikes = find_spike_from_templates(recording, method='naive', method_kwargs=method_kwargs,
+                        n_jobs=1, chunk_size=30000, progress_bar=False)
     print(spikes)
 
 
