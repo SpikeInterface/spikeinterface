@@ -34,7 +34,7 @@ def test_WaveformExtractor():
     recording.annotate(is_filtered=True)
     folder_rec = "wf_rec1"
     recording = recording.save(folder=folder_rec)
-    sorting = generate_sorting(num_units=5, sampling_frequency=sampling_frequency, durations=durations)
+    sorting = generate_sorting(num_units=15, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump !!!!
     recording = recording.save()
