@@ -30,11 +30,14 @@ def test_WaveformExtractor():
     sampling_frequency = 30000.
 
     # 2 segments
-    recording = generate_recording(num_channels=2, durations=durations, sampling_frequency=sampling_frequency)
+    num_channels = 2
+    recording = generate_recording(num_channels=num_channels, durations=durations, 
+                                   sampling_frequency=sampling_frequency)
     recording.annotate(is_filtered=True)
     folder_rec = "wf_rec1"
     recording = recording.save(folder=folder_rec)
-    sorting = generate_sorting(num_units=5, sampling_frequency=sampling_frequency, durations=durations)
+    num_units = 15
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump !!!!
     recording = recording.save()
@@ -53,7 +56,7 @@ def test_WaveformExtractor():
 
     wfs = we.get_waveforms(0)
     assert wfs.shape[0] <= 500
-    assert wfs.shape[1:] == (210, 2)
+    assert wfs.shape[1:] == (210, num_channels)
 
     wfs, sampled_index = we.get_waveforms(0, with_index=True)
 
@@ -65,17 +68,17 @@ def test_WaveformExtractor():
     template = we.get_template(0)
     assert template.shape == (210, 2)
     templates = we.get_all_templates()
-    assert templates.shape == (5, 210, 2)
+    assert templates.shape == (num_units, 210, num_channels)
 
     wf_std = we.get_template(0, mode='std')
-    assert wf_std.shape == (210, 2)
+    assert wf_std.shape == (210, num_channels)
     wfs_std = we.get_all_templates(mode='std')
-    assert wfs_std.shape == (5, 210, 2)
+    assert wfs_std.shape == (num_units, 210, num_channels)
 
 
     wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
-    assert wf_segment.shape == (210, 2)
-    assert wf_segment.shape == (210, 2)
+    assert wf_segment.shape == (210, num_channels)
+    assert wf_segment.shape == (210, num_channels)
     
     
     # test filter units
@@ -84,7 +87,7 @@ def test_WaveformExtractor():
     for unit in wf_filt.sorting.get_unit_ids():
         assert unit in keep_units
     filtered_templates = wf_filt.get_all_templates()
-    assert len(filtered_templates) == len(keep_units)
+    assert filtered_templates.shape == (len(keep_units), 210, num_channels)
 
 
 def test_extract_waveforms():

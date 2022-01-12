@@ -337,7 +337,7 @@ class WaveformExtractor:
         waveforms_files = [f for f in (self.folder / "waveforms").iterdir() if f.suffix == ".npy"]
         for unit in sorting.get_unit_ids():
             for wf_file in waveforms_files:
-                if f"{unit}" in wf_file.name:
+                if f"waveforms_{unit}.npy" in wf_file.name or f'sampled_index_{unit}.npy' in wf_file.name:
                     shutil.copyfile(
                         wf_file, new_waveforms_folder / wf_file.name)
         
