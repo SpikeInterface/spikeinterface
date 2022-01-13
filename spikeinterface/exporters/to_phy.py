@@ -3,6 +3,7 @@ import csv
 
 import numpy as np
 import shutil
+import pandas as pd
 
 import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor
@@ -179,7 +180,8 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
             sac = waveform_extractor.load_extension('spike_amplitudes')
             amplitudes = sac.get_amplitudes(outputs='concatenated')
         else:
-            amplitudes = compute_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
+            amplitudes = compute_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', 
+                                                  **job_kwargs)
         # one segment only
         amplitudes = amplitudes[0][:, np.newaxis]
         np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
@@ -204,21 +206,34 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
 
     # Save .tsv metadata
-    with (output_folder / 'cluster_group.tsv').open('w') as tsvfile:
-        writer = csv.writer(tsvfile, delimiter='\t', lineterminator='\n')
-        writer.writerow(['cluster_id', 'group'])
-        for i, u in enumerate(sorting.get_unit_ids()):
-            writer.writerow([i, 'unsorted'])
+    unit_ids = sorting.unit_ids
+    cluster_group = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                  'group': ['unsorted'] * len(unit_ids)})
+    cluster_group.to_csv(output_folder / 'cluster_group.tsv',
+                         sep="\t", index=False)
+    si_unit_ids = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                'si_unit_id': unit_ids})
+    si_unit_ids.to_csv(output_folder / 'cluster_si_unit_ids.tsv',
+                       sep="\t", index=False)
 
     unit_groups = sorting.get_property('group')
     if unit_groups is None:
         unit_groups = np.zeros(len(unit_ids), dtype='int32')
-
-    with (output_folder / 'cluster_channel_group.tsv').open('w') as tsvfile:
-        writer = csv.writer(tsvfile, delimiter='\t', lineterminator='\n')
-        writer.writerow(['cluster_id', 'channel_group'])
-        for i, unit_id in enumerate(unit_ids):
-            writer.writerow([i, unit_groups[i]])
+    channel_group = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                  'channel_group': unit_groups})
+    channel_group.to_csv(output_folder / 'cluster_channel_group.tsv',
+                         sep="\t", index=False)
+    
+    if waveform_extractor.is_extension('quality_metrics'):
+        qm = waveform_extractor.load_extension('quality_metrics')
+        qm_data = qm.get_metrics()
+        for column_name in qm_data.columns:
+            # already computed by phy
+            if column_name not in ["num_spikes", "firing_rate"]:
+                metric = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                       column_name: qm_data[column_name].values})
+                metric.to_csv(output_folder / f'cluster_{column_name}.tsv',
+                              sep="\t", index=False)
 
     if verbose:
         print('Run:\nphy template-gui ', str(output_folder / 'params.py'))
