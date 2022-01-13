@@ -90,12 +90,12 @@ def test_compute_spike_amplitudes_parallel():
     # shutil.rmtree(folder)
 
 
-def test_filter_units():
+def test_select_units():
     we = WaveformExtractor.load_from_folder('mearec_waveforms')
     amps = compute_spike_amplitudes(we, load_if_exists=True)
 
     keep_units = we.sorting.get_unit_ids()[::2]
-    we_filt = we.filter_units(keep_units, 'mearec_waveforms_filt')
+    we_filt = we.select_units(keep_units, 'mearec_waveforms_filt')
     assert "spike_amplitudes" in we_filt.get_available_extension_names()
 
 if __name__ == '__main__':
