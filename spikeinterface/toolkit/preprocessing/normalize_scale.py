@@ -97,7 +97,7 @@ class ScaleRecording(BasePreprocessor):
     ----------
     recording: RecordingExtractor
         The recording extractor to be transformed
-    scalar: float or array
+    gain: float or array
         Scalar for the traces of the recording extractor or array with scalars for each channel
     offset: float or array
         Offset for the traces of the recording extractor or array with offsets for each channel
@@ -139,7 +139,7 @@ class ScaleRecording(BasePreprocessor):
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), gain=gain, offset=offset, dtype=dtype)
+        self._kwargs = dict(recording=recording.to_dict(), gain=gain, offset=offset, dtype=np.dtype(dtype).str)
 
 
 class CenterRecording(BasePreprocessor):
