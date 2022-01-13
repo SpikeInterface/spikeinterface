@@ -232,19 +232,22 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         chan_id = extremum_channels_ids[unit_id]
         chan_ind = recording.id_to_index(chan_id)
         amplitudes = waveforms[:, before, chan_ind]
+        
+        # change amplitudes signs in case peak_sign is pos
+        if peak_sign == "pos":
+            amplitudes = -amplitudes
 
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
         # TODO : change with something better scipy.ndimage.filters.gaussian_filter1d
         pdf = scipy.ndimage.filters.gaussian_filter1d(h, histogram_smoothing_value)
         support = b[:-1]
-
-        peak_index = np.argmax(pdf)
-        G = np.argmin(np.abs(pdf[peak_index:] - pdf[0])) + peak_index
-
         bin_size = np.mean(np.diff(support))
+        peak_index = np.argmax(pdf)
+        
+        G = np.argmin(np.abs(pdf[peak_index:] - pdf[0])) + peak_index
         fraction_missing = np.sum(pdf[G:]) * bin_size
-
+    
         fraction_missing = np.min([fraction_missing, 0.5])
 
         all_fraction_missing[unit_id] = fraction_missing
