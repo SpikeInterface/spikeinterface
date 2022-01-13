@@ -158,12 +158,12 @@ def test_pca_models_and_project_new():
     assert new_proj.shape == (100, n_components)
     
 
-def test_filter_units():
+def test_select_units():
     we = WaveformExtractor.load_from_folder('toy_waveforms_1seg')
     pc = compute_principal_components(we, load_if_exists=True)
 
     keep_units = we.sorting.get_unit_ids()[::2]
-    we_filt = we.filter_units(keep_units, 'toy_waveforms_1seg_filt')
+    we_filt = we.select_units(keep_units, 'toy_waveforms_1seg_filt')
     assert "principal_components" in we_filt.get_available_extension_names()
 
 if __name__ == '__main__':

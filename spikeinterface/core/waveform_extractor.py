@@ -300,7 +300,7 @@ class WaveformExtractor:
         (self.folder / 'params.json').write_text(
             json.dumps(check_json(self._params), indent=4), encoding='utf8')
         
-    def filter_units(self, unit_ids, new_folder):
+    def select_units(self, unit_ids, new_folder):
         """
         Filters units by creating a new waveform extractor object in a new folder.
         
@@ -343,7 +343,7 @@ class WaveformExtractor:
         
         for ext_name in self.get_available_extension_names():
             ext = self.load_extension(ext_name)
-            ext.filter_units(unit_ids, new_folder)
+            ext.select_units(unit_ids, new_folder)
                     
         we = WaveformExtractor.load_from_folder(new_folder)
         return we
@@ -955,7 +955,7 @@ class BaseWaveformExtractorExtension:
         # must be implemented in subclass
         raise NotImplementedError
     
-    def filter_units(self, unit_ids, new_waveforms_folder):
+    def select_units(self, unit_ids, new_waveforms_folder):
         # creaste new extension folder
         new_ext_folder = new_waveforms_folder / self.extension_name
         new_ext_folder.mkdir()
@@ -963,10 +963,10 @@ class BaseWaveformExtractorExtension:
         shutil.copyfile(self.extension_folder / "params.json",
                         new_ext_folder / "params.json")
         # specific files must be copied in subclass
-        self._specific_filter_units(unit_ids=unit_ids, 
+        self._specific_select_units(unit_ids=unit_ids, 
                                     new_waveforms_folder=new_waveforms_folder)
         
-    def _specific_filter_units(self, unit_ids, new_waveforms_folder):
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # must be implemented in subclass
         raise NotImplementedError
 

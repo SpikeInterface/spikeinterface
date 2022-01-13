@@ -83,7 +83,7 @@ def test_WaveformExtractor():
     
     # test filter units
     keep_units = sorting.get_unit_ids()[::2]
-    wf_filt = we.filter_units(keep_units, "we_filt")
+    wf_filt = we.select_units(keep_units, "we_filt")
     for unit in wf_filt.sorting.get_unit_ids():
         assert unit in keep_units
     filtered_templates = wf_filt.get_all_templates()
