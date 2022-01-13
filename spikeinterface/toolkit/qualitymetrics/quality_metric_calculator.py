@@ -70,7 +70,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
     def _reset(self):
         self._metrics = None
         
-    def _specific_filter_units(self, unit_ids, new_waveforms_folder):
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # filter metrics dataframe
         new_metrics = self._metrics.loc[np.array(unit_ids)]
         new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
