@@ -65,7 +65,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         
         return params
     
-    def _specific_filter_units(self, unit_ids, new_waveforms_folder):
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # populate folder
         pca_files = [f for f in (
             self.extension_folder).iterdir() if f.suffix == ".npy"]
