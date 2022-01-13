@@ -36,7 +36,7 @@ class SortingPerformanceWidget(BaseWidget):
 
     def __init__(self, sorting_comparison, metrics,
                  performance_name='accuracy', metric_name='snr',
-                 markersize=10, marker='.', figure=None, ax=None):
+                 color='b', markersize=10, marker='.', figure=None, ax=None):
         assert isinstance(sorting_comparison, GroundTruthComparison), \
             "The 'sorting_comparison' object should be a GroundTruthComparison instance"
         BaseWidget.__init__(self, figure, ax)
@@ -44,6 +44,7 @@ class SortingPerformanceWidget(BaseWidget):
         self.metrics = metrics
         self.performance_name = performance_name
         self.metric_name = metric_name
+        self.color = color
         self.markersize = markersize
         self.marker = marker
 
@@ -58,7 +59,7 @@ class SortingPerformanceWidget(BaseWidget):
 
         ax = self.ax
 
-        ax.plot(metric, perf, marker=self.marker, markersize=int(self.markersize), ls='')
+        ax.plot(metric, perf, marker=self.marker, markersize=int(self.markersize), ls='', color=self.color)
         ax.set_xlabel(self.metric_name)
         ax.set_ylabel(self.performance_name)
         ax.set_ylim(0, 1.05)
