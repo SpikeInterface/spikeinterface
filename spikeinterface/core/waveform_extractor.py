@@ -63,8 +63,6 @@ class WaveformExtractor:
         self.sorting = sorting
         self.folder = Path(folder)
 
-
-
         # cache in memory
         self._waveforms = {}
         self._template_cache = {}
@@ -369,7 +367,7 @@ class WaveformExtractor:
     def return_scaled(self):
         return self._params['return_scaled']
 
-    def get_waveforms(self, unit_id, with_index=False, sparsity=None):
+    def get_waveforms(self, unit_id, with_index=False, cache=False, memmap=True, sparsity=None):
         """
         Return waveforms for the specified unit id.
 
@@ -379,6 +377,11 @@ class WaveformExtractor:
             Unit id to retrieve waveforms for
         with_index: bool
             If True, spike indices of extracted waveforms are returned (default False)
+        cache: bool
+            If True, waveforms are cached to the self._waveforms dictionary (default False)
+        memmap: bool
+            If True, waveforms are loaded as memmap objects.
+            If False, waveforms are loaded as np.array objects (default True)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by channel ids as values.
             The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
@@ -399,9 +402,12 @@ class WaveformExtractor:
             if not waveform_file.is_file():
                 raise Exception('Waveforms not extracted yet: '
                                 'please do WaveformExtractor.run_extract_waveforms() first')
-
-            wfs = np.load(waveform_file)
-            self._waveforms[unit_id] = wfs
+            if memmap:
+                wfs = np.load(waveform_file, mmap_mode="r")
+            else:
+                wfs = np.load(waveform_file)
+            if cache:
+                self._waveforms[unit_id] = wfs
 
         if sparsity is not None:
             assert unit_id in sparsity, f"Sparsity for unit {unit_id} is not in the sparsity dictionary!"
@@ -477,7 +483,7 @@ class WaveformExtractor:
             self._template_cache[mode] = templates
 
         for i, unit_id in enumerate(unit_ids):
-            wfs = self.get_waveforms(unit_id)
+            wfs = self.get_waveforms(unit_id, cache=False)
             for mode in modes:
                 if mode == 'median':
                     arr = np.median(wfs, axis=0)
