@@ -54,6 +54,10 @@ def test_run_sorter_singularity():
                          **sorter_params)
     print(sorting)
 
+    # basic check to confirm sorting was successful
+    assert 'Tridesclous' in sorting.to_dict()['class']
+    assert len(sorting.get_unit_ids()) > 0
+
 
 if __name__ == '__main__':
     test_run_sorter_local()
