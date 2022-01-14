@@ -63,7 +63,7 @@ class WaveformExtractor:
         self.sorting = sorting
         self.folder = Path(folder)
 
-        # cache in memory/memmap
+        # cache in memory
         self._waveforms = {}
         self._template_cache = {}
         self._params = {}
