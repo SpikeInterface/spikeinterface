@@ -4,6 +4,11 @@ import numpy as np
 
 import scipy.spatial
 
+from tqdm import tqdm
+import sklearn, scipy
+
+from threadpoolctl import threadpool_limits
+
 try:
     import numba
     from numba import jit, prange
@@ -34,7 +39,7 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
     waveform_extractor: WaveformExtractor
         The waveform extractor
     method: str 
-        Which method to use ('naive' | 'tridesclous')
+        Which method to use ('naive' | 'tridesclous' | 'circus')
     method_kwargs: dict, optional
         Keyword arguments for the chosen method
     extra_ouputs: bool
@@ -120,8 +125,9 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     
     function = worker_ctx['function']
-     
-    spikes = function(traces, method_kwargs)
+    
+    with threadpool_limits(limits=1, user_api='blas'):
+        spikes = function(traces, method_kwargs)
     
     # remove spikes in margin
     if margin > 0:
@@ -589,7 +595,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'mcc_amplitudes': True,
         'omp' : True,
         'omp_min_sps' : 0.5,
-        'omp_tol' : 1e-5
+        'omp_tol' : 1e-5,
+        'progess_bar_steps' : False,
     }
 
     @classmethod
@@ -615,9 +622,12 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         norms = np.zeros(nb_templates, dtype=np.float32)
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
 
-        from tqdm import tqdm
+        
 
-        all_units = tqdm(d['waveform_extractor'].sorting.unit_ids, desc='prepare templates')
+        all_units = list(d['waveform_extractor'].sorting.unit_ids)
+        if d['progess_bar_steps']:
+            all_units = tqdm(all_units, desc='prepare templates')
+
 
         templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
 
@@ -647,8 +657,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _prepare_overlaps(cls, templates, d):
 
-        import sklearn, scipy
-        from tqdm import tqdm
+        
+        
 
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
@@ -665,7 +675,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         size = 2 * nb_samples - 1
 
-        all_delays = tqdm(range(nb_samples), desc='compute overlaps')
+        all_delays = list(range(nb_samples))
+        if d['progess_bar_steps']:
+            all_delays = tqdlm(all_delays, desc='compute overlaps')
 
         overlaps = {}
         
@@ -707,8 +719,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _optimize_amplitudes(cls, d):
-        import scipy
-        from tqdm import tqdm
 
         waveform_extractor = d['waveform_extractor']
         templates = d['templates']
@@ -717,7 +727,11 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         min_amplitude = d['min_amplitude']
         alpha = 0.5
         norms = d['norms']
-        all_units = tqdm(waveform_extractor.sorting.unit_ids, desc='optimize amplitudes')
+        all_units = list(waveform_extractor.sorting.unit_ids)
+        if d['progess_bar_steps']:
+            all_units = tqdm(all_units, desc='optimize amplitudes')
+
+        
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
 
         for count, unit_id in enumerate(all_units):
@@ -825,7 +839,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
                 min_sps = (amplitudes[:, 0] * norms)[:, np.newaxis]
                 max_sps = (amplitudes[:, 1] * norms)[:, np.newaxis]
-
+                
                 while True:
 
                     is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
