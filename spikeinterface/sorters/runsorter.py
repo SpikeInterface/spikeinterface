@@ -220,7 +220,7 @@ class ContainerClient:
 
 def run_sorter_container(sorter_name, recording, mode, container_image, output_folder=None,
                          remove_existing_folder=True, delete_output_folder=False,
-                         verbose=False, raise_error=True, with_output=True, **sorter_params):
+                         verbose=False, raise_error=True, with_output=False, **sorter_params):
     # common code for docker and singularity
 
     assert platform.system() in ('Linux', 'Darwin'), \
