@@ -24,7 +24,7 @@ spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind'
 
 
 
-def find_spike_from_templates(recording, method='simple', method_kwargs={}, extra_ouputs=False,
+def find_spikes_from_templates(recording, method='simple', method_kwargs={}, extra_ouputs=False,
                               **job_kwargs):
     """Find spike from a recording from given templates.
 
@@ -73,7 +73,7 @@ def find_spike_from_templates(recording, method='simple', method_kwargs={}, extr
     init_func = _init_worker_find_spike
     init_args = (recording.to_dict(), method, method_kwargs_seralized)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       handle_returns=True, job_name='find spike', **job_kwargs)
+                                       handle_returns=True, job_name=f'find spikes {method}', **job_kwargs)
     spikes = processor.run()
 
     spikes = np.concatenate(spikes)
@@ -137,7 +137,7 @@ def _find_spike_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 # generic class for template engine
-class TemplateMatchingEngineBase:
+class BaseTemplateMatchingEngine:
     default_params = {}
     
     @classmethod
@@ -180,7 +180,7 @@ class TemplateMatchingEngineBase:
 ##########
 
 
-class NaiveMatching(TemplateMatchingEngineBase):
+class NaiveMatching(BaseTemplateMatchingEngine):
     """
     This is a naive template matching that do not resolve collision
     and do not take in account sparsity.
@@ -296,7 +296,7 @@ class NaiveMatching(TemplateMatchingEngineBase):
 ##########
 
 
-class TridesclousPeeler(TemplateMatchingEngineBase):
+class TridesclousPeeler(BaseTemplateMatchingEngine):
     default_params = {
         'waveform_extractor': None,
         'peak_sign': 'neg',
