@@ -289,22 +289,27 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     need_si_install = 'ModuleNotFoundError' in res_output
 
     if need_si_install:
+        # downgrade pip version to avoid dependency issues during installations
+        # see https://github.com/SpikeInterface/spikeinterface-dockerfiles/pull/14
+        cmd = 'pip install --no-input pip==21.2.4'
+        res_output = container_client.run_command(cmd)
         if 'dev' in si_version:
             if verbose:
                 print(
                     f"Installing spikeinterface from sources in {container_image}")
             # TODO later check output
-            cmd = 'pip install --upgrade --force MEArec'
+            print(container_client.run_command('pip list'))
+            cmd = 'pip install --upgrade --no-input MEArec'
             res_output = container_client.run_command(cmd)
-            cmd = 'pip install -e git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
+            cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
             res_output = container_client.run_command(cmd)
-            cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
+            cmd = 'pip install --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
                 print(
                     f"Installing spikeinterface=={si_version} in {container_image}")
-            cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
+            cmd = f'pip install --upgrade --no-input spikeinterface[full]=={si_version}'
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
