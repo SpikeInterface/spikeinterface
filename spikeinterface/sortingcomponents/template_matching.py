@@ -23,25 +23,24 @@ spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind'
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-
-def find_spikes_from_templates(recording, method='simple', method_kwargs={}, extra_ouputs=False,
-                              **job_kwargs):
+def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extra_ouputs=False,
+                               **job_kwargs):
     """Find spike from a recording from given templates.
 
     Parameters
     ----------
     recording: RecordingExtractor
-        The recording extractor object.
+        The recording extractor object
     waveform_extractor: WaveformExtractor
-        The waveform extractor.
-    method: {'simple'}
-        Which method to use.
+        The waveform extractor
+    method: str 
+        Which method to use ('naive' | 'tridesclous')
     method_kwargs: dict, optional
-        Keyword arguments for the chosen method.
+        Keyword arguments for the chosen method
     extra_ouputs: bool
         If True then method_kwargs is also return
     job_kwargs: dict
-        Parameters for ChunkRecordingExecutor.
+        Parameters for ChunkRecordingExecutor
 
     Returns
     -------
@@ -55,7 +54,6 @@ def find_spikes_from_templates(recording, method='simple', method_kwargs={}, ext
     """
 
     assert method in template_matching_methods
-    
     
     method_class = template_matching_methods[method]
     
@@ -142,52 +140,53 @@ class BaseTemplateMatchingEngine:
     
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
-        # need to be overwrite in subclass
+        """This function runs before loops"""
+        # needs to be implementd in subclass
         raise NotImplementedError
-        # this function before loops
 
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
-        # need to be overwrite in subclass
+        """This function serializes kwargs to distribute them to workers"""
+        # needs to be implementd in subclass
         raise NotImplementedError
-        # this serializa params to distribute it to workers
 
     @classmethod
     def unserialize_in_worker(cls, recording, kwargs):
-        # need to be overwrite in subclass
+        """This function unserializes kwargs in workers"""
+        # needs to be implementd in subclass
         raise NotImplementedError
-        # this in worker at init to unserialize some wkargs if necessary
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        # need to be overwrite in subclass
+        """This function returns the number of samples for the chunk margins"""
+        # needs to be implementd in subclass
         raise NotImplementedError
         # this must return number of sample for margin
 
 
     @classmethod
     def main_function(cls, traces, method_kwargs):
-        # need to be overwrite in subclass
+        """
+        This is the main function to detect and label spikes.
+        It returns spikes in the traces chunk.
+        """
+        # needs to be implementd in subclass
         raise NotImplementedError
-        # this is the main function to detect and label spikes
-        # this return spikes in traces chunk
-
-
     
 
-##########
-# naive mathing
-##########
+##################
+# naive matching #
+##################
 
 
 class NaiveMatching(BaseTemplateMatchingEngine):
     """
-    This is a naive template matching that do not resolve collision
-    and do not take in account sparsity.
-    It just minimize the dist to templates for detected peaks.
+    This is a naive template matching that does not resolve collision
+    and does not take in account sparsity.
+    It just minimizes the distance to templates for detected peaks.
 
     It is implemented for benchmarking against this low quality template matching.
-    And also as an example how to deal with methods_kwargs, margin, intit, func, ...
+    And also as an example how to deal with methods_kwargs, margin, init, func, etc.
     """
     default_params = {
         'waveform_extractor': None,
@@ -291,12 +290,17 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         return spikes
 
 
-##########
-# tridesclous peeler
-##########
+######################
+# tridesclous peeler #
+######################
 
 
 class TridesclousPeeler(BaseTemplateMatchingEngine):
+    """
+    Template-matching from Tridesclous sorter.
+    
+    @Sam add short description
+    """
     default_params = {
         'waveform_extractor': None,
         'peak_sign': 'neg',
@@ -566,13 +570,8 @@ if HAVE_NUMBA:
             #~ scalar_product[i] = sum_sp / sum_norm
         return distances
         #~ return scalar_product, distances
-        
-    
-
-
 
 template_matching_methods = {
-    'naive' : NaiveMatching,
-    'tridesclous' : TridesclousPeeler,
+    'naive': NaiveMatching,
+    'tridesclous': TridesclousPeeler,
 }
-
