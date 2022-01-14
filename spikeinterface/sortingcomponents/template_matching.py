@@ -592,7 +592,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.2,
         'mcc_amplitudes': True,
-        'omp' : True
+        'omp' : True,
+        'omp_min_sps' : 0.5,
+        'omp_tol' : 1e-5
     }
 
     @classmethod
@@ -797,6 +799,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         margin = d['margin']
         norms = d['norms']
         omp = d['omp']
+        omp_tol = d['omp_tol']
+        omp_min_sps = d['omp_min_sps']
 
         neighbor_window = len(snippet_window) - 1
         amplitudes = d['amplitudes']
@@ -865,9 +869,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
                 import scipy
 
-                M = np.zeros((10*nb_peaks, 10*nb_peaks), dtype=np.float32)
-                stop_criteria = 0.5 * norms[:, np.newaxis]
-                error_tol = 1e-5
+                M = np.zeros((5*nb_peaks, 5*nb_peaks), dtype=np.float32)
+                stop_criteria = omp_min_sps * norms[:, np.newaxis]
 
                 all_selections = np.empty((2, scalar_products.size), dtype=np.int32, order='F')
                 res_sps = np.zeros(0, dtype=np.float32)
@@ -915,7 +918,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
                     all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True)/norms[selection[0]]
                     diff_amplitudes = (all_amplitudes - amplitudes[selection[0], selection[1]])
-                    modified = np.where(np.abs(diff_amplitudes) > error_tol)[0]
+                    modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
                     amplitudes[selection[0], selection[1]] = all_amplitudes
 
                     for i in modified:
