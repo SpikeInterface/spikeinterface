@@ -70,7 +70,7 @@ def find_spikes_from_templates(recording, method='simple', method_kwargs={}, ext
     
     # and run
     func = _find_spikes_chunk
-    init_func = _init_worker_find_spike
+    init_func = _init_worker_find_spikes
     init_args = (recording.to_dict(), method, method_kwargs_seralized)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name=f'find spikes ({method})', **job_kwargs)
@@ -84,7 +84,7 @@ def find_spikes_from_templates(recording, method='simple', method_kwargs={}, ext
         return spikes
 
 
-def _init_worker_find_spike(recording, method, method_kwargs):
+def _init_worker_find_spikes(recording, method, method_kwargs):
     """Initialize worker for finding spikes."""
 
     if isinstance(recording, dict):
@@ -799,11 +799,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         peak_chan_ind = peak_chan_ind[unique_idx]
 
         nb_peaks = len(peak_sample_ind)
-
-        result = {'sample_ind': [],
-                  'channel_ind': [],
-                  'cluster_ind': [],
-                  'amplitude' : []}
+        nb_spikes = 0
 
         if nb_peaks > 0:
 
@@ -813,6 +809,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             scalar_products = templates.dot(snippets.T)
 
             peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
+
+            spikes = np.empty(scalar_products.size, dtype=spike_dtype)
 
             if not omp:
 
@@ -843,10 +841,11 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     scalar_products[:, is_neighbor] += to_add
                     scalar_products[best_cluster_ind, peak_index] = -np.inf
 
-                    result['sample_ind'] += [best_peak_sample_ind]
-                    result['channel_ind'] += [best_peak_chan_ind]
-                    result['cluster_ind'] += [best_cluster_ind]
-                    result['amplitude'] += [best_amplitude_]
+                    spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
+                    spikes['channel_ind'][nb_spikes] = best_peak_chan_ind
+                    spikes['cluster_ind'][nb_spikes] = best_cluster_ind
+                    spikes['amplitude'][nb_spikes] = best_amplitude_
+                    nb_spikes += 1
 
             else:
 
@@ -921,26 +920,19 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                 is_valid = (amplitudes > min_sps)*(amplitudes < max_sps)
                 valid_indices = np.where(is_valid)
 
-                if len(valid_indices[0]) > 0:
-                
-                    for i,j in zip(valid_indices[0], valid_indices[1]):
+                nb_spikes = len(valid_indices[0])
+                spikes['sample_ind'][:nb_spikes] = peak_sample_ind[valid_indices[1]]
+                spikes['channel_ind'][:nb_spikes] = peak_chan_ind[valid_indices[1]]
+                spikes['cluster_ind'][:nb_spikes] = valid_indices[0]
+                spikes['amplitude'][:nb_spikes] = amplitudes[is_valid]
 
-                        best_peak_sample_ind = peak_sample_ind[j]
-                        best_peak_chan_ind = peak_chan_ind[j]
-                        best_cluster_ind = i
-
-                        result['sample_ind'] += [best_peak_sample_ind]
-                        result['channel_ind'] += [best_peak_chan_ind]
-                        result['cluster_ind'] += [best_cluster_ind]
-                        result['amplitude'] += [amplitudes[i,j]]
-
-
-            spikes = np.zeros(len(result['sample_ind']), dtype=spike_dtype)
-            for key in ['sample_ind', 'channel_ind', 'cluster_ind', 'amplitude']:
-                spikes[key] = result[key]
+            spikes = spikes[:nb_spikes]
 
             order = np.argsort(spikes['sample_ind'])
             spikes = spikes[order]
+
+        else:
+            spikes = np.zeros(0, dtype=spike_dtype)
 
         return spikes
 
