@@ -589,6 +589,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'amplitudes' : None,
         'sparsify_threshold': 0.2,
         'max_amplitude' : 3,
+        'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.2,
         'mcc_amplitudes': True,
         'omp' : True
@@ -610,6 +611,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_templates = d['nb_templates']
         spread = d['spread']
         max_amplitude = d['max_amplitude']
+        min_amplitude = d['min_amplitude']
         use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
         sparse_thresholds = d['noise_levels'] * d['sparsify_threshold']
 
@@ -634,10 +636,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             amps = template.dot(w.reshape(w.shape[0], -1).T)/norms[count]
             median_amps = np.median(amps)
             mads_amps = np.median(np.abs(amps - np.median(amps)))
-            amplitudes[count] = [max(0.5, median_amps - spread*mads_amps), min(max_amplitude, median_amps+spread*mads_amps)]
-
-            # Necessary to clear cache of the waveform_extractor
-            waveform_extractor._waveforms = {}
+            amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps+spread*mads_amps)]
 
             templates[count] = template
 
@@ -690,11 +689,12 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         return overlaps
 
-    def _mcc_error(good_values, bad_values, bounds):
-        fn = np.sum((good_values < bounds[0]) | (good_values > bounds[1]))
-        fp = np.sum((bounds[0] <= bad_values) & (bad_values <= bounds[1]))
-        tp = np.sum((bounds[0] <= good_values) & (good_values <= bounds[1]))
-        tn = np.sum((bad_values < bounds[0]) | (bad_values > bounds[1]))
+    @classmethod
+    def _mcc_error(cls, bounds, good, bad):
+        fn = np.sum((good < bounds[0]) | (good > bounds[1]))
+        fp = np.sum((bounds[0] <= bad) & (bad <= bounds[1]))
+        tp = np.sum((bounds[0] <= good) & (good <= bounds[1]))
+        tn = np.sum((bad < bounds[0]) | (bad > bounds[1]))
         denom = (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)
         if denom > 0:
             mcc = 1 - (tp*tn - fp*fn)/np.sqrt(denom)
@@ -702,28 +702,39 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             mcc = 1
         return mcc
 
-    # def _cost_function(x, good_values, bad_values, alpha=1e-1, max_amplitude=3):
-    #     # We want a minimal error, with the larger bounds that are possible
-    #     cost = _mcc_error(good_values, bad_values, x) + alpha*np.abs((max_amplitude - (x[1] - x[0])))
-    #     return cost
+    @classmethod
+    def _cost_function(cls, bounds, good, bad, delta_amplitude, alpha):
+        # We want a minimal error, with the larger bounds that are possible
+        cost = alpha*cls._mcc_error(bounds, good, bad) + (1 - alpha)*np.abs((1 - (bounds[1] - bounds[0])/delta_amplitude))
+        return cost
+
+    @classmethod
+    def _optimize_amplitudes(cls, d):
+        import scipy
+        from tqdm import tqdm
+
+        waveform_extractor = d['waveform_extractor']
+        templates = d['templates']
+        nb_templates = d['nb_templates']
+        max_amplitude = d['max_amplitude']
+        min_amplitude = d['min_amplitude']
+        alpha = 0.5
+        norms = d['norms']
+        all_units = tqdm(waveform_extractor.sorting.unit_ids, desc='optimize amplitudes')
+        amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
+
+        for count, unit_id in enumerate(all_units):
+            w = waveform_extractor.get_waveforms(unit_id)
+            amps = templates.dot(w.reshape(w.shape[0], -1).T)/norms[:, np.newaxis]
+            good = amps[count, :].flatten()
+            bad = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :].flatten()
+            cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
+            res = scipy.optimize.differential_evolution(cls._cost_function, bounds=[(min_amplitude,1), (1, max_amplitude)], args=cost_kwargs)
+            amplitudes[count] = res.x
+
+        return amplitudes
 
 
-    # def _optimize_amplitudes(self):
-    #     import scipy
-    #     from tqdm import tqdm
-    #     all_units = tqdm(self.waveform_extractor.sorting.unit_ids, desc='optimize amplitudes')
-    #     for count, unit_id in enumerate(all_units):
-    #         w = self.waveform_extractor.get_waveforms(unit_id)
-    #         if self.sparse:
-    #             self.waveform_extractor._waveforms = {}
-    #         amps = self.templates.dot(w.reshape(w.shape[0], -1).T)/self.norms[:, np.newaxis]
-    #         good_values = amps[count, :].flatten()
-    #         bad_values = amps[np.concatenate((np.arange(count), np.arange(count+1, self.nb_templates))), :].flatten()
-    #         res = scipy.optimize.differential_evolution(self._cost_function, bounds=[(0,1), (1, self.max_amplitude)], args=(good_values, bad_values))
-    #         self.amplitudes[count] = res.x
-
-
-    
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
 
@@ -752,8 +763,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d['snippet_window'] = np.arange(-d['nbefore'], d['nafter'])
         d['snippet_size'] = d['nb_channels'] * len(d['snippet_window'])
 
-        #if mcc_amplitudes:
-        #    self.optimize_amplitudes()
+        if d['mcc_amplitudes']:
+            d['amplitudes'] = cls._optimize_amplitudes(d)
 
         return d        
 
