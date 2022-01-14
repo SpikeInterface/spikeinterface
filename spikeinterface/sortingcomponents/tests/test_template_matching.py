@@ -3,13 +3,13 @@ import numpy as np
 
 from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
-from spikeinterface.sortingcomponents import find_spike_from_templates
+from spikeinterface.sortingcomponents import find_spikes_from_templates, template_matching_methods
 
 from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import read_mearec
 
 
-def test_find_spike_from_templates():
+def test_find_spikes_from_templates():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
@@ -26,48 +26,52 @@ def test_find_spike_from_templates():
     #~ spikes = find_spike_from_templates(recording, method='naive', method_kwargs=method_kwargs,
                         #~ n_jobs=1, chunk_size=30000, progress_bar=False)
 
+
     method_kwargs = {
         'waveform_extractor' : we,
         'noise_levels' : get_noise_levels(recording),
         'omp' : False
     }
 
+
+
     sampling_frequency = recording.get_sampling_frequency()
 
-    spikes_circus = find_spike_from_templates(recording, method='circus', method_kwargs=method_kwargs,
+    result = {}
+
+    import spikeinterface.full as si
+
+    for method in template_matching_methods.keys():
+
+        spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
                         n_jobs=1, chunk_size=30000, progress_bar=True)
 
-    
-    method_kwargs = {
-        'waveform_extractor' : we,
-        'noise_levels' : get_noise_levels(recording),
-        'omp' : True
-    }
-
-    spikes_circus_omp = find_spike_from_templates(recording, method='circus', method_kwargs=method_kwargs,
-                        n_jobs=1, chunk_size=30000, progress_bar=True)
-    
+        result[method] = si.NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
     
     
     # debug
-    import matplotlib.pyplot as plt
-    import spikeinterface.full as si
+    # import matplotlib.pyplot as plt
+    # import spikeinterface.full as si
 
-    sorting_circus = si.NumpySorting.from_times_labels(spikes_circus['sample_ind'], spikes_circus['cluster_ind'], sampling_frequency)
-    sorting_circus_omp = si.NumpySorting.from_times_labels(spikes_circus_omp['sample_ind'], spikes_circus_omp['cluster_ind'], sampling_frequency)
+    # sorting_tdc = si.NumpySorting.from_times_labels(spikes_tdc['sample_ind'], spikes_tdc['cluster_ind'], sampling_frequency)
+    # sorting_circus = si.NumpySorting.from_times_labels(spikes_circus['sample_ind'], spikes_circus['cluster_ind'], sampling_frequency)
+    # sorting_circus_omp = si.NumpySorting.from_times_labels(spikes_circus_omp['sample_ind'], spikes_circus_omp['cluster_ind'], sampling_frequency)
 
-    metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
+    # metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
     
-    comp_circus = si.compare_sorter_to_ground_truth(gt_sorting, sorting_circus)
-    comp_circus_omp = si.compare_sorter_to_ground_truth(gt_sorting, sorting_circus_omp)
+    # comp_circus = si.compare_sorter_to_ground_truth(gt_sorting, sorting_circus)
+    # comp_circus_omp = si.compare_sorter_to_ground_truth(gt_sorting, sorting_circus_omp)
+    # comp_tdc = si.compare_sorter_to_ground_truth(gt_sorting, sorting_tdc)
 
-    si.plot_agreement_matrix(comp_circus)
-    si.plot_agreement_matrix(comp_circus_omp)
-    si.plot_sorting_performance(comp_circus, metrics, performance_name='accuracy', metric_name='snr',)
-    si.plot_sorting_performance(comp_circus_omp, metrics, performance_name='accuracy', metric_name='snr',)
-    plt.show()
+    # si.plot_agreement_matrix(comp_circus)
+    # si.plot_agreement_matrix(comp_circus_omp)
+    # si.plot_agreement_matrix(comp_tdc)
+    # si.plot_sorting_performance(comp_circus, metrics, performance_name='accuracy', metric_name='snr',)
+    # si.plot_sorting_performance(comp_circus_omp, metrics, performance_name='accuracy', metric_name='snr',)
+    # si.plot_sorting_performance(comp_tdc, metrics, performance_name='accuracy', metric_name='snr',)
+    # plt.show()
 
 
 
 if __name__ == '__main__':
-    test_find_spike_from_templates()
+    test_find_spikes_from_templates()
