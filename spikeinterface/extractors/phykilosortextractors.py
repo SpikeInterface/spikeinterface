@@ -93,7 +93,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
             cluster_info["cluster_id"] = cluster_info["id"]
             del cluster_info["id"]
-        unit_ids = cluster_info["cluster_id"].values
+
+        if 'si_unit_id' in cluster_info.columns:
+            unit_ids = cluster_info["si_unit_id"].values
+            del cluster_info["si_unit_id"]
+        else:
+            unit_ids = cluster_info["cluster_id"].values
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
