@@ -49,7 +49,7 @@ class WaveformExtractor:
 
     """
     extensions = []
-    def __init__(self, recording, sorting, folder, cache_to_mem=False):
+    def __init__(self, recording, sorting, folder):
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             "The recording and sorting objects must have the same number of segments!"
         np.testing.assert_almost_equal(recording.get_sampling_frequency(),
@@ -67,7 +67,6 @@ class WaveformExtractor:
         self._waveforms = {}
         self._template_cache = {}
         self._params = {}
-        self._cache_to_mem = cache_to_mem
 
         if (self.folder / 'params.json').is_file():
             with open(str(self.folder / 'params.json'), 'r') as f:
@@ -101,7 +100,7 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def create(cls, recording, sorting, folder, cache_to_mem=False, remove_if_exists=False):
+    def create(cls, recording, sorting, folder, remove_if_exists=False):
         folder = Path(folder)
         if folder.is_dir():
             if remove_if_exists:
@@ -115,7 +114,7 @@ class WaveformExtractor:
         if sorting.is_dumpable:
             sorting.dump(folder / 'sorting.json', relative_to=None)
 
-        return cls(recording, sorting, folder, cache_to_mem)
+        return cls(recording, sorting, folder)
 
     @classmethod
     def register_extension(cls, extension_class):
@@ -368,7 +367,7 @@ class WaveformExtractor:
     def return_scaled(self):
         return self._params['return_scaled']
 
-    def get_waveforms(self, unit_id, with_index=False, sparsity=None):
+    def get_waveforms(self, unit_id, with_index=False, cache=False, memmap=True, sparsity=None):
         """
         Return waveforms for the specified unit id.
 
@@ -378,6 +377,11 @@ class WaveformExtractor:
             Unit id to retrieve waveforms for
         with_index: bool
             If True, spike indices of extracted waveforms are returned (default False)
+        cache: bool
+            If True, waveforms are cached to the self._waveforms dictionary (default False)
+        memmap: bool
+            If True, waveforms are loaded as memmap objects.
+            If False, waveforms are loaded as np.array objects (default True)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by channel ids as values.
             The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
@@ -398,11 +402,12 @@ class WaveformExtractor:
             if not waveform_file.is_file():
                 raise Exception('Waveforms not extracted yet: '
                                 'please do WaveformExtractor.run_extract_waveforms() first')
-            if not self._cache_to_mem:
+            if memmap:
                 wfs = np.load(waveform_file, mmap_mode="r")
             else:
                 wfs = np.load(waveform_file)
-            self._waveforms[unit_id] = wfs
+            if cache:
+                self._waveforms[unit_id] = wfs
 
         if sparsity is not None:
             assert unit_id in sparsity, f"Sparsity for unit {unit_id} is not in the sparsity dictionary!"
@@ -478,7 +483,7 @@ class WaveformExtractor:
             self._template_cache[mode] = templates
 
         for i, unit_id in enumerate(unit_ids):
-            wfs = self.get_waveforms(unit_id)
+            wfs = self.get_waveforms(unit_id, cache=False)
             for mode in modes:
                 if mode == 'median':
                     arr = np.median(wfs, axis=0)
@@ -800,7 +805,6 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
 def extract_waveforms(recording, sorting, folder,
                       load_if_exists=False,
-                      cache_to_mem=False,
                       precompute_template=('average', ),
                       ms_before=3., ms_after=4.,
                       max_spikes_per_unit=500,
@@ -823,8 +827,6 @@ def extract_waveforms(recording, sorting, folder,
     load_if_exists: bool
         If True and waveforms have already been extracted in the specified folder, they are loaded
         and not recomputed.
-    cache_to_mem: bool
-        If True, waveforms are loaded and cached in memory (default False)
     precompute_template: None or list
         Precompute average/std/median for template. If None not precompute.
     ms_before: float
@@ -858,7 +860,7 @@ def extract_waveforms(recording, sorting, folder,
     if load_if_exists and folder.is_dir():
         we = WaveformExtractor.load_from_folder(folder)
     else:
-        we = WaveformExtractor.create(recording, sorting, folder, cache_to_mem)
+        we = WaveformExtractor.create(recording, sorting, folder)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
                       return_scaled=return_scaled)
         we.run_extract_waveforms(**job_kwargs)
