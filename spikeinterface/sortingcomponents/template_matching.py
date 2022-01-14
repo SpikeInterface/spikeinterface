@@ -23,7 +23,6 @@ spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind'
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-
 def find_spikes_from_templates(recording, method='simple', method_kwargs={}, extra_ouputs=False,
                               **job_kwargs):
     """Find spike from a recording from given templates.
@@ -31,17 +30,17 @@ def find_spikes_from_templates(recording, method='simple', method_kwargs={}, ext
     Parameters
     ----------
     recording: RecordingExtractor
-        The recording extractor object.
+        The recording extractor object
     waveform_extractor: WaveformExtractor
-        The waveform extractor.
-    method: {'simple'}
-        Which method to use.
+        The waveform extractor
+    method: str 
+        Which method to use ('naive' | 'tridesclous')
     method_kwargs: dict, optional
-        Keyword arguments for the chosen method.
+        Keyword arguments for the chosen method
     extra_ouputs: bool
         If True then method_kwargs is also return
     job_kwargs: dict
-        Parameters for ChunkRecordingExecutor.
+        Parameters for ChunkRecordingExecutor
 
     Returns
     -------
@@ -55,7 +54,6 @@ def find_spikes_from_templates(recording, method='simple', method_kwargs={}, ext
     """
 
     assert method in template_matching_methods
-    
     
     method_class = template_matching_methods[method]
     
@@ -132,7 +130,6 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     spikes['sample_ind'] += (start_frame - margin)
     spikes['segment_ind'] = segment_index
-
     return spikes
 
 
@@ -163,7 +160,6 @@ class BaseTemplateMatchingEngine:
         # need to be overwrite in subclass
         raise NotImplementedError
         # this must return number of sample for margin
-
 
     @classmethod
     def main_function(cls, traces, method_kwargs):
@@ -567,13 +563,10 @@ if HAVE_NUMBA:
         return distances
         #~ return scalar_product, distances
         
-    
-
 
 ##########
 # Circus peeler
 ##########
-
 
 class CircusPeeler(BaseTemplateMatchingEngine):
 
@@ -773,7 +766,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
         kwargs = dict(kwargs)
-        
         # remove waveform_extractor
         kwargs.pop('waveform_extractor')
         return kwargs
@@ -950,12 +942,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         return spikes
 
-
-
-
 template_matching_methods = {
     'naive' : NaiveMatching,
     'tridesclous' : TridesclousPeeler,
     'circus' : CircusPeeler
 }
-
