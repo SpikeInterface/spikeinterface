@@ -33,8 +33,10 @@ def test_run_sorter_docker():
     sorting = run_sorter('tridesclous', recording, output_folder='sorting_tdc_docker',
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, docker_image=docker_image,
-                         **sorter_params)
-    print(sorting)
+                         with_output=False, **sorter_params)
+    assert sorting is None
+    # TODO: Add another run with `with_output=True` and check sorting result
+
 
 
 @pytest.mark.skipif(ON_GITHUB, reason="Singularity tests don't run on github: test it locally")
