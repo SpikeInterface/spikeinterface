@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
-from spikeinterface.sortingcomponents import find_spikes_from_templates
+from spikeinterface.sortingcomponents import find_spikes_from_templates, template_matching_methods
 
 from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import read_mearec
@@ -21,32 +21,37 @@ def test_find_spikes_from_templates():
                            ms_before=1, ms_after=2., max_spikes_per_unit=500, return_scaled=False,
                            n_jobs=1, chunk_size=10000)
     
-    
-    method_kwargs = {'waveform_extractor' : we}
-    spikes = find_spikes_from_templates(recording, method='naive', method_kwargs=method_kwargs,
-                        n_jobs=1, chunk_size=30000, progress_bar=False)
-
     method_kwargs = {
         'waveform_extractor' : we,
         'noise_levels' : get_noise_levels(recording),
     }
-    spikes = find_spikes_from_templates(recording, method='tridesclous', method_kwargs=method_kwargs,
-                        n_jobs=1, chunk_size=30000, progress_bar=False)
-    
-    
-    
 
+    sampling_frequency = recording.get_sampling_frequency()
+
+    result = {}
+
+    import spikeinterface.full as si
+    for method in template_matching_methods.keys():
+        spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
+                        n_jobs=1, chunk_size=30000, progress_bar=True)
+
+        result[method] = si.NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
+    
+    
     # debug
-    # import matplotlib.pyplot as plt
-    # import spikeinterface.full as si
-    # metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
-    # sorting = si.NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], recording.get_sampling_frequency())
-    # comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
-    # si.plot_agreement_matrix(comp)
-    # si.plot_sorting_performance(comp, metrics, performance_name='accuracy', metric_name='snr',)
-    # plt.show()
+    #import matplotlib.pyplot as plt
+    #import spikeinterface.full as si
 
-
+    #metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
+    
+    #comparisons = {}
+    #for method in template_matching_methods.keys():
+    #    comparisons[method] = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
+    #    si.plot_agreement_matrix(comparisons[method])
+    #    plt.title(method)
+    #    si.plot_sorting_performance(comparisons[method], metrics, performance_name='accuracy', metric_name='snr',)
+    #    plt.title(method)
+    #plt.show()
 
 if __name__ == '__main__':
     test_find_spikes_from_templates()
