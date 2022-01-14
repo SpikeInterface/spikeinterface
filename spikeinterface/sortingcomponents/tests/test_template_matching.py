@@ -53,22 +53,15 @@ def test_find_spikes_from_templates():
     # import matplotlib.pyplot as plt
     # import spikeinterface.full as si
 
-    # sorting_tdc = si.NumpySorting.from_times_labels(spikes_tdc['sample_ind'], spikes_tdc['cluster_ind'], sampling_frequency)
-    # sorting_circus = si.NumpySorting.from_times_labels(spikes_circus['sample_ind'], spikes_circus['cluster_ind'], sampling_frequency)
-    # sorting_circus_omp = si.NumpySorting.from_times_labels(spikes_circus_omp['sample_ind'], spikes_circus_omp['cluster_ind'], sampling_frequency)
-
     # metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
     
-    # comp_circus = si.compare_sorter_to_ground_truth(gt_sorting, sorting_circus)
-    # comp_circus_omp = si.compare_sorter_to_ground_truth(gt_sorting, sorting_circus_omp)
-    # comp_tdc = si.compare_sorter_to_ground_truth(gt_sorting, sorting_tdc)
-
-    # si.plot_agreement_matrix(comp_circus)
-    # si.plot_agreement_matrix(comp_circus_omp)
-    # si.plot_agreement_matrix(comp_tdc)
-    # si.plot_sorting_performance(comp_circus, metrics, performance_name='accuracy', metric_name='snr',)
-    # si.plot_sorting_performance(comp_circus_omp, metrics, performance_name='accuracy', metric_name='snr',)
-    # si.plot_sorting_performance(comp_tdc, metrics, performance_name='accuracy', metric_name='snr',)
+    # comparisons = {}
+    # for method in template_matching_methods.keys():
+    #     comparisons[method] = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
+    #     si.plot_agreement_matrix(comparisons[method])
+    #     plt.title(method)
+    #     si.plot_sorting_performance(comparisons[method], metrics, performance_name='accuracy', metric_name='snr',)
+    #     plt.title(method)
     # plt.show()
 
 
