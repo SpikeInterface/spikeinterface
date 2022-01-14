@@ -34,7 +34,7 @@ class FrameSliceRecording(BaseRecording):
                                sampling_frequency=parent_recording.get_sampling_frequency(),
                                channel_ids=channel_ids,
                                dtype=parent_recording.get_dtype())
-
+        
         # link recording segment
         parent_segment = parent_recording._recording_segments[0]
         sub_segment = FrameSliceRecordingSegment(parent_segment, int(start_frame), int(end_frame))
@@ -42,7 +42,7 @@ class FrameSliceRecording(BaseRecording):
 
         # copy properties and annotations
         parent_recording.copy_metadata(self)
-
+        
         # update dump dict
         self._kwargs = {'parent_recording': parent_recording.to_dict(), 'start_frame': int(start_frame),
                         'end_frame': int(end_frame)}

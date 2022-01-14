@@ -66,6 +66,10 @@ class UnitsAggregationSorting(BaseSorting):
             parent_segments = [sort._sorting_segments[i_seg] for sort in sorting_list]
             sub_segment = UnitsAggregationSortingSegment(unit_map, parent_segments)
             self.add_sorting_segment(sub_segment)
+        
+        # set is_dumpable
+        if not np.all([sort.is_dumpable for sort in sorting_list]):
+            self.is_dumpable = False
 
         self._sortings = sorting_list
         self._kwargs = {'sorting_list': [sort.to_dict() for sort in sorting_list],

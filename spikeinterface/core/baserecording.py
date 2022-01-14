@@ -24,8 +24,6 @@ class BaseRecording(BaseExtractor):
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
 
-        self.is_dumpable = True
-
         self._sampling_frequency = sampling_frequency
         self._dtype = np.dtype(dtype)
 

@@ -85,6 +85,10 @@ class ChannelsAggregationRecording(BaseRecording):
             parent_segments = [rec._recording_segments[i_seg] for rec in recording_list]
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
+            
+        # set is_dumpable
+        if not np.all([rec.is_dumpable for sort in recording_list]):
+            self.is_dumpable = False
 
         self._recordings = recording_list
         self._kwargs = {'recording_list': [rec.to_dict() for rec in recording_list],

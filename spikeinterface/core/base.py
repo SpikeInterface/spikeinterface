@@ -181,7 +181,7 @@ class BaseExtractor:
 
     def copy_metadata(self, other, only_main=False, ids=None):
         """
-        Copy annotations/properties/features to another extractor.
+        Copy annotations/properties/is_dumpable to another extractor.
 
         If 'only main' is True, then only "main" annotations/properties/features one are copied.
         """
@@ -194,19 +194,17 @@ class BaseExtractor:
         if only_main:
             ann_keys = BaseExtractor._main_annotations
             prop_keys = BaseExtractor._main_properties
-            # feat_keys = BaseExtractor._main_features
         else:
             ann_keys = self._annotations.keys()
             prop_keys = self._properties.keys()
-            # TODO include features
-            # feat_keys = ExtractorBase._features.keys()
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
         for k in prop_keys:
             values = self._properties[k]
             if values is not None:
                 other.set_property(k, values[inds])
-        # TODO: copy features also
+        
+        other.is_dumpable = self.is_dumpable
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
                 relative_to=None, folder_metadata=None):
