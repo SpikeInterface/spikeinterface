@@ -126,7 +126,7 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     
     function = worker_ctx['function']
     
-    with threadpool_limits(limits=1, user_api='blas'):
+    with threadpool_limits(limits=1):
         spikes = function(traces, method_kwargs)
     
     # remove spikes in margin
@@ -501,11 +501,9 @@ def _tdc_find_spikes(traces, d, level=0):
                 distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
                 
                 ## numba with cluster+channel spasity
-                #~ union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
-                #~ scalar_product, distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-                #~ distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-                #~ print(scalar_product)
-                
+                # union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
+                # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
+
                 ind = np.argmin(distances)
                 cluster_ind = possible_clusters[ind]
                 #~ print(scalar_product[ind])
@@ -541,19 +539,21 @@ def _tdc_find_spikes(traces, d, level=0):
         return spikes    
 
 
-
+'''
 if HAVE_NUMBA:
-    @jit(parallel=True)
+    #@jit(parallel=True)
+    @jit(nopython=True)
     def numba_sparse_dist(wf, templates, union_channels, possible_clusters):
         """
         numba implementation that compute distance from template
         """
         total_cluster, width, num_chan = templates.shape
+
         num_cluster = possible_clusters.shape[0]
         distances = np.zeros((num_cluster,), dtype=np.float32)
         #~ scalar_product = np.zeros((num_cluster,), dtype=np.float32)
+        # for i in prange(num_cluster):
         for i in prange(num_cluster):
-        #~ for i in prange(num_cluster):
             cluster_ind = possible_clusters[i]
             sum_dist = 0.
             #~ sum_sp = 0.
@@ -570,7 +570,8 @@ if HAVE_NUMBA:
             #~ scalar_product[i] = sum_sp / sum_norm
         return distances
         #~ return scalar_product, distances
-        
+'''
+
 
 #################
 # Circus peeler #
@@ -656,9 +657,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_overlaps(cls, templates, d):
-
-        
-        
 
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
