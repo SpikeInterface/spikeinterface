@@ -19,7 +19,7 @@ core:
   * save() instead of CacheRecording
   * multi segment
   * no more RecordingExtractor.get_ttl_events() use Event instead
-  * no more SubRecordingExtractor use recording.channel_slice() instead
+  * no more SubRecordingExtractor use recording.channel_slice() and recording.frame_slice() instead
   * no more SubSortingExtractor use sorting.select_units() instead
   * more efficient parralel with job_tools sub-module
 
