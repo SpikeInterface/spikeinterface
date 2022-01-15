@@ -126,7 +126,7 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     
     function = worker_ctx['function']
     
-    with threadpool_limits(limits=1, user_api='blas'):
+    with threadpool_limits(limits=1):
         spikes = function(traces, method_kwargs)
     
     # remove spikes in margin
@@ -501,11 +501,9 @@ def _tdc_find_spikes(traces, d, level=0):
                 distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
                 
                 ## numba with cluster+channel spasity
-                #~ union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
-                #~ scalar_product, distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-                #~ distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-                #~ print(scalar_product)
-                
+                # union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
+                # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
+
                 ind = np.argmin(distances)
                 cluster_ind = possible_clusters[ind]
                 #~ print(scalar_product[ind])
@@ -541,19 +539,21 @@ def _tdc_find_spikes(traces, d, level=0):
         return spikes    
 
 
-
+'''
 if HAVE_NUMBA:
-    @jit(parallel=True)
+    #@jit(parallel=True)
+    @jit(nopython=True)
     def numba_sparse_dist(wf, templates, union_channels, possible_clusters):
         """
         numba implementation that compute distance from template
         """
         total_cluster, width, num_chan = templates.shape
+
         num_cluster = possible_clusters.shape[0]
         distances = np.zeros((num_cluster,), dtype=np.float32)
         #~ scalar_product = np.zeros((num_cluster,), dtype=np.float32)
+        # for i in prange(num_cluster):
         for i in prange(num_cluster):
-        #~ for i in prange(num_cluster):
             cluster_ind = possible_clusters[i]
             sum_dist = 0.
             #~ sum_sp = 0.
@@ -570,7 +570,8 @@ if HAVE_NUMBA:
             #~ scalar_product[i] = sum_sp / sum_norm
         return distances
         #~ return scalar_product, distances
-        
+'''
+
 
 #################
 # Circus peeler #
@@ -633,14 +634,17 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         for count, unit_id in enumerate(all_units):
             w = waveform_extractor.get_waveforms(unit_id)
+            snippets = w.reshape(w.shape[0], -1).T
 
             template = np.median(w, axis=0)
             template = cls._sparsify_template(template, sparse_thresholds)
+            template = cls._denoise_template(template, snippets, d)
+
             norms[count] = np.linalg.norm(template)
             template /= norms[count]
             template = template.flatten()
 
-            amps = template.dot(w.reshape(w.shape[0], -1).T)/norms[count]
+            amps = template.dot(snippets)/norms[count]
             median_amps = np.median(amps)
             mads_amps = np.median(np.abs(amps - np.median(amps)))
             amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps+spread*mads_amps)]
@@ -656,9 +660,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_overlaps(cls, templates, d):
-
-        
-        
 
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
@@ -712,7 +713,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         return mcc
 
     @classmethod
-    def _cost_function(cls, bounds, good, bad, delta_amplitude, alpha):
+    def _cost_function_mcc(cls, bounds, good, bad, delta_amplitude, alpha):
         # We want a minimal error, with the larger bounds that are possible
         cost = alpha*cls._mcc_error(bounds, good, bad) + (1 - alpha)*np.abs((1 - (bounds[1] - bounds[0])/delta_amplitude))
         return cost
@@ -731,7 +732,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if d['progess_bar_steps']:
             all_units = tqdm(all_units, desc='optimize amplitudes')
 
-        
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
 
         for count, unit_id in enumerate(all_units):
@@ -740,11 +740,38 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             good = amps[count, :].flatten()
             bad = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :].flatten()
             cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
-            res = scipy.optimize.differential_evolution(cls._cost_function, bounds=[(min_amplitude,1), (1, max_amplitude)], args=cost_kwargs)
+            res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=[(min_amplitude,1), (1, max_amplitude)], args=cost_kwargs)
             amplitudes[count] = res.x
 
         return amplitudes
 
+    @classmethod
+    def _savgol_template(cls, n, template):
+        if n > 3:
+            template = scipy.signal.savgol_filter(template, n, 3, axis=0)
+        return template
+
+    @classmethod
+    def _cost_function_denoise(cls, n, template, snippets):
+        template = cls._savgol_template(n, template)
+        amps = template.flatten().dot(snippets)/(np.linalg.norm(template)**2)
+        median_amps = np.median(amps)
+        mads_amps = np.median(np.abs(amps - np.median(amps)))
+        cost = np.abs(1 - median_amps) + mads_amps
+        return cost
+
+    @classmethod
+    def _denoise_template(cls, template, snippets, d):
+        nb_samples = d['nb_samples']
+        nb_channels = d['nb_channels']
+
+        indices = np.arange(3, 50, 2)
+        costs = [cls._cost_function_denoise(n, template, snippets) for n in indices]
+
+        best_idx = np.argmin(costs)
+        template = cls._savgol_template(indices[best_idx], template)
+
+        return template
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
@@ -874,8 +901,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
                 min_sps = amplitudes[:, 0][:, np.newaxis]
                 max_sps = amplitudes[:, 1][:, np.newaxis]
-
-                import scipy
 
                 M = np.zeros((5*nb_peaks, 5*nb_peaks), dtype=np.float32)
                 stop_criteria = omp_min_sps * norms[:, np.newaxis]

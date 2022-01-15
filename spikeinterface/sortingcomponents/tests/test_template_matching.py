@@ -39,19 +39,19 @@ def test_find_spikes_from_templates():
     
     
     # debug
-    #import matplotlib.pyplot as plt
-    #import spikeinterface.full as si
+    # import matplotlib.pyplot as plt
+    # import spikeinterface.full as si
 
-    #metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
+    # metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
     
-    #comparisons = {}
-    #for method in template_matching_methods.keys():
+    # comparisons = {}
+    # for method in template_matching_methods.keys():
     #    comparisons[method] = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
     #    si.plot_agreement_matrix(comparisons[method])
     #    plt.title(method)
     #    si.plot_sorting_performance(comparisons[method], metrics, performance_name='accuracy', metric_name='snr',)
     #    plt.title(method)
-    #plt.show()
+    # plt.show()
 
 if __name__ == '__main__':
     test_find_spikes_from_templates()
