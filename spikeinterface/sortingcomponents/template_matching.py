@@ -308,7 +308,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         'detect_threshold': 5,
         'noise_levels': None,
         'local_radius_um': 100,
-        'num_closest' : 3,
+        'num_closest' : 5,
     }
     
     @classmethod
@@ -380,10 +380,14 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             chans, = np.nonzero(d['template_sparsity'][unit_ind, :])
             template_sparse = templates[unit_ind, :, :][:, chans]
             closest_vec = []
+            # against N closets
             for u in closest_u:
                 vec = (templates[u, :, :][:, chans] - template_sparse)
                 vec /= np.sum(vec ** 2)
                 closest_vec.append((u, vec))
+            # against noise
+            closest_vec.append((None, - template_sparse / np.sum(template_sparse ** 2)))
+            
             closest_units.append(closest_vec)
 
         d['closest_units'] = closest_units
@@ -440,7 +444,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
                 break
             all_spikes.append(spikes[keep])
             
-            _tdc_remove_spikes(traces, spikes, d)
+            #~ _tdc_remove_spikes(traces, spikes, d)
             
             level += 1
             
@@ -454,15 +458,15 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         return all_spikes
 
 
-def _tdc_remove_spikes(traces, spikes, d):
-    nbefore, nafter = d['nbefore'], d['nafter']
-    for spike in spikes:
-        if spike['cluster_ind'] < 0:
-            continue
-        template = d['templates'][spike['cluster_ind'], :, :]
-        s0 = spike['sample_ind'] - d['nbefore']
-        s1 = spike['sample_ind'] + d['nafter']
-        traces[s0:s1, :] -= template * spike['amplitude']
+#~ def _tdc_remove_spikes(traces, spikes, d):
+    #~ nbefore, nafter = d['nbefore'], d['nafter']
+    #~ for spike in spikes:
+        #~ if spike['cluster_ind'] < 0:
+            #~ continue
+        #~ template = d['templates'][spike['cluster_ind'], :, :]
+        #~ s0 = spike['sample_ind'] - d['nbefore']
+        #~ s1 = spike['sample_ind'] + d['nafter']
+        #~ traces[s0:s1, :] -= template * spike['amplitude']
     
 
 def _tdc_find_spikes(traces, d, level=0):
@@ -478,9 +482,16 @@ def _tdc_find_spikes(traces, d, level=0):
         peak_sample_ind += margin // 2
 
 
+        peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+        order = np.argsort(np.abs(peak_amplitude))[::-1]
+        peak_sample_ind = peak_sample_ind[order]
+        peak_chan_ind = peak_chan_ind[order]
+
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
         spikes['sample_ind'] = peak_sample_ind
         spikes['channel_ind'] = peak_chan_ind  # TODO need to put the channel from template
+
+
         
         # naively take the closest template
         for i in range(peak_sample_ind.size):
@@ -513,7 +524,6 @@ def _tdc_find_spikes(traces, d, level=0):
                 template_sparse = templates[cluster_ind, :, :][:, chan_sparsity]
                 wf_sparse = wf[:, chan_sparsity]
                 centered = wf_sparse - template_sparse
-                
                 accepted = True
                 for other_ind, other_vector in d['closest_units'][cluster_ind]:
                     v = np.sum(centered * other_vector)
@@ -521,9 +531,24 @@ def _tdc_find_spikes(traces, d, level=0):
                         accepted = False
                         break
                 
+                #~ if cluster_ind in (5, 8):
+                    #~ import matplotlib.pyplot as plt
+                    #~ fig, ax = plt.subplots()
+                    #~ ax.plot(wf_sparse, color='k')
+                    #~ ax.plot(template_sparse, color='g')
+                    #~ ax.set_title(f'{cluster_ind}  {accepted}')
+                    #~ plt.show()
+                    
                 if accepted:
-                #~ if 1.:
                     amplitude = 1.
+                    
+                    sample_ind = peak_sample_ind[i]
+                    # remove template
+                    template = templates[cluster_ind, :, :]
+                    s0 = sample_ind - d['nbefore']
+                    s1 = sample_ind + d['nafter']
+                    traces[s0:s1, :] -= template * amplitude
+                    
                 else:
                     cluster_ind = -1
                     amplitude = 0.
