@@ -623,12 +623,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         norms = np.zeros(nb_templates, dtype=np.float32)
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
 
-        
-
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
         if d['progess_bar_steps']:
             all_units = tqdm(all_units, desc='prepare templates')
-
 
         templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
 
@@ -646,8 +643,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             amps = template.dot(snippets)/norms[count]
             median_amps = np.median(amps)
-            mads_amps = np.median(np.abs(amps - np.median(amps)))
-            amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps+spread*mads_amps)]
+            mads_amps = np.median(np.abs(amps - median_amps))
+            amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps + spread*mads_amps)]
 
             templates[count] = template
 
@@ -734,14 +731,30 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
 
+        all_amps = {}
         for count, unit_id in enumerate(all_units):
             w = waveform_extractor.get_waveforms(unit_id)
-            amps = templates.dot(w.reshape(w.shape[0], -1).T)/norms[:, np.newaxis]
+            snippets = w.reshape(w.shape[0], -1).T
+            amps = templates.dot(snippets)/norms[:, np.newaxis]
             good = amps[count, :].flatten()
-            bad = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :].flatten()
+
+            sub_amps = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :]
+            bad = sub_amps[sub_amps >= good]
+            median_amps = np.median(good)
             cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
-            res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=[(min_amplitude,1), (1, max_amplitude)], args=cost_kwargs)
+            cost_bounds = [(min_amplitude, median_amps), (median_amps, max_amplitude)]
+            res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=cost_bounds, args=cost_kwargs)
             amplitudes[count] = res.x
+
+            # import pylab as plt
+            # plt.hist(good, 100, alpha=0.5)
+            # plt.hist(bad, 100, alpha=0.5)
+            # plt.hist(neutral, 100, alpha=0.5)
+            # ymin, ymax = plt.ylim()
+            # plt.plot([res.x[0], res.x[0]], [ymin, ymax], 'k--')
+            # plt.plot([res.x[1], res.x[1]], [ymin, ymax], 'k--')
+            # plt.savefig('test_%d.png' %count)
+            # plt.close()
 
         return amplitudes
 
@@ -854,9 +867,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if nb_peaks > 0:
 
             snippets = traces[peak_sample_ind[:, None] + snippet_window]
-            snippets = snippets.reshape(nb_peaks, -1)
+            snippets = snippets.reshape(nb_peaks, -1).T
 
-            scalar_products = templates.dot(snippets.T)
+            #snippets_norms = np.linalg.norm(snippets, axis=0)
+            scalar_products = templates.dot(snippets)
 
             peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
 
@@ -878,7 +892,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     best_amplitude_ind = scalar_products[is_valid].argmax()
                     best_cluster_ind, peak_index = valid_indices[0][best_amplitude_ind], valid_indices[1][best_amplitude_ind]
                     best_amplitude = scalar_products[best_cluster_ind, peak_index]
-                    best_amplitude_ = best_amplitude / norms[best_cluster_ind]
                     best_peak_sample_ind = peak_sample_ind[peak_index]
                     best_peak_chan_ind = peak_chan_ind[peak_index]
 
@@ -894,8 +907,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
                     spikes['channel_ind'][nb_spikes] = best_peak_chan_ind
                     spikes['cluster_ind'][nb_spikes] = best_cluster_ind
-                    spikes['amplitude'][nb_spikes] = best_amplitude_
+                    spikes['amplitude'][nb_spikes] = best_amplitude
                     nb_spikes += 1
+
+                spikes['amplitude'][:nb_spikes] /= norms[spikes['cluster_ind'][:nb_spikes]]
 
             else:
 
