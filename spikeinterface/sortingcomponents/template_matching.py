@@ -678,7 +678,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         all_delays = list(range(nb_samples))
         if d['progess_bar_steps']:
-            all_delays = tqdlm(all_delays, desc='compute overlaps')
+            all_delays = tqdm(all_delays, desc='compute overlaps')
 
         overlaps = {}
         
@@ -949,7 +949,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                         Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
                         M = Z
 
-                    all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True)/norms[selection[0]]
+                    all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
                     diff_amplitudes = (all_amplitudes - amplitudes[selection[0], selection[1]])
                     modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
                     amplitudes[selection[0], selection[1]] = all_amplitudes
