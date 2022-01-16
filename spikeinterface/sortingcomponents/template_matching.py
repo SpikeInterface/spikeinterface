@@ -795,7 +795,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         return cost
 
     @classmethod
-    def _denoise_template(cls, template, snippets, d, mode='spline'):
+    def _denoise_template(cls, template, snippets, d, mode='savgol'):
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
 
@@ -813,7 +813,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             template = cls._wiener_template(indices[best_idx], template)
         elif mode == 'spline':
             cost_kwargs = [template, snippets, d, 'spline']
-            cost_bounds = [(0, nb_samples*nb_channels)]
+            cost_bounds = [(0, nb_samples)]
             res = scipy.optimize.differential_evolution(cls._cost_function_denoise, bounds=cost_bounds, args=cost_kwargs)
             #print(res.x)
             template = cls._spline_template(res.x, template, d)
