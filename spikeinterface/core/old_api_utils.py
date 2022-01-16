@@ -45,9 +45,11 @@ class NewToOldRecording:
         v = values[ind[0]]
         return v
 
+
 def create_extractor_from_new_recording(new_recording):
     old_recording = NewToOldRecording(new_recording)
     return old_recording
+
 
 class NewToOldSorting:
     """
@@ -63,6 +65,15 @@ class NewToOldSorting:
         self._sampling_frequency = sorting.get_sampling_frequency()
         self.is_dumpable = False
 
+        unit_map = {}
+        if isinstance(self._sorting.get_unit_ids()[0], (int, np.integer)):
+            for u in self._sorting.get_unit_ids():
+                unit_map[u] = u
+        else:
+            for i_u, u in enumerate(self._sorting.get_unit_ids()):
+                unit_map[i_u] = u
+        self._unit_map = unit_map
+
     def get_unit_ids(self):
         """This function returns a list of ids (ints) for each unit in the sorsted result.
 
@@ -71,7 +82,7 @@ class NewToOldSorting:
         unit_ids: array_like
             A list of the unit ids in the sorted result (ints).
         """
-        return self._sorting.get_unit_ids()   
+        return list(self._unit_map.keys())
 
     def get_unit_spike_train(self, unit_id, start_frame=None, end_frame=None):
         """This function extracts spike frames from the specified unit.
@@ -103,9 +114,9 @@ class NewToOldSorting:
             An 1D array containing all the frames for each spike in the
             specified unit given the range of start and end frames
         """
-        return self._sorting.get_unit_spike_train(unit_id=unit_id, segment_index=0,
-                                                  start_frame=start_frame, end_frame=end_frame)        
-    
+        return self._sorting.get_unit_spike_train(unit_id=self._unit_map[unit_id], segment_index=0,
+                                                  start_frame=start_frame, end_frame=end_frame)
+
     def get_units_spike_train(self, unit_ids=None, start_frame=None, end_frame=None):
         """This function extracts spike frames from the specified units.
 
@@ -151,7 +162,7 @@ class NewToOldSorting:
             The sampling frequency
         """
         self._sampling_frequency = sampling_frequency
-    
+
     def set_times(self, times):
         """This function sets the sorting times to convert spike trains to seconds
 
@@ -162,7 +173,7 @@ class NewToOldSorting:
         """
         max_frames = np.array([np.max(self.get_unit_spike_train(u)) for u in self.get_unit_ids()])
         assert np.all(max_frames < len(times)), "The length of 'times' should be greater than the maximum " \
-                                                     "spike frame index"
+                                                "spike frame index"
         self._times = times.astype('float64')
 
     def frame_to_time(self, frames):
@@ -203,12 +214,15 @@ class NewToOldSorting:
         else:
             return np.searchsorted(self._times, times).astype('int64')
 
+
 def create_extractor_from_new_sorting(new_sorting):
     old_sorting = NewToOldSorting(new_sorting)
     return old_sorting
 
+
 _old_to_new_property_map = {'gain': {'name': 'gain_to_uV', 'skip_if_value': 1},
                             'offset': {'name': 'offset_to_uV', 'skip_if_value': 0}}
+
 
 class OldToNewRecording(BaseRecording):
     """Wrapper class to convert old RecordingExtractor to a
