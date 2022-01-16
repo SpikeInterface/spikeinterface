@@ -51,10 +51,6 @@ def create_extractor_from_new_recording(new_recording):
     return old_recording
 
 
-_old_to_new_property_map = {'gain': {'name': 'gain_to_uV', 'skip_if_value': 1},
-                            'offset': {'name': 'offset_to_uV', 'skip_if_value': 0}}
-
-
 class OldToNewRecording(BaseRecording):
     """Wrapper class to convert old RecordingExtractor to a
     new Recording in spikeinterface > v0.90
@@ -81,7 +77,16 @@ class OldToNewRecording(BaseRecording):
 
         # add old properties
         copy_properties(oldapi_extractor=oldapi_recording_extractor, new_extractor=self,
-                        old_to_new_property_map=_old_to_new_property_map)
+                        skip_properties=["gain", "offset"])
+        # set correct gains and offsets
+        gains, offsets = find_old_gains_offsets_recursively(
+            oldapi_recording_extractor.dump_to_dict())
+        if gains is not None:
+            if np.any(gains != 1):
+                self.set_channel_gains(gains)
+        if offsets is not None:
+            if np.any(offsets != 0):
+                self.set_channel_gains(offsets)
 
         self._kwargs = {'oldapi_recording_extractor': oldapi_recording_extractor}
 
@@ -115,8 +120,9 @@ class OldToNewRecordingSegment(BaseRecordingSegment):
                                                            start_frame=start_frame,
                                                            end_frame=end_frame,
                                                            return_scaled=False).T
-        
-def create_recording_from_old_extractor(oldapi_recording_extractor)->OldToNewRecording:
+
+
+def create_recording_from_old_extractor(oldapi_recording_extractor) -> OldToNewRecording:
     new_recording = OldToNewRecording(oldapi_recording_extractor)
     return new_recording
 
@@ -177,7 +183,7 @@ def create_sorting_from_old_extractor(oldapi_sorting_extractor) -> OldToNewSorti
     return new_sorting
 
 
-def copy_properties(oldapi_extractor, new_extractor, old_to_new_property_map={}):
+def copy_properties(oldapi_extractor, new_extractor, skip_properties=None):
     # add old properties
     properties = dict()
     if hasattr(oldapi_extractor, "get_channel_ids"):
@@ -189,20 +195,16 @@ def copy_properties(oldapi_extractor, new_extractor, old_to_new_property_map={})
         get_property = oldapi_extractor.get_unit_property
         get_property_names = oldapi_extractor.get_unit_property_names
 
+    if skip_properties is None:
+        skip_properties = []
+
     for id in get_ids():
         properties_for_channel = get_property_names(id)
-        for prop in properties_for_channel:
-            prop_value = get_property(id, prop)
-            skip_if_value = None
-            if prop in old_to_new_property_map:
-                prop_name = old_to_new_property_map[prop]["name"]
-                skip_if_value = old_to_new_property_map[prop]["skip_if_value"]
-            else:
-                prop_name = prop
+        for prop_name in properties_for_channel:
+            prop_value = get_property(id, prop_name)
 
-            if skip_if_value is not None:
-                if prop_value == skip_if_value:
-                    continue
+            if prop_name in skip_properties:
+                continue
 
             if prop_name not in properties:
                 properties[prop_name] = dict()
@@ -217,3 +219,17 @@ def copy_properties(oldapi_extractor, new_extractor, old_to_new_property_map={})
         property_values = prop_dict["values"]
         new_extractor.set_property(key=property_name,
                                    values=property_values, ids=property_ids)
+
+
+def find_old_gains_offsets_recursively(oldapi_extractor_dict):
+    kwargs = oldapi_extractor_dict['kwargs']
+    if np.any([isinstance(v, dict) and 'dumpable' in v.keys() for (k, v) in kwargs.items()]):
+        # check nested
+        for k, v in oldapi_extractor_dict["kwargs"].items():
+            if isinstance(v, dict) and "dumpable" in v:
+                return find_old_gains_offsets_recursively(v)
+    else:
+        gains = oldapi_extractor_dict["key_properties"]["gain"]
+        offsets = oldapi_extractor_dict["key_properties"]["offset"]
+
+        return gains, offsets
