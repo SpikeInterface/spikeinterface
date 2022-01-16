@@ -589,7 +589,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
-        'sparsify_threshold': 0.2,
+        'sparsify_threshold': 0.2 ,
         'max_amplitude' : 3,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.2,
@@ -625,7 +625,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
         if d['progess_bar_steps']:
-            all_units = tqdm(all_units, desc='prepare templates')
+            all_units = tqdm(all_units, desc='[1] - prepare templates')
 
         templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
 
@@ -675,7 +675,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         all_delays = list(range(nb_samples))
         if d['progess_bar_steps']:
-            all_delays = tqdm(all_delays, desc='compute overlaps')
+            all_delays = tqdm(all_delays, desc='[2] - compute overlaps')
 
         overlaps = {}
         
@@ -727,7 +727,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         norms = d['norms']
         all_units = list(waveform_extractor.sorting.unit_ids)
         if d['progess_bar_steps']:
-            all_units = tqdm(all_units, desc='optimize amplitudes')
+            all_units = tqdm(all_units, desc='[3] - optimize amplitudes')
 
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
 
@@ -749,7 +749,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             # import pylab as plt
             # plt.hist(good, 100, alpha=0.5)
             # plt.hist(bad, 100, alpha=0.5)
-            # plt.hist(neutral, 100, alpha=0.5)
             # ymin, ymax = plt.ylim()
             # plt.plot([res.x[0], res.x[0]], [ymin, ymax], 'k--')
             # plt.plot([res.x[1], res.x[1]], [ymin, ymax], 'k--')
@@ -765,8 +764,30 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         return template
 
     @classmethod
-    def _cost_function_denoise(cls, n, template, snippets):
-        template = cls._savgol_template(n, template)
+    def _wiener_template(cls, n, template):
+        template = scipy.signal.wiener(template, (n, 1))
+        return template
+
+    @classmethod
+    def _spline_template(cls, n, template, d):
+        xdata = np.arange(d['nb_samples'])
+        ydata = np.arange(d['nb_channels'])
+        try:
+            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=n)
+        except Exception:
+            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=0)
+        new_template = f(xdata, ydata).astype(np.float32)
+        return new_template.copy()
+
+    @classmethod
+    def _cost_function_denoise(cls, n, template, snippets, d, mode='savgol'):
+        
+        if mode == 'savgol':
+            template = cls._savgol_template(n, template)
+        elif mode == 'spline':
+            template = cls._spline_template(n, template, d)
+        elif mode == 'wiener':
+            template = cls._wiener_template(n, template)
         amps = template.flatten().dot(snippets)/(np.linalg.norm(template)**2)
         median_amps = np.median(amps)
         mads_amps = np.median(np.abs(amps - np.median(amps)))
@@ -774,15 +795,28 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         return cost
 
     @classmethod
-    def _denoise_template(cls, template, snippets, d):
+    def _denoise_template(cls, template, snippets, d, mode='spline'):
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
 
-        indices = np.arange(3, 50, 2)
-        costs = [cls._cost_function_denoise(n, template, snippets) for n in indices]
-
-        best_idx = np.argmin(costs)
-        template = cls._savgol_template(indices[best_idx], template)
+        if mode == 'savgol':
+            indices = np.arange(3, 50, 2)
+            costs = [cls._cost_function_denoise(n, template, snippets, d, 'savgol') for n in indices]
+            best_idx = np.argmin(costs)
+            #print(best_idx)
+            template = cls._savgol_template(indices[best_idx], template)
+        elif mode == 'wiener':
+            indices = np.arange(1, d['nb_samples']//2)
+            costs = [cls._cost_function_denoise(n, template, snippets, d, 'wiener') for n in indices]
+            best_idx = np.argmin(costs)
+            #print(best_idx)
+            template = cls._wiener_template(indices[best_idx], template)
+        elif mode == 'spline':
+            cost_kwargs = [template, snippets, d, 'spline']
+            cost_bounds = [(0, nb_samples*nb_channels)]
+            res = scipy.optimize.differential_evolution(cls._cost_function_denoise, bounds=cost_bounds, args=cost_kwargs)
+            #print(res.x)
+            template = cls._spline_template(res.x, template, d)
 
         return template
 
