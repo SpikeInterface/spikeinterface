@@ -49,7 +49,46 @@ class NewToOldRecording:
 def create_extractor_from_new_recording(new_recording):
     old_recording = NewToOldRecording(new_recording)
     return old_recording
+class NewToOldSorting:
+    """
+    This class mimic the old API of spikeextractors with:
+      * reversed shape (channels, samples):
+      * unique segment
+    """
 
+    def __init__(self, sorting):
+        assert sorting.get_num_segments() == 1
+        self._sorting = sorting
+
+    def get_traces(self, channel_ids=None, start_frame=None, end_frame=None):
+        traces = self._recording.get_traces(channel_ids=channel_ids,
+                                            start_frame=start_frame, end_frame=end_frame,
+                                            segment_index=0)
+        return traces.T
+
+    def get_num_frames(self):
+        return self._recording.get_num_frames(segment_index=0)
+
+    def get_num_channels(self):
+        return self._recording.get_num_channels()
+
+    def get_sampling_frequency(self):
+        return self._recording.get_sampling_frequency()
+
+    def get_channel_ids(self):
+        return self._recording.get_channel_ids()
+
+    def get_channel_property(self, channel_id, property):
+        rec = self._recording
+        values = rec.get_property(property)
+        ind = rec.ids_to_indices([channel_id])
+        v = values[ind[0]]
+        return v
+
+
+def create_extractor_from_new_sorting(new_sorting):
+    old_sorting = NewToOldSorting(new_sorting)
+    return old_sorting
 
 _old_to_new_property_map = {'gain': {'name': 'gain_to_uV', 'skip_if_value': 1},
                             'offset': {'name': 'offset_to_uV', 'skip_if_value': 0}}
