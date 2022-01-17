@@ -620,7 +620,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'use_sparse_matrix_threshold' : 0.2,
         'mcc_amplitudes': True,
         'omp' : True,
-        'omp_min_sps' : 1,
+        'omp_min_sps' : 0.5,
         'omp_tol' : 1e-3,
         'progess_bar_steps' : False,
     }
