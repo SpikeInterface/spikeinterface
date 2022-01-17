@@ -631,11 +631,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
-        'sparsify_threshold': 0.2 ,
+        'sparsify_threshold': 1,
         'max_amplitude' : 3,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.2,
-        'mcc_amplitudes': True,
         'omp' : True,
         'omp_min_sps' : 0.5,
         'omp_tol' : 1e-3,
@@ -669,36 +668,31 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if d['progess_bar_steps']:
             all_units = tqdm(all_units, desc='[1] - prepare templates')
 
-        templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
+        templates = waveform_extractor.get_all_templates(mode='median')
+
+        normalized_templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
 
         for count, unit_id in enumerate(all_units):
-            w = waveform_extractor.get_waveforms(unit_id)
-            snippets = w.reshape(w.shape[0], -1).T
-
-            template = np.median(w, axis=0)
-            template = cls._sparsify_template(template, sparse_thresholds)
+            template = cls._sparsify_template(templates[count], sparse_thresholds)
             #template = cls._denoise_template(template, snippets, d)
 
             norms[count] = np.linalg.norm(template)
             template /= norms[count]
             template = template.flatten()
 
-            if not d['omp']:
-                amps = template.dot(snippets)/norms[count]
-                median_amps = np.median(amps)
-                mads_amps = np.median(np.abs(amps - median_amps))
-                amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps + spread*mads_amps)]
-            else:
-                amplitudes[count] = [min_amplitude, max_amplitude]
+            amplitudes[count] = [min_amplitude, max_amplitude]
 
-            templates[count] = template
+            normalized_templates[count] = template
+            is_nul = np.abs(templates[count]) < 1e-5
+            templates[count][is_nul] = 0
 
-        nnz = np.sum(templates != 0)/(nb_templates * nb_samples * nb_channels)
+        nnz = np.sum(normalized_templates != 0)/(nb_templates * nb_samples * nb_channels)
         if nnz <= use_sparse_matrix_threshold:
             import scipy
-            templates = scipy.sparse.csr_matrix(templates)
+            normalized_templates = scipy.sparse.csr_matrix(normalized_templates)
+            print(f'Turning templates into sparse matrix! Sparsity level is {nnz}')
 
-        return templates, norms, amplitudes
+        return normalized_templates, norms, amplitudes
 
     @classmethod
     def _prepare_overlaps(cls, templates, d):
@@ -910,7 +904,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d['snippet_window'] = np.arange(-d['nbefore'], d['nafter'])
         d['snippet_size'] = d['nb_channels'] * len(d['snippet_window'])
 
-        if d['mcc_amplitudes'] and not d['omp']:
+        if not d['omp']:
             nb_segments = recording.get_num_segments()
             nb_snippets = d['waveform_extractor']._params['max_spikes_per_unit']
             nb_chunks = nb_snippets // nb_segments
@@ -965,23 +959,28 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_peaks = len(peak_sample_ind)
         nb_spikes = 0
 
+        #import time
+
         if nb_peaks > 0:
 
+            #t_start = time.time()
             snippets = traces[peak_sample_ind[:, None] + snippet_window]
             snippets = snippets.reshape(nb_peaks, -1).T
 
-            #snippets_norms = np.linalg.norm(snippets, axis=0)
             scalar_products = templates.dot(snippets)
 
             peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
 
             spikes = np.empty(scalar_products.size, dtype=spike_dtype)
+            #t_dot = time.time() - t_start
 
             if not omp:
 
                 min_sps = (amplitudes[:, 0] * norms)[:, np.newaxis]
                 max_sps = (amplitudes[:, 1] * norms)[:, np.newaxis]
                 
+                #t_start = time.time()
+
                 while True:
 
                     is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
@@ -1011,6 +1010,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     spikes['amplitude'][nb_spikes] = best_amplitude
                     nb_spikes += 1
 
+                #t_loop = time.time() - t_start
+                #print(t_dot, t_loop)
                 spikes['amplitude'][:nb_spikes] /= norms[spikes['cluster_ind'][:nb_spikes]]
 
             else:
