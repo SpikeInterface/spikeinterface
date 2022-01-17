@@ -25,6 +25,7 @@ It represents an extracellular recording and has the following features:
 * store object annotations
 * enable grouping, splitting, and slicing
 * handle segment operations (e.g. concatenation)
+* handle time information
 
 
 Sorting
@@ -38,6 +39,7 @@ It represents a spike sorted output and has the following features:
 * store channel properties
 * store object annotations
 * enable selection of sub-units
+* handle time information
 
 
 Event
