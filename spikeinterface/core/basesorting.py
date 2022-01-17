@@ -1,5 +1,6 @@
 from typing import List, Union
 import numpy as np
+import warnings
 
 from .base import BaseExtractor, BaseSegment
 
@@ -14,6 +15,7 @@ class BaseSorting(BaseExtractor):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
         self._sorting_segments: List[BaseSortingSegment] = []
+        # this weak link is to handle times from a recording object
         self._recording = None
 
     def __repr__(self):
@@ -68,7 +70,7 @@ class BaseSorting(BaseExtractor):
 
     def register_recording(self, recording):
         self._recording = recording
-        
+
     def has_recording(self):
         return self._recording is not None
 
@@ -110,6 +112,7 @@ class BaseSorting(BaseExtractor):
             NpzSortingExtractor.write_sorting(self, save_path)
             cached = NpzSortingExtractor(save_path)
             if self.has_recording():
+                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
         else:
             raise ValueError(f'format {format} not supported')
