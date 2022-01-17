@@ -69,8 +69,8 @@ class BaseSorting(BaseExtractor):
             return spike_train
 
     def register_recording(self, recording):
-        assert np.isclose(self.get_sampling_frequency(), 
-                          recording.get_sampling_frequency(), 
+        assert np.isclose(self.get_sampling_frequency(),
+                          recording.get_sampling_frequency(),
                           atol=0.1), "The recording has a different sampling frequency than the sorting!"
         self._recording = recording
 
