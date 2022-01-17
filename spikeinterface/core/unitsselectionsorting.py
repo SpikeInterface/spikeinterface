@@ -41,7 +41,7 @@ class UnitsSelectionSorting(BaseSorting):
         parent_sorting.copy_metadata(self, only_main=False, ids=self._unit_ids)
 
         if parent_sorting.has_recording():
-            self.set_recording(parent_sorting._recording)
+            self.register_recording(parent_sorting._recording)
 
         self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), unit_ids=unit_ids,
                             renamed_unit_ids=renamed_unit_ids)
