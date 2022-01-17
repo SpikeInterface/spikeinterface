@@ -447,8 +447,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
                 break
             all_spikes.append(spikes[keep])
             
-            #~ _tdc_remove_spikes(traces, spikes, d)
-            
             level += 1
             
             if level == 2:
@@ -460,17 +458,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         
         return all_spikes
 
-
-#~ def _tdc_remove_spikes(traces, spikes, d):
-    #~ nbefore, nafter = d['nbefore'], d['nafter']
-    #~ for spike in spikes:
-        #~ if spike['cluster_ind'] < 0:
-            #~ continue
-        #~ template = d['templates'][spike['cluster_ind'], :, :]
-        #~ s0 = spike['sample_ind'] - d['nbefore']
-        #~ s1 = spike['sample_ind'] + d['nafter']
-        #~ traces[s0:s1, :] -= template * spike['amplitude']
-    
 
 def _tdc_find_spikes(traces, d, level=0):
         peak_sign = d['peak_sign']
@@ -531,9 +518,16 @@ def _tdc_find_spikes(traces, d, level=0):
                 template_sparse = templates[cluster_ind, :, :][:, chan_sparsity]
 
                 # find best shift
-                for s, shift in enumerate(possible_shifts):
-                    wf_shift = traces[s0 + shift: s1 + shift, chan_sparsity]
-                    distances_shift[s] = np.sum((template_sparse - wf_shift)**2)
+                
+                ## pure numpy version
+                # for s, shift in enumerate(possible_shifts):
+                #     wf_shift = traces[s0 + shift: s1 + shift, chan_sparsity]
+                #     distances_shift[s] = np.sum((template_sparse - wf_shift)**2)
+                # ind_shift = np.argmin(distances_shift)
+                # shift = possible_shifts[ind_shift]
+                
+                ## numba version
+                numba_best_shift(traces, templates[cluster_ind, :, :], sample_ind, d['nbefore'], possible_shifts, distances_shift, chan_sparsity)
                 ind_shift = np.argmin(distances_shift)
                 shift = possible_shifts[ind_shift]
 
@@ -598,6 +592,27 @@ if HAVE_NUMBA:
                         sum_dist += (v - t) ** 2
             distances[i] = sum_dist
         return distances
+
+    @jit(nopython=True)
+    def numba_best_shift(traces, template, sample_ind, nbefore, possible_shifts, distances_shift, chan_sparsity):
+        """
+        numba implementation to compute several sample shift before template substraction
+        """
+        width, num_chan = template.shape
+        n_shift = possible_shifts.size
+        for i in range(n_shift):
+            shift = possible_shifts[i]
+            sum_dist = 0.
+            for chan_ind in range(num_chan):
+                if chan_sparsity[chan_ind]:
+                    for s in range(width):
+                        v = traces[sample_ind - nbefore + s +shift, chan_ind]
+                        t = template[s, chan_ind]
+                        sum_dist += (v - t) ** 2
+            distances_shift[i] = sum_dist
+        
+        return distances_shift
+    
 
 
 #################
