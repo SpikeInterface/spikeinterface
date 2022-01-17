@@ -66,10 +66,11 @@ class NewToOldSorting:
         self.is_dumpable = False
 
         unit_map = {}
-        if isinstance(self._sorting.get_unit_ids()[0], (int, np.integer)):
+        if np.all([isinstance(unit_id, int)] for unit_id in self._sorting.get_unit_ids()):
             for u in self._sorting.get_unit_ids():
                 unit_map[u] = u
         else:
+            print("Some unit IDs are not int but all unit IDs must be int in the old API SortingExtractor. Converting unit IDs to index...")
             for i_u, u in enumerate(self._sorting.get_unit_ids()):
                 unit_map[i_u] = u
         self._unit_map = unit_map
