@@ -495,30 +495,33 @@ def _tdc_find_spikes(traces, d, level=0):
         spikes['channel_ind'] = peak_chan_ind  # TODO need to put the channel from template
 
 
-        
+
+        possible_shifts = d['possible_shifts']
+        distances_shift = np.zeros(possible_shifts.size)
+
         # naively take the closest template
         for i in range(peak_sample_ind.size):
             sample_ind = peak_sample_ind[i]
-
-            s0 = sample_ind - d['nbefore']
-            s1 = sample_ind + d['nafter']
 
             chan_ind = peak_chan_ind[i]
             possible_clusters = possible_clusters_by_channel[chan_ind]
             
             if possible_clusters.size > 0:
+                s0 = sample_ind - d['nbefore']
+                s1 = sample_ind + d['nafter']
+
                 wf = traces[s0:s1, :]
                 
                 ## pure numpy with cluster spasity
                 # distances = np.sum(np.sum((templates[possible_clusters, :, :] - wf[None, : , :])**2, axis=1), axis=1)
 
                 ## pure numpy with cluster+channel spasity
-                union_channels, = np.nonzero(np.any(d['template_sparsity'][possible_clusters, :], axis=0))
-                distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
+                # union_channels, = np.nonzero(np.any(d['template_sparsity'][possible_clusters, :], axis=0))
+                # distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
                 
                 ## numba with cluster+channel spasity
-                # union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
-                # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
+                union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
+                distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
 
                 ind = np.argmin(distances)
                 cluster_ind = possible_clusters[ind]
@@ -528,8 +531,6 @@ def _tdc_find_spikes(traces, d, level=0):
                 template_sparse = templates[cluster_ind, :, :][:, chan_sparsity]
 
                 # find best shift
-                possible_shifts = d['possible_shifts']
-                distances_shift = np.zeros(possible_shifts.size)
                 for s, shift in enumerate(possible_shifts):
                     wf_shift = traces[s0 + shift: s1 + shift, chan_sparsity]
                     distances_shift[s] = np.sum((template_sparse - wf_shift)**2)
@@ -575,38 +576,28 @@ def _tdc_find_spikes(traces, d, level=0):
         return spikes    
 
 
-'''
+
 if HAVE_NUMBA:
-    #@jit(parallel=True)
     @jit(nopython=True)
     def numba_sparse_dist(wf, templates, union_channels, possible_clusters):
         """
-        numba implementation that compute distance from template
+        numba implementation that compute distance from template with sparsity 
+        handle by two separate vectors
         """
         total_cluster, width, num_chan = templates.shape
-
         num_cluster = possible_clusters.shape[0]
         distances = np.zeros((num_cluster,), dtype=np.float32)
-        #~ scalar_product = np.zeros((num_cluster,), dtype=np.float32)
-        # for i in prange(num_cluster):
         for i in prange(num_cluster):
             cluster_ind = possible_clusters[i]
             sum_dist = 0.
-            #~ sum_sp = 0.
-            #~ sum_norm = 0.
             for chan_ind in range(num_chan):
                 if union_channels[chan_ind]:
                     for s in range(width):
                         v = wf[s, chan_ind]
                         t = templates[cluster_ind, s, chan_ind]
                         sum_dist += (v - t) ** 2
-                        #~ sum_sp += v * t
-                        #~ sum_norm += t * t
             distances[i] = sum_dist
-            #~ scalar_product[i] = sum_sp / sum_norm
         return distances
-        #~ return scalar_product, distances
-'''
 
 
 #################
