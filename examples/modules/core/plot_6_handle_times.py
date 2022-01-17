@@ -16,7 +16,11 @@ rec, sort = toy_example(num_segments=1)
 
 
 ##############################################################################
-# Now let's create a time vector by getting the default times and adding 5 s:
+# Generally, the time information would be automaticall loaded when reading a 
+# recording. 
+# However, sometimes we might need to add a time vector externally.
+# For example, now let's create a time vector by getting the default times and 
+# adding 5 s:
 
 default_times = rec.get_times()
 print(default_times[:10])
@@ -26,7 +30,7 @@ new_times = default_times + 5
 # We can now set the new time vector with the :code:`set_times()` function.
 # Additionally, we can register to recording object to the sorting one so that 
 # time information can be accessed by the sorting object as well (note that this 
-# weak link is lost in case the sorting object is saved to disk!):
+# link is lost in case the sorting object is saved to disk!):
 
 rec.set_times(new_times)
 sort.register_recording(rec)
