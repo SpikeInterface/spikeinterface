@@ -768,7 +768,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_templates = d['nb_templates']
         max_amplitude = d['max_amplitude']
         min_amplitude = d['min_amplitude']
-        alpha = 0.75
+        alpha = 0.5
         norms = d['norms']
         all_units = list(waveform_extractor.sorting.unit_ids)
         if d['progess_bar_steps']:
