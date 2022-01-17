@@ -60,7 +60,7 @@ class BaseSorting(BaseExtractor):
         spike_train = segment.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
         if return_times:
-            if self.has_time_vector(segment_index=segment_index):
+            if self.has_recording():
                 times = self.get_times(segment_index=segment_index)
                 return times[spike_train]
             else:
@@ -69,6 +69,9 @@ class BaseSorting(BaseExtractor):
             return spike_train
 
     def register_recording(self, recording):
+        assert np.isclose(self.get_sampling_frequency(), 
+                          recording.get_sampling_frequency(), 
+                          atol=0.1), "The recording has a different sampling frequency than the sorting!"
         self._recording = recording
 
     def has_recording(self):
