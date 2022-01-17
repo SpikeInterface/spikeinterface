@@ -760,65 +760,79 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _savgol_template(cls, n, template):
         if n > 3:
-            template = scipy.signal.savgol_filter(template, n, 3, axis=0)
-        return template
+            filtered_template = scipy.signal.savgol_filter(template, n, 3, axis=0)
+        return filtered_template
 
     @classmethod
     def _wiener_template(cls, n, template):
-        template = scipy.signal.wiener(template, (n, 1))
-        return template
+        filtered_template = scipy.signal.wiener(template, (n, 1))
+        return filtered_template
 
     @classmethod
     def _spline_template(cls, n, template, d):
         xdata = np.arange(d['nb_samples'])
         ydata = np.arange(d['nb_channels'])
+        size = len(xdata)*len(ydata)
         try:
-            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=n)
+            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=n*size)
         except Exception:
             f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=0)
-        new_template = f(xdata, ydata).astype(np.float32)
-        return new_template.copy()
+        filtered_template = f(xdata, ydata).astype(np.float32)
+        return filtered_template.copy()
 
     @classmethod
-    def _cost_function_denoise(cls, n, template, snippets, d, mode='savgol'):
+    def _hanning_filtering_template(cls, template, filtered_template, d):
+        before = np.hanning(2*d['waveform_extractor'].nbefore)[:d['waveform_extractor'].nbefore]
+        after = np.hanning(2*d['waveform_extractor'].nafter)[d['waveform_extractor'].nafter:]
+        hanning = np.concatenate((before, after))[:, np.newaxis]
+        return (1 - hanning)*filtered_template + hanning*template
+
+
+    @classmethod
+    def _cost_function_denoise(cls, n, template, snippets, d, mode='savgol', hanning=True):
         
         if mode == 'savgol':
-            template = cls._savgol_template(n, template)
+            filtered_template = cls._savgol_template(n, template)
         elif mode == 'spline':
-            template = cls._spline_template(n, template, d)
+            filtered_template = cls._spline_template(n, template, d)
         elif mode == 'wiener':
-            template = cls._wiener_template(n, template)
-        amps = template.flatten().dot(snippets)/(np.linalg.norm(template)**2)
+            filtered_template = cls._wiener_template(n, template)
+
+        if hanning:
+            filtered_template = cls._hanning_filtering_template(template, filtered_template, d)
+
+        amps = filtered_template.flatten().dot(snippets)/(np.linalg.norm(filtered_template)**2)
         median_amps = np.median(amps)
         mads_amps = np.median(np.abs(amps - np.median(amps)))
         cost = np.abs(1 - median_amps) + mads_amps
         return cost
 
     @classmethod
-    def _denoise_template(cls, template, snippets, d, mode='savgol'):
+    def _denoise_template(cls, template, snippets, d, mode='spline', hanning=True):
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
 
         if mode == 'savgol':
             indices = np.arange(3, 50, 2)
-            costs = [cls._cost_function_denoise(n, template, snippets, d, 'savgol') for n in indices]
+            costs = [cls._cost_function_denoise(n, template, snippets, d, 'savgol', hanning) for n in indices]
             best_idx = np.argmin(costs)
             #print(best_idx)
-            template = cls._savgol_template(indices[best_idx], template)
+            filtered_template = cls._savgol_template(indices[best_idx], template)
         elif mode == 'wiener':
             indices = np.arange(1, d['nb_samples']//2)
-            costs = [cls._cost_function_denoise(n, template, snippets, d, 'wiener') for n in indices]
+            costs = [cls._cost_function_denoise(n, template, snippets, d, 'wiener', hanning) for n in indices]
             best_idx = np.argmin(costs)
             #print(best_idx)
-            template = cls._wiener_template(indices[best_idx], template)
+            filtered_template = cls._wiener_template(indices[best_idx], template)
         elif mode == 'spline':
-            cost_kwargs = [template, snippets, d, 'spline']
-            cost_bounds = [(0, nb_samples)]
-            res = scipy.optimize.differential_evolution(cls._cost_function_denoise, bounds=cost_bounds, args=cost_kwargs)
-            #print(res.x)
-            template = cls._spline_template(res.x, template, d)
+            cost_kwargs = [template, snippets, d, 'spline', hanning]
+            res = scipy.optimize.fminbound(cls._cost_function_denoise, 0, 2, args=cost_kwargs)
+            filtered_template = cls._spline_template(res, template, d)
 
-        return template
+        if hanning:
+            filtered_template = cls._hanning_filtering_template(template, filtered_template, d)
+
+        return filtered_template
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
