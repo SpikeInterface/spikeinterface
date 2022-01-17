@@ -255,7 +255,7 @@ class BaseSorter:
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         sorting = cls._get_result_from_folder(output_folder)
-        sorting.set_recording(recording)
+        sorting.register_recording(recording)
         return sorting
 
     #############################################

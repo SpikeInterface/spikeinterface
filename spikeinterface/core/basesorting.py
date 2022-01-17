@@ -110,7 +110,7 @@ class BaseSorting(BaseExtractor):
             NpzSortingExtractor.write_sorting(self, save_path)
             cached = NpzSortingExtractor(save_path)
             if self.has_recording():
-                cached.set_recording(self._recording)
+                cached.register_recording(self._recording)
         else:
             raise ValueError(f'format {format} not supported')
 
