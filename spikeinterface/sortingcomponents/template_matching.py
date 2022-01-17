@@ -20,7 +20,7 @@ except ImportError:
 from spikeinterface.core import WaveformExtractor
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
 from spikeinterface.toolkit import (get_noise_levels, get_template_channel_sparsity,
-    get_channel_distances, get_chunk_with_margin, get_template_extremum_channel)
+    get_channel_distances, get_chunk_with_margin, get_template_extremum_channel, get_random_data_chunks)
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
 
@@ -632,7 +632,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'mcc_amplitudes': True,
         'omp' : True,
         'omp_min_sps' : 0.5,
-        'omp_tol' : 1e-5,
+        'omp_tol' : 1e-3,
         'progess_bar_steps' : False,
     }
 
@@ -671,16 +671,19 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             template = np.median(w, axis=0)
             template = cls._sparsify_template(template, sparse_thresholds)
-            template = cls._denoise_template(template, snippets, d)
+            #template = cls._denoise_template(template, snippets, d)
 
             norms[count] = np.linalg.norm(template)
             template /= norms[count]
             template = template.flatten()
 
-            amps = template.dot(snippets)/norms[count]
-            median_amps = np.median(amps)
-            mads_amps = np.median(np.abs(amps - median_amps))
-            amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps + spread*mads_amps)]
+            if not d['omp']:
+                amps = template.dot(snippets)/norms[count]
+                median_amps = np.median(amps)
+                mads_amps = np.median(np.abs(amps - median_amps))
+                amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps + spread*mads_amps)]
+            else:
+                amplitudes[count] = [min_amplitude, max_amplitude]
 
             templates[count] = template
 
@@ -752,20 +755,21 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         return cost
 
     @classmethod
-    def _optimize_amplitudes(cls, d):
+    def _optimize_amplitudes(cls, noise_snippets, d):
 
         waveform_extractor = d['waveform_extractor']
         templates = d['templates']
         nb_templates = d['nb_templates']
         max_amplitude = d['max_amplitude']
         min_amplitude = d['min_amplitude']
-        alpha = 0.5
+        alpha = 0.75
         norms = d['norms']
         all_units = list(waveform_extractor.sorting.unit_ids)
         if d['progess_bar_steps']:
             all_units = tqdm(all_units, desc='[3] - optimize amplitudes')
 
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
+        noise = templates.dot(noise_snippets)/norms[:, np.newaxis]
 
         all_amps = {}
         for count, unit_id in enumerate(all_units):
@@ -776,6 +780,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             sub_amps = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :]
             bad = sub_amps[sub_amps >= good]
+            bad = np.concatenate((bad, noise[count]))
             median_amps = np.median(good)
             cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
             cost_bounds = [(min_amplitude, median_amps), (median_amps, max_amplitude)]
@@ -785,6 +790,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             # import pylab as plt
             # plt.hist(good, 100, alpha=0.5)
             # plt.hist(bad, 100, alpha=0.5)
+            # plt.hist(noise[count], 100, alpha=0.5)
             # ymin, ymax = plt.ylim()
             # plt.plot([res.x[0], res.x[0]], [ymin, ymax], 'k--')
             # plt.plot([res.x[1], res.x[1]], [ymin, ymax], 'k--')
@@ -893,14 +899,18 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             d['templates'], d['norms'], d['amplitudes'] = cls._prepare_templates(d)
             d['overlaps'] = cls._prepare_overlaps(d['templates'], d)
 
-
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
         d['snippet_window'] = np.arange(-d['nbefore'], d['nafter'])
         d['snippet_size'] = d['nb_channels'] * len(d['snippet_window'])
 
-        if d['mcc_amplitudes']:
-            d['amplitudes'] = cls._optimize_amplitudes(d)
+        if d['mcc_amplitudes'] and not d['omp']:
+            nb_segments = recording.get_num_segments()
+            nb_snippets = d['waveform_extractor']._params['max_spikes_per_unit']
+            nb_chunks = nb_snippets // nb_segments
+            noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=nb_chunks, chunk_size=d['nb_samples'], seed=42)
+            noise_snippets = noise_snippets.reshape(nb_chunks, d['nb_samples'], d['nb_channels']).reshape(nb_chunks, -1).T
+            d['amplitudes'] = cls._optimize_amplitudes(noise_snippets, d)
 
         return d        
 
@@ -1049,7 +1059,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                         Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
                         M = Z
 
-                    all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
+                    all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True)/norms[selection[0]]
                     diff_amplitudes = (all_amplitudes - amplitudes[selection[0], selection[1]])
                     modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
                     amplitudes[selection[0], selection[1]] = all_amplitudes
