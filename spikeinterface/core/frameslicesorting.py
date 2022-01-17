@@ -46,8 +46,8 @@ class FrameSliceSorting(BaseSorting):
         parent_sorting.copy_metadata(self)
 
         if parent_sorting.has_recording():
-            warnings.warn(
-                "Cannot propagate registered recording to FrameSliceSorting")
+            self.register_recording(parent_sorting._recording.frame_slice(start_frame=start_frame,
+                                                                          end_frame=end_frame))
 
         # update dump dict
         self._kwargs = {'parent_sorting': parent_sorting.to_dict(), 'start_frame': int(start_frame),
