@@ -660,7 +660,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             template = np.median(w, axis=0)
             template = cls._sparsify_template(template, sparse_thresholds)
-            template = cls._denoise_template(template, snippets, d)
+            #template = cls._denoise_template(template, snippets, d)
 
             norms[count] = np.linalg.norm(template)
             template /= norms[count]
