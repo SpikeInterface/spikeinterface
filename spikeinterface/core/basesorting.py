@@ -60,7 +60,7 @@ class BaseSorting(BaseExtractor):
         spike_train = segment.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
         if return_times:
-            if self.has_time_vector:
+            if self.has_time_vector(segment_index=segment_index):
                 times = self.get_times(segment_index=segment_index)
                 return times[spike_train]
             else:
