@@ -153,69 +153,6 @@ class NewToOldSorting:
         """
         return self._sampling_frequency
 
-    def set_sampling_frequency(self, sampling_frequency):
-        """
-        It sets the sorting extractor sampling frequency.
-
-        Parameters
-        ----------
-        sampling_frequency: float
-            The sampling frequency
-        """
-        self._sampling_frequency = sampling_frequency
-
-    def set_times(self, times):
-        """This function sets the sorting times to convert spike trains to seconds
-
-        Parameters
-        ----------
-        times: array-like
-            The times in seconds for each frame
-        """
-        max_frames = np.array([np.max(self.get_unit_spike_train(u)) for u in self.get_unit_ids()])
-        assert np.all(max_frames < len(times)), "The length of 'times' should be greater than the maximum " \
-                                                "spike frame index"
-        self._times = times.astype('float64')
-
-    def frame_to_time(self, frames):
-        """This function converts user-inputed frame indexes to times with units of seconds.
-
-        Parameters
-        ----------
-        frames: float or array-like
-            The frame or frames to be converted to times
-
-        Returns
-        -------
-        times: float or array-like
-            The corresponding times in seconds
-        """
-        # Default implementation
-        if self._times is None:
-            return np.round(frames / self.get_sampling_frequency(), 6)
-        else:
-            return self._times[frames]
-
-    def time_to_frame(self, times):
-        """This function converts a user-inputted times (in seconds) to a frame indexes.
-
-        Parameters
-        ----------
-        times: float or array-like
-            The times (in seconds) to be converted to frame indexes
-
-        Returns
-        -------
-        frames: float or array-like
-            The corresponding frame indexes
-        """
-        # Default implementation
-        if self._times is None:
-            return np.round(times * self.get_sampling_frequency()).astype('int64')
-        else:
-            return np.searchsorted(self._times, times).astype('int64')
-
-
 def create_extractor_from_new_sorting(new_sorting):
     old_sorting = NewToOldSorting(new_sorting)
     return old_sorting
