@@ -309,6 +309,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         'noise_levels': None,
         'local_radius_um': 100,
         'num_closest' : 5,
+        'shift' : 4,
     }
     
     @classmethod
@@ -407,6 +408,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         d['nbefore'] = we.nbefore
         d['nafter'] = we.nafter
+        
+        d['possible_shifts'] = np.arange(-d['shift'], d['shift'] +1, dtype='int64')
 
         return d        
 
@@ -495,8 +498,10 @@ def _tdc_find_spikes(traces, d, level=0):
         
         # naively take the closest template
         for i in range(peak_sample_ind.size):
-            i0 = peak_sample_ind[i] - d['nbefore']
-            i1 = peak_sample_ind[i] + d['nafter']
+            sample_ind = peak_sample_ind[i]
+            
+            i0 = sample_ind - d['nbefore']
+            i1 = sample_ind + d['nafter']
 
             chan_ind = peak_chan_ind[i]
             possible_clusters = possible_clusters_by_channel[chan_ind]
@@ -518,11 +523,25 @@ def _tdc_find_spikes(traces, d, level=0):
                 ind = np.argmin(distances)
                 cluster_ind = possible_clusters[ind]
                 #~ print(scalar_product[ind])
-                
-                # accept or not
+
                 chan_sparsity = d['template_sparsity'][cluster_ind, :]
                 template_sparse = templates[cluster_ind, :, :][:, chan_sparsity]
-                wf_sparse = wf[:, chan_sparsity]
+                
+                # find best shift
+                distance_shifts = np.zeros(d['possible_shifts'].size)
+                for s, shift in enumerate(d['possible_shifts']):
+                    i0 = sample_ind - d['nbefore'] + shift
+                    i1 = sample_ind + d['nafter'] + shift
+                    distance_shifts[s] =  np.sum((traces[i0:i1,chan_sparsity] - template_sparse)**2)
+                ind_shift = np.argmin(distance_shifts)
+                shift = d['possible_shifts'][ind_shift]
+                
+                sample_ind += shift
+                i0 = sample_ind - d['nbefore']
+                i1 = sample_ind + d['nafter']
+                wf_sparse = traces[i0:i1, chan_sparsity]
+                
+                # accept or not
                 centered = wf_sparse - template_sparse
                 accepted = True
                 for other_ind, other_vector in d['closest_units'][cluster_ind]:
@@ -531,18 +550,9 @@ def _tdc_find_spikes(traces, d, level=0):
                         accepted = False
                         break
                 
-                #~ if cluster_ind in (5, 8):
-                    #~ import matplotlib.pyplot as plt
-                    #~ fig, ax = plt.subplots()
-                    #~ ax.plot(wf_sparse, color='k')
-                    #~ ax.plot(template_sparse, color='g')
-                    #~ ax.set_title(f'{cluster_ind}  {accepted}')
-                    #~ plt.show()
-                    
                 if accepted:
                     amplitude = 1.
                     
-                    sample_ind = peak_sample_ind[i]
                     # remove template
                     template = templates[cluster_ind, :, :]
                     s0 = sample_ind - d['nbefore']
