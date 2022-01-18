@@ -52,12 +52,6 @@ def run_sorter(sorter_name, recording, output_folder=None,
     >>> sorting = run_sorter('tridesclous', recording)
     """ + _common_param_doc
 
-    if docker_image is None and singularity_image is None:
-        return run_sorter_local(sorter_name, recording, output_folder=output_folder,
-                                remove_existing_folder=remove_existing_folder,
-                                delete_output_folder=delete_output_folder,
-                                verbose=verbose, raise_error=raise_error, with_output=with_output,
-                                **sorter_params)
     if docker_image is not None:
         return run_sorter_container(sorter_name, recording, 'docker', docker_image,
                                     output_folder=output_folder,
@@ -70,6 +64,11 @@ def run_sorter(sorter_name, recording, output_folder=None,
                                     remove_existing_folder=remove_existing_folder,
                                     delete_output_folder=delete_output_folder, verbose=verbose,
                                     raise_error=raise_error, with_output=with_output, **sorter_params)
+    return run_sorter_local(sorter_name, recording, output_folder=output_folder,
+                            remove_existing_folder=remove_existing_folder,
+                            delete_output_folder=delete_output_folder,
+                            verbose=verbose, raise_error=raise_error, with_output=with_output,
+                            **sorter_params)
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
