@@ -631,14 +631,14 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
-        'sparsify_threshold': 1,
+        'sparsify_threshold': 0.2,
         'max_amplitude' : 3,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.2,
         'omp' : True,
         'omp_min_sps' : 0.5,
         'omp_tol' : 1e-3,
-        'progess_bar_steps' : False,
+        'progess_bar_steps' : True,
     }
 
     @classmethod
@@ -683,8 +683,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             amplitudes[count] = [min_amplitude, max_amplitude]
 
             normalized_templates[count] = template
-            is_nul = np.abs(templates[count]) < 1e-5
-            templates[count][is_nul] = 0
+            #is_nul = np.abs(templates[count]) < 1e-5
+            #templates[count][is_nul] = 0
 
         nnz = np.sum(normalized_templates != 0)/(nb_templates * nb_samples * nb_channels)
         if nnz <= use_sparse_matrix_threshold:
