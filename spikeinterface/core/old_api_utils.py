@@ -86,7 +86,7 @@ class OldToNewRecording(BaseRecording):
                 self.set_channel_gains(gains)
         if offsets is not None:
             if np.any(offsets != 0):
-                self.set_channel_gains(offsets)
+                self.set_channel_offsets(offsets)
 
         self._kwargs = {'oldapi_recording_extractor': oldapi_recording_extractor}
 
