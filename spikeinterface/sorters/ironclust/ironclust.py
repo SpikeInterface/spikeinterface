@@ -251,3 +251,56 @@ class IronClustSorter(BaseSorter):
         sorting = MdaSortingExtractor(file_path=result_fname, sampling_frequency=samplerate)
 
         return sorting
+
+    @classmethod
+    def run_from_folder_matlab(cls, output_folder, container_image):
+        """
+        POC function to run matlab based sorter in a docker
+
+        Based on BaseSorter.run_from_folder and IronClustSorter._run_from_folder
+        """
+
+        dataset_dir = (output_folder / 'ironclust_dataset').absolute()
+        tmpdir = (output_folder / 'tmp').absolute()
+        cmd = '''
+            p_ironclust {tmpdir} {dataset_dir}/raw.mda {dataset_dir}/geom.csv '' '' {tmpdir}/firings.mda {dataset_dir}/argfile.txt
+        '''
+        cmd = cmd.format(tmpdir=str(tmpdir), dataset_dir=str(dataset_dir))
+
+        import datetime
+        now = datetime.datetime.now()
+        log = {
+            'sorter_name': 'ironclust',
+            'sorter_version': '1.0.0',
+            'datetime': now,
+            'runtime_trace': []
+        }
+
+        import json
+        import time
+        import docker
+        client = docker.from_env()
+        t0 = time.perf_counter()
+        try:
+            volumes = {}
+            volumes[str(output_folder.absolute())] = {
+                'bind': str(output_folder.absolute()), 'mode': 'rw'
+            }
+            client.containers.run(container_image, cmd, volumes=volumes)
+            t1 = time.perf_counter()
+            run_time = float(t1 - t0)
+            has_error = False
+        except Exception as exp:
+            import traceback
+            has_error = True
+            run_time = None
+            log['error_trace'] = traceback.format_exc()
+
+        log['error'] = has_error
+        log['run_time'] = run_time
+
+        with (output_folder / 'spikeinterface_log.json').open('w', encoding='utf8') as f:
+            from spikeinterface.core.core_tools import check_json
+            json.dump(check_json(log), f, indent=4)
+
+        return run_time
