@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 
+from spikeinterface import NumpySorting
 from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
 from spikeinterface.sortingcomponents import find_spikes_from_templates, template_matching_methods
@@ -30,12 +31,12 @@ def test_find_spikes_from_templates():
 
     result = {}
 
-    import spikeinterface.full as si
+    
     for method in template_matching_methods.keys():
         spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
                         n_jobs=1, chunk_size=30000, progress_bar=True)
 
-        result[method] = si.NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
+        result[method] = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
     
     
     # debug
@@ -46,11 +47,12 @@ def test_find_spikes_from_templates():
     
     # comparisons = {}
     # for method in template_matching_methods.keys():
-    #    comparisons[method] = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
-    #    si.plot_agreement_matrix(comparisons[method])
-    #    plt.title(method)
-    #    si.plot_sorting_performance(comparisons[method], metrics, performance_name='accuracy', metric_name='snr',)
-    #    plt.title(method)
+    #     comp = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
+    #     comparisons[method] = comp
+    #     si.plot_agreement_matrix(comp)
+    #     plt.title(method)
+    #     si.plot_sorting_performance(comp, metrics, performance_name='accuracy', metric_name='snr',)
+    #     plt.title(method)
     # plt.show()
 
 if __name__ == '__main__':

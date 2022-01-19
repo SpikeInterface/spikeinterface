@@ -346,8 +346,10 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d['neighbours_mask'] = channel_distance < d['local_radius_um']
         
         #
-        template_sparsity_inds = get_template_channel_sparsity(we, method='radius',
-                                  peak_sign=d['peak_sign'], outputs='index', radius_um=d['local_radius_um'])
+        #~ template_sparsity_inds = get_template_channel_sparsity(we, method='radius',
+                                  #~ peak_sign=d['peak_sign'], outputs='index', radius_um=d['local_radius_um'])
+        template_sparsity_inds = get_template_channel_sparsity(we, method='threshold',
+                                  peak_sign=d['peak_sign'], outputs='index', threshold=d['detect_threshold'])                                  
         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype='bool')
         for unit_index, unit_id in enumerate(unit_ids):
             chan_inds = template_sparsity_inds[unit_id]
