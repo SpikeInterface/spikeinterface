@@ -58,7 +58,7 @@ class NwbRecordingExtractor(BaseRecording):
     samples_for_rate_estimation: int
         If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
         to estimate the rate (default 100000)
-        
+
     Returns
     -------
     recording: NwbRecordingExtractor
@@ -77,34 +77,34 @@ class NwbRecordingExtractor(BaseRecording):
         check_nwb_install()
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
-        
-        self.io =  NWBHDF5IO(self._file_path, mode='r',load_namespaces=True)
+
+        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
         self._nwbfile = self.io.read()
         self._es = get_electrical_series(
             self._nwbfile, self._electrical_series_name)
-        
+
         sampling_frequency = None
         if hasattr(self._es, 'rate'):
             sampling_frequency = self._es.rate
-        
+
         if hasattr(self._es, 'starting_time'):
             t_start = self._es.starting_time
         else:
             t_start = None
-        
+
         timestamps = None
         if hasattr(self._es, 'timestamps'):
             if self._es.timestamps is not None:
                 timestamps = self._es.timestamps
                 t_start = self._es.timestamps[0]
-            
+
         # if rate is unknown, estimate from timestamps
         if sampling_frequency is None:
             assert timestamps is not None, "Could not find rate information as both 'rate' and "\
                                            "'timestamps' are missing from the file. "\
                                            "Use the 'sampling_frequency' argument."
             sampling_frequency = 1. / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
-        
+
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=self._es.timestamps)
         else:
@@ -129,7 +129,7 @@ class NwbRecordingExtractor(BaseRecording):
         dtype = self._es.data.dtype
 
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
-        recording_segment = NwbRecordingSegment(nwbfile=self._nwbfile, 
+        recording_segment = NwbRecordingSegment(nwbfile=self._nwbfile,
                                                 electrical_series_name=self._electrical_series_name,
                                                 num_frames=num_frames, times_kwargs=times_kwargs)
         self.add_recording_segment(recording_segment)
@@ -192,9 +192,6 @@ class NwbRecordingExtractor(BaseRecording):
                         'load_time_vector': load_time_vector,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
 
-    def __del__(self):
-        self.io.close()
-
 
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, nwbfile, electrical_series_name, num_frames, times_kwargs):
@@ -251,7 +248,7 @@ class NwbSortingExtractor(BaseSorting):
     samples_for_rate_estimation: int, optional
         If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
         to estimate the rate (default 100000)
-        
+
     Returns
     -------
     sorting: NwbSortingExtractor
@@ -268,7 +265,7 @@ class NwbSortingExtractor(BaseSorting):
         check_nwb_install()
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
-        
+
         self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
         self._nwbfile = self.io.read()
         timestamps = None
@@ -299,7 +296,7 @@ class NwbSortingExtractor(BaseSorting):
                 continue
             # if it is unit_property
             property_values = self._nwbfile.units[column][:]
-            
+
             # only load columns with same shape for all units
             if np.all(p.shape == property_values[0].shape for p in property_values):
                 properties[column] = property_values
@@ -314,13 +311,10 @@ class NwbSortingExtractor(BaseSorting):
         for prop_name, values in properties.items():
             self.set_property(prop_name, np.array(values))
 
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 
+        self._kwargs = {'file_path': str(Path(file_path).absolute()),
                         'electrical_series_name': self._electrical_series_name,
                         'sampling_frequency': sampling_frequency,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
-
-    def __del__(self):
-        self.io.close()
 
 
 class NwbSortingSegment(BaseSortingSegment):
@@ -341,7 +335,7 @@ class NwbSortingSegment(BaseSortingSegment):
         if end_frame is None:
             end_frame = np.inf
         times = self._nwbfile.units['spike_times'][list(self._nwbfile.units.id[:]).index(unit_id)][:]
-        
+
         if self._timestamps is not None:
             frames = np.searchsorted(times, self.timestamps).astype('int64')
         else:
@@ -382,7 +376,7 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     Returns
     -------
     extractors: extractor or tuple
-        Single RecordingExtractor/SortingExtractor or tuple with both 
+        Single RecordingExtractor/SortingExtractor or tuple with both
         (depending on 'load_recording'/'load_sorting') arguments
     """
     outputs = ()

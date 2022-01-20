@@ -253,7 +253,9 @@ class BaseSorter:
             raise SpikeSortingError(
                 "Spike sorting failed. You can inspect the runtime trace in spikeinterface_log.json")
 
+        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         sorting = cls._get_result_from_folder(output_folder)
+        sorting.register_recording(recording)
         return sorting
 
     #############################################
