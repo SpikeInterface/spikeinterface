@@ -198,8 +198,11 @@ class PairwiseDisplacementWidget(BaseWidget):
 
             im.set_clim(-40, 40)
             ax.set_aspect('equal')
-            depth = self.spatial_bins[i]
-            ax.set_title(f'{depth} um')
+            if self.spatial_bins is None:
+                pass
+            else:
+                depth = self.spatial_bins[i]
+                ax.set_title(f'{depth} um')
         
         self.figure.colorbar(ims[-1], ax=self.axes.flatten()[:n])
         self.figure.suptitle('pairwise displacement')
@@ -258,7 +261,9 @@ class DisplacementWidget(BaseWidget):
 
         if self.with_histogram:
             motion_histogram = self.extra_check['motion_histogram']
-            extent = (self.temporal_bins[0], self.temporal_bins[-1], self.spatial_bins[0], self.spatial_bins[-1])
+            spatial_hist_bins = self.extra_check['spatial_hist_bins']
+            temporal_hist_bins = self.extra_check['temporal_hist_bins']
+            extent = (temporal_hist_bins[0], temporal_hist_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
             im = ax.imshow(
                 motion_histogram.T,
                 interpolation='nearest',
@@ -269,7 +274,8 @@ class DisplacementWidget(BaseWidget):
             )
 
         if self.spatial_bins is None:
-            raise NotImplementedError
+            offset = np.median(self.extra_check['spatial_hist_bins'])
+            ax.plot(self.temporal_bins, self.motion[:, 0] + offset, color='r')
             # ax.plot(temporal_bins[:-1], motion + 2000, color='r')
             # ax.set_xlabel('times[s]')
             # ax.set_ylabel('motion [um]')
