@@ -1,9 +1,7 @@
 import shutil
 import os
-import sys
 from pathlib import Path
 import json
-from copy import deepcopy
 import platform
 
 
@@ -54,25 +52,23 @@ def run_sorter(sorter_name, recording, output_folder=None,
     >>> sorting = run_sorter('tridesclous', recording)
     """ + _common_param_doc
 
-    if docker_image is None and singularity_image is None:
-        sorting = run_sorter_local(sorter_name, recording, output_folder=output_folder,
-                                   remove_existing_folder=remove_existing_folder,
-                                   delete_output_folder=delete_output_folder,
-                                   verbose=verbose, raise_error=raise_error, with_output=with_output,
-                                   **sorter_params)
-    elif docker_image is not None:
-        sorting = run_sorter_container(sorter_name, recording, 'docker', docker_image,
-                                      output_folder=output_folder,
-                                      remove_existing_folder=remove_existing_folder,
-                                      delete_output_folder=delete_output_folder, verbose=verbose,
-                                      raise_error=raise_error, with_output=with_output, **sorter_params)
-    elif singularity_image is not None:
-        sorting = run_sorter_container(sorter_name, recording, 'singularity', singularity_image,
-                                      output_folder=output_folder,
-                                      remove_existing_folder=remove_existing_folder,
-                                      delete_output_folder=delete_output_folder, verbose=verbose,
-                                      raise_error=raise_error, with_output=with_output, **sorter_params)
-    return sorting
+    if docker_image is not None:
+        return run_sorter_container(sorter_name, recording, 'docker', docker_image,
+                                    output_folder=output_folder,
+                                    remove_existing_folder=remove_existing_folder,
+                                    delete_output_folder=delete_output_folder, verbose=verbose,
+                                    raise_error=raise_error, with_output=with_output, **sorter_params)
+    if singularity_image is not None:
+        return run_sorter_container(sorter_name, recording, 'singularity', singularity_image,
+                                    output_folder=output_folder,
+                                    remove_existing_folder=remove_existing_folder,
+                                    delete_output_folder=delete_output_folder, verbose=verbose,
+                                    raise_error=raise_error, with_output=with_output, **sorter_params)
+    return run_sorter_local(sorter_name, recording, output_folder=output_folder,
+                            remove_existing_folder=remove_existing_folder,
+                            delete_output_folder=delete_output_folder,
+                            verbose=verbose, raise_error=raise_error, with_output=with_output,
+                            **sorter_params)
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
@@ -142,7 +138,6 @@ def find_recording_folder(d):
             return folder_to_mount
 
 
-
 class ContainerClient:
     """
     Small abstraction class to run commands in:
@@ -153,7 +148,7 @@ class ContainerClient:
         assert mode in ('docker', 'singularity')
         self.mode = mode
 
-        if mode =='docker':
+        if mode == 'docker':
             import docker
             client = docker.from_env()
             if extra_kwargs.get('requires_gpu', False):
@@ -161,9 +156,9 @@ class ContainerClient:
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
             self.docker_container = client.containers.create(
-                    container_image, tty=True,  volumes=volumes, **extra_kwargs)
+                    container_image, tty=True, volumes=volumes, **extra_kwargs)
 
-        elif mode =='singularity':
+        elif mode == 'singularity':
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
             if Path(container_image).exists():
@@ -184,24 +179,24 @@ class ContainerClient:
                 options += ['--nv']
 
             self.client_instance = Client.instance(self.singularity_image, start=False, options=options)
-    
+
     def start(self):
-        if self.mode =='docker':
+        if self.mode == 'docker':
             self.docker_container.start()
-        elif self.mode =='singularity':
+        elif self.mode == 'singularity':
             self.client_instance.start()
-    
+
     def stop(self):
-        if self.mode =='docker':
+        if self.mode == 'docker':
             self.docker_container.stop()
-        elif self.mode =='singularity':
+        elif self.mode == 'singularity':
             self.client_instance.stop()
 
     def run_command(self, command):
-        if self.mode =='docker':
+        if self.mode == 'docker':
             res = self.docker_container.exec_run(command)
             return str(res.output)
-        elif self.mode =='singularity':
+        elif self.mode == 'singularity':
             from spython.main import Client
             res = Client.execute(self.client_instance, command)
             if isinstance(res, dict):
@@ -278,7 +273,6 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     cmd = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
     res_output = container_client.run_command(cmd)
     need_si_install = 'ModuleNotFoundError' in res_output
-
 
     if need_si_install:
         if 'dev' in si_version:

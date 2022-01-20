@@ -414,11 +414,11 @@ def detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, n_shifts, ne
 
 
 if HAVE_NUMBA:
-    @numba.jit(parallel=True)
+    @numba.jit(parallel=False)
     def _numba_detect_peak_pos(traces, traces_center, peak_mask, n_shifts,
                                abs_threholds, peak_sign, neighbours_mask):
         num_chans = traces_center.shape[1]
-        for chan_ind in numba.prange(num_chans):
+        for chan_ind in range(num_chans):
             for s in range(peak_mask.shape[0]):
                 if not peak_mask[s, chan_ind]:
                     continue
@@ -437,11 +437,11 @@ if HAVE_NUMBA:
         return peak_mask
 
 
-    @numba.jit(parallel=True)
+    @numba.jit(parallel=False)
     def _numba_detect_peak_neg(traces, traces_center, peak_mask, n_shifts,
                                abs_threholds, peak_sign, neighbours_mask):
         num_chans = traces_center.shape[1]
-        for chan_ind in numba.prange(num_chans):
+        for chan_ind in range(num_chans):
             for s in range(peak_mask.shape[0]):
                 if not peak_mask[s, chan_ind]:
                     continue

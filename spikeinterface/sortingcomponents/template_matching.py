@@ -4,6 +4,11 @@ import numpy as np
 
 import scipy.spatial
 
+from tqdm import tqdm
+import sklearn, scipy
+
+from threadpoolctl import threadpool_limits
+
 try:
     import numba
     from numba import jit, prange
@@ -15,7 +20,7 @@ except ImportError:
 from spikeinterface.core import WaveformExtractor
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
 from spikeinterface.toolkit import (get_noise_levels, get_template_channel_sparsity,
-    get_channel_distances, get_chunk_with_margin, get_template_extremum_channel)
+    get_channel_distances, get_chunk_with_margin, get_template_extremum_channel, get_random_data_chunks)
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
 
@@ -34,7 +39,7 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
     waveform_extractor: WaveformExtractor
         The waveform extractor
     method: str 
-        Which method to use ('naive' | 'tridesclous')
+        Which method to use ('naive' | 'tridesclous' | 'circus')
     method_kwargs: dict, optional
         Keyword arguments for the chosen method
     extra_ouputs: bool
@@ -120,8 +125,9 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     
     function = worker_ctx['function']
-     
-    spikes = function(traces, method_kwargs)
+    
+    with threadpool_limits(limits=1):
+        spikes = function(traces, method_kwargs)
     
     # remove spikes in margin
     if margin > 0:
@@ -302,7 +308,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         'detect_threshold': 5,
         'noise_levels': None,
         'local_radius_um': 100,
-        'num_closest' : 3,
+        'num_closest' : 5,
+        'sample_shift': 3,
     }
     
     @classmethod
@@ -339,8 +346,10 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d['neighbours_mask'] = channel_distance < d['local_radius_um']
         
         #
-        template_sparsity_inds = get_template_channel_sparsity(we, method='radius',
-                                  peak_sign=d['peak_sign'], outputs='index', radius_um=d['local_radius_um'])
+        #~ template_sparsity_inds = get_template_channel_sparsity(we, method='radius',
+                                  #~ peak_sign=d['peak_sign'], outputs='index', radius_um=d['local_radius_um'])
+        template_sparsity_inds = get_template_channel_sparsity(we, method='threshold',
+                                  peak_sign=d['peak_sign'], outputs='index', threshold=d['detect_threshold'])                                  
         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype='bool')
         for unit_index, unit_id in enumerate(unit_ids):
             chan_inds = template_sparsity_inds[unit_id]
@@ -374,10 +383,14 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             chans, = np.nonzero(d['template_sparsity'][unit_ind, :])
             template_sparse = templates[unit_ind, :, :][:, chans]
             closest_vec = []
+            # against N closets
             for u in closest_u:
                 vec = (templates[u, :, :][:, chans] - template_sparse)
                 vec /= np.sum(vec ** 2)
                 closest_vec.append((u, vec))
+            # against noise
+            closest_vec.append((None, - template_sparse / np.sum(template_sparse ** 2)))
+            
             closest_units.append(closest_vec)
 
         d['closest_units'] = closest_units
@@ -397,6 +410,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         d['nbefore'] = we.nbefore
         d['nafter'] = we.nafter
+        
+        d['possible_shifts'] = np.arange(-d['sample_shift'], d['sample_shift'] +1, dtype='int64')
 
         return d        
 
@@ -434,8 +449,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
                 break
             all_spikes.append(spikes[keep])
             
-            _tdc_remove_spikes(traces, spikes, d)
-            
             level += 1
             
             if level == 2:
@@ -447,17 +460,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         
         return all_spikes
 
-
-def _tdc_remove_spikes(traces, spikes, d):
-    nbefore, nafter = d['nbefore'], d['nafter']
-    for spike in spikes:
-        if spike['cluster_ind'] < 0:
-            continue
-        template = d['templates'][spike['cluster_ind'], :, :]
-        s0 = spike['sample_ind'] - d['nbefore']
-        s1 = spike['sample_ind'] + d['nafter']
-        traces[s0:s1, :] -= template * spike['amplitude']
-    
 
 def _tdc_find_spikes(traces, d, level=0):
         peak_sign = d['peak_sign']
@@ -472,54 +474,89 @@ def _tdc_find_spikes(traces, d, level=0):
         peak_sample_ind += margin // 2
 
 
+        peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+        order = np.argsort(np.abs(peak_amplitude))[::-1]
+        peak_sample_ind = peak_sample_ind[order]
+        peak_chan_ind = peak_chan_ind[order]
+
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
         spikes['sample_ind'] = peak_sample_ind
         spikes['channel_ind'] = peak_chan_ind  # TODO need to put the channel from template
-        
+
+
+
+        possible_shifts = d['possible_shifts']
+        distances_shift = np.zeros(possible_shifts.size)
+
         # naively take the closest template
         for i in range(peak_sample_ind.size):
-            i0 = peak_sample_ind[i] - d['nbefore']
-            i1 = peak_sample_ind[i] + d['nafter']
+            sample_ind = peak_sample_ind[i]
 
             chan_ind = peak_chan_ind[i]
             possible_clusters = possible_clusters_by_channel[chan_ind]
             
             if possible_clusters.size > 0:
-                wf = traces[i0:i1, :]
+                s0 = sample_ind - d['nbefore']
+                s1 = sample_ind + d['nafter']
+
+                wf = traces[s0:s1, :]
                 
                 ## pure numpy with cluster spasity
                 # distances = np.sum(np.sum((templates[possible_clusters, :, :] - wf[None, : , :])**2, axis=1), axis=1)
 
                 ## pure numpy with cluster+channel spasity
-                union_channels, = np.nonzero(np.any(d['template_sparsity'][possible_clusters, :], axis=0))
-                distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
+                # union_channels, = np.nonzero(np.any(d['template_sparsity'][possible_clusters, :], axis=0))
+                # distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
                 
                 ## numba with cluster+channel spasity
-                #~ union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
-                #~ scalar_product, distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-                #~ distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-                #~ print(scalar_product)
-                
+                union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
+                distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
+
                 ind = np.argmin(distances)
                 cluster_ind = possible_clusters[ind]
                 #~ print(scalar_product[ind])
-                
-                # accept or not
+
                 chan_sparsity = d['template_sparsity'][cluster_ind, :]
                 template_sparse = templates[cluster_ind, :, :][:, chan_sparsity]
-                wf_sparse = wf[:, chan_sparsity]
-                centered = wf_sparse - template_sparse
+
+                # find best shift
                 
+                ## pure numpy version
+                # for s, shift in enumerate(possible_shifts):
+                #     wf_shift = traces[s0 + shift: s1 + shift, chan_sparsity]
+                #     distances_shift[s] = np.sum((template_sparse - wf_shift)**2)
+                # ind_shift = np.argmin(distances_shift)
+                # shift = possible_shifts[ind_shift]
+                
+                ## numba version
+                numba_best_shift(traces, templates[cluster_ind, :, :], sample_ind, d['nbefore'], possible_shifts, distances_shift, chan_sparsity)
+                ind_shift = np.argmin(distances_shift)
+                shift = possible_shifts[ind_shift]
+
+                sample_ind = sample_ind + shift
+                s0 = sample_ind - d['nbefore']
+                s1 = sample_ind + d['nafter']
+                wf_sparse = traces[s0:s1, chan_sparsity]
+
+                # accept or not
+
+                centered = wf_sparse - template_sparse
                 accepted = True
                 for other_ind, other_vector in d['closest_units'][cluster_ind]:
                     v = np.sum(centered * other_vector)
                     if np.abs(v) >0.5:
                         accepted = False
                         break
-                
+
                 if accepted:
-                #~ if 1.:
                     amplitude = 1.
+                    
+                    # remove template
+                    template = templates[cluster_ind, :, :]
+                    s0 = sample_ind - d['nbefore']
+                    s1 = sample_ind + d['nafter']
+                    traces[s0:s1, :] -= template * amplitude
+                    
                 else:
                     cluster_ind = -1
                     amplitude = 0.
@@ -537,34 +574,48 @@ def _tdc_find_spikes(traces, d, level=0):
 
 
 if HAVE_NUMBA:
-    @jit(parallel=True)
+    @jit(nopython=True)
     def numba_sparse_dist(wf, templates, union_channels, possible_clusters):
         """
-        numba implementation that compute distance from template
+        numba implementation that compute distance from template with sparsity 
+        handle by two separate vectors
         """
         total_cluster, width, num_chan = templates.shape
         num_cluster = possible_clusters.shape[0]
         distances = np.zeros((num_cluster,), dtype=np.float32)
-        #~ scalar_product = np.zeros((num_cluster,), dtype=np.float32)
         for i in prange(num_cluster):
-        #~ for i in prange(num_cluster):
             cluster_ind = possible_clusters[i]
             sum_dist = 0.
-            #~ sum_sp = 0.
-            #~ sum_norm = 0.
             for chan_ind in range(num_chan):
                 if union_channels[chan_ind]:
                     for s in range(width):
                         v = wf[s, chan_ind]
                         t = templates[cluster_ind, s, chan_ind]
                         sum_dist += (v - t) ** 2
-                        #~ sum_sp += v * t
-                        #~ sum_norm += t * t
             distances[i] = sum_dist
-            #~ scalar_product[i] = sum_sp / sum_norm
         return distances
-        #~ return scalar_product, distances
+
+    @jit(nopython=True)
+    def numba_best_shift(traces, template, sample_ind, nbefore, possible_shifts, distances_shift, chan_sparsity):
+        """
+        numba implementation to compute several sample shift before template substraction
+        """
+        width, num_chan = template.shape
+        n_shift = possible_shifts.size
+        for i in range(n_shift):
+            shift = possible_shifts[i]
+            sum_dist = 0.
+            for chan_ind in range(num_chan):
+                if chan_sparsity[chan_ind]:
+                    for s in range(width):
+                        v = traces[sample_ind - nbefore + s +shift, chan_ind]
+                        t = template[s, chan_ind]
+                        sum_dist += (v - t) ** 2
+            distances_shift[i] = sum_dist
         
+        return distances_shift
+    
+
 
 #################
 # Circus peeler #
@@ -582,14 +633,14 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
-        'sparsify_threshold': 0.2,
+        'sparsify_threshold': 1,
         'max_amplitude' : 3,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.2,
-        'mcc_amplitudes': True,
         'omp' : True,
         'omp_min_sps' : 0.5,
-        'omp_tol' : 1e-5
+        'omp_tol' : 1e-3,
+        'progess_bar_steps' : False,
     }
 
     @classmethod
@@ -615,40 +666,38 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         norms = np.zeros(nb_templates, dtype=np.float32)
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
 
-        from tqdm import tqdm
+        all_units = list(d['waveform_extractor'].sorting.unit_ids)
+        if d['progess_bar_steps']:
+            all_units = tqdm(all_units, desc='[1] - prepare templates')
 
-        all_units = tqdm(d['waveform_extractor'].sorting.unit_ids, desc='prepare templates')
+        templates = waveform_extractor.get_all_templates(mode='median')
 
-        templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
+        normalized_templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
 
         for count, unit_id in enumerate(all_units):
-            w = waveform_extractor.get_waveforms(unit_id)
+            template = cls._sparsify_template(templates[count], sparse_thresholds)
+            #template = cls._denoise_template(template, snippets, d)
 
-            template = np.median(w, axis=0)
-            template = cls._sparsify_template(template, sparse_thresholds)
             norms[count] = np.linalg.norm(template)
             template /= norms[count]
             template = template.flatten()
 
-            amps = template.dot(w.reshape(w.shape[0], -1).T)/norms[count]
-            median_amps = np.median(amps)
-            mads_amps = np.median(np.abs(amps - np.median(amps)))
-            amplitudes[count] = [max(min_amplitude, median_amps - spread*mads_amps), min(max_amplitude, median_amps+spread*mads_amps)]
+            amplitudes[count] = [min_amplitude, max_amplitude]
 
-            templates[count] = template
+            normalized_templates[count] = template
+            is_nul = np.abs(templates[count]) < 1e-5
+            templates[count][is_nul] = 0
 
-        nnz = np.sum(templates != 0)/(nb_templates * nb_samples * nb_channels)
+        nnz = np.sum(normalized_templates != 0)/(nb_templates * nb_samples * nb_channels)
         if nnz <= use_sparse_matrix_threshold:
             import scipy
-            templates = scipy.sparse.csr_matrix(templates)
+            normalized_templates = scipy.sparse.csr_matrix(normalized_templates)
+            print(f'Turning templates into sparse matrix! Sparsity level is {nnz}')
 
-        return templates, norms, amplitudes
+        return normalized_templates, norms, amplitudes
 
     @classmethod
     def _prepare_overlaps(cls, templates, d):
-
-        import sklearn, scipy
-        from tqdm import tqdm
 
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
@@ -665,7 +714,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         size = 2 * nb_samples - 1
 
-        all_delays = tqdm(range(nb_samples), desc='compute overlaps')
+        all_delays = list(range(nb_samples))
+        if d['progess_bar_steps']:
+            all_delays = tqdm(all_delays, desc='[2] - compute overlaps')
 
         overlaps = {}
         
@@ -700,15 +751,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         return mcc
 
     @classmethod
-    def _cost_function(cls, bounds, good, bad, delta_amplitude, alpha):
+    def _cost_function_mcc(cls, bounds, good, bad, delta_amplitude, alpha):
         # We want a minimal error, with the larger bounds that are possible
         cost = alpha*cls._mcc_error(bounds, good, bad) + (1 - alpha)*np.abs((1 - (bounds[1] - bounds[0])/delta_amplitude))
         return cost
 
     @classmethod
-    def _optimize_amplitudes(cls, d):
-        import scipy
-        from tqdm import tqdm
+    def _optimize_amplitudes(cls, noise_snippets, d):
 
         waveform_extractor = d['waveform_extractor']
         templates = d['templates']
@@ -717,20 +766,118 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         min_amplitude = d['min_amplitude']
         alpha = 0.5
         norms = d['norms']
-        all_units = tqdm(waveform_extractor.sorting.unit_ids, desc='optimize amplitudes')
-        amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
+        all_units = list(waveform_extractor.sorting.unit_ids)
+        if d['progess_bar_steps']:
+            all_units = tqdm(all_units, desc='[3] - optimize amplitudes')
 
+        amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
+        noise = templates.dot(noise_snippets)/norms[:, np.newaxis]
+
+        all_amps = {}
         for count, unit_id in enumerate(all_units):
             w = waveform_extractor.get_waveforms(unit_id)
-            amps = templates.dot(w.reshape(w.shape[0], -1).T)/norms[:, np.newaxis]
+            snippets = w.reshape(w.shape[0], -1).T
+            amps = templates.dot(snippets)/norms[:, np.newaxis]
             good = amps[count, :].flatten()
-            bad = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :].flatten()
+
+            sub_amps = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :]
+            bad = sub_amps[sub_amps >= good]
+            bad = np.concatenate((bad, noise[count]))
+            median_amps = np.median(good)
             cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
-            res = scipy.optimize.differential_evolution(cls._cost_function, bounds=[(min_amplitude,1), (1, max_amplitude)], args=cost_kwargs)
+            cost_bounds = [(min_amplitude, median_amps), (median_amps, max_amplitude)]
+            res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=cost_bounds, args=cost_kwargs)
             amplitudes[count] = res.x
+
+            # import pylab as plt
+            # plt.hist(good, 100, alpha=0.5)
+            # plt.hist(bad, 100, alpha=0.5)
+            # plt.hist(noise[count], 100, alpha=0.5)
+            # ymin, ymax = plt.ylim()
+            # plt.plot([res.x[0], res.x[0]], [ymin, ymax], 'k--')
+            # plt.plot([res.x[1], res.x[1]], [ymin, ymax], 'k--')
+            # plt.savefig('test_%d.png' %count)
+            # plt.close()
 
         return amplitudes
 
+    @classmethod
+    def _savgol_filter(cls, n, template):
+        if n > 3:
+            filtered_template = scipy.signal.savgol_filter(template, n, 3, axis=0)
+        else:
+            filtered_template = template.copy()
+        return filtered_template
+
+    @classmethod
+    def _wiener_filter(cls, n, template):
+        filtered_template = scipy.signal.wiener(template, (n, 1))
+        return filtered_template
+
+    @classmethod
+    def _spline_filter(cls, n, template, d):
+        xdata = np.arange(d['nb_samples'])
+        ydata = np.arange(d['nb_channels'])
+        size = len(xdata)*len(ydata)
+        try:
+            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=n*size)
+        except Exception:
+            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=0)
+        filtered_template = f(xdata, ydata).astype(np.float32)
+        return filtered_template.copy()
+
+    @classmethod
+    def _hanning_filter(cls, template, filtered_template, d):
+        before = np.hanning(2*d['waveform_extractor'].nbefore)[:d['waveform_extractor'].nbefore]
+        after = np.hanning(2*d['waveform_extractor'].nafter)[d['waveform_extractor'].nafter:]
+        hanning = np.concatenate((before, after))[:, np.newaxis]
+        return (1 - hanning)*filtered_template + hanning*template
+
+    @classmethod
+    def _cost_function_denoise(cls, n, template, snippets, d, mode='savgol', hanning=True):
+        
+        if mode == 'savgol':
+            filtered_template = cls._savgol_filter(n, template)
+        elif mode == 'spline':
+            filtered_template = cls._spline_filter(n, template, d)
+        elif mode == 'wiener':
+            filtered_template = cls._wiener_filter(n, template)
+
+        if hanning:
+            filtered_template = cls._hanning_filter(template, filtered_template, d)
+
+        amps = filtered_template.flatten().dot(snippets)/(np.linalg.norm(filtered_template)**2)
+        median_amps = np.median(amps)
+        mads_amps = np.median(np.abs(amps - np.median(amps)))
+        cost = np.abs(1 - median_amps) + mads_amps
+        return cost
+
+    @classmethod
+    def _denoise_template(cls, template, snippets, d, mode='savgol', hanning=True):
+        nb_samples = d['nb_samples']
+        nb_channels = d['nb_channels']
+
+        if mode == 'savgol':
+            indices = np.arange(3, 50, 2)
+            costs = [cls._cost_function_denoise(n, template, snippets, d, 'savgol', hanning) for n in indices]
+            best_idx = np.argmin(costs)
+            #print(best_idx)
+            filtered_template = cls._savgol_filter(indices[best_idx], template)
+        elif mode == 'wiener':
+            indices = np.arange(1, d['nb_samples']//2)
+            costs = [cls._cost_function_denoise(n, template, snippets, d, 'wiener', hanning) for n in indices]
+            best_idx = np.argmin(costs)
+            #print(best_idx)
+            filtered_template = cls._wiener_filter(indices[best_idx], template)
+        elif mode == 'spline':
+            cost_kwargs = [template, snippets, d, 'spline', hanning]
+            res = scipy.optimize.fminbound(cls._cost_function_denoise, 0, 2, args=cost_kwargs)
+            filtered_template = cls._spline_filter(res, template, d)
+
+        if hanning:
+            filtered_template = cls._hanning_filter(template, filtered_template, d)
+
+        return filtered_template
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
@@ -754,14 +901,18 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             d['templates'], d['norms'], d['amplitudes'] = cls._prepare_templates(d)
             d['overlaps'] = cls._prepare_overlaps(d['templates'], d)
 
-
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
         d['snippet_window'] = np.arange(-d['nbefore'], d['nafter'])
         d['snippet_size'] = d['nb_channels'] * len(d['snippet_window'])
 
-        if d['mcc_amplitudes']:
-            d['amplitudes'] = cls._optimize_amplitudes(d)
+        if not d['omp']:
+            nb_segments = recording.get_num_segments()
+            nb_snippets = d['waveform_extractor']._params['max_spikes_per_unit']
+            nb_chunks = nb_snippets // nb_segments
+            noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=nb_chunks, chunk_size=d['nb_samples'], seed=42)
+            noise_snippets = noise_snippets.reshape(nb_chunks, d['nb_samples'], d['nb_channels']).reshape(nb_chunks, -1).T
+            d['amplitudes'] = cls._optimize_amplitudes(noise_snippets, d)
 
         return d        
 
@@ -810,21 +961,27 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_peaks = len(peak_sample_ind)
         nb_spikes = 0
 
+        #import time
+
         if nb_peaks > 0:
 
+            #t_start = time.time()
             snippets = traces[peak_sample_ind[:, None] + snippet_window]
-            snippets = snippets.reshape(nb_peaks, -1)
+            snippets = snippets.reshape(nb_peaks, -1).T
 
-            scalar_products = templates.dot(snippets.T)
+            scalar_products = templates.dot(snippets)
 
             peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
 
             spikes = np.empty(scalar_products.size, dtype=spike_dtype)
+            #t_dot = time.time() - t_start
 
             if not omp:
 
                 min_sps = (amplitudes[:, 0] * norms)[:, np.newaxis]
                 max_sps = (amplitudes[:, 1] * norms)[:, np.newaxis]
+                
+                #t_start = time.time()
 
                 while True:
 
@@ -837,7 +994,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     best_amplitude_ind = scalar_products[is_valid].argmax()
                     best_cluster_ind, peak_index = valid_indices[0][best_amplitude_ind], valid_indices[1][best_amplitude_ind]
                     best_amplitude = scalar_products[best_cluster_ind, peak_index]
-                    best_amplitude_ = best_amplitude / norms[best_cluster_ind]
                     best_peak_sample_ind = peak_sample_ind[peak_index]
                     best_peak_chan_ind = peak_chan_ind[peak_index]
 
@@ -853,15 +1009,17 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
                     spikes['channel_ind'][nb_spikes] = best_peak_chan_ind
                     spikes['cluster_ind'][nb_spikes] = best_cluster_ind
-                    spikes['amplitude'][nb_spikes] = best_amplitude_
+                    spikes['amplitude'][nb_spikes] = best_amplitude
                     nb_spikes += 1
+
+                #t_loop = time.time() - t_start
+                #print(t_dot, t_loop)
+                spikes['amplitude'][:nb_spikes] /= norms[spikes['cluster_ind'][:nb_spikes]]
 
             else:
 
                 min_sps = amplitudes[:, 0][:, np.newaxis]
                 max_sps = amplitudes[:, 1][:, np.newaxis]
-
-                import scipy
 
                 M = np.zeros((5*nb_peaks, 5*nb_peaks), dtype=np.float32)
                 stop_criteria = omp_min_sps * norms[:, np.newaxis]

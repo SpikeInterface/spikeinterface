@@ -1,5 +1,5 @@
 from typing import List, Union
-
+import warnings
 import numpy as np
 
 from .basesorting import BaseSorting, BaseSortingSegment
@@ -66,6 +66,10 @@ class UnitsAggregationSorting(BaseSorting):
             parent_segments = [sort._sorting_segments[i_seg] for sort in sorting_list]
             sub_segment = UnitsAggregationSortingSegment(unit_map, parent_segments)
             self.add_sorting_segment(sub_segment)
+
+        if np.any([sort.has_recording() for sort in sorting_list]):
+            warnings.warn(
+                "Cannot propagate registered recording to UnitsAggregationSorting")
 
         self._sortings = sorting_list
         self._kwargs = {'sorting_list': [sort.to_dict() for sort in sorting_list],
