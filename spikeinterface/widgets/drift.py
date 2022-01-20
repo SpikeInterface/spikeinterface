@@ -134,3 +134,160 @@ def plot_drift_over_time(*args, **kwargs):
 
 
 plot_drift_over_time.__doc__ = DriftOverTimeWidget.__doc__
+
+
+##########
+# Some function for checking estimate_motion
+
+
+class PairwiseDisplacementWidget(BaseWidget):
+    """
+    Widget for checking pairwise displacement 
+    Need to run  function `estimate_motion` with
+    output_extra_check=True
+
+
+    Parameters
+    ----------
+    motion
+    
+    temporal_bins
+    
+    spatial_bins
+    
+    extra_check
+
+    Returns
+    -------
+    W: PairwiseDisplacementWidget
+        The output widget
+    """
+
+    def __init__(self, motion, temporal_bins, spatial_bins, extra_check,
+                 figure=None, ax=None, ncols=5):
+        BaseWidget.__init__(self, figure, num_axes=motion.shape[1], ncols=ncols)
+
+        self.motion = motion
+        self.temporal_bins = temporal_bins
+        self.spatial_bins = spatial_bins
+        self.extra_check = extra_check
+
+    def plot(self):
+        self._do_plot()
+
+    def _do_plot(self):
+
+        n = self.motion.shape[1]
+
+        extent = (self.temporal_bins[0], self.temporal_bins[-1], self.temporal_bins[0], self.temporal_bins[-1])
+
+        ims = []
+        for i in range(n):
+            ax = self.axes.flatten()[i]
+
+            pairwise_displacement = self.extra_check['pairwise_displacement_list'][i]
+            im = ax.imshow(
+                pairwise_displacement,
+                interpolation='nearest',
+                cmap='PiYG',
+                origin='lower',
+                aspect='auto',
+                extent=extent,
+            )
+            ims.append(im)
+
+            im.set_clim(-40, 40)
+            ax.set_aspect('equal')
+            depth = self.spatial_bins[i]
+            ax.set_title(f'{depth} um')
+        
+        self.figure.colorbar(ims[-1], ax=self.axes.flatten()[:n])
+        self.figure.suptitle('pairwise displacement')
+
+
+def plot_pairwise_displacement(*args, **kwargs):
+    W = PairwiseDisplacementWidget(*args, **kwargs)
+    W.plot()
+    return W
+
+plot_pairwise_displacement.__doc__ = PairwiseDisplacementWidget.__doc__
+
+
+class DisplacementWidget(BaseWidget):
+    """
+    Widget for checking pairwise displacement 
+    Need to run  function `estimate_motion` with
+    output_extra_check=True
+
+
+    Parameters
+    ----------
+    motion
+    
+    temporal_bins
+    
+    spatial_bins
+    
+    extra_check
+
+    Returns
+    -------
+    W: DisplacementWidget
+        The output widget
+    """
+
+    def __init__(self, motion, temporal_bins, spatial_bins, extra_check,
+                with_histogram=True,
+                figure=None, ax=None):
+        BaseWidget.__init__(self, figure, ax)
+
+        self.motion = motion
+        self.temporal_bins = temporal_bins
+        self.spatial_bins = spatial_bins
+        self.extra_check = extra_check
+
+        self.with_histogram = with_histogram
+
+
+    def plot(self):
+        self._do_plot()
+
+    def _do_plot(self):
+        ax = self.ax
+        n = self.motion.shape[1]
+
+        if self.with_histogram:
+            motion_histogram = self.extra_check['motion_histogram']
+            extent = (self.temporal_bins[0], self.temporal_bins[-1], self.spatial_bins[0], self.spatial_bins[-1])
+            im = ax.imshow(
+                motion_histogram.T,
+                interpolation='nearest',
+                origin='lower',
+                aspect='auto',
+                extent=extent,
+                cmap='inferno'
+            )
+
+        if self.spatial_bins is None:
+            raise NotImplementedError
+            # ax.plot(temporal_bins[:-1], motion + 2000, color='r')
+            # ax.set_xlabel('times[s]')
+            # ax.set_ylabel('motion [um]')
+        else:
+            for i in range(n):
+                ax.plot(self.temporal_bins, self.motion[:, i] + self.spatial_bins[i], color='r')
+
+        ax.set_xlabel('time[s]')
+        ax.set_ylabel('depth[um]')
+
+
+
+
+
+
+def plot_displacement(*args, **kwargs):
+    W = DisplacementWidget(*args, **kwargs)
+    W.plot()
+    return W
+
+plot_displacement.__doc__ = DisplacementWidget.__doc__
