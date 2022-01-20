@@ -61,7 +61,19 @@ def estimate_motion(recording, peaks, peak_locations=None,
         
     Returns
     -------
-    motion: numpy array
+    motion: numpy array 2d
+        Motion estimate in um.
+        Shape (temporal bins, spatial bins)
+        motion.shape[0] = temporal_bins.shape[0]
+        motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)
+    temporal_bins: numpy.array 1d
+        temporal bins (bin center)
+    spatial_bins: numpy.array 1d or None
+        If rigid then None
+        else motion.shape[1]
+    extra_check: dict
+        Optional output if `output_extra_check=True`
+        This dict contain histogram, pairwise_displacement usefull for ploting.
     """
     # TODO handle multi segment one day
     assert recording.get_num_segments() == 1
@@ -76,15 +88,17 @@ def estimate_motion(recording, peaks, peak_locations=None,
         # make 2D histogram raster
         if verbose:
             print('Computing motion histogram')
-        motion_histogram, temporal_bins, spatial_hist_bins = make_motion_histogram(recording, peaks,
+        motion_histogram, temporal_hist_bins, spatial_hist_bins = make_motion_histogram(recording, peaks,
                                                                                    peak_locations=peak_locations, 
                                                                                    bin_duration_s=bin_duration_s, 
                                                                                    bin_um=bin_um,
                                                                                    margin_um=margin_um)
         if output_extra_check:
             extra_check['motion_histogram'] = motion_histogram
-            extra_check['temporal_bins'] = temporal_bins
+            extra_check['temporal_hist_bins'] = temporal_hist_bins
             extra_check['spatial_hist_bins'] = spatial_hist_bins
+        # temporal bins are bin center
+        temporal_bins = temporal_hist_bins[:-1] + bin_duration_s // 2.
 
         # rigid or non rigid is handled with a family of gaussian non_rigid_windows
         non_rigid_windows = []
