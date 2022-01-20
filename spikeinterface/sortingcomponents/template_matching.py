@@ -24,6 +24,9 @@ from spikeinterface.toolkit import (get_noise_levels, get_template_channel_spars
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
 
+from sklearn.feature_extraction.image import extract_patches_2d, reconstruct_from_patches_2d
+from sklearn.linear_model import orthogonal_mp_gram
+
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
@@ -902,6 +905,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d['nafter'] = d['waveform_extractor'].nafter
         d['snippet_window'] = np.arange(-d['nbefore'], d['nafter'])
         d['snippet_size'] = d['nb_channels'] * len(d['snippet_window'])
+        d['patch_sizes'] = (d['waveform_extractor'].nsamples, d['nb_channels'])
 
         if not d['omp']:
             nb_segments = recording.get_num_segments()
@@ -943,6 +947,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         omp = d['omp']
         omp_tol = d['omp_tol']
         omp_min_sps = d['omp_min_sps']
+        patch_sizes = d['patch_sizes']
 
         neighbor_window = len(snippet_window) - 1
         amplitudes = d['amplitudes']
@@ -1010,11 +1015,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         else:
 
-            peak_samples_ind = np.arange(margin // 2, len(traces) - margin // 2)
-
             snippets = traces[peak_sample_ind[:, None] + snippet_window]
             snippets = snippets.reshape(nb_peaks, -1).T
-
             scalar_products = templates.dot(snippets)
 
             peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
@@ -1033,6 +1035,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             nb_selection = 0
 
             full_sps = scalar_products.copy()
+            #mask = np.ones(scalar_products.shape, dtype=np.bool)
 
             all_neighbors = np.abs(peaks_times) <= neighbor_window
             neighbors = {}
@@ -1043,7 +1046,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             while True:
 
-                is_valid = scalar_products > stop_criteria
+                is_valid = (scalar_products > stop_criteria)# * mask
                 valid_indices = np.where(is_valid)
 
                 if len(valid_indices[0]) == 0:
@@ -1058,6 +1061,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     
                 res_sps = full_sps[selection[0], selection[1]]
                 scalar_products[best_cluster_ind, peak_index] = -np.inf
+                #mask[best_cluster_ind, peak_index] = False
 
                 delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
                 idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
@@ -1101,8 +1105,158 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         return spikes
 
+
+
+
+#################
+# OMP peeler #
+#################
+
+class OMPPeeler(BaseTemplateMatchingEngine):
+
+    _default_params = {
+        'n_shifts': 3,
+        'noise_levels': None,
+        'random_chunk_kwargs': {},
+        'templates' : None,
+        'sparsify_threshold': 0.2 ,
+        'min_amplitude' : 0.75,
+        'max_amplitude' : 1.25,
+        'use_sparse_matrix_threshold' : 0.2,
+    }
+
+    @classmethod
+    def _sparsify_template(cls, template, sparse_thresholds):
+        stds = np.std(template, axis=0)
+        idx = np.where(stds < sparse_thresholds)[0]
+        template[:, idx] = 0
+        return template
+
+    @classmethod
+    def _prepare_templates(cls, d):
+        
+        waveform_extractor = d['waveform_extractor']
+        nb_samples = d['nb_samples']
+        nb_channels = d['nb_channels']
+        nb_templates = d['nb_templates']
+        max_amplitude = d['max_amplitude']
+        min_amplitude = d['min_amplitude']
+        use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
+        sparse_thresholds = d['noise_levels'] * d['sparsify_threshold']
+
+        norms = np.zeros(nb_templates, dtype=np.float32)
+
+        all_units = list(d['waveform_extractor'].sorting.unit_ids)
+
+        templates = waveform_extractor.get_all_templates(mode='median')
+        normed_templates = np.zeros((nb_templates, nb_samples*nb_channels), dtype=np.float32)
+
+        for count, unit_id in enumerate(all_units):
+            
+            template = cls._sparsify_template(templates[count], sparse_thresholds)
+
+            norms[count] = np.linalg.norm(template)
+            normed_template = template/norms[count]
+            normed_template = normed_template.flatten()
+            normed_templates[count] = normed_template
+
+        nnz = np.sum(normed_templates != 0)/(nb_templates * nb_samples * nb_channels)
+        if nnz <= use_sparse_matrix_threshold:
+            import scipy
+            normed_templates = scipy.sparse.csr_matrix(normed_templates)
+
+        return normed_templates, norms
+
+    @classmethod
+    def initialize_and_check_kwargs(cls, recording, kwargs):
+
+        d = cls._default_params.copy()
+        d.update(kwargs)
+
+        assert isinstance(d['waveform_extractor'], WaveformExtractor)
+        
+        d['nb_channels'] = d['waveform_extractor'].recording.get_num_channels()
+        d['nb_samples'] = d['waveform_extractor'].nsamples
+        d['nb_templates'] = len(d['waveform_extractor'].sorting.unit_ids)
+
+        if d['noise_levels'] is None:
+            print('OMPPeeler : noise should be computed outside')
+            d['noise_levels'] = get_noise_levels(recording)
+
+        if d['templates'] is None:
+            d['templates'], d['norms'] = cls._prepare_templates(d)
+
+        d['patch_sizes'] = (d['waveform_extractor'].nsamples, d['nb_channels'])
+        d['nbefore'] = d['waveform_extractor'].nbefore
+        d['nafter'] = d['waveform_extractor'].nafter
+
+        return d        
+
+    @classmethod
+    def serialize_method_kwargs(cls, kwargs):
+        kwargs = dict(kwargs)
+        # remove waveform_extractor
+        kwargs.pop('waveform_extractor')
+        return kwargs
+
+    @classmethod
+    def unserialize_in_worker(cls, kwargs):
+        return kwargs
+
+    @classmethod
+    def get_margin(cls, recording, kwargs):
+        margin = 2 * max(kwargs['nbefore'], kwargs['nafter'])
+        return margin
+
+    @classmethod
+    def main_function(cls, traces, d):
+        n_shifts = d['n_shifts']
+        templates = d['templates']
+        nb_templates = len(templates)
+        margin = d['margin']
+        norms = d['norms']
+        nb_channels = d['nb_channels']
+        patch_sizes = d['patch_sizes']
+        max_amplitude = d['max_amplitude']
+        min_amplitude = d['min_amplitude']
+
+        peak_traces = traces[margin // 2:-margin // 2, :]
+        
+        snippets = extract_patches_2d(peak_traces, patch_sizes)
+        snippets = snippets.reshape(snippets.shape[0], -1).T
+
+        Gram = np.dot(templates, templates.T)
+
+        scalar_products = templates.dot(snippets)
+        spikes = np.empty(scalar_products.size, dtype=spike_dtype)
+
+        pre_amplitudes = orthogonal_mp_gram(Gram, scalar_products, copy_Xy=False, copy_Gram=True).T/norms
+        pre_amplitudes[pre_amplitudes < 0.5] = 0
+
+        peaks = detect_peaks_by_channel(pre_amplitudes, 'pos', min_amplitude*np.ones(nb_templates), n_shifts)
+        amplitudes = np.zeros(pre_amplitudes.shape)
+        amplitudes[peaks[0], peaks[1]] = pre_amplitudes[peaks[0], peaks[1]]
+
+        is_valid = (amplitudes > min_amplitude)*(amplitudes < max_amplitude)
+        valid_indices = np.where(is_valid)
+        nb_spikes = len(valid_indices[0])
+
+        spikes['sample_ind'][:nb_spikes] = valid_indices[0] + margin // 2
+        spikes['channel_ind'][:nb_spikes] = np.zeros(len(valid_indices[0]))
+        spikes['cluster_ind'][:nb_spikes] = valid_indices[1]
+        spikes['amplitude'][:nb_spikes] = amplitudes[is_valid]
+
+        spikes = spikes[:nb_spikes]
+        order = np.argsort(spikes['sample_ind'])
+        spikes = spikes[order]
+
+        return spikes
+
+
+
 template_matching_methods = {
     'naive' : NaiveMatching,
     'tridesclous' : TridesclousPeeler,
-    'circus' : CircusPeeler
+    'circus' : CircusPeeler,
+    'omp' : OMPPeeler
 }
