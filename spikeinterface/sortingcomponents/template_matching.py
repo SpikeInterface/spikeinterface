@@ -617,6 +617,7 @@ if HAVE_NUMBA:
     
 
 
+
 #################
 # Circus peeler #
 #################
@@ -633,7 +634,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
-        'sparsify_threshold': 0.2,
+        'sparsify_threshold': 0.2 ,
         'max_amplitude' : 3,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.2,
@@ -668,33 +669,30 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
         if d['progess_bar_steps']:
-            all_units = tqdm(all_units, desc='[1] - prepare templates')
+            all_units = tqdm(all_units, desc='[1] compute templates')
 
         templates = waveform_extractor.get_all_templates(mode='median')
-
-        normalized_templates = np.zeros((nb_templates,  nb_samples * nb_channels), dtype=np.float32)
+        normed_templates = np.zeros((nb_templates, nb_samples*nb_channels), dtype=np.float32)
 
         for count, unit_id in enumerate(all_units):
+            
             template = cls._sparsify_template(templates[count], sparse_thresholds)
             #template = cls._denoise_template(template, snippets, d)
 
             norms[count] = np.linalg.norm(template)
-            template /= norms[count]
-            template = template.flatten()
+            normed_template = template/norms[count]
+            normed_template = normed_template.flatten()
 
             amplitudes[count] = [min_amplitude, max_amplitude]
 
-            normalized_templates[count] = template
-            #is_nul = np.abs(templates[count]) < 1e-5
-            #templates[count][is_nul] = 0
+            normed_templates[count] = normed_template
 
-        nnz = np.sum(normalized_templates != 0)/(nb_templates * nb_samples * nb_channels)
+        nnz = np.sum(normed_templates != 0)/(nb_templates * nb_samples * nb_channels)
         if nnz <= use_sparse_matrix_threshold:
             import scipy
-            normalized_templates = scipy.sparse.csr_matrix(normalized_templates)
-            print(f'Turning templates into sparse matrix! Sparsity level is {nnz}')
+            normed_templates = scipy.sparse.csr_matrix(normed_templates)
 
-        return normalized_templates, norms, amplitudes
+        return normed_templates, norms, amplitudes
 
     @classmethod
     def _prepare_overlaps(cls, templates, d):
@@ -716,7 +714,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         all_delays = list(range(nb_samples))
         if d['progess_bar_steps']:
-            all_delays = tqdm(all_delays, desc='[2] - compute overlaps')
+            all_delays = tqdm(all_delays, desc='[2] compute overlaps')
 
         overlaps = {}
         
@@ -768,7 +766,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         norms = d['norms']
         all_units = list(waveform_extractor.sorting.unit_ids)
         if d['progess_bar_steps']:
-            all_units = tqdm(all_units, desc='[3] - optimize amplitudes')
+            all_units = tqdm(all_units, desc='[3] compute amplitudes')
 
         amplitudes = np.zeros((nb_templates, 2), dtype=np.float32)
         noise = templates.dot(noise_snippets)/norms[:, np.newaxis]
@@ -783,9 +781,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             sub_amps = amps[np.concatenate((np.arange(count), np.arange(count+1, nb_templates))), :]
             bad = sub_amps[sub_amps >= good]
             bad = np.concatenate((bad, noise[count]))
-            median_amps = np.median(good)
             cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
-            cost_bounds = [(min_amplitude, median_amps), (median_amps, max_amplitude)]
+            cost_bounds = [(min_amplitude, 1), (1, max_amplitude)]
             res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=cost_bounds, args=cost_kwargs)
             amplitudes[count] = res.x
 
@@ -801,83 +798,83 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         return amplitudes
 
-    @classmethod
-    def _savgol_filter(cls, n, template):
-        if n > 3:
-            filtered_template = scipy.signal.savgol_filter(template, n, 3, axis=0)
-        else:
-            filtered_template = template.copy()
-        return filtered_template
+    # @classmethod
+    # def _savgol_filter(cls, n, template):
+    #     if n > 3:
+    #         filtered_template = scipy.signal.savgol_filter(template, n, 3, axis=0)
+    #     else:
+    #         filtered_template = template.copy()
+    #     return filtered_template
 
-    @classmethod
-    def _wiener_filter(cls, n, template):
-        filtered_template = scipy.signal.wiener(template, (n, 1))
-        return filtered_template
+    # @classmethod
+    # def _wiener_filter(cls, n, template):
+    #     filtered_template = scipy.signal.wiener(template, (n, 1))
+    #     return filtered_template
 
-    @classmethod
-    def _spline_filter(cls, n, template, d):
-        xdata = np.arange(d['nb_samples'])
-        ydata = np.arange(d['nb_channels'])
-        size = len(xdata)*len(ydata)
-        try:
-            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=n*size)
-        except Exception:
-            f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=0)
-        filtered_template = f(xdata, ydata).astype(np.float32)
-        return filtered_template.copy()
+    # @classmethod
+    # def _spline_filter(cls, n, template, d):
+    #     xdata = np.arange(d['nb_samples'])
+    #     ydata = np.arange(d['nb_channels'])
+    #     size = len(xdata)*len(ydata)
+    #     try:
+    #         f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=n*size)
+    #     except Exception:
+    #         f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=0)
+    #     filtered_template = f(xdata, ydata).astype(np.float32)
+    #     return filtered_template.copy()
 
-    @classmethod
-    def _hanning_filter(cls, template, filtered_template, d):
-        before = np.hanning(2*d['waveform_extractor'].nbefore)[:d['waveform_extractor'].nbefore]
-        after = np.hanning(2*d['waveform_extractor'].nafter)[d['waveform_extractor'].nafter:]
-        hanning = np.concatenate((before, after))[:, np.newaxis]
-        return (1 - hanning)*filtered_template + hanning*template
+    # @classmethod
+    # def _hanning_filter(cls, template, filtered_template, d):
+    #     before = np.hanning(2*d['waveform_extractor'].nbefore)[:d['waveform_extractor'].nbefore]
+    #     after = np.hanning(2*d['waveform_extractor'].nafter)[d['waveform_extractor'].nafter:]
+    #     hanning = np.concatenate((before, after))[:, np.newaxis]
+    #     return (1 - hanning)*filtered_template + hanning*template
 
-    @classmethod
-    def _cost_function_denoise(cls, n, template, snippets, d, mode='savgol', hanning=True):
+    # @classmethod
+    # def _cost_function_denoise(cls, n, template, snippets, d, mode='savgol', hanning=True):
         
-        if mode == 'savgol':
-            filtered_template = cls._savgol_filter(n, template)
-        elif mode == 'spline':
-            filtered_template = cls._spline_filter(n, template, d)
-        elif mode == 'wiener':
-            filtered_template = cls._wiener_filter(n, template)
+    #     if mode == 'savgol':
+    #         filtered_template = cls._savgol_filter(n, template)
+    #     elif mode == 'spline':
+    #         filtered_template = cls._spline_filter(n, template, d)
+    #     elif mode == 'wiener':
+    #         filtered_template = cls._wiener_filter(n, template)
 
-        if hanning:
-            filtered_template = cls._hanning_filter(template, filtered_template, d)
+    #     if hanning:
+    #         filtered_template = cls._hanning_filter(template, filtered_template, d)
 
-        amps = filtered_template.flatten().dot(snippets)/(np.linalg.norm(filtered_template)**2)
-        median_amps = np.median(amps)
-        mads_amps = np.median(np.abs(amps - np.median(amps)))
-        cost = np.abs(1 - median_amps) + mads_amps
-        return cost
+    #     amps = filtered_template.flatten().dot(snippets)/(np.linalg.norm(filtered_template)**2)
+    #     median_amps = np.median(amps)
+    #     mads_amps = np.median(np.abs(amps - np.median(amps)))
+    #     cost = np.abs(1 - median_amps) + mads_amps
+    #     return cost
 
-    @classmethod
-    def _denoise_template(cls, template, snippets, d, mode='savgol', hanning=True):
-        nb_samples = d['nb_samples']
-        nb_channels = d['nb_channels']
+    # @classmethod
+    # def _denoise_template(cls, template, snippets, d, mode='savgol', hanning=True):
+    #     nb_samples = d['nb_samples']
+    #     nb_channels = d['nb_channels']
 
-        if mode == 'savgol':
-            indices = np.arange(3, 50, 2)
-            costs = [cls._cost_function_denoise(n, template, snippets, d, 'savgol', hanning) for n in indices]
-            best_idx = np.argmin(costs)
-            #print(best_idx)
-            filtered_template = cls._savgol_filter(indices[best_idx], template)
-        elif mode == 'wiener':
-            indices = np.arange(1, d['nb_samples']//2)
-            costs = [cls._cost_function_denoise(n, template, snippets, d, 'wiener', hanning) for n in indices]
-            best_idx = np.argmin(costs)
-            #print(best_idx)
-            filtered_template = cls._wiener_filter(indices[best_idx], template)
-        elif mode == 'spline':
-            cost_kwargs = [template, snippets, d, 'spline', hanning]
-            res = scipy.optimize.fminbound(cls._cost_function_denoise, 0, 2, args=cost_kwargs)
-            filtered_template = cls._spline_filter(res, template, d)
+    #     if mode == 'savgol':
+    #         indices = np.arange(3, 50, 2)
+    #         costs = [cls._cost_function_denoise(n, template, snippets, d, 'savgol', hanning) for n in indices]
+    #         best_idx = np.argmin(costs)
+    #         #print(best_idx)
+    #         filtered_template = cls._savgol_filter(indices[best_idx], template)
+    #     elif mode == 'wiener':
+    #         indices = np.arange(1, d['nb_samples']//2)
+    #         costs = [cls._cost_function_denoise(n, template, snippets, d, 'wiener', hanning) for n in indices]
+    #         best_idx = np.argmin(costs)
+    #         #print(best_idx)
+    #         filtered_template = cls._wiener_filter(indices[best_idx], template)
+    #     elif mode == 'spline':
+    #         cost_kwargs = [template, snippets, d, 'spline', hanning]
+    #         res = scipy.optimize.fminbound(cls._cost_function_denoise, 0, 2, args=cost_kwargs)
+    #         filtered_template = cls._spline_filter(res, template, d)
 
-        if hanning:
-            filtered_template = cls._hanning_filter(template, filtered_template, d)
+    #     if hanning:
+    #         filtered_template = cls._hanning_filter(template, filtered_template, d)
 
-        return filtered_template
+    #     return filtered_template
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
@@ -961,11 +958,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_peaks = len(peak_sample_ind)
         nb_spikes = 0
 
-        #import time
+        if not omp:
 
-        if nb_peaks > 0:
-
-            #t_start = time.time()
             snippets = traces[peak_sample_ind[:, None] + snippet_window]
             snippets = snippets.reshape(nb_peaks, -1).T
 
@@ -974,15 +968,12 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
 
             spikes = np.empty(scalar_products.size, dtype=spike_dtype)
-            #t_dot = time.time() - t_start
 
-            if not omp:
+            if nb_peaks > 0:
 
                 min_sps = (amplitudes[:, 0] * norms)[:, np.newaxis]
                 max_sps = (amplitudes[:, 1] * norms)[:, np.newaxis]
                 
-                #t_start = time.time()
-
                 while True:
 
                     is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
@@ -1012,93 +1003,101 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     spikes['amplitude'][nb_spikes] = best_amplitude
                     nb_spikes += 1
 
-                #t_loop = time.time() - t_start
-                #print(t_dot, t_loop)
                 spikes['amplitude'][:nb_spikes] /= norms[spikes['cluster_ind'][:nb_spikes]]
 
             else:
-
-                min_sps = amplitudes[:, 0][:, np.newaxis]
-                max_sps = amplitudes[:, 1][:, np.newaxis]
-
-                M = np.zeros((5*nb_peaks, 5*nb_peaks), dtype=np.float32)
-                stop_criteria = omp_min_sps * norms[:, np.newaxis]
-
-                all_selections = np.empty((2, scalar_products.size), dtype=np.int32, order='F')
-                res_sps = np.zeros(0, dtype=np.float32)
-                amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
-                nb_selection = 0
-
-                full_sps = scalar_products.copy()
-
-                all_neighbors = np.abs(peaks_times) <= neighbor_window
-                neighbors = {}
-                for i in range(len(all_neighbors)):
-                    idx = np.where(all_neighbors[i])[0]
-                    if len(idx) > 0:
-                        neighbors[i] = {'idx' : idx, 'tdx' : peaks_times[i][idx] + neighbor_window }
-
-                while True:
-
-                    is_valid = scalar_products > stop_criteria
-                    valid_indices = np.where(is_valid)
-
-                    if len(valid_indices[0]) == 0:
-                        break
-
-                    best_amplitude_ind = scalar_products[is_valid].argmax()
-                    best_cluster_ind, peak_index = valid_indices[0][best_amplitude_ind], valid_indices[1][best_amplitude_ind]
-                
-                    all_selections[:, nb_selection] = [best_cluster_ind, peak_index]
-                    nb_selection += 1
-                    selection = all_selections[:, :nb_selection]
-        
-                    res_sps = full_sps[selection[0], selection[1]]
-                    scalar_products[best_cluster_ind, peak_index] = -np.inf
-
-                    delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
-                    idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
-
-                    myline = neighbor_window + delta_t[idx]
-                    line_1 = overlaps[selection[0, -1]].toarray()[selection[0, idx], myline]
-                    M[nb_selection-1, idx] = line_1
-
-                    if nb_selection >= (M.shape[0] - 1):
-                        Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
-                        Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
-                        M = Z
-
-                    all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True)/norms[selection[0]]
-                    diff_amplitudes = (all_amplitudes - amplitudes[selection[0], selection[1]])
-                    modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
-                    amplitudes[selection[0], selection[1]] = all_amplitudes
-
-                    for i in modified:
-
-                        tmp_best, tmp_peak = selection[:, i]
-                        
-                        if tmp_best in neighbors:
-                            diff_amp = diff_amplitudes[i]*norms[tmp_best]
-                            idx = neighbors[tmp_peak]['idx']
-                            tdx = neighbors[tmp_peak]['tdx']
-                            scalar_products[:, idx] -= diff_amp * overlaps[tmp_best].toarray()[:, tdx]
-
-                is_valid = (amplitudes > min_sps)*(amplitudes < max_sps)
-                valid_indices = np.where(is_valid)
-
-                nb_spikes = len(valid_indices[0])
-                spikes['sample_ind'][:nb_spikes] = peak_sample_ind[valid_indices[1]]
-                spikes['channel_ind'][:nb_spikes] = peak_chan_ind[valid_indices[1]]
-                spikes['cluster_ind'][:nb_spikes] = valid_indices[0]
-                spikes['amplitude'][:nb_spikes] = amplitudes[is_valid]
-
-            spikes = spikes[:nb_spikes]
-
-            order = np.argsort(spikes['sample_ind'])
-            spikes = spikes[order]
+                spikes = np.zeros(0, dtype=spike_dtype)
 
         else:
-            spikes = np.zeros(0, dtype=spike_dtype)
+
+            peak_samples_ind = np.arange(margin // 2, len(traces) - margin // 2)
+
+            snippets = traces[peak_sample_ind[:, None] + snippet_window]
+            snippets = snippets.reshape(nb_peaks, -1).T
+
+            scalar_products = templates.dot(snippets)
+
+            peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
+
+            spikes = np.empty(scalar_products.size, dtype=spike_dtype)
+
+            min_sps = amplitudes[:, 0][:, np.newaxis]
+            max_sps = amplitudes[:, 1][:, np.newaxis]
+
+            M = np.zeros((5*nb_peaks, 5*nb_peaks), dtype=np.float32)
+            stop_criteria = omp_min_sps * norms[:, np.newaxis]
+
+            all_selections = np.empty((2, scalar_products.size), dtype=np.int32, order='F')
+            res_sps = np.zeros(0, dtype=np.float32)
+            amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
+            nb_selection = 0
+
+            full_sps = scalar_products.copy()
+
+            all_neighbors = np.abs(peaks_times) <= neighbor_window
+            neighbors = {}
+            for i in range(len(all_neighbors)):
+                idx = np.where(all_neighbors[i])[0]
+                if len(idx) > 0:
+                    neighbors[i] = {'idx' : idx, 'tdx' : peaks_times[i][idx] + neighbor_window }
+
+            while True:
+
+                is_valid = scalar_products > stop_criteria
+                valid_indices = np.where(is_valid)
+
+                if len(valid_indices[0]) == 0:
+                    break
+
+                best_amplitude_ind = scalar_products[is_valid].argmax()
+                best_cluster_ind, peak_index = valid_indices[0][best_amplitude_ind], valid_indices[1][best_amplitude_ind]
+            
+                all_selections[:, nb_selection] = [best_cluster_ind, peak_index]
+                nb_selection += 1
+                selection = all_selections[:, :nb_selection]
+    
+                res_sps = full_sps[selection[0], selection[1]]
+                scalar_products[best_cluster_ind, peak_index] = -np.inf
+
+                delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
+                idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
+
+                myline = neighbor_window + delta_t[idx]
+                line_1 = overlaps[selection[0, -1]].toarray()[selection[0, idx], myline]
+                M[nb_selection-1, idx] = line_1
+
+                if nb_selection >= (M.shape[0] - 1):
+                    Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
+                    Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
+                    M = Z
+
+                all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
+                diff_amplitudes = (all_amplitudes - amplitudes[selection[0], selection[1]])
+                modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
+                amplitudes[selection[0], selection[1]] = all_amplitudes
+
+                for i in modified:
+
+                    tmp_best, tmp_peak = selection[:, i]
+                    
+                    if tmp_best in neighbors:
+                        diff_amp = diff_amplitudes[i]*norms[tmp_best]
+                        idx = neighbors[tmp_peak]['idx']
+                        tdx = neighbors[tmp_peak]['tdx']
+                        scalar_products[:, idx] -= diff_amp * overlaps[tmp_best].toarray()[:, tdx]
+
+            is_valid = (amplitudes > min_sps)*(amplitudes < max_sps)
+            valid_indices = np.where(is_valid)
+
+            nb_spikes = len(valid_indices[0])
+            spikes['sample_ind'][:nb_spikes] = peak_sample_ind[valid_indices[1]]
+            spikes['channel_ind'][:nb_spikes] = peak_chan_ind[valid_indices[1]]
+            spikes['cluster_ind'][:nb_spikes] = valid_indices[0]
+            spikes['amplitude'][:nb_spikes] = amplitudes[is_valid]
+        
+        spikes = spikes[:nb_spikes]
+        order = np.argsort(spikes['sample_ind'])
+        spikes = spikes[order]
 
         return spikes
 
