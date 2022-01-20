@@ -1,6 +1,6 @@
 from typing import List, Union
-
 import numpy as np
+import warnings
 
 from .base import BaseExtractor, BaseSegment
 
@@ -15,6 +15,8 @@ class BaseSorting(BaseExtractor):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
         self._sorting_segments: List[BaseSortingSegment] = []
+        # this weak link is to handle times from a recording object
+        self._recording = None
 
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -51,10 +53,54 @@ class BaseSorting(BaseExtractor):
                              segment_index: Union[int, None] = None,
                              start_frame: Union[int, None] = None,
                              end_frame: Union[int, None] = None,
+                             return_times: bool = False
                              ):
         segment_index = self._check_segment_index(segment_index)
-        S = self._sorting_segments[segment_index]
-        return S.get_unit_spike_train(unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
+        segment = self._sorting_segments[segment_index]
+        spike_train = segment.get_unit_spike_train(
+            unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
+        if return_times:
+            if self.has_recording():
+                times = self.get_times(segment_index=segment_index)
+                return times[spike_train]
+            else:
+                return spike_train / self.get_sampling_frequency()
+        else:
+            return spike_train
+
+    def register_recording(self, recording):
+        assert np.isclose(self.get_sampling_frequency(),
+                          recording.get_sampling_frequency(),
+                          atol=0.1), "The recording has a different sampling frequency than the sorting!"
+        self._recording = recording
+
+    def has_recording(self):
+        return self._recording is not None
+
+    def has_time_vector(self, segment_index=None):
+        """
+        Check if the segment of the registered recording has a time vector.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            return self._recording.has_time_vector(segment_index=segment_index)
+        else:
+            return False
+
+    def get_times(self, segment_index=None):
+        """
+        Get time vector for a registered recording segment.
+
+        If a recording is registered:
+            * if the segment has a time_vector, then it is returned
+            * if not, a time_vector is constructed on the fly with sampling frequency
+        If there is no registered recording it returns None
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            return self._recording.get_times(segment_index=segment_index)
+        else:
+            return None
 
     def _save(self, format='npz', **save_kwargs):
         """
@@ -68,6 +114,9 @@ class BaseSorting(BaseExtractor):
             save_path = folder / 'sorting_cached.npz'
             NpzSortingExtractor.write_sorting(self, save_path)
             cached = NpzSortingExtractor(save_path)
+            if self.has_recording():
+                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
+                cached.register_recording(self._recording)
         else:
             raise ValueError(f'format {format} not supported')
 
