@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
 from typing import Union
-import copy
 import sys
 
 from ..utils import ShellScript
 from ..basesorter import BaseSorter
+from ..runsorter import ContainerClient
 
 from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
 
@@ -185,14 +185,19 @@ class IronClustSorter(BaseSorter):
             f.write('{}'.format(samplerate))
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, output_folder, params, verbose, matlab_docker_image):
         dataset_dir = (output_folder / 'ironclust_dataset').absolute()
-        source_dir = (Path(__file__).parent).absolute()
-
         tmpdir = (output_folder / 'tmp').absolute()
 
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
+
+        # Running sorter in matlab docker image and returning
+        if matlab_docker_image is not None:
+            cls._run_matlab_container(output_folder, dataset_dir, tmpdir, matlab_docker_image)
+            return
+
+        source_dir = (Path(__file__).parent).absolute()
 
         cmd = '''
             addpath('{source_dir}');
@@ -253,54 +258,28 @@ class IronClustSorter(BaseSorter):
         return sorting
 
     @classmethod
-    def run_from_folder_matlab(cls, output_folder, container_image):
-        """
-        POC function to run matlab based sorter in a docker
-
-        Based on BaseSorter.run_from_folder and IronClustSorter._run_from_folder
-        """
-
-        dataset_dir = (output_folder / 'ironclust_dataset').absolute()
-        tmpdir = (output_folder / 'tmp').absolute()
+    def _run_matlab_container(cls, output_folder, dataset_dir, tmpdir, container_image):
         cmd = '''
             p_ironclust {tmpdir} {dataset_dir}/raw.mda {dataset_dir}/geom.csv '' '' {tmpdir}/firings.mda {dataset_dir}/argfile.txt
         '''
         cmd = cmd.format(tmpdir=str(tmpdir), dataset_dir=str(dataset_dir))
+        output_folder = output_folder.absolute()
 
-        import datetime
-        now = datetime.datetime.now()
-        log = {
-            'sorter_name': 'ironclust',
-            'sorter_version': '1.0.0',
-            'datetime': now,
-            'runtime_trace': []
+        extra_kwargs = {}
+        volumes = {}
+        volumes[str(output_folder)] = {
+            'bind': str(output_folder), 'mode': 'rw'
         }
 
-        import json
-        import time
-        import docker
-        client = docker.from_env()
-        t0 = time.perf_counter()
-        try:
-            volumes = {}
-            volumes[str(output_folder.absolute())] = {
-                'bind': str(output_folder.absolute()), 'mode': 'rw'
-            }
-            client.containers.run(container_image, cmd, volumes=volumes)
-            t1 = time.perf_counter()
-            run_time = float(t1 - t0)
-            has_error = False
-        except Exception as exp:
-            import traceback
-            has_error = True
-            run_time = None
-            log['error_trace'] = traceback.format_exc()
+        # TODO: allow run in singularity
+        container_client = ContainerClient('docker', container_image, volumes, extra_kwargs)
+        container_client.start()
+        sorter_output = container_client.run_command(cmd)
 
-        log['error'] = has_error
-        log['run_time'] = run_time
-
-        with (output_folder / 'spikeinterface_log.json').open('w', encoding='utf8') as f:
-            from spikeinterface.core.core_tools import check_json
-            json.dump(check_json(log), f, indent=4)
-
-        return run_time
+        # chown folder to user uid
+        uid = os.getuid()
+        # this approach is better
+        cmd = ['chown', f'{uid}:{uid}', '-R', f'{output_folder}']
+        res_output = container_client.run_command(cmd)
+        container_client.stop()
+        container_client.docker_container.remove()

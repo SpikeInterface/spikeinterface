@@ -4,15 +4,10 @@ base class for sorters implementation.
 import time
 import copy
 from pathlib import Path
-import os
 import datetime
 import json
 import traceback
 import shutil
-
-import numpy as np
-
-from joblib import Parallel, delayed
 
 from spikeinterface.core import load_extractor, BaseRecording
 from spikeinterface.core.core_tools import check_json
@@ -171,7 +166,7 @@ class BaseSorter:
         cls._setup_recording(recording, output_folder, sorter_params, verbose)
 
     @classmethod
-    def run_from_folder(cls, output_folder, raise_error, verbose):
+    def run_from_folder(cls, output_folder, raise_error, verbose, matlab_docker_image):
         # need setup_recording to be done.
         output_folder = Path(output_folder)
 
@@ -197,7 +192,7 @@ class BaseSorter:
         t0 = time.perf_counter()
 
         try:
-            SorterClass._run_from_folder(output_folder, sorter_params, verbose)
+            SorterClass._run_from_folder(output_folder, sorter_params, verbose, matlab_docker_image)
             t1 = time.perf_counter()
             run_time = float(t1 - t0)
             has_error = False
@@ -298,7 +293,7 @@ class BaseSorter:
         # can be implemented in subclass to check if the filter will be applied
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, output_folder, params, verbose, matlab_docker_image):
         # need be implemented in subclass
         # this is where the script is launch for one recording from a folder already prepared
         # this must run or generate the command line to run the sorter for one recording

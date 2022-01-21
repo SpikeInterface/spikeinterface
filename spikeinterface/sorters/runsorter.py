@@ -53,11 +53,11 @@ def run_sorter(sorter_name, recording, output_folder=None,
     """ + _common_param_doc
 
     if docker_image is not None and matlab_docker:
-        return run_matlab_sorter_container(sorter_name, recording, docker_image,
-                                           output_folder=output_folder,
-                                           remove_existing_folder=remove_existing_folder,
-                                           delete_output_folder=delete_output_folder, verbose=verbose,
-                                           raise_error=raise_error, with_output=with_output, **sorter_params)
+        return run_sorter_local(sorter_name, recording, output_folder=output_folder,
+                                remove_existing_folder=remove_existing_folder,
+                                delete_output_folder=delete_output_folder, verbose=verbose,
+                                raise_error=raise_error, matlab_docker_image=docker_image,
+                                with_output=with_output, **sorter_params)
     if docker_image is not None:
         return run_sorter_container(sorter_name, recording, 'docker', docker_image,
                                     output_folder=output_folder,
@@ -77,9 +77,9 @@ def run_sorter(sorter_name, recording, output_folder=None,
                             **sorter_params)
 
 
-def run_sorter_local(sorter_name, recording, output_folder=None,
-                     remove_existing_folder=True, delete_output_folder=False,
-                     verbose=False, raise_error=True, with_output=True, **sorter_params):
+def run_sorter_local(sorter_name, recording, output_folder=None, remove_existing_folder=True,
+                     delete_output_folder=False, verbose=False, raise_error=True,
+                     with_output=True, matlab_docker_image=None, **sorter_params):
     if isinstance(recording, list):
         raise Exception(
             'You you want to run several sorters/recordings use run_sorters(...)')
@@ -92,7 +92,7 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     SorterClass.set_params_to_folder(
         recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
-    SorterClass.run_from_folder(output_folder, raise_error, verbose)
+    SorterClass.run_from_folder(output_folder, raise_error, verbose, matlab_docker_image)
     if with_output:
         sorting = SorterClass.get_result_from_folder(output_folder)
     else:
@@ -353,41 +353,6 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     if delete_output_folder:
         shutil.rmtree(output_folder)
 
-    return sorting
-
-
-def run_matlab_sorter_container(sorter_name, recording, container_image, output_folder=None,
-                                remove_existing_folder=True, delete_output_folder=False,
-                                verbose=False, raise_error=True, with_output=True, **sorter_params):
-    """
-    POC function to run matlab based sorter in a docker
-
-    Based on run_sorter_local and run_sorter_container
-    """
-
-    assert platform.system() in ('Linux', 'Darwin'), \
-        'run_sorter() with docker is supported only on linux/macos platform '
-
-    if output_folder is None:
-        output_folder = sorter_name + '_output'
-
-    SorterClass = sorter_dict[sorter_name]
-    output_folder = SorterClass.initialize_folder(
-        recording, output_folder, verbose, remove_existing_folder)
-
-    SorterClass.set_params_to_folder(
-        recording, output_folder, sorter_params, verbose)
-
-    SorterClass.setup_recording(recording, output_folder, verbose=verbose)
-    SorterClass.run_from_folder_matlab(output_folder, container_image)
-
-    if with_output:
-        sorting = SorterClass.get_result_from_folder(output_folder)
-    else:
-        sorting = None
-
-    if delete_output_folder:
-        shutil.rmtree(output_folder)
     return sorting
 
 
