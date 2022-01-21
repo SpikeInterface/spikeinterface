@@ -630,7 +630,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     _default_params = {
         'peak_sign': 'neg',
         'n_shifts': 1,
-        'spread' : 5, 
+        'jitter' : 1,
         'detect_threshold': 5,
         'noise_levels': None,
         'random_chunk_kwargs': {},
@@ -649,6 +649,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _sparsify_template(cls, template, sparse_thresholds):
+        #template -= np.mean(template, axis = 0)
         stds = np.std(template, axis=0)
         idx = np.where(stds < sparse_thresholds)[0]
         template[:, idx] = 0
@@ -661,7 +662,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
         nb_templates = d['nb_templates']
-        spread = d['spread']
         max_amplitude = d['max_amplitude']
         min_amplitude = d['min_amplitude']
         use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
@@ -694,6 +694,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if nnz <= use_sparse_matrix_threshold:
             import scipy
             normed_templates = scipy.sparse.csr_matrix(normed_templates)
+            print(f'Templates are automatically sparsified (sparsity level is {nnz})')
 
         return normed_templates, norms, amplitudes
 
@@ -801,84 +802,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         return amplitudes
 
-    # @classmethod
-    # def _savgol_filter(cls, n, template):
-    #     if n > 3:
-    #         filtered_template = scipy.signal.savgol_filter(template, n, 3, axis=0)
-    #     else:
-    #         filtered_template = template.copy()
-    #     return filtered_template
-
-    # @classmethod
-    # def _wiener_filter(cls, n, template):
-    #     filtered_template = scipy.signal.wiener(template, (n, 1))
-    #     return filtered_template
-
-    # @classmethod
-    # def _spline_filter(cls, n, template, d):
-    #     xdata = np.arange(d['nb_samples'])
-    #     ydata = np.arange(d['nb_channels'])
-    #     size = len(xdata)*len(ydata)
-    #     try:
-    #         f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=n*size)
-    #     except Exception:
-    #         f = scipy.interpolate.RectBivariateSpline(xdata, ydata, template, kx=3, ky=1, s=0)
-    #     filtered_template = f(xdata, ydata).astype(np.float32)
-    #     return filtered_template.copy()
-
-    # @classmethod
-    # def _hanning_filter(cls, template, filtered_template, d):
-    #     before = np.hanning(2*d['waveform_extractor'].nbefore)[:d['waveform_extractor'].nbefore]
-    #     after = np.hanning(2*d['waveform_extractor'].nafter)[d['waveform_extractor'].nafter:]
-    #     hanning = np.concatenate((before, after))[:, np.newaxis]
-    #     return (1 - hanning)*filtered_template + hanning*template
-
-    # @classmethod
-    # def _cost_function_denoise(cls, n, template, snippets, d, mode='savgol', hanning=True):
-        
-    #     if mode == 'savgol':
-    #         filtered_template = cls._savgol_filter(n, template)
-    #     elif mode == 'spline':
-    #         filtered_template = cls._spline_filter(n, template, d)
-    #     elif mode == 'wiener':
-    #         filtered_template = cls._wiener_filter(n, template)
-
-    #     if hanning:
-    #         filtered_template = cls._hanning_filter(template, filtered_template, d)
-
-    #     amps = filtered_template.flatten().dot(snippets)/(np.linalg.norm(filtered_template)**2)
-    #     median_amps = np.median(amps)
-    #     mads_amps = np.median(np.abs(amps - np.median(amps)))
-    #     cost = np.abs(1 - median_amps) + mads_amps
-    #     return cost
-
-    # @classmethod
-    # def _denoise_template(cls, template, snippets, d, mode='savgol', hanning=True):
-    #     nb_samples = d['nb_samples']
-    #     nb_channels = d['nb_channels']
-
-    #     if mode == 'savgol':
-    #         indices = np.arange(3, 50, 2)
-    #         costs = [cls._cost_function_denoise(n, template, snippets, d, 'savgol', hanning) for n in indices]
-    #         best_idx = np.argmin(costs)
-    #         #print(best_idx)
-    #         filtered_template = cls._savgol_filter(indices[best_idx], template)
-    #     elif mode == 'wiener':
-    #         indices = np.arange(1, d['nb_samples']//2)
-    #         costs = [cls._cost_function_denoise(n, template, snippets, d, 'wiener', hanning) for n in indices]
-    #         best_idx = np.argmin(costs)
-    #         #print(best_idx)
-    #         filtered_template = cls._wiener_filter(indices[best_idx], template)
-    #     elif mode == 'spline':
-    #         cost_kwargs = [template, snippets, d, 'spline', hanning]
-    #         res = scipy.optimize.fminbound(cls._cost_function_denoise, 0, 2, args=cost_kwargs)
-    #         filtered_template = cls._spline_filter(res, template, d)
-
-    #     if hanning:
-    #         filtered_template = cls._hanning_filter(template, filtered_template, d)
-
-    #     return filtered_template
-
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
 
@@ -906,6 +829,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d['snippet_window'] = np.arange(-d['nbefore'], d['nafter'])
         d['snippet_size'] = d['nb_channels'] * len(d['snippet_window'])
         d['patch_sizes'] = (d['waveform_extractor'].nsamples, d['nb_channels'])
+        #d['jitter'] = int(1e-3*d['jitter'] * recording.get_sampling_frequency())
 
         if not d['omp']:
             nb_segments = recording.get_num_segments()
@@ -946,6 +870,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         norms = d['norms']
         omp = d['omp']
         omp_tol = d['omp_tol']
+        jitter = d['jitter']
         omp_min_sps = d['omp_min_sps']
         patch_sizes = d['patch_sizes']
 
@@ -955,10 +880,19 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         peak_traces = traces[margin // 2:-margin // 2, :]
         peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(peak_traces, peak_sign, abs_threholds, n_shifts)
 
-        peak_sample_ind, unique_idx = np.unique(peak_sample_ind, return_index=True)
-        peak_sample_ind += margin // 2
+        if jitter > 0:
+            jittered_peaks = peak_sample_ind[:, np.newaxis] + np.arange(-jitter, jitter)
+            jittered_channels = peak_chan_ind[:, np.newaxis] + np.zeros(2*jitter)
+            mask = (jittered_peaks > 0) & (jittered_peaks < len(peak_traces))
+            jittered_peaks = jittered_peaks[mask]
+            jittered_channels = jittered_channels[mask]
+            peak_sample_ind, unique_idx = np.unique(jittered_peaks, return_index=True)
+            peak_chan_ind = jittered_channels[unique_idx]
+        else:
+            peak_sample_ind, unique_idx = np.unique(peak_sample_ind, return_index=True)
+            peak_chan_ind = peak_chan_ind[unique_idx]
 
-        peak_chan_ind = peak_chan_ind[unique_idx]
+        peak_sample_ind += margin // 2
 
         nb_peaks = len(peak_sample_ind)
         nb_spikes = 0
@@ -966,11 +900,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if not omp:
 
             snippets = traces[peak_sample_ind[:, None] + snippet_window]
-            snippets = snippets.reshape(nb_peaks, -1).T
+            snippets = snippets.reshape(nb_peaks, -1)
+            #snippets -= snippets.mean(0)
 
-            scalar_products = templates.dot(snippets)
-
-            peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
+            scalar_products = templates.dot(snippets.T)
 
             spikes = np.empty(scalar_products.size, dtype=spike_dtype)
 
@@ -993,13 +926,12 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     best_peak_sample_ind = peak_sample_ind[peak_index]
                     best_peak_chan_ind = peak_chan_ind[peak_index]
 
-                    peak_data = peaks_times[peak_index]
+                    peak_data = peak_sample_ind - peak_sample_ind[peak_index] 
                     is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
-                    is_neighbor = np.arange(is_valid[0], is_valid[1])
-                    idx_neighbor = peak_data[is_neighbor] + neighbor_window
+                    idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
 
                     to_add = -best_amplitude * overlaps[best_cluster_ind].toarray()[:, idx_neighbor]
-                    scalar_products[:, is_neighbor] += to_add
+                    scalar_products[:, is_valid[0]:is_valid[1]] += to_add
                     scalar_products[best_cluster_ind, peak_index] = -np.inf
 
                     spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
@@ -1019,8 +951,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             snippets = snippets.reshape(nb_peaks, -1).T
             scalar_products = templates.dot(snippets)
 
-            peaks_times = peak_sample_ind - peak_sample_ind[:, np.newaxis]
-
             spikes = np.empty(scalar_products.size, dtype=spike_dtype)
 
             min_sps = amplitudes[:, 0][:, np.newaxis]
@@ -1035,14 +965,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             nb_selection = 0
 
             full_sps = scalar_products.copy()
-            #mask = np.ones(scalar_products.shape, dtype=np.bool)
 
-            all_neighbors = np.abs(peaks_times) <= neighbor_window
             neighbors = {}
-            for i in range(len(all_neighbors)):
-                idx = np.where(all_neighbors[i])[0]
-                if len(idx) > 0:
-                    neighbors[i] = {'idx' : idx, 'tdx' : peaks_times[i][idx] + neighbor_window }
 
             while True:
 
@@ -1083,12 +1007,16 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                 for i in modified:
 
                     tmp_best, tmp_peak = selection[:, i]
+                    diff_amp = diff_amplitudes[i]*norms[tmp_best]
                     
-                    if tmp_best in neighbors:
-                        diff_amp = diff_amplitudes[i]*norms[tmp_best]
-                        idx = neighbors[tmp_peak]['idx']
-                        tdx = neighbors[tmp_peak]['tdx']
-                        scalar_products[:, idx] -= diff_amp * overlaps[tmp_best].toarray()[:, tdx]
+                    if not tmp_peak in neighbors.keys():
+                        peak_data = peak_sample_ind - peak_sample_ind[tmp_peak] 
+                        idx = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
+                        neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window }
+
+                    idx = neighbors[tmp_peak]['idx']
+                    tdx = neighbors[tmp_peak]['tdx']
+                    scalar_products[:, idx[0]:idx[1]] -= diff_amp * overlaps[tmp_best].toarray()[:, tdx]
 
             is_valid = (amplitudes > min_sps)*(amplitudes < max_sps)
             valid_indices = np.where(is_valid)
