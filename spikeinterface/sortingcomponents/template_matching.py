@@ -934,6 +934,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         snippets = traces[peak_sample_ind[:, None] + snippet_window]
         snippets = snippets.reshape(nb_peaks, -1)
 
+
         dot_products = templates.dot(snippets.T)
         scalar_products = dot_products[:nb_units]
 
@@ -967,6 +968,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
 
                     to_add = -best_amplitude * overlaps[best_cluster_ind].toarray()[:, idx_neighbor]
+
                     if second_component and np.abs(best_amplitude_2/norms[best_cluster_ind + nb_units]) > 0.1:
                         to_add += -best_amplitude_2 * overlaps[best_cluster_ind + nb_units].toarray()[:, idx_neighbor]
 
