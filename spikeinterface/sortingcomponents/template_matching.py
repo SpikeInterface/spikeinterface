@@ -31,7 +31,7 @@ spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind'
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extra_ouputs=False,
+def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extra_outputs=False,
                               **job_kwargs):
     """Find spike from a recording from given templates.
 
@@ -45,7 +45,7 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
         Which method to use ('naive' | 'tridesclous' | 'circus')
     method_kwargs: dict, optional
         Keyword arguments for the chosen method
-    extra_ouputs: bool
+    extra_outputs: bool
         If True then method_kwargs is also return
     job_kwargs: dict
         Parameters for ChunkRecordingExecutor
@@ -84,7 +84,7 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
 
     spikes = np.concatenate(spikes)
     
-    if extra_ouputs:
+    if extra_outputs:
         return spikes, method_kwargs
     else:
         return spikes
