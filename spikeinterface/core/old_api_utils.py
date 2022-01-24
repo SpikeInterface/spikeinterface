@@ -51,6 +51,113 @@ def create_extractor_from_new_recording(new_recording):
     return old_recording
 
 
+class NewToOldSorting:
+    """
+    This class mimic the old API of spikeextractors with:
+      * unique segment
+    """
+    extractor_name = 'NewToOldSorting'
+    is_writable = False
+
+    def __init__(self, sorting):
+        assert sorting.get_num_segments() == 1
+        self._sorting = sorting
+        self._sampling_frequency = sorting.get_sampling_frequency()
+        self.is_dumpable = False
+
+        unit_map = {}
+        if np.all([isinstance(unit_id, int)] for unit_id in self._sorting.get_unit_ids()):
+            for u in self._sorting.get_unit_ids():
+                unit_map[u] = u
+        else:
+            print("Some unit IDs are not int but all unit IDs must be int in the old API SortingExtractor. Converting unit IDs to index...")
+            for i_u, u in enumerate(self._sorting.get_unit_ids()):
+                unit_map[i_u] = u
+        self._unit_map = unit_map
+
+    def get_unit_ids(self):
+        """This function returns a list of ids (ints) for each unit in the sorsted result.
+
+        Returns
+        -------
+        unit_ids: array_like
+            A list of the unit ids in the sorted result (ints).
+        """
+        return list(self._unit_map.keys())
+
+    def get_unit_spike_train(self, unit_id, start_frame=None, end_frame=None):
+        """This function extracts spike frames from the specified unit.
+        It will return spike frames from within three ranges:
+
+            [start_frame, t_start+1, ..., end_frame-1]
+            [start_frame, start_frame+1, ..., final_unit_spike_frame - 1]
+            [0, 1, ..., end_frame-1]
+            [0, 1, ..., final_unit_spike_frame - 1]
+
+        if both start_frame and end_frame are given, if only start_frame is
+        given, if only end_frame is given, or if neither start_frame or end_frame
+        are given, respectively. Spike frames are returned in the form of an
+        array_like of spike frames. In this implementation, start_frame is inclusive
+        and end_frame is exclusive conforming to numpy standards.
+
+        Parameters
+        ----------
+        unit_id: int
+            The id that specifies a unit in the recording
+        start_frame: int
+            The frame above which a spike frame is returned  (inclusive)
+        end_frame: int
+            The frame below which a spike frame is returned  (exclusive)
+
+        Returns
+        -------
+        spike_train: numpy.ndarray
+            An 1D array containing all the frames for each spike in the
+            specified unit given the range of start and end frames
+        """
+        return self._sorting.get_unit_spike_train(unit_id=self._unit_map[unit_id], segment_index=0,
+                                                  start_frame=start_frame, end_frame=end_frame)
+
+    def get_units_spike_train(self, unit_ids=None, start_frame=None, end_frame=None):
+        """This function extracts spike frames from the specified units.
+
+        Parameters
+        ----------
+        unit_ids: array_like
+            The unit ids from which to return spike trains. If None, all unit
+            spike trains will be returned
+        start_frame: int
+            The frame above which a spike frame is returned  (inclusive)
+        end_frame: int
+            The frame below which a spike frame is returned  (exclusive)
+
+        Returns
+        -------
+        spike_train: numpy.ndarray
+            An 2D array containing all the frames for each spike in the
+            specified units given the range of start and end frames
+        """
+        if unit_ids is None:
+            unit_ids = self.get_unit_ids()
+        spike_trains = [self.get_unit_spike_train(uid, start_frame, end_frame) for uid in unit_ids]
+        return spike_trains
+
+    def get_sampling_frequency(self):
+        """
+        It returns the sampling frequency.
+
+        Returns
+        -------
+        sampling_frequency: float
+            The sampling frequency
+        """
+        return self._sampling_frequency
+
+def create_extractor_from_new_sorting(new_sorting):
+    old_sorting = NewToOldSorting(new_sorting)
+    return old_sorting
+
+
 class OldToNewRecording(BaseRecording):
     """Wrapper class to convert old RecordingExtractor to a
     new Recording in spikeinterface > v0.90
