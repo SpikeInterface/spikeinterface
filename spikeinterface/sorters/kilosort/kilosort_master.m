@@ -1,6 +1,4 @@
 try
-    useGPU = {useGPU};
-
     % prepare for kilosort execution
     addpath(genpath('{kilosort_path}'));
 

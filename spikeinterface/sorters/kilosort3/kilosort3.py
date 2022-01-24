@@ -36,7 +36,6 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     sorter_name: str = 'kilosort3'
     kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
-    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
@@ -170,6 +169,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         )
 
         kilosort3_config_txt = kilosort3_config_txt.format(
+            gpu_to_use=p['gpu_to_use'] or 0,
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),
             dat_file=str((output_folder / 'recording.dat').absolute()),

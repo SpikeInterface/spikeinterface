@@ -301,13 +301,15 @@ def merge_params_dict(yass_params, params):
     merge_params['neuralnetwork']['detect']['filename'] = os.path.join(params['neural_nets_path'], 'detect.pt')
     merge_params['neuralnetwork']['denoise']['filename'] = os.path.join(params['neural_nets_path'], 'denoise.pt')
 
+    if "gpu_to_use" in params:
+        merge_params['resources']['gpu_id'] = params["gpu_to_use"]
+        merge_params['resources']['n_gpu_processors'] = len(params["gpu_to_use"])
     merge_params['resources']['multi_processing'] = params['multi_processing']
     merge_params['resources']['n_processors'] = params['n_processors']
-    merge_params['resources']['n_gpu_processors'] = params['n_gpu_processors']
+
     merge_params['resources']['n_sec_chunk'] = params['n_sec_chunk']
     merge_params['resources']['n_sec_chunk_gpu_detect'] = params['n_sec_chunk_gpu_detect']
     merge_params['resources']['n_sec_chunk_gpu_deconv'] = params['n_sec_chunk_gpu_deconv']
-    merge_params['resources']['gpu_id'] = params['gpu_id']
     merge_params['resources']['generate_phy'] = params['generate_phy']
     merge_params['resources']['phy_percent_spikes'] = params['phy_percent_spikes']
 

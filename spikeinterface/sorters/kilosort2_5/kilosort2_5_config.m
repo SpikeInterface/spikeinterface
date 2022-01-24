@@ -50,7 +50,7 @@ ops.nskip           = 25;  % how many batches to skip for determining spike PCs
 
 ops.CAR             = {use_car}; % perform CAR
 
-ops.GPU                 = 1; % has to be 1, no CPU version yet, sorry
+ops.GPU                 = {gpu_to_use}; % has to be 1, no CPU version yet, sorry
 % ops.Nfilt             = 1024; % max number of clusters
 ops.nfilt_factor        = {nfilt_factor}; % max number of clusters per good channel (even temporary ones) 4
 ops.ntbuff              = {ntbuff};    % samples of symmetrical buffer for whitening and spike detection 64

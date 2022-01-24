@@ -40,7 +40,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
     _default_params = {
         'detect_threshold': 6,
         'car': True,
-        'useGPU': True,
+        'gpu_to_use': True,
         'freq_min': 300,
         'freq_max': 6000,
         'ntbuff': 64,
@@ -53,7 +53,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
     _params_description = {
         'detect_threshold': "Threshold for spike detection",
         'car': "Enable or disable common reference",
-        'useGPU': "Enable or disable GPU usage",
+        'gpu_to_use': "Enable or disable GPU usage",
         'freq_min': "High-pass filter cutoff frequency",
         'freq_max': "Low-pass filter cutoff frequency",
         'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
@@ -143,11 +143,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         nchan = recording.get_num_channels()
 
-        if p['useGPU']:
-            useGPU = 1
-        else:
-            useGPU = 0
-
         if p['car']:
             use_car = 1
         else:
@@ -159,10 +154,10 @@ class KilosortSorter(KilosortBase, BaseSorter):
             output_folder=str(output_folder.absolute()),
             channel_path=str((output_folder / 'kilosort_channelmap.m').absolute()),
             config_path=str((output_folder / 'kilosort_config.m').absolute()),
-            useGPU=useGPU,
         )
 
         kilosort_config_txt = kilosort_config_txt.format(
+            gpu_to_use=p['gpu_to_use'] or 0,
             nchanTOT=recording.get_num_channels(),
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),
