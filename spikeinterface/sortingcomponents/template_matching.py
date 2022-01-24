@@ -637,7 +637,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
-        'sparsify_threshold': 0.2 ,
+        'sparsify_threshold': 0.25,
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
         'second_component' : False,
@@ -934,11 +934,12 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         snippets = traces[peak_sample_ind[:, None] + snippet_window]
         snippets = snippets.reshape(nb_peaks, -1)
 
-
         dot_products = templates.dot(snippets.T)
         scalar_products = dot_products[:nb_units]
 
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
+
+        idx_lookup = np.arange(scalar_products.size).reshape(nb_units, -1)
 
         if not omp:
 
@@ -949,37 +950,40 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     
                 while True:
 
-                    is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
-                    valid_indices = np.where(is_valid)
+                    is_valid = (scalar_products >= min_sps) & (scalar_products <= max_sps)
 
-                    if len(valid_indices[0]) == 0:
+                    if np.any(is_valid):
+
+                        best_amplitude_ind = scalar_products[is_valid].argmax()
+                        best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
+
+
+                        best_amplitude = scalar_products[best_cluster_ind, peak_index]
+                        if second_component:
+                            best_amplitude_2 = dot_products[best_cluster_ind + nb_units, peak_index]
+                        best_peak_sample_ind = peak_sample_ind[peak_index]
+                        best_peak_chan_ind = peak_chan_ind[peak_index]
+
+                        peak_data = peak_sample_ind - peak_sample_ind[peak_index] 
+                        is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
+                        idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
+
+                        to_add = -best_amplitude * overlaps[best_cluster_ind].toarray()[:, idx_neighbor]
+
+                        if second_component and np.abs(best_amplitude_2/norms[best_cluster_ind + nb_units]) > 0.1:
+                            to_add += -best_amplitude_2 * overlaps[best_cluster_ind + nb_units].toarray()[:, idx_neighbor]
+
+                        dot_products[:, is_valid[0]:is_valid[1]] += to_add
+                        dot_products[best_cluster_ind, is_valid[0]:is_valid[1]] = -np.inf
+
+                        spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
+                        spikes['channel_ind'][nb_spikes] = best_peak_chan_ind
+                        spikes['cluster_ind'][nb_spikes] = best_cluster_ind
+                        spikes['amplitude'][nb_spikes] = best_amplitude
+                        nb_spikes += 1
+                    
+                    else:
                         break
-
-                    best_amplitude_ind = scalar_products[is_valid].argmax()
-                    best_cluster_ind, peak_index = valid_indices[0][best_amplitude_ind], valid_indices[1][best_amplitude_ind]
-                    best_amplitude = scalar_products[best_cluster_ind, peak_index]
-                    if second_component:
-                        best_amplitude_2 = dot_products[best_cluster_ind + nb_units, peak_index]
-                    best_peak_sample_ind = peak_sample_ind[peak_index]
-                    best_peak_chan_ind = peak_chan_ind[peak_index]
-
-                    peak_data = peak_sample_ind - peak_sample_ind[peak_index] 
-                    is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
-                    idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
-
-                    to_add = -best_amplitude * overlaps[best_cluster_ind].toarray()[:, idx_neighbor]
-
-                    if second_component and np.abs(best_amplitude_2/norms[best_cluster_ind + nb_units]) > 0.1:
-                        to_add += -best_amplitude_2 * overlaps[best_cluster_ind + nb_units].toarray()[:, idx_neighbor]
-
-                    dot_products[:, is_valid[0]:is_valid[1]] += to_add
-                    dot_products[best_cluster_ind, is_valid[0]:is_valid[1]] = -np.inf
-
-                    spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
-                    spikes['channel_ind'][nb_spikes] = best_peak_chan_ind
-                    spikes['cluster_ind'][nb_spikes] = best_cluster_ind
-                    spikes['amplitude'][nb_spikes] = best_amplitude
-                    nb_spikes += 1
 
                 spikes['amplitude'][:nb_spikes] /= norms[spikes['cluster_ind'][:nb_spikes]]
 
@@ -1005,76 +1009,77 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             while True:
 
                 is_valid = (scalar_products > stop_criteria)
-                valid_indices = np.where(is_valid)
 
-                if len(valid_indices[0]) == 0:
-                    break
+                if np.any(is_valid):
 
-                best_amplitude_ind = scalar_products[is_valid].argmax()
-                best_cluster_ind, peak_index = valid_indices[0][best_amplitude_ind], valid_indices[1][best_amplitude_ind]
-            
-                all_selections[:, nb_selection] = [best_cluster_ind, peak_index]
-                nb_selection += 1
-
-                if second_component:
-                    all_selections[:, nb_selection] = [best_cluster_ind + nb_units, peak_index]
+                    best_amplitude_ind = scalar_products[is_valid].argmax()
+                    best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
+                
+                    all_selections[:, nb_selection] = [best_cluster_ind, peak_index]
                     nb_selection += 1
 
-                selection = all_selections[:, :nb_selection]
-    
-                res_sps = full_sps[selection[0], selection[1]]
-
-                delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
-                idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
-
-                myline = neighbor_window + delta_t[idx]
-                if second_component:
-                    M[nb_selection-2, idx] = overlaps[selection[0, -2]].toarray()[selection[0, idx], myline]
-                    M[nb_selection-1, idx] = overlaps[selection[0, -1]].toarray()[selection[0, idx], myline]
-                else:
-                    M[nb_selection-1, idx] = overlaps[selection[0, -1]].toarray()[selection[0, idx], myline]
-
-                if nb_selection >= (M.shape[0] - 1):
-                    Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
-                    Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
-                    M = Z
-
-                dot_products[best_cluster_ind, peak_index] = -np.inf
-
-                all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
-
-                if second_component:
-                    diff_amplitudes   = (all_amplitudes[::2] - final_amplitudes[selection[0, ::2], selection[1, ::2]])
-                    diff_amplitudes_2 = (all_amplitudes[1::2] - final_amplitudes[selection[0, 1::2], selection[1, 1::2]])
-                else:
-                    diff_amplitudes   = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
-
-                modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
-                final_amplitudes[selection[0], selection[1]] = all_amplitudes
-
-                for i in modified:
-
                     if second_component:
-                        tmp_best, tmp_peak = selection[:, 2*i]
-                        diff_amp = diff_amplitudes[i]*norms[tmp_best]
-                        diff_amp_2 = diff_amplitudes_2[i]*norms[tmp_best + nb_units]
+                        all_selections[:, nb_selection] = [best_cluster_ind + nb_units, peak_index]
+                        nb_selection += 1
+
+                    selection = all_selections[:, :nb_selection]
+        
+                    res_sps = full_sps[selection[0], selection[1]]
+
+                    delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
+                    idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
+
+                    myline = neighbor_window + delta_t[idx]
+                    if second_component:
+                        M[nb_selection-2, idx] = overlaps[selection[0, -2]].toarray()[selection[0, idx], myline]
+                        M[nb_selection-1, idx] = overlaps[selection[0, -1]].toarray()[selection[0, idx], myline]
                     else:
-                        tmp_best, tmp_peak = selection[:, i]
-                        diff_amp = diff_amplitudes[i]*norms[tmp_best]
-                    
-                    if not tmp_peak in neighbors.keys():
-                        peak_data = peak_sample_ind - peak_sample_ind[tmp_peak] 
-                        idx = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
-                        neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window }
+                        M[nb_selection-1, idx] = overlaps[selection[0, -1]].toarray()[selection[0, idx], myline]
 
-                    idx = neighbors[tmp_peak]['idx']
-                    tdx = neighbors[tmp_peak]['tdx']
+                    if nb_selection >= (M.shape[0] - 1):
+                        Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
+                        Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
+                        M = Z
 
-                    to_add = diff_amp * overlaps[tmp_best].toarray()[:, tdx]
+                    dot_products[best_cluster_ind, peak_index] = -np.inf
+
+                    all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
+
                     if second_component:
-                        to_add += diff_amp_2 * overlaps[tmp_best + nb_units].toarray()[:, tdx]
+                        diff_amplitudes   = (all_amplitudes[::2] - final_amplitudes[selection[0, ::2], selection[1, ::2]])
+                        diff_amplitudes_2 = (all_amplitudes[1::2] - final_amplitudes[selection[0, 1::2], selection[1, 1::2]])
+                    else:
+                        diff_amplitudes   = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
 
-                    dot_products[:, idx[0]:idx[1]] -= to_add
+                    modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
+                    final_amplitudes[selection[0], selection[1]] = all_amplitudes
+
+                    for i in modified:
+
+                        if second_component:
+                            tmp_best, tmp_peak = selection[:, 2*i]
+                            diff_amp = diff_amplitudes[i]*norms[tmp_best]
+                            diff_amp_2 = diff_amplitudes_2[i]*norms[tmp_best + nb_units]
+                        else:
+                            tmp_best, tmp_peak = selection[:, i]
+                            diff_amp = diff_amplitudes[i]*norms[tmp_best]
+                        
+                        if not tmp_peak in neighbors.keys():
+                            peak_data = peak_sample_ind - peak_sample_ind[tmp_peak] 
+                            idx = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
+                            neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window }
+
+                        idx = neighbors[tmp_peak]['idx']
+                        tdx = neighbors[tmp_peak]['tdx']
+
+                        to_add = diff_amp * overlaps[tmp_best].toarray()[:, tdx]
+                        if second_component:
+                            to_add += diff_amp_2 * overlaps[tmp_best + nb_units].toarray()[:, tdx]
+
+                        dot_products[:, idx[0]:idx[1]] -= to_add
+
+                else:
+                    break
 
             if second_component:
                 is_valid = (final_amplitudes[:nb_units] > min_sps)*(final_amplitudes[:nb_units] < max_sps)
