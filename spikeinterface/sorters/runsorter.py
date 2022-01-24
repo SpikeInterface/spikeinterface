@@ -298,7 +298,6 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
                 print(
                     f"Installing spikeinterface from sources in {container_image}")
             # TODO later check output
-            print(container_client.run_command('pip list'))
             cmd = 'pip install --upgrade --no-input MEArec'
             res_output = container_client.run_command(cmd)
             cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
