@@ -915,7 +915,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_peaks = len(peak_sample_ind)
         nb_spikes = 0
 
-        snippets = extract_patches_2d(traces, (nsamples, nb_channels))[peak_sample_ind]
+        snippets = extract_patches_2d(traces, patch_sizes)[peak_sample_ind]
         snippets = snippets.reshape(nb_peaks, -1)
 
         peak_sample_ind += margin // 2
