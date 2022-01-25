@@ -56,12 +56,12 @@ def run_sorter(sorter_name, recording, gpu_to_use=None, output_folder=None,
     """ + _common_param_doc
 
     keyword_arguments = {
-        gpu_to_use: gpu_to_use,
-        output_folder: output_folder,
-        remove_existing_folder: remove_existing_folder,
-        delete_output_folder: delete_output_folder, verbose: verbose,
-        raise_error: raise_error,
-        with_output: with_output
+        "gpu_to_use": gpu_to_use,
+        "output_folder": output_folder,
+        "remove_existing_folder": remove_existing_folder,
+        "delete_output_folder": delete_output_folder, verbose: verbose,
+        "raise_error": raise_error,
+        "with_output": with_output
     }
 
     if docker_image is not None:
@@ -74,7 +74,7 @@ def run_sorter(sorter_name, recording, gpu_to_use=None, output_folder=None,
             sorter_name, recording, 'singularity', singularity_image, **keyword_arguments, **sorter_params
         )
 
-    return run_sorter_local(sorter_name, recording, output_folder=output_folder, **keyword_arguments)
+    return run_sorter_local(sorter_name, recording, output_folder=output_folder, **keyword_arguments, **sorter_params)
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
