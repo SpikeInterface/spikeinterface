@@ -731,3 +731,4 @@ def make_collision_events(sorting, delta):
     collision_events = np.concatenate(collision_events)
 
     return collision_events
+

@@ -12,6 +12,9 @@ def get_chunk_with_margin(rec_segment, start_frame, end_frame,
     """
     length = rec_segment.get_num_samples()
 
+    if channel_indices is None:
+        channel_indices = slice(None)
+
     if not add_zeros:
         if start_frame is None:
             left_margin = 0

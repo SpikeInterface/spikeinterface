@@ -1,14 +1,16 @@
 import pytest
 import numpy as np
 
+from spikeinterface import NumpySorting
 from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
-from spikeinterface.sortingcomponents import find_spike_from_templates
+from spikeinterface.sortingcomponents import find_spikes_from_templates, template_matching_methods
 
+from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import read_mearec
 
 
-def test_find_spike_from_templates():
+def test_find_spikes_from_templates():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
@@ -17,12 +19,41 @@ def test_find_spike_from_templates():
 
     folder = 'waveforms_mearec'
     we = extract_waveforms(recording, gt_sorting, folder, load_if_exists=True,
-                           ms_before=1, ms_after=2., max_spikes_per_unit=500,
-                           n_jobs=1, chunk_size=30000)
+                           ms_before=1, ms_after=2., max_spikes_per_unit=500, return_scaled=False,
+                           n_jobs=1, chunk_size=10000)
+    
+    method_kwargs = {
+        'waveform_extractor' : we,
+        'noise_levels' : get_noise_levels(recording),
+    }
 
-    spikes = find_spike_from_templates(recording, we, method='simple')
-    print(spikes)
+    sampling_frequency = recording.get_sampling_frequency()
 
+    result = {}
+
+    
+    for method in template_matching_methods.keys():
+        spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
+                        n_jobs=1, chunk_size=30000, progress_bar=True)
+
+        result[method] = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
+    
+    
+    # debug
+    # import matplotlib.pyplot as plt
+    # import spikeinterface.full as si
+
+    # metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
+    
+    # comparisons = {}
+    # for method in template_matching_methods.keys():
+    #     comp = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
+    #     comparisons[method] = comp
+    #     si.plot_agreement_matrix(comp)
+    #     plt.title(method)
+    #     si.plot_sorting_performance(comp, metrics, performance_name='accuracy', metric_name='snr',)
+    #     plt.title(method)
+    # plt.show()
 
 if __name__ == '__main__':
-    test_find_spike_from_templates()
+    test_find_spikes_from_templates()
