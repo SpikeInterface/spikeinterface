@@ -1,3 +1,4 @@
+import probeinterface as pi
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -14,22 +15,27 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
     stream_id: str or None
 
     mea_pitch: float or None
+    
+    electrode_width: float or None
 
     """
     mode = 'file'
     NeoRawIOClass = 'BiocamRawIO'
 
-    def __init__(self, file_path, stream_id=None, mea_pitch=None):
+    def __init__(self, file_path, stream_id=None, mea_pitch=None, electrode_width=None):
         neo_kwargs = {'filename': str(file_path)}
-        if mea_pitch is not None:
-            neo_kwargs.update({'mea_pitch': mea_pitch})
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        # load locations from neo array annotations
-        stream_ann = self.neo_reader.raw_annotations["blocks"][0]["segments"][0]["signals"][self.stream_index]
-        locations = stream_ann["__array_annotations__"]["locations"]
-        self.set_dummy_probe_from_locations(locations)
-
+        # load probe from probeinterface
+        probe_kwargs = {}
+        if mea_pitch is not None:
+            probe_kwargs["mea_pitch"] = mea_pitch
+        if electrode_width is not None:
+            probe_kwargs["electrode_width"] = electrode_width
+        probe = pi.read_3brain(file_path, **probe_kwargs)
+        self.set_probe(probe, in_place=True)
+        self.set_property("row", self.get_property("contact_vector")["row"])
+        self.set_property("col", self.get_property("contact_vector")["col"])
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id, mea_pitch=mea_pitch)
 
 
