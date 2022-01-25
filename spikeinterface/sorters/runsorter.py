@@ -158,8 +158,8 @@ class ContainerClient:
             import docker
             client = docker.from_env()
 
-            if gpu_to_use:
-                gpu_to_use = [gpu_to_use] if isinstance(gpu_to_use, int) else gpu_to_use
+            if gpu_to_use is not None:
+                gpu_to_use = [gpu_to_use] if isinstance(gpu_to_use, int) else list(gpu_to_use)
                 device_requests = [
                     docker.types.DeviceRequest(
                         device_ids=gpu_to_use, count=len(gpu_to_use), capabilities=[['gpu']]
@@ -188,7 +188,7 @@ class ContainerClient:
             options=['--bind', singularity_bind]
 
             # gpu options
-            if gpu_to_use:
+            if gpu_to_use is not None:
                 # only nvidia at the moment
                 options += ['--nv']
 
@@ -249,7 +249,16 @@ def run_sorter_container(sorter_name, recording, mode, container_image, gpu_to_u
     # need to share specific parameters
     (parent_folder / 'in_container_params.json').write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
-    # the py script
+
+    if gpu_to_use is None:
+        gpu_to_use_container = None
+    # The GPU indexing inside the container starts from 0
+    elif isinstance(gpu_to_use, int):
+        # in cases of single GPU passthrough, the index is zero
+        gpu_to_use_container = [0]
+    else:
+        # in cases where we pass several GPUs 0, 1, ..., n GPUs
+        gpu_to_use_container = list(range(len(gpu_to_use)))
 
     py_script = f"""
 import json
@@ -265,9 +274,16 @@ with open('{parent_folder}/in_container_params.json', encoding='utf8', mode='r')
 
 # run in docker
 output_folder = '{output_folder}'
-run_sorter_local('{sorter_name}', recording, gpu_to_use={0 if gpu_to_use else None}, output_folder=output_folder,
-            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-            verbose={verbose}, raise_error={raise_error}, **sorter_params)
+run_sorter_local(
+    '{sorter_name}',
+    recording, gpu_to_use={gpu_to_use_container},
+    output_folder=output_folder,
+    remove_existing_folder={remove_existing_folder},
+    delete_output_folder=False,
+    verbose={verbose},
+    raise_error={raise_error},
+    **sorter_params
+)
 """
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
