@@ -162,7 +162,7 @@ class ContainerClient:
                 gpu_to_use = [gpu_to_use] if isinstance(gpu_to_use, int) else gpu_to_use
                 device_requests = [
                     docker.types.DeviceRequest(
-                        device_ids=, count=len(gpu_to_use), capabilities=[['gpu']]
+                        device_ids=gpu_to_use, count=len(gpu_to_use), capabilities=[['gpu']]
                     )
                 ]
             else:
