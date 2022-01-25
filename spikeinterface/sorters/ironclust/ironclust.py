@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from typing import Union
-import copy
 import sys
 
 from ..utils import ShellScript
@@ -27,6 +26,32 @@ def check_if_installed(ironclust_path: Union[str, None]):
         return False
 
 
+def check_compiled():
+    """
+    Checks if the sorter is running inside an image with matlab-compiled ironclust
+
+    Returns
+    -------
+    is_compiled: bool
+        Boolean indicating if a bash command p_ironclust exists or not
+
+    """
+    shell_cmd = '''
+    #!/bin/bash
+    if ! [ -x "$(command -v p_ironclust)" ]; then
+        echo 'Error: p_ironclust is not installed.' >&2
+        exit 1
+    fi
+    '''
+    shell_script = ShellScript(shell_cmd)
+    shell_script.start()
+    shell_script.wait()
+    retcode = shell_script.wait()
+    if retcode != 0:
+        return False
+    return True
+
+
 class IronClustSorter(BaseSorter):
     """IronClust Sorter object."""
 
@@ -34,6 +59,7 @@ class IronClustSorter(BaseSorter):
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)
 
     requires_locations = True
+    is_compiled = check_compiled()
 
     _default_params = {
         'detect_sign': -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
@@ -124,11 +150,16 @@ class IronClustSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if cls.is_compiled:
+            return True
         return check_if_installed(cls.ironclust_path)
 
-    @staticmethod
-    def get_sorter_version():
-        version_filename = Path(os.environ["IRONCLUST_PATH"]) / 'matlab' / 'version.txt'
+    @classmethod
+    def get_sorter_version(cls):
+        if cls.is_compiled:
+            version_filename = Path('/opt') / 'version.txt'
+        else:
+            version_filename = Path(os.environ["IRONCLUST_PATH"]) / 'matlab' / 'version.txt'
         if version_filename.is_file():
             with open(str(version_filename), mode='r', encoding='utf8') as f:
                 line = f.readline()
@@ -194,36 +225,42 @@ class IronClustSorter(BaseSorter):
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
 
-        cmd = '''
-            addpath('{source_dir}');
-            addpath('{ironclust_path}', '{ironclust_path}/matlab', '{ironclust_path}/matlab/mdaio');
-            try
-                p_ironclust('{tmpdir}', '{dataset_dir}/raw.mda', '{dataset_dir}/geom.csv', '', '', '{tmpdir}/firings.mda', '{dataset_dir}/argfile.txt');
-            catch
-                fprintf('----------------------------------------');
-                fprintf(lasterr());
-                quit(1);
-            end
-            quit(0);
-        '''
-        cmd = cmd.format(ironclust_path=IronClustSorter.ironclust_path, tmpdir=str(tmpdir),
-                         dataset_dir=str(dataset_dir), source_dir=str(source_dir))
-
-        matlab_cmd = ShellScript(cmd, script_path=str(tmpdir / 'run_ironclust.m'))
-        matlab_cmd.write()
-
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            shell_cmd = '''
-                {disk_move}
-                cd {tmpdir}
-                matlab -nosplash -wait -log -r run_ironclust
-            '''.format(disk_move=str(tmpdir)[:2], tmpdir=tmpdir)
-        else:
+        if cls.is_compiled:
             shell_cmd = '''
                 #!/bin/bash
-                cd "{tmpdir}"
-                matlab -nosplash -nodisplay -log -r run_ironclust
-            '''.format(tmpdir=tmpdir)
+                p_ironclust {tmpdir} {dataset_dir}/raw.mda {dataset_dir}/geom.csv '' '' {tmpdir}/firings.mda {dataset_dir}/argfile.txt
+            '''.format(tmpdir=str(tmpdir), dataset_dir=str(dataset_dir))
+        else:
+            cmd = '''
+                addpath('{source_dir}');
+                addpath('{ironclust_path}', '{ironclust_path}/matlab', '{ironclust_path}/matlab/mdaio');
+                try
+                    p_ironclust('{tmpdir}', '{dataset_dir}/raw.mda', '{dataset_dir}/geom.csv', '', '', '{tmpdir}/firings.mda', '{dataset_dir}/argfile.txt');
+                catch
+                    fprintf('----------------------------------------');
+                    fprintf(lasterr());
+                    quit(1);
+                end
+                quit(0);
+            '''
+            cmd = cmd.format(ironclust_path=IronClustSorter.ironclust_path, tmpdir=str(tmpdir),
+                             dataset_dir=str(dataset_dir), source_dir=str(source_dir))
+
+            matlab_cmd = ShellScript(cmd, script_path=str(tmpdir / 'run_ironclust.m'))
+            matlab_cmd.write()
+
+            if 'win' in sys.platform and sys.platform != 'darwin':
+                shell_cmd = '''
+                    {disk_move}
+                    cd {tmpdir}
+                    matlab -nosplash -wait -log -r run_ironclust
+                '''.format(disk_move=str(tmpdir)[:2], tmpdir=tmpdir)
+            else:
+                shell_cmd = '''
+                    #!/bin/bash
+                    cd "{tmpdir}"
+                    matlab -nosplash -nodisplay -log -r run_ironclust
+                '''.format(tmpdir=tmpdir)
 
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
