@@ -2,7 +2,6 @@ function par = set_parameters_ss()
 
     % LOAD PARAMS
     par.segments_length = 5;             % length (in minutes) of segments in which the data is cut (default 5min).
-    par.sr = 24000;                      % sampling rate (in Hz). This parameter will be only used if the data file don't have a sr.
 
 
     % PLOTTING PARAMETERS

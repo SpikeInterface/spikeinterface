@@ -266,8 +266,6 @@ class BaseExtractor:
             # include only main properties
             dump_dict['properties'] = {k: self._properties.get(k, None) for k in self._main_properties}
 
-        # TODO include features
-
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"

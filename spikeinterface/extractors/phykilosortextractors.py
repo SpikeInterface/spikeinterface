@@ -87,13 +87,18 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                         cluster_info = cluster_info.query(f"group != '{exclude_group}'")
 
         if keep_good_only and "KSLabel" in cluster_info.columns:
-            cluster_info = cluster_info.query("KSLabel != 'good'")
+            cluster_info = cluster_info.query("KSLabel == 'good'")
 
         if "cluster_id" not in cluster_info.columns:
             assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
             cluster_info["cluster_id"] = cluster_info["id"]
             del cluster_info["id"]
-        unit_ids = cluster_info["cluster_id"].values
+
+        if 'si_unit_id' in cluster_info.columns:
+            unit_ids = cluster_info["si_unit_id"].values
+            del cluster_info["si_unit_id"]
+        else:
+            unit_ids = cluster_info["cluster_id"].values
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
