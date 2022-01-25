@@ -644,23 +644,16 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'use_sparse_matrix_threshold' : 0.2,
         'omp' : True,
         'omp_min_sps' : 0.5,
-        'omp_tol' : 1e-3,
+        'omp_tol' : 1e-12,
         'progess_bar_steps' : True,
     }
 
     @classmethod
     def _sparsify_template(cls, template, sparse_thresholds):
-        #template -= np.mean(template, axis = 0)
         stds = np.std(template, axis=0)
         idx = np.where(stds < sparse_thresholds)[0]
         template[:, idx] = 0
         return template
-
-    # @classmethod
-    # def _sparsify_template(cls, template, template_sparsity_inds):
-    #     new_templates = np.zeros(template.shape, dtype=np.float32)
-    #     new_templates[:, template_sparsity_inds[0]] = template[:, template_sparsity_inds[0]]
-    #     return new_templates
 
     @classmethod
     def _prepare_templates(cls, d):
@@ -691,9 +684,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             templates = np.vstack((templates, templates_2))
 
         normed_templates = np.zeros((nb_templates, nb_samples*nb_channels), dtype=np.float32)
-
-        # template_sparsity_inds = get_template_channel_sparsity(waveform_extractor, method='threshold',
-        #                     peak_sign=d['peak_sign'], outputs='index', threshold=d['detect_threshold'])
 
         for count, unit_id in enumerate(all_units):
             
@@ -855,8 +845,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
-        d['snippet_window'] = np.arange(-d['nbefore'], d['nafter'])
-        d['snippet_size'] = d['nb_channels'] * len(d['snippet_window'])
         d['patch_sizes'] = (d['waveform_extractor'].nsamples, d['nb_channels'])
         #d['jitter'] = int(1e-3*d['jitter'] * recording.get_sampling_frequency())
 
@@ -893,8 +881,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         n_shifts = d['n_shifts']
         templates = d['templates']
         overlaps = d['overlaps']
-        snippet_window = d['snippet_window']
-        snippet_size = d['snippet_size']
         margin = d['margin']
         norms = d['norms']
         omp = d['omp']
@@ -904,8 +890,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         patch_sizes = d['patch_sizes']
         second_component = d['second_component']
         nb_units = d['nb_units']
-
-        neighbor_window = len(snippet_window) - 1
+        nsamples = d['nafter'] + d['nafter']
+        neighbor_window = nsamples - 1
         amplitudes = d['amplitudes']
 
         if omp:
@@ -926,13 +912,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             peak_sample_ind, unique_idx = np.unique(peak_sample_ind, return_index=True)
             peak_chan_ind = peak_chan_ind[unique_idx]
 
-        peak_sample_ind += margin // 2
-
         nb_peaks = len(peak_sample_ind)
         nb_spikes = 0
 
-        snippets = traces[peak_sample_ind[:, None] + snippet_window]
+        snippets = extract_patches_2d(traces, (nsamples, nb_channels))[peak_sample_ind]
         snippets = snippets.reshape(nb_peaks, -1)
+
+        peak_sample_ind += margin // 2
 
         dot_products = templates.dot(snippets.T)
         scalar_products = dot_products[:nb_units]
@@ -956,7 +942,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
                         best_amplitude_ind = scalar_products[is_valid].argmax()
                         best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
-
 
                         best_amplitude = scalar_products[best_cluster_ind, peak_index]
                         if second_component:
