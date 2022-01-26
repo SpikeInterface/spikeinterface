@@ -47,9 +47,6 @@ def test_run_sorter_singularity():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5', unlock=True)
     output_folder='sorting_tdc_singularity'
 
-    #  test for sam localy
-    # mearec_filename = '/mnt/data/sam/DataSpikeSorting/mearec_test_10s.h5'
-    # output_folder = '/mnt/data/sam/DataSpikeSorting/tdc_singularity_mearec_test_10s'
 
     recording, sorting_true = read_mearec(mearec_filename)
 
