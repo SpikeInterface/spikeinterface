@@ -26,9 +26,6 @@ def test_run_sorter_docker():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5', unlock=True)
     output_folder='sorting_tdc_docker'
 
-    #  test for sam localy
-    # mearec_filename = '/data_local/DataSpikeSorting/mearec_test_10s.h5'
-    # output_folder = '/data_local/DataSpikeSorting/tdc_docker_mearec_test_10s'
 
     recording, sorting_true = read_mearec(mearec_filename)
 
