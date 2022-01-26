@@ -157,9 +157,8 @@ class IronClustSorter(BaseSorter):
     @classmethod
     def get_sorter_version(cls):
         if cls.is_compiled:
-            version_filename = Path('/opt') / 'version.txt'
-        else:
-            version_filename = Path(os.environ["IRONCLUST_PATH"]) / 'matlab' / 'version.txt'
+            return 'compiled'
+        version_filename = Path(os.environ["IRONCLUST_PATH"]) / 'matlab' / 'version.txt'
         if version_filename.is_file():
             with open(str(version_filename), mode='r', encoding='utf8') as f:
                 line = f.readline()
