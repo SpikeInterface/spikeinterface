@@ -289,10 +289,6 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     need_si_install = 'ModuleNotFoundError' in res_output
 
     if need_si_install:
-        # downgrade pip version to avoid dependency issues during installations
-        # see https://github.com/SpikeInterface/spikeinterface-dockerfiles/pull/14
-        cmd = 'pip install --no-input pip==21.2.4'
-        res_output = container_client.run_command(cmd)
         if 'dev' in si_version:
             if verbose:
                 print(
