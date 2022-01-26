@@ -51,8 +51,8 @@ def test_run_sorter_singularity():
     output_folder='sorting_tdc_singularity'
 
     #  test for sam localy
-    # mearec_filename = '/data_local/DataSpikeSorting/mearec_test_10s.h5'
-    # output_folder = '/data_local/DataSpikeSorting/tdc_singularity_mearec_test_10s'
+    # mearec_filename = '/mnt/data/sam/DataSpikeSorting/mearec_test_10s.h5'
+    # output_folder = '/mnt/data/sam/DataSpikeSorting/tdc_singularity_mearec_test_10s'
 
     recording, sorting_true = read_mearec(mearec_filename)
 
@@ -73,5 +73,5 @@ def test_run_sorter_singularity():
 
 if __name__ == '__main__':
     # test_run_sorter_local()
-    test_run_sorter_docker()
-    # test_run_sorter_singularity()
+    # test_run_sorter_docker()
+    test_run_sorter_singularity()
