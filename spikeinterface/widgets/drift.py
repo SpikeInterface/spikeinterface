@@ -282,6 +282,7 @@ class DisplacementWidget(BaseWidget):
         else:
             for i in range(n):
                 ax.plot(self.temporal_bins, self.motion[:, i] + self.spatial_bins[i], color='r')
+                
 
         ax.set_xlabel('time[s]')
         ax.set_ylabel('depth[um]')
