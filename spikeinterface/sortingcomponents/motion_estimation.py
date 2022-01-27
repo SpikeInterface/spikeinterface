@@ -152,6 +152,9 @@ def estimate_motion(recording, peaks, peak_locations=None,
 
         motion = np.concatenate(motion, axis=1)
 
+    # replace nan by zeros
+    motion[np.isnan(motion)] = 0
+
     if output_extra_check:
         return motion, temporal_bins, spatial_bins, extra_check
     else:
