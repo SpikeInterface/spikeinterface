@@ -1,12 +1,12 @@
 """
-Implementation if utils class to manipulate segment with 2 diffrents concept:
-  * append_recordings/append_sortings/append_events
-  * concatenate_recordings/ concatenate_sortings/ concatenate_events
+Implementation of utils class to manipulate segments with 2 differents concept:
+  * append_recordings / append_sortings / append_events
+  * concatenate_recordings / concatenate_sortings / concatenate_events
 
 
-For instance:
-  * append_recording: given one recording with 2 segments and one recording with 3 segments give one recording with 5 segments
-  * conatenate_recording: given a list of several recording with several segment give one recording with one segment that sum the total duration
+Example:
+  * append_recording: given one recording with 2 segments and one recording with 3 segments, returns one recording with 5 segments
+  * concatenate_recording: given a list of several recordings (each with possibly multiple segments), returns one recording with one segment that is a concatenation of all the segments
 
 """
 import numpy as np
@@ -34,8 +34,9 @@ def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_
 
 class AppendSegmentRecording(BaseRecording):
     """
-    Return a recording that "appends" all segments from all recording
-    into one recording multi segment.
+    Takes as input a list of parent recordings each with multiple segments and
+    returns a single multi-segment recording that "appends" all segments from
+    all parent recordings.
 
     For instance, given one recording with 2 segments and one recording with
     3 segments, this class will give one recording with 5 segments
@@ -60,13 +61,12 @@ class AppendSegmentRecording(BaseRecording):
         ok1 = all(dtype == rec.get_dtype() for rec in recording_list)
         ok2 = all(np.array_equal(channel_ids, rec.channel_ids) for rec in recording_list)
         if not (ok1 and ok2):
-            raise ValueError("Recording don't have the same dtype/channel_ids")
+            raise ValueError("Recording don't have the same dtype or channel_ids")
         _check_sampling_frequencies(
             [rec.get_sampling_frequency() for rec in recording_list],
             sampling_frequency_max_diff
         )
         
-
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         rec0.copy_metadata(self)
 
