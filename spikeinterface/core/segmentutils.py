@@ -99,14 +99,16 @@ append_recordings.__doc__ == AppendSegmentRecording.__doc__
 
 class ConcatenateSegmentRecording(BaseRecording):
     """
-    Return a recording that "concatenates" all segments from all recording
-    into one recording mono segment. The operation is lazy.
+    Return a recording that "concatenates" all segments from all parent recordings
+    into one recording with a single segment. The operation is lazy.
 
     For instance, given one recording with 2 segments and one recording with
-    3 segments, this class will give one recording with 1 segment
+    3 segments, this class will give one recording with one large segment
+    made by concatenating the 5 segments.
 
-    You can only concatenate segments if:
-      * all segments DO NOT have times
+    Time information is lost upon concatenation. By default `ignore_times` is True.
+    If it is False, you get an error unless:
+      * all segments DO NOT have times, AND
       * all segment have t_start=None
 
     Parameters
