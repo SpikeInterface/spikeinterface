@@ -170,9 +170,8 @@ class BaseExtractor:
                 # create the property with nan or empty
                 shape = (size,) + values.shape[1:]
                 if values.dtype.kind not in ('f', 'S', 'U'):
-                    raise Exception("For values dtypes other than float or sting, the missing value cannot "
-                                    "be automatically inferred. Please specify it with the 'missing_value' "
-                                    "argument.")
+                    raise Exception("For values dtypes other than float, string or unicode, the missing value cannot "
+                                    "be automatically inferred. Please specify it with the 'missing_value' argument.")
                 if values.dtype.kind in ('b', 'c', 'u', 'i', 'f', 'S', 'U'):
                     dtype = values.dtype
                 else:
