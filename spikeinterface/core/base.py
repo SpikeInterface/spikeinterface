@@ -1,3 +1,4 @@
+from argparse import ArgumentError
 from pathlib import Path
 import importlib
 from copy import deepcopy
@@ -151,7 +152,8 @@ class BaseExtractor:
             List of subset of ids to set the values, by default None
         missing_value : object, optional
             In case the property is set on a subset of values ('ids' not None), 
-            it specifies the how the missing values should be filled, by default None
+            it specifies the how the missing values should be filled, by default None.
+            The missing_value has to be specified for types int and unsigned int.
         """
         if values is None:
             if key in self._properties:
@@ -167,21 +169,21 @@ class BaseExtractor:
             if key not in self._properties:
                 # create the property with nan or empty
                 shape = (size,) + values.shape[1:]
-                if values.dtype.kind in ('i', 'f', 'S', 'U'):
+                if values.dtype.kind not in ('f', 'S', 'U'):
+                    raise Exception("For values dtypes other than float or sting, the missing value cannot "
+                                    "be automatically inferred. Please specify it with the 'missing_value' "
+                                    "argument.")
+                if values.dtype.kind in ('b', 'c', 'u', 'i', 'f', 'S', 'U'):
                     dtype = values.dtype
                 else:
                     dtype = object
                 empty_values = np.zeros(shape, dtype=dtype)
                 if values.dtype.kind == 'f':
                     empty_values = np.array([np.nan] * len(empty_values))
-                elif values.dtype.kind == 'i' and missing_value is None:
-                    warnings.warn("Missing values are filled with 0. "
-                                  "The 'missing_value' argument to specify a different default value")
                 if missing_value is not None:
                     if dtype.kind != np.array(missing_value).dtype.kind:
-                        warnings.warn("Mismatch between values and missing_value types. "
-                                      "The type of the property will be 'object'")
-                        dtype = object
+                        raise Exception("Mismatch between values and missing_value types. Provide a missing_value "
+                                        "with the same type as the values.")
                     empty_values = np.zeros(shape, dtype=dtype)  
                     empty_values = np.array([missing_value] * len(empty_values)).astype(dtype)
                 self._properties[key] = empty_values
