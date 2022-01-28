@@ -59,6 +59,31 @@ def test_BaseRecording():
     values = rec.get_property('quality')
     assert np.all(values[:2] == [1., 3.3, ])
     
+    # missing property
+    rec.set_property('string_property', ["ciao", "bello"], ids=[0, 1])
+    values = rec.get_property('string_property')
+    assert values[2] == ""
+    print("Str properties", values)
+    
+    rec.set_property('string_property_nan', ["ciao", "bello"], ids=[0, 1], missing_value=np.nan)
+    values = rec.get_property('string_property_nan')
+    assert np.isnan(values[2])
+    print("Str properties nan", values)
+    
+    rec.set_property('int_property', [5, 6], ids=[1, 2], missing_value=200)
+    values = rec.get_property('int_property')
+    # since nan is the missing value, the values should be cast to float
+    assert values.dtype.kind == "i"
+    assert values[0] == 200
+    print("Int properties", values)
+    
+    rec.set_property('int_property_nan', [5, 6], ids=[1, 2], missing_value=np.nan)
+    values = rec.get_property('int_property_nan')
+    # since nan is the missing value, the values should be cast to object
+    assert values.dtype.kind == "O"
+    assert np.isnan(values[0])
+    print("Int properties nan", values)
+    
     times0 = rec.get_times(segment_index=0)
 
     # dump/load dict
