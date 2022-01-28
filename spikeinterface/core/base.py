@@ -4,9 +4,9 @@ from copy import deepcopy
 import weakref
 import json
 import pickle
-import datetime
 import random
 import string
+import warnings
 
 import numpy as np
 
@@ -131,15 +131,27 @@ class BaseExtractor:
     def get_annotation_keys(self):
         return list(self._annotations.keys())
 
-    def set_property(self, key, values, ids=None):
+    def set_property(self, key, values, ids=None, missing_value=None):
         """
-        Set property vector:
-          * channel_property
-          * unit_property
+        Set property vector for main ids.
 
         If ids is given AND property already exists,
-        then it is modified only on a subset of channels/units
+        then it is modified only on a subset of channels/units.
+        missing_values allows to specify the values of unset 
+        properties if ids is used
 
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        values : np.array
+            Array of values for the property
+        ids : list/np.array, optional
+            List of subset of ids to set the values, by default None
+        missing_value : object, optional
+            In case the property is set on a subset of values ('ids' not None), 
+            it specifies the how the missing values should be filled, by default None
         """
         if values is None:
             if key in self._properties:
@@ -161,9 +173,17 @@ class BaseExtractor:
                     dtype = object
                 empty_values = np.zeros(shape, dtype=dtype)
                 if values.dtype.kind == 'f':
-                    empty_values = empty_values * np.nan
-                # ~ elif values.dtype.kind == 'i':
-                # ~ # TODO find a way to put missing values
+                    empty_values = np.array([np.nan] * len(empty_values))
+                elif values.dtype.kind == 'i' and missing_value is None:
+                    warnings.warn("Missing values are filled with 0. "
+                                  "The 'missing_value' argument to specify a different default value")
+                if missing_value is not None:
+                    if dtype.kind != np.array(missing_value).dtype.kind:
+                        warnings.warn("Mismatch between values and missing_value types. "
+                                      "The type of the property will be 'object'")
+                        dtype = object
+                    empty_values = np.zeros(shape, dtype=dtype)  
+                    empty_values = np.array([missing_value] * len(empty_values)).astype(dtype)
                 self._properties[key] = empty_values
 
             indices = self.ids_to_indices(ids)
