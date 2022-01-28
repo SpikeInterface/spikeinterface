@@ -56,7 +56,6 @@ def run_sorter(sorter_name, recording, gpu_to_use=None, output_folder=None,
     """ + _common_param_doc
 
     keyword_arguments = {
-        "gpu_to_use": gpu_to_use,
         "output_folder": output_folder,
         "remove_existing_folder": remove_existing_folder,
         "delete_output_folder": delete_output_folder, verbose: verbose,
@@ -66,7 +65,7 @@ def run_sorter(sorter_name, recording, gpu_to_use=None, output_folder=None,
 
     if docker_image is not None:
         return run_sorter_container(
-            sorter_name, recording, 'docker', docker_image, **keyword_arguments, **sorter_params
+            sorter_name, recording, 'docker', docker_image, gpu_to_use=gpu_to_use, **keyword_arguments, **sorter_params
         )
 
     if singularity_image is not None:
@@ -74,7 +73,7 @@ def run_sorter(sorter_name, recording, gpu_to_use=None, output_folder=None,
             sorter_name, recording, 'singularity', singularity_image, **keyword_arguments, **sorter_params
         )
 
-    return run_sorter_local(sorter_name, recording, output_folder=output_folder, **keyword_arguments, **sorter_params)
+    return run_sorter_local(sorter_name, recording, gpu_to_use=gpu_to_use, output_folder=output_folder, **keyword_arguments, **sorter_params)
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
@@ -232,7 +231,7 @@ def run_sorter_container(sorter_name, recording, mode, container_image, gpu_to_u
 
     SorterClass = sorter_dict[sorter_name]
     if not SorterClass.docker_requires_gpu and gpu_to_use:
-        msg = f"{sorter_name} does not support GPU yet gpu_to_use is defined"
+        msg = f"{sorter_name} does not support GPU, but gpu_to_use is defined"
         raise ValueError(msg)
 
     output_folder = Path(output_folder).absolute()
