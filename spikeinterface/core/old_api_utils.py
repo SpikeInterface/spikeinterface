@@ -171,7 +171,7 @@ class OldToNewRecording(BaseRecording):
     def __init__(self, oldapi_recording_extractor):
         BaseRecording.__init__(self, oldapi_recording_extractor.get_sampling_frequency(),
                                oldapi_recording_extractor.get_channel_ids(),
-                               oldapi_recording_extractor.get_dtype())
+                               oldapi_recording_extractor.get_dtype(return_scaled=False))
 
         # set is_dumpable to False to use dumping mechanism of old extractor
         self.is_dumpable = False
