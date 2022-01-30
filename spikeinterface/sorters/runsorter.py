@@ -155,6 +155,15 @@ class ContainerClient:
                 extra_kwargs.pop('requires_gpu')
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+
+            # check if the image is already present locally
+            repo_tags = []
+            for image in client.images.list():
+                repo_tags.extend(image.attrs['RepoTags'])
+
+            if container_image not in repo_tags:
+                client.images.pull(container_image)
+
             self.docker_container = client.containers.create(
                     container_image, tty=True, volumes=volumes, **extra_kwargs)
 
@@ -267,11 +276,11 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     container_client.start()
 
     # check if container contains spikeinterface already
-    # this do not work with singularity:
-    # cmd = 'python -c "import spikeinterface; print(spikeinterface.__version__)"'
-    # this approach is better
-    cmd = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
-    res_output = container_client.run_command(cmd)
+    cmd_1 = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
+    cmd_2 = ['python', '-c', 'from spikeinterface.sorters import run_sorter_local']
+    res_output = ''
+    for cmd in [cmd_1, cmd_2]:
+        res_output += str(container_client.run_command(cmd))
     need_si_install = 'ModuleNotFoundError' in res_output
 
     if need_si_install:
@@ -280,17 +289,17 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
                 print(
                     f"Installing spikeinterface from sources in {container_image}")
             # TODO later check output
-            cmd = 'pip install --upgrade --force MEArec'
+            cmd = 'pip install --upgrade --no-input MEArec'
             res_output = container_client.run_command(cmd)
-            cmd = 'pip install -e git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
+            cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
             res_output = container_client.run_command(cmd)
-            cmd = 'pip install --upgrade --force https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
+            cmd = 'pip install --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
                 print(
                     f"Installing spikeinterface=={si_version} in {container_image}")
-            cmd = f'pip install --upgrade --force spikeinterface[full]=={si_version}'
+            cmd = f'pip install --upgrade --no-input spikeinterface[full]=={si_version}'
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
