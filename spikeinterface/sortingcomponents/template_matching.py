@@ -649,67 +649,32 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'n_shifts': 1, ### Is useless with convolve
         'jitter' : 1, ### Is useless with convolve
         'detect_threshold': 5, ### Is useless with convolve
-        'noise_levels': None,
-        'random_chunk_kwargs': {},
+        'noise_levels': None, ### Is useless with convolve
+        'random_chunk_kwargs': {}, ### Is useless with convolve
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
-        'sparsify_threshold': 0.25,
+        'sparsify_threshold': 0.99,
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
-        'use_sparse_matrix_threshold' : 0.2,
+        'use_sparse_matrix_threshold' : 0.25,
         'omp' : True,
         'omp_min_sps' : 0.5,
         'progess_bar_steps' : True,
         'convolve' : True
     }
 
-    # @classmethod
-    # def _sparsify_template(cls, template, mask):
-    #     #stds = np.std(template, axis=0)
-    #     #sparse_channels = np.where(stds < sparse_thresholds)[0]
-    #     all_channels = np.arange(template.shape[1])
-    #     sparse_channels = ~np.in1d(all_channels, mask)
-    #     template[:, sparse_channels] = 0
-    #     return template
-
     @classmethod
-    def _sparsify_template(cls, template, sparse_thresholds):
-        stds = np.std(template, axis=0)
-        sparse_channels = np.where(stds < sparse_thresholds)[0]
-        template[:, sparse_channels] = 0
-        active_channels = np.where(np.sum(template, axis=0) !=0)[0]
+    def _sparsify_template(cls, template, sparsify_threshold):
+
+        channel_norms = np.linalg.norm(template, axis=0)**2
+        total_norm = np.linalg.norm(template)**2
+        idx = np.argsort(channel_norms)[::-1]
+        explained_norms = np.cumsum(channel_norms[idx]/total_norm)
+        channel = np.searchsorted(explained_norms, sparsify_threshold)
+        active_channels = np.sort(idx[:channel])
+        template[:, idx[channel:]] = 0
         return template, active_channels
-
-    # @classmethod
-    # def _similarities(cls, templates, normalize=True):
-    #     nb_templates = len(templates)
-    #     flatten_templates = templates.reshape(nb_templates, -1)
-    #     data = np.dot(flatten_templates, flatten_templates.T)
-    #     if normalize:
-    #         norm = np.linalg.norm(flatten_templates, axis=1)
-    #         data /= (norm * norm[:, np.newaxis])
-    #     return data
-
-    # @classmethod
-    # def _get_best_radius(cls, radius, waveforms):
-    #     templates = waveforms.get_all_templates(mode='median').copy()
-    #     masks = get_template_channel_sparsity(waveforms, method='radius', radius_um=radius, outputs='index')
-    #     all_channels = np.arange(templates.shape[2])
-    #     for count, unit_id in enumerate(masks):
-    #         templates[count, :, ~np.in1d(all_channels, masks[unit_id])] = 0
-    #     distances = cls._similarities(templates.reshape(len(templates), -1))
-    #     return np.exp(distances).sum()
-
-    # @classmethod
-    # def _get_n_best(cls, num_channels, waveforms):
-    #     templates = waveforms.get_all_templates(mode='median').copy()
-    #     masks = get_template_channel_sparsity(waveforms, method='best_channels', num_channels=num_channels, outputs='index')
-    #     all_channels = np.arange(templates.shape[2])
-    #     for count, unit_id in enumerate(masks):
-    #         templates[count, :, ~np.in1d(all_channels, masks[unit_id])] = 0
-    #     distances = cls._similarities(templates.reshape(len(templates), -1))
-    #     return np.linalg.norm(np.exp(distances))
 
     @classmethod
     def _prepare_templates(cls, d):
@@ -721,7 +686,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         max_amplitude = d['max_amplitude']
         min_amplitude = d['min_amplitude']
         use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
-        sparse_thresholds = d['noise_levels'] * d['sparsify_threshold']
 
         d['norms'] = np.zeros(nb_templates, dtype=np.float32)
         d['amplitudes'] = np.zeros((nb_templates, 2), dtype=np.float32)
@@ -730,34 +694,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if d['progess_bar_steps']:
             all_units = tqdm(all_units, desc='[1] compute templates')
 
-        templates = waveform_extractor.get_all_templates(mode='median')
+        templates = waveform_extractor.get_all_templates(mode='median').copy()
 
         d['sparsities'] = {}
-
-        #import scipy
-        #res = scipy.optimize.differential_evolution(cls._get_best_radius, bounds=[(50, 500)], args=(waveform_extractor, ))
-        #d['sparsities'] = get_template_channel_sparsity(waveform_extractor, method='radius', radius_um=res.x, outputs='index')
-        #print(res.x)
-
-        #import scipy
-        #res = scipy.optimize.differential_evolution(cls._get_best_threshold, bounds=[(0, 5)], args=(waveform_extractor, d['noise_levels']))
-        #print(res)
-        #d['sparsities'] = get_template_channel_sparsity(waveform_extractor, method='threshold', threshold=res.x, outputs='index', noise_levels=d['noise_levels'])
-
-        #mask_sizes = np.arange(1, nb_channels+1)
-        #res = [cls._get_n_best(i, waveform_extractor) for i in mask_sizes]
-        #print(res, mask_sizes[np.argmin(res)])
-        #d['sparsities'] = get_template_channel_sparsity(waveform_extractor, method='best_channels', num_channels=mask_sizes[np.argmin(res)], outputs='index')
-
-        #d['sparsities'] = get_template_channel_sparsity(waveform_extractor, method='threshold', threshold=1, outputs='index')
         
         for count, unit_id in enumerate(all_units):
-            
-            #mask = d['sparsities'].pop(unit_id)
-            #templates[count] = cls._sparsify_template(templates[count], mask)
-            #d['sparsities'][count] = mask
                 
-            templates[count], active_channels = cls._sparsify_template(templates[count], sparse_thresholds)
+            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'])
             d['sparsities'][count] = active_channels
             
             d['norms'][count] = np.linalg.norm(templates[count])
@@ -771,6 +714,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             import scipy
             templates = scipy.sparse.csr_matrix(templates)
             print(f'Templates are automatically sparsified (sparsity level is {nnz})')
+            d['is_dense'] = False
+        else:
+            d['is_dense'] = True
 
         d['templates'] = templates
 
@@ -783,8 +729,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
         nb_templates = d['nb_templates']
-
-        is_dense = isinstance(templates, np.ndarray)
+        is_dense = d['is_dense']
 
         if not is_dense:
             dense_templates = templates.toarray()
@@ -890,6 +835,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d.update(kwargs)
 
         assert isinstance(d['waveform_extractor'], WaveformExtractor)
+
+        for v in ['sparsify_threshold', 'omp_min_sps','use_sparse_matrix_threshold']:
+            assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
         
         d['nb_channels'] = d['waveform_extractor'].recording.get_num_channels()
         d['nb_samples'] = d['waveform_extractor'].nsamples
@@ -964,6 +912,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         convolve = d['convolve']
         sym_patch = d['sym_patch']
         sparsities = d['sparsities']
+        is_dense = d['is_dense']
 
         if omp:
             stop_criteria = omp_min_sps * norms[:, np.newaxis]
@@ -1003,8 +952,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         else:
 
             nb_peaks = len(traces) - nb_samples + 1
-
-            is_dense = isinstance(templates, np.ndarray)
 
             if is_dense:
                 kernel_filters = templates.reshape(nb_templates, nb_samples, nb_channels)[:, ::-1, :]
