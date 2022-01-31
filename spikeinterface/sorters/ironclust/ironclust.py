@@ -59,7 +59,6 @@ class IronClustSorter(BaseSorter):
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)
 
     requires_locations = True
-    is_compiled = check_compiled()
 
     _default_params = {
         'detect_sign': -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
@@ -150,13 +149,13 @@ class IronClustSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        if cls.is_compiled:
+        if check_compiled():
             return True
         return check_if_installed(cls.ironclust_path)
 
-    @classmethod
-    def get_sorter_version(cls):
-        if cls.is_compiled:
+    @staticmethod
+    def get_sorter_version():
+        if check_compiled():
             return 'compiled'
         version_filename = Path(os.environ["IRONCLUST_PATH"]) / 'matlab' / 'version.txt'
         if version_filename.is_file():
@@ -224,7 +223,7 @@ class IronClustSorter(BaseSorter):
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
 
-        if cls.is_compiled:
+        if check_compiled():
             shell_cmd = '''
                 #!/bin/bash
                 p_ironclust {tmpdir} {dataset_dir}/raw.mda {dataset_dir}/geom.csv '' '' {tmpdir}/firings.mda {dataset_dir}/argfile.txt
