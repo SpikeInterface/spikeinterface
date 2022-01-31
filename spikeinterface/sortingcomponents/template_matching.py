@@ -635,12 +635,10 @@ def fastconvolution(traces, templates, output):
     for i in range(center, nb_time - center + 1):
         offset_1 = i - center
         for k in range(nb_templates):
-            num = 0.0
             for jj in range(nb_samples):
-                offset_2 = offset + jj
+                offset_2 = offset_1 + jj
                 for j in range(nb_channels):
-                    num += (templates[k, jj, j] * traces[offset_2, j])
-            output[k, offset_1] = num
+                    output[k, offset_1] += (templates[k, jj, j] * traces[offset_2, j])
     return output
 
 
@@ -1009,28 +1007,26 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             #filters = templates.reshape(nb_templates, nb_samples, nb_channels)[:,::-1,:]
             #scalar_products = scipy.signal.fftconvolve(filters, traces[np.newaxis,:,:], axes=(0, 1), mode='valid').sum(2)
 
+            #scalar_products = fastconvolution(traces, templates.reshape(nb_templates, nsamples, nb_channels), scalar_products)
+
             ## Write a numba kernel, seems doable http://numba.pydata.org/numba-doc/0.15.1/examples.html#filterbank-correlation
-            ## Sadly, the numba kernel seems slower than the scipy implementation for full convolution, with oaconvolve
+            ## Sadly, the numba kernel seems slower than the scipy implementation for full convolution, with oaconvolve of fftconvolve
+            ## (faster)
             scalar_products = np.empty((nb_templates, size), dtype=np.float32)
             is_dense = isinstance(templates, np.ndarray)
-            active_channels_traces = np.where(np.std(traces, axis=0) > d['noise_levels'])[0]
 
             for i in range(nb_templates):
                 if is_dense:
                     kernel_filter = templates[i].reshape(nb_samples, nb_channels)
                 else:
                     kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
+                kernel_filter = kernel_filter[::-1, sparsities[i]]
 
-                active_channels_filter = sparsities[i]
-
-                active_channels = np.intersect1d(active_channels_filter, active_channels_traces)
-
-                convolution = scipy.signal.fftconvolve(kernel_filter[::-1, active_channels], traces[:, active_channels], axes=0, mode='valid')
+                convolution = scipy.signal.fftconvolve(kernel_filter, traces[:, sparsities[i]], axes=0, mode='valid')
                 if len(convolution) > 0:
                     scalar_products[i] = convolution.sum(1)
                 else:
                     scalar_products[i] = 0
-            #     #scalar_products = fastconvolution(traces, templates.reshape(nb_templates, nsamples, nb_channels), scalar_products)
 
             nb_peaks = size
             peak_sample_ind = np.arange(d['nbefore'], len(traces) - d['nafter'] + 1)
@@ -1081,7 +1077,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             M = np.zeros((nb_peaks, nb_peaks), dtype=np.float32)
 
-            all_selections = np.empty((2, scalar_products.size), dtype=np.int32, order='F')
+            all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
             res_sps = np.zeros(0, dtype=np.float32)
             final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
             nb_selection = 0
@@ -1089,6 +1085,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             full_sps = scalar_products.copy()
 
             neighbors = {}
+            cached_overlaps = {}
 
             is_valid = (scalar_products > stop_criteria)
 
@@ -1108,7 +1105,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                 idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
 
                 myline = neighbor_window + delta_t[idx]
-                M[nb_selection-1, idx] = overlaps[selection[0, -1]].toarray()[selection[0, idx], myline]
+                cached_overlaps[selection[0, -1]] = overlaps[selection[0, -1]].toarray()
+                M[nb_selection-1, idx] = cached_overlaps[selection[0, -1]][selection[0, idx], myline]
 
                 if nb_selection >= (M.shape[0] - 1):
                     Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
@@ -1119,7 +1117,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
                 all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
 
-                diff_amplitudes   = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
+                diff_amplitudes = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
 
                 modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
                 final_amplitudes[selection[0], selection[1]] = all_amplitudes
@@ -1129,17 +1127,20 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                     tmp_best, tmp_peak = selection[:, i]
                     diff_amp = diff_amplitudes[i]*norms[tmp_best]
                     
+                    if not tmp_best in cached_overlaps.keys():
+                        cached_overlaps[tmp_best] = overlaps[tmp_best].toarray()
+
                     if not tmp_peak in neighbors.keys():
                         peak_data = peak_sample_ind - peak_sample_ind[tmp_peak] 
                         idx = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
-                        neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window }
+                        neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window}
 
                     idx = neighbors[tmp_peak]['idx']
                     tdx = neighbors[tmp_peak]['tdx']
 
-                    to_add = diff_amp * overlaps[tmp_best].toarray()[:, tdx]
+                    to_add = diff_amp * cached_overlaps[tmp_best][:, tdx]
                     scalar_products[:, idx[0]:idx[1]] -= to_add
-
+                
                 is_valid = (scalar_products > stop_criteria)
 
             is_valid = (final_amplitudes > min_sps)*(final_amplitudes < max_sps)
