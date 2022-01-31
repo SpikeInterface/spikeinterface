@@ -1002,35 +1002,28 @@ class CircusPeeler(BaseTemplateMatchingEngine):
                 scalar_products = np.zeros((nb_templates, 0), dtype=np.float32)
         else:
 
-            size = len(traces) - nb_samples + 1
+            nb_peaks = len(traces) - nb_samples + 1
 
-            #filters = templates.reshape(nb_templates, nb_samples, nb_channels)[:,::-1,:]
-            #scalar_products = scipy.signal.fftconvolve(filters, traces[np.newaxis,:,:], axes=(0, 1), mode='valid').sum(2)
-
-            #scalar_products = fastconvolution(traces, templates.reshape(nb_templates, nsamples, nb_channels), scalar_products)
-
-            ## Write a numba kernel, seems doable http://numba.pydata.org/numba-doc/0.15.1/examples.html#filterbank-correlation
-            ## Sadly, the numba kernel seems slower than the scipy implementation for full convolution, with oaconvolve of fftconvolve
-            ## (faster)
-            scalar_products = np.empty((nb_templates, size), dtype=np.float32)
             is_dense = isinstance(templates, np.ndarray)
 
-            for i in range(nb_templates):
-                if is_dense:
-                    kernel_filter = templates[i].reshape(nb_samples, nb_channels)
-                else:
+            if is_dense:
+                kernel_filters = templates.reshape(nb_templates, nb_samples, nb_channels)[:, ::-1, :]
+                scalar_products = scipy.signal.fftconvolve(kernel_filters, traces[np.newaxis, :, :], axes=(0, 1), mode='valid').sum(2)
+            else:
+                scalar_products = np.empty((nb_templates, nb_peaks), dtype=np.float32)
+
+                for i in range(nb_templates):
                     kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
-                kernel_filter = kernel_filter[::-1, sparsities[i]]
+                    kernel_filter = kernel_filter[::-1, sparsities[i]]
 
-                convolution = scipy.signal.fftconvolve(kernel_filter, traces[:, sparsities[i]], axes=0, mode='valid')
-                if len(convolution) > 0:
-                    scalar_products[i] = convolution.sum(1)
-                else:
-                    scalar_products[i] = 0
+                    convolution = scipy.signal.fftconvolve(kernel_filter, traces[:, sparsities[i]], axes=0, mode='valid')
+                    if len(convolution) > 0:
+                        scalar_products[i] = convolution.sum(1)
+                    else:
+                        scalar_products[i] = 0
 
-            nb_peaks = size
             peak_sample_ind = np.arange(d['nbefore'], len(traces) - d['nafter'] + 1)
-            peak_chan_ind = np.zeros(size)
+            peak_chan_ind = np.zeros(nb_peaks)
 
         nb_spikes = 0
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
