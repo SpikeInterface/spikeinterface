@@ -1,4 +1,3 @@
-from argparse import ArgumentError
 from pathlib import Path
 import importlib
 from copy import deepcopy
@@ -155,6 +154,8 @@ class BaseExtractor:
             it specifies the how the missing values should be filled, by default None.
             The missing_value has to be specified for types int and unsigned int.
         """
+        default_missing_values = {"f": np.nan, "S": "", "U": ""}
+        
         if values is None:
             if key in self._properties:
                 self._properties.pop(key)
@@ -166,29 +167,50 @@ class BaseExtractor:
             assert values.shape[0] == size
             self._properties[key] = values
         else:
-            if key not in self._properties:
-                # create the property with nan or empty
-                shape = (size,) + values.shape[1:]
-                if values.dtype.kind not in ('f', 'S', 'U'):
-                    raise Exception("For values dtypes other than float, string or unicode, the missing value cannot "
-                                    "be automatically inferred. Please specify it with the 'missing_value' argument.")
-                if values.dtype.kind in ('b', 'c', 'u', 'i', 'f', 'S', 'U'):
+            ids = np.array(ids)
+            assert np.unique(ids).size == ids.size, "'ids' are not unique!"
+            
+            if ids.size < size:
+                if key not in self._properties:
+                    # create the property with nan or empty
+                    shape = (size,) + values.shape[1:]
                     dtype = values.dtype
-                else:
-                    dtype = object
-                empty_values = np.zeros(shape, dtype=dtype)
-                if values.dtype.kind == 'f':
-                    empty_values = np.array([np.nan] * len(empty_values))
-                if missing_value is not None:
-                    if dtype.kind != np.array(missing_value).dtype.kind:
-                        raise Exception("Mismatch between values and missing_value types. Provide a missing_value "
-                                        "with the same type as the values.")
-                    empty_values = np.zeros(shape, dtype=dtype)  
-                    empty_values = np.array([missing_value] * len(empty_values)).astype(dtype)
-                self._properties[key] = empty_values
+                    dtype_kind = dtype.kind
+        
+                    if missing_value is None:
+                        if dtype_kind not in default_missing_values.keys():
+                            raise Exception("For values dtypes other than float, string or unicode, the missing value "
+                                            "cannot be automatically inferred. Please specify it with the 'missing_value' "
+                                            "argument.")
+                        else:
+                            missing_value = default_missing_values[dtype_kind]
+                    else:
+                        assert dtype_kind == np.array(missing_value).dtype.kind, ("Mismatch between values and "
+                                                                                "missing_value types. Provide a "
+                                                                                "missing_value with the same type as "
+                                                                                "the values.")
+                        
+                    empty_values = np.zeros(shape, dtype=dtype)
+                    empty_values[:] = missing_value
 
-            indices = self.ids_to_indices(ids)
-            self._properties[key][indices] = values
+                    if dtype_kind in default_missing_values.keys() and missing_value is None:
+                        empty_values = np.zeros(shape, dtype=dtype)
+                        empty_values[:] = default_missing_values[dtype_kind]
+                        # empty_values = np.ones(shape, dtype=dtype) np.array([defau] * size)
+                    elif missing_value is not None:
+                        if dtype.kind != np.array(missing_value).dtype.kind:
+                            raise Exception("Mismatch between values and missing_value types. Provide a missing_value "
+                                            "with the same type as the values.")
+                        empty_values = np.zeros(shape, dtype=dtype)  
+                        empty_values = np.array([missing_value] * len(empty_values)).astype(dtype)
+                    self._properties[key] = empty_values
+
+                indices = self.ids_to_indices(ids)
+                self._properties[key][indices] = values
+            else:
+                indices = self.ids_to_indices(ids)
+                self._properties[key] = np.zeros_like(values, dtype=values.dtype)
+                self._properties[key][indices] = values
 
     def get_property(self, key, ids=None):
         values = self._properties.get(key, None)

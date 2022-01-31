@@ -70,13 +70,11 @@ def test_BaseRecording():
                   missing_value=np.nan)
     
     # int properties without missing values raise an error
-    assert_raises(Exception, rec.set_property, key='int_property', values=[5, 6], ids=[1, 2], missing_value=200)
+    assert_raises(Exception, rec.set_property, key='int_property', values=[5, 6], ids=[1, 2])
     
-    rec.set_property('int_property_nan', np.array([5, 6]).astype("float"), ids=[1, 2], missing_value=np.nan)
-    values = rec.get_property('int_property_nan')
-    # since the missing value has a different type, the values should be cast to object
-    assert values.dtype.kind == "f"
-    assert np.isnan(values[0])
+    rec.set_property('int_property', [5, 6], ids=[1, 2], missing_value=200)
+    values = rec.get_property('int_property')
+    assert values.dtype.kind == "i"
     
     times0 = rec.get_times(segment_index=0)
 
