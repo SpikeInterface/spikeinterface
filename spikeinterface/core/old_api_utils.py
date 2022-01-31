@@ -1,6 +1,7 @@
 from typing import Union
 
 import numpy as np
+import warnings
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment)
 
@@ -322,10 +323,23 @@ def copy_properties(oldapi_extractor, new_extractor, skip_properties=None):
             properties[prop_name]["values"].append(prop_value)
 
     for property_name, prop_dict in properties.items():
-        property_ids = prop_dict["ids"]
-        property_values = prop_dict["values"]
-        new_extractor.set_property(key=property_name,
-                                   values=property_values, ids=property_ids)
+        property_ids = np.array(prop_dict["ids"])
+        property_values = np.array(prop_dict["values"])
+        missing_value = None
+        
+        # For back-compatibility, incomplete int/uint properties are upcast to float
+        # and missing_value is set to np.nan
+        if len(property_ids) < len(get_ids()):
+            if property_values.dtype.kind in ("u", "i"):
+                property_values = property_values.astype("float")
+                missing_value = np.nan
+        try:
+            new_extractor.set_property(key=property_name,
+                                       values=property_values, 
+                                       ids=property_ids,
+                                       missing_value=missing_value)
+        except Exception as e:
+            warnings.warn(f"Property {property_name} cannot be ported to new API due to missing values.")
 
 
 def find_old_gains_offsets_recursively(oldapi_extractor_dict):
