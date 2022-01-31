@@ -456,11 +456,14 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             
             if level == 2:
                 break
-
-        all_spikes = np.concatenate(all_spikes)
-        order = np.argsort(all_spikes['sample_ind'])
-        all_spikes = all_spikes[order]
         
+        if len(all_spikes) > 0:
+            all_spikes = np.concatenate(all_spikes)
+            order = np.argsort(all_spikes['sample_ind'])
+            all_spikes = all_spikes[order]
+        else:
+            all_spikes = np.zeros(0, dtype=spike_dtype)
+
         return all_spikes
 
 
