@@ -683,8 +683,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d['amplitudes'] = np.zeros((nb_templates, 2), dtype=np.float32)
 
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
-        if d['progess_bar_steps']:
-            all_units = tqdm(all_units, desc='[1] compute templates')
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
 
@@ -734,7 +732,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         all_delays = list(range(nb_samples))
         if d['progess_bar_steps']:
-            all_delays = tqdm(all_delays, desc='[2] compute overlaps')
+            all_delays = tqdm(all_delays, desc='[1] compute overlaps')
 
         overlaps = {}
         
@@ -972,8 +970,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d['amplitudes'] = np.zeros((nb_templates, 2), dtype=np.float32)
 
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
-        if d['progess_bar_steps']:
-            all_units = tqdm(all_units, desc='[1] compute templates')
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
 
@@ -1023,7 +1019,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         all_delays = list(range(nb_samples))
         if d['progess_bar_steps']:
-            all_delays = tqdm(all_delays, desc='[2] compute overlaps')
+            all_delays = tqdm(all_delays, desc='[1] compute overlaps')
 
         overlaps = {}
         
@@ -1077,7 +1073,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         norms = d['norms']
         all_units = list(waveform_extractor.sorting.unit_ids)
         if d['progess_bar_steps']:
-            all_units = tqdm(all_units, desc='[3] compute amplitudes')
+            all_units = tqdm(all_units, desc='[2] compute amplitudes')
 
         d['amplitudes'] = np.zeros((nb_templates, 2), dtype=np.float32)
         noise = templates.dot(noise_snippets)/norms[:, np.newaxis]
