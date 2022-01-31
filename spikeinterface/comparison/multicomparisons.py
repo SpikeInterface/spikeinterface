@@ -218,7 +218,7 @@ class AgreementSortingExtractor(BaseSorting):
             for k in ('agreement_number', 'avg_agreement', 'unit_ids'):
                 values = [self._msc._new_units[unit_id][k]
                           for unit_id in unit_ids]
-                self.set_property(k, values)
+                self.set_property(k, values, ids=unit_ids)
 
         sorting_segment = AgreementSortingSegment(multisortingcomparison)
         self.add_sorting_segment(sorting_segment)
