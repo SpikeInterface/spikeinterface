@@ -186,23 +186,12 @@ class BaseExtractor:
                             missing_value = default_missing_values[dtype_kind]
                     else:
                         assert dtype_kind == np.array(missing_value).dtype.kind, ("Mismatch between values and "
-                                                                                "missing_value types. Provide a "
-                                                                                "missing_value with the same type as "
-                                                                                "the values.")
+                                                                                  "missing_value types. Provide a "
+                                                                                  "missing_value with the same type "
+                                                                                  "as the values.")
                         
                     empty_values = np.zeros(shape, dtype=dtype)
                     empty_values[:] = missing_value
-
-                    if dtype_kind in default_missing_values.keys() and missing_value is None:
-                        empty_values = np.zeros(shape, dtype=dtype)
-                        empty_values[:] = default_missing_values[dtype_kind]
-                        # empty_values = np.ones(shape, dtype=dtype) np.array([defau] * size)
-                    elif missing_value is not None:
-                        if dtype.kind != np.array(missing_value).dtype.kind:
-                            raise Exception("Mismatch between values and missing_value types. Provide a missing_value "
-                                            "with the same type as the values.")
-                        empty_values = np.zeros(shape, dtype=dtype)  
-                        empty_values = np.array([missing_value] * len(empty_values)).astype(dtype)
                     self._properties[key] = empty_values
 
                 indices = self.ids_to_indices(ids)
