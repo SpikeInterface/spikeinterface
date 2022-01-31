@@ -642,15 +642,9 @@ def fastconvolution(traces, templates, output):
     return output
 
 
-class CircusPeeler(BaseTemplateMatchingEngine):
+class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
-        'peak_sign': 'neg', ### Is useless with convolve
-        'n_shifts': 1, ### Is useless with convolve
-        'jitter' : 1, ### Is useless with convolve
-        'detect_threshold': 5, ### Is useless with convolve
-        'noise_levels': None, ### Is useless with convolve
-        'random_chunk_kwargs': {}, ### Is useless with convolve
         'overlaps' : None,
         'templates' : None,
         'amplitudes' : None,
@@ -658,15 +652,302 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.25,
-        'omp' : True,
         'omp_min_sps' : 0.5,
         'progess_bar_steps' : True,
-        'convolve' : True
     }
 
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold):
 
+        channel_norms = np.linalg.norm(template, axis=0)**2
+        total_norm = np.linalg.norm(template)**2
+        idx = np.argsort(channel_norms)[::-1]
+        explained_norms = np.cumsum(channel_norms[idx]/total_norm)
+        channel = np.searchsorted(explained_norms, sparsify_threshold)
+        active_channels = np.sort(idx[:channel])
+        template[:, idx[channel:]] = 0
+        return template, active_channels
+
+    @classmethod
+    def _prepare_templates(cls, d):
+        
+        waveform_extractor = d['waveform_extractor']
+        nb_samples = d['nb_samples']
+        nb_channels = d['nb_channels']
+        nb_templates = d['nb_templates']
+        max_amplitude = d['max_amplitude']
+        min_amplitude = d['min_amplitude']
+        use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
+
+        d['norms'] = np.zeros(nb_templates, dtype=np.float32)
+        d['amplitudes'] = np.zeros((nb_templates, 2), dtype=np.float32)
+
+        all_units = list(d['waveform_extractor'].sorting.unit_ids)
+        if d['progess_bar_steps']:
+            all_units = tqdm(all_units, desc='[1] compute templates')
+
+        templates = waveform_extractor.get_all_templates(mode='median').copy()
+
+        d['sparsities'] = {}
+        
+        for count, unit_id in enumerate(all_units):
+                
+            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'])
+            d['sparsities'][count] = active_channels
+            
+            d['norms'][count] = np.linalg.norm(templates[count])
+            templates[count] /= d['norms'][count]
+            d['amplitudes'][count] = [min_amplitude, max_amplitude]
+
+        templates = templates.reshape(nb_templates, -1)
+
+        nnz = np.sum(templates != 0)/(nb_templates * nb_samples * nb_channels)
+        if nnz <= use_sparse_matrix_threshold:
+            import scipy
+            templates = scipy.sparse.csr_matrix(templates)
+            print(f'Templates are automatically sparsified (sparsity level is {nnz})')
+            d['is_dense'] = False
+        else:
+            d['is_dense'] = True
+
+        d['templates'] = templates
+
+        return d
+
+    @classmethod
+    def _prepare_overlaps(cls, d):
+
+        templates = d['templates']
+        nb_samples = d['nb_samples']
+        nb_channels = d['nb_channels']
+        nb_templates = d['nb_templates']
+        is_dense = d['is_dense']
+
+        if not is_dense:
+            dense_templates = templates.toarray()
+        else:
+            dense_templates = templates
+
+        dense_templates = dense_templates.reshape(nb_templates, nb_samples, nb_channels)
+
+        size = 2 * nb_samples - 1
+
+        all_delays = list(range(nb_samples))
+        if d['progess_bar_steps']:
+            all_delays = tqdm(all_delays, desc='[2] compute overlaps')
+
+        overlaps = {}
+        
+        for delay in all_delays:
+            source = dense_templates[:, :delay, :].reshape(nb_templates, -1)
+            target = dense_templates[:, nb_samples-delay:, :].reshape(nb_templates, -1)
+
+            overlaps[delay] = scipy.sparse.csr_matrix(sklearn.metrics.pairwise.distance.cdist(source, target, lambda u,v :u.dot(v)))
+            
+            if delay < nb_samples:
+                overlaps[size - delay-1] = overlaps[delay].T.tocsr()
+
+        new_overlaps = []
+        for i in range(nb_templates):
+            data = [overlaps[j][i, :].T for j in range(size)]
+            data = scipy.sparse.hstack(data).tocsc()
+            new_overlaps += [data]
+        
+        d['overlaps'] = new_overlaps
+
+        return d
+
+    @classmethod
+    def initialize_and_check_kwargs(cls, recording, kwargs):
+
+        d = cls._default_params.copy()
+        d.update(kwargs)
+
+        assert isinstance(d['waveform_extractor'], WaveformExtractor)
+
+        for v in ['sparsify_threshold', 'omp_min_sps','use_sparse_matrix_threshold']:
+            assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
+        
+        d['nb_channels'] = d['waveform_extractor'].recording.get_num_channels()
+        d['nb_samples'] = d['waveform_extractor'].nsamples
+        d['nb_templates'] = len(d['waveform_extractor'].sorting.unit_ids)
+
+        if d['templates'] is None:
+            d = cls._prepare_templates(d)
+            d = cls._prepare_overlaps(d)
+
+        d['nbefore'] = d['waveform_extractor'].nbefore
+        d['nafter'] = d['waveform_extractor'].nafter
+
+        return d        
+
+    @classmethod
+    def serialize_method_kwargs(cls, kwargs):
+        kwargs = dict(kwargs)
+        # remove waveform_extractor
+        kwargs.pop('waveform_extractor')
+        return kwargs
+
+    @classmethod
+    def unserialize_in_worker(cls, kwargs):
+        return kwargs
+
+    @classmethod
+    def get_margin(cls, recording, kwargs):
+        margin = 2 * max(kwargs['nbefore'], kwargs['nafter'])
+        return margin
+
+    @classmethod
+    def main_function(cls, traces, d):
+        templates = d['templates']
+        nb_templates = d['nb_templates']
+        nb_channels = d['nb_channels']
+        overlaps = d['overlaps']
+        margin = d['margin']
+        norms = d['norms']
+        omp_tol = np.finfo(np.float32).eps
+        omp_min_sps = d['omp_min_sps']
+        nb_samples = d['nafter'] + d['nbefore']
+        neighbor_window = nb_samples - 1
+        amplitudes = d['amplitudes']
+        sparsities = d['sparsities']
+        is_dense = d['is_dense']
+
+        stop_criteria = omp_min_sps * norms[:, np.newaxis]
+
+        nb_peaks = len(traces) - nb_samples + 1
+
+        if is_dense:
+            kernel_filters = templates.reshape(nb_templates, nb_samples, nb_channels)[:, ::-1, :]
+            scalar_products = scipy.signal.fftconvolve(kernel_filters, traces[np.newaxis, :, :], axes=(0, 1), mode='valid').sum(2)
+        else:
+            scalar_products = np.empty((nb_templates, nb_peaks), dtype=np.float32)
+
+            for i in range(nb_templates):
+                kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
+                kernel_filter = kernel_filter[::-1, sparsities[i]]
+
+                convolution = scipy.signal.fftconvolve(kernel_filter, traces[:, sparsities[i]], axes=0, mode='valid')
+                if len(convolution) > 0:
+                    scalar_products[i] = convolution.sum(1)
+                else:
+                    scalar_products[i] = 0
+
+        peak_sample_ind = np.arange(d['nbefore'], len(traces) - d['nafter'] + 1)
+        peak_chan_ind = np.zeros(nb_peaks)
+
+        nb_spikes = 0
+        spikes = np.empty(scalar_products.size, dtype=spike_dtype)
+        idx_lookup = np.arange(scalar_products.size).reshape(nb_templates, -1)
+
+        min_sps = amplitudes[:, 0][:, np.newaxis]
+        max_sps = amplitudes[:, 1][:, np.newaxis]
+
+        M = np.zeros((nb_peaks, nb_peaks), dtype=np.float32)
+
+        all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
+        res_sps = np.zeros(0, dtype=np.float32)
+        final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
+        nb_selection = 0
+
+        full_sps = scalar_products.copy()
+
+        neighbors = {}
+        cached_overlaps = {}
+
+        is_valid = (scalar_products > stop_criteria)
+
+        while np.any(is_valid):
+
+            best_amplitude_ind = scalar_products[is_valid].argmax()
+            best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
+            
+            all_selections[:, nb_selection] = [best_cluster_ind, peak_index]
+            nb_selection += 1
+
+            selection = all_selections[:, :nb_selection]
+
+            res_sps = full_sps[selection[0], selection[1]]
+
+            delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
+            idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
+
+            myline = neighbor_window + delta_t[idx]
+            cached_overlaps[selection[0, -1]] = overlaps[selection[0, -1]].toarray()
+            M[nb_selection-1, idx] = cached_overlaps[selection[0, -1]][selection[0, idx], myline]
+
+            if nb_selection >= (M.shape[0] - 1):
+                Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
+                Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
+                M = Z
+
+            scalar_products[best_cluster_ind, peak_index] = -np.inf
+
+            all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
+
+            diff_amplitudes = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
+
+            modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
+            final_amplitudes[selection[0], selection[1]] = all_amplitudes
+
+            for i in modified:
+
+                tmp_best, tmp_peak = selection[:, i]
+                diff_amp = diff_amplitudes[i]*norms[tmp_best]
+                
+                if not tmp_best in cached_overlaps.keys():
+                    cached_overlaps[tmp_best] = overlaps[tmp_best].toarray()
+
+                if not tmp_peak in neighbors.keys():
+                    peak_data = peak_sample_ind - peak_sample_ind[tmp_peak] 
+                    idx = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
+                    neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window}
+
+                idx = neighbors[tmp_peak]['idx']
+                tdx = neighbors[tmp_peak]['tdx']
+
+                to_add = diff_amp * cached_overlaps[tmp_best][:, tdx]
+                scalar_products[:, idx[0]:idx[1]] -= to_add
+            
+            is_valid = (scalar_products > stop_criteria)
+
+        is_valid = (final_amplitudes > min_sps)*(final_amplitudes < max_sps)
+        valid_indices = np.where(is_valid)
+
+        nb_spikes = len(valid_indices[0])
+        spikes['sample_ind'][:nb_spikes] = peak_sample_ind[valid_indices[1]]
+        spikes['channel_ind'][:nb_spikes] = peak_chan_ind[valid_indices[1]]
+        spikes['cluster_ind'][:nb_spikes] = valid_indices[0]
+        spikes['amplitude'][:nb_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
+        
+        spikes = spikes[:nb_spikes]
+        order = np.argsort(spikes['sample_ind'])
+        spikes = spikes[order]
+
+        return spikes
+
+
+class CircusPeeler(BaseTemplateMatchingEngine):
+
+    _default_params = {
+        'peak_sign': 'neg', 
+        'n_shifts': 1, 
+        'jitter' : 1, 
+        'detect_threshold': 5, 
+        'noise_levels': None, 
+        'random_chunk_kwargs': {},
+        'overlaps' : None,
+        'templates' : None,
+        'amplitudes' : None,
+        'sparsify_threshold': 0.99,
+        'max_amplitude' : 1.5,
+        'min_amplitude' : 0.5,
+        'use_sparse_matrix_threshold' : 0.25,
+        'progess_bar_steps' : True,
+    }
+
+    @classmethod
+    def _sparsify_template(cls, template, sparsify_threshold):
         channel_norms = np.linalg.norm(template, axis=0)**2
         total_norm = np.linalg.norm(template)**2
         idx = np.argsort(channel_norms)[::-1]
@@ -836,7 +1117,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         assert isinstance(d['waveform_extractor'], WaveformExtractor)
 
-        for v in ['sparsify_threshold', 'omp_min_sps','use_sparse_matrix_threshold']:
+        for v in ['sparsify_threshold', 'use_sparse_matrix_threshold']:
             assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
         
         d['nb_channels'] = d['waveform_extractor'].recording.get_num_channels()
@@ -851,7 +1132,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         if d['templates'] is None:
             d = cls._prepare_templates(d)
-            #d = cls._orthogonalize_templates(d)
             d = cls._prepare_overlaps(d)
 
         d['nbefore'] = d['waveform_extractor'].nbefore
@@ -860,17 +1140,16 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d['sym_patch'] = d['nbefore'] == d['nafter']
         #d['jitter'] = int(1e-3*d['jitter'] * recording.get_sampling_frequency())
 
-        if not d['omp']:
-            nb_segments = recording.get_num_segments()
-            if d['waveform_extractor']._params['max_spikes_per_unit'] is None:
-                nb_snippets = 1000
-            else:
-                nb_snippets = 2*d['waveform_extractor']._params['max_spikes_per_unit']
+        nb_segments = recording.get_num_segments()
+        if d['waveform_extractor']._params['max_spikes_per_unit'] is None:
+            nb_snippets = 1000
+        else:
+            nb_snippets = 2*d['waveform_extractor']._params['max_spikes_per_unit']
 
-            nb_chunks = nb_snippets // nb_segments
-            noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=nb_chunks, chunk_size=d['nb_samples'], seed=42)
-            noise_snippets = noise_snippets.reshape(nb_chunks, d['nb_samples'], d['nb_channels']).reshape(nb_chunks, -1).T
-            d = cls._optimize_amplitudes(noise_snippets, d)
+        nb_chunks = nb_snippets // nb_segments
+        noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=nb_chunks, chunk_size=d['nb_samples'], seed=42)
+        noise_snippets = noise_snippets.reshape(nb_chunks, d['nb_samples'], d['nb_channels']).reshape(nb_chunks, -1).T
+        d = cls._optimize_amplitudes(noise_snippets, d)
 
         return d        
 
@@ -901,196 +1180,83 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         overlaps = d['overlaps']
         margin = d['margin']
         norms = d['norms']
-        omp = d['omp']
-        omp_tol = np.finfo(np.float32).eps
         jitter = d['jitter']
-        omp_min_sps = d['omp_min_sps']
         patch_sizes = d['patch_sizes']
         nb_samples = d['nafter'] + d['nbefore']
         neighbor_window = nb_samples - 1
         amplitudes = d['amplitudes']
-        convolve = d['convolve']
         sym_patch = d['sym_patch']
         sparsities = d['sparsities']
         is_dense = d['is_dense']
+        
+        peak_traces = traces[margin // 2:-margin // 2, :]
+        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(peak_traces, peak_sign, abs_threholds, n_shifts)
 
-        if omp:
-            stop_criteria = omp_min_sps * norms[:, np.newaxis]
-
-        if not convolve:
-            
-            peak_traces = traces[margin // 2:-margin // 2, :]
-            peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(peak_traces, peak_sign, abs_threholds, n_shifts)
-
-            if jitter > 0:
-                jittered_peaks = peak_sample_ind[:, np.newaxis] + np.arange(-jitter, jitter)
-                jittered_channels = peak_chan_ind[:, np.newaxis] + np.zeros(2*jitter)
-                mask = (jittered_peaks > 0) & (jittered_peaks < len(peak_traces))
-                jittered_peaks = jittered_peaks[mask]
-                jittered_channels = jittered_channels[mask]
-                peak_sample_ind, unique_idx = np.unique(jittered_peaks, return_index=True)
-                peak_chan_ind = jittered_channels[unique_idx]
-            else:
-                peak_sample_ind, unique_idx = np.unique(peak_sample_ind, return_index=True)
-                peak_chan_ind = peak_chan_ind[unique_idx]
-
-            nb_peaks = len(peak_sample_ind)
-
-            if sym_patch:
-                snippets = extract_patches_2d(traces, patch_sizes)[peak_sample_ind]
-                peak_sample_ind += margin // 2
-            else:
-                peak_sample_ind += margin // 2
-                snippet_window = np.arange(-d['nbefore'], d['nafter'])
-                snippets = traces[peak_sample_ind[:, np.newaxis] + snippet_window]
-
-            if nb_peaks > 0:
-                snippets = snippets.reshape(nb_peaks, -1)
-                scalar_products = templates.dot(snippets.T)
-            else:
-                scalar_products = np.zeros((nb_templates, 0), dtype=np.float32)
+        if jitter > 0:
+            jittered_peaks = peak_sample_ind[:, np.newaxis] + np.arange(-jitter, jitter)
+            jittered_channels = peak_chan_ind[:, np.newaxis] + np.zeros(2*jitter)
+            mask = (jittered_peaks > 0) & (jittered_peaks < len(peak_traces))
+            jittered_peaks = jittered_peaks[mask]
+            jittered_channels = jittered_channels[mask]
+            peak_sample_ind, unique_idx = np.unique(jittered_peaks, return_index=True)
+            peak_chan_ind = jittered_channels[unique_idx]
         else:
+            peak_sample_ind, unique_idx = np.unique(peak_sample_ind, return_index=True)
+            peak_chan_ind = peak_chan_ind[unique_idx]
 
-            nb_peaks = len(traces) - nb_samples + 1
+        nb_peaks = len(peak_sample_ind)
 
-            if is_dense:
-                kernel_filters = templates.reshape(nb_templates, nb_samples, nb_channels)[:, ::-1, :]
-                scalar_products = scipy.signal.fftconvolve(kernel_filters, traces[np.newaxis, :, :], axes=(0, 1), mode='valid').sum(2)
-            else:
-                scalar_products = np.empty((nb_templates, nb_peaks), dtype=np.float32)
+        if sym_patch:
+            snippets = extract_patches_2d(traces, patch_sizes)[peak_sample_ind]
+            peak_sample_ind += margin // 2
+        else:
+            peak_sample_ind += margin // 2
+            snippet_window = np.arange(-d['nbefore'], d['nafter'])
+            snippets = traces[peak_sample_ind[:, np.newaxis] + snippet_window]
 
-                for i in range(nb_templates):
-                    kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
-                    kernel_filter = kernel_filter[::-1, sparsities[i]]
-
-                    convolution = scipy.signal.fftconvolve(kernel_filter, traces[:, sparsities[i]], axes=0, mode='valid')
-                    if len(convolution) > 0:
-                        scalar_products[i] = convolution.sum(1)
-                    else:
-                        scalar_products[i] = 0
-
-            peak_sample_ind = np.arange(d['nbefore'], len(traces) - d['nafter'] + 1)
-            peak_chan_ind = np.zeros(nb_peaks)
+        if nb_peaks > 0:
+            snippets = snippets.reshape(nb_peaks, -1)
+            scalar_products = templates.dot(snippets.T)
+        else:
+            scalar_products = np.zeros((nb_templates, 0), dtype=np.float32)
 
         nb_spikes = 0
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
         idx_lookup = np.arange(scalar_products.size).reshape(nb_templates, -1)
 
-        if not omp:
 
-            min_sps = (amplitudes[:, 0] * norms)[:, np.newaxis]
-            max_sps = (amplitudes[:, 1] * norms)[:, np.newaxis]
+        min_sps = (amplitudes[:, 0] * norms)[:, np.newaxis]
+        max_sps = (amplitudes[:, 1] * norms)[:, np.newaxis]
+
+        is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
+
+        while np.any(is_valid):
+
+            best_amplitude_ind = scalar_products[is_valid].argmax()
+            best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
+
+            best_amplitude = scalar_products[best_cluster_ind, peak_index]
+            best_peak_sample_ind = peak_sample_ind[peak_index]
+            best_peak_chan_ind = peak_chan_ind[peak_index]
+
+            peak_data = peak_sample_ind - peak_sample_ind[peak_index] 
+            is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
+            idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
+
+            to_add = -best_amplitude * overlaps[best_cluster_ind].toarray()[:, idx_neighbor]
+
+            scalar_products[:, is_valid[0]:is_valid[1]] += to_add
+            scalar_products[best_cluster_ind, is_valid[0]:is_valid[1]] = -np.inf
+
+            spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
+            spikes['channel_ind'][nb_spikes] = best_peak_chan_ind
+            spikes['cluster_ind'][nb_spikes] = best_cluster_ind
+            spikes['amplitude'][nb_spikes] = best_amplitude
+            nb_spikes += 1
 
             is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
 
-            while np.any(is_valid):
-
-                best_amplitude_ind = scalar_products[is_valid].argmax()
-                best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
-
-                best_amplitude = scalar_products[best_cluster_ind, peak_index]
-                best_peak_sample_ind = peak_sample_ind[peak_index]
-                best_peak_chan_ind = peak_chan_ind[peak_index]
-
-                peak_data = peak_sample_ind - peak_sample_ind[peak_index] 
-                is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
-                idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
-
-                to_add = -best_amplitude * overlaps[best_cluster_ind].toarray()[:, idx_neighbor]
-
-                scalar_products[:, is_valid[0]:is_valid[1]] += to_add
-                scalar_products[best_cluster_ind, is_valid[0]:is_valid[1]] = -np.inf
-
-                spikes['sample_ind'][nb_spikes] = best_peak_sample_ind
-                spikes['channel_ind'][nb_spikes] = best_peak_chan_ind
-                spikes['cluster_ind'][nb_spikes] = best_cluster_ind
-                spikes['amplitude'][nb_spikes] = best_amplitude
-                nb_spikes += 1
-
-                is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
-
-            spikes['amplitude'][:nb_spikes] /= norms[spikes['cluster_ind'][:nb_spikes]]
-        else:
-
-            min_sps = amplitudes[:, 0][:, np.newaxis]
-            max_sps = amplitudes[:, 1][:, np.newaxis]
-
-            M = np.zeros((nb_peaks, nb_peaks), dtype=np.float32)
-
-            all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
-            res_sps = np.zeros(0, dtype=np.float32)
-            final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
-            nb_selection = 0
-
-            full_sps = scalar_products.copy()
-
-            neighbors = {}
-            cached_overlaps = {}
-
-            is_valid = (scalar_products > stop_criteria)
-
-            while np.any(is_valid):
-
-                best_amplitude_ind = scalar_products[is_valid].argmax()
-                best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
-                
-                all_selections[:, nb_selection] = [best_cluster_ind, peak_index]
-                nb_selection += 1
-
-                selection = all_selections[:, :nb_selection]
-    
-                res_sps = full_sps[selection[0], selection[1]]
-
-                delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
-                idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
-
-                myline = neighbor_window + delta_t[idx]
-                cached_overlaps[selection[0, -1]] = overlaps[selection[0, -1]].toarray()
-                M[nb_selection-1, idx] = cached_overlaps[selection[0, -1]][selection[0, idx], myline]
-
-                if nb_selection >= (M.shape[0] - 1):
-                    Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
-                    Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
-                    M = Z
-
-                scalar_products[best_cluster_ind, peak_index] = -np.inf
-
-                all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
-
-                diff_amplitudes = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
-
-                modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
-                final_amplitudes[selection[0], selection[1]] = all_amplitudes
-
-                for i in modified:
-
-                    tmp_best, tmp_peak = selection[:, i]
-                    diff_amp = diff_amplitudes[i]*norms[tmp_best]
-                    
-                    if not tmp_best in cached_overlaps.keys():
-                        cached_overlaps[tmp_best] = overlaps[tmp_best].toarray()
-
-                    if not tmp_peak in neighbors.keys():
-                        peak_data = peak_sample_ind - peak_sample_ind[tmp_peak] 
-                        idx = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
-                        neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window}
-
-                    idx = neighbors[tmp_peak]['idx']
-                    tdx = neighbors[tmp_peak]['tdx']
-
-                    to_add = diff_amp * cached_overlaps[tmp_best][:, tdx]
-                    scalar_products[:, idx[0]:idx[1]] -= to_add
-                
-                is_valid = (scalar_products > stop_criteria)
-
-            is_valid = (final_amplitudes > min_sps)*(final_amplitudes < max_sps)
-            valid_indices = np.where(is_valid)
-
-            nb_spikes = len(valid_indices[0])
-            spikes['sample_ind'][:nb_spikes] = peak_sample_ind[valid_indices[1]]
-            spikes['channel_ind'][:nb_spikes] = peak_chan_ind[valid_indices[1]]
-            spikes['cluster_ind'][:nb_spikes] = valid_indices[0]
-            spikes['amplitude'][:nb_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
+        spikes['amplitude'][:nb_spikes] /= norms[spikes['cluster_ind'][:nb_spikes]]
         
         spikes = spikes[:nb_spikes]
         order = np.argsort(spikes['sample_ind'])
@@ -1104,4 +1270,5 @@ template_matching_methods = {
     'naive' : NaiveMatching,
     'tridesclous' : TridesclousPeeler,
     'circus' : CircusPeeler,
+    'circus-omp' : CircusOMPPeeler
 }
