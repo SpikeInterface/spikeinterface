@@ -163,6 +163,9 @@ class BaseExtractor:
 
         size = self._main_ids.size
         values = np.asarray(values)
+        dtype = values.dtype
+        dtype_kind = dtype.kind
+        
         if ids is None:
             assert values.shape[0] == size
             self._properties[key] = values
@@ -174,8 +177,7 @@ class BaseExtractor:
                 if key not in self._properties:
                     # create the property with nan or empty
                     shape = (size,) + values.shape[1:]
-                    dtype = values.dtype
-                    dtype_kind = dtype.kind
+                    
         
                     if missing_value is None:
                         if dtype_kind not in default_missing_values.keys():
@@ -193,6 +195,9 @@ class BaseExtractor:
                     empty_values = np.zeros(shape, dtype=dtype)
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
+                else:
+                    assert dtype_kind == self._properties[key].dtype.kind, ("Mismatch between existing property dtype "
+                                                                            "values dtype.")
 
                 indices = self.ids_to_indices(ids)
                 self._properties[key][indices] = values
