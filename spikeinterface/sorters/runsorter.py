@@ -58,7 +58,8 @@ def run_sorter(sorter_name, recording, gpu_to_use=None, output_folder=None,
     keyword_arguments = {
         "output_folder": output_folder,
         "remove_existing_folder": remove_existing_folder,
-        "delete_output_folder": delete_output_folder, verbose: verbose,
+        "delete_output_folder": delete_output_folder,
+        verbose: verbose,
         "raise_error": raise_error,
         "with_output": with_output
     }
@@ -73,7 +74,7 @@ def run_sorter(sorter_name, recording, gpu_to_use=None, output_folder=None,
             sorter_name, recording, 'singularity', singularity_image, **keyword_arguments, **sorter_params
         )
 
-    return run_sorter_local(sorter_name, recording, gpu_to_use=gpu_to_use, output_folder=output_folder, **keyword_arguments, **sorter_params)
+    return run_sorter_local(sorter_name, recording, gpu_to_use=gpu_to_use, **keyword_arguments, **sorter_params)
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
@@ -149,7 +150,7 @@ class ContainerClient:
       * docker with "docker" python package
       * singularity with  "spython" python package
     """
-    def __init__(self, mode, container_image, volumes, gpu_to_use=None):
+    def __init__(self, mode, container_image, volumes, gpu_to_use=None, **kwargs):
         assert mode in ('docker', 'singularity')
         self.mode = mode
 
@@ -176,7 +177,8 @@ class ContainerClient:
                 client.images.pull(container_image)
 
             self.docker_container = client.containers.create(
-                    container_image, tty=True, volumes=volumes, device_requests=device_requests)
+                container_image, tty=True, volumes=volumes, device_requests=device_requests, **kwargs
+            )
 
         elif mode == 'singularity':
             from spython.main import Client
