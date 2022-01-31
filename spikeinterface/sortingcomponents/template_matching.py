@@ -1230,6 +1230,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
 
+        cached_overlaps = {}
+
         while np.any(is_valid):
 
             best_amplitude_ind = scalar_products[is_valid].argmax()
@@ -1243,7 +1245,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
             idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
 
-            to_add = -best_amplitude * overlaps[best_cluster_ind].toarray()[:, idx_neighbor]
+            if not best_cluster_ind in cached_overlaps.keys():
+                cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
+
+            to_add = -best_amplitude * cached_overlaps[best_cluster_ind][:, idx_neighbor]
 
             scalar_products[:, is_valid[0]:is_valid[1]] += to_add
             scalar_products[best_cluster_ind, is_valid[0]:is_valid[1]] = -np.inf
