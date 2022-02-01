@@ -753,7 +753,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         new_overlaps = []
         for i in range(nb_templates):
             data = [overlaps[j][i, :].T for j in range(size)]
-            data = scipy.sparse.hstack(data).tocsc()
+            data = scipy.sparse.hstack(data)
             new_overlaps += [data]
         
         d['overlaps'] = new_overlaps
@@ -876,7 +876,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
 
             myline = neighbor_window + delta_t[idx]
-            cached_overlaps[selection[0, -1]] = overlaps[selection[0, -1]].toarray()
+            if selection[0, -1] not in cached_overlaps.keys():
+                cached_overlaps[selection[0, -1]] = overlaps[selection[0, -1]].toarray()
+
             M[nb_selection-1, idx] = cached_overlaps[selection[0, -1]][selection[0, idx], myline]
 
             if nb_selection >= (M.shape[0] - 1):
@@ -1039,7 +1041,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         new_overlaps = []
         for i in range(nb_templates):
             data = [overlaps[j][i, :].T for j in range(size)]
-            data = scipy.sparse.hstack(data).tocsc()
+            data = scipy.sparse.hstack(data)
             new_overlaps += [data]
         
         d['overlaps'] = new_overlaps
@@ -1224,7 +1226,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
         idx_lookup = np.arange(scalar_products.size).reshape(nb_templates, -1)
 
-
         min_sps = (amplitudes[:, 0] * norms)[:, np.newaxis]
         max_sps = (amplitudes[:, 1] * norms)[:, np.newaxis]
 
@@ -1241,8 +1242,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             best_peak_sample_ind = peak_sample_ind[peak_index]
             best_peak_chan_ind = peak_chan_ind[peak_index]
 
-            peak_data = peak_sample_ind - peak_sample_ind[peak_index] 
-            is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
+            peak_data = peak_sample_ind - peak_sample_ind[peak_index]
+            is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window + 1])
             idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
 
             if not best_cluster_ind in cached_overlaps.keys():
