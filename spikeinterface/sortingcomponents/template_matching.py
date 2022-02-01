@@ -6,6 +6,7 @@ import scipy.spatial
 
 from tqdm import tqdm
 import sklearn, scipy
+import scipy
 
 from threadpoolctl import threadpool_limits
 
@@ -628,21 +629,22 @@ if HAVE_NUMBA:
 # Circus peeler #
 #################
 
-@jit(nopython=True)
-def fastconvolution(traces, templates, output):
-    nb_time, nb_channels = traces.shape
-    nb_templates, nb_samples, nb_channels = templates.shape
+if HAVE_NUMBA:
+    @jit(nopython=True)
+    def fastconvolution(traces, templates, output):
+        nb_time, nb_channels = traces.shape
+        nb_templates, nb_samples, nb_channels = templates.shape
 
-    center = nb_samples // 2
+        center = nb_samples // 2
 
-    for i in range(center, nb_time - center + 1):
-        offset_1 = i - center
-        for k in range(nb_templates):
-            for jj in range(nb_samples):
-                offset_2 = offset_1 + jj
-                for j in range(nb_channels):
-                    output[k, offset_1] += (templates[k, jj, j] * traces[offset_2, j])
-    return output
+        for i in range(center, nb_time - center + 1):
+            offset_1 = i - center
+            for k in range(nb_templates):
+                for jj in range(nb_samples):
+                    offset_2 = offset_1 + jj
+                    for j in range(nb_channels):
+                        output[k, offset_1] += (templates[k, jj, j] * traces[offset_2, j])
+        return output
 
 
 class CircusOMPPeeler(BaseTemplateMatchingEngine):
@@ -991,7 +993,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         nnz = np.sum(templates != 0)/(nb_templates * nb_samples * nb_channels)
         if nnz <= use_sparse_matrix_threshold:
-            import scipy
             templates = scipy.sparse.csr_matrix(templates)
             print(f'Templates are automatically sparsified (sparsity level is {nnz})')
             d['is_dense'] = False
