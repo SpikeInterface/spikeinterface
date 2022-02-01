@@ -14,6 +14,7 @@ import numpy as np
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
+from typing import List
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
     assert sampling_frequency_max_diff >= 0
@@ -264,5 +265,38 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
 def append_sortings(*args, **kwargs):
     return AppendSegmentSorting(*args, **kwargs)
 
-
 append_sortings.__doc__ == AppendSegmentSorting.__doc__
+
+# Q: should this take as input a concatenated recording or just a list of recordings?
+class SplitSorting(BaseSorting):
+    """Splits a sorting with a single segment to multiple segments
+    based on the given list of recordings (must be in order)
+
+    Parameters
+    ----------
+    parent_sorting : BaseSorting
+        sorting with a single segment (e.g. from sorting concatenated recording)
+    recording_list : list
+        List of recordings whose lengths will be used to split the sorting
+        into smaller segments
+    """
+    def __init__(self, parent_sorting: BaseSorting, recording_list: List[BaseRecording]):
+        sampling_frequency = parent_sorting.get_sampling_frequency()
+        unit_ids = parent_sorting.unit_ids
+        BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        parent_sorting.copy_metadata(self)
+
+        num_samples = [0]
+        for recording in recording_list:
+            for recording_segment in recording._recording_segments:
+                num_samples.append(recording_segment.get_num_samples())
+        
+        cum_num_samples = np.cumsum(num_samples)
+        for idx in range(len(cum_num_samples)-1):
+            parent_sorting.frame_slice(start_frame=cum_num_samples[idx],
+                                       end_frame=cum_num_samples[idx+1])
+            sliced_segment = parent_sorting._sorting_segments[0]
+            self.add_sorting_segment(sliced_segment)
+
+        self._kwargs = {'parent_sorting': parent_sorting,
+                        'recording_list': [recording.to_dict() for recording in recording_list]}
