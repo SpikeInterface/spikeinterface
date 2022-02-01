@@ -650,22 +650,26 @@ if HAVE_NUMBA:
 class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
-        'overlaps' : None,
         'templates' : None,
-        'amplitudes' : None,
         'sparsify_threshold': 0.99,
-        'max_amplitude' : 1.5,
-        'min_amplitude' : 0.5,
+        'amplitudes' : [0.5, 1.5],
         'use_sparse_matrix_threshold' : 0.25,
         'omp_min_sps' : 0.5,
-        'progess_bar_steps' : True,
+        'hanning' : True,
+        'progess_bar_steps' : False,
     }
 
     @classmethod
-    def _sparsify_template(cls, template, sparsify_threshold):
+    def _sparsify_template(cls, template, sparsify_threshold, hanning=None):
 
-        channel_norms = np.linalg.norm(template, axis=0)**2
-        total_norm = np.linalg.norm(template)**2
+        if hanning is not None:
+            hanning_template = template*hanning[:, np.newaxis]
+            channel_norms = np.linalg.norm(hanning_template, axis=0)**2
+            total_norm = np.linalg.norm(hanning_template)**2
+        else:
+            channel_norms = np.linalg.norm(template, axis=0)**2
+            total_norm = np.linalg.norm(template)**2
+
         idx = np.argsort(channel_norms)[::-1]
         explained_norms = np.cumsum(channel_norms[idx]/total_norm)
         channel = np.searchsorted(explained_norms, sparsify_threshold)
@@ -680,33 +684,35 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         nb_samples = d['nb_samples']
         nb_channels = d['nb_channels']
         nb_templates = d['nb_templates']
-        max_amplitude = d['max_amplitude']
-        min_amplitude = d['min_amplitude']
         use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
 
         d['norms'] = np.zeros(nb_templates, dtype=np.float32)
-        d['amplitudes'] = np.zeros((nb_templates, 2), dtype=np.float32)
 
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
 
         d['sparsities'] = {}
+
+        if d['hanning']:
+            han_before = np.hanning(2*d['nbefore'])
+            han_after = np.hanning(2*d['nafter'])
+            hanning = np.concatenate((han_before[:d['nbefore']], han_after[d['nafter']:]))
+        else:
+            hanning = None
         
         for count, unit_id in enumerate(all_units):
                 
-            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'])
+            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'], hanning)
             d['sparsities'][count] = active_channels
             
             d['norms'][count] = np.linalg.norm(templates[count])
             templates[count] /= d['norms'][count]
-            d['amplitudes'][count] = [min_amplitude, max_amplitude]
 
         templates = templates.reshape(nb_templates, -1)
 
         nnz = np.sum(templates != 0)/(nb_templates * nb_samples * nb_channels)
         if nnz <= use_sparse_matrix_threshold:
-            import scipy
             templates = scipy.sparse.csr_matrix(templates)
             print(f'Templates are automatically sparsified (sparsity level is {nnz})')
             d['is_dense'] = False
@@ -777,13 +783,12 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d['nb_channels'] = d['waveform_extractor'].recording.get_num_channels()
         d['nb_samples'] = d['waveform_extractor'].nsamples
         d['nb_templates'] = len(d['waveform_extractor'].sorting.unit_ids)
+        d['nbefore'] = d['waveform_extractor'].nbefore
+        d['nafter'] = d['waveform_extractor'].nafter
 
         if d['templates'] is None:
             d = cls._prepare_templates(d)
             d = cls._prepare_overlaps(d)
-
-        d['nbefore'] = d['waveform_extractor'].nbefore
-        d['nafter'] = d['waveform_extractor'].nafter
 
         return d        
 
@@ -815,7 +820,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         omp_min_sps = d['omp_min_sps']
         nb_samples = d['nafter'] + d['nbefore']
         neighbor_window = nb_samples - 1
-        amplitudes = d['amplitudes']
+        min_amplitude, max_amplitude = d['amplitudes']
         sparsities = d['sparsities']
         is_dense = d['is_dense']
 
@@ -845,9 +850,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         nb_spikes = 0
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
         idx_lookup = np.arange(scalar_products.size).reshape(nb_templates, -1)
-
-        min_sps = amplitudes[:, 0][:, np.newaxis]
-        max_sps = amplitudes[:, 1][:, np.newaxis]
 
         M = np.zeros((nb_peaks, nb_peaks), dtype=np.float32)
 
@@ -919,7 +921,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             
             is_valid = (scalar_products > stop_criteria)
 
-        is_valid = (final_amplitudes > min_sps)*(final_amplitudes < max_sps)
+        is_valid = (final_amplitudes > min_amplitude)*(final_amplitudes < max_amplitude)
         valid_indices = np.where(is_valid)
 
         nb_spikes = len(valid_indices[0])
@@ -944,9 +946,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'detect_threshold': 5, 
         'noise_levels': None, 
         'random_chunk_kwargs': {},
-        'overlaps' : None,
         'templates' : None,
-        'amplitudes' : None,
         'sparsify_threshold': 0.99,
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
@@ -977,7 +977,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
 
         d['norms'] = np.zeros(nb_templates, dtype=np.float32)
-        d['amplitudes'] = np.zeros((nb_templates, 2), dtype=np.float32)
 
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
 
@@ -992,7 +991,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             
             d['norms'][count] = np.linalg.norm(templates[count])
             templates[count] /= d['norms'][count]
-            d['amplitudes'][count] = [min_amplitude, max_amplitude]
 
         templates = templates.reshape(nb_templates, -1)
 
