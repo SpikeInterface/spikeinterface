@@ -870,7 +870,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
             res_sps = full_sps[selection[0], selection[1]]
 
-            delta_t = peak_sample_ind[selection[1]] - peak_sample_ind[selection[1, -1]]
+            delta_t = selection[1] - selection[1, -1]
             idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
 
             myline = neighbor_window + delta_t[idx]
@@ -884,10 +884,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
             scalar_products[best_cluster_ind, peak_index] = -np.inf
 
-            all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)/norms[selection[0]]
+            all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)
+            all_amplitudes /= norms[selection[0]]
 
             diff_amplitudes = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
-
             modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
             final_amplitudes[selection[0], selection[1]] = all_amplitudes
 
@@ -900,14 +900,14 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                     cached_overlaps[tmp_best] = overlaps[tmp_best].toarray()
 
                 if not tmp_peak in neighbors.keys():
-                    peak_data = peak_sample_ind - peak_sample_ind[tmp_peak] 
-                    idx = np.searchsorted(peak_data, [-neighbor_window, neighbor_window])
-                    neighbors[tmp_peak] = {'idx' : idx, 'tdx' : peak_data[idx[0]:idx[1]] + neighbor_window}
+                    idx = [max(0, tmp_peak - neighbor_window), min(nb_peaks, tmp_peak + neighbor_window + 1)]
+                    offset = [neighbor_window + idx[0] - tmp_peak, neighbor_window + idx[1] - tmp_peak]
+                    neighbors[tmp_peak] = {'idx' : idx, 'tdx' : offset}
 
                 idx = neighbors[tmp_peak]['idx']
                 tdx = neighbors[tmp_peak]['tdx']
 
-                to_add = diff_amp * cached_overlaps[tmp_best][:, tdx]
+                to_add = diff_amp * cached_overlaps[tmp_best][:, tdx[0]:tdx[1]]
                 scalar_products[:, idx[0]:idx[1]] -= to_add
             
             is_valid = (scalar_products > stop_criteria)
