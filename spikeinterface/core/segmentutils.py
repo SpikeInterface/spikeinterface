@@ -277,7 +277,7 @@ class SplitSorting(BaseSorting):
     Parameters
     ----------
     parent_sorting : BaseSorting
-        sorting with a single segment (e.g. from sorting concatenated recording)
+        Sorting with a single segment (e.g. from sorting concatenated recording)
     recording_list : list
         List of recordings whose lengths will be used to split the sorting
         into smaller segments
@@ -293,10 +293,10 @@ class SplitSorting(BaseSorting):
             for recording_segment in recording._recording_segments:
                 num_samples.append(recording_segment.get_num_samples())
         
-        cum_num_samples = np.cumsum(num_samples)
-        for idx in range(len(cum_num_samples)-1):
-            parent_sorting.frame_slice(start_frame=cum_num_samples[idx],
-                                       end_frame=cum_num_samples[idx+1])
+        cumsum_num_samples = np.cumsum(num_samples)
+        for idx in range(len(cumsum_num_samples)-1):
+            parent_sorting.frame_slice(start_frame=cumsum_num_samples[idx],
+                                       end_frame=cumsum_num_samples[idx+1])
             sliced_segment = parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
 
