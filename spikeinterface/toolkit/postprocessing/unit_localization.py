@@ -13,7 +13,7 @@ dtype_localize_by_method = {
 possible_localization_methods = list(dtype_localize_by_method.keys())
 
 
-def localize_unit(waveform_extractor, method='center_of_mass', output='numpy', **method_kwargs):
+def localize_units(waveform_extractor, method='center_of_mass', output='numpy', **method_kwargs):
     """
     Localise units in 2D or 3D with several methods given the template.
 
