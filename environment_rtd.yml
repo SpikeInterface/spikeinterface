@@ -10,6 +10,8 @@ dependencies:
   - numpy=1.20
   - pip:
     - numpy==1.20
+    - git+https://github.com/scikit-learn-contrib/hdbscan.git
+    - numba==0.54.1
     - joblib
     - tqdm
     - pillow
@@ -27,7 +29,7 @@ dependencies:
     - isosplit5
     - mountainsort4>=1.0.0
     - hdbscan
-    - tridesclous>=1.6.3
+    - tridesclous>=1.6.4
     - herdingspikes
     - sphinx-gallery
     - numpydoc
