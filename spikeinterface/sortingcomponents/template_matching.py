@@ -745,7 +745,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             source = dense_templates[:, :delay, :].reshape(nb_templates, -1)
             target = dense_templates[:, nb_samples-delay:, :].reshape(nb_templates, -1)
 
-            overlaps[delay] = scipy.sparse.csr_matrix(sklearn.metrics.pairwise.distance.cdist(source, target, lambda u,v :u.dot(v)))
+            if delay > 0:
+                overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
+            else:
+                overlaps[delay] = scipy.sparse.csr_matrix((nb_templates, nb_templates), dtype=np.float32)
             
             if delay < nb_samples:
                 overlaps[size - delay-1] = overlaps[delay].T.tocsr()
@@ -1033,7 +1036,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             source = dense_templates[:, :delay, :].reshape(nb_templates, -1)
             target = dense_templates[:, nb_samples-delay:, :].reshape(nb_templates, -1)
 
-            overlaps[delay] = scipy.sparse.csr_matrix(sklearn.metrics.pairwise.distance.cdist(source, target, lambda u,v :u.dot(v)))
+            if delay > 0:
+                overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
+            else:
+                overlaps[delay] = scipy.sparse.csr_matrix((nb_templates, nb_templates), dtype=np.float32)
             
             if delay < nb_samples:
                 overlaps[size - delay-1] = overlaps[delay].T.tocsr()
