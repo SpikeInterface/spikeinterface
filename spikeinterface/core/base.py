@@ -368,7 +368,6 @@ class BaseExtractor:
             values = self.get_property(key)
             np.save(prop_folder / (key + '.npy'), values)
 
-
     def clone(self):
         """
         Clones an existing extractor into a new instance.
@@ -544,18 +543,39 @@ class BaseExtractor:
         # This implemented in BaseRecording for probe
         pass
 
-    def save(self, **kwargs):
+    def save(self, format="folder", **kwargs):
         """
-        route save_to_folder() or save_to_mem()
+        Save a SpikeInterface object
+
+        Parameters
+        ----------
+        format: str
+            "folder" | "memory", default "folder"
+        kwargs: Keyword arguments for saving.
+             * folder: the folder path (if format is "folder")
+             * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
+             * verbose: if True output is verbose
+             * save_kwargs: additional kwargs to control parallel processing for recording:
+                * chunk_size or chunk_memory, or total_memory
+                    - chunk_size: int
+                        number of samples per chunk
+                    - chunk_memory: str
+                        Memory usage for each job (e.g. '100M', '1G'
+                    - total_memory: str
+                        Total memory usage (e.g. '500M', '2G')
+                * n_jobs: int
+                    Number of jobs to use. With -1 the number of jobs is the same as number of cores
+                * progress_bar: bool
+                    If True, a progress bar is printed
         """
-        if kwargs.get('format', None) == 'memory':
+        if format == 'memory':
             return self.save_to_memory(**kwargs)
         else:
             return self.save_to_folder(**kwargs)
 
     def save_to_memory(self, **kwargs):
         # used only by recording at the moment
-        cached = self._save(**kwargs)
+        cached = self._save(format="memory", **kwargs)
         self.copy_metadata(cached)
         return cached
 
@@ -621,7 +641,6 @@ class BaseExtractor:
                 json.dumps({'warning': 'the provenace is not dumpable!!!'}),
                 encoding='utf8'
             )
-
 
         # save data (done the subclass)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
