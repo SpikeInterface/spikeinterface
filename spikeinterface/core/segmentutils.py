@@ -295,9 +295,9 @@ class SplitSegmentSorting(BaseSorting):
         
         cumsum_num_samples = np.cumsum(num_samples)
         for idx in range(len(cumsum_num_samples)-1):
-            parent_sorting.frame_slice(start_frame=cumsum_num_samples[idx],
-                                       end_frame=cumsum_num_samples[idx+1])
-            sliced_segment = parent_sorting._sorting_segments[0]
+            sliced_parent_sorting = parent_sorting.frame_slice(start_frame=cumsum_num_samples[idx],
+                                                               end_frame=cumsum_num_samples[idx+1])
+            sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
 
         self._kwargs = {'parent_sorting': parent_sorting,
