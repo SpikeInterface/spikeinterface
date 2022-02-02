@@ -270,7 +270,7 @@ def append_sortings(*args, **kwargs):
 append_sortings.__doc__ == AppendSegmentSorting.__doc__
 
 # Q: should this take as input a concatenated recording or just a list of recordings?
-class SplitSorting(BaseSorting):
+class SplitSegmentSorting(BaseSorting):
     """Splits a sorting with a single segment to multiple segments
     based on the given list of recordings (must be in order)
 
@@ -302,3 +302,8 @@ class SplitSorting(BaseSorting):
 
         self._kwargs = {'parent_sorting': parent_sorting,
                         'recording_list': [recording.to_dict() for recording in recording_list]}
+        
+def split_sorting(*args, **kwargs):
+    return SplitSegmentSorting(*args, **kwargs)
+
+split_sorting.__doc__ == SplitSegmentSorting.__doc__
