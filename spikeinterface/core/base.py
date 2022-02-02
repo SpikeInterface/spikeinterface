@@ -553,8 +553,11 @@ class BaseExtractor:
         kwargs: Keyword arguments for saving.
             * format: "memory" or "binary" (for recording) / "memory" or "npz" for sorting.
                 In case format is not memory, the recording is saved to a folder
-                (which need to be specified with the 'folder' kwarg)
-            * folder: the folder path (if format is "folder")
+            * folder: if provided, the folder path where the object is saved
+            * name: if provided and folder is not given, the name of the folder in the global temporary
+                    folder (use set_global_tmp_folder() to change this folder) where the object is saved.
+              If folder and name are not given, the object is saved in the global temporary folder with 
+              a random string
             * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
             * verbose: if True output is verbose
             * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
@@ -569,7 +572,6 @@ class BaseExtractor:
         if format == 'memory':
             loaded_extractor = self.save_to_memory(**kwargs)
         else:
-            assert "folder" in kwargs, "Please specify the 'folder' argument when saving."
             loaded_extractor = self.save_to_folder(**kwargs)
         return loaded_extractor
 
