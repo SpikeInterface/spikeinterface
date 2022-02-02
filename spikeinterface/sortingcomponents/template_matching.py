@@ -774,7 +774,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         
         if d['noise_levels'] is None:
             print('CircusOMPPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording)
+            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'])
 
         d['nb_channels'] = d['waveform_extractor'].recording.get_num_channels()
         d['nb_samples'] = d['waveform_extractor'].nsamples
@@ -951,9 +951,14 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     }
 
     @classmethod
-    def _sparsify_template(cls, template, sparsify_threshold):
+    def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
+
+        is_silent = template.std(0) < 0.25*noise_levels
+        template[:, is_silent] = 0
+
         channel_norms = np.linalg.norm(template, axis=0)**2
         total_norm = np.linalg.norm(template)**2
+
         idx = np.argsort(channel_norms)[::-1]
         explained_norms = np.cumsum(channel_norms[idx]/total_norm)
         channel = np.searchsorted(explained_norms, sparsify_threshold)
@@ -1128,7 +1133,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         if d['noise_levels'] is None:
             print('CircusPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording)
+            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'])
 
         d['abs_threholds'] = d['noise_levels'] * d['detect_threshold']
 
