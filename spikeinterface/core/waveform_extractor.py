@@ -80,7 +80,7 @@ class WaveformExtractor:
         txt = f'{clsname}: {nchan} channels - {nunits} units - {nseg} segments'
         if len(self._params) > 0:
             max_spikes_per_unit = self._params['max_spikes_per_unit']
-            txt = txt + f'\n  before:{self.nbefore} after{self.nafter} n_per_units: {max_spikes_per_unit}'
+            txt = txt + f'\n  before:{self.nbefore} after:{self.nafter} n_per_units:{max_spikes_per_unit}'
         return txt
 
     @classmethod
@@ -129,14 +129,14 @@ class WaveformExtractor:
         """
         This maintains a list of possible extensions that are available.
         It depends on the imported submodules (e.g. for toolkit module).
-        
+
         For instance:
         import spikeinterface as si
         si.WaveformExtractor.extensions == []
 
         from spikeinterface.toolkit import WaveformPrincipalComponent
         si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
-        
+
         """
         assert issubclass(extension_class, BaseWaveformExtractorExtension)
         assert extension_class.extension_name is not None, 'extension_name must not be None'
@@ -207,7 +207,7 @@ class WaveformExtractor:
         Browse persistent extensions in the folder.
         Return a list of classes.
         Then instances can be loaded with we.load_extension(extension_name)
-        
+
         Importante note: extension modules need to be loaded (and so registered)
         before this call, otherwise extensions will be ignored even if the folder
         exists.
@@ -217,18 +217,18 @@ class WaveformExtractor:
         extensions_in_folder: list
             A list of class of computed extension inthis folder
         """
-        extensions_in_folder =  []
+        extensions_in_folder = []
         for extension_class in self.extensions:
             if self.is_extension(extension_class.extension_name):
                 extensions_in_folder.append(extension_class)
         return extensions_in_folder
-    
+
     def get_available_extension_names(self):
         """
         Browse persistent extensions in the folder.
         Return a list of extensions by name.
         Then instances can be loaded with we.load_extension(extension_name)
-        
+
         Importante note: extension modules need to be loaded (and so registered)
         before this call, otherwise extensions will be ignored even if the folder
         exists.
