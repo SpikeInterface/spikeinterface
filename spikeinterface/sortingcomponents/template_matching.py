@@ -889,7 +889,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
             scalar_products[best_cluster_ind, peak_index] = -np.inf
 
-            all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)
+            all_amplitudes = np.linalg.solve(M[:nb_selection, :nb_selection], res_sps)
             all_amplitudes /= norms[selection[0]]
 
             diff_amplitudes = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
