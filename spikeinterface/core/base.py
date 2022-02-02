@@ -13,6 +13,7 @@ import numpy as np
 
 from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json
+from .job_tools import _shared_job_kwargs_doc
 
 
 class BaseExtractor:
@@ -369,7 +370,6 @@ class BaseExtractor:
             values = self.get_property(key)
             np.save(prop_folder / (key + '.npy'), values)
 
-
     def clone(self):
         """
         Clones an existing extractor into a new instance.
@@ -547,12 +547,36 @@ class BaseExtractor:
 
     def save(self, **kwargs):
         """
-        route save_to_folder() or save_to_mem()
+        Save a SpikeInterface object
+
+        Parameters
+        ----------
+        kwargs: Keyword arguments for saving.
+            * format: "memory" or "binary" (for recording) / "memory" or "npz" for sorting.
+                In case format is not memory, the recording is saved to a folder
+            * folder: if provided, the folder path where the object is saved
+            * name: if provided and folder is not given, the name of the folder in the global temporary
+                    folder (use set_global_tmp_folder() to change this folder) where the object is saved.
+              If folder and name are not given, the object is saved in the global temporary folder with 
+              a random string
+            * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
+            * verbose: if True output is verbose
+            * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
+            {}
+
+        Returns
+        -------
+        loaded_extractor: BaseRecording or BaseSorting
+            The reference to the saved object after it is loaded back
         """
-        if kwargs.get('format', None) == 'memory':
-            return self.save_to_memory(**kwargs)
+        format = kwargs.get('format', None)
+        if format == 'memory':
+            loaded_extractor = self.save_to_memory(**kwargs)
         else:
-            return self.save_to_folder(**kwargs)
+            loaded_extractor = self.save_to_folder(**kwargs)
+        return loaded_extractor
+
+    save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
     def save_to_memory(self, **kwargs):
         # used only by recording at the moment
@@ -622,7 +646,6 @@ class BaseExtractor:
                 json.dumps({'warning': 'the provenace is not dumpable!!!'}),
                 encoding='utf8'
             )
-
 
         # save data (done the subclass)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
