@@ -212,7 +212,8 @@ export_to_phy(we_TDC, './phy_folder_for_TDC',
 
 snrs = st.compute_snrs(we_TDC)
 print(snrs)
-isi_violations_rate, isi_violations_count = st.compute_isi_violations(we_TDC, isi_threshold_ms=1.5)
+si_violations_ratio, isi_violations_rate, isi_violations_count = st.compute_isi_violations(we_TDC, isi_threshold_ms=1.5)
+print(si_violations_ratio)
 print(isi_violations_rate)
 print(isi_violations_count)
 

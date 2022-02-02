@@ -32,7 +32,7 @@ print(recording)
 
 # The sorter name can be now a parameter, e.g. chosen with a command line interface or a GUI
 sorter_name = 'herdingspikes'
-sorting_HS = ss.run_sorter(sorter_name='herdingspikes', recording=recording, output_folder='my_sorter_output')
+sorting_HS = ss.run_sorter(sorter_name='herdingspikes', recording=recording, output_folder='my_sorter_output', clustering_bandwidth=8)
 print(sorting_HS.get_unit_ids())
 
 ##############################################################################
@@ -41,7 +41,9 @@ print(sorting_HS.get_unit_ids())
 
 recordings = {'toy' : recording }
 sorter_list = ['herdingspikes', 'tridesclous']
-sorting_output = ss.run_sorters(sorter_list, recordings, working_folder='tmp_some_sorters', mode_if_folder_exists='overwrite')
+sorter_params = { 'herdingspikes': {'clustering_bandwidth' : 8} }
+sorting_output = ss.run_sorters(sorter_list, recordings, working_folder='tmp_some_sorters', 
+                                mode_if_folder_exists='overwrite', sorter_params=sorter_params)
 
 ##############################################################################
 # The 'mode' argument allows to 'overwrite' the 'working_folder' (if existing), 'raise' and Exception, or 'keep' the
