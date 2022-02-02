@@ -7,6 +7,7 @@ import pickle
 import os
 import random
 import string
+import warnings
 
 import numpy as np
 
@@ -131,16 +132,31 @@ class BaseExtractor:
     def get_annotation_keys(self):
         return list(self._annotations.keys())
 
-    def set_property(self, key, values, ids=None):
+    def set_property(self, key, values, ids=None, missing_value=None):
         """
-        Set property vector:
-          * channel_property
-          * unit_property
+        Set property vector for main ids.
 
         If ids is given AND property already exists,
-        then it is modified only on a subset of channels/units
+        then it is modified only on a subset of channels/units.
+        missing_values allows to specify the values of unset 
+        properties if ids is used
 
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        values : np.array
+            Array of values for the property
+        ids : list/np.array, optional
+            List of subset of ids to set the values, by default None
+        missing_value : object, optional
+            In case the property is set on a subset of values ('ids' not None), 
+            it specifies the how the missing values should be filled, by default None.
+            The missing_value has to be specified for types int and unsigned int.
         """
+        default_missing_values = {"f": np.nan, "S": "", "U": ""}
+        
         if values is None:
             if key in self._properties:
                 self._properties.pop(key)
@@ -148,26 +164,48 @@ class BaseExtractor:
 
         size = self._main_ids.size
         values = np.asarray(values)
+        dtype = values.dtype
+        dtype_kind = dtype.kind
+        
         if ids is None:
             assert values.shape[0] == size
             self._properties[key] = values
         else:
-            if key not in self._properties:
-                # create the property with nan or empty
-                shape = (size,) + values.shape[1:]
-                if values.dtype.kind in ('i', 'f', 'S', 'U'):
-                    dtype = values.dtype
+            ids = np.array(ids)
+            assert np.unique(ids).size == ids.size, "'ids' are not unique!"
+            
+            if ids.size < size:
+                if key not in self._properties:
+                    # create the property with nan or empty
+                    shape = (size,) + values.shape[1:]
+                    
+        
+                    if missing_value is None:
+                        if dtype_kind not in default_missing_values.keys():
+                            raise Exception("For values dtypes other than float, string or unicode, the missing value "
+                                            "cannot be automatically inferred. Please specify it with the 'missing_value' "
+                                            "argument.")
+                        else:
+                            missing_value = default_missing_values[dtype_kind]
+                    else:
+                        assert dtype_kind == np.array(missing_value).dtype.kind, ("Mismatch between values and "
+                                                                                  "missing_value types. Provide a "
+                                                                                  "missing_value with the same type "
+                                                                                  "as the values.")
+                        
+                    empty_values = np.zeros(shape, dtype=dtype)
+                    empty_values[:] = missing_value
+                    self._properties[key] = empty_values
                 else:
-                    dtype = object
-                empty_values = np.zeros(shape, dtype=dtype)
-                if values.dtype.kind == 'f':
-                    empty_values = empty_values * np.nan
-                # ~ elif values.dtype.kind == 'i':
-                # ~ # TODO find a way to put missing values
-                self._properties[key] = empty_values
+                    assert dtype_kind == self._properties[key].dtype.kind, ("Mismatch between existing property dtype "
+                                                                            "values dtype.")
 
-            indices = self.ids_to_indices(ids)
-            self._properties[key][indices] = values
+                indices = self.ids_to_indices(ids)
+                self._properties[key][indices] = values
+            else:
+                indices = self.ids_to_indices(ids)
+                self._properties[key] = np.zeros_like(values, dtype=values.dtype)
+                self._properties[key][indices] = values
 
     def get_property(self, key, ids=None):
         values = self._properties.get(key, None)
