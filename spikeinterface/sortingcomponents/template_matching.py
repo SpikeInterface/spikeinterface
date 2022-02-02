@@ -654,21 +654,20 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'sparsify_threshold': 0.99,
         'amplitudes' : [0.5, 1.5],
         'use_sparse_matrix_threshold' : 0.25,
+        'noise_levels': None,
+        'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,
-        'hanning' : True,
         'progess_bar_steps' : False,
     }
 
     @classmethod
-    def _sparsify_template(cls, template, sparsify_threshold, hanning=None):
+    def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        if hanning is not None:
-            hanning_template = template*hanning[:, np.newaxis]
-            channel_norms = np.linalg.norm(hanning_template, axis=0)**2
-            total_norm = np.linalg.norm(hanning_template)**2
-        else:
-            channel_norms = np.linalg.norm(template, axis=0)**2
-            total_norm = np.linalg.norm(template)**2
+        is_silent = template.std(0) < 0.25*noise_levels
+        template[:, is_silent] = 0
+
+        channel_norms = np.linalg.norm(template, axis=0)**2
+        total_norm = np.linalg.norm(template)**2
 
         idx = np.argsort(channel_norms)[::-1]
         explained_norms = np.cumsum(channel_norms[idx]/total_norm)
@@ -694,16 +693,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         d['sparsities'] = {}
 
-        if d['hanning']:
-            han_before = np.hanning(2*d['nbefore'])
-            han_after = np.hanning(2*d['nafter'])
-            hanning = np.concatenate((han_before[:d['nbefore']], han_after[d['nafter']:]))
-        else:
-            hanning = None
-        
         for count, unit_id in enumerate(all_units):
                 
-            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'], hanning)
+            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'], d['noise_levels'])
             d['sparsities'][count] = active_channels
             
             d['norms'][count] = np.linalg.norm(templates[count])
@@ -780,6 +772,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         for v in ['sparsify_threshold', 'omp_min_sps','use_sparse_matrix_threshold']:
             assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
         
+        if d['noise_levels'] is None:
+            print('CircusOMPPeeler : noise should be computed outside')
+            d['noise_levels'] = get_noise_levels(recording)
+
         d['nb_channels'] = d['waveform_extractor'].recording.get_num_channels()
         d['nb_samples'] = d['waveform_extractor'].nsamples
         d['nb_templates'] = len(d['waveform_extractor'].sorting.unit_ids)
