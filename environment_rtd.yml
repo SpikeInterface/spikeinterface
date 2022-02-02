@@ -26,6 +26,8 @@ dependencies:
     - neo>=0.10.0
     - probeinterface
     - MEArec>=1.7.1
+    - isosplit5
+    - mountainsort4>=1.0.0    
     - tridesclous>=1.6.4
     - herdingspikes
     - sphinx-gallery
