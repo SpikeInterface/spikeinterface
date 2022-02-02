@@ -12,6 +12,7 @@ import numpy as np
 
 from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json
+from .job_tools import _shared_job_kwargs_doc
 
 
 class BaseExtractor:
@@ -543,39 +544,40 @@ class BaseExtractor:
         # This implemented in BaseRecording for probe
         pass
 
-    def save(self, format="folder", **kwargs):
+    def save(self, **kwargs):
         """
         Save a SpikeInterface object
 
         Parameters
         ----------
-        format: str
-            "folder" | "memory", default "folder"
         kwargs: Keyword arguments for saving.
-             * folder: the folder path (if format is "folder")
-             * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
-             * verbose: if True output is verbose
-             * save_kwargs: additional kwargs to control parallel processing for recording:
-                * chunk_size or chunk_memory, or total_memory
-                    - chunk_size: int
-                        number of samples per chunk
-                    - chunk_memory: str
-                        Memory usage for each job (e.g. '100M', '1G'
-                    - total_memory: str
-                        Total memory usage (e.g. '500M', '2G')
-                * n_jobs: int
-                    Number of jobs to use. With -1 the number of jobs is the same as number of cores
-                * progress_bar: bool
-                    If True, a progress bar is printed
+            * format: "memory" or "binary" (for recording) / "memory" or "npz" for sorting.
+                In case format is not memory, the recording is saved to a folder
+                (which need to be specified with the 'folder' kwarg)
+            * folder: the folder path (if format is "folder")
+            * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
+            * verbose: if True output is verbose
+            * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
+            {}
+
+        Returns
+        -------
+        loaded_extractor: BaseRecording or BaseSorting
+            The reference to the saved object after it is loaded back
         """
+        format = kwargs.get('format', None)
         if format == 'memory':
-            return self.save_to_memory(**kwargs)
+            loaded_extractor = self.save_to_memory(**kwargs)
         else:
-            return self.save_to_folder(**kwargs)
+            assert "folder" in kwargs, "Please specify the 'folder' argument when saving."
+            loaded_extractor = self.save_to_folder(**kwargs)
+        return loaded_extractor
+
+    save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
     def save_to_memory(self, **kwargs):
         # used only by recording at the moment
-        cached = self._save(format="memory", **kwargs)
+        cached = self._save(**kwargs)
         self.copy_metadata(cached)
         return cached
 
