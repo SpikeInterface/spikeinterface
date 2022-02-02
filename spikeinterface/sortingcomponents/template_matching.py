@@ -987,7 +987,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         
         for count, unit_id in enumerate(all_units):
                 
-            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'])
+            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'], d['noise_levels'])
             d['sparsities'][count] = active_channels
             
             d['norms'][count] = np.linalg.norm(templates[count])
