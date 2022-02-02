@@ -4,6 +4,7 @@ from copy import deepcopy
 import weakref
 import json
 import pickle
+import os
 import random
 import string
 import warnings
@@ -649,12 +650,14 @@ def _make_paths_relative(d, relative):
             if "path" in k:
                 # paths can be str or list of str
                 if isinstance(d[k], str):
-                    d[k] = str(Path(d[k]).relative_to(relative))
+                    # we use os.path.relpath here to allow for relative paths with respect to shared root
+                    d[k] = os.path.relpath(str(d[k]), start=str(relative.absolute()))
                 else:
                     assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
                     relative_paths = []
                     for path in d[k]:
-                        relative_paths.append(str(Path(path).relative_to(relative)))
+                        # we use os.path.relpath here to allow for relative paths with respect to shared root
+                        relative_paths.append(os.path.relpath(str(path), start=str(relative.absolute())))
                     d[k] = relative_paths
         return d
 
