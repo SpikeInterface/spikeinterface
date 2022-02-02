@@ -213,12 +213,21 @@ def test_portability():
 
     # save with relative paths
     we = extract_waveforms(recording, sorting, wf_folder, use_relative_path=True)
-    
+
     # move all to a separate folder
     shutil.copytree(folder_to_move, folder_moved)
     wf_folder_moved = folder_moved / "waveform_extractor"
     we_loaded = extract_waveforms(recording, sorting, wf_folder_moved, load_if_exists=True)
     
+    assert we_loaded.recording is not None
+    assert we_loaded.sorting is not None
+
+    assert np.allclose(
+        we.recording.get_channel_ids(), we_loaded.recording.get_channel_ids())
+    assert np.allclose(
+        we.sorting.get_unit_ids(), we_loaded.sorting.get_unit_ids())
+
+
     for unit in we.sorting.get_unit_ids():
         wf = we.get_waveforms(unit_id=unit)
         wf_loaded = we_loaded.get_waveforms(unit_id=unit)

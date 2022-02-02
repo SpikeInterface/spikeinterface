@@ -198,6 +198,7 @@ class ContainerClient:
     def stop(self):
         if self.mode == 'docker':
             self.docker_container.stop()
+            self.docker_container.remove(force=True)
         elif self.mode == 'singularity':
             self.client_instance.stop()
 
