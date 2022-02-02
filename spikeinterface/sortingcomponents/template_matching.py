@@ -877,10 +877,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
 
             myline = neighbor_window + delta_t[idx]
-            if selection[0, -1] not in cached_overlaps.keys():
-                cached_overlaps[selection[0, -1]] = overlaps[selection[0, -1]].toarray()
+            if best_cluster_ind not in cached_overlaps.keys():
+                cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
 
-            M[nb_selection-1, idx] = cached_overlaps[selection[0, -1]][selection[0, idx], myline]
+            M[nb_selection-1, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
 
             if nb_selection >= (M.shape[0] - 1):
                 Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
@@ -889,7 +889,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
             scalar_products[best_cluster_ind, peak_index] = -np.inf
 
-            all_amplitudes = np.linalg.solve(M[:nb_selection, :nb_selection], res_sps)
+            all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)
             all_amplitudes /= norms[selection[0]]
 
             diff_amplitudes = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
