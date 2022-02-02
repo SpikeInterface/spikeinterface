@@ -269,7 +269,6 @@ def append_sortings(*args, **kwargs):
 
 append_sortings.__doc__ == AppendSegmentSorting.__doc__
 
-# Q: should this take as input a concatenated recording or just a list of recordings?
 class SplitSegmentSorting(BaseSorting):
     """Splits a sorting with a single segment to multiple segments
     based on the given list of recordings (must be in order)
@@ -278,15 +277,29 @@ class SplitSegmentSorting(BaseSorting):
     ----------
     parent_sorting : BaseSorting
         Sorting with a single segment (e.g. from sorting concatenated recording)
-    recording_list : list
-        List of recordings whose lengths will be used to split the sorting
+    recording_list : list of recordings, ConcatenateSegmentRecording, or None
+        If list of recordings, uses the lengths of those recordings to split the sorting
         into smaller segments
+        If ConcatenateSegmentRecording, uses the associated list of recordings to split
+        the sorting into smaller segments
+        If None, looks for the recording associated with the sorting
     """
-    def __init__(self, parent_sorting: BaseSorting, recording_list: List[BaseRecording]):
+    def __init__(self, parent_sorting: BaseSorting, recording_or_recording_list):
+        assert parent_sorting.get_num_segments() != 1, "The sorting must have only one segment."
         sampling_frequency = parent_sorting.get_sampling_frequency()
         unit_ids = parent_sorting.unit_ids
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         parent_sorting.copy_metadata(self)
+        
+        if isinstance(recording_or_recording_list, list):
+            # how to make sure this list only contains recordings (of possibly various types)?
+            recording_list = recording_or_recording_list
+        elif isinstance(recording_or_recording_list, ConcatenateSegmentRecording):
+            recording_list = recording_or_recording_list.recording_list
+        elif recording_or_recording_list is None:
+            recording_list = [parent_sorting._recording]
+        else:
+            raise TypeError("`recording_or_recording_list` must be a list of recordings, ConcatenateSegmentRecording, or None")
 
         num_samples = [0]
         for recording in recording_list:
