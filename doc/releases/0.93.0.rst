@@ -1,0 +1,29 @@
+.. _release0.93.0:
+
+SpikeInterface 0.93.0 release notes
+-----------------------------------
+
+4th February 2022
+
+
+
+core:
+
+extractors:
+  
+sorters:
+  
+toolkit:
+
+  
+comparison:
+  
+widgets:
+
+
+export:
+
+sortingcomponents:
+  
+doc:
+
