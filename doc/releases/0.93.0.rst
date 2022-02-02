@@ -6,14 +6,46 @@ SpikeInterface 0.93.0 release notes
 4th February 2022
 
 
+* add WaveformExtractorExtension (PC, qualitymetrics, spike amplitudes)
+  Some processing are save in subfolder in generic fashion
+* add singularity integration  in run_sorter
+* add template_matching module
+
+
 
 core:
+  * fix timestamps when from h5py
+  * Allow concatenation of datasets with diff srate
+  * Propagate properties in Recording and Sorting OldToNew wrappers 
+  * add WaveformExtractorExtension.
+  * Fix old to new scaling
+  * Implement filter_units() in waveform extractor and extensions
+  * Make waveform cache to memory optional
+  * refactor old<->new API
+  * Add recording link to sorting
+  * Add 'missing_value' to set_property
+  * Improve portability of WaveformExtractor
+
 
 extractors:
+  * Fix KS keep_good_only query
+  * Remove __del__ from nwbextractor
+  * various fix
+
   
 sorters:
+  * singularity integration 
+  * Enhance container handling
+  * Matlab compiled IronClust
   
 toolkit:
+  * whiteen by property
+  * fix unit_localization
+  * fix slice in get_chunk_with_margin
+  * Fix 'single' common referencing
+  * enable n_jobs >= 2 compute_spike_amplitudes
+  * fix gain/offset shape
+  * Fix peak sign for amplitude cutoffs
 
   
 comparison:
@@ -22,8 +54,16 @@ widgets:
 
 
 export:
+  * fix export_to_phy
+  * Add quality metrics and SI unit ids to phy tsv
+  
 
 sortingcomponents:
+  * start sampling peak
+  * start motion estimation module
+  * start motion estimation correction
+  * add template_matching module
   
 doc:
-
+  * various improvements
+  * fix some typos

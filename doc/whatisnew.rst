@@ -24,7 +24,10 @@ NEW API
 Version 0.93.0
 ==============
 
-* 
+* add WaveformExtractorExtension (PC, qualitymetrics, spike amplitudes)
+  Some processing are save in subfolder in generic fashion
+* add singularity integration  in run_sorter
+* add template_matching module
 
 
 Version 0.92.0
