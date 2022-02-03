@@ -28,6 +28,10 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_
 from sklearn.feature_extraction.image import extract_patches_2d, reconstruct_from_patches_2d
 from sklearn.linear_model import orthogonal_mp_gram
 
+potrs, = scipy.linalg.get_lapack_funcs(('potrs',), dtype=np.float32)
+
+nrm2, = scipy.linalg.get_blas_funcs(('nrm2', ), dtype=np.float32)
+
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
@@ -812,6 +816,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         overlaps = d['overlaps']
         margin = d['margin']
         norms = d['norms']
+        nbefore = d['nbefore']
+        nafter = d['nafter']
         omp_tol = np.finfo(np.float32).eps
         omp_min_sps = d['omp_min_sps']
         nb_samples = d['nafter'] + d['nbefore']
@@ -873,6 +879,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
             res_sps = full_sps[selection[0], selection[1]]
 
+            mb_selection = nb_selection - 1
+
             delta_t = selection[1] - selection[1, -1]
             idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
 
@@ -880,16 +888,27 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             if best_cluster_ind not in cached_overlaps.keys():
                 cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
 
-            M[nb_selection-1, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
+            M[mb_selection, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
 
             if nb_selection >= (M.shape[0] - 1):
                 Z = np.zeros((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
                 Z[:nb_selection, :nb_selection] = M[:nb_selection, :nb_selection]
                 M = Z
 
-            scalar_products[best_cluster_ind, peak_index] = -np.inf
+            if mb_selection > 0:
+                scipy.linalg.solve_triangular(M[:mb_selection, :mb_selection], M[mb_selection, :mb_selection], trans=0,
+                 lower=1,
+                 overwrite_b=True,
+                 check_finite=False)
 
-            all_amplitudes = scipy.linalg.solve(M[:nb_selection, :nb_selection], res_sps, assume_a='sym', check_finite=False, lower=True, overwrite_b=True)
+                v = nrm2(M[mb_selection, :mb_selection]) ** 2
+                if 1 - v <= omp_tol:  # selected atoms are dependent
+                    break
+                M[mb_selection, mb_selection] = np.sqrt(1 - v)
+
+            all_amplitudes, _ = potrs(M[:nb_selection, :nb_selection], res_sps,
+                lower=True, overwrite_b=False)
+
             all_amplitudes /= norms[selection[0]]
 
             diff_amplitudes = (all_amplitudes - final_amplitudes[selection[0], selection[1]])
@@ -914,6 +933,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
                 to_add = diff_amp * cached_overlaps[tmp_best][:, tdx[0]:tdx[1]]
                 scalar_products[:, idx[0]:idx[1]] -= to_add
+
+            scalar_products[best_cluster_ind, peak_index] = -np.inf
             
             is_valid = (scalar_products > stop_criteria)
 
