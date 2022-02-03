@@ -87,7 +87,6 @@ class DriftOverTimeWidget(BaseWidget):
         all_depth = np.sort(all_depth)
 
         if self.mode == 'heatmap':
-            ndepth = all_depth.size
             step = np.min(np.diff(all_depth))
             depth_bins = np.arange(np.min(all_depth), np.max(all_depth) + step, step)
 
@@ -108,9 +107,8 @@ class DriftOverTimeWidget(BaseWidget):
 
             kwargs = dict()
             kwargs.update(self.imshow_kwargs)
-            im = self.ax.imshow(peak_density, interpolation='nearest',
-                                origin='lower', aspect='auto', extent=extent, **kwargs)
-            
+            self.ax.imshow(peak_density, interpolation='nearest',
+                           origin='lower', aspect='auto', extent=extent, **kwargs)
         elif self.mode == 'scatter':
             times = peaks['sample_ind'] / fs
             depths = positions[peaks['channel_ind'], self.probe_axis]
@@ -125,7 +123,7 @@ class DriftOverTimeWidget(BaseWidget):
         self.ax.set_xlabel('time (s)')
         txt_axis = ['x', 'y'][self.probe_axis]
         self.ax.set_ylabel(f'{txt_axis} (um)')
-        
+
 
 def plot_drift_over_time(*args, **kwargs):
     W = DriftOverTimeWidget(*args, **kwargs)
@@ -137,25 +135,26 @@ plot_drift_over_time.__doc__ = DriftOverTimeWidget.__doc__
 
 
 ##########
-# Some function for checking estimate_motion
-
-
+# Some function for checking estimate_motion
 class PairwiseDisplacementWidget(BaseWidget):
     """
-    Widget for checking pairwise displacement 
+    Widget for checking pairwise displacement
     Need to run  function `estimate_motion` with
     output_extra_check=True
 
 
     Parameters
     ----------
-    motion
-    
-    temporal_bins
-    
-    spatial_bins
-    
-    extra_check
+    motion: np.array 2D
+        motion.shape[0] equal temporal_bins.shape[0]
+        motion.shape[1] equal 1 when "rigid" motion
+                        equal temporal_bins.shape[0] when "none rigid"
+    temporal_bins: np.array
+        Temporal bins in second.
+    spatial_bins: None or np.array
+        Bins for non-rigid motion. If None, rigid motion is used
+    extra_check: dict
+        Extra dictionary given by displacement functions
 
     Returns
     -------
@@ -203,7 +202,7 @@ class PairwiseDisplacementWidget(BaseWidget):
             else:
                 depth = self.spatial_bins[i]
                 ax.set_title(f'{depth} um')
-        
+
         self.figure.colorbar(ims[-1], ax=self.axes.flatten()[:n])
         self.figure.suptitle('pairwise displacement')
 
@@ -213,35 +212,38 @@ def plot_pairwise_displacement(*args, **kwargs):
     W.plot()
     return W
 
+
 plot_pairwise_displacement.__doc__ = PairwiseDisplacementWidget.__doc__
 
 
 class DisplacementWidget(BaseWidget):
     """
-    Widget for checking pairwise displacement 
+    Widget for checking pairwise displacement
     Need to run  function `estimate_motion` with
     output_extra_check=True
 
 
     Parameters
     ----------
-    motion
-    
-    temporal_bins
-    
-    spatial_bins
-    
-    extra_check
+    motion: np.array 2D
+        motion.shape[0] equal temporal_bins.shape[0]
+        motion.shape[1] equal 1 when "rigid" motion
+                        equal temporal_bins.shape[0] when "none rigid"
+    temporal_bins: np.array
+        Temporal bins in second.
+    spatial_bins: None or np.array
+        Bins for non-rigid motion. If None, rigid motion is used
+    extra_check: dict
+        Extra dictionary given by displacement functions
 
     Returns
     -------
     W: DisplacementWidget
         The output widget
     """
-
     def __init__(self, motion, temporal_bins, spatial_bins, extra_check,
-                with_histogram=True,
-                figure=None, ax=None):
+                 with_histogram=True,
+                 figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
         self.motion = motion
@@ -250,7 +252,6 @@ class DisplacementWidget(BaseWidget):
         self.extra_check = extra_check
 
         self.with_histogram = with_histogram
-
 
     def plot(self):
         self._do_plot()
@@ -264,7 +265,7 @@ class DisplacementWidget(BaseWidget):
             spatial_hist_bins = self.extra_check['spatial_hist_bins']
             temporal_hist_bins = self.extra_check['temporal_hist_bins']
             extent = (temporal_hist_bins[0], temporal_hist_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
-            im = ax.imshow(
+            ax.imshow(
                 motion_histogram.T,
                 interpolation='nearest',
                 origin='lower',
@@ -282,19 +283,15 @@ class DisplacementWidget(BaseWidget):
         else:
             for i in range(n):
                 ax.plot(self.temporal_bins, self.motion[:, i] + self.spatial_bins[i], color='r')
-                
 
         ax.set_xlabel('time[s]')
         ax.set_ylabel('depth[um]')
-
-
-
-
 
 
 def plot_displacement(*args, **kwargs):
     W = DisplacementWidget(*args, **kwargs)
     W.plot()
     return W
+
 
 plot_displacement.__doc__ = DisplacementWidget.__doc__

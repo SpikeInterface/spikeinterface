@@ -1,6 +1,4 @@
 import numpy as np
-import scipy.signal
-
 from tqdm import tqdm
 
 possible_motion_estimation_methods = ['decentralized_registration', ]
@@ -40,13 +38,13 @@ def estimate_motion(recording, peaks, peak_locations=None,
     bin_um: float
         Spatial bin size in micro meter
     margin_um: float
-        Margin in um to exclude from histogram estimation and 
+        Margin in um to exclude from histogram estimation and
         non-rigid smoothing functions to avoid edge effects
     method: str
         The method to be used ('decentralized_registration')
     method_kwargs: dict
         Specific options for the chosen method.
-        * 'decentralized_registration': 
+        * 'decentralized_registration'
     non_rigid_kwargs: None or dict.
         If None then the motion is consider as rigid.
         If dict then the motion is estimated in non rigid manner with fields:
@@ -58,7 +56,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
         Display progress bar or not.
     verbose: bool
         If True, output is verbose
-        
+
     Returns
     -------
     motion: numpy array 2d
@@ -84,15 +82,15 @@ def estimate_motion(recording, peaks, peak_locations=None,
     if output_extra_check:
         extra_check = {}
 
-    if method =='decentralized_registration':
+    if method == 'decentralized_registration':
         # make 2D histogram raster
         if verbose:
             print('Computing motion histogram')
         motion_histogram, temporal_hist_bins, spatial_hist_bins = make_motion_histogram(recording, peaks,
-                                                                                   peak_locations=peak_locations, 
-                                                                                   bin_duration_s=bin_duration_s, 
-                                                                                   bin_um=bin_um,
-                                                                                   margin_um=margin_um)
+                                                                                        peak_locations=peak_locations,
+                                                                                        bin_duration_s=bin_duration_s,
+                                                                                        bin_um=bin_um,
+                                                                                        margin_um=margin_um)
         if output_extra_check:
             extra_check['motion_histogram'] = motion_histogram
             extra_check['temporal_hist_bins'] = temporal_hist_bins
@@ -104,14 +102,14 @@ def estimate_motion(recording, peaks, peak_locations=None,
         non_rigid_windows = []
         if non_rigid_kwargs is None:
             # one unique block for all depth
-            non_rigid_windows = [np.ones(motion_histogram.shape[1] , dtype='float64')]
+            non_rigid_windows = [np.ones(motion_histogram.shape[1], dtype='float64')]
             spatial_bins = None
         else:
             assert 'bin_step_um' in non_rigid_kwargs, "'non_rigid_kwargs' needs to specify the 'bin_step_um' field"
             probe = recording.get_probe()
             dim = ['x', 'y', 'z'].index(direction)
             contact_pos = probe.contact_positions[:, dim]
-            
+
             bin_step_um = non_rigid_kwargs['bin_step_um']
             min_ = np.min(contact_pos) - margin_um
             max_ = np.max(contact_pos) + margin_um
@@ -124,10 +122,9 @@ def estimate_motion(recording, peaks, peak_locations=None,
                 sigma = bin_step_um
                 win = np.exp(-(spatial_hist_bins[:-1] - win_center) ** 2 / (2 * sigma ** 2))
                 non_rigid_windows.append(win)
-            
+
             if output_extra_check:
                 extra_check['non_rigid_windows'] = non_rigid_windows
-
 
         if output_extra_check:
             extra_check['pairwise_displacement_list'] = []
@@ -170,28 +167,27 @@ def get_location_from_fields(peaks_or_locations):
 
 
 def make_motion_histogram(recording, peaks, peak_locations=None,
-                          weight_with_amplitude=False, direction='y', 
+                          weight_with_amplitude=False, direction='y',
                           bin_duration_s=1., bin_um=2., margin_um=50):
     """
-    Generate motion histogram 
+    Generate motion histogram
     """
     if peak_locations is None:
         peak_locations = get_location_from_fields(peaks)
     else:
         peak_locations = get_location_from_fields(peak_locations)
-    
+
     fs = recording.get_sampling_frequency()
     num_sample = recording.get_num_samples(segment_index=0)
     bin = int(bin_duration_s * fs)
     sample_bins = np.arange(0, num_sample+bin, bin)
     temporal_bins = sample_bins / fs
-    
+
     # contact along one axis
     probe = recording.get_probe()
     dim = ['x', 'y', 'z'].index(direction)
     contact_pos = probe.contact_positions[:, dim]
-    
-    
+
     min_ = np.min(contact_pos) - margin_um
     max_ = np.max(contact_pos) + margin_um
     spatial_bins = np.arange(min_, max_+bin_um, bin_um)
@@ -199,30 +195,28 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
     arr = np.zeros((peaks.size, 2), dtype='float64')
     arr[:, 0] = peaks['sample_ind']
     arr[:, 1] = peak_locations[:, dim]
-    
+
     if weight_with_amplitude:
         weights = np.abs(peaks['amplitude'])
     else:
         weights = None
     motion_histogram, edges = np.histogramdd(arr, bins=(sample_bins, spatial_bins), weights=weights)
-    
-    
+
     return motion_histogram, temporal_bins, spatial_bins
 
 
-def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress_bar=False): # maximum_displacement_um=400
+def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress_bar=False): 
     """
     Compute pairwise displacement
     """
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype='float32')
 
-    if method =='conv2d':
+    if method == 'conv2d':
         n = motion_hist.shape[1] // 2
         possible_displacement = np.arange(motion_hist.shape[1]) * bin_um
         possible_displacement -= possible_displacement[n]
 
-        
         # TODO find something faster
         loop = range(size)
         if progress_bar:
@@ -233,14 +227,6 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
                 conv = np.convolve(motion_hist[i, :], motion_hist[j, ::-1], mode='same')
                 ind_max = np.argmax(conv)
                 pairwise_displacement[i, j] = possible_displacement[ind_max]
-
-        # for i in range(size):
-        #     print(i, size)
-        #     conv = scipy.ndimage.convolve1d(motion_hist, motion_hist[i, ::-1], axis=1)
-        #     ind_max = np.argmax(conv, axis=1)
-        #     pairwise_displacement[i, :] = possible_displacement[ind_max]
-
-
     elif method == 'phase_cross_correlation':
         try:
             import skimage.registration
@@ -248,14 +234,12 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
             raise ImportError("To use 'phase_cross_correlation' method install scikit-image")
 
         for i in range(size):
-            print(i, size)
             for j in range(size):
-                shift, error, diffphase = skimage.registration.phase_cross_correlation(motion_hist[i, :], motion_hist[j, :])
+                shift, error, diffphase = skimage.registration.phase_cross_correlation(motion_hist[i, :], 
+                                                                                       motion_hist[j, :])
                 pairwise_displacement[i, j] = shift
-
     else:
         raise ValueError(f'method do not exists for compute_pairwise_displacement {method}')
-
 
     return pairwise_displacement
 
@@ -285,9 +269,8 @@ def compute_global_displacement(pairwise_displacement, method='gradient_descent'
             else:
                 p_prev = p.copy()
 
-
-    elif method =='robust':
-        pass
+    elif method == 'robust':
+        raise NotImplementedError
         # error_mat_S = error_mat[np.where(S != 0)]
         # W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
 
@@ -295,7 +278,7 @@ def compute_global_displacement(pairwise_displacement, method='gradient_descent'
         # W2 = W2[np.where(S != 0)]
 
         # W = (W2*W1)[:,None]
-        
+
         # I, J = np.where(S != 0)
         # V = displacement_matrix[np.where(S != 0)]
         # M = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),I)))
@@ -305,9 +288,8 @@ def compute_global_displacement(pairwise_displacement, method='gradient_descent'
         # for i in notebook.tqdm(range(n_iter)):
         #     p = lsqr(A[idx].multiply(W[idx]), V[idx]*W[idx][:,0])[0]
         #     idx = np.where(np.abs(zscore(A@p-V)) <= robust_regression_sigma)
-        # return p
-
+        # return p
     else:
-        raise ValueError(f'method do not exists for compute_global_displacement {method}')
+        raise ValueError(f"Method {method} doesn't exists for compute_global_displacement")
 
     return displacement
