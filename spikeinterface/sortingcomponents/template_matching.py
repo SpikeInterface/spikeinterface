@@ -633,28 +633,62 @@ if HAVE_NUMBA:
 # Circus peeler #
 #################
 
-if HAVE_NUMBA:
-    @jit(nopython=True)
-    def fastconvolution(traces, templates, output):
-        nb_time, nb_channels = traces.shape
-        nb_templates, nb_samples, nb_channels = templates.shape
+# if HAVE_NUMBA:
+#     @jit(nopython=True)
+#     def fastconvolution(traces, templates, output):
+#         nb_time, nb_channels = traces.shape
+#         nb_templates, nb_samples, nb_channels = templates.shape
 
-        center = nb_samples // 2
+#         center = nb_samples // 2
 
-        for i in range(center, nb_time - center + 1):
-            offset_1 = i - center
-            for k in range(nb_templates):
-                for jj in range(nb_samples):
-                    offset_2 = offset_1 + jj
-                    for j in range(nb_channels):
-                        output[k, offset_1] += (templates[k, jj, j] * traces[offset_2, j])
-        return output
+#         for i in range(center, nb_time - center + 1):
+#             offset_1 = i - center
+#             for k in range(nb_templates):
+#                 for jj in range(nb_samples):
+#                     offset_2 = offset_1 + jj
+#                     for j in range(nb_channels):
+#                         output[k, offset_1] += (templates[k, jj, j] * traces[offset_2, j])
+#         return output
 
 
 class CircusOMPPeeler(BaseTemplateMatchingEngine):
+    """
+    Orthogonal Matching Pursuit inspired from Spyking Circus sorter
+
+    https://elifesciences.org/articles/34518
+    
+    This is an Orthogonal Template Matching algorithm. For speed and 
+    memory optimization, templates are automatically sparsified if the 
+    density of the matrix falls below a given threshold. Signal is
+    convolved with the templates, and as long as some scalar products
+    are higher than a given threshold, we use a Cholesky decomposition
+    to compute the optimal amplitudes needed to reconstruct the signal.
+
+    IMPORTANT NOTE: small chunks are more efficient for such Peeler,
+    consider using 100ms chunk
+
+    Parameters
+    ----------
+    noise_levels: array
+        The noise levels, for every channels
+    random_chunk_kwargs: dict
+        Parameters for computing noise levels, if not provided (sub optimal)
+    amplitude: tuple
+        (Minimal, Maximal) amplitudes allowed for every template
+    omp_min_sps: float
+        Stopping criteria of the OMP algorithm, in percentage of the norm
+    sparsify_threshold: float
+        Templates are sparsified in order to keep only the channels necessary
+        to explain a given fraction of the total norm
+    use_sparse_matrix_threshold: float
+        If density of the templates is below a given threshold, sparse matrix
+        are used (memory efficient)
+    progress_bar_steps: bool
+        In order to display or not steps from the algorithm
+    -----
+    """
 
     _default_params = {
-        'templates' : None,
         'sparsify_threshold': 0.99,
         'amplitudes' : [0.5, 1.5],
         'use_sparse_matrix_threshold' : 0.25,
@@ -786,9 +820,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
 
-        if d['templates'] is None:
-            d = cls._prepare_templates(d)
-            d = cls._prepare_overlaps(d)
+        d = cls._prepare_templates(d)
+        d = cls._prepare_overlaps(d)
 
         return d        
 
@@ -846,7 +879,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                 else:
                     scalar_products[i] = 0
 
-        peak_sample_ind = np.arange(d['nbefore'], len(traces) - d['nafter'] + 1)
         peak_chan_ind = np.zeros(nb_peaks)
 
         nb_spikes = 0
@@ -881,7 +913,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
             mb_selection = nb_selection - 1
 
-            delta_t = selection[1] - selection[1, -1]
+            delta_t = selection[1] - peak_index
             idx = np.where(np.abs(delta_t) <= neighbor_window)[0]
 
             myline = neighbor_window + delta_t[idx]
@@ -942,8 +974,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         valid_indices = np.where(is_valid)
 
         nb_spikes = len(valid_indices[0])
-        spikes['sample_ind'][:nb_spikes] = peak_sample_ind[valid_indices[1]]
-        spikes['channel_ind'][:nb_spikes] = peak_chan_ind[valid_indices[1]]
+        spikes['sample_ind'][:nb_spikes] = valid_indices[1] + d['nbefore']
+        spikes['channel_ind'][:nb_spikes] = 0
         spikes['cluster_ind'][:nb_spikes] = valid_indices[0]
         spikes['amplitude'][:nb_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
         
@@ -956,6 +988,53 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
 class CircusPeeler(BaseTemplateMatchingEngine):
 
+    """
+    Greedy Template-matching ported from the Spyking Circus sorter
+
+    https://elifesciences.org/articles/34518
+    
+    This is a Greedy Template Matching algorithm. The idea is to detect 
+    all the peaks (negative, positive or both) above a certain threshold
+    Then, at every peak (plus or minus some jitter) we look if the signal 
+    can be explained with a scaled template. 
+    The amplitudes allowed, for every templates, are automatically adjusted 
+    in an optimal manner, to enhance the Matthew Correlation Coefficient 
+    between all spikes/templates in the waveformextractor. For speed and 
+    memory optimization, templates are automatically sparsified if the 
+    density of the matrix falls below a given threshold 
+
+    Parameters
+    ----------
+    peak_sign: str
+        Sign of the peak (neg, pos, or both)
+    n_shifts: int
+        The number of samples before/after to classify a peak (should be low)
+    jitter: int
+        The number of samples considered before/after every peak to search for
+        matches
+    detect_threshold: int
+        The detection threshold
+    noise_levels: array
+        The noise levels, for every channels
+    random_chunk_kwargs: dict
+        Parameters for computing noise levels, if not provided (sub optimal)
+    max_amplitude: float
+        Maximal amplitude allowed for every template
+    min_amplitude: float
+        Minimal amplitude allowed for every template
+    sparsify_threshold: float
+        Templates are sparsified in order to keep only the channels necessary
+        to explain a given fraction of the total norm
+    use_sparse_matrix_threshold: float
+        If density of the templates is below a given threshold, sparse matrix
+        are used (memory efficient)
+    progress_bar_steps: bool
+        In order to display or not steps from the algorithm
+    -----
+
+
+    """
+
     _default_params = {
         'peak_sign': 'neg', 
         'n_shifts': 1, 
@@ -963,7 +1042,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'detect_threshold': 5, 
         'noise_levels': None, 
         'random_chunk_kwargs': {},
-        'templates' : None,
         'sparsify_threshold': 0.99,
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
@@ -1158,9 +1236,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         d['abs_threholds'] = d['noise_levels'] * d['detect_threshold']
 
-        if d['templates'] is None:
-            d = cls._prepare_templates(d)
-            d = cls._prepare_overlaps(d)
+        d = cls._prepare_templates(d)
+        d = cls._prepare_overlaps(d)
 
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
