@@ -30,6 +30,7 @@ core:
   * sorting.get_unit_spike_train have return_times=True/False
   * Add 'missing_value' to set_property
   * Improve portability of WaveformExtractor
+  * Add SplitSegmentSorting
 
 
 extractors:
@@ -51,6 +52,7 @@ toolkit:
   * enable n_jobs >= 2 compute_spike_amplitudes
   * fix gain/offset shape
   * Fix peak sign for amplitude cutoffs
+  * Refactor template metrics
 
   
 comparison:
