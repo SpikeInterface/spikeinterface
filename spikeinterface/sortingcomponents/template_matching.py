@@ -314,6 +314,9 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         'local_radius_um': 100,
         'num_closest' : 5,
         'sample_shift': 3,
+        'ms_before': 0.8,
+        'ms_after': 1.2,
+        'num_peeler_loop':  2,
     }
     
     @classmethod
@@ -336,6 +339,23 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         # TODO load as sharedmem
         templates = we.get_all_templates(mode='average')
         d['templates'] = templates
+
+        d['nbefore'] = we.nbefore
+        d['nafter'] = we.nafter
+
+
+        nbefore_short = int(d['ms_before'] * sr / 1000.)
+        nafter_short = int(d['ms_before'] * sr / 1000.)
+        assert nbefore_short <= we.nbefore
+        assert nafter_short <= we.nafter
+        d['nbefore_short'] = nbefore_short
+        d['nafter_short'] = nafter_short
+        s0 = (we.nbefore - nbefore_short)
+        s1 = -(we.nafter - nafter_short)
+        if s1 == 0:
+            s1 = None
+        templates_short = templates[:, slice(s0,s1), :].copy()
+        d['templates_short'] = templates_short
 
         
         d['peak_shift'] = int(d['peak_shift_ms'] / 1000 * sr)
@@ -412,8 +432,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d['possible_clusters_by_channel'] = possible_clusters_by_channel
 
 
-        d['nbefore'] = we.nbefore
-        d['nafter'] = we.nafter
+        
         
         d['possible_shifts'] = np.arange(-d['sample_shift'], d['sample_shift'] +1, dtype='int64')
 
@@ -444,8 +463,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         all_spikes = []
         level = 0
         while True:
-            
-            # find spikes
             spikes = _tdc_find_spikes(traces, d, level=level)
             keep = (spikes['cluster_ind'] >= 0)
             
@@ -455,7 +472,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             
             level += 1
             
-            if level == 2:
+            if level == d['num_peeler_loop']:
                 break
         
         if len(all_spikes) > 0:
@@ -471,6 +488,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 def _tdc_find_spikes(traces, d, level=0):
         peak_sign = d['peak_sign']
         templates = d['templates']
+        templates_short = d['templates_short']
         margin = d['margin']
         possible_clusters_by_channel = d['possible_clusters_by_channel']
         
@@ -503,10 +521,14 @@ def _tdc_find_spikes(traces, d, level=0):
             possible_clusters = possible_clusters_by_channel[chan_ind]
             
             if possible_clusters.size > 0:
-                s0 = sample_ind - d['nbefore']
-                s1 = sample_ind + d['nafter']
+                #~ s0 = sample_ind - d['nbefore']
+                #~ s1 = sample_ind + d['nafter']
 
-                wf = traces[s0:s1, :]
+                #~ wf = traces[s0:s1, :]
+
+                s0 = sample_ind - d['nbefore_short']
+                s1 = sample_ind + d['nafter_short']
+                wf_short = traces[s0:s1, :]
                 
                 ## pure numpy with cluster spasity
                 # distances = np.sum(np.sum((templates[possible_clusters, :, :] - wf[None, : , :])**2, axis=1), axis=1)
@@ -517,7 +539,9 @@ def _tdc_find_spikes(traces, d, level=0):
                 
                 ## numba with cluster+channel spasity
                 union_channels = np.any(d['template_sparsity'][possible_clusters, :], axis=0)
-                distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
+                # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
+                distances = numba_sparse_dist(wf_short, templates_short, union_channels, possible_clusters)
+                
 
                 ind = np.argmin(distances)
                 cluster_ind = possible_clusters[ind]
