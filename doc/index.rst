@@ -16,14 +16,14 @@ With SpikeInterface, users can:
 
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
-- run many popular, semi-automatic spike sorters.
-- post-process sorted datasets
+- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
+- post-process sorted datasets.
 - compare and benchmark spike sorting outputs.
-- compute quality metrics to validate and curate spike sorting outputs
+- compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs.
-- export report and export to phy with one line
-- offer a powerfull Qt based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
-- have some powerfull sorting components to build your own sorter.
+- export report and export toPhy
+- offer a powerful Qt-based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- have some powerful sorting components to build your own sorter.
 
 
 .. toctree::
@@ -53,17 +53,17 @@ For more information, please have a look at:
 - A collection of analysis notebook `SpikeInterface Reports <https://spikeinterface.github.io/>`_
 
 
-**version notes**
+**Versions**
 
-- SpikeInterface get a major release in July 2021 (version 0.90.0)
+SpikeInterface get a major release in July 2021 (version 0.90.0)
 
   * breaks backward compatibility with 0.10/0.11/0.12/0.13 series
   * is not a metapackage anymore
   * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
 
-  Please see the release notes here: :ref:`release0.90.0`
+Please see the release notes here: :ref:`release0.90.0`
   
-  See the documentation for the version 0.13.0 (old API) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
+See the documentation for the version 0.13.0 (old API) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
 
 
 .. Indices and tables
