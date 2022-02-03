@@ -147,9 +147,13 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     Returns
     -------
+    isi_violations_ratio : float
+        The isi violation ratio described in [1]
     isi_violations_rate : float
         Rate of contaminating spikes as a fraction of overall rate. Higher values indicate more contamination
-
+    isi_violation_count : int
+        Number of violations
+    
     Notes
     -----
     You can interpret an ISI violations ratio value of 0.5 as meaning that contamining spikes are occurring at roughly

@@ -16,4 +16,4 @@ from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculato
 from .correlograms import compute_correlograms
 
 
-from .unit_localization import localize_unit, compute_center_of_mass
+from .unit_localization import localize_units, compute_center_of_mass
