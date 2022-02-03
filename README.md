@@ -45,6 +45,19 @@
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
+With SpikeInterface, users can:
+
+- read/write many extracellular file formats.
+- pre-process extracellular recordings.
+- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
+- post-process sorted datasets.
+- compare and benchmark spike sorting outputs.
+- compute quality metrics to validate and curate spike sorting outputs.
+- visualize recordings and spike sorting outputs.
+- export report and export toPhy
+- offer a powerful Qt-based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- have some powerful sorting components to build your own sorter.
+
 
 
 **Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
@@ -59,7 +72,7 @@ Documentation of current API release 0.12.0 is [here](https://spikeinterface.rea
 
 
 
-## How to install spikeinteface version
+## How to install spikeinteface
 
 You can install the new `spikeinterface` version with pip:
 
@@ -76,7 +89,7 @@ python setup.py install (or develop)
 cd ..
 ```
 
-## version note
+## Versions
 
 `spikeinterface` version 0.90 > 0.93:
 

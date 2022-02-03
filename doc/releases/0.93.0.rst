@@ -7,11 +7,11 @@ SpikeInterface 0.93.0 release notes
 
 
 * add WaveformExtractorExtension (PC, qualitymetrics, spike amplitudes)
-  Some processing are save in subfolder in generic fashion
+  to automatically store and retrieve processed data waveforms folder
 * add singularity integration in run_sorter
-* Sorting have a link to the recording
+* add a link to the originating recording to the sorting object
 * new framework for collision benchmark
-* Refactor comparison module and add Template comparison
+* refactor comparison module and add TemplateComparison
 * add template_matching module (experimental)
 * add motion_correction module (experimental)
 
@@ -19,45 +19,45 @@ SpikeInterface 0.93.0 release notes
 
 core:
   * fix timestamps when from h5py
-  * Allow concatenation of datasets with diff srate
-  * Propagate properties in Recording and Sorting OldToNew wrappers 
+  * allow concatenation of datasets with diff srate
+  * propagate properties in Recording and Sorting OldToNew wrappers 
   * add WaveformExtractorExtension.
-  * Fix old to new scaling
-  * Implement filter_units() in waveform extractor and extensions
-  * Make waveform cache to memory optional
+  * fix old to new scaling
+  * implement filter_units() in waveform extractor and extensions
+  * make waveform cache to memory optional
   * refactor old<->new API
-  * Sorting have a link to the recording and so 
+  * sorting have a link to the recording and so 
   * sorting.get_unit_spike_train have return_times=True/False
-  * Add 'missing_value' to set_property
-  * Improve portability of WaveformExtractor
-  * Add SplitSegmentSorting
+  * add 'missing_value' to set_property
+  * improve portability of WaveformExtractor
+  * add SplitSegmentSorting
 
 
 extractors:
-  * Fix KS keep_good_only query
-  * Remove __del__ from nwbextractor
+  * fix KS keep_good_only query
+  * remove __del__ from nwbextractor
   * various fix
 
   
 sorters:
   * singularity integration 
-  * Enhance container handling
-  * Matlab compiled IronClust
+  * enhance container handling
+  * matlab-compiled IronClust version
   
 toolkit:
-  * whiteen by property
+  * whiten by property
   * fix unit_localization
   * fix slice in get_chunk_with_margin
-  * Fix 'single' common referencing
+  * fix 'single' common referencing
   * enable n_jobs >= 2 compute_spike_amplitudes
   * fix gain/offset shape
-  * Fix peak sign for amplitude cutoffs
-  * Refactor template metrics
+  * fix peak sign for amplitude cutoffs
+  * refactor template metrics
 
   
 comparison:
   * new framework for collision benchmark
-  * Refactor comparison module and add Template comparison
+  * refactor comparison module and add TemplateComparison
 
 widgets:
   * widgets for collision benchmark
@@ -65,7 +65,7 @@ widgets:
 
 export:
   * fix export_to_phy
-  * Add quality metrics and SI unit ids to phy tsv
+  * add quality metrics and SI unit ids to phy tsv
   
 
 sortingcomponents:
