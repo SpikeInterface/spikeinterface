@@ -26,8 +26,13 @@ Version 0.93.0
 
 * add WaveformExtractorExtension (PC, qualitymetrics, spike amplitudes)
   Some processing are save in subfolder in generic fashion
-* add singularity integration  in run_sorter
-* add template_matching module
+* add singularity integration in run_sorter
+* Sorting have a link to the recording
+* new framework for collision benchmark
+* Refactor comparison module and add Template comparison
+* add template_matching module (experimental)
+* add motion_correction module (experimental)
+
 
 
 Version 0.92.0
