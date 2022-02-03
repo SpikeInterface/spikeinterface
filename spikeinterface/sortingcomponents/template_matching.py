@@ -317,6 +317,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         'ms_before': 0.8,
         'ms_after': 1.2,
         'num_peeler_loop':  2,
+        'num_template_try' : 1,
     }
     
     @classmethod
@@ -513,7 +514,6 @@ def _tdc_find_spikes(traces, d, level=0):
         possible_shifts = d['possible_shifts']
         distances_shift = np.zeros(possible_shifts.size)
 
-        # naively take the closest template
         for i in range(peak_sample_ind.size):
             sample_ind = peak_sample_ind[i]
 
@@ -542,41 +542,49 @@ def _tdc_find_spikes(traces, d, level=0):
                 # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
                 distances = numba_sparse_dist(wf_short, templates_short, union_channels, possible_clusters)
                 
-
-                ind = np.argmin(distances)
-                cluster_ind = possible_clusters[ind]
-                #~ print(scalar_product[ind])
-
-                chan_sparsity = d['template_sparsity'][cluster_ind, :]
-                template_sparse = templates[cluster_ind, :, :][:, chan_sparsity]
-
-                # find best shift
                 
-                ## pure numpy version
-                # for s, shift in enumerate(possible_shifts):
-                #     wf_shift = traces[s0 + shift: s1 + shift, chan_sparsity]
-                #     distances_shift[s] = np.sum((template_sparse - wf_shift)**2)
-                # ind_shift = np.argmin(distances_shift)
-                # shift = possible_shifts[ind_shift]
+                # DEBUG
+                #~ ind = np.argmin(distances)
+                #~ cluster_ind = possible_clusters[ind]
                 
-                ## numba version
-                numba_best_shift(traces, templates[cluster_ind, :, :], sample_ind, d['nbefore'], possible_shifts, distances_shift, chan_sparsity)
-                ind_shift = np.argmin(distances_shift)
-                shift = possible_shifts[ind_shift]
+                for ind in np.argsort(distances)[:d['num_template_try']]:
+                    cluster_ind = possible_clusters[ind]
 
-                sample_ind = sample_ind + shift
-                s0 = sample_ind - d['nbefore']
-                s1 = sample_ind + d['nafter']
-                wf_sparse = traces[s0:s1, chan_sparsity]
+                    chan_sparsity = d['template_sparsity'][cluster_ind, :]
+                    template_sparse = templates[cluster_ind, :, :][:, chan_sparsity]
 
-                # accept or not
+                    # find best shift
+                    
+                    ## pure numpy version
+                    # for s, shift in enumerate(possible_shifts):
+                    #     wf_shift = traces[s0 + shift: s1 + shift, chan_sparsity]
+                    #     distances_shift[s] = np.sum((template_sparse - wf_shift)**2)
+                    # ind_shift = np.argmin(distances_shift)
+                    # shift = possible_shifts[ind_shift]
+                    
+                    ## numba version
+                    numba_best_shift(traces, templates[cluster_ind, :, :], sample_ind, d['nbefore'], possible_shifts, distances_shift, chan_sparsity)
+                    ind_shift = np.argmin(distances_shift)
+                    shift = possible_shifts[ind_shift]
 
-                centered = wf_sparse - template_sparse
-                accepted = True
-                for other_ind, other_vector in d['closest_units'][cluster_ind]:
-                    v = np.sum(centered * other_vector)
-                    if np.abs(v) >0.5:
-                        accepted = False
+                    sample_ind = sample_ind + shift
+                    s0 = sample_ind - d['nbefore']
+                    s1 = sample_ind + d['nafter']
+                    wf_sparse = traces[s0:s1, chan_sparsity]
+
+                    # accept or not
+
+                    centered = wf_sparse - template_sparse
+                    accepted = True
+                    for other_ind, other_vector in d['closest_units'][cluster_ind]:
+                        v = np.sum(centered * other_vector)
+                        if np.abs(v) >0.5:
+                            accepted = False
+                            break
+                    
+                    if accepted:
+                        #~ if ind != np.argsort(distances)[0]:
+                            #~ print('not first one', np.argsort(distances), ind)
                         break
 
                 if accepted:
