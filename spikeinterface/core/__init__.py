@@ -31,7 +31,8 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 from .segmentutils import (
     append_recordings, AppendSegmentRecording,
     concatenate_recordings, ConcatenateSegmentRecording,
-    append_sortings, AppendSegmentSorting)
+    append_sortings, AppendSegmentSorting, 
+    split_sorting, SplitSegmentSorting)
 
 # default folder
 from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
@@ -50,4 +51,4 @@ from .waveform_extractor import WaveformExtractor, extract_waveforms
 from .datasets import download_dataset
 
 from .old_api_utils import (create_recording_from_old_extractor, create_sorting_from_old_extractor,
-                            create_extractor_from_new_recording)
+                            create_extractor_from_new_recording, create_extractor_from_new_sorting)

@@ -1,14 +1,6 @@
-"""
-test for BaseSorting are done with NpzSortingExtractor.
-but check only for BaseRecording general methods.
-"""
 import shutil
 from pathlib import Path
-import pytest
 import numpy as np
-
-from spikeinterface.core import NpzSortingExtractor, load_extractor
-from spikeinterface.core.base import BaseExtractor
 
 from spikeinterface.core.testing_tools import generate_recording, generate_sorting
 
@@ -60,7 +52,7 @@ def test_time_handling():
                                                         return_times=True)
                 rec_times = rec.get_times(segment_index=segment_index)
                 assert np.all(spike_times >= rec_times[0])
-                assert np.all(spike_times < rec_times[-1])
+                assert np.all(spike_times <= rec_times[-1])
 
 
 def test_frame_slicing():
@@ -85,7 +77,7 @@ def test_frame_slicing():
         spike_times = sort_slice.get_unit_spike_train(u, return_times=True)
         rec_times = rec_slice.get_times()
         assert np.all(spike_times >= rec_times[0])
-        assert np.all(spike_times < rec_times[-1])
+        assert np.all(spike_times <= rec_times[-1])
 
 
 if __name__ == '__main__':

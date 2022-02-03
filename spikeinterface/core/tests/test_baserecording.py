@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 import pytest
 import numpy as np
+from numpy.testing import assert_raises
 
 from probeinterface import Probe
 
@@ -58,6 +59,22 @@ def test_BaseRecording():
     rec.set_property('quality', [1., 3.3, np.nan])
     values = rec.get_property('quality')
     assert np.all(values[:2] == [1., 3.3, ])
+    
+    # missing property
+    rec.set_property('string_property', ["ciao", "bello"], ids=[0, 1])
+    values = rec.get_property('string_property')
+    assert values[2] == ""
+    
+    # setting an different type raises an error
+    assert_raises(Exception, rec.set_property, key='string_property_nan', values=["ciao", "bello"], ids=[0, 1], 
+                  missing_value=np.nan)
+    
+    # int properties without missing values raise an error
+    assert_raises(Exception, rec.set_property, key='int_property', values=[5, 6], ids=[1, 2])
+    
+    rec.set_property('int_property', [5, 6], ids=[1, 2], missing_value=200)
+    values = rec.get_property('int_property')
+    assert values.dtype.kind == "i"
     
     times0 = rec.get_times(segment_index=0)
 

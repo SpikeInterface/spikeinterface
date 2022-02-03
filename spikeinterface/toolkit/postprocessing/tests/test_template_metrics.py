@@ -26,8 +26,16 @@ def setup_module():
 
 def test_calculate_template_metrics():
     we = WaveformExtractor.load_from_folder('toy_waveforms')
-    features = calculate_template_metrics(we)
+    features = calculate_template_metrics(we, upsampling_factor=1)
     print(features)
+
+    features_up = calculate_template_metrics(we, upsampling_factor=2)
+    print(features_up)
+
+    features_sparse = calculate_template_metrics(we, upsampling_factor=2,
+                                                 sparsity_dict=dict(method="radius", 
+                                                                    radius_um=20))
+    print(features_sparse)
 
 
 if __name__ == '__main__':
