@@ -307,8 +307,16 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
     """
     Template-matching ported from Tridesclous sorter.
     
-    @Sam add short description
-    """    
+    The idea of this peeler is pretty simple.
+    1. Find peaks
+    2. order by best amplitues
+    3. find nearest template
+    4. remove it from traces.
+    5. in the residual find peaks again
+    
+    This method is quite fast but don't give exelent results to resolve
+    spike collision when templates have high similarity.
+    """
     default_params = {
         'waveform_extractor': None,
         'peak_sign': 'neg',
