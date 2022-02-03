@@ -4,14 +4,16 @@ from copy import deepcopy
 import weakref
 import json
 import pickle
-import datetime
+import os
 import random
 import string
+import warnings
 
 import numpy as np
 
 from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json
+from .job_tools import _shared_job_kwargs_doc
 
 
 class BaseExtractor:
@@ -131,16 +133,31 @@ class BaseExtractor:
     def get_annotation_keys(self):
         return list(self._annotations.keys())
 
-    def set_property(self, key, values, ids=None):
+    def set_property(self, key, values, ids=None, missing_value=None):
         """
-        Set property vector:
-          * channel_property
-          * unit_property
+        Set property vector for main ids.
 
         If ids is given AND property already exists,
-        then it is modified only on a subset of channels/units
+        then it is modified only on a subset of channels/units.
+        missing_values allows to specify the values of unset 
+        properties if ids is used
 
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        values : np.array
+            Array of values for the property
+        ids : list/np.array, optional
+            List of subset of ids to set the values, by default None
+        missing_value : object, optional
+            In case the property is set on a subset of values ('ids' not None), 
+            it specifies the how the missing values should be filled, by default None.
+            The missing_value has to be specified for types int and unsigned int.
         """
+        default_missing_values = {"f": np.nan, "S": "", "U": ""}
+        
         if values is None:
             if key in self._properties:
                 self._properties.pop(key)
@@ -148,26 +165,48 @@ class BaseExtractor:
 
         size = self._main_ids.size
         values = np.asarray(values)
+        dtype = values.dtype
+        dtype_kind = dtype.kind
+        
         if ids is None:
             assert values.shape[0] == size
             self._properties[key] = values
         else:
-            if key not in self._properties:
-                # create the property with nan or empty
-                shape = (size,) + values.shape[1:]
-                if values.dtype.kind in ('i', 'f', 'S', 'U'):
-                    dtype = values.dtype
+            ids = np.array(ids)
+            assert np.unique(ids).size == ids.size, "'ids' are not unique!"
+            
+            if ids.size < size:
+                if key not in self._properties:
+                    # create the property with nan or empty
+                    shape = (size,) + values.shape[1:]
+                    
+        
+                    if missing_value is None:
+                        if dtype_kind not in default_missing_values.keys():
+                            raise Exception("For values dtypes other than float, string or unicode, the missing value "
+                                            "cannot be automatically inferred. Please specify it with the 'missing_value' "
+                                            "argument.")
+                        else:
+                            missing_value = default_missing_values[dtype_kind]
+                    else:
+                        assert dtype_kind == np.array(missing_value).dtype.kind, ("Mismatch between values and "
+                                                                                  "missing_value types. Provide a "
+                                                                                  "missing_value with the same type "
+                                                                                  "as the values.")
+                        
+                    empty_values = np.zeros(shape, dtype=dtype)
+                    empty_values[:] = missing_value
+                    self._properties[key] = empty_values
                 else:
-                    dtype = object
-                empty_values = np.zeros(shape, dtype=dtype)
-                if values.dtype.kind == 'f':
-                    empty_values = empty_values * np.nan
-                # ~ elif values.dtype.kind == 'i':
-                # ~ # TODO find a way to put missing values
-                self._properties[key] = empty_values
+                    assert dtype_kind == self._properties[key].dtype.kind, ("Mismatch between existing property dtype "
+                                                                            "values dtype.")
 
-            indices = self.ids_to_indices(ids)
-            self._properties[key][indices] = values
+                indices = self.ids_to_indices(ids)
+                self._properties[key][indices] = values
+            else:
+                indices = self.ids_to_indices(ids)
+                self._properties[key] = np.zeros_like(values, dtype=values.dtype)
+                self._properties[key][indices] = values
 
     def get_property(self, key, ids=None):
         values = self._properties.get(key, None)
@@ -266,8 +305,6 @@ class BaseExtractor:
             # include only main properties
             dump_dict['properties'] = {k: self._properties.get(k, None) for k in self._main_properties}
 
-        # TODO include features
-
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
@@ -332,7 +369,6 @@ class BaseExtractor:
         for key in self.get_property_keys():
             values = self.get_property(key)
             np.save(prop_folder / (key + '.npy'), values)
-
 
     def clone(self):
         """
@@ -471,6 +507,9 @@ class BaseExtractor:
                     d = pickle.load(f)
             else:
                 raise ValueError(f'Impossible to load {file_path}')
+            if 'warning' in d and 'not dumpable' in d['warning']:
+                print('The extractor was not dumpable')
+                return None
             extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
 
@@ -511,12 +550,36 @@ class BaseExtractor:
 
     def save(self, **kwargs):
         """
-        route save_to_folder() or save_to_mem()
+        Save a SpikeInterface object
+
+        Parameters
+        ----------
+        kwargs: Keyword arguments for saving.
+            * format: "memory" or "binary" (for recording) / "memory" or "npz" for sorting.
+                In case format is not memory, the recording is saved to a folder
+            * folder: if provided, the folder path where the object is saved
+            * name: if provided and folder is not given, the name of the folder in the global temporary
+                    folder (use set_global_tmp_folder() to change this folder) where the object is saved.
+              If folder and name are not given, the object is saved in the global temporary folder with 
+              a random string
+            * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
+            * verbose: if True output is verbose
+            * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
+            {}
+
+        Returns
+        -------
+        loaded_extractor: BaseRecording or BaseSorting
+            The reference to the saved object after it is loaded back
         """
-        if kwargs.get('format', None) == 'memory':
-            return self.save_to_memory(**kwargs)
+        format = kwargs.get('format', None)
+        if format == 'memory':
+            loaded_extractor = self.save_to_memory(**kwargs)
         else:
-            return self.save_to_folder(**kwargs)
+            loaded_extractor = self.save_to_folder(**kwargs)
+        return loaded_extractor
+
+    save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
     def save_to_memory(self, **kwargs):
         # used only by recording at the moment
@@ -587,7 +650,6 @@ class BaseExtractor:
                 encoding='utf8'
             )
 
-
         # save data (done the subclass)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
 
@@ -614,12 +676,14 @@ def _make_paths_relative(d, relative):
             if "path" in k:
                 # paths can be str or list of str
                 if isinstance(d[k], str):
-                    d[k] = str(Path(d[k]).relative_to(relative))
+                    # we use os.path.relpath here to allow for relative paths with respect to shared root
+                    d[k] = os.path.relpath(str(d[k]), start=str(relative.absolute()))
                 else:
                     assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
                     relative_paths = []
                     for path in d[k]:
-                        relative_paths.append(str(Path(path).relative_to(relative)))
+                        # we use os.path.relpath here to allow for relative paths with respect to shared root
+                        relative_paths.append(os.path.relpath(str(path), start=str(relative.absolute())))
                     d[k] = relative_paths
         return d
 

@@ -4,7 +4,7 @@ from .basewidget import BaseWidget
 
 from probeinterface.plotting import plot_probe
 
-from spikeinterface.toolkit import localize_unit
+from spikeinterface.toolkit import localize_units
 
 from .utils import get_unit_colors
 
@@ -61,7 +61,7 @@ class UnitLocalizationWidget(BaseWidget):
         unit_ids = we.sorting.unit_ids
 
         if unit_location is None:
-            unit_location = localize_unit(we, method=self.method, **self.method_kwargs)
+            unit_location = localize_units(we, method=self.method, **self.method_kwargs)
 
         ax = self.ax
         probegroup = we.recording.get_probegroup()

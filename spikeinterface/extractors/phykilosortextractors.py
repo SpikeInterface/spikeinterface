@@ -87,8 +87,18 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                         cluster_info = cluster_info.query(f"group != '{exclude_group}'")
 
         if keep_good_only and "KSLabel" in cluster_info.columns:
-            cluster_info = cluster_info.query(f"KSLabel != 'good'")
-        unit_ids = cluster_info["cluster_id"].values
+            cluster_info = cluster_info.query("KSLabel == 'good'")
+
+        if "cluster_id" not in cluster_info.columns:
+            assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
+            cluster_info["cluster_id"] = cluster_info["id"]
+            del cluster_info["id"]
+
+        if 'si_unit_id' in cluster_info.columns:
+            unit_ids = cluster_info["si_unit_id"].values
+            del cluster_info["si_unit_id"]
+        else:
+            unit_ids = cluster_info["cluster_id"].values
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
@@ -117,7 +127,7 @@ class PhySortingSegment(BaseSortingSegment):
             spike_times = spike_times[spike_times >= start_frame]
         if end_frame is not None:
             spike_times = spike_times[spike_times < end_frame]
-        return spike_times.copy()
+        return spike_times.copy().squeeze()
 
 
 class PhySortingExtractor(BasePhyKilosortSortingExtractor):

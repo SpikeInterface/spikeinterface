@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 from .basesorting import BaseSorting, BaseSortingSegment
 
@@ -43,6 +44,10 @@ class FrameSliceSorting(BaseSorting):
 
         # copy properties and annotations
         parent_sorting.copy_metadata(self)
+
+        if parent_sorting.has_recording():
+            self.register_recording(parent_sorting._recording.frame_slice(start_frame=start_frame,
+                                                                          end_frame=end_frame))
 
         # update dump dict
         self._kwargs = {'parent_sorting': parent_sorting.to_dict(), 'start_frame': int(start_frame),
