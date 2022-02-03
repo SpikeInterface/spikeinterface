@@ -31,7 +31,8 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 from .segmentutils import (
     append_recordings, AppendSegmentRecording,
     concatenate_recordings, ConcatenateSegmentRecording,
-    append_sortings, AppendSegmentSorting)
+    append_sortings, AppendSegmentSorting, 
+    split_sorting, SplitSegmentSorting)
 
 # default folder
 from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
