@@ -82,12 +82,15 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     else:
         extremum_channels_ids = get_template_channel_sparsity(
             waveform_extractor, **sparsity_dict)
-        df_indices = []
+        unit_ids = []
+        channel_ids = []
         for unit_id, sparse_channels in extremum_channels_ids.items():
-            new_indices = [f"{unit_id}@{chan}" for chan in sparse_channels]
-            df_indices += new_indices
+            unit_ids += [unit_id] * len(sparse_channels)
+            channel_ids += list(sparse_channels)
+        multi_index = pd.MultiIndex.from_tuples(list(zip(unit_ids, channel_ids)),
+                                                names=["unit_id", "channel_id"])
         template_metrics = pd.DataFrame(
-            index=df_indices, columns=[feature_names])
+            index=multi_index, columns=[feature_names])
 
     for unit_id in unit_ids:
         template_all_chans = waveform_extractor.get_template(unit_id)
@@ -101,7 +104,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
             if sparsity_dict is None:
                 index = unit_id
             else:
-                index = f"{unit_id}@{chan_ids[i]}"
+                index = ({unit_id}, {chan_ids[i]})
             if upsampling_factor > 1:
                 assert isinstance(
                     upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
