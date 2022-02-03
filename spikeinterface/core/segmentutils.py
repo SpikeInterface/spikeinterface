@@ -137,7 +137,7 @@ class ConcatenateSegmentRecording(BaseRecording):
                     assert d['t_start'] is None, ("ConcatenateSegmentRecording does not handle t_start. "
                                                   "Use ignore_times=True to ignore time information.")
                 parent_segments.append(parent_segment)
-        rec_seg = ProxyConcatenateRecordingSegment(parent_segments, ignore_times=ignore_times)
+        rec_seg = ProxyConcatenateRecordingSegment(parent_segments, one_rec.get_sampling_frequency(), ignore_times=ignore_times)
         self.add_recording_segment(rec_seg)
 
         self._kwargs = {'recording_list': [rec.to_dict() for rec in recording_list],
@@ -145,11 +145,14 @@ class ConcatenateSegmentRecording(BaseRecording):
 
 
 class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
-    def __init__(self, parent_segments, ignore_times=True):
-        d = parent_segments[0].get_times_kwargs()
+    def __init__(self, parent_segments, sampling_frequency, ignore_times=True):
         if ignore_times:
+            d = {}
             d['t_start'] = None
             d['time_vector'] = None
+            d['sampling_frequency'] = sampling_frequency
+        else:
+            d = parent_segments[0].get_times_kwargs()
         BaseRecordingSegment.__init__(self, **d)
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
