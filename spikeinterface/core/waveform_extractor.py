@@ -80,15 +80,17 @@ class WaveformExtractor:
         txt = f'{clsname}: {nchan} channels - {nunits} units - {nseg} segments'
         if len(self._params) > 0:
             max_spikes_per_unit = self._params['max_spikes_per_unit']
-            txt = txt + f'\n  before:{self.nbefore} after{self.nafter} n_per_units: {max_spikes_per_unit}'
+            txt = txt + f'\n  before:{self.nbefore} after:{self.nafter} n_per_units:{max_spikes_per_unit}'
         return txt
 
     @classmethod
     def load_from_folder(cls, folder):
         folder = Path(folder)
-        assert folder.is_dir(), f'This folder do not exists {folder}'
-        recording = load_extractor(folder / 'recording.json')
-        sorting = load_extractor(folder / 'sorting.json')
+        assert folder.is_dir(), f'This folder does not exists {folder}'
+        recording = load_extractor(folder / 'recording.json',
+                                   base_folder=folder)
+        sorting = load_extractor(folder / 'sorting.json',
+                                 base_folder=folder)
         we = cls(recording, sorting, folder)
 
         for mode in _possible_template_modes:
@@ -100,7 +102,8 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def create(cls, recording, sorting, folder, remove_if_exists=False):
+    def create(cls, recording, sorting, folder, remove_if_exists=False,
+               use_relative_path=False):
         folder = Path(folder)
         if folder.is_dir():
             if remove_if_exists:
@@ -108,11 +111,16 @@ class WaveformExtractor:
             else:
                 raise FileExistsError('Folder already exists')
         folder.mkdir(parents=True)
+        
+        if use_relative_path:
+            relative_to = folder
+        else:
+            relative_to = None
 
         if recording.is_dumpable:
-            recording.dump(folder / 'recording.json', relative_to=None)
+            recording.dump(folder / 'recording.json', relative_to=relative_to)
         if sorting.is_dumpable:
-            sorting.dump(folder / 'sorting.json', relative_to=None)
+            sorting.dump(folder / 'sorting.json', relative_to=relative_to)
 
         return cls(recording, sorting, folder)
 
@@ -121,14 +129,14 @@ class WaveformExtractor:
         """
         This maintains a list of possible extensions that are available.
         It depends on the imported submodules (e.g. for toolkit module).
-        
+
         For instance:
         import spikeinterface as si
         si.WaveformExtractor.extensions == []
 
         from spikeinterface.toolkit import WaveformPrincipalComponent
         si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
-        
+
         """
         assert issubclass(extension_class, BaseWaveformExtractorExtension)
         assert extension_class.extension_name is not None, 'extension_name must not be None'
@@ -199,7 +207,7 @@ class WaveformExtractor:
         Browse persistent extensions in the folder.
         Return a list of classes.
         Then instances can be loaded with we.load_extension(extension_name)
-        
+
         Importante note: extension modules need to be loaded (and so registered)
         before this call, otherwise extensions will be ignored even if the folder
         exists.
@@ -209,18 +217,18 @@ class WaveformExtractor:
         extensions_in_folder: list
             A list of class of computed extension inthis folder
         """
-        extensions_in_folder =  []
+        extensions_in_folder = []
         for extension_class in self.extensions:
             if self.is_extension(extension_class.extension_name):
                 extensions_in_folder.append(extension_class)
         return extensions_in_folder
-    
+
     def get_available_extension_names(self):
         """
         Browse persistent extensions in the folder.
         Return a list of extensions by name.
         Then instances can be loaded with we.load_extension(extension_name)
-        
+
         Importante note: extension modules need to be loaded (and so registered)
         before this call, otherwise extensions will be ignored even if the folder
         exists.
@@ -811,6 +819,7 @@ def extract_waveforms(recording, sorting, folder,
                       overwrite=False,
                       return_scaled=True,
                       dtype=None,
+                      use_relative_path=False,
                       **job_kwargs):
     """
     Extracts waveform on paired Recording-Sorting objects.
@@ -843,7 +852,11 @@ def extract_waveforms(recording, sorting, folder,
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
-
+    use_relative_path: bool
+        If True, the recording and sorting paths are relative to the waveforms folder. 
+        This allows portability of the waveform folder provided that the relative paths are the same, 
+        but forces all the data files to be in the same drive.
+        Default is False.
 
     {}
 
@@ -860,7 +873,7 @@ def extract_waveforms(recording, sorting, folder,
     if load_if_exists and folder.is_dir():
         we = WaveformExtractor.load_from_folder(folder)
     else:
-        we = WaveformExtractor.create(recording, sorting, folder)
+        we = WaveformExtractor.create(recording, sorting, folder, use_relative_path=use_relative_path)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
                       return_scaled=return_scaled)
         we.run_extract_waveforms(**job_kwargs)

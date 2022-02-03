@@ -42,8 +42,8 @@ print(we)
 
 firing_rates = st.compute_firing_rate(we)
 print(firing_rates)
-isi_violations_rate, isi_violations_count = st.compute_isi_violations(we)
-print(isi_violations_rate)
+isi_violation_ratio, isi_violations_rate, isi_violations_count = st.compute_isi_violations(we)
+print(isi_violation_ratio)
 snrs = st.compute_snrs(we)
 print(snrs)
 
@@ -62,5 +62,5 @@ print(pc_metrics)
 # To compute more than one metric at once, we can use the :code:`compute_quality_metrics` function and indicate
 # which metrics we want to compute. This will return a pandas dataframe:
 
-metrics = st.compute_quality_metrics(we, waveform_principal_component=pc)
+metrics = st.compute_quality_metrics(we)
 print(metrics)
