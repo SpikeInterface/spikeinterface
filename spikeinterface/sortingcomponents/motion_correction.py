@@ -62,64 +62,7 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
 
 
 
-def channel_motions_over_time(times, channel_locations, motion, temporal_bins, spatial_bins, direction=1):
-    """
-    Interpolate the channel motion over time given motion matrix.
 
-    Parameters
-    ----------
-    times: np.array 1d
-        Times vector
-    channel_location: np.array 2d
-        Channel location with shape (n, 2) or (n, 3)
-    motion: np.array 2D
-        motion.shape[0] equal temporal_bins.shape[0]
-        motion.shape[1] equal 1 when "rigid" motion
-                        equal temporal_bins.shape[0] when "none rigid"
-    temporal_bins: np.array
-        Temporal bins in second.
-    spatial_bins: None or np.array
-        Bins for non-rigid motion. If None, rigid motion is used 
-    direction: int in (0, 1, 2)
-        Dimension of shift in channel_locations.
-    Returns
-    -------
-    channel_motions: np.array
-        Shift over time by channel
-        Shape (times.shape[0], channel_location.shape[0])
-    """
-    
-    num_chans = channel_locations.shape[0]
-    num_samples = times.shape[0]
-
-    # clip to times
-    l0 = max(0, np.searchsorted(temporal_bins, times[0], side='left') - 1)
-    l1 = np.searchsorted(temporal_bins, times[-1], side='right') + 1 
-
-    temporal_bins = temporal_bins[l0:l1]
-    motion = motion[l0:l1, :]
-
-    if spatial_bins is None:
-        # rigid motion interpolation 1D
-        f = scipy.interpolate.interp1d(temporal_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
-        channel_motions = f(times)
-        channel_motions.reshape(-1, 1)
-    else:
-        # non rigid motion interpolation 2D
-
-        # (1) inperpolate in time
-        f = scipy.interpolate.interp1d(temporal_bins, motion, kind='linear', 
-                                       axis=0, bounds_error=False, fill_value="extrapolate")
-        motion_high = f(times)
-
-        # (2) inperpolate on space
-        f = scipy.interpolate.interp1d(spatial_bins, motion_high, kind='linear', 
-                                       axis=1, bounds_error=False, fill_value="extrapolate")
-
-        locs = channel_locations[:, direction]
-        channel_motions = f(locs)
-
-    return channel_motions
 
 
 
@@ -228,6 +171,66 @@ def _get_closest_ind(array, values):
 
 
 
+def channel_motions_over_time_OLD(times, channel_locations, motion, temporal_bins, spatial_bins, direction=1):
+    """
+    Interpolate the channel motion over time given motion matrix.
+
+    Parameters
+    ----------
+    times: np.array 1d
+        Times vector
+    channel_location: np.array 2d
+        Channel location with shape (n, 2) or (n, 3)
+    motion: np.array 2D
+        motion.shape[0] equal temporal_bins.shape[0]
+        motion.shape[1] equal 1 when "rigid" motion
+                        equal temporal_bins.shape[0] when "none rigid"
+    temporal_bins: np.array
+        Temporal bins in second.
+    spatial_bins: None or np.array
+        Bins for non-rigid motion. If None, rigid motion is used 
+    direction: int in (0, 1, 2)
+        Dimension of shift in channel_locations.
+    Returns
+    -------
+    channel_motions: np.array
+        Shift over time by channel
+        Shape (times.shape[0], channel_location.shape[0])
+    """
+    
+    num_chans = channel_locations.shape[0]
+    num_samples = times.shape[0]
+
+    # clip to times
+    l0 = max(0, np.searchsorted(temporal_bins, times[0], side='left') - 1)
+    l1 = np.searchsorted(temporal_bins, times[-1], side='right') + 1 
+
+    temporal_bins = temporal_bins[l0:l1]
+    motion = motion[l0:l1, :]
+
+    if spatial_bins is None:
+        # rigid motion interpolation 1D
+        f = scipy.interpolate.interp1d(temporal_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
+        channel_motions = f(times)
+        channel_motions.reshape(-1, 1)
+    else:
+        # non rigid motion interpolation 2D
+
+        # (1) inperpolate in time
+        f = scipy.interpolate.interp1d(temporal_bins, motion, kind='linear', 
+                                       axis=0, bounds_error=False, fill_value="extrapolate")
+        motion_high = f(times)
+
+        # (2) inperpolate on space
+        f = scipy.interpolate.interp1d(spatial_bins, motion_high, kind='linear', 
+                                       axis=1, bounds_error=False, fill_value="extrapolate")
+
+        locs = channel_locations[:, direction]
+        channel_motions = f(locs)
+
+    return channel_motions
+
+
 def correct_motion_on_traces_OLD(traces, times, channel_locations, motion, temporal_bins, spatial_bins, direction=1,):
     """
     Apply inverse motion with spatial interpolation on traces.
@@ -255,7 +258,7 @@ def correct_motion_on_traces_OLD(traces, times, channel_locations, motion, tempo
     else:
         # non rigid motion = interpolation 2D
         
-        channel_motions = channel_motions_over_time(times, channel_locations, motion,
+        channel_motions = channel_motions_over_time_OLD(times, channel_locations, motion,
                                                      temporal_bins, spatial_bins, direction=direction)
 
         # print(num_samples)
@@ -297,9 +300,30 @@ from spikeinterface.toolkit.preprocessing.basepreprocessor import BasePreprocess
 
 class CorrectMotionRecording(BasePreprocessor):
     """
+    recording that correct motion on the fly given a rigid or non rigid
+    motion vector estimation.
+    
+    This internaly apply for every time bin an inverse weighted distance interpolation
+    on the original after reverse the motion.
 
+    This is still experimental at the moment.
+    
+    estimate_motion() must be call before this to get the motion vector.
+    
     Parameters
     ----------
+    recording: Recording
+        The parent recording.
+    motion: np.array 2D
+        motion.shape[0] equal temporal_bins.shape[0]
+        motion.shape[1] equal 1 when "rigid" motion
+                        equal temporal_bins.shape[0] when "none rigid"
+    temporal_bins: np.array
+        Temporal bins in second.
+    spatial_bins: None or np.array
+        Bins for non-rigid motion. If None, rigid motion is used 
+    direction: int in (0, 1, 2)
+        Dimension of shift in channel_locations.
 
     Returns
     -------
@@ -307,7 +331,7 @@ class CorrectMotionRecording(BasePreprocessor):
     name = 'correct_motion'
 
     def __init__(self, recording, motion, temporal_bins, spatial_bins, direction=1):
-
+        assert recording.get_num_segments() == 1, 'correct is handle only for one segment for the moment'
         BasePreprocessor.__init__(self, recording)
 
         channel_locations = recording.get_channel_locations()
