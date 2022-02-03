@@ -63,9 +63,9 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     Returns
     -------
     tempalte_metrics : pd.DataFrame
-        Dataframe with the computed template metrics. 
+        Dataframe with the computed template metrics.
         If 'sparsity_dict' is None, the index is the unit_id.
-        If 'sparsity_dict' is given, the index is "unit_id@channel_id"
+        If 'sparsity_dict' is given, the index is a multi-index (unit_id, channel_id)
     """
     unit_ids = waveform_extractor.sorting.unit_ids
     sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
@@ -104,7 +104,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
             if sparsity_dict is None:
                 index = unit_id
             else:
-                index = ({unit_id}, {chan_ids[i]})
+                index = (unit_id, chan_ids[i])
             if upsampling_factor > 1:
                 assert isinstance(
                     upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
