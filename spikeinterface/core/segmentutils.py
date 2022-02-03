@@ -1,12 +1,12 @@
 """
-Implementation if utils class to manipulate segment with 2 diffrents concept:
-  * append_recordings/append_sortings/append_events
-  * concatenate_recordings/ concatenate_sortings/ concatenate_events
+Implementation of utils class to manipulate segments with 2 different concept:
+  * append_recordings / append_sortings / append_events
+  * concatenate_recordings / concatenate_sortings / concatenate_events
 
 
-For instance:
-  * append_recording: given one recording with 2 segments and one recording with 3 segments give one recording with 5 segments
-  * conatenate_recording: given a list of several recording with several segment give one recording with one segment that sum the total duration
+Example:
+  * append_recording: given one recording with 2 segments and one recording with 3 segments, returns one recording with 5 segments
+  * concatenate_recording: given a list of several recordings (each with possibly multiple segments), returns one recording with one segment that is a concatenation of all the segments
 
 """
 import numpy as np
@@ -14,6 +14,7 @@ import numpy as np
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
+from typing import List
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
     assert sampling_frequency_max_diff >= 0
@@ -34,8 +35,9 @@ def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_
 
 class AppendSegmentRecording(BaseRecording):
     """
-    Return a recording that "appends" all segments from all recording
-    into one recording multi segment.
+    Takes as input a list of parent recordings each with multiple segments and
+    returns a single multi-segment recording that "appends" all segments from
+    all parent recordings.
 
     For instance, given one recording with 2 segments and one recording with
     3 segments, this class will give one recording with 5 segments
@@ -60,12 +62,11 @@ class AppendSegmentRecording(BaseRecording):
         ok1 = all(dtype == rec.get_dtype() for rec in recording_list)
         ok2 = all(np.array_equal(channel_ids, rec.channel_ids) for rec in recording_list)
         if not (ok1 and ok2):
-            raise ValueError("Recording don't have the same dtype/channel_ids")
+            raise ValueError("Recording don't have the same dtype or channel_ids")
         _check_sampling_frequencies(
             [rec.get_sampling_frequency() for rec in recording_list],
             sampling_frequency_max_diff
         )
-        
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
         rec0.copy_metadata(self)
@@ -99,14 +100,16 @@ append_recordings.__doc__ == AppendSegmentRecording.__doc__
 
 class ConcatenateSegmentRecording(BaseRecording):
     """
-    Return a recording that "concatenates" all segments from all recording
-    into one recording mono segment. The operation is lazy.
+    Return a recording that "concatenates" all segments from all parent recordings
+    into one recording with a single segment. The operation is lazy.
 
     For instance, given one recording with 2 segments and one recording with
-    3 segments, this class will give one recording with 1 segment
+    3 segments, this class will give one recording with one large segment
+    made by concatenating the 5 segments.
 
-    You can only concatenate segments if:
-      * all segments DO NOT have times
+    Time information is lost upon concatenation. By default `ignore_times` is True.
+    If it is False, you get an error unless:
+      * all segments DO NOT have times, AND
       * all segment have t_start=None
 
     Parameters
@@ -267,5 +270,61 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
 def append_sortings(*args, **kwargs):
     return AppendSegmentSorting(*args, **kwargs)
 
-
 append_sortings.__doc__ == AppendSegmentSorting.__doc__
+
+
+class SplitSegmentSorting(BaseSorting):
+    """Splits a sorting with a single segment to multiple segments
+    based on the given list of recordings (must be in order)
+
+    Parameters
+    ----------
+    parent_sorting : BaseSorting
+        Sorting with a single segment (e.g. from sorting concatenated recording)
+    recording_or_recording_list : list of recordings, ConcatenateSegmentRecording, or None
+        If list of recordings, uses the lengths of those recordings to split the sorting
+        into smaller segments
+        If ConcatenateSegmentRecording, uses the associated list of recordings to split
+        the sorting into smaller segments
+        If None, looks for the recording associated with the sorting (default None)
+    """
+    def __init__(self, parent_sorting: BaseSorting, recording_or_recording_list=None):
+        assert parent_sorting.get_num_segments() != 1, "The sorting must have only one segment."
+        sampling_frequency = parent_sorting.get_sampling_frequency()
+        unit_ids = parent_sorting.unit_ids
+        BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        parent_sorting.copy_metadata(self)
+
+        if recording_or_recording_list is None:
+            assert parent_sorting.has_recording(), ("There is no recording registered to the sorting object. "
+                                                    "Please specify the 'recording_or_recording_list' argument.")
+            recording_list = [parent_sorting._recording]
+        elif isinstance(recording_or_recording_list, list):
+            # how to make sure this list only contains recordings (of possibly various types)?
+            recording_list = recording_or_recording_list
+        elif isinstance(recording_or_recording_list, ConcatenateSegmentRecording):
+            recording_list = recording_or_recording_list.recording_list
+        else:
+            raise TypeError("'recording_or_recording_list' must be a list of recordings, "
+                            "ConcatenateSegmentRecording, or None")
+
+        num_samples = [0]
+        for recording in recording_list:
+            for recording_segment in recording._recording_segments:
+                num_samples.append(recording_segment.get_num_samples())
+
+        cumsum_num_samples = np.cumsum(num_samples)
+        for idx in range(len(cumsum_num_samples)-1):
+            sliced_parent_sorting = parent_sorting.frame_slice(start_frame=cumsum_num_samples[idx],
+                                                               end_frame=cumsum_num_samples[idx+1])
+            sliced_segment = sliced_parent_sorting._sorting_segments[0]
+            self.add_sorting_segment(sliced_segment)
+
+        self._kwargs = {'parent_sorting': parent_sorting,
+                        'recording_list': [recording.to_dict() for recording in recording_list]}
+
+
+def split_sorting(*args, **kwargs):
+    return SplitSegmentSorting(*args, **kwargs)
+
+split_sorting.__doc__ == SplitSegmentSorting.__doc__
