@@ -8,8 +8,12 @@ SpikeInterface 0.93.0 release notes
 
 * add WaveformExtractorExtension (PC, qualitymetrics, spike amplitudes)
   Some processing are save in subfolder in generic fashion
-* add singularity integration  in run_sorter
-* add template_matching module
+* add singularity integration in run_sorter
+* Sorting have a link to the recording
+* new framework for collision benchmark
+* Refactor comparison module and add Template comparison
+* add template_matching module (experimental)
+* add motion_correction module (experimental)
 
 
 
@@ -22,7 +26,8 @@ core:
   * Implement filter_units() in waveform extractor and extensions
   * Make waveform cache to memory optional
   * refactor old<->new API
-  * Add recording link to sorting
+  * Sorting have a link to the recording and so 
+  * sorting.get_unit_spike_train have return_times=True/False
   * Add 'missing_value' to set_property
   * Improve portability of WaveformExtractor
 
@@ -49,8 +54,11 @@ toolkit:
 
   
 comparison:
-  
+  * new framework for collision benchmark
+  * Refactor comparison module and add Template comparison
+
 widgets:
+  * widgets for collision benchmark
 
 
 export:
@@ -59,10 +67,9 @@ export:
   
 
 sortingcomponents:
-  * start sampling peak
-  * start motion estimation module
-  * start motion estimation correction
-  * add template_matching module
+  * add select_peaks()
+  * add template_matching module (experimental)
+  * add motion_correction module (experimental)
   
 doc:
   * various improvements
