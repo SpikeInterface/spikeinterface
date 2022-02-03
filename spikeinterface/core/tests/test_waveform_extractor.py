@@ -182,6 +182,57 @@ def test_sparsity():
         assert temp_diff.shape[-1] == len(sparsity_diff[unit])
 
 
+def test_portability():
+    durations = [30, 40]
+    sampling_frequency = 30000.
+    
+    folder_to_move = Path("original_folder")
+    if folder_to_move.is_dir():
+        shutil.rmtree(folder_to_move)
+    folder_to_move.mkdir()
+    folder_moved = Path("moved_folder")
+    if folder_moved.is_dir():
+        shutil.rmtree(folder_moved)
+    # folder_moved.mkdir()
+        
+    # 2 segments
+    num_channels = 2
+    recording = generate_recording(num_channels=num_channels, durations=durations, 
+                                   sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=True)
+    folder_rec = folder_to_move / "rec"
+    recording = recording.save(folder=folder_rec)
+    num_units = 15
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
+    folder_sort = folder_to_move / "sort"
+    sorting = sorting.save(folder=folder_sort)
+
+    wf_folder = folder_to_move / "waveform_extractor"
+    if wf_folder.is_dir():
+        shutil.rmtree(wf_folder)
+
+    # save with relative paths
+    we = extract_waveforms(recording, sorting, wf_folder, use_relative_path=True)
+
+    # move all to a separate folder
+    shutil.copytree(folder_to_move, folder_moved)
+    wf_folder_moved = folder_moved / "waveform_extractor"
+    we_loaded = extract_waveforms(recording, sorting, wf_folder_moved, load_if_exists=True)
+    
+    assert we_loaded.recording is not None
+    assert we_loaded.sorting is not None
+
+    assert np.allclose(
+        we.recording.get_channel_ids(), we_loaded.recording.get_channel_ids())
+    assert np.allclose(
+        we.sorting.get_unit_ids(), we_loaded.sorting.get_unit_ids())
+
+
+    for unit in we.sorting.get_unit_ids():
+        wf = we.get_waveforms(unit_id=unit)
+        wf_loaded = we_loaded.get_waveforms(unit_id=unit)
+
+        assert np.allclose(wf, wf_loaded)
 
 
 if __name__ == '__main__':
@@ -189,3 +240,4 @@ if __name__ == '__main__':
     test_WaveformExtractor()
     test_extract_waveforms()
     test_sparsity()
+    test_portability()
