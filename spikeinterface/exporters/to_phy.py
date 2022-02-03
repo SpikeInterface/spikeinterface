@@ -3,13 +3,14 @@ import csv
 
 import numpy as np
 import shutil
+import pandas as pd
 
 import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.toolkit import (get_template_channel_sparsity,
-                                    get_spike_amplitudes, compute_template_similarity,
-                                    WaveformPrincipalComponent)
+                                    compute_spike_amplitudes, compute_template_similarity,
+                                    compute_principal_components)
 
 
 def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
@@ -46,7 +47,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     remove_if_exists: bool
         If True and 'output_folder' exists, it is removed and overwritten
     peak_sign: 'neg', 'pos', 'both'
-        Used by get_spike_amplitudes
+        Used by compute_spike_amplitudes
     template_mode: str
         Parameter 'mode' to be given to WaveformExtractor.get_template()
     dtype: dtype or None
@@ -175,44 +176,64 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     np.save(str(output_folder / 'channel_groups.npy'), channel_groups)
 
     if compute_amplitudes:
-        amplitudes = get_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', **job_kwargs)
+        if waveform_extractor.is_extension('spike_amplitudes'):
+            sac = waveform_extractor.load_extension('spike_amplitudes')
+            amplitudes = sac.get_amplitudes(outputs='concatenated')
+        else:
+            amplitudes = compute_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', 
+                                                  **job_kwargs)
         # one segment only
         amplitudes = amplitudes[0][:, np.newaxis]
         np.save(str(output_folder / 'amplitudes.npy'), amplitudes)
 
     if compute_pc_features:
-        pc = WaveformPrincipalComponent(waveform_extractor)
-        pc.set_params(n_components=5, mode='by_channel_local')
+        if waveform_extractor.is_extension('principal_components'):
+            pc = waveform_extractor.load_extension('principal_components')
+        else:
+            pc = compute_principal_components(waveform_extractor, n_components=5, mode='by_channel_local')
+        
+        max_channels_per_template = min(max_channels_per_template, len(channel_ids))
         pc.run_for_all_spikes(output_folder / 'pc_features.npy',
                               max_channels_per_template=max_channels_per_template, peak_sign=peak_sign,
                               **job_kwargs)
 
-        max_channels_per_template = min(max_channels_per_template, len(channel_ids))
         pc_feature_ind = np.zeros((len(unit_ids), max_channels_per_template), dtype='int64')
         best_channels_index = get_template_channel_sparsity(waveform_extractor, method='best_channels',
                                                             peak_sign=peak_sign, num_channels=max_channels_per_template,
                                                             outputs='index')
-
         for u, unit_id in enumerate(sorting.unit_ids):
             pc_feature_ind[u, :] = best_channels_index[unit_id]
         np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
 
     # Save .tsv metadata
-    with (output_folder / 'cluster_group.tsv').open('w') as tsvfile:
-        writer = csv.writer(tsvfile, delimiter='\t', lineterminator='\n')
-        writer.writerow(['cluster_id', 'group'])
-        for i, u in enumerate(sorting.get_unit_ids()):
-            writer.writerow([i, 'unsorted'])
+    unit_ids = sorting.unit_ids
+    cluster_group = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                  'group': ['unsorted'] * len(unit_ids)})
+    cluster_group.to_csv(output_folder / 'cluster_group.tsv',
+                         sep="\t", index=False)
+    si_unit_ids = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                'si_unit_id': unit_ids})
+    si_unit_ids.to_csv(output_folder / 'cluster_si_unit_ids.tsv',
+                       sep="\t", index=False)
 
     unit_groups = sorting.get_property('group')
     if unit_groups is None:
         unit_groups = np.zeros(len(unit_ids), dtype='int32')
-
-    with (output_folder / 'cluster_channel_group.tsv').open('w') as tsvfile:
-        writer = csv.writer(tsvfile, delimiter='\t', lineterminator='\n')
-        writer.writerow(['cluster_id', 'channel_group'])
-        for i, unit_id in enumerate(unit_ids):
-            writer.writerow([i, unit_groups[i]])
+    channel_group = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                  'channel_group': unit_groups})
+    channel_group.to_csv(output_folder / 'cluster_channel_group.tsv',
+                         sep="\t", index=False)
+    
+    if waveform_extractor.is_extension('quality_metrics'):
+        qm = waveform_extractor.load_extension('quality_metrics')
+        qm_data = qm.get_metrics()
+        for column_name in qm_data.columns:
+            # already computed by phy
+            if column_name not in ["num_spikes", "firing_rate"]:
+                metric = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
+                                       column_name: qm_data[column_name].values})
+                metric.to_csv(output_folder / f'cluster_{column_name}.tsv',
+                              sep="\t", index=False)
 
     if verbose:
         print('Run:\nphy template-gui ', str(output_folder / 'params.py'))

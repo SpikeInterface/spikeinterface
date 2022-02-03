@@ -72,10 +72,10 @@ recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max
 ##############################################################################
 # Change reference
 # -----------------
-# 
+#
 # In many cases, before spike sorting, it is wise to re-reference the
 # signals to reduce the common-mode noise from the recordings.
-# 
+#
 # To re-reference in :code:`spiketoolkit` you can use the :code:`common_reference`
 # function. Both common average reference (CAR) and common median
 # reference (CMR) can be applied. Moreover, the average/median can be
@@ -84,9 +84,10 @@ recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max
 
 recording_car = st.common_reference(recording, reference='global', operator='average')
 recording_cmr = st.common_reference(recording, reference='global', operator='median')
-recording_single = st.common_reference(recording, reference='single', ref_channels=[1])
+recording_single = st.common_reference(recording, reference='single', ref_channel_ids=[1])
 recording_single_groups = st.common_reference(recording, reference='single',
-                                                            groups=[[0, 1], [2, 3]], ref_channels=[0, 2])
+                                              groups=[[0, 1], [2, 3]], 
+                                              ref_channel_ids=[0, 2])
 
 
 trace0_car = recording_car.get_traces(segment_index=0)[:, 0]
