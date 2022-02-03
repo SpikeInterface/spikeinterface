@@ -277,7 +277,7 @@ class SplitSegmentSorting(BaseSorting):
     ----------
     parent_sorting : BaseSorting
         Sorting with a single segment (e.g. from sorting concatenated recording)
-    recording_list : list of recordings, ConcatenateSegmentRecording, or None
+    recording_or_recording_list : list of recordings, ConcatenateSegmentRecording, or None
         If list of recordings, uses the lengths of those recordings to split the sorting
         into smaller segments
         If ConcatenateSegmentRecording, uses the associated list of recordings to split
