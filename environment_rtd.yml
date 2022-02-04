@@ -8,10 +8,9 @@ dependencies:
   - datalad
   - pyqt=5
   - numpy=1.20
+  - numba
   - pip:
-    - numpy==1.20
     - git+https://github.com/scikit-learn-contrib/hdbscan.git
-    - numba==0.54.1
     - joblib
     - tqdm
     - pillow
@@ -22,10 +21,11 @@ dependencies:
     - networkx
     - pybind11
     - loky
-    - numba
     - neo>=0.10.0
     - probeinterface
     - MEArec>=1.7.1
+    - isosplit5
+    - mountainsort4>=1.0.0    
     - tridesclous>=1.6.4
     - herdingspikes
     - sphinx-gallery
