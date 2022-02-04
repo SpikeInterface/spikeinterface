@@ -99,13 +99,13 @@ cd ..
   * it doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets anymore
 
 
-To install the olde `spikeinterface` API, you can use pip and point to the old version:
+To install the old `spikeinterface` API (version<0.90), you can use pip and point to the old version:
 
 ```bash
 pip install spikeinterface==0.13
 ```
 
-The recommended is to use new version.
+We strongly recommend using the new version.
 
 ## Citation
 
