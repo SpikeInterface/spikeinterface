@@ -1,0 +1,78 @@
+.. _release0.93.0:
+
+SpikeInterface 0.93.0 release notes
+-----------------------------------
+
+4th February 2022
+
+
+* add WaveformExtractorExtension (PC, qualitymetrics, spike amplitudes)
+  to automatically store and retrieve processed data waveforms folder
+* add singularity integration in run_sorter
+* add a link to the originating recording to the sorting object
+* new framework for collision benchmark
+* refactor comparison module and add TemplateComparison
+* add template_matching module (experimental)
+* add motion_correction module (experimental)
+
+
+
+core:
+  * fix timestamps when from h5py
+  * allow concatenation of datasets with diff srate
+  * propagate properties in Recording and Sorting OldToNew wrappers 
+  * add WaveformExtractorExtension.
+  * fix old to new scaling
+  * implement filter_units() in waveform extractor and extensions
+  * make waveform cache to memory optional
+  * refactor old<->new API
+  * sorting have a link to the recording and so 
+  * sorting.get_unit_spike_train have return_times=True/False
+  * add 'missing_value' to set_property
+  * improve portability of WaveformExtractor
+  * add SplitSegmentSorting
+
+
+extractors:
+  * fix KS keep_good_only query
+  * remove __del__ from nwbextractor
+  * various fix
+
+  
+sorters:
+  * singularity integration 
+  * enhance container handling
+  * matlab-compiled IronClust version
+  
+toolkit:
+  * whiten by property
+  * fix unit_localization
+  * fix slice in get_chunk_with_margin
+  * fix 'single' common referencing
+  * enable n_jobs >= 2 compute_spike_amplitudes
+  * fix gain/offset shape
+  * fix peak sign for amplitude cutoffs
+  * refactor template metrics
+
+  
+comparison:
+  * new framework for collision benchmark
+  * refactor comparison module and add TemplateComparison
+
+widgets:
+  * widgets for collision benchmark
+
+
+export:
+  * fix export_to_phy
+  * add quality metrics and SI unit ids to phy tsv
+  
+
+sortingcomponents:
+  * add select_peaks()
+  * add template_matching module (experimental)
+  * add motion_correction module (experimental)
+  
+doc:
+  * various improvements
+  * fix some typos
