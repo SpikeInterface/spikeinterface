@@ -6,6 +6,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.93.0.rst
   releases/0.92.0.rst
   releases/0.91.0.rst
   releases/0.90.1.rst
@@ -19,6 +20,20 @@ Release notes
 
 NEW API
 -------
+
+Version 0.93.0
+==============
+
+* add WaveformExtractorExtension (PC, qualitymetrics, spike amplitudes)
+  to automatically store and retrieve processed data waveforms folder
+* add singularity integration in run_sorter
+* add a link to the originating recording to the sorting object
+* new framework for collision benchmark
+* refactor comparison module and add TemplateComparison
+* add template_matching module (experimental)
+* add motion_correction module (experimental)
+
+
 
 Version 0.92.0
 ==============

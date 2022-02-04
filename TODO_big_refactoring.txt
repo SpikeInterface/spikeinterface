@@ -9,7 +9,6 @@ core:
 
 extractors:
 
-    * BiocamRecordingExtractor  : need to be done in neo
     * OpenEphysSortingExtractor : need to be done in neo
 
 
@@ -22,7 +21,6 @@ toolkit:
      * "max_drift",
      * "cumulative_drift",
      * "silhouette_score",
-     * "noise_overlap",
 
   * get_random_data_for_scaling(recording, num_chunks_per_segment=20, chunk_size=10000, seed=0)
      remove chunk and use duration instead.
@@ -45,16 +43,12 @@ examples:
 
   * check and read everything
   * toolkit examples
-  * make more example with widgets
   
 
 
 doc:
 
-  * read everything (typos/grammar)
-  * try to build documentation with dithub actions as artifact after test (alessio ?)
-  * make API
-
+  * try to build documentation with github actions as artifact after test (alessio ?)
 
 
 

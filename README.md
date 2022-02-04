@@ -45,14 +45,19 @@
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
+With SpikeInterface, users can:
 
+- read/write many extracellular file formats.
+- pre-process extracellular recordings.
+- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
+- post-process sorted datasets.
+- compare and benchmark spike sorting outputs.
+- compute quality metrics to validate and curate spike sorting outputs.
+- visualize recordings and spike sorting outputs.
+- export report and export toPhy
+- offer a powerful Qt-based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- have some powerful sorting components to build your own sorter.
 
-`spikeinterface` version 0.90:
-
-  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series.
-  * has been first released in July 2021 (0.90.0)
-  * is not a meta-package anymore
-  * it doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets anymore
 
 
 **Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
@@ -61,16 +66,18 @@ You can also have a look at the [spikeinterface-gui](https://https://github.com/
 
 ## Documentation
 
-All documentation for spikeinterface 0.90 can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
+All documentation for spikeinterface 0.93 can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
 
 Documentation of current API release 0.12.0 is [here](https://spikeinterface.readthedocs.io/en/stable/).
 
-## How to install new SI version (0.90)
+
+
+## How to install spikeinteface
 
 You can install the new `spikeinterface` version with pip:
 
 ```bash
-pip install spikeinterface==0.90
+pip install spikeinterface
 ```
 
 To get the latest updates, you can install `spikeinterface` from sources:
@@ -82,12 +89,23 @@ python setup.py install (or develop)
 cd ..
 ```
 
-To install the olde `spikeinterface` API, you can use pip and point to the old version:
+## Versions
+
+`spikeinterface` version 0.90 > 0.93:
+
+  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series.
+  * has been first released in July 2021 (0.90.0)
+  * is not a meta-package anymore
+  * it doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets anymore
+
+
+To install the old `spikeinterface` API (version<0.90), you can use pip and point to the old version:
 
 ```bash
 pip install spikeinterface==0.13
 ```
 
+We strongly recommend using the new version.
 
 ## Citation
 
