@@ -903,19 +903,22 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         nb_peaks = len(traces) - nb_samples + 1
 
+        traces = np.ascontiguousarray(traces.T)
+
         if is_dense:
             kernel_filters = templates.reshape(nb_templates, nb_samples, nb_channels)[:, ::-1, :]
-            scalar_products = scipy.signal.fftconvolve(kernel_filters, traces[np.newaxis, :, :], axes=(0, 1), mode='valid').sum(2)
+            kernel_filters = np.ascontiguousarray(np.transpose(kernel_filters, axes=(0, 2, 1)))
+            scalar_products = scipy.signal.fftconvolve(kernel_filters, traces[np.newaxis, :, :], axes=(0, 2), mode='valid').sum(1)
         else:
             scalar_products = np.empty((nb_templates, nb_peaks), dtype=np.float32)
 
             for i in range(nb_templates):
                 kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
-                kernel_filter = kernel_filter[::-1, sparsities[i]]
+                kernel_filter = np.ascontiguousarray(kernel_filter[::-1, sparsities[i]].T)
 
-                convolution = scipy.signal.fftconvolve(kernel_filter, traces[:, sparsities[i]], axes=0, mode='valid')
+                convolution = scipy.signal.fftconvolve(kernel_filter, traces[sparsities[i]], axes=1, mode='valid')
                 if len(convolution) > 0:
-                    scalar_products[i] = convolution.sum(1)
+                    scalar_products[i] = convolution.sum(0)
                 else:
                     scalar_products[i] = 0
 
