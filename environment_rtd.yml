@@ -3,7 +3,7 @@ channels:
   - defaults
 dependencies:
   - python=3.8
-  - pip=21.2.4
+  - pip<21
   - git-annex
   - datalad
   - pyqt=5
