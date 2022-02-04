@@ -7,10 +7,7 @@ dependencies:
   - git-annex
   - datalad
   - pyqt=5
-  - numpy=1.20
-  - numba
   - pip:
-    - git+https://github.com/scikit-learn-contrib/hdbscan.git
     - joblib
     - tqdm
     - pillow
@@ -30,3 +27,6 @@ dependencies:
     - herdingspikes
     - sphinx-gallery
     - numpydoc
+    - numpy==1.20
+    - git+https://github.com/scikit-learn-contrib/hdbscan.git
+    - numba==0.54.1
