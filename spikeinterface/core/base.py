@@ -507,6 +507,9 @@ class BaseExtractor:
                     d = pickle.load(f)
             else:
                 raise ValueError(f'Impossible to load {file_path}')
+            if 'warning' in d and 'not dumpable' in d['warning']:
+                print('The extractor was not dumpable')
+                return None
             extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
 
