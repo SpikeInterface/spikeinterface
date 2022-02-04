@@ -11,8 +11,12 @@ from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
                            plot_autocorrelograms, AutoCorrelogramsWidget)
 
 # peak activity
-from .drift import plot_drift_over_time, DriftOverTimeWidget
 from .activity import plot_peak_activity_map, PeakActivityMapWidget
+
+# drift/motion
+from .drift import (plot_drift_over_time, DriftOverTimeWidget,
+                    plot_pairwise_displacement, PairwiseDisplacementWidget,
+                    plot_displacement, DisplacementWidget)
 
 # waveform/PC related
 from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
