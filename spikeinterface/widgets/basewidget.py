@@ -29,12 +29,12 @@ class BaseWidget:
             else:
                 if num_axes == 0:
                     # one figure without plots (diffred subplot creation with
-                    self.figure = plt.figure()
+                    figure = plt.figure()
                     ax = None
                     axes = None
                 elif num_axes == 1:
-                    self.figure = plt.figure()
-                    ax = self.figure.add_subplot(111)
+                    figure = plt.figure()
+                    ax = figure.add_subplot(111)
                     axes = np.array([[ax]])
                 else:
                     assert ncols is not None
@@ -47,7 +47,6 @@ class BaseWidget:
                     if ncols * nrows > num_axes:
                         for extra_ax in axes.flatten()[num_axes:]:
                             extra_ax.remove()
-
 
         self.figure = figure
         self.ax = ax
