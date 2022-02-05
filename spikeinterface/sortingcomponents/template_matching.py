@@ -691,6 +691,104 @@ if HAVE_NUMBA:
 #         return output
 
 
+from scipy.fft._helper import _init_nd_shape_and_axes
+from scipy.signal.signaltools import  _init_freq_conv_axes, _apply_conv_mode
+from scipy import linalg, fft as sp_fft
+
+
+def get_scipy_shape(in1, in2, mode="full", axes=None, calc_fast_len=True):
+
+    in1 = np.asarray(in1)
+    in2 = np.asarray(in2)
+
+    if in1.ndim == in2.ndim == 0:  # scalar inputs
+        return in1 * in2
+    elif in1.ndim != in2.ndim:
+        raise ValueError("in1 and in2 should have the same dimensionality")
+    elif in1.size == 0 or in2.size == 0:  # empty arrays
+        return np.array([])
+
+    in1, in2, axes = _init_freq_conv_axes(in1, in2, mode, axes,
+                                          sorted_axes=False)
+
+    s1 = in1.shape
+    s2 = in2.shape
+    
+    shape = [max((s1[i], s2[i])) if i not in axes else s1[i] + s2[i] - 1
+             for i in range(in1.ndim)]
+
+    if not len(axes):
+        return in1 * in2
+
+    complex_result = (in1.dtype.kind == 'c' or in2.dtype.kind == 'c')
+
+    if calc_fast_len:
+        # Speed up FFT by padding to optimal size.
+        fshape = [
+            sp_fft.next_fast_len(shape[a], not complex_result) for a in axes]
+    else:
+        fshape = shape
+
+    return fshape, axes
+
+def fftconvolve_with_cache(in1, in2, cache, mode="full", axes=None):
+
+    in1 = np.asarray(in1)
+    in2 = np.asarray(in2)
+
+    if in1.ndim == in2.ndim == 0:  # scalar inputs
+        return in1 * in2
+    elif in1.ndim != in2.ndim:
+        raise ValueError("in1 and in2 should have the same dimensionality")
+    elif in1.size == 0 or in2.size == 0:  # empty arrays
+        return np.array([])
+
+    in1, in2, axes = _init_freq_conv_axes(in1, in2, mode, axes,
+                                          sorted_axes=False)
+
+    s1 = in1.shape
+    s2 = in2.shape
+    
+    shape = [max((s1[i], s2[i])) if i not in axes else s1[i] + s2[i] - 1
+             for i in range(in1.ndim)]
+
+    ret = _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True)
+
+    return _apply_conv_mode(ret, s1, s2, mode, axes)
+
+
+def _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True):
+    
+    if not len(axes):
+        return in1 * in2
+
+    complex_result = (in1.dtype.kind == 'c' or in2.dtype.kind == 'c')
+
+    if calc_fast_len:
+        # Speed up FFT by padding to optimal size.
+        fshape = [
+            sp_fft.next_fast_len(shape[a], not complex_result) for a in axes]
+    else:
+        fshape = shape
+
+    if not complex_result:
+        fft, ifft = sp_fft.rfftn, sp_fft.irfftn
+    else:
+        fft, ifft = sp_fft.fftn, sp_fft.ifftn
+
+    sp1 = cache['full'][cache['mask']]
+    sp2 = cache['template']
+
+    #sp2 = fft(in2[cache['mask']], fshape, axes=axes)
+    ret = ifft(sp1 * sp2, fshape, axes=axes)
+
+    if calc_fast_len:
+          fslice = tuple([slice(sz) for sz in shape])
+          ret = ret[fslice]
+
+    return ret
+
+
 class CircusOMPPeeler(BaseTemplateMatchingEngine):
     """
     Orthogonal Matching Pursuit inspired from Spyking Circus sorter
@@ -731,7 +829,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     _default_params = {
         'sparsify_threshold': 0.99,
         'amplitudes' : [0.5, 1.5],
-        'use_sparse_matrix_threshold' : 0.25,
+        'use_sparse_matrix_threshold' : 1,
         'noise_levels': None,
         'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,
@@ -899,6 +997,11 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         sparsities = d['sparsities']
         is_dense = d['is_dense']
 
+        if 'fft_kernels' not in d:
+            d['fft_kernels'] = {}
+
+        fft_kernels = d['fft_kernels']
+
         stop_criteria = omp_min_sps * norms[:, np.newaxis]
 
         nb_peaks = len(traces) - nb_samples + 1
@@ -910,13 +1013,24 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             kernel_filters = np.ascontiguousarray(np.transpose(kernel_filters, axes=(0, 2, 1)))
             scalar_products = scipy.signal.fftconvolve(kernel_filters, traces[np.newaxis, :, :], axes=(0, 2), mode='valid').sum(1)
         else:
+
+            fshape, axes = get_scipy_shape(templates[0].toarray().reshape(nb_samples, nb_channels).T, traces, axes=1)
+            fft_cache = {'full' : sp_fft.rfftn(traces, fshape, axes=axes)}
+
             scalar_products = np.empty((nb_templates, nb_peaks), dtype=np.float32)
 
             for i in range(nb_templates):
-                kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
-                kernel_filter = np.ascontiguousarray(kernel_filter[::-1, sparsities[i]].T)
 
-                convolution = scipy.signal.fftconvolve(kernel_filter, traces[sparsities[i]], axes=1, mode='valid')
+                if i not in fft_kernels:
+                    kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
+                    kernel_filter = np.ascontiguousarray(kernel_filter[::-1].T)
+                    fft_kernels.update({i : sp_fft.rfftn(kernel_filter[sparsities[i]], fshape, axes=axes)})
+                else:
+                    kernel_filter = np.zeros((nb_channels, nb_samples), dtype=np.float32)
+
+                fft_cache.update({'mask' : sparsities[i], 'template' : fft_kernels[i]})
+                convolution = fftconvolve_with_cache(kernel_filter, traces, fft_cache, axes=1, mode='valid')
+
                 if len(convolution) > 0:
                     scalar_products[i] = convolution.sum(0)
                 else:
