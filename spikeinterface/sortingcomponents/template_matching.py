@@ -1018,6 +1018,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             fft_cache = {'full' : sp_fft.rfftn(traces, fshape, axes=axes)}
 
             scalar_products = np.empty((nb_templates, nb_peaks), dtype=np.float32)
+            dummy_filter = np.empty((nb_channels, nb_samples), dtype=np.float32)
 
             for i in range(nb_templates):
 
@@ -1025,12 +1026,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                     kernel_filter = templates[i].toarray().reshape(nb_samples, nb_channels)
                     kernel_filter = np.ascontiguousarray(kernel_filter[::-1].T)
                     fft_kernels.update({i : sp_fft.rfftn(kernel_filter[sparsities[i]], fshape, axes=axes)})
-                else:
-                    kernel_filter = np.zeros((nb_channels, nb_samples), dtype=np.float32)
 
                 fft_cache.update({'mask' : sparsities[i], 'template' : fft_kernels[i]})
-                convolution = fftconvolve_with_cache(kernel_filter, traces, fft_cache, axes=1, mode='valid')
 
+                convolution = fftconvolve_with_cache(dummy_filter, traces, fft_cache, axes=1, mode='valid')
                 if len(convolution) > 0:
                     scalar_products[i] = convolution.sum(0)
                 else:
