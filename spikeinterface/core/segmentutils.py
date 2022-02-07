@@ -289,7 +289,7 @@ class SplitSegmentSorting(BaseSorting):
         If None, looks for the recording associated with the sorting (default None)
     """
     def __init__(self, parent_sorting: BaseSorting, recording_or_recording_list=None):
-        assert parent_sorting.get_num_segments() != 1, "The sorting must have only one segment."
+        assert parent_sorting.get_num_segments() == 1, "The sorting must have only one segment."
         sampling_frequency = parent_sorting.get_sampling_frequency()
         unit_ids = parent_sorting.unit_ids
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
