@@ -10,13 +10,17 @@ import scipy.optimize
 from ..toolkit import get_chunk_with_margin
 
 
-possible_extraction_methods = {'local_pca' : ""}
+dtype_extract_by_method = {
+    'custom_projection': [('norm', 'float64'),  ('ptp', 'float64'), ('mean', 'float64'), ('std', 'float64')],
+}
+
+possible_extraction_methods = list(dtype_extract_by_method.keys())
 
 
 def init_kwargs_dict(method, method_kwargs):
     """Initialize a dictionary of keyword arguments."""
 
-    if method == 'local_pca':
+    if method == 'custom_projection':
         method_kwargs_ = dict(local_radius_um=150)
 
     method_kwargs_.update(method_kwargs)
@@ -24,7 +28,7 @@ def init_kwargs_dict(method, method_kwargs):
     return method_kwargs_
 
 
-def get_features_peaks(recording, peaks, ms_before=1, ms_after=2, method='local_pca',
+def get_features_peaks(recording, peaks, ms_before=1, ms_after=2, method='custom_projection',
                    method_kwargs={}, **job_kwargs):
     """Get features of a selection of peaks depending the method.
 
@@ -38,11 +42,11 @@ def get_features_peaks(recording, peaks, ms_before=1, ms_after=2, method='local_
         The left window, before a peak, in milliseconds.
     ms_after: float
         The right window, after a peak, in milliseconds.
-    method: 'local_pca'
+    method: 'random_projection'
         Method to use.
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
-            'local_pca':
+            'custom_projection':
 
     Returns
     -------
@@ -72,7 +76,7 @@ def get_features_peaks(recording, peaks, ms_before=1, ms_after=2, method='local_
     init_func = _init_worker_get_features_peaks
     init_args = (recording.to_dict(), peaks, method, method_kwargs, nbefore, nafter, contact_locations, margin)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True,
-                                       job_name='extract features from peaks', **job_kwargs)
+                                       job_name='extract features peaks', **job_kwargs)
     peak_locations = processor.run()
 
     peak_locations = np.concatenate(peak_locations)
@@ -103,7 +107,7 @@ def _init_worker_get_features_peaks(recording, peaks, method, method_kwargs,
     worker_ctx['contact_locations'] = contact_locations
     worker_ctx['margin'] = margin
 
-    if method in ('local_pca'):
+    if method in ('custom_projection'):
         # handle sparsity
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance < method_kwargs['local_radius_um']
@@ -142,28 +146,29 @@ def _get_features_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx)
     local_peaks = local_peaks.copy()
     local_peaks['sample_ind'] -= (start_frame - left_margin)
 
-    if method == 'local_pca':
-        peak_features = features_peaks_local_pca(traces, local_peaks, contact_locations,
+    if method == 'custom_projection':
+        peak_features = features_peaks_custom_projection(traces, local_peaks, contact_locations,
                                                        neighbours_mask, nbefore, nafter)
 
     return peak_features
 
 
-def features_peaks_local_pca(traces, local_peak, contact_locations, neighbours_mask,
+def features_peaks_custom_projection(traces, local_peak, contact_locations, neighbours_mask,
                                   nbefore, nafter):
     """Extract the features of a selection of peaks with the Incremental PCA method"""
 
-    peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['local_pca'])
+    peak_features = np.zeros(local_peak.size, dtype=dtype_extract_by_method['custom_projection'])
 
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
-        chan_inds, = np.nonzero(chan_mask)
+        chan_inds,  = np.where(chan_mask == 0)
 
-        local_contact_locations = contact_locations[chan_inds, :]
+        wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :].copy()
+        wf[:, chan_inds] = 0
 
-        wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
+        peak_features[i]['norm'] = np.linalg.norm(wf)
+        peak_features[i]['ptp'] = np.ptp(wf)
+        peak_features[i]['mean'] = np.mean(wf)
+        peak_features[i]['std'] = np.std(wf)
 
-        peak_locations['x'][i] = com[0]
-        peak_locations['y'][i] = com[1]
-
-    return peak_locations
+    return peak_features
