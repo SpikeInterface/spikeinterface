@@ -369,7 +369,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # save
         mode = p["mode"]
-        for chan_ind, chan_id in enumerate(channel_ids):
+        for chan_ind, chan_id in enumerate(we.recording.channel_ids):
             pca = pca_model[chan_ind]
             with (self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl").open("wb") as f:
                 pickle.dump(pca, f)
