@@ -203,6 +203,8 @@ class NumpySorting(BaseSorting):
     def from_peaks(peaks, sampling_frequency):
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
+        The unit ids correspond to the recording channel ids and spike trains are the
+        detected spikes for each channel.
 
         Parameters
         ----------
