@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset
+from spikeinterface import download_dataset, BaseSorting
 from spikeinterface.sortingcomponents import detect_peaks
 
 from spikeinterface.extractors import MEArecRecordingExtractor
@@ -18,6 +18,13 @@ def test_detect_peaks():
     peaks = detect_peaks(recording, method='by_channel',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
                          chunk_size=10000, verbose=1, progress_bar=False)
+    
+    # by_channel
+    sorting = detect_peaks(recording, method='by_channel',
+                           peak_sign='neg', detect_threshold=5, n_shifts=2,
+                           chunk_size=10000, verbose=1, progress_bar=False,
+                           outputs="sorting")
+    assert isinstance(sorting, BaseSorting)
 
     # locally_exclusive
     peaks = detect_peaks(recording, method='locally_exclusive',
