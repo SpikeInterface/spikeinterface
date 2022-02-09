@@ -173,6 +173,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         Only used if noise_levels is None.
     outputs: 'numpy_compact', 'numpy_split', 'sorting'
         The type of the output. By default, "numpy_compact" returns an array with complex dtype.
+        In case of 'sorting', each unit corresponds to a recording channel.
     localization_dict : dict, optional
         Can optionally do peak localization at the same time as detection.
         This avoids running `localize_peaks` separately and re-reading the entire dataset.
