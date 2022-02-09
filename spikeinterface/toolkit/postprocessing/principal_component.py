@@ -54,14 +54,15 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         self._pca_model = None
 
     def _set_params(self, n_components=5, mode='by_channel_local',
-                   whiten=True, dtype='float32'):
+                   whiten=True, dtype='float32', sparsity=None):
 
         assert mode in _possible_modes, "Invalid mode!"
         
         params = dict(n_components=int(n_components),
                       mode=str(mode),
                       whiten=bool(whiten),
-                      dtype=np.dtype(dtype).str)
+                      dtype=np.dtype(dtype).str,
+                      sparsity=sparsity)
         
         return params
     
@@ -261,6 +262,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             n_spike = we.get_waveforms(unit_id).shape[0]
             projection_file = self.extension_folder / f'pca_{unit_id}.npy'
             if p['mode'] in ('by_channel_local', 'by_channel_global'):
+                if p['sparsity'] is not None:
+                    num_chans = len(p['sparsity'][unit_id])
                 shape = (n_spike, p['n_components'], num_chans)
             elif p['mode'] == 'concatenated':
                 shape = (n_spike, p['n_components'])
@@ -356,6 +359,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs = we.get_waveforms(unit_id)
             if wfs.size == 0:
                 continue
+
+            if p['sparsity'] is not None:
+                channel_ids = we.recording.ids_to_indices(p['sparsity'][unit_id])
+    
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca = pca_model[chan_ind]
                 pca.partial_fit(wfs[:, :, chan_ind])
@@ -387,6 +394,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs = we.get_waveforms(unit_id)
             if wfs.size == 0:
                 continue
+
+            if p['sparsity'] is not None:
+                channel_ids = we.recording.ids_to_indices(p['sparsity'][unit_id])
+
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca = pca_model[chan_ind]
                 proj = pca.transform(wfs[:, :, chan_ind])
@@ -407,6 +418,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs = we.get_waveforms(unit_id)
             if wfs.size == 0:
                 continue
+
+            if p['sparsity'] is not None:
+                channel_ids = we.recording.ids_to_indices(p['sparsity'][unit_id])
+
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca_model.partial_fit(wfs[:, :, chan_ind])
 
@@ -436,6 +451,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs = we.get_waveforms(unit_id)
             if wfs.size == 0:
                 continue
+
+            if p['sparsity'] is not None:
+                channel_ids = we.recording.ids_to_indices(p['sparsity'][unit_id])
+
             for chan_ind, chan_id in enumerate(channel_ids):
                 proj = pca_model.transform(wfs[:, :, chan_ind])
                 projection_memmap[unit_id][:, :, chan_ind] = proj
@@ -452,6 +471,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # fit
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
+
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
             pca_model.partial_fit(wfs_flat)
 
@@ -492,6 +512,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     nafter = worker_ctx['nafter']
     unit_channels = worker_ctx['unit_channels']
     pca_model = worker_ctx['pca_model']
+    sparsity = worker_ctx['sparsity']
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
@@ -526,6 +547,9 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
         unit_index = spike_labels[i]
         chan_inds = unit_channels[unit_index]
 
+        if sparsity is not None:
+            chan_inds = recording.ids_to_indices(sparsity[unit_index])
+
         for c, chan_ind in enumerate(chan_inds):
             w = wf[:, chan_ind]
             if w.size > 0:
@@ -547,6 +571,7 @@ def _init_work_all_pc_extractor(recording, all_pcs_args, spike_times, spike_labe
     worker_ctx['nafter'] = nafter
     worker_ctx['unit_channels'] = unit_channels
     worker_ctx['pca_model'] = pca_model
+    worker_ctx['sparsity'] = sparsity
 
     return worker_ctx
 
@@ -559,7 +584,7 @@ WaveformExtractor.register_extension(WaveformPrincipalComponent)
 
 def compute_principal_components(waveform_extractor, load_if_exists=False,
                                  n_components=5, mode='by_channel_local',
-                                 whiten=True, dtype='float32'):
+                                 whiten=True, dtype='float32', sparsity=None):
     """
     Compute PC scores from waveform extractor. The PCA projections are pre-computed only
     on the sampled waveforms available from the WaveformExtractor.
@@ -580,6 +605,9 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
         If True, waveforms are pre-whitened
     dtype: dtype
         Dtype of the pc scores (default float32)
+    sparsity: dict or None
+        If given, dictionary with unit ids as keys and channel sparsity by index as values.
+        The sparsity is used to refine, per unit, the channels on which PCA should be computed
 
     Returns
     -------
@@ -608,7 +636,7 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
         pc = WaveformPrincipalComponent.load_from_folder(folder)
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)
-        pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype)
+        pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype, sparsity=sparsity)
         pc.run()
 
     return pc
