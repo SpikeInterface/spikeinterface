@@ -13,7 +13,6 @@ from .peak_localization import (dtype_localize_by_method, init_kwargs_dict,
 
 try:
     import numba
-
     HAVE_NUMBA = True
 except ImportError:
     HAVE_NUMBA = False
