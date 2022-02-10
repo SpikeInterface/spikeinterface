@@ -11,7 +11,9 @@ import hdbscan
 import umap
 
 from ..core import get_global_tmp_folder, extract_waveforms, NumpySorting
-from ..toolkit import get_channel_distances
+from ..toolkit import get_channel_distances, get_random_data_chunks
+
+
 
 
 def find_cluster_from_peaks(recording, peaks, method='stupid', method_kwargs={}, extra_outputs=False, **job_kwargs):
@@ -84,8 +86,9 @@ class SlidingHdbscanClustering:
         'tmp_folder': None,
         'ms_before': 1.5,
         'ms_after': 2.5,
-        'max_spikes_per_channel': 1000,
+        'noise_size' : 300,
         'min_spike_on_channel' : 5,
+        'stop_explore_percent' : 0.05,
         'min_cluster_size' : 10,
         'radius_um': 50.,
         'n_components_by_channel': 4,
@@ -93,23 +96,23 @@ class SlidingHdbscanClustering:
     }
 
     @classmethod
-    def _initlialize_folder(cls, recording, peaks, params):
-        print('_initlialize_folder')
-        d = params
+    def main_function(cls, recording, peaks, params):
+        we = cls._initlialize_folder(recording, peaks, params)
+        peak_labels = cls._find_clusters(recording, peaks, we, params)
+        labels = np.unique(peak_labels)
+        labels, peak_labels = None, None
+        return labels, peak_labels
 
+    @classmethod
+    def _initlialize_folder(cls, recording, peaks, params):
+        d = params
         tmp_folder = params['tmp_folder']
-        
         if tmp_folder is None:
             name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = get_global_tmp_folder() / f'SlidingHdbscanClustering_{name}'
         else:
             tmp_folder = Path(tmp_folder)
-        
-        possible_chans, count = np.unique(peaks['channel_ind'], return_counts=True)
-        print(possible_chans)
-        print(count)
-        
-        
+
         sorting = NumpySorting.from_times_labels(peaks['sample_ind'], peaks['channel_ind'], recording.get_sampling_frequency())
         sorting = sorting.save(folder=tmp_folder / 'by_channel_peaks')
         print([sorting.get_unit_spike_train(unit_id).size for unit_id in sorting.unit_ids])
@@ -129,10 +132,11 @@ class SlidingHdbscanClustering:
                     **d['job_kwargs'])
         
         return we
+    
+
 
     @classmethod
     def _find_clusters(cls, recording, peaks, we, d):
-        
         
         num_chans = recording.get_num_channels()
         #~ channel_explored = np.zeros(num_chans, dtype='bool')
@@ -150,45 +154,58 @@ class SlidingHdbscanClustering:
         #~ print('possible_chan_inds', possible_chan_inds)
         #
         peak_labels = np.zeros(peaks.size, dtype='int64')
+
+
+        noise = get_random_data_chunks(recording, return_scaled=False,
+                        num_chunks_per_segment=d['noise_size'], chunk_size=we.nbefore+we.nafter, concatenated=False, seed=None)
+        noise = np.stack(noise, axis=0)
         
+        
+        # create amplitudes percentile vector
+        # this help to explore channel starting with high amplitudes
+        chan_amps = np.zeros(num_chans, dtype='float64')
+        remain_count = np.zeros(num_chans, dtype='int64')
+        remain_percent = np.zeros(num_chans, dtype='float64')
+        total_count = np.zeros(num_chans, dtype='int64')
+        for chan_ind in range(num_chans):
+            total_count[chan_ind] = np.sum(peaks['channel_ind'] == chan_ind)
+        
+        # this force compute compute at forst loop
+        prev_local_chan_inds = np.arange(num_chans, dtype='int64')
         
         actual_label = 1
         
         while True:
-            #~ print('*'*10)
-            count = [np.sum(peaks['channel_ind'] == chan_ind) for chan_ind in possible_chan_inds]
-            count2 = [np.sum((peaks['channel_ind'] == chan_ind) & (peak_labels==0)) for chan_ind in possible_chan_inds]
-            #~ print(peaks.size, peak_labels.size, np.sum(count))
-            #~ print('possible_chan_inds', possible_chan_inds)
-            #~ print(count)
-            #~ print(count2)
+
+            # update ampltiude percentile and count peak by channel
+            for chan_ind in prev_local_chan_inds:
+                if total_count[chan_ind] == 0:
+                    continue
+                #~ inds, = np.nonzero(np.in1d(peaks['channel_ind'], closest_channels[chan_ind]) & (peak_labels==0))
+                inds, = np.nonzero((peaks['channel_ind'] == chan_ind) & (peak_labels==0))
+                if inds.size <= d['min_spike_on_channel']:
+                    chan_amps[chan_ind] = 0.
+                else:
+                    amps = np.abs(peaks['amplitude'][inds])
+                    chan_amps[chan_ind] = np.percentile(amps, 90)
+                remain_count[chan_ind] = inds.size
+                remain_percent[chan_ind] = remain_count[chan_ind] / total_count[chan_ind]
+                if remain_percent[chan_ind] < d['stop_explore_percent']:
+                    chan_amps[chan_ind] = 0.
             
-            #~ print('Not label', np.sum(peak_labels==0), peak_labels.size)
             
             # get best channel
-            chan_amps = np.zeros(num_chans)
-            not_label_mask = (peak_labels == 0)
-            for c, chan_ind in enumerate(possible_chan_inds):
-                #~ if channel_explored[c]:
-                    #~ continue
-                sel, = np.nonzero((peaks['channel_ind'] == chan_ind) & not_label_mask)
-                
-                #~ print('chan_ind', chan_ind, 'sel', sel.size)
-                #~ sel2, = np.nonzero(peak_labels[sel] == 0)
-                amps = np.abs(peaks[sel]['amplitude'])
-                #~ print(sel.size, amps.size, amps.size <= d['min_cluster_size'])
-                if amps.size <= d['min_spike_on_channel']:
-                    # TODO should relax this because
-                    # cluster could be spread over several channel
-                    continue
-                chan_amps[chan_ind] = np.percentile(amps, 90)
-            #~ print('chan_amps', chan_amps)
             if np.all(chan_amps == 0):
                 break
-            local_chan_ind = np.argmax(chan_amps)
+            
+            # try fist unexplore and high amplitude
+            
+            # local_chan_ind = np.argmax(chan_amps)
+            local_chan_ind = np.argmax(chan_amps * remain_percent)
+            
             local_chan_inds = closest_channels[local_chan_ind]
 
-            print('local_chan_ind', local_chan_ind)
+            print('local_chan_ind', local_chan_ind, 'amps', chan_amps[local_chan_ind], 'count', remain_count[local_chan_ind], 'remain', remain_percent[local_chan_ind])
             
             # take waveforms not label yet for channel in radius
             wfs = []
@@ -208,12 +225,14 @@ class SlidingHdbscanClustering:
                 #~ print(wfs_chan.shape)
                 wfs_chan = wfs_chan[inds, :, :][:, :, local_chan_inds]
                 wfs.append(wfs_chan)
+            # put noise to enhance clusters
+            wfs.append(noise[:, :, local_chan_inds])
             wfs = np.concatenate(wfs, axis=0)
             local_peak_ind = np.concatenate(local_peak_ind, axis=0)
             #~ print('wfs.shape', wfs.shape, 'local_peak_ind.size', local_peak_ind.size)
             #~ assert local_peak_ind.size == wfs.shape[0]
 
-            # reduce dim : PCA + UMAP
+            # reduce dim : PCA
             n = d['n_components_by_channel']
             local_feature = np.zeros((wfs.shape[0], d['n_components_by_channel'] * len(local_chan_inds)))
             pca = sklearn.decomposition.TruncatedSVD(n_components=n)
@@ -230,19 +249,37 @@ class SlidingHdbscanClustering:
             
             # find some clusters
             clusterer = hdbscan.HDBSCAN(min_cluster_size=d['min_cluster_size'], allow_single_cluster=True, metric='l2')
-            local_labels = clusterer.fit_predict(local_feature)
+            all_labels = clusterer.fit_predict(local_feature)
+            
+            local_labels = all_labels[:-noise.shape[0]]
+            noise_labels = all_labels[-noise.shape[0]:]
             
             local_labels_set = np.unique(local_labels)
+            print('local_labels_set', local_labels_set)
+            print('noise_labels_set', np.unique(noise_labels))
             
-            several_cluster = np.sum(local_labels_set>=0) > 1
+            num_cluster = np.sum(local_labels_set>=0)
+            print('num_cluster', num_cluster)
             
-            print('several_cluster', several_cluster)
+            #~ if not several_cluster:
+                #~ # try more UMAP feature
+                #~ reducer = umap.UMAP()
+                #~ reduce_local_feature = reducer.fit_transform(wfs_flat)
+                #~ clusterer = hdbscan.HDBSCAN(min_cluster_size=d['min_cluster_size'], allow_single_cluster=True, metric='l2')
+                #~ local_labels = clusterer.fit_predict(reduce_local_feature)
+                
+                #~ local_labels_set = np.unique(local_labels)
+                #~ several_cluster = np.sum(local_labels_set>=0) > 1
+                #~ print('several_cluster2', several_cluster)
             
-            if several_cluster:
+            
+            
+            if num_cluster > 1:
                 # take only the best cluster = best amplitude on central channel
                 # other cluster will be taken in a next loop
                 ind = local_chan_inds.tolist().index(local_chan_ind)
-                peak_values = wfs[:, we.nbefore, ind]
+                # peak_values = wfs[:, we.nbefore, ind]
+                peak_values = wfs[:-noise.shape[0], we.nbefore, ind]
                 peak_values = np.abs(peak_values)
                 label_peak_values = np.zeros(local_labels_set.size)
                 for l, label in enumerate(local_labels_set):
@@ -254,34 +291,46 @@ class SlidingHdbscanClustering:
                 #~ assert local_peak_ind.size == local_labels.size
                 final_peak_inds = local_peak_ind[local_labels == best_label]
                 
+                # trash outliers from this channel (propably some collision)
                 outlier_inds, = np.nonzero((local_labels == -1) & (peaks[local_peak_ind]['channel_ind'] == local_chan_ind))
                 if outlier_inds.size > 0:
-                    peak_labels[outlier_inds] = -1
-            else:
-                # TODO: find more strict criteria
+                    peak_labels[local_peak_ind[outlier_inds]] = -1
+            elif num_cluster == 1:
+                best_label = 0
                 final_peak_inds = local_peak_ind[local_labels >= 0]
-            
-            peak_labels[final_peak_inds] = actual_label
-            actual_label += 1
-
-
+            else:
+                best_label = None
+                final_peak_inds = np.array([], dtype='int64')
+                # trash all peaks from this channel
+                to_trash_ind,  = np.nonzero(peaks[local_peak_ind]['channel_ind'] == local_chan_ind)
+                peak_labels[local_peak_ind[to_trash_ind]] = -1
                 
+            #~ print('final_peak_inds.size', final_peak_inds.size)
+            if best_label is not None:
+                peak_labels[final_peak_inds] = actual_label
+                actual_label += 1
             
-            
+            # this force recompute amplitude and count at next loop
+            prev_local_chan_inds = local_chan_inds
 
+            
             # DEBUG plot
             #~ plot_debug = local_chan_ind in(21, 22)
             #~ plot_debug = True
-            #~ plot_debug = False
+            plot_debug = False
             #~ plot_debug = actual_label >= 15
-            plot_debug = not several_cluster
+            #~ plot_debug = not several_cluster
             
             
             if plot_debug:
                 import matplotlib.pyplot as plt
 
                 reducer = umap.UMAP()
-                reduce_local_feature = reducer.fit_transform(local_feature)                
+                reduce_local_feature_all = reducer.fit_transform(local_feature)
+                reduce_local_feature = reduce_local_feature_all[:-noise.shape[0]]
+                reduce_local_feature_noise = reduce_local_feature_all[-noise.shape[0]:]
+                
+                wfs_no_noise = wfs[:-noise.shape[0]]
                 
                 fig, axs = plt.subplots(ncols=3)
                 cmap = plt.get_cmap('jet', np.unique(local_labels).size)
@@ -294,15 +343,23 @@ class SlidingHdbscanClustering:
                     #~ ax.scatter(local_feature[mask, 0], local_feature[mask, 1], color=color)
                     ax.scatter(reduce_local_feature[mask, 0], reduce_local_feature[mask, 1], color=color)
                     
+                    # scatter noise
+                    mask_noise = (noise_labels == label)
+                    if np.any(mask_noise):
+                        ax.scatter(reduce_local_feature_noise[mask_noise, 0], reduce_local_feature_noise[mask_noise, 1], color=color, marker='*')
+                        
+                    
                     ax = axs[1]
-                    wfs_flat2 = wfs[mask, :, :].swapaxes(1, 2).reshape(np.sum(mask), -1).T
+                    #~ wfs_flat2 = wfs[mask, :, :].swapaxes(1, 2).reshape(np.sum(mask), -1).T
+                    wfs_flat2 = wfs_no_noise[mask, :, :].swapaxes(1, 2).reshape(np.sum(mask), -1).T
                     ax.plot(wfs_flat2, color=color)
                     if label == best_label:
                         ax.plot(np.mean(wfs_flat2, axis=1), color='m', lw=2)
-                    if outlier_inds.size > 0:
-                        wfs_flat2 = wfs[outlier_inds, :, :].swapaxes(1, 2).reshape(outlier_inds.size, -1).T
-                        ax.plot(wfs_flat2, color='red', ls='--')
-                    if several_cluster:
+                    if num_cluster > 1:
+                        if outlier_inds.size > 0:
+                            wfs_flat2 = wfs_no_noise[outlier_inds, :, :].swapaxes(1, 2).reshape(outlier_inds.size, -1).T
+                            ax.plot(wfs_flat2, color='red', ls='--')
+                    if num_cluster > 1:
                         ax = axs[2]
                         count, bins = np.histogram(peak_values[mask], bins=35)
                         ax.plot(bins[:-1], count, color=color)
@@ -310,6 +367,13 @@ class SlidingHdbscanClustering:
                 for c in range(len(local_chan_inds)):
                     ax.axvline(c * (we.nbefore + we.nafter) + we.nbefore, color='k', ls='--')
                 ax.set_title(f'n={local_peak_ind.size} labeled={final_peak_inds.size} chans={local_chan_ind} {local_chan_inds}')
+
+                ax = axs[2]
+                sel, = np.nonzero((peaks['channel_ind'] == local_chan_ind) & (peak_labels == 0))
+                count, bins = np.histogram(np.abs(peaks['amplitude'][sel]), bins=200)
+                ax.plot(bins[:-1], count, color='k', alpha=0.5)
+
+
                 plt.show()
             # END DEBUG plot
         
@@ -317,24 +381,7 @@ class SlidingHdbscanClustering:
         
         return peak_labels
     
-    @classmethod
-    def main_function(cls, recording, peaks, params):
-        we = cls._initlialize_folder(recording, peaks, params)
-        peak_labels = cls._find_clusters(recording, we, params)
-        
-        
-        #~ tmp_folder = params['tmp_folder']
-        
-        #~ if tmp_folder is None:
-            #~ name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            #~ tmp_folder = get_global_tmp_folder() / f'SlidingHdbscanClustering_{name}'
-        
-        
-        
-        #~ labels = np.arange(recording.get_num_channels(), dtype='int64')
-        #~ peak_labels = peaks['channel_ind']
-        labels, peak_labels = None, None
-        return labels, peak_labels
+
     
 
 
