@@ -68,7 +68,7 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, 
         ## This method will randomly select max_peaks_per_channel peaks per channels
         for channel in np.unique(peaks['channel_ind']):
             max_peaks = min(peaks_indices[channel].size, max_peaks_per_channel)
-            selected_peaks += [np.random.choice(peaks_indices[channel].size, size=max_peaks, replace=False)]
+            selected_peaks += [np.random.choice(peaks_indices[channel], size=max_peaks, replace=False)]
     elif method == 'smart_sampling':
 
         ## This method will try to select around max_peaks_per_channel but in a non uniform manner
