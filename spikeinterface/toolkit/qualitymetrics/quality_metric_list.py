@@ -1,3 +1,5 @@
+"""Lists of quality metrics."""
+
 from .misc_metrics import (
     compute_num_spikes,
     compute_firing_rate,
