@@ -1,9 +1,9 @@
 """Classes and functions for computing multiple quality metrics."""
 
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
-import shutil
-from copy import deepcopy
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
@@ -21,7 +21,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
     Notes
     -----
-    principal_component is loaded automatically if already computed.
+    principal_components are loaded automatically if already computed.
     """
 
     extension_name = 'quality_metrics'
@@ -122,7 +122,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             if self.principal_component is None:
                 raise ValueError('waveform_principal_component must be provied')
             kwargs = {k: self._params[k] for k in ('max_spikes_for_nn', 'n_neighbors', 'seed')}
-            pc_metrics = calculate_pc_metrics(self.principal_component, metric_names=pc_metric_names, **kwargs)
+            pc_metrics = calculate_pc_metrics(self.principal_component,
+                                              metric_names=pc_metric_names, **kwargs)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 
@@ -135,7 +136,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
     def get_metrics(self):
         """Get the computed metrics."""
 
-        assert self._metrics is not None, "Quality metrics are not computed. Use the 'compute_metrics()' function."
+        msg = "Quality metrics are not computed. Use the 'compute_metrics()' function."
+        assert self._metrics is not None, msg
         return self._metrics
 
 
