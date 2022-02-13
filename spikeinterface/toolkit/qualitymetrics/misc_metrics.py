@@ -7,10 +7,10 @@ Some of then come from or the old implementation:
 Implementations here have been refactored to support the multi-segment API of spikeinterface.
 """
 
+from collections import namedtuple
+
 import numpy as np
 import scipy.ndimage
-
-from collections import namedtuple
 
 from ..utils import get_noise_levels
 from ..postprocessing import (
@@ -96,7 +96,7 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     Returns
     -------
     presence_ratio : dict
-        The presence ratio, represents the fraction of time bins the unit is spiking, for each unit ID.
+        The presence ratio for each unit ID.
 
     Notes
     -----
@@ -206,8 +206,8 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     ---------
     [1] Hill et al. (2011) J Neurosci 31: 8699-8705
 
-    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality) and
-    converted to Python by Daniel Denman.
+    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
+    and converted to Python by Daniel Denman.
     """
 
     recording = waveform_extractor.recording
@@ -244,7 +244,9 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
         isi_violations_rate[unit_id] = num_violations / total_duration
         isi_violations_count[unit_id] = num_violations
 
-    res = namedtuple('isi_violaion', ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
+    res = namedtuple('isi_violaion',
+                     ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
+
     return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
 
 
@@ -315,9 +317,7 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
         G = np.argmin(np.abs(pdf[peak_index:] - pdf[0])) + peak_index
         fraction_missing = np.sum(pdf[G:]) * bin_size
-
         fraction_missing = np.min([fraction_missing, 0.5])
-
         all_fraction_missing[unit_id] = fraction_missing
 
     return all_fraction_missing
