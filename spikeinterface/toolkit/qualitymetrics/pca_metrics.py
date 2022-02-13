@@ -8,10 +8,10 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import IncrementalPCA
 
 import spikeinterface as si
-# from ..utils import get_random_data_chunks
-# from ..postprocessing import get_template_channel_sparsity
+from ..utils import get_random_data_chunks
+from ..postprocessing import get_template_channel_sparsity
 
-# from ..postprocessing import WaveformPrincipalComponent
+from ..postprocessing import WaveformPrincipalComponent
 
 _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
                              'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
