@@ -161,6 +161,32 @@ class BaseSorting(BaseExtractor):
             spike_labels = spike_labels[order]
             spikes.append((spike_times, spike_labels))
         return spikes
+    
+    def to_spike_vector(self):
+        """
+        Construct a unique vector concatenating all spikes in one vector
+        with several fields : sample_ind, unit_index, segment_index.
+        
+        See also get_all_spike_trains
+        """
+        spikes_ = self.get_all_spike_trains(outputs='unit_index')
+        
+        n = np.sum([e[0].size for e in spikes_])
+        spike_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        spikes = np.zeros(n, dtype=spike_dtype)
+        
+        pos = 0
+        for segment_index, (spike_times, spike_labels) in enumerate(spikes_):
+            n = spike_times.size
+            spikes[pos:pos+n]['sample_ind'] = spike_times
+            spikes[pos:pos+n]['unit_ind'] = spike_labels
+            spikes[pos:pos+n]['segment_ind'] = segment_index
+            pos += n
+        
+        return spikes
+        
+        
+        
 
 
 class BaseSortingSegment(BaseSegment):
