@@ -70,7 +70,10 @@ def test_BaseSorting():
     sorting3 = BaseExtractor.load(folder)
 
     spikes = sorting.get_all_spike_trains()
-    print(spikes)
+    # print(spikes)
+    
+    spikes = sorting.to_spike_vector()
+    # print(spikes)
 
 
 if __name__ == '__main__':
