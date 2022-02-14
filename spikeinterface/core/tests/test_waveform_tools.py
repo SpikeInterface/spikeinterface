@@ -61,40 +61,51 @@ def test_waveform_tools():
     
     dtype = recording.get_dtype()
     return_scaled = False
-    #~ dtype = 'float32'
-    #~ return_scaled = True
-    
     
     spikes = sorting.to_spike_vector()
-    #~ print(spikes)
     
     unit_ids = sorting.unit_ids
-    wfs_arrays = allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype)
-    #~ print(wfs_arrays)
     
-    job_kwargs = {}
-    job_kwargs = {'n_jobs': 1, 'chunk_size': 3000}
-    job_kwargs = {'n_jobs': 2, 'chunk_size': 3000}
-    distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbefore, nafter, return_scaled, **job_kwargs)
-
-
-    for unit_ind, unit_id in enumerate(unit_ids):
-        wf = wfs_arrays[unit_id]
-        assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
+    #~ wfs_arrays = allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype)
     
+    #~ some_job_kwargs = [
+        #~ {},
+        #~ {'n_jobs': 1, 'chunk_size': 3000, 'progress_bar':True},
+        #~ {'n_jobs': 2, 'chunk_size': 3000, 'progress_bar':True},
+    #~ ]
+    
+    #~ for job_kwargs in some_job_kwargs:
+        #~ distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbefore, nafter, return_scaled, **job_kwargs)
+        #~ for unit_ind, unit_id in enumerate(unit_ids):
+            #~ wf = wfs_arrays[unit_id]
+            #~ assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
+            
+    
+    # sparse mode
+    wf_folder = Path('test_waveform_tools_sparse')
+    if wf_folder.is_dir():
+        shutil.rmtree(wf_folder)
+    wf_folder.mkdir()
+    
+    
+    sparsity_mask = np.random.randint(0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype='bool')
+    
+    wfs_arrays = allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)
+    job_kwargs = {'n_jobs': 1, 'chunk_size': 3000, 'progress_bar':True}
+    distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbefore, nafter, return_scaled, sparsity_mask=sparsity_mask, **job_kwargs)
     
 
     #~ we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
 
     #~ we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
     #~ we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
-    import matplotlib.pyplot as plt
-    for unit_ind, unit_id in enumerate(unit_ids):
-        wf = wfs_arrays[unit_id]
-        wf_flat =wf.swapaxes(1, 2).reshape(wf.shape[0], -1)
-        fig, ax = plt.subplots()
-        ax.plot(wf_flat)
-        plt.show()
+    #~ import matplotlib.pyplot as plt
+    #~ for unit_ind, unit_id in enumerate(unit_ids):
+        #~ wf = wfs_arrays[unit_id]
+        #~ wf_flat =wf.swapaxes(1, 2).reshape(wf.shape[0], -1)
+        #~ fig, ax = plt.subplots()
+        #~ ax.plot(wf_flat)
+        #~ plt.show()
 
 
 

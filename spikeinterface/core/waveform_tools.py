@@ -14,7 +14,7 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
         
     
     """
-    num_chans = recording.get_num_channels()
+    
     nsamples = nbefore + nafter
     
     if mode =='memmap':
@@ -22,6 +22,10 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
         wfs_arrays = {}
         for unit_ind, unit_id in enumerate(unit_ids):
             n_spikes = np.sum(spikes['unit_ind'] == unit_ind)
+            if sparsity_mask is None:
+                num_chans = recording.get_num_channels()
+            else:
+                num_chans = np.sum(sparsity_mask[unit_ind, :])
             shape = (n_spikes, nsamples, num_chans)
             filename = folder / f'waveforms_{unit_id}.npy'
             arr = np.lib.format.open_memmap(filename, mode='w+', dtype=dtype, shape=shape)
@@ -32,8 +36,14 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
     else:
         raise ValueError('allocate_waveforms bad mode')
 
-def distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbefore, nafter, return_scaled, **job_kwargs):
+
+def distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbefore, nafter, return_scaled, sparsity_mask=None, **job_kwargs):
     n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
+
+    inds_by_unit = {}
+    for unit_ind, unit_id in enumerate(unit_ids):
+        inds,  = np.nonzero(spikes['unit_ind'] == unit_ind)
+        inds_by_unit[unit_id] = inds
 
     # and run
     func = _waveform_extractor_chunk
@@ -42,16 +52,14 @@ def distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbef
         init_args = (recording, )
     else:
         init_args = (recording.to_dict(), )
-    init_args = init_args + (unit_ids, spikes, wfs_arrays, nbefore, nafter, return_scaled)
+    init_args = init_args + (unit_ids, spikes, wfs_arrays, nbefore, nafter, return_scaled, inds_by_unit, sparsity_mask)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name='extract waveforms',
                                        **job_kwargs)
     processor.run()
 
 
-
-
 # used by WaveformExtractor + ChunkRecordingExecutor
-def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays, nbefore, nafter, return_scaled):
+def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays, nbefore, nafter, return_scaled, inds_by_unit, sparsity_mask):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -65,12 +73,8 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays, nbe
     worker_ctx['nbefore'] = nbefore
     worker_ctx['nafter'] = nafter
     worker_ctx['return_scaled'] = return_scaled
-    
-    inds_by_unit = {}
-    for unit_ind, unit_id in enumerate(unit_ids):
-        inds,  = np.nonzero(spikes['unit_ind'] == unit_ind)
-        inds_by_unit[unit_id] = inds
     worker_ctx['inds_by_unit'] = inds_by_unit
+    worker_ctx['sparsity_mask'] = sparsity_mask
 
     return worker_ctx
 
@@ -86,6 +90,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     nafter = worker_ctx['nafter']
     return_scaled = worker_ctx['return_scaled']
     inds_by_unit = worker_ctx['inds_by_unit']
+    sparsity_mask = worker_ctx['sparsity_mask']
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
     
@@ -125,9 +130,12 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
             # find pos 
             inds = inds_by_unit[unit_id]
             in_chunk_pos,  = np.nonzero((inds >=l0) & (inds < l1))
-            #~ print('l0', l0, 'l1', l1, 'unit_ind', unit_ind, 'in_chunk_pos', in_chunk_pos)
             for pos in in_chunk_pos:
                 sample_ind = spikes[inds[pos]]['sample_ind']
-                #~ print('sample_ind', sample_ind, 'segment_index', segment_index, 'seg_size', seg_size, 'start', start, 'end', end)
-                wfs[pos,: , :] = traces[sample_ind - start - nbefore:sample_ind - start + nafter, :]
+                wf = traces[sample_ind - start - nbefore:sample_ind - start + nafter, :]
+                
+                if sparsity_mask is None:
+                    wfs[pos,: , :] = wf
+                else:
+                    wfs[pos,: , :] = wf[:, sparsity_mask[unit_ind]]
 
