@@ -1,5 +1,7 @@
 from pathlib import Path
 import shutil
+import platform
+
 import numpy as np
 
 from spikeinterface.core.testing_tools import generate_recording, generate_sorting
@@ -86,18 +88,20 @@ def test_waveform_tools():
     
 
     # memory
-    list_wfs = []
-    for job_kwargs in some_job_kwargs:
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='shared_memory', folder=None, dtype=dtype)
-        distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, mode='shared_memory', **job_kwargs)
-        for unit_ind, unit_id in enumerate(unit_ids):
-            wf = wfs_arrays[unit_id]
-            assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
-        list_wfs.append({unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids})
-        # to avoid warning we need to first destroy arrays then sharedmemm object
-        del wfs_arrays
-        del wfs_arrays_info
-    _check_all_wf_equal(list_wfs)
+    if platform.system() != 'Windows':
+        # shared memory on windows is buggy...
+        list_wfs = []
+        for job_kwargs in some_job_kwargs:
+            wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='shared_memory', folder=None, dtype=dtype)
+            distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, mode='shared_memory', **job_kwargs)
+            for unit_ind, unit_id in enumerate(unit_ids):
+                wf = wfs_arrays[unit_id]
+                assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
+            list_wfs.append({unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids})
+            # to avoid warning we need to first destroy arrays then sharedmemm object
+            del wfs_arrays
+            del wfs_arrays_info
+        _check_all_wf_equal(list_wfs)
 
     
     # with sparsity
