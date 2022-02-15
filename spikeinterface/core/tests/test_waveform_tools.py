@@ -56,8 +56,6 @@ def test_waveform_tools():
     nbefore = int(3. * sampling_frequency / 1000.)
     nafter = int(4. * sampling_frequency / 1000.)
     
-    print('nbefore', nbefore, 'nafter', nafter)
-    
     dtype = recording.get_dtype()
     return_scaled = False
     

@@ -662,7 +662,6 @@ class WaveformExtractor:
         spikes = []
         for segment_index in range(self.sorting.get_num_segments()):
             num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids])
-            print('num_in_seg', num_in_seg)
             spike_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
             spikes_ = np.zeros(num_in_seg,  dtype=spike_dtype)
             pos = 0
@@ -682,8 +681,6 @@ class WaveformExtractor:
         wf_folder = self.folder / 'waveforms'
         wfs_arrays, wfs_arrays_info = allocate_waveforms(self.recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=p['dtype'])
         distribute_waveforms_to_buffers(self.recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **job_kwargs)
-
-
 
 
 
