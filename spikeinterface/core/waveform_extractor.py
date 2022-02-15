@@ -7,7 +7,6 @@ import numpy as np
 from .base import load_extractor
 
 from .core_tools import check_json
-#~ from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 from .job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.waveform_tools import allocate_waveforms, distribute_waveforms_to_buffers
 
@@ -650,42 +649,7 @@ class WaveformExtractor:
         return_scaled = self.return_scaled
         unit_ids = self.sorting.unit_ids
 
-        #~ n_jobs = ensure_n_jobs(self.recording, job_kwargs.get('n_jobs', None))
-
         selected_spikes = self.sample_spikes()
-
-        # get spike times
-        #~ selected_spike_times = {}
-        #~ for unit_id in self.sorting.unit_ids:
-            #~ selected_spike_times[unit_id] = []
-            #~ for segment_index in range(self.sorting.get_num_segments()):
-                #~ spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                #~ sel = selected_spikes[unit_id][segment_index]
-                #~ selected_spike_times[unit_id].append(spike_times[sel])
-
-        # prepare memmap
-        #~ wfs_memmap = {}
-        #~ for unit_id in self.sorting.unit_ids:
-            #~ file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
-            #~ n_spikes = np.sum([e.size for e in selected_spike_times[unit_id]])
-            #~ shape = (n_spikes, self.nsamples, num_chans)
-            #~ wfs = np.zeros(shape, dtype=p['dtype'])
-            #~ np.save(file_path, wfs)
-            #~ # wfs = np.load(file_path, mmap_mode='r+')
-            #~ wfs_memmap[unit_id] = file_path
-
-        # and run
-        #~ func = _waveform_extractor_chunk
-        #~ init_func = _init_worker_waveform_extractor
-        #~ if n_jobs == 1:
-            #~ init_args = (self.recording, self.sorting,)
-        #~ else:
-            #~ init_args = (self.recording.to_dict(), self.sorting.to_dict(),)
-        #~ init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter, return_scaled)
-        #~ processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, job_name='extract waveforms',
-                                           #~ **job_kwargs)
-        #~ processor.run()
-
 
         selected_spike_times = {}
         for unit_id in self.sorting.unit_ids:
@@ -714,8 +678,7 @@ class WaveformExtractor:
             spikes_ = spikes_[order]
             spikes.append(spikes_)
         spikes = np.concatenate(spikes)
-        print(spikes)
-        
+
         wf_folder = self.folder / 'waveforms'
         wfs_arrays, wfs_arrays_info = allocate_waveforms(self.recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=p['dtype'])
         distribute_waveforms_to_buffers(self.recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **job_kwargs)

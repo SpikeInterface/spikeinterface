@@ -4,12 +4,13 @@ This module contain low level function to retrieve snippet of traces aka "spike 
 This is internally used by WaveformExtractor but also can be used as a sorting component.
 
 It is a 2 steps way :
-  1. allocate buffer (file or memory)
-  2. extract and distribute snipet to buffer (in parallel optionaly)
-
+  1. allocate buffers (file or memory)
+  2. extract and distribute snipet into buffers (in parallel optionaly)
 
 """
+
 import platform
+from pathlib import Path
 
 import numpy as np
 
@@ -20,13 +21,38 @@ from .core_tools import make_shared_array
 def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=None, dtype=None, sparsity_mask=None):
     """
     
+    Allocate memmap or sheared memory buffers before snippet extraction.
     
-    sparsity_mask:
-        If not None must
-        shape=(len(unit_ids), len(channel_ids)
-        dtype='bool'
-        
+    Important note, for shared momory mode wfs_arrays_info contain reference to
+    the shared memmory buffer, this variable must be reference as long as arrays as used.
     
+    Parameters
+    ----------
+    recording: recording
+        The recording object
+    spikes: 1d numpy array with several field
+        spikes handle as a unique vector.
+        This vector can be spikes = Sorting.to_spike_vector()
+    unit_ids: list ot numpy
+        List of unit_ids
+    nbefore: int
+        N samples before spike
+    nafter: int
+        N samples after spike
+    mode: ('memmap' | 'shared_memory')
+        mode to use
+    folder: str or path
+        In case of memmap mode, folder to put npy files.
+    dtype: numpy.dtype
+        dtype for waveformsq buffer
+    sparsity_mask: None or array of bool
+        If not None shape must be must be (len(unit_ids), len(channel_ids)
+    Returns
+    -------
+    wfs_arrays: dict of arrays
+        Arrays for all units (memmap or shared_memmep
+    wfs_arrays_info: dict of info
+        Dictionary to "construct" array in workers process (memmap file or sharemem)
     """
     
     nsamples = nbefore + nafter
@@ -34,6 +60,8 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
     dtype = np.dtype(dtype)
     if mode =='shared_memory':
         assert folder is None
+    else:
+        folder = Path(folder)
     
     # prepare buffers
     wfs_arrays = {}
@@ -62,6 +90,41 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
     
 
 def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, mode='memmap', sparsity_mask=None, **job_kwargs):
+    """
+    Distribute snipets of traces into corresponding buffers.
+    
+    Buffers must be pre allocate with `allocate_waveforms()`
+    
+    Important note, for "shared_memory" mode wfs_arrays_info contain reference to
+    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    
+    Parameters
+    ----------
+    recording: recording
+        The recording object
+    spikes: 1d numpy array with several field
+        spikes handle as a unique vector.
+        This vector can be spikes = Sorting.to_spike_vector()
+    unit_ids: list ot numpy
+        List of unit_ids
+    wfs_arrays_info: dict
+        Dictionary to "construct" array in workers process (memmap file or sharemem)
+    nbefore: int
+        N samples before spike
+    nafter: int
+        N samples after spike
+    return_scaled: bool
+        Scale traces before exporting to buffer or not.
+    mode: ('memmap' | 'shared_memory')
+        mode to use
+    sparsity_mask: None or array of bool
+        If not None shape must be must be (len(unit_ids), len(channel_ids)    
+    
+    {}
+    
+    """
+    
+    
     n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
 
     inds_by_unit = {}
@@ -81,6 +144,7 @@ def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info
                                        **job_kwargs)
     processor.run()
 
+distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
 # used by ChunkRecordingExecutor
 def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info, nbefore, nafter, return_scaled, inds_by_unit, mode, sparsity_mask):
