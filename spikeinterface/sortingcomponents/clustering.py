@@ -14,8 +14,9 @@ except:
     HAVE_HDBSCAN = False
 
 
-from ..core import get_global_tmp_folder, extract_waveforms, NumpySorting
+from ..core import get_global_tmp_folder
 from ..toolkit import get_channel_distances, get_random_data_chunks
+from ..core.waveform_tools import allocate_waveforms, distribute_waveforms_to_buffers
 
 
 
@@ -122,23 +123,45 @@ class SlidingHdbscanClustering:
             tmp_folder = get_global_tmp_folder() / f'SlidingHdbscanClustering_{name}'
         else:
             tmp_folder = Path(tmp_folder)
-
-        sorting = NumpySorting.from_times_labels(peaks['sample_ind'], peaks['channel_ind'], recording.get_sampling_frequency())
-        sorting = sorting.save(folder=tmp_folder / 'by_channel_peaks')
+        tmp_folder.mkdir()
         
-        we = extract_waveforms(recording, sorting, 
-                    tmp_folder / 'by_chan_waveform',
-                    load_if_exists=False,
-                    precompute_template=[],
-                    ms_before=d['ms_before'], ms_after=d['ms_after'],
-                    max_spikes_per_unit=None,
-                    overwrite=False,
-                    return_scaled=False,
-                    dtype=None,
-                    use_relative_path=False,
-                    **d['job_kwargs'])
+        # create a new peak vector to extract waveforms
+        dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        peaks2 = np.zeros(peaks.size, dtype=dtype)
+        peaks2['sample_ind'] = peaks['sample_ind']
+        peaks2['unit_ind'] = peaks['channel_ind']
+        peaks2['segment_ind'] = peaks['segment_ind']
         
-        return we
+        unit_ids = recording.channel_ids
+        fs = recording.get_sampling_frequency()
+        dtype = recording.get_dtype()
+        
+        nbefore = int(d['ms_before'] * fs / 1000.)
+        nafter = int(d['ms_after'] * fs / 1000.)
+        
+        return_scaled = False
+        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, unit_ids, nbefore, nafter, mode='memmap', folder=tmp_folder, dtype=dtype)
+        distribute_waveforms_to_buffers(recording, peaks2, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **d['job_kwargs'])
+        
+        return wfs_arrays, wfs_arrays_info
+        
+        
+        #~ sorting = NumpySorting.from_times_labels(peaks['sample_ind'], peaks['channel_ind'], recording.get_sampling_frequency())
+        #~ sorting = sorting.save(folder=tmp_folder / 'by_channel_peaks')
+        
+        #~ we = extract_waveforms(recording, sorting, 
+                    #~ tmp_folder / 'by_chan_waveform',
+                    #~ load_if_exists=False,
+                    #~ precompute_template=[],
+                    #~ ms_before=d['ms_before'], ms_after=d['ms_after'],
+                    #~ max_spikes_per_unit=None,
+                    #~ overwrite=False,
+                    #~ return_scaled=False,
+                    #~ dtype=None,
+                    #~ use_relative_path=False,
+                    #~ **d['job_kwargs'])
+        
+        #~ return we
     
     @classmethod
     def _find_clusters(cls, recording, peaks, we, d):
