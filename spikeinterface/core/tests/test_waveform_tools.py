@@ -49,7 +49,7 @@ def test_waveform_tools():
     recording = recording.save()
     sorting = sorting.save()
 
-    wf_folder = Path('test_waveform_tools')
+    
 
     #~ we = WaveformExtractor.create(recording, sorting, folder)
     
@@ -71,7 +71,8 @@ def test_waveform_tools():
     
     # memmap mode 
     list_wfs = []
-    for job_kwargs in some_job_kwargs:
+    for j, job_kwargs in enumerate(some_job_kwargs):
+        wf_folder = Path(f'test_waveform_tools_{j}')
         if wf_folder.is_dir():
             shutil.rmtree(wf_folder)
         wf_folder.mkdir()
@@ -81,8 +82,6 @@ def test_waveform_tools():
             wf = wfs_arrays[unit_id]
             assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
         list_wfs.append({unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids})
-        del wfs_arrays
-        del wfs_arrays_info
     _check_all_wf_equal(list_wfs)
     
 
