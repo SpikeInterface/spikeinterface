@@ -1,7 +1,21 @@
+"""
+This module contain low level function to retrieve snippet of traces aka "spike waveforms".
+
+This is internally used by WaveformExtractor but also can be used as a sorting component.
+
+It is a 2 steps way :
+  1. allocate buffer (file or memory)
+  2. extract and distribute snipet to buffer (in parallel optionaly)
+
+
+"""
+import platform
 
 import numpy as np
 
 from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
+from .core_tools import make_shared_array
+
 
 def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=None, dtype=None, sparsity_mask=None):
     """
@@ -17,27 +31,37 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
     
     nsamples = nbefore + nafter
     
-    if mode =='memmap':
-        # prepare memmap
-        wfs_arrays = {}
-        for unit_ind, unit_id in enumerate(unit_ids):
-            n_spikes = np.sum(spikes['unit_ind'] == unit_ind)
-            if sparsity_mask is None:
-                num_chans = recording.get_num_channels()
-            else:
-                num_chans = np.sum(sparsity_mask[unit_ind, :])
-            shape = (n_spikes, nsamples, num_chans)
+    dtype = np.dtype(dtype)
+    if mode =='shared_memory':
+        assert folder is None
+    
+    # prepare buffers
+    wfs_arrays = {}
+    wfs_arrays_info = {}
+    for unit_ind, unit_id in enumerate(unit_ids):
+        n_spikes = np.sum(spikes['unit_ind'] == unit_ind)
+        if sparsity_mask is None:
+            num_chans = recording.get_num_channels()
+        else:
+            num_chans = np.sum(sparsity_mask[unit_ind, :])
+        shape = (n_spikes, nsamples, num_chans)
+        
+        if mode =='memmap':
             filename = folder / f'waveforms_{unit_id}.npy'
             arr = np.lib.format.open_memmap(filename, mode='w+', dtype=dtype, shape=shape)
             wfs_arrays[unit_id] = arr
-        return wfs_arrays
-    elif mode =='memory':
-        raise NotImplementedError()
-    else:
-        raise ValueError('allocate_waveforms bad mode')
+            wfs_arrays_info[unit_id] = filename
+        elif mode =='shared_memory':
+            arr, shm = make_shared_array(shape, dtype)
+            wfs_arrays[unit_id] = arr
+            wfs_arrays_info[unit_id] = (shm, shm.name, dtype.str, shape)
+        else:
+            raise ValueError('allocate_waveforms bad mode')
 
+    return wfs_arrays, wfs_arrays_info
+    
 
-def distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbefore, nafter, return_scaled, sparsity_mask=None, **job_kwargs):
+def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, mode='memmap', sparsity_mask=None, **job_kwargs):
     n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
 
     inds_by_unit = {}
@@ -52,14 +76,14 @@ def distribute_waveform_to_buffers(recording, spikes, unit_ids, wfs_arrays, nbef
         init_args = (recording, )
     else:
         init_args = (recording.to_dict(), )
-    init_args = init_args + (unit_ids, spikes, wfs_arrays, nbefore, nafter, return_scaled, inds_by_unit, sparsity_mask)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name='extract waveforms',
+    init_args = init_args + (unit_ids, spikes, wfs_arrays_info, nbefore, nafter, return_scaled, inds_by_unit, mode, sparsity_mask)
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=f'extract waveforms {mode}',
                                        **job_kwargs)
     processor.run()
 
 
-# used by WaveformExtractor + ChunkRecordingExecutor
-def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays, nbefore, nafter, return_scaled, inds_by_unit, sparsity_mask):
+# used by ChunkRecordingExecutor
+def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info, nbefore, nafter, return_scaled, inds_by_unit, mode, sparsity_mask):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -67,6 +91,25 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays, nbe
         recording = load_extractor(recording)
     worker_ctx['recording'] = recording
     
+    if mode == 'memmap':
+        #~ if not platform.system().lower().startswith('linux'):
+        # For OSX and windows : need to re open all npy files in r+ mode for each worker
+        wfs_arrays = {}
+        for unit_id, filename in wfs_arrays_info.items():
+            wfs_arrays[unit_id] = np.load(filename, mmap_mode='r+')
+    elif mode == 'shared_memory':
+        
+        from multiprocessing.shared_memory import SharedMemory
+        wfs_arrays = {}
+        shms = {}
+        for unit_id, (sm, shm_name, dtype, shape) in wfs_arrays_info.items():
+            shm = SharedMemory(shm_name)
+            arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            wfs_arrays[unit_id] = arr
+            # we need a reference to all sham otherwise we get segment fault!!!
+            shms[unit_id] = shm
+        worker_ctx['shms'] = shms
+
     worker_ctx['unit_ids'] = unit_ids
     worker_ctx['spikes'] = spikes
     worker_ctx['wfs_arrays'] = wfs_arrays
@@ -79,7 +122,7 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays, nbe
     return worker_ctx
 
 
-# used by WaveformExtractor + ChunkRecordingExecutor
+# used by ChunkRecordingExecutor
 def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     recording = worker_ctx['recording']
