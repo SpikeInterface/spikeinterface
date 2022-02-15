@@ -9,7 +9,7 @@ from .base import load_extractor
 from .core_tools import check_json
 #~ from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 from .job_tools import _shared_job_kwargs_doc
-from spikeinterface.core.waveform_tools import allocate_waveforms, distribute_waveform_to_buffers
+from spikeinterface.core.waveform_tools import allocate_waveforms, distribute_waveforms_to_buffers
 
 _possible_template_modes = ('average', 'std', 'median')
 
@@ -717,8 +717,8 @@ class WaveformExtractor:
         print(spikes)
         
         wf_folder = self.folder / 'waveforms'
-        wfs_arrays = allocate_waveforms(self.recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=p['dtype'])
-        distribute_waveform_to_buffers(self.recording, spikes, unit_ids, wfs_arrays, nbefore, nafter, return_scaled, **job_kwargs)
+        wfs_arrays, wfs_arrays_info = allocate_waveforms(self.recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=p['dtype'])
+        distribute_waveforms_to_buffers(self.recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **job_kwargs)
 
 
 
