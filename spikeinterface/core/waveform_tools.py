@@ -224,7 +224,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     l0 = i0 + s0
     l1 = i1 + s0
     
-    if spikes.size > 0:
+    if l1 > l0:
         start = spikes[l0]['sample_ind'] - nbefore
         end = spikes[l1-1]['sample_ind'] + nafter
         
