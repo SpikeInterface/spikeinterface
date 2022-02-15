@@ -47,7 +47,7 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
         shape = (n_spikes, nsamples, num_chans)
         
         if mode =='memmap':
-            filename = folder / f'waveforms_{unit_id}.npy'
+            filename = str(folder / f'waveforms_{unit_id}.npy')
             arr = np.lib.format.open_memmap(filename, mode='w+', dtype=dtype, shape=shape)
             wfs_arrays[unit_id] = arr
             wfs_arrays_info[unit_id] = filename
