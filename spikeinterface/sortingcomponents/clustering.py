@@ -108,8 +108,8 @@ class SlidingHdbscanClustering:
     @classmethod
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, 'SlidingHdbscanClustering need hdbscan to be installed'
-        we = cls._initlialize_folder(recording, peaks, params)
-        peak_labels = cls._find_clusters(recording, peaks, we, params)
+        wfs_arrays, wfs_arrays_info, sparsity_mask = cls._initlialize_folder(recording, peaks, params)
+        peak_labels = cls._find_clusters(recording, peaks, wfs_arrays, sparsity_mask, params)
         labels = np.unique(peak_labels)
         labels, peak_labels = None, None
         return labels, peak_labels
@@ -125,6 +125,16 @@ class SlidingHdbscanClustering:
             tmp_folder = Path(tmp_folder)
         tmp_folder.mkdir()
         
+        num_chans = recording.channel_ids.size
+
+        
+        # important sparsity is 2 times radius sparsity because closest channel will be 1 time radius
+        chan_distances = get_channel_distances(recording)
+        sparsity_mask = np.zeros((num_chans, num_chans), dtype='bool')
+        for c in range(num_chans):
+            chans, = np.nonzero(chan_distances[c, :] <= ( 2 * d['radius_um']))
+            sparsity_mask[c, chans] = True
+        
         # create a new peak vector to extract waveforms
         dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
         peaks2 = np.zeros(peaks.size, dtype=dtype)
@@ -139,32 +149,15 @@ class SlidingHdbscanClustering:
         nafter = int(d['ms_after'] * fs / 1000.)
         
         return_scaled = False
-        ids = np.arange(recording.channel_ids.size, dtype='int64')
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, ids, nbefore, nafter, mode='memmap', folder=tmp_folder, dtype=dtype)
-        distribute_waveforms_to_buffers(recording, peaks2,  ids, wfs_arrays_info, nbefore, nafter, return_scaled, **d['job_kwargs'])
-        
-        return wfs_arrays, wfs_arrays_info
-        
-        
-        #~ sorting = NumpySorting.from_times_labels(peaks['sample_ind'], peaks['channel_ind'], recording.get_sampling_frequency())
-        #~ sorting = sorting.save(folder=tmp_folder / 'by_channel_peaks')
-        
-        #~ we = extract_waveforms(recording, sorting, 
-                    #~ tmp_folder / 'by_chan_waveform',
-                    #~ load_if_exists=False,
-                    #~ precompute_template=[],
-                    #~ ms_before=d['ms_before'], ms_after=d['ms_after'],
-                    #~ max_spikes_per_unit=None,
-                    #~ overwrite=False,
-                    #~ return_scaled=False,
-                    #~ dtype=None,
-                    #~ use_relative_path=False,
-                    #~ **d['job_kwargs'])
-        
-        #~ return we
+        ids = np.arange(num_chans, dtype='int64')
+        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, ids, nbefore, nafter, mode='memmap', folder=tmp_folder, dtype=dtype, sparsity_mask=sparsity_mask)
+        distribute_waveforms_to_buffers(recording, peaks2,  ids, wfs_arrays_info, nbefore, nafter, return_scaled, sparsity_mask=sparsity_mask, **d['job_kwargs'])
+
+        return wfs_arrays, wfs_arrays_info, sparsity_mask
+
     
     @classmethod
-    def _find_clusters(cls, recording, peaks, wfs_arrays, d):
+    def _find_clusters(cls, recording, peaks, wfs_arrays, sparsity_mask, d):
         
         num_chans = recording.get_num_channels()
         fs = recording.get_sampling_frequency()
@@ -174,7 +167,6 @@ class SlidingHdbscanClustering:
         
         
         possible_channel_inds = np.unique(peaks['channel_ind'])
-        print('possible_channel_inds', possible_channel_inds)
         
         # channel neighborhood
         #~ possible_inds = we.sorting.unit_ids
@@ -207,6 +199,7 @@ class SlidingHdbscanClustering:
         actual_label = 1
         
         while True:
+            print('actual_label', actual_label)
 
             # update ampltiude percentile and count peak by channel
             for chan_ind in prev_local_chan_inds:
@@ -245,8 +238,18 @@ class SlidingHdbscanClustering:
                 #~ wfs_chan = we.get_waveforms(chan_ind, with_index=False, cache=False, memmap=True, sparsity=None)
                 wfs_chan = wfs_arrays[chan_ind]
                 
+                # TODO: only for debug, remove later
                 assert wfs_chan.shape[0] == sel.size
-                wfs_chan = wfs_chan[inds, :, :][:, :, local_chan_inds]
+                
+                wf_chans, = np.nonzero(sparsity_mask[chan_ind])
+                # TODO: only for debug, remove later
+                assert np.all(np.in1d(local_chan_inds, wf_chans))
+                
+                # none label spikes
+                wfs_chan = wfs_chan[inds, :, :]
+                # only some channels
+                wfs_chan = wfs_chan[:, :, np.in1d(wf_chans, local_chan_inds)]
+                
                 wfs.append(wfs_chan)
             
             # put noise to enhance clusters
