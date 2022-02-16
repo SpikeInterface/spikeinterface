@@ -266,7 +266,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 shape = (n_spike, p['n_components'])
             proj = np.zeros(shape, dtype=p['dtype'])
             np.save(projection_file, proj)
-            comp = np.load(projection_file, mmap_mode='r+')
+            comp = np.load(str(projection_file), mmap_mode='r+')
             projection_memmap[unit_id] = comp
 
         # run ...
