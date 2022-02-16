@@ -115,7 +115,8 @@ class BaseSorting(BaseExtractor):
             NpzSortingExtractor.write_sorting(self, save_path)
             cached = NpzSortingExtractor(save_path)
             if self.has_recording():
-                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
+                warnings.warn(
+                    "The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
         else:
             raise ValueError(f'format {format} not supported')
@@ -129,13 +130,15 @@ class BaseSorting(BaseExtractor):
 
     def select_units(self, unit_ids, renamed_unit_ids=None):
         from spikeinterface import UnitsSelectionSorting
-        sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
+        sub_sorting = UnitsSelectionSorting(
+            self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
     # add tests
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceSorting
-        sub_sorting = FrameSliceSorting(self, start_frame=start_frame, end_frame=end_frame)
+        sub_sorting = FrameSliceSorting(
+            self, start_frame=start_frame, end_frame=end_frame)
         return sub_sorting
 
     def get_all_spike_trains(self, outputs='unit_id'):
@@ -148,7 +151,8 @@ class BaseSorting(BaseExtractor):
             spike_times = []
             spike_labels = []
             for i, unit_id in enumerate(self.unit_ids):
-                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                st = self.get_unit_spike_train(
+                    unit_id=unit_id, segment_index=segment_index)
                 spike_times.append(st)
                 if outputs == 'unit_id':
                     spike_labels.append(np.array([unit_id] * st.size))
@@ -160,6 +164,35 @@ class BaseSorting(BaseExtractor):
             spike_times = spike_times[order]
             spike_labels = spike_labels[order]
             spikes.append((spike_times, spike_labels))
+        return spikes
+
+    def to_spike_vector(self):
+        """
+        Construct a unique structured numpy vector concatenating all spikes 
+        with several fields: sample_ind, unit_index, segment_index.
+
+        See also `get_all_spike_trains()`
+        
+        Returns
+        -------
+        spikes: np.array
+            Structured numpy array ('sample_ind', 'unit_index', 'segment_index') with all spikes
+        """
+        spikes_ = self.get_all_spike_trains(outputs='unit_index')
+
+        n = np.sum([e[0].size for e in spikes_])
+        spike_dtype = [('sample_ind', 'int64'), ('unit_ind',
+                                                 'int64'), ('segment_ind', 'int64')]
+        spikes = np.zeros(n, dtype=spike_dtype)
+
+        pos = 0
+        for segment_index, (spike_times, spike_labels) in enumerate(spikes_):
+            n = spike_times.size
+            spikes[pos:pos+n]['sample_ind'] = spike_times
+            spikes[pos:pos+n]['unit_ind'] = spike_labels
+            spikes[pos:pos+n]['segment_ind'] = segment_index
+            pos += n
+
         return spikes
 
 
