@@ -132,7 +132,6 @@ class SlidingHdbscanClustering:
         peaks2['unit_ind'] = peaks['channel_ind']
         peaks2['segment_ind'] = peaks['segment_ind']
         
-        unit_ids = recording.channel_ids
         fs = recording.get_sampling_frequency()
         dtype = recording.get_dtype()
         
@@ -140,8 +139,9 @@ class SlidingHdbscanClustering:
         nafter = int(d['ms_after'] * fs / 1000.)
         
         return_scaled = False
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, unit_ids, nbefore, nafter, mode='memmap', folder=tmp_folder, dtype=dtype)
-        distribute_waveforms_to_buffers(recording, peaks2, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **d['job_kwargs'])
+        ids = np.arange(recording.channel_ids.size, dtype='int64')
+        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, ids, nbefore, nafter, mode='memmap', folder=tmp_folder, dtype=dtype)
+        distribute_waveforms_to_buffers(recording, peaks2,  ids, wfs_arrays_info, nbefore, nafter, return_scaled, **d['job_kwargs'])
         
         return wfs_arrays, wfs_arrays_info
         
@@ -164,24 +164,31 @@ class SlidingHdbscanClustering:
         #~ return we
     
     @classmethod
-    def _find_clusters(cls, recording, peaks, we, d):
+    def _find_clusters(cls, recording, peaks, wfs_arrays, d):
         
         num_chans = recording.get_num_channels()
+        fs = recording.get_sampling_frequency()
+        nbefore = int(d['ms_before'] * fs / 1000.)
+        nafter = int(d['ms_after'] * fs / 1000.)
+        
+        
+        
+        possible_channel_inds = np.unique(peaks['channel_ind'])
+        print('possible_channel_inds', possible_channel_inds)
         
         # channel neighborhood
-        possible_inds = we.sorting.unit_ids
+        #~ possible_inds = we.sorting.unit_ids
         chan_distances = get_channel_distances(recording)
         closest_channels = []
         for c in range(num_chans):
             chans, = np.nonzero(chan_distances[c, :] <= d['radius_um'])
-            chans = np.intersect1d(possible_inds, chans)
+            chans = np.intersect1d(possible_channel_inds, chans)
             closest_channels.append(chans)
         
-        possible_chan_inds = we.sorting.unit_ids
         peak_labels = np.zeros(peaks.size, dtype='int64')
 
         noise = get_random_data_chunks(recording, return_scaled=False,
-                        num_chunks_per_segment=d['noise_size'], chunk_size=we.nbefore+we.nafter, concatenated=False, seed=None)
+                        num_chunks_per_segment=d['noise_size'], chunk_size=nbefore+nafter, concatenated=False, seed=None)
         noise = np.stack(noise, axis=0)
         
         
@@ -235,7 +242,9 @@ class SlidingHdbscanClustering:
                 inds,  = np.nonzero(peak_labels[sel] == 0)
                 local_peak_ind.append(sel[inds])
                 # here a unit is a channel index!!!
-                wfs_chan = we.get_waveforms(chan_ind, with_index=False, cache=False, memmap=True, sparsity=None)
+                #~ wfs_chan = we.get_waveforms(chan_ind, with_index=False, cache=False, memmap=True, sparsity=None)
+                wfs_chan = wfs_arrays[chan_ind]
+                
                 assert wfs_chan.shape[0] == sel.size
                 wfs_chan = wfs_chan[inds, :, :][:, :, local_chan_inds]
                 wfs.append(wfs_chan)
@@ -268,7 +277,7 @@ class SlidingHdbscanClustering:
                 # take only the best cluster = best amplitude on central channel
                 # other cluster will be taken in a next loop
                 ind = local_chan_inds.tolist().index(local_chan_ind)
-                peak_values = wfs[:-noise.shape[0], we.nbefore, ind]
+                peak_values = wfs[:-noise.shape[0], nbefore, ind]
                 peak_values = np.abs(peak_values)
                 label_peak_values = np.zeros(local_labels_set.size)
                 for l, label in enumerate(local_labels_set):
@@ -345,7 +354,7 @@ class SlidingHdbscanClustering:
                         ax.plot(bins[:-1], count, color=color)
                 ax = axs[1]
                 for c in range(len(local_chan_inds)):
-                    ax.axvline(c * (we.nbefore + we.nafter) + we.nbefore, color='k', ls='--')
+                    ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
                 ax.set_title(f'n={local_peak_ind.size} labeled={final_peak_inds.size} chans={local_chan_ind} {local_chan_inds}')
 
                 ax = axs[2]
