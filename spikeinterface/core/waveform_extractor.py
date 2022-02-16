@@ -412,7 +412,7 @@ class WaveformExtractor:
                 raise Exception('Waveforms not extracted yet: '
                                 'please do WaveformExtractor.run_extract_waveforms() first')
             if memmap:
-                wfs = np.load(waveform_file, mmap_mode="r")
+                wfs = np.load(str(waveform_file), mmap_mode="r")
             else:
                 wfs = np.load(waveform_file)
             if cache:

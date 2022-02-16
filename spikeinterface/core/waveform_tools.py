@@ -166,7 +166,7 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info
         # For OSX and windows : need to re open all npy files in r+ mode for each worker
         wfs_arrays = {}
         for unit_id, filename in wfs_arrays_info.items():
-            wfs_arrays[unit_id] = np.load(filename, mmap_mode='r+')
+            wfs_arrays[unit_id] = np.load(str(filename), mmap_mode='r+')
     elif mode == 'shared_memory':
 
         from multiprocessing.shared_memory import SharedMemory
