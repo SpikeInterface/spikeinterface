@@ -6,7 +6,7 @@ import pytest
 
 from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import read_mearec
-from spikeinterface.toolkit import compute_template_similarity
+from spikeinterface.toolkit import compute_template_similarity, check_equal_template_with_distribution_overlap
 
 
 def setup_module():
@@ -30,12 +30,33 @@ def test_compute_template_similarity():
     similarity = compute_template_similarity(we)
 
     # DEBUG
-    # ~ import matplotlib.pyplot as plt
-    # ~ fig, ax = plt.subplots()
-    # ~ ax.imshow(similarity, interpolation='nearest')
-    # ~ plt.show()
+    #~ import matplotlib.pyplot as plt
+    #~ fig, ax = plt.subplots()
+    #~ ax.imshow(similarity, interpolation='nearest')
+    #~ plt.show()
+
+
+def test_check_equal_template_with_distribution_overlap():
+
+    we = WaveformExtractor.load_from_folder('mearec_waveforms')
+    
+    
+    for unit_id0 in we.sorting.unit_ids:
+        waveforms0 = we.get_waveforms(unit_id0)
+        for unit_id1 in we.sorting.unit_ids:
+            if unit_id0 == unit_id1:
+                continue
+            waveforms1 = we.get_waveforms(unit_id1)
+            check_equal_template_with_distribution_overlap(waveforms0, waveforms1, debug=False)
+            
+        
+    
+    
+    
+    
 
 
 if __name__ == '__main__':
-    setup_module()
-    test_compute_template_similarity()
+    #~ setup_module()
+    #~ test_compute_template_similarity()
+    test_check_equal_template_with_distribution_overlap()
