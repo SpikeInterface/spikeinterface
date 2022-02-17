@@ -3,6 +3,8 @@ import random
 import string
 from pathlib import Path
 
+import time
+
 import numpy as np
 
 import sklearn.decomposition
@@ -199,7 +201,7 @@ class SlidingHdbscanClustering:
         actual_label = 1
         
         while True:
-            print('actual_label', actual_label)
+            print('actual_label', actual_label, 'remain', np.sum(peak_labels==0))
 
             # update ampltiude percentile and count peak by channel
             for chan_ind in prev_local_chan_inds:
@@ -228,6 +230,7 @@ class SlidingHdbscanClustering:
             local_chan_inds = closest_channels[local_chan_ind]
             
             # take waveforms not label yet for channel in radius
+            t0 = time.perf_counter()
             wfs = []
             local_peak_ind = []
             for chan_ind in local_chan_inds:
@@ -256,18 +259,30 @@ class SlidingHdbscanClustering:
             wfs.append(noise[:, :, local_chan_inds])
             wfs = np.concatenate(wfs, axis=0)
             local_peak_ind = np.concatenate(local_peak_ind, axis=0)
+            t1 = time.perf_counter()
+            print('WFS time',  t1 - t0)
+            
 
             # reduce dim : PCA
+            t0 = time.perf_counter()
             n = d['n_components_by_channel']
             local_feature = np.zeros((wfs.shape[0], d['n_components_by_channel'] * len(local_chan_inds)))
             pca = sklearn.decomposition.TruncatedSVD(n_components=n)
             for c, chan_ind in enumerate(local_chan_inds):
                 local_feature[:, c*n:(c+1)*n] = pca.fit_transform(wfs[:, :, c])
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
+            t1 = time.perf_counter()
+            print('PCA time',  t1 - t0)
+
             
             # find some clusters
-            clusterer = hdbscan.HDBSCAN(min_cluster_size=d['min_cluster_size'], allow_single_cluster=True, metric='l2')
+            t0 = time.perf_counter()
+            clusterer = hdbscan.HDBSCAN(min_cluster_size=d['min_cluster_size'], allow_single_cluster=True, metric='l1')
             all_labels = clusterer.fit_predict(local_feature)
+            t1 = time.perf_counter()
+            print('HDBSCAN time',  t1 - t0)
+            
+
             
             local_labels = all_labels[:-noise.shape[0]]
             noise_labels = all_labels[-noise.shape[0]:]
