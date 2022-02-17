@@ -60,6 +60,8 @@ class IronClustSorter(BaseSorter):
 
     requires_locations = True
 
+    docker_requires_gpu = True
+
     _default_params = {
         'detect_sign': -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
         'adjacency_radius': 50,  # Use -1 to include all channels in every neighborhood
