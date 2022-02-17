@@ -437,7 +437,7 @@ class SlidingHdbscanClustering:
         main_channels = []
         channel_inds = []
         for l, label in enumerate(labels):
-            #~ print('label', label)
+            # print('label', label)
 
             #~ t0 = time.perf_counter()
             wfs, chan_inds = _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, sparsity_mask, label)
@@ -511,12 +511,14 @@ class SlidingHdbscanClustering:
                             #~ ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
                         #~ ax.set_title(f'label0={label0} label1={label1} shift{shift}')
                         #~ plt.show()
+        
+        # merge in reverse order because of shift accumulation
         peak_sample_shifts = np.zeros(peaks.size, dtype='int64')
-        for (l0, l1, shift) in auto_merge_list:
+        for (l0, l1, shift) in auto_merge_list[::-1]:
             label0, label1 = labels[l0], labels[l1]
             inds, = np.nonzero(peak_labels == label1)
             clean_peak_labels[inds] = label0
-            peak_sample_shifts[inds] = shift
+            peak_sample_shifts[inds] += shift
             
             
                     
@@ -538,6 +540,11 @@ def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, 
     if wanted_chans is None:
         #only main channel sparsity
         wanted_chans = closest_channels[main_chan]
+        for chan_ind in label_chan_inds:
+            # remove channel non in common
+            wanted_chans = np.intersect1d(wanted_chans, closest_channels[chan_ind])
+        # print('wanted_chans', wanted_chans)
+
 
     wfs = []
     for chan_ind in label_chan_inds:
@@ -547,6 +554,7 @@ def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, 
         
 
         wf_chans, = np.nonzero(sparsity_mask[chan_ind])
+        # print('wf_chans', wf_chans)
         # TODO: only for debug, remove later
         assert np.all(np.in1d(wanted_chans, wf_chans))
         wfs_chan = wfs_arrays[chan_ind]
