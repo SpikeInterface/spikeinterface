@@ -6,7 +6,7 @@ from .template_tools import (get_template_amplitudes,
 
 from .template_metrics import (calculate_template_metrics, get_template_metric_names)
 
-from .template_similarity import compute_template_similarity
+from .template_similarity import compute_template_similarity, check_equal_template_with_distribution_overlap
 
 from .principal_component import (WaveformPrincipalComponent,
                                   compute_principal_components)
