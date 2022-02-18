@@ -118,7 +118,10 @@ class SlidingHdbscanClustering:
         wfs_arrays, wfs_arrays_info, sparsity_mask = cls._initlialize_folder(recording, peaks, params)
         # wfs_arrays = { u:arr.copy() for u, arr in wfs_arrays.items()}
         peak_labels = cls._find_clusters(recording, peaks, wfs_arrays, sparsity_mask, params)
-        clean_peak_labels = cls._clean_cluster(recording, peaks, wfs_arrays, sparsity_mask, peak_labels, params)
+        
+        wfs_arrays2, wfs_arrays_info2, sparsity_mask2 = cls._prepare_clean(recording, peaks, wfs_arrays, sparsity_mask, peak_labels, params)
+        
+        clean_peak_labels, peak_sample_shifts = cls._clean_cluster(recording, peaks, wfs_arrays2, sparsity_mask2, peak_labels, params)
         
         labels = np.unique(clean_peak_labels)
         labels = labels[labels >= 0]
@@ -231,8 +234,8 @@ class SlidingHdbscanClustering:
         actual_label = 1
         
         while True:
-            print()
-            print('actual_label', actual_label, 'remain', np.sum(peak_labels==0))
+            #~ print()
+            #~ print('actual_label', actual_label, 'remain', np.sum(peak_labels==0))
 
             # update ampltiude percentile and count peak by channel
             for chan_ind in prev_local_chan_inds:
@@ -445,7 +448,7 @@ class SlidingHdbscanClustering:
         chan_distances = get_channel_distances(recording)
         closest_channels = []
         for c in range(num_chans):
-            chans, = np.nonzero(chan_distances[c, :] <= d['radius_um'])
+            chans, = np.nonzero(chan_distances[c, :] <= ( d['radius_um']) * 2)
             closest_channels.append(chans)
 
         labels = np.unique(peak_labels)
@@ -474,8 +477,9 @@ class SlidingHdbscanClustering:
             main_chan = main_channels[l]
             mask = keep_peak_labels == label
             peaks2['unit_ind'][mask] = l
-            closest =closest_channels[main_chan]
-            sparsity_mask2[l, closest] = True
+            # here we take a biger radius
+            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= d['radius_um'])
+            sparsity_mask2[l, closest_chans] = True
 
         wfs_arrays2, wfs_arrays_info2 = allocate_waveforms(recording, peaks2, labels, nbefore, nafter, mode=d['waveform_mode'], folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask2)
         distribute_waveforms_to_buffers(recording, peaks2,  labels, wfs_arrays_info2, nbefore, nafter, return_scaled, mode=d['waveform_mode'], sparsity_mask=sparsity_mask2, **d['job_kwargs'])
@@ -631,7 +635,7 @@ class SlidingHdbscanClustering:
             #~ plot_debug = not_aligned
             #~ plot_debug = True
             plot_debug = False
-            #~ plot_debug = label in (24, 18)
+            #~ plot_debug = label in (23, )
             if plot_debug :
                 import matplotlib.pyplot as plt
                 fig, axs = plt.subplots(nrows=2)
