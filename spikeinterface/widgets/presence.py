@@ -33,7 +33,7 @@ class PresenceWidget(BaseWidget):
     """
 
     def __init__(self, sorting, segment_index=None, unit_ids=None,
-                 time_range=None, figure=None, time_pixels = 200, ax=None):
+                 time_range=None, figure=None, time_pixels=200, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
         self._time_pixels = time_pixels
@@ -59,8 +59,10 @@ class PresenceWidget(BaseWidget):
         if self._visible_trange is None:
             self._visible_trange = [0, self._max_frame]
         else:
-            assert len(time_range) == 2, "'time_range' should be a list with start and end time in seconds"
-            self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
+            assert len(
+                time_range) == 2, "'time_range' should be a list with start and end time in seconds"
+            self._visible_trange = [
+                int(t * self._sampling_frequency) for t in time_range]
 
         self._visible_trange = self._fix_trange(self._visible_trange)
         self.name = 'Presence'
@@ -72,11 +74,12 @@ class PresenceWidget(BaseWidget):
         units_ids = self._unit_ids
         if units_ids is None:
             units_ids = self._sorting.get_unit_ids()
-        visible_start_frame = self._visible_trange[0] / self._sampling_frequency
+        visible_start_frame = self._visible_trange[0] / \
+            self._sampling_frequency
         visible_end_frame = self._visible_trange[1] / self._sampling_frequency
 
-        
-        time_grid = np.linspace(visible_start_frame, visible_end_frame, self._time_pixels)
+        time_grid = np.linspace(visible_start_frame,
+                                visible_end_frame, self._time_pixels)
         time_den = []
 
         self.ax.grid('both')
@@ -87,21 +90,21 @@ class PresenceWidget(BaseWidget):
                                                             segment_index=self.segment_index)
             spiketimes = spiketrain / float(self._sampling_frequency)
 
-            if spiketimes[0] !=spiketimes[-1]: #not always the same value
+            if spiketimes[0] != spiketimes[-1]:  # not always the same value
                 time_den.append(gaussian_kde(spiketimes).pdf(time_grid))
             else:
                 aux = np.zeros_like(time_grid)
                 aux[np.argmin(np.abs(time_grid - spiketimes))] = 1
                 time_den.append(aux)
-        
-        
-        self.ax.matshow(np.vstack(time_den), cmap=plt.cm.inferno, aspect='auto')
 
-        
-        self.ax.hlines(np.arange(len(units_ids)) + 0.5, 0, len(time_den[0]), color='k', linewidth=4)
+        self.ax.matshow(np.vstack(time_den),
+                        cmap=plt.cm.inferno, aspect='auto')
+
+        self.ax.hlines(np.arange(len(units_ids)) + 0.5, 0,
+                       len(time_den[0]), color='k', linewidth=4)
 
         self.ax.tick_params(axis='y', which='both', grid_linestyle='None')
-        
+
         self.ax.set_xlim(0, self._time_pixels)
         new_labels = []
         self.ax.xaxis.set_ticks_position('bottom')
@@ -111,6 +114,7 @@ class PresenceWidget(BaseWidget):
                 new_labels.append('{:.1f}'.format(time_grid[int(xt)]))
             else:
                 new_labels.append('{:.1f}'.format(visible_end_frame))
+        self.ax.set_xticks(self.ax.get_xticks())
         self.ax.set_xticklabels(new_labels)
         self.ax.set_yticks(np.arange(len(units_ids)))
         self.ax.set_yticklabels(units_ids)
