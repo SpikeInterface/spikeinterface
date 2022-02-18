@@ -55,6 +55,9 @@ from .gtstudy import (StudyComparisonRunTimesWidget, plot_gt_study_run_times,
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
+# unit presence
+from .presence import plot_presence, PresenceWidget
+
 # correlogram comparison
 from .correlogramcomp import (StudyComparisonCorrelogramBySimilarityWidget, plot_study_comparison_correlogram_by_similarity,
     StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget, plot_study_comparison_correlogram_by_similarity_ranges_mean_error)
