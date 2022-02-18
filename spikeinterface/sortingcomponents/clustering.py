@@ -104,8 +104,9 @@ class SlidingHdbscanClustering:
         'min_cluster_size' : 10,
         'radius_um': 50.,
         'n_components_by_channel': 4,
-        'auto_merge_num_shift':3,
+        'auto_merge_num_shift': 3,
         'auto_merge_quantile_limit': 0.8, 
+        #~ 'auto_trash_misalignment_shift' : 4,
         
         'job_kwargs' : {}
     }
@@ -113,6 +114,7 @@ class SlidingHdbscanClustering:
     @classmethod
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, 'SlidingHdbscanClustering need hdbscan to be installed'
+        params = cls._check_params(recording, peaks, params)
         wfs_arrays, wfs_arrays_info, sparsity_mask = cls._initlialize_folder(recording, peaks, params)
         # wfs_arrays = { u:arr.copy() for u, arr in wfs_arrays.items()}
         peak_labels = cls._find_clusters(recording, peaks, wfs_arrays, sparsity_mask, params)
@@ -124,10 +126,11 @@ class SlidingHdbscanClustering:
         return labels, peak_labels
 
     @classmethod
-    def _initlialize_folder(cls, recording, peaks, params):
+    def _check_params(cls, recording, peaks, params):
         d = params
-        tmp_folder = params['tmp_folder']
+        params2 = params.copy()
         
+        tmp_folder = params['tmp_folder']
         if d['waveform_mode'] ==  'memmap':
             if tmp_folder is None:
                 name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
@@ -135,15 +138,20 @@ class SlidingHdbscanClustering:
             else:
                 tmp_folder = Path(tmp_folder)
             tmp_folder.mkdir()
+            params2['tmp_folder'] = tmp_folder
         elif d['waveform_mode'] ==  'shared_memory':
             assert tmp_folder is None, 'temp_folder must be None for shared_memory'
-            
-            
         else:
-            raise ValueError('shared_memory')
+            raise ValueError('shared_memory')        
+        
+        return params2
+    
+    @classmethod
+    def _initlialize_folder(cls, recording, peaks, params):
+        d = params
+        tmp_folder = params['tmp_folder']
         
         num_chans = recording.channel_ids.size
-
         
         # important sparsity is 2 times radius sparsity because closest channel will be 1 time radius
         chan_distances = get_channel_distances(recording)
@@ -165,10 +173,17 @@ class SlidingHdbscanClustering:
         nbefore = int(d['ms_before'] * fs / 1000.)
         nafter = int(d['ms_after'] * fs / 1000.)
         
+        if tmp_folder is None:
+            wf_folder = None
+        else:
+            wf_folder = tmp_folder / 'waveforms_pre_cluster'
+            wf_folder.mkdir()
+            
+        
         return_scaled = False
         ids = np.arange(num_chans, dtype='int64')
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, ids, nbefore, nafter, mode=d['waveform_mode'], folder=tmp_folder, dtype=dtype, sparsity_mask=sparsity_mask)
-        distribute_waveforms_to_buffers(recording, peaks2,  ids, wfs_arrays_info, nbefore, nafter, return_scaled, sparsity_mask=sparsity_mask, **d['job_kwargs'])
+        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, ids, nbefore, nafter, mode=d['waveform_mode'], folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)
+        distribute_waveforms_to_buffers(recording, peaks2,  ids, wfs_arrays_info, nbefore, nafter, return_scaled, mode=d['waveform_mode'], sparsity_mask=sparsity_mask, **d['job_kwargs'])
 
         return wfs_arrays, wfs_arrays_info, sparsity_mask
 
@@ -409,10 +424,18 @@ class SlidingHdbscanClustering:
         peak_labels[peak_labels == 0] = -1
         
         return peak_labels
-    
-    @classmethod
-    def _clean_cluster(cls, recording, peaks, wfs_arrays, sparsity_mask, peak_labels, d):
 
+    @classmethod
+    def _prepare_clean(cls, recording, peaks, wfs_arrays, sparsity_mask, peak_labels, d):
+        
+        tmp_folder = d['tmp_folder']
+        if tmp_folder is None:
+            wf_folder = None
+        else:
+            wf_folder = tmp_folder / 'waveforms_pre_clean'
+            wf_folder.mkdir()
+        
+        
         num_chans = recording.get_num_channels()
         fs = recording.get_sampling_frequency()
         nbefore = int(d['ms_before'] * fs / 1000.)
@@ -423,95 +446,156 @@ class SlidingHdbscanClustering:
         closest_channels = []
         for c in range(num_chans):
             chans, = np.nonzero(chan_distances[c, :] <= d['radius_um'])
-            chans = np.intersect1d(possible_channel_inds, chans)
             closest_channels.append(chans)
-
-
-        clean_peak_labels = peak_labels.copy()
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
         
-        # loop over label to collect template and main channel
-        templates = []
+        # loop over label take wafevorm from channel and get main channel
         main_channels = []
-        channel_inds = []
         for l, label in enumerate(labels):
-            # print('label', label)
-
-            #~ t0 = time.perf_counter()
             wfs, chan_inds = _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, sparsity_mask, label)
-            #~ print(wfs.shape)
-            #~ t1 = time.perf_counter()
-            #~ print('WFS time',  t1 - t0)
-            
             template = np.mean(wfs, axis=0)
-            templates.append(template)
             main_chan = chan_inds[np.argmax(np.max(np.abs(template), axis=0))]
             main_channels.append(main_chan)
-            channel_inds.append(chan_inds)
+        
+        # extact again waveforms based on new sparsity mask depending on main_chan
+        dtype = recording.get_dtype()
+        return_scaled = False
+        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        keep = peak_labels>=0
+        num_keep = np.sum(keep)
+        keep_peak_labels = peak_labels[keep]
+        peaks2 = np.zeros(num_keep, dtype=peak_dtype)
+        peaks2['sample_ind'] = peaks['sample_ind'][keep]
+        peaks2['segment_ind'] = peaks['segment_ind'][keep]
+        sparsity_mask2 = np.zeros((labels.shape[0], num_chans), dtype='bool')
+        for l, label in enumerate(labels):
+            main_chan = main_channels[l]
+            mask = keep_peak_labels == label
+            peaks2['unit_ind'][mask] = l
+            closest =closest_channels[main_chan]
+            sparsity_mask2[l, closest] = True
 
-            # DEBUG plot
+        wfs_arrays2, wfs_arrays_info2 = allocate_waveforms(recording, peaks2, labels, nbefore, nafter, mode=d['waveform_mode'], folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask2)
+        distribute_waveforms_to_buffers(recording, peaks2,  labels, wfs_arrays_info2, nbefore, nafter, return_scaled, mode=d['waveform_mode'], sparsity_mask=sparsity_mask2, **d['job_kwargs'])
+
+        #~ wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, ids, nbefore, nafter, mode=d['waveform_mode'], folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)
+        #~ distribute_waveforms_to_buffers(recording, peaks2,  ids, wfs_arrays_info, nbefore, nafter, return_scaled, mode=d['waveform_mode'], sparsity_mask=sparsity_mask, **d['job_kwargs'])
+        
+        
+        
+        return wfs_arrays2, wfs_arrays_info2, sparsity_mask2
+
+    
+    @classmethod
+    def _clean_cluster(cls, recording, peaks, wfs_arrays2, sparsity_mask2, peak_labels, d):
+
+        fs = recording.get_sampling_frequency()
+        nbefore = int(d['ms_before'] * fs / 1000.)
+        nafter = int(d['ms_after'] * fs / 1000.)
+        
+        
+        #~ print(sparsity_mask2)
+        
+        clean_peak_labels = peak_labels.copy()
+
+        labels = np.unique(peak_labels)
+        labels = labels[labels >= 0]
+        #~ print('labels', labels)
+        
+        # Check debug
+        assert sparsity_mask2.shape[0] == labels.shape[0]
+        
+        # get main channel on new wfs
+        templates = []
+        main_channels = []
+        
+        for l, label in enumerate(labels):
+            wfs = wfs_arrays2[label]
+            template = np.mean(wfs, axis=0)
+            chan_inds, = np.nonzero(sparsity_mask2[l, :])
+            assert wfs.shape[2] == chan_inds.size
+            main_chan = chan_inds[np.argmax(np.max(np.abs(template), axis=0))]
+            templates.append(template)
+            main_channels.append(main_chan)
+            
             #~ plot_debug = True
-            #~ plot_debug = False
             #~ if plot_debug:
                 #~ import matplotlib.pyplot as plt
                 #~ wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
                 #~ fig, ax = plt.subplots()
-                #~ ax.plot(wfs_flat, color='b', alpha=0.5)
-                #~ ax.plot(template.T.flatten(), color='r')
-                #~ for c in range(len(chan_inds)):
-                    #~ ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
-                #~ ax.set_title(f'label={label.size} main_chan={main_chan} chan_inds={chan_inds}')
+                #~ ax.plot(wfs_flat, color='g', alpha=0.1)
+                #~ ax.plot(template.T.flatten(), color='c', lw=2)
                 #~ plt.show()
-        
-        ## auto merge step
+
+        ## Step 1 : auto merge
         auto_merge_list = []
         for l0 in  range(len(labels)):
             for l1 in  range(l0+1, len(labels)):
                 
+                label0, label1 = labels[l0], labels[l1]
+
                 main_chan0 = main_channels[l0]
                 main_chan1 = main_channels[l1]
                 
-                if main_chan0 not in closest_channels[main_chan1]:
-                    continue
-                #~ print()
-                #~ print('check', l0, l1)
-                #~ print(channel_inds[l0], channel_inds[l1])
-                intersect_chans = np.intersect1d(channel_inds[l0], channel_inds[l1])
+                channel_inds0, = np.nonzero(sparsity_mask2[l0, :])
+                channel_inds1, = np.nonzero(sparsity_mask2[l1, :])
+
+                
+                #~ if main_chan0 not in channel_inds1:
+                    #~ print('no shared channel')
+                    #~ continue
+
+                intersect_chans = np.intersect1d(channel_inds0, channel_inds1)
                 if len(intersect_chans) == 0:
+                    #~ print('no intersect channel')
                     continue
                 #~ print('intersect_chans', intersect_chans)
-                label0, label1 = labels[l0], labels[l1]
-                waveforms0, _ = _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, sparsity_mask, label0, wanted_chans=intersect_chans)
-                waveforms1, _ = _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, sparsity_mask, label1, wanted_chans=intersect_chans)
+                
+                wfs0 = wfs_arrays2[label0]
+                wfs0 = wfs0[:, :,np.in1d(channel_inds0, intersect_chans)]
+                wfs1 = wfs_arrays2[label1]
+                wfs1 = wfs1[:, :,np.in1d(channel_inds1, intersect_chans)]
+                
+                # TODO : remove
+                assert wfs0.shape[2] == wfs1.shape[2]
+                
+                
+                #~ waveforms0, _ = _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, sparsity_mask, label0, wanted_chans=intersect_chans)
+                #~ waveforms1, _ = _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, sparsity_mask, label1, wanted_chans=intersect_chans)
                 #~ print(waveforms0.shape, waveforms1.shape)
-                equal, shift = check_equal_template_with_distribution_overlap(waveforms0, waveforms1,
+                
+                
+                equal, shift = check_equal_template_with_distribution_overlap(wfs0, wfs1,
                                 num_shift=d['auto_merge_num_shift'], quantile_limit=d['auto_merge_quantile_limit'], 
                                 return_shift=True, debug=False)
                 #~ print(equal, shift)
                 if equal:
                     auto_merge_list.append((l0, l1, shift))
 
-                    # DEBUG plot
-                    #~ plot_debug = True
-                    #~ plot_debug = False
-                    #~ if plot_debug :
-                        #~ import matplotlib.pyplot as plt
-                        #~ wfs_flat0 = waveforms0.swapaxes(1, 2).reshape(waveforms0.shape[0], -1).T
-                        #~ wfs_flat1 = waveforms1.swapaxes(1, 2).reshape(waveforms1.shape[0], -1).T
-                        #~ fig, ax = plt.subplots()
-                        #~ ax.plot(wfs_flat0, color='g', alpha=0.1)
-                        #~ ax.plot(wfs_flat1, color='r', alpha=0.1)
+                # DEBUG plot
+                #~ plot_debug = debug
+                #~ plot_debug = True
+                plot_debug = False
+                #~ plot_debug = equal
+                if plot_debug :
+                    import matplotlib.pyplot as plt
+                    wfs_flat0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1).T
+                    wfs_flat1 = wfs1.swapaxes(1, 2).reshape(wfs1.shape[0], -1).T
+                    fig, ax = plt.subplots()
+                    ax.plot(wfs_flat0, color='g', alpha=0.1)
+                    ax.plot(wfs_flat1, color='r', alpha=0.1)
 
-                        #~ ax.plot(np.mean(wfs_flat0, axis=1), color='c', lw=2)
-                        #~ ax.plot(np.mean(wfs_flat1, axis=1), color='m', lw=2)
-                        
-                        #~ for c in range(len(intersect_chans)):
-                            #~ ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
-                        #~ ax.set_title(f'label0={label0} label1={label1} shift{shift}')
-                        #~ plt.show()
+                    ax.plot(np.mean(wfs_flat0, axis=1), color='c', lw=2)
+                    ax.plot(np.mean(wfs_flat1, axis=1), color='m', lw=2)
+                    
+                    for c in range(len(intersect_chans)):
+                        ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
+                    ax.set_title(f'label0={label0} label1={label1} equal{equal} shift{shift}')
+                    plt.show()
         
+        print('auto_merge_list', auto_merge_list)
         # merge in reverse order because of shift accumulation
         peak_sample_shifts = np.zeros(peaks.size, dtype='int64')
         for (l0, l1, shift) in auto_merge_list[::-1]:
@@ -519,9 +603,57 @@ class SlidingHdbscanClustering:
             inds, = np.nonzero(peak_labels == label1)
             clean_peak_labels[inds] = label0
             peak_sample_shifts[inds] += shift
+
+        # update label list
+        labels_clean = np.unique(clean_peak_labels)
+        labels_clean = labels_clean[labels_clean >= 0]
+        
+        # Step 2 : remove none aligner units
+        # some unit have a secondary peak that can be detected
+        # lets remove the secondary template
+        # to avoid recomputing template this is done on the original list
+        auto_trash_list = []
+        auto_trash_misalignment_shift = d['auto_merge_num_shift'] + 1
+        for l, label in enumerate(labels):
+            if label not in labels_clean:
+                continue
             
+            template = templates[l]
+            main_chan = main_channels[l]
+            chan_inds,  = np.nonzero(sparsity_mask2[l, :])
+            max_ind = list(chan_inds).index(main_chan)
+            sample_max = np.argmax(np.abs(template[:, max_ind]))
             
-                    
+            not_aligned = np.abs(sample_max - nbefore) >= auto_trash_misalignment_shift
+            if not_aligned:
+                auto_trash_list.append(label)
+
+            #~ plot_debug = not_aligned
+            #~ plot_debug = True
+            plot_debug = False
+            #~ plot_debug = label in (24, 18)
+            if plot_debug :
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=2)
+                ax = axs[0]
+                wfs_flat = template.T.flatten()
+                ax.plot(wfs_flat)
+                for c in range(template.shape[1]):
+                    ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
+                    if c == max_ind:
+                        ax.axvline(c * (nbefore + nafter) + sample_max, color='b')
+                        
+                ax.set_title(f'label={label}  not_aligned{not_aligned} chan_inds={chan_inds} chan={chan_inds[max_ind]} max_ind{max_ind}')
+                ax = axs[1]
+                ax.plot(template[:, max_ind])
+                ax.axvline(sample_max)
+                ax.axvline(nbefore, color='r', ls='--')
+                plt.show()
+        
+        print('auto_trash_list', auto_trash_list)
+        for label in auto_trash_list:
+            inds, = np.nonzero(clean_peak_labels == label)
+            clean_peak_labels[inds] = -label
 
 
         return clean_peak_labels, peak_sample_shifts
