@@ -1,8 +1,9 @@
+docker
 h5py
 pandas
 scipy
 scikit-learn
+spython
 matplotlib
 networkx
 # datalad
-
