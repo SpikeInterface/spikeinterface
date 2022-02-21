@@ -244,7 +244,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
         isi_violations_rate[unit_id] = num_violations / total_duration
         isi_violations_count[unit_id] = num_violations
 
-    res = namedtuple('isi_violaion',
+    res = namedtuple('isi_violation',
                      ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
 
     return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
