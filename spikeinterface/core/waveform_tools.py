@@ -164,9 +164,11 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info
     if mode == 'memmap':
         # ~ if not platform.system().lower().startswith('linux'):
         # For OSX and windows : need to re open all npy files in r+ mode for each worker
-        wfs_arrays = {}
-        for unit_id, filename in wfs_arrays_info.items():
-            wfs_arrays[unit_id] = np.load(str(filename), mmap_mode='r+')
+        pass
+        #~ wfs_arrays = {}
+        #~ for unit_id, filename in wfs_arrays_info.items():
+            #~ wfs_arrays[unit_id] = np.load(str(filename), mmap_mode='r+')
+        worker_ctx['wfs_arrays_info'] = wfs_arrays_info
     elif mode == 'shared_memory':
 
         from multiprocessing.shared_memory import SharedMemory
@@ -179,15 +181,18 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info
             # we need a reference to all sham otherwise we get segment fault!!!
             shms[unit_id] = shm
         worker_ctx['shms'] = shms
+        worker_ctx['wfs_arrays'] = wfs_arrays
 
     worker_ctx['unit_ids'] = unit_ids
     worker_ctx['spikes'] = spikes
-    worker_ctx['wfs_arrays'] = wfs_arrays
+    
     worker_ctx['nbefore'] = nbefore
     worker_ctx['nafter'] = nafter
     worker_ctx['return_scaled'] = return_scaled
     worker_ctx['inds_by_unit'] = inds_by_unit
     worker_ctx['sparsity_mask'] = sparsity_mask
+    worker_ctx['mode'] = mode
+    
 
     return worker_ctx
 
@@ -198,7 +203,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     recording = worker_ctx['recording']
     unit_ids = worker_ctx['unit_ids']
     spikes = worker_ctx['spikes']
-    wfs_arrays = worker_ctx['wfs_arrays']
+    #~ wfs_arrays = worker_ctx['wfs_arrays']
     nbefore = worker_ctx['nbefore']
     nafter = worker_ctx['nafter']
     return_scaled = worker_ctx['return_scaled']
@@ -239,10 +244,20 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                                       return_scaled=return_scaled)
 
         for unit_ind, unit_id in enumerate(unit_ids):
-            wfs = wfs_arrays[unit_id]
             # find pos
             inds = inds_by_unit[unit_id]
             in_chunk_pos,  = np.nonzero((inds >= l0) & (inds < l1))
+            if in_chunk_pos.size ==0:
+                continue
+            
+            #~ wfs = wfs_arrays[unit_id]
+            if worker_ctx['mode'] == 'memmap':
+                filename = worker_ctx['wfs_arrays_info'][unit_id]
+                wfs = np.load(str(filename), mmap_mode='r+')
+            elif worker_ctx['mode'] == 'shared_memory':
+                
+                wfs = worker_ctx['wfs_arrays'][unit_id]
+
             for pos in in_chunk_pos:
                 sample_ind = spikes[inds[pos]]['sample_ind']
                 wf = traces[sample_ind - start -
