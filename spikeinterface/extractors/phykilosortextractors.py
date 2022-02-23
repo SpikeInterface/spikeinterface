@@ -96,6 +96,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         if 'si_unit_id' in cluster_info.columns:
             unit_ids = cluster_info["si_unit_id"].values
+            # update spike cluster values
+            spike_clusters_new = np.zeros_like(spike_clusters)
+            for phy_id, si_id in zip(cluster_info["cluster_id"].values,
+                                     cluster_info["si_unit_id"].values):
+                spike_clusters_new[spike_clusters == phy_id] = si_id
+            spike_clusters = spike_clusters_new
             del cluster_info["si_unit_id"]
         else:
             unit_ids = cluster_info["cluster_id"].values
