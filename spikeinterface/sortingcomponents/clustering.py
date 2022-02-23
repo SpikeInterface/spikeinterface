@@ -865,7 +865,7 @@ class PositionAndPCAClustering:
         'ms_after': 2.5,
         "n_components_by_channel" : 3,
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "progress_bar" : True},
-        "hdbscan_params": {"min_cluster_size" : 50, "probability_thr" : 0, "allow_single_cluster" : True},
+        "hdbscan_params": {"min_cluster_size" : 10, "probability_thr" : 0, "allow_single_cluster" : True},
         "debug" : True,
         "local_radius_um" : 100,
         "tmp_folder" : None
@@ -1016,12 +1016,14 @@ class PositionAndPCAClustering:
             closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
             sparsity_mask[l, closest_chans] = True
 
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, labels, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)
-        distribute_waveforms_to_buffers(recording, peaks2,  labels, wfs_arrays_info, nbefore, nafter, return_scaled, mode='memmap', sparsity_mask=sparsity_mask, **params['job_kwargs'])
+        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, labels, nbefore, nafter,
+                                                         mode='memmap', folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)
+        distribute_waveforms_to_buffers(recording, peaks2,  labels, wfs_arrays_info, nbefore, nafter, return_scaled,
+                                        mode='memmap', sparsity_mask=sparsity_mask, **params['job_kwargs'])
 
         peak_labels_ = -1 * np.ones(num_keep, dtype=np.int64)
         nb_clusters = 0
-
+        main_channels = {}
         for l in range(len(labels)):
             label = labels[l]
             mask, = np.nonzero(keep_peak_labels == label)
@@ -1051,6 +1053,13 @@ class PositionAndPCAClustering:
             mask2, = np.nonzero(local_labels >= 0)
 
             peak_labels_[mask[mask2]] = local_labels[mask2] + nb_clusters
+
+            for label in np.unique(local_labels[mask2]):
+                template = np.mean(wfs[local_labels == label, :, :], axis=0)
+                ind_max = np.argmax(np.max(np.abs(template), axis=0))
+                chans, = np.nonzero(sparsity_mask[l, :])
+                main_channels[label + nb_clusters] = chans[ind_max]
+
             nb_clusters += local_labels.max() + 1
             print(nb_clusters)
 
@@ -1060,6 +1069,125 @@ class PositionAndPCAClustering:
 
         to_cluster_from = np.stack([positions['x'], positions['y']], axis=1)[keep]
         cls.plot_clusters(to_cluster_from, peak_labels_, ['x', 'y'], 'global_clustering.png')
+
+
+        # clean
+        keep_clean = (peak_labels >=0)
+        peak_labels_clean =peak_labels[keep_clean] 
+        labels = np.unique(peak_labels_clean)
+        
+        wf_folder_clean = Path(tmp_folder) / 'waveforms_clustering_clean'
+        wf_folder_clean.mkdir(parents=True)
+        
+        n = np.sum(keep_clean)
+        sparsity_mask2 = np.zeros((n, num_chans), dtype='bool')
+        peaks3 = np.zeros(n, dtype=peak_dtype)
+        peaks3['sample_ind'] = peaks['sample_ind'][keep_clean]
+        peaks3['unit_ind'] = peak_labels_clean
+        peaks3['segment_ind'] = peaks['segment_ind'][keep_clean]
+        for l in labels:
+            main_chan = main_channels[l]
+            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
+            sparsity_mask2[l, closest_chans] = True
+
+
+        wfs_arrays2, wfs_arrays_info2 = allocate_waveforms(recording, peaks3, labels, nbefore, nafter,
+                                                         mode='memmap', folder=wf_folder_clean,
+                                                         dtype=dtype, sparsity_mask=sparsity_mask2)
+        distribute_waveforms_to_buffers(recording, peaks3,  labels, wfs_arrays_info2, nbefore, nafter, return_scaled,
+                                        mode='memmap', sparsity_mask=sparsity_mask2, **params['job_kwargs'])
+        print(wfs_arrays.keys())
+
+
+        main_channels = []
+        templates = []
+        for l, label in enumerate(labels):
+            wfs = wfs_arrays2[label]
+            template = np.mean(wfs, axis=0)
+            chan_inds, = np.nonzero(sparsity_mask2[l, :])
+            assert wfs.shape[2] == chan_inds.size
+            main_chan = chan_inds[np.argmax(np.max(np.abs(template), axis=0))]
+            templates.append(template)
+            main_channels.append(main_chan)
+            
+        ## Step 1 : auto merge
+        # auto_merge_list = []
+        auto_trash_list = []
+        for l0 in  range(len(labels)):
+            for l1 in  range(l0+1, len(labels)):
+                
+                label0, label1 = labels[l0], labels[l1]
+
+                main_chan0 = main_channels[l0]
+                main_chan1 = main_channels[l1]
+                
+                channel_inds0, = np.nonzero(sparsity_mask2[l0, :])
+                channel_inds1, = np.nonzero(sparsity_mask2[l1, :])
+
+                
+                intersect_chans = np.intersect1d(channel_inds0, channel_inds1)
+                if len(intersect_chans) == 0:
+                    continue
+                 
+                wfs0 = wfs_arrays2[label0]
+                wfs0 = wfs0[:, :,np.in1d(channel_inds0, intersect_chans)]
+                wfs1 = wfs_arrays2[label1]
+                wfs1 = wfs1[:, :,np.in1d(channel_inds1, intersect_chans)]
+                
+                # TODO : remove
+                assert wfs0.shape[2] == wfs1.shape[2]
+                
+                auto_merge_num_shift = 7
+                auto_merge_quantile_limit = 0.8
+                equal, shift = check_equal_template_with_distribution_overlap(wfs0, wfs1,
+                                num_shift=auto_merge_num_shift, quantile_limit=auto_merge_quantile_limit, 
+                                return_shift=True, debug=False)
+                
+                print(label0, label1, equal)
+                if equal:
+                    if shift == 0:
+                        if wfs0.shape[0] >= wfs1.shape[0]:
+                            auto_trash_list.append(l1)
+                        else:
+                            auto_trash_list.append(l0)
+                    else:
+                        ind0 = list(channel_inds0).index(main_chan0)
+                        ind_sample0 = np.argmax(np.abs(templates[l0][:, ind0]))
+                        ind1 = list(channel_inds1).index(main_chan1)
+                        ind_sample1 = np.argmax(np.abs(templates[l1][:, ind1]))
+                        best = np.argmin(np.abs(np.array([ind_sample0, ind_sample1]) - nbefore))
+                        if best == 0:
+                            auto_trash_list.append(l1)
+                        else:
+                            auto_trash_list.append(l0)
+
+                # DEBUG plot
+                #~ plot_debug = debug
+                # plot_debug = True
+                # plot_debug = False
+                plot_debug = equal
+                if plot_debug :
+                    import matplotlib.pyplot as plt
+                    wfs_flat0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1).T
+                    wfs_flat1 = wfs1.swapaxes(1, 2).reshape(wfs1.shape[0], -1).T
+                    fig, ax = plt.subplots()
+                    ax.plot(wfs_flat0, color='g', alpha=0.1)
+                    ax.plot(wfs_flat1, color='r', alpha=0.1)
+
+                    ax.plot(np.mean(wfs_flat0, axis=1), color='c', lw=2)
+                    ax.plot(np.mean(wfs_flat1, axis=1), color='m', lw=2)
+                    
+                    for c in range(len(intersect_chans)):
+                        ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
+                    ax.set_title(f'label0={label0} label1={label1} equal{equal} shift{shift}')
+                    plt.show()
+        
+        print('auto_trash_list', auto_trash_list)
+
+
+        peak_labels[np.in1d(peak_labels, auto_trash_list)] = -3
+
+
 
         return np.unique(peak_labels), peak_labels
 
