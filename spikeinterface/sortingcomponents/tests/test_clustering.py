@@ -24,13 +24,10 @@ def test_find_cluster_from_peaks():
     peaks = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
                          chunk_size=10000, verbose=False, progress_bar=False, noise_levels=noise_levels)
-    # print(peaks)
     
     for method in clustering_methods:
-        print(method)
-    
         labels, peak_labels = find_cluster_from_peaks(recording, peaks, method=method)
-        print(labels)
+        print(method, 'found', len(labels), 'clusters')
     
     
     
