@@ -82,6 +82,73 @@ class StupidClustering:
         return labels, peak_labels
 
 
+class PositionClustering:
+    """
+    hdbscan clustering on peak_locations previously done by localize_peaks()
+    """
+    _default_params = {
+        "peak_locations" : None,
+        "hdbscan_params": {"min_cluster_size" : 20,  "allow_single_cluster" : True, 'metric' : 'l2'},
+        "probability_thr" : 0,
+        "apply_norm" : True,
+        "debug" : False,
+        "tmp_folder" : None,
+    }
+
+    @classmethod
+    def main_function(cls, recording, peaks, params):
+        d = params
+
+        assert d['peak_locations'] is not None, "peak_locations should not be None!"
+
+        tmp_folder = d['tmp_folder']
+        if tmp_folder is not None:
+            tmp_folder.mkdir(exist_ok=True)
+
+        peak_locations = d['peak_locations']
+        
+        location_keys = ['x', 'y']
+        locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
+        
+        if d['apply_norm']:
+            locations_n = locations.copy()
+            locations_n -= np.mean(locations_n, axis=0)
+            locations_n /= np.std(locations_n, axis=0)
+
+        
+        clustering = hdbscan.hdbscan(locations_n, **d['hdbscan_params'])
+        peak_labels = clustering[0]
+        peak_labels_persistent = peak_labels.copy()
+        cluster_probability = clustering[2]
+
+        persistent_clusters, = np.nonzero(clustering[2] > d['probability_thr'])
+        mask = np.in1d(peak_labels, persistent_clusters)
+        peak_labels_persistent[~mask] = -2
+        
+        final_peak_labels = peak_labels_persistent
+        labels = np.unique(peak_labels)
+        labels =labels[labels>=0]
+
+        if d['debug']:
+            import matplotlib.pyplot as plt
+            import spikeinterface.full as si
+            fig1, ax = plt.subplots()
+            kwargs = dict(probe_shape_kwargs=dict(facecolor='w', edgecolor='k', lw=0.5, alpha=0.3),
+                                    contacts_kargs = dict(alpha=0.5, edgecolor='k', lw=0.5, facecolor='w'))
+            si.plot_probe_map(recording, ax=ax, **kwargs)
+            ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, color='k')
+
+            fig1, ax = plt.subplots()
+            si.plot_probe_map(recording, ax=ax, **kwargs)
+            ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, c=peak_labels)
+
+            if tmp_folder is not None:
+                fig1.savefig(tmp_folder / 'peak_locations.png')
+                fig2.savefig(tmp_folder / 'peak_locations_clustered.png')
+
+        return np.unique(peak_labels), final_peak_labels
+
+
 class SlidingHdbscanClustering:
     """
     This is a port of the tridesclous clustering.
@@ -561,121 +628,7 @@ def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, 
 
 
 
-class PositionClustering:
-    """
-    hdbscan clustering on peak_locations previously done by localize_peaks()
-    """
-    _default_params = {
-        "peak_locations" : None,
-        "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "progress_bar" : True},
-        "hdbscan_params": {"min_cluster_size" : 20, "probability_thr" : 0, "allow_single_cluster" : True, 'metric' : 'l2'},
-        #"hdbscan_params": {"min_samples" : 50, "eps" : 5, 'probability_thr' : 0},
-        "debug" : True,
-        "tmp_folder" : 'tmp'
-    }
-    #labels = hdbscan.hdbscan(to_cluster_from, allow_single_cluster=True, min_cluster_size=20, metric='l2')
 
-    @classmethod
-    def launch_clustering(cls, to_cluster_from, probability_thr, clustering_params):
-
-        # from sklearn.cluster import DBSCAN
-        # clustering =  DBSCAN(**clustering_params).fit(to_cluster_from)
-        # peak_labels_persistent = clustering.labels_
-
-        import hdbscan
-        clustering = hdbscan.hdbscan(to_cluster_from, **clustering_params)
-        peak_labels = clustering[0]
-        peak_labels_persistent = peak_labels.copy()
-        cluster_probability = clustering[2]
-
-        persistent_clusters, = np.nonzero(clustering[2] > probability_thr)
-        mask = np.in1d(peak_labels, persistent_clusters)
-
-        peak_labels_persistent[~mask] = -2
-        
-        return peak_labels_persistent
-
-    @classmethod
-    def plot_clusters(cls, data, labels, plot_labels, output):
-        import pylab as plt
-        nb_dims = data.shape[1]
-
-        fig, ax = plt.subplots(nb_dims, nb_dims)
-
-        for i in range(nb_dims):
-            for j in range(nb_dims):
-                #ax[i, j].spines['top'].set_visible(False)
-                #ax[i, j].spines['right'].set_visible(False)
-                #ax[i, j].set_xticks([])
-                #ax[i, j].set_yticks([])
-                if j > i:
-                    ax[i, j].scatter(data[:, i], data[:, j], c=labels, s=1, alpha=0.1)
-
-                    for l in np.unique(labels):
-                        mask = labels == l
-                        x, y = np.mean(data[mask, i]), np.mean(data[mask, j])
-                        ax[i,j].text(x, y, f'{l}')
-
-                else:
-                    ax[i, j].axis("off")
-
-
-        for i in range(nb_dims):
-            ax[i, 0].set_ylabel(plot_labels[i])
-
-        for j in range(nb_dims):
-            ax[nb_dims-1, i].set_xlabel(plot_labels[i])
-
-        plt.tight_layout()
-
-        plt.show()
-        #plt.savefig(output)
-        #plt.close()
-
-
-    @classmethod
-    def main_function(cls, recording, peaks, params):
-
-        assert params['peak_locations'] is not None, "Peak locations should not be None!"
-
-        clustering_params = {}
-        clustering_params.update(params['hdbscan_params'])
-        clustering_params['core_dist_n_jobs'] = params['job_kwargs']['n_jobs']
-        #clustering_params['n_jobs'] = params['chunk_params']['n_jobs']
-        probability_thr = clustering_params.pop('probability_thr')
-
-        if params['debug']:
-            tmp_folder = Path(params['tmp_folder'])
-            tmp_folder.mkdir(exist_ok=True)
-
-        positions = params['peak_locations']
-        
-        if params['debug']:
-            import pylab as plt
-            import spikeinterface.full as si
-
-            si.plot_probe_map(recording)
-            plt.scatter(positions['x'], positions['y'], alpha=0.1, s=1)
-
-            plt.savefig(tmp_folder / 'positions.png')
-            plt.close()
-
-        plot_labels = []
-
-        to_cluster_from = []
-        for key in ['x', 'y']: ##Think about adding z ?
-            to_cluster_from += [positions[key]]
-            plot_labels += [key]
-
-        to_cluster_from = np.stack(to_cluster_from, axis=1)
-
-        peak_labels = cls.launch_clustering(to_cluster_from, probability_thr, clustering_params)
-
-        if params['debug'] is not None:
-            filename = tmp_folder / 'clustering.png'
-            cls.plot_clusters(to_cluster_from, peak_labels, plot_labels, filename)
-
-        return np.unique(peak_labels), peak_labels
 
 
 class PositionAndPCAClustering:
@@ -1036,8 +989,8 @@ class PositionAndPCAClustering:
 
 clustering_methods = {
     'stupid' : StupidClustering,
-    'sliding_hdbscan': SlidingHdbscanClustering,
     'position_clustering' : PositionClustering,
+    'sliding_hdbscan': SlidingHdbscanClustering,
     'position_pca_clustering' : PositionAndPCAClustering
 }
 
