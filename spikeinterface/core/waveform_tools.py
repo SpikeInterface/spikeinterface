@@ -16,10 +16,89 @@ from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs
 from .core_tools import make_shared_array
 
 
-def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=None, dtype=None,
+
+def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
+                                mode='memmap', return_scaled=False, folder=None, dtype=None,
+                                sparsity_mask=None,  copy=False, **job_kwargs):
+    """
+    Allocate buffers (memmap or or shared memory) and then distribute every waveform into theses buffers.
+
+    Same as calling allocate_waveforms_buffers() and then distribute_waveforms_to_buffers().
+
+    Important note: for the "shared_memory" mode wfs_arrays_info contains reference to
+    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    And this variable is also returned.
+    To avoid this a copy to non shared memmory can be perform at the end.
+
+    Parameters
+    ----------
+    recording: recording
+        The recording object
+    spikes: 1d numpy array with several fields
+        Spikes handled as a unique vector.
+        This vector can be obtained with: `spikes = Sorting.to_spike_vector()`
+    unit_ids: list ot numpy
+        List of unit_ids
+    nbefore: int
+        N samples before spike
+    nafter: int
+        N samples after spike
+    mode: str
+        Mode to use ('memmap' | 'shared_memory')
+    return_scaled: bool
+        Scale traces before exporting to buffer or not.
+    folder: str or path
+        In case of memmap mode, folder to save npy files
+    dtype: numpy.dtype
+        dtype for waveforms buffer
+    sparsity_mask: None or array of bool
+        If not None shape must be must be (len(unit_ids), len(channel_ids))
+
+    {}
+    
+    Returns
+    -------
+    wfs_arrays: dict of arrays
+        Arrays for all units (memmap or shared_memmep
+
+    wfs_arrays_info: dict of info
+        Optionally return in case of shared_memory if copy=False.
+        Dictionary to "construct" array in workers process (memmap file or sharemem info)
+    """
+    
+    if dtype is None:
+        if return_scaled:
+            dtype = recording.get_detype()
+        else:
+            dtype = 'float32'
+    dtype = np.dtype(dtype)
+
+
+    wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter,
+                        mode=mode, folder=folder, dtype=dtype, sparsity_mask=sparsity_mask)
+    
+    distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled,
+                                    mode=mode, sparsity_mask=sparsity_mask, **job_kwargs)
+
+    if mode == 'memmap':
+        return wfs_arrays
+    elif mode == 'shared_memory':
+        if copy:
+            wfs_arrays = {unit_id: arr.copy() for unit_id, arr in wfs_arrays.items()}
+            # clear shared mem buffer
+            del wfs_arrays_info
+            return wfs_arrays
+        else:
+            return wfs_arrays, wfs_arrays_info
+
+extract_waveforms_to_buffers.__doc__ = extract_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
+
+
+
+def allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=None, dtype=None,
                        sparsity_mask=None):
     """
-    Allocate memmap or shered memory buffers before snippet extraction.
+    Allocate memmap or shared memory buffers before snippet extraction.
 
     Important note: for the shared memory mode wfs_arrays_info contains reference to
     the shared memmory buffer, this variable must be reference as long as arrays as used.
@@ -84,7 +163,7 @@ def allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memma
             wfs_arrays[unit_id] = arr
             wfs_arrays_info[unit_id] = (shm, shm.name, dtype.str, shape)
         else:
-            raise ValueError('allocate_waveforms bad mode')
+            raise ValueError('allocate_waveforms_buffers bad mode')
 
     return wfs_arrays, wfs_arrays_info
 
@@ -94,7 +173,7 @@ def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info
     """
     Distribute snippets of traces into corresponding buffers.
 
-    Buffers must be pre-allocated with the `allocate_waveforms()` function.
+    Buffers must be pre-allocated with the `allocate_waveforms_buffers()` function.
 
     Important note, for "shared_memory" mode wfs_arrays_info contain reference to
     the shared memmory buffer, this variable must be reference as long as arrays as used.
@@ -146,12 +225,10 @@ def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info
     processor.run()
 
 
-distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc__.format(
-    _shared_job_kwargs_doc)
+distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
+
 
 # used by ChunkRecordingExecutor
-
-
 def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info, nbefore, nafter, return_scaled,
                                     inds_by_unit, mode, sparsity_mask):
     # create a local dict per worker
@@ -162,11 +239,9 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info
     worker_ctx['recording'] = recording
 
     if mode == 'memmap':
-        # ~ if not platform.system().lower().startswith('linux'):
-        # For OSX and windows : need to re open all npy files in r+ mode for each worker
-        wfs_arrays = {}
-        for unit_id, filename in wfs_arrays_info.items():
-            wfs_arrays[unit_id] = np.load(str(filename), mmap_mode='r+')
+        # in memmap mode we have the "too many open file" problem with linux
+        # memmap file will be open on demand and not globally per worker
+        worker_ctx['wfs_arrays_info'] = wfs_arrays_info
     elif mode == 'shared_memory':
 
         from multiprocessing.shared_memory import SharedMemory
@@ -179,15 +254,18 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info
             # we need a reference to all sham otherwise we get segment fault!!!
             shms[unit_id] = shm
         worker_ctx['shms'] = shms
+        worker_ctx['wfs_arrays'] = wfs_arrays
 
     worker_ctx['unit_ids'] = unit_ids
     worker_ctx['spikes'] = spikes
-    worker_ctx['wfs_arrays'] = wfs_arrays
+    
     worker_ctx['nbefore'] = nbefore
     worker_ctx['nafter'] = nafter
     worker_ctx['return_scaled'] = return_scaled
     worker_ctx['inds_by_unit'] = inds_by_unit
     worker_ctx['sparsity_mask'] = sparsity_mask
+    worker_ctx['mode'] = mode
+    
 
     return worker_ctx
 
@@ -198,7 +276,6 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     recording = worker_ctx['recording']
     unit_ids = worker_ctx['unit_ids']
     spikes = worker_ctx['spikes']
-    wfs_arrays = worker_ctx['wfs_arrays']
     nbefore = worker_ctx['nbefore']
     nafter = worker_ctx['nafter']
     return_scaled = worker_ctx['return_scaled']
@@ -239,10 +316,19 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                                       return_scaled=return_scaled)
 
         for unit_ind, unit_id in enumerate(unit_ids):
-            wfs = wfs_arrays[unit_id]
             # find pos
             inds = inds_by_unit[unit_id]
             in_chunk_pos,  = np.nonzero((inds >= l0) & (inds < l1))
+            if in_chunk_pos.size ==0:
+                continue
+            
+            if worker_ctx['mode'] == 'memmap':
+                # open file in demand (and also autoclose it after)
+                filename = worker_ctx['wfs_arrays_info'][unit_id]
+                wfs = np.load(str(filename), mmap_mode='r+')
+            elif worker_ctx['mode'] == 'shared_memory':
+                wfs = worker_ctx['wfs_arrays'][unit_id]
+
             for pos in in_chunk_pos:
                 sample_ind = spikes[inds[pos]]['sample_ind']
                 wf = traces[sample_ind - start -
