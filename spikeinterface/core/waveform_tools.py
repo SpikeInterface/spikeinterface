@@ -54,6 +54,8 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
     sparsity_mask: None or array of bool
         If not None shape must be must be (len(unit_ids), len(channel_ids))
 
+    {}
+    
     Returns
     -------
     wfs_arrays: dict of arrays
