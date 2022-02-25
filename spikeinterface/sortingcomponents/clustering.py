@@ -21,7 +21,7 @@ from ..toolkit import get_channel_distances, get_random_data_chunks
 from ..core.waveform_tools import extract_waveforms_to_buffers
 
 
-from .clustering_tools import auto_clean_clustering
+from .clustering_tools import auto_clean_clustering, auto_split_clustering
 
 
 def find_cluster_from_peaks(recording, peaks, method='stupid', method_kwargs={}, extra_outputs=False, **job_kwargs):
@@ -114,18 +114,19 @@ class PositionClustering:
             locations_n = locations.copy()
             locations_n -= np.mean(locations_n, axis=0)
             locations_n /= np.std(locations_n, axis=0)
+        else:
+            locations_n = locations
 
         
         clustering = hdbscan.hdbscan(locations_n, **d['hdbscan_params'])
         peak_labels = clustering[0]
-        peak_labels_persistent = peak_labels.copy()
         cluster_probability = clustering[2]
-
+        
+        # keep only persistent
         persistent_clusters, = np.nonzero(clustering[2] > d['probability_thr'])
         mask = np.in1d(peak_labels, persistent_clusters)
-        peak_labels_persistent[~mask] = -2
+        peak_labels[~mask] = -2
         
-        final_peak_labels = peak_labels_persistent
         labels = np.unique(peak_labels)
         labels =labels[labels>=0]
 
@@ -138,7 +139,7 @@ class PositionClustering:
             si.plot_probe_map(recording, ax=ax, **kwargs)
             ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, color='k')
 
-            fig1, ax = plt.subplots()
+            fig2, ax = plt.subplots()
             si.plot_probe_map(recording, ax=ax, **kwargs)
             ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, c=peak_labels)
 
@@ -146,7 +147,7 @@ class PositionClustering:
                 fig1.savefig(tmp_folder / 'peak_locations.png')
                 fig2.savefig(tmp_folder / 'peak_locations_clustered.png')
 
-        return np.unique(peak_labels), final_peak_labels
+        return labels, peak_labels
 
 
 class SlidingHdbscanClustering:
@@ -633,19 +634,9 @@ def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, 
 
 class PositionAndPCAClustering:
     """
-    Stupid clustering.
-    peak are clustered from there channel detection
-    So peak['channel_ind'] will be the peak_labels
-    """
-    """
-    hdbscan clustering
-
-    The idea is to combine the positions of the cells, as obtained with
-    a chosen localization method, and some key features such as ptp/mean/std
-    to get a rather robust and quick clustering
-
-    peak are clustered from there channel detection
-    So peak['channel_ind'] will be the peak_labels
+    Perform a hdbscan clustering on peak position then apply locals
+    PCA on waveform + hdbscan on every spatial clustering to check
+    if there a need to oversplit.
     
     """
     _default_params = {
@@ -653,338 +644,126 @@ class PositionAndPCAClustering:
         'ms_before': 1.5,
         'ms_after': 2.5,
         "n_components_by_channel" : 3,
-        "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "progress_bar" : True},
-        "hdbscan_params": {"min_cluster_size" : 50, "probability_thr" : 0, "allow_single_cluster" : True},
+        "n_components": 5,
+        "job_kwargs" : {"n_jobs" : 1, "chunk_memory" : "10M", "progress_bar" : True},
+        "hdbscan_params_spatial": {"min_cluster_size" : 20, "allow_single_cluster" : True},
+        "probability_thr" : 0,
+        "hdbscan_params_pca": {"min_cluster_size" : 10, "allow_single_cluster" : True},
+        "apply_norm": True,
+        'waveform_mode': 'memmap',
+        "local_radius_um" : 50.,
         "debug" : True,
-        "local_radius_um" : 100,
         "tmp_folder" : None
     }
 
     @classmethod
-    def launch_clustering(cls, to_cluster_from, probability_thr, clustering_params):
-
-        import hdbscan
-        clustering = hdbscan.hdbscan(to_cluster_from, **clustering_params)
-        peak_labels = clustering[0]
-        peak_labels_persistent = peak_labels.copy()
-        cluster_probability = clustering[2]
-
-        persistent_clusters, = np.nonzero(clustering[2] > probability_thr)
-        mask = np.in1d(peak_labels, persistent_clusters)
-
-        peak_labels_persistent[~mask] = -2
-        
-        return peak_labels_persistent
-
-    @classmethod
-    def plot_clusters(cls, data, labels, plot_labels, output):
-        import pylab as plt
-        nb_dims = data.shape[1]
-
-        fig, ax = plt.subplots(nb_dims, nb_dims)
-
-        for i in range(nb_dims):
-            for j in range(nb_dims):
-                ax[i, j].spines['top'].set_visible(False)
-                ax[i, j].spines['right'].set_visible(False)
-                ax[i, j].set_xticks([])
-                ax[i, j].set_yticks([])
-                if j > i:
-                    ax[i, j].scatter(data[:, i], data[:, j], c=labels, s=1, alpha=0.1)
-
-                    for l in np.unique(labels):
-                        mask = labels == l
-                        x, y = np.mean(data[mask, i]), np.mean(data[mask, j])
-                        ax[i,j].text(x, y, f'{l}')
-
-                else:
-                    ax[i, j].axis("off")
-
-
-        for i in range(nb_dims):
-            ax[i, 0].set_ylabel(plot_labels[i])
-
-        for j in range(nb_dims):
-            ax[nb_dims-1, i].set_xlabel(plot_labels[i])
-
-        plt.tight_layout()
-
-        #plt.show()
-        plt.savefig(output)
-        plt.close()
-
-
-    #@classmethod
-    #def main_function(cls, recording, peaks, params):
-
-
-
-    @classmethod
     def main_function(cls, recording, peaks, params):
+        d = params
 
-        assert params['peak_locations'] is not None, "Peak locations should not be None!"
+        assert d['peak_locations'] is not None, "peak_locations should not be None!"
 
-        fs = recording.get_sampling_frequency()
-        nbefore = int(params['ms_before'] * fs / 1000.)
-        nafter = int(params['ms_after'] * fs / 1000.)
-
-        tmp_folder = params['tmp_folder']
-        if tmp_folder is None:
-            wf_folder = None
-        else:
-            wf_folder = Path(tmp_folder) / 'waveforms_clustering'
-            wf_folder.mkdir(parents=True)
-
-        clustering_params = {}
-        clustering_params.update(params['hdbscan_params'])
-        clustering_params['core_dist_n_jobs'] = params['job_kwargs']['n_jobs']
-        probability_thr = clustering_params.pop('probability_thr')
-
-        if params['debug']:
-            tmp_folder = Path(params['tmp_folder'])
+        tmp_folder = d['tmp_folder']
+        if tmp_folder is not None:
+            tmp_folder = Path(tmp_folder)
             tmp_folder.mkdir(exist_ok=True)
-
-        positions = params['peak_locations']
         
-        if params['debug']:
-            import pylab as plt
+        
+        # step1 : clustering on peak location
+        peak_locations = d['peak_locations']
+        
+        location_keys = ['x', 'y']
+        locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
+        
+        if d['apply_norm']:
+            locations_n = locations.copy()
+            locations_n -= np.mean(locations_n, axis=0)
+            locations_n /= np.std(locations_n, axis=0)
+        else:
+            locations_n = locations
+        
+        clustering = hdbscan.hdbscan(locations_n, **d['hdbscan_params_spatial'])
+        spatial_peak_labels = clustering[0]
+        cluster_probability = clustering[2]
+        persistent_clusters, = np.nonzero(clustering[2] > d['probability_thr'])
+        mask = np.in1d(spatial_peak_labels, persistent_clusters)
+        spatial_peak_labels[~mask] = -2
+        
+        spatial_labels = np.unique(spatial_peak_labels)
+        spatial_labels =spatial_labels[spatial_labels>=0]
+
+        if d['debug']:
+            import matplotlib.pyplot as plt
             import spikeinterface.full as si
+            fig1, ax = plt.subplots()
+            kwargs = dict(probe_shape_kwargs=dict(facecolor='w', edgecolor='k', lw=0.5, alpha=0.3),
+                                    contacts_kargs = dict(alpha=0.5, edgecolor='k', lw=0.5, facecolor='w'))
+            si.plot_probe_map(recording, ax=ax, **kwargs)
+            ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, color='k')
 
-            si.plot_probe_map(recording)
-            plt.scatter(positions['x'], positions['y'], alpha=0.1, s=1)
+            fig2, ax = plt.subplots()
+            si.plot_probe_map(recording, ax=ax, **kwargs)
+            ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, c=spatial_peak_labels)
 
-            plt.savefig(tmp_folder / 'positions.png')
-            plt.close()
+            if tmp_folder is not None:
+                fig1.savefig(tmp_folder / 'peak_locations.png')
+                fig2.savefig(tmp_folder / 'peak_locations_clustered.png')
 
-        plot_labels = []
 
-        to_cluster_from = []
-        for key in ['x', 'y']: ##Think about adding z ?
-            to_cluster_from += [positions[key]]
-            plot_labels += [key]
-
-        to_cluster_from = np.stack(to_cluster_from, axis=1)
-
-        pre_labels = cls.launch_clustering(to_cluster_from, probability_thr, clustering_params)
-
-        if params['debug'] is not None:
-            filename = tmp_folder / 'clustering.png'
-            cls.plot_clusters(to_cluster_from, pre_labels, plot_labels, filename)
-
-        # extact again waveforms based on new sparsity mask depending on main_chan
-        dtype = recording.get_dtype()
-        return_scaled = False
+        # step2 : extract waveform by cluster
+        spatial_keep, = np.nonzero(spatial_peak_labels >= 0)
+        #~ num_keep = np.sum(spatial_keep)
+        keep_peak_labels = spatial_peak_labels[spatial_keep]
+        
         peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
-        keep = pre_labels >= 0
-    
-        num_keep = np.sum(keep)
-        keep_peak_labels = pre_labels[keep]
-    
-        labels = np.unique(keep_peak_labels)
-
-        peaks2 = np.zeros(num_keep, dtype=peak_dtype)
-        peaks2['sample_ind'] = peaks['sample_ind'][keep]
-        peaks2['segment_ind'] = peaks['segment_ind'][keep]
+        peaks2 = np.zeros(spatial_keep.size, dtype=peak_dtype)
+        peaks2['sample_ind'] = peaks['sample_ind'][spatial_keep]
+        peaks2['segment_ind'] = peaks['segment_ind'][spatial_keep]
 
         num_chans = recording.get_num_channels()
-        sparsity_mask = np.zeros((labels.shape[0], num_chans), dtype='bool')
-
+        sparsity_mask = np.zeros((spatial_labels.size, num_chans), dtype='bool')
         chan_locs = recording.get_channel_locations()
         chan_distances = get_channel_distances(recording)
-        
-        print(np.unique(labels))
-        for l, label in enumerate(labels):
+        for l, label in enumerate(spatial_labels):
             mask = keep_peak_labels == label
             peaks2['unit_ind'][mask] = l
 
-            x, y = np.mean(positions['x'][keep][mask]), np.mean(positions['y'][keep][mask])
-            main_chan = np.argmin(np.linalg.norm(chan_locs - np.array([[x, y]]), axis=1))
-            print(x, y, main_chan)
+            center = np.mean(locations[spatial_keep][mask], axis=0)
+            main_chan = np.argmin(np.linalg.norm(chan_locs - center[np.newaxis, :], axis=1))
 
             # here we take a biger radius
             closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
             sparsity_mask[l, closest_chans] = True
 
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, peaks2, labels, nbefore, nafter,
-                                                         mode='memmap', folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)
-        distribute_waveforms_to_buffers(recording, peaks2,  labels, wfs_arrays_info, nbefore, nafter, return_scaled,
-                                        mode='memmap', sparsity_mask=sparsity_mask, **params['job_kwargs'])
+        if tmp_folder is not None:
+            wf_folder = tmp_folder / 'waveforms_pre_cluster'
+            wf_folder.mkdir()
 
-        peak_labels_ = -1 * np.ones(num_keep, dtype=np.int64)
-        nb_clusters = 0
-        main_channels = {}
-        for l in range(len(labels)):
-            label = labels[l]
-            mask, = np.nonzero(keep_peak_labels == label)
-            wfs = wfs_arrays[label]
+        fs = recording.get_sampling_frequency()
+        nbefore = int(d['ms_before'] * fs / 1000.)
+        nafter = int(d['ms_after'] * fs / 1000.)
 
-            n = params['n_components_by_channel']
-            local_feature = np.zeros((wfs.shape[0], n * wfs.shape[2]))
-            tsvd = sklearn.decomposition.TruncatedSVD(n_components=n)
-            plot_labels = []
-            for c in range(wfs.shape[2]):
-                local_feature[:, c*n:(c+1)*n] = tsvd.fit_transform(wfs[:, :, c])
-            
-            pca = sklearn.decomposition.PCA(n_components=5, whiten=True)
-            local_feature = pca.fit_transform(local_feature)
-
-
-            plot_labels = np.arange(local_feature.shape[1])
-            local_labels = cls.launch_clustering(local_feature, 0, clustering_params)
-
-            if params['debug'] is not None:
-
-                local_labels_2 = local_labels.copy()
-                local_labels_2[local_labels_2 >= 0] += nb_clusters + 1
-                filename = tmp_folder / f'local_clustering_{label}.png'
-                cls.plot_clusters(local_feature, local_labels_2, plot_labels, filename)
-
-            mask2, = np.nonzero(local_labels >= 0)
-
-            peak_labels_[mask[mask2]] = local_labels[mask2] + nb_clusters
-
-            for label in np.unique(local_labels[mask2]):
-                template = np.mean(wfs[local_labels == label, :, :], axis=0)
-                ind_max = np.argmax(np.max(np.abs(template), axis=0))
-                chans, = np.nonzero(sparsity_mask[l, :])
-                main_channels[label + nb_clusters] = chans[ind_max]
-
-            nb_clusters += local_labels.max() + 1
-            print(nb_clusters)
-
+        ids = np.arange(num_chans, dtype='int64')
+        wfs_arrays = extract_waveforms_to_buffers(recording, peaks2, spatial_labels, nbefore, nafter,
+                                mode=d['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
+                                sparsity_mask=sparsity_mask,  copy=(d['waveform_mode'] == 'shared_memory'),
+                                **d['job_kwargs'])
+        
+        split_peak_labels = auto_split_clustering(wfs_arrays, sparsity_mask, spatial_labels, keep_peak_labels, nbefore, nafter,
+                n_components_by_channel=d['n_components_by_channel'],
+                n_components=d['n_components'],
+                hdbscan_params=d['hdbscan_params_pca'],
+                probability_thr=d['probability_thr'],
+                debug=d['debug'],
+                debug_folder=tmp_folder,
+                )
 
         peak_labels = -2 * np.ones(peaks.size, dtype=np.int64)
-        peak_labels[keep] = peak_labels_
-
-        to_cluster_from = np.stack([positions['x'], positions['y']], axis=1)[keep]
-        cls.plot_clusters(to_cluster_from, peak_labels_, ['x', 'y'], 'global_clustering.png')
-
-
-        # clean
-        # keep_clean = (peak_labels >=0)
-        # peak_labels_clean =peak_labels[keep_clean] 
-        # labels = np.unique(peak_labels_clean)
+        peak_labels[spatial_keep] = split_peak_labels
         
-        # wf_folder_clean = Path(tmp_folder) / 'waveforms_clustering_clean'
-        # wf_folder_clean.mkdir(parents=True)
+        labels = np.unique(peak_labels)
+        labels = labels[labels>=0]
         
-        # n = np.sum(keep_clean)
-        # sparsity_mask2 = np.zeros((n, num_chans), dtype='bool')
-        # peaks3 = np.zeros(n, dtype=peak_dtype)
-        # peaks3['sample_ind'] = peaks['sample_ind'][keep_clean]
-        
-        # peaks3['segment_ind'] = peaks['segment_ind'][keep_clean]
-        # for l, label in enumerate(labels):
-        #     main_chan = main_channels[label]
-        #     closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
-        #     sparsity_mask2[l, closest_chans] = True
-        #     peaks3['unit_ind'][peak_labels_clean == label] = l
-        #     print(labels, closest_chans, main_chan)
-
-        # wfs_arrays2, wfs_arrays_info2 = allocate_waveforms(recording, peaks3, labels, nbefore, nafter,
-        #                                                  mode='memmap', folder=wf_folder_clean,
-        #                                                  dtype=dtype, sparsity_mask=sparsity_mask2)
-        # distribute_waveforms_to_buffers(recording, peaks3,  labels, wfs_arrays_info2, nbefore, nafter, return_scaled,
-        #                                 mode='memmap', sparsity_mask=sparsity_mask2, **params['job_kwargs'])
-        # print(wfs_arrays.keys())
-
-
-        # main_channels = []
-        # templates = np.zeros((labels.size, nbefore+nafter, num_chans), dtype=np.float32)
-
-        # for l, label in enumerate(labels):
-        #     wfs = wfs_arrays2[label]
-        #     template = np.mean(wfs, axis=0)
-        #     chan_inds, = np.nonzero(sparsity_mask2[l, :])
-        #     templates[l, :, chan_inds] =  template
-        #     assert wfs.shape[2] == chan_inds.size
-        #     main_chan = chan_inds[np.argmax(np.max(np.abs(template), axis=0))]
-        #     templates.append(template)
-        #     main_channels.append(main_chan)
-
-        # print(main_channels)
-        # ## Step 1 : auto merge
-        # # auto_merge_list = []
-        # auto_trash_list = []
-        # for l0 in  range(len(labels)):
-        #     for l1 in  range(l0+1, len(labels)):
-                
-        #         label0, label1 = labels[l0], labels[l1]
-
-        #         main_chan0 = main_channels[l0]
-        #         main_chan1 = main_channels[l1]
-                
-        #         channel_inds0, = np.nonzero(sparsity_mask2[l0, :])
-        #         channel_inds1, = np.nonzero(sparsity_mask2[l1, :])
-
-                
-        #         intersect_chans = np.intersect1d(channel_inds0, channel_inds1)
-        #         if len(intersect_chans) == 0:
-        #             continue
-                 
-        #         wfs0 = wfs_arrays2[label0]
-        #         wfs0 = wfs0[:, :,np.in1d(channel_inds0, intersect_chans)]
-        #         wfs1 = wfs_arrays2[label1]
-        #         wfs1 = wfs1[:, :,np.in1d(channel_inds1, intersect_chans)]
-                
-        #         # TODO : remove
-        #         assert wfs0.shape[2] == wfs1.shape[2]
-                
-        #         auto_merge_num_shift = 7
-        #         auto_merge_quantile_limit = 0.8
-        #         equal, shift = check_equal_template_with_distribution_overlap(wfs0, wfs1,
-        #                         num_shift=auto_merge_num_shift, quantile_limit=auto_merge_quantile_limit, 
-        #                         return_shift=True, debug=(label0 == 9) and (label1 == 17))
-                
-        #         print(label0, label1, equal)
-        #         if equal:
-        #             if shift == 0:
-        #                 if wfs0.shape[0] >= wfs1.shape[0]:
-        #                     auto_trash_list.append(l1)
-        #                 else:
-        #                     auto_trash_list.append(l0)
-        #             else:
-        #                 ind0 = list(channel_inds0).index(main_chan0)
-        #                 ind_sample0 = np.argmax(np.abs(templates[l0][:, ind0]))
-        #                 ind1 = list(channel_inds1).index(main_chan1)
-        #                 ind_sample1 = np.argmax(np.abs(templates[l1][:, ind1]))
-        #                 best = np.argmin(np.abs(np.array([ind_sample0, ind_sample1]) - nbefore))
-        #                 if best == 0:
-        #                     auto_trash_list.append(l1)
-        #                 else:
-        #                     auto_trash_list.append(l0)
-
-        #         # DEBUG plot
-        #         #~ plot_debug = debug
-        #         #plot_debug = True
-        #         plot_debug = False
-        #         # plot_debug = equal
-        #         plot_debug = (label0 == 9) and (label1 == 17)
-        #         if plot_debug :
-        #             import matplotlib.pyplot as plt
-        #             wfs_flat0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1).T
-        #             wfs_flat1 = wfs1.swapaxes(1, 2).reshape(wfs1.shape[0], -1).T
-        #             fig, ax = plt.subplots()
-        #             ax.plot(wfs_flat0, color='g', alpha=0.1)
-        #             ax.plot(wfs_flat1, color='r', alpha=0.1)
-
-        #             ax.plot(np.mean(wfs_flat0, axis=1), color='c', lw=2)
-        #             ax.plot(np.mean(wfs_flat1, axis=1), color='m', lw=2)
-                    
-        #             for c in range(len(intersect_chans)):
-        #                 ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
-        #             ax.set_title(f'label0={label0} label1={label1} equal{equal} shift{shift}')
-        #             plt.show()
-        
-        # print('auto_trash_list', auto_trash_list)
-
-
-        # peak_labels[np.in1d(peak_labels, auto_trash_list)] = -3
-
-
-
-        return np.unique(peak_labels), peak_labels
-
+        return labels, peak_labels        
 
 
 clustering_methods = {
