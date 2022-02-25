@@ -31,6 +31,7 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
     nb_clusters = 0
     main_channels = {}
     for l, label in enumerate(labels):
+        print('auto_split_clustering', label, l, len(labels))
         mask, = np.nonzero(peak_labels == label)
         wfs = wfs_arrays[label]
         

@@ -112,8 +112,9 @@ class PositionClustering:
         
         if d['apply_norm']:
             locations_n = locations.copy()
-            locations_n -= np.mean(locations_n, axis=0)
-            locations_n /= np.std(locations_n, axis=0)
+            locations_n[:, 0] *= 10
+            # locations_n -= np.mean(locations_n, axis=0)
+            # locations_n /= np.std(locations_n, axis=0)
         else:
             locations_n = locations
 
@@ -676,8 +677,9 @@ class PositionAndPCAClustering:
         
         if d['apply_norm']:
             locations_n = locations.copy()
-            locations_n -= np.mean(locations_n, axis=0)
-            locations_n /= np.std(locations_n, axis=0)
+            locations_n[:, 0] *= 10
+            # locations_n -= np.mean(locations_n, axis=0)
+            # locations_n /= np.std(locations_n, axis=0)
         else:
             locations_n = locations
         
@@ -734,9 +736,13 @@ class PositionAndPCAClustering:
             closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
             sparsity_mask[l, closest_chans] = True
 
-        if tmp_folder is not None:
-            wf_folder = tmp_folder / 'waveforms_pre_cluster'
-            wf_folder.mkdir()
+        
+        if d['waveform_mode'] == 'shared_memory':
+            wf_folder = None
+        else:
+            if tmp_folder is not None:
+                wf_folder = tmp_folder / 'waveforms_pre_cluster'
+                wf_folder.mkdir()
 
         fs = recording.get_sampling_frequency()
         nbefore = int(d['ms_before'] * fs / 1000.)
