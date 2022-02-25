@@ -644,6 +644,7 @@ class PositionAndPCAClustering:
         "peak_locations" : None,
         'ms_before': 1.5,
         'ms_after': 2.5,
+        
         "n_components_by_channel" : 3,
         "n_components": 5,
         "job_kwargs" : {"n_jobs" : 1, "chunk_memory" : "10M", "progress_bar" : True},
@@ -653,6 +654,7 @@ class PositionAndPCAClustering:
         "apply_norm": True,
         'waveform_mode': 'memmap',
         "local_radius_um" : 50.,
+        'noise_size' : 300,
         "debug" : True,
         "tmp_folder" : None
     }
@@ -731,11 +733,10 @@ class PositionAndPCAClustering:
 
             center = np.mean(locations[spatial_keep][mask], axis=0)
             main_chan = np.argmin(np.linalg.norm(chan_locs - center[np.newaxis, :], axis=1))
-
-            # here we take a biger radius
+            
+            # TODO take a radius that depend on the cluster dispertion itself
             closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
             sparsity_mask[l, closest_chans] = True
-
         
         if d['waveform_mode'] == 'shared_memory':
             wf_folder = None
@@ -753,8 +754,12 @@ class PositionAndPCAClustering:
                                 mode=d['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
                                 sparsity_mask=sparsity_mask,  copy=(d['waveform_mode'] == 'shared_memory'),
                                 **d['job_kwargs'])
-        
-        split_peak_labels = auto_split_clustering(wfs_arrays, sparsity_mask, spatial_labels, keep_peak_labels, nbefore, nafter,
+
+        noise = get_random_data_chunks(recording, return_scaled=False,
+                        num_chunks_per_segment=d['noise_size'], chunk_size=nbefore+nafter, concatenated=False, seed=None)
+        noise = np.stack(noise, axis=0)
+
+        split_peak_labels = auto_split_clustering(wfs_arrays, sparsity_mask, spatial_labels, keep_peak_labels, nbefore, nafter, noise, 
                 n_components_by_channel=d['n_components_by_channel'],
                 n_components=d['n_components'],
                 hdbscan_params=d['hdbscan_params_pca'],
