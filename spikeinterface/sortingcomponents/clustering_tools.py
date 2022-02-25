@@ -73,7 +73,6 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
             active_labels_set = np.unique(active_labels)
             active_labels_set = active_labels_set[active_labels_set>=0]
             num_cluster = active_labels_set.size
-            #~ print('num_cluster', num_cluster)
             
             if num_cluster > 1:
                 # take the best one
@@ -88,14 +87,28 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
                         v = np.mean(np.abs(np.mean(active_wfs[sel, nbefore, :], axis=0)))
                         extremum_values.append(v)
                 best_label = active_labels_set[np.argmax(extremum_values)]
-                local_labels_with_noise[active_ind[active_labels_with_noise == best_label]] = local_count
+                inds = active_ind[active_labels_with_noise == best_label]
+                inds_no_noise = inds[inds < wfs.shape[0]]
+                if inds_no_noise.size > 1:
+                    # avoid cluster with one spike
+                    local_labels_with_noise[inds] = local_count
+                    local_count += 1
+                else:
+                    local_labels_with_noise[inds] = -1
+                
                 local_count += 1
                 
             elif num_cluster == 1:
                 best_label = active_labels_set[0]
-                local_labels_with_noise[active_ind[active_labels_with_noise == best_label]] = local_count
-                local_count += 1
-                
+                inds = active_ind[active_labels_with_noise == best_label]
+                inds_no_noise = inds[inds < wfs.shape[0]]
+                if inds_no_noise.size > 1:
+                    # avoid cluster with one spike
+                    local_labels_with_noise[inds] = local_count
+                    local_count += 1
+                else:
+                    local_labels_with_noise[inds] = -1
+                    
                 # last loop
                 local_labels_with_noise[active_ind[active_labels_with_noise==-1]] = -1
             else:
@@ -103,6 +116,7 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
                 break
         
         local_labels = local_labels_with_noise[:-noise_size]
+        # assert np.sum(local_labels == 0) == 0
         
         local_labels[local_labels>0] -= 1
 
@@ -140,14 +154,8 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
         mask2, = np.nonzero(local_labels >= 0)
         split_peak_labels[mask[mask2]] = local_labels[mask2] + nb_clusters
 
-        for label in np.unique(local_labels[mask2]):
-            template = np.mean(wfs[local_labels == label, :, :], axis=0)
-            ind_max = np.argmax(np.max(np.abs(template), axis=0))
-            chans, = np.nonzero(sparsity_mask[l, :])
-            main_channels[label + nb_clusters] = chans[ind_max]
-
         nb_clusters += local_labels.max() + 1
-
+    
     return split_peak_labels
     
 
