@@ -767,7 +767,7 @@ class PositionAndPCAClustering:
                 debug=d['debug'],
                 debug_folder=tmp_folder,
                 )
-
+        
         peak_labels = -2 * np.ones(peaks.size, dtype=np.int64)
         peak_labels[spatial_keep] = split_peak_labels
         
