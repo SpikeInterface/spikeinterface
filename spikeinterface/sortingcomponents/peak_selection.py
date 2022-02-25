@@ -45,7 +45,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
             'uniform':
-                * select_per_channel : bool
+                * select_per_channel: bool
                     If True, the selection is done on a per channel basis (default)
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
@@ -67,12 +67,10 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
                 * n_bins: int
                     The number of bins used to estimate the distributions at each channel
                 * n_peaks: int
-                    The number of peaks to select per channel
-            'smart_sampling_locations':
-                * peaks_locations: array
-                    The locations of all the peaks, computed via localize_peaks
-                * n_bins: int
-                    The number of bins used to estimate the distributions
+                    If select_per_channel is True, this is the number of peaks per channels,
+                    otherwise this is the total number of peaks
+                * select_per_channel: bool
+                    If True, the selection is done on a per channel basis (default)
     
     {}
 
@@ -247,64 +245,6 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             acceptation_threshold = rejection_curve[indices]
             valid_indices,  = np.where(acceptation_threshold < np.random.rand(len(indices)))
             selected_peaks = [valid_indices]
-
-    elif method == 'smart_sampling_locations':
-
-        ## This method will try to select around n_peaks per regions of the space
-        ## First, it will look at the distribution of the peaks amplitudes, per channel. 
-        ## Once this distribution is known, it will sample from the peaks with a rejection probability
-        ## such that the final distribution of the amplitudes, for the selected peaks, will be as
-        ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
-        ## from the space of all the peaks, using the amplitude as a discriminative criteria
-        ## To do so, one must provide the noise_levels, detect_threshold used to detect the peaks, the 
-        ## sign of the peaks, and the number of bins for the probability density histogram
-        
-        def reject_rate(x, d, a, target, n_bins):
-            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
-
-        params = {'peaks_locations' : None, 
-                  'n_bins' : (10, 10)}
-
-        params.update(method_kwargs)
-
-        assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
-
-        xmin, xmax = np.min(params['peaks_locations']['x']), np.max(params['peaks_locations']['x'])
-        ymin, ymax = np.min(params['peaks_locations']['y']), np.max(params['peaks_locations']['y'])
-
-        x_grid = np.linspace(xmin, xmax, params['n_bins'][0])
-        y_grid = np.linspace(ymin, ymax, params['n_bins'][1])
-
-        x_idx = np.searchsorted(x_grid, params['peaks_locations']['x'])
-        y_idx = np.searchsorted(y_grid, params['peaks_locations']['y'])
-
-        all_values = np.arange(params['n_bins'][0]*params['n_bins'][1]+1)
-
-        grid_idx = x_idx * params['n_bins'][0] + params['n_bins'][1]
-        
-        x, y = np.histogram(grid_idx, bins=all_values)
-        histogram = {'probability' : x/x.sum(), 'positions' : y[1:]}
-
-        indices = np.searchsorted(histograms['positions'], grid_idx)
-
-        probabilities = histograms['probability']
-        z = probabilities[probabilities > 0]
-        c = 1.0 / np.min(z)
-        d = np.ones(len(probabilities))
-        d[probabilities > 0] = 1. / (c * z)
-        d = np.minimum(1, d)
-        d /= np.sum(d)
-        twist = np.sum(probabilities * d)
-        factor = twist * c
-
-        n_bins = params['n_bins'][0] * params['n_bins'][1]
-        target_rejection = 1 - params['n_peaks']/len(indices)
-        res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, n_bins), disp=False)
-        rejection_curve = np.clip(1 - d*res[0], 0, 1)
-
-        acceptation_threshold = rejection_curve[indices]
-        valid_indices = acceptation_threshold < np.random.rand(len(indices))
-        selected_peaks, = np.where(valid_indices)
 
     else:
         raise NotImplementedError(f"No method {method} for peaks selection")
