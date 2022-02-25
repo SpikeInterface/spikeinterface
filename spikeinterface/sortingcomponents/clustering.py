@@ -709,8 +709,8 @@ class PositionAndPCAClustering:
             ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, c=spatial_peak_labels)
 
             if tmp_folder is not None:
-                fig1.savefig(tmp_folder / 'peak_locations.png')
-                fig2.savefig(tmp_folder / 'peak_locations_clustered.png')
+                fig1.savefig(tmp_folder / 'peak_locations.pdf')
+                fig2.savefig(tmp_folder / 'peak_locations_clustered.pdf')
 
 
         # step2 : extract waveform by cluster

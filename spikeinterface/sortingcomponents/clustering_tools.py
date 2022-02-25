@@ -125,7 +125,7 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
                 wfs_flat = wfs_and_noise[plot_mask, :, :].swapaxes(1, 2).reshape(np.sum(plot_mask), -1).T
                 ax.plot(wfs_flat, color=color, alpha=0.1)
                 if plot_label >=0:
-                    ax.plot(wfs_flat.mean(0), color=color, lw=2)
+                    ax.plot(wfs_flat.mean(1), color=color, lw=2)
             
             for c in range(wfs.shape[2]):
                 ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='-', alpha=0.5)
