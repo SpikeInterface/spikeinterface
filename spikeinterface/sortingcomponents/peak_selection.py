@@ -144,71 +144,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
         def reject_rate(x, d, a, target, n_bins):
             return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
-        params = {'detect_threshold' : 5, 
-                  'peak_sign' : 'neg',
-                  'n_bins' : 50, 
-                  'n_peaks' : None, 
-                  'noise_levels' : None,
-                  'select_per_channel' : True}
-
-        params.update(method_kwargs)
-        print(params)
-
-        assert params['n_peaks'] is not None, "n_peaks should be defined!"
-        assert params['noise_levels'] is not None, "Noise levels should be provided"
-
-        histograms = {}
-
-        if params['select_per_channel']:
-            for channel in np.unique(peaks['channel_ind']):
-
-                peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
-
-                sub_peaks = peaks[peaks_indices]
-
-                snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
-
-                if params['peak_sign'] == 'neg':
-                    bins = list(np.linspace(snrs.min(), -params['detect_threshold'], params['n_bins']))
-                elif params['peak_sign'] == 'pos':
-                    bins = list(params['detect_threshold'], np.linspace(snrs.max(), params['n_bins']))
-                elif params['peak_sign'] == 'both':
-                    if snrs.max() > params['detect_threshold']:
-                        pos_values = list(params['detect_threshold'], np.linspace(snrs.max(), params['n_bins']//2))
-                    else:
-                        pos_values = []
-                    if snrs.min() < -params['detect_threshold']:
-                        neg_values = list(np.linspace(snrs.min(), -params['detect_threshold'], params['n_bins']//2))
-                    else:
-                        neg_values = []
-                    bins = neg_values + pos_values
-
-                x, y = np.histogram(snrs, bins=bins)
-                histograms[channel] = {'probability' : x/x.sum(), 'snrs' : y[1:]}
-
-                indices = np.searchsorted(histograms[channel]['snrs'], snrs)
-
-                probabilities = histograms[channel]['probability']
-                z = probabilities[probabilities > 0]
-                c = 1.0 / np.min(z)
-                d = np.ones(len(probabilities))
-                d[probabilities > 0] = 1. / (c * z)
-                d = np.minimum(1, d)
-                d /= np.sum(d)
-                twist = np.sum(probabilities * d)
-                factor = twist * c
-
-                target_rejection = 1 - params['n_peaks']/len(indices)
-                res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, params['n_bins']), disp=False)
-                rejection_curve = np.clip(1 - d*res[0], 0, 1)
-
-                acceptation_threshold = rejection_curve[indices]
-                valid_indices = acceptation_threshold < np.random.rand(len(indices))
-                selected_peaks += [peaks_indices[valid_indices]]
-        else:
-
-            snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
-
+        def get_valid_indices(params, snrs):
             if params['peak_sign'] == 'neg':
                 bins = list(np.linspace(snrs.min(), -params['detect_threshold'], params['n_bins']))
             elif params['peak_sign'] == 'pos':
@@ -243,7 +179,37 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             rejection_curve = np.clip(1 - d*res[0], 0, 1)
 
             acceptation_threshold = rejection_curve[indices]
-            valid_indices,  = np.where(acceptation_threshold < np.random.rand(len(indices)))
+            valid_indices = acceptation_threshold < np.random.rand(len(indices))
+
+            return valid_indices
+
+        params = {'detect_threshold' : 5, 
+                  'peak_sign' : 'neg',
+                  'n_bins' : 50, 
+                  'n_peaks' : None, 
+                  'noise_levels' : None,
+                  'select_per_channel' : True}
+
+        params.update(method_kwargs)
+
+        assert params['n_peaks'] is not None, "n_peaks should be defined!"
+        assert params['noise_levels'] is not None, "Noise levels should be provided"
+
+        histograms = {}
+
+        if params['select_per_channel']:
+            for channel in np.unique(peaks['channel_ind']):
+
+                peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
+                sub_peaks = peaks[peaks_indices]
+                snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
+                valid_indices = get_valid_indices(params, snrs)
+                selected_peaks += [peaks_indices[valid_indices]]
+        else:
+
+            snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
+            valid_indices = get_valid_indices(params, snrs)
+            valid_indices,  = np.where(valid_indices)
             selected_peaks = [valid_indices]
 
     else:
