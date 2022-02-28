@@ -5,9 +5,9 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from neuroscope
     Ref: http://neuroscope.sourceforge.net
-    
+
     Based on neo.rawio.NeuroScopeRawIO
-    
+
     Parameters
     ----------
     file_path: str
@@ -24,7 +24,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-def read_neuroscope(*args, **kwargs):
+def read_neuroscope_recording(*args, **kwargs):
     recording = NeuroScopeRecordingExtractor(*args, **kwargs)
     return recording
 
