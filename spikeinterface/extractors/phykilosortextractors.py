@@ -96,6 +96,26 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         if 'si_unit_id' in cluster_info.columns:
             unit_ids = cluster_info["si_unit_id"].values
+
+            if np.all(np.isnan(unit_ids)):
+                max_si_unit_id = -1
+            else:
+                max_si_unit_id = int(np.nanmax(unit_ids))
+
+            # update spike cluster values
+            spike_clusters_new = np.zeros_like(spike_clusters)
+            for i, (phy_id, si_id) in enumerate(zip(cluster_info["cluster_id"].values,
+                                                    cluster_info["si_unit_id"].values)):
+                if np.isnan(si_id):
+                    max_si_unit_id += 1
+                    new_si_id = int(max_si_unit_id)
+                else:
+                    new_si_id = si_id
+                unit_ids[i] = new_si_id
+
+                spike_clusters_new[spike_clusters == phy_id] = new_si_id
+            unit_ids = unit_ids.astype(int)
+            spike_clusters = spike_clusters_new
             del cluster_info["si_unit_id"]
         else:
             unit_ids = cluster_info["cluster_id"].values
