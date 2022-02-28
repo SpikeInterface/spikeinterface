@@ -29,4 +29,4 @@ def read_neuroscope_recording(*args, **kwargs):
     return recording
 
 
-read_neuroscope.__doc__ = NeuroScopeRecordingExtractor.__doc__
+read_neuroscope_recording.__doc__ = NeuroScopeRecordingExtractor.__doc__

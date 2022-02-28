@@ -8,7 +8,7 @@ from .neoextractors import (
     SpikeGLXRecordingExtractor, read_spikeglx,
     OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys,
     IntanRecordingExtractor, read_intan,
-    NeuroScopeRecordingExtractor, read_neuroscope,
+    NeuroScopeRecordingExtractor, read_neuroscope_recording,
     PlexonRecordingExtractor, read_plexon,
     NeuralynxRecordingExtractor, read_neuralynx,
     BlackrockRecordingExtractor, read_blackrock,
@@ -36,6 +36,7 @@ from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spyking
 from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
 from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
 from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor, read_phy, read_kilosort
+from .neuroscopeextractors import NeuroScopeSortingExtractor, read_neuroscope_sorting
 
 # sorting in relation with simulator
 from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
@@ -93,6 +94,7 @@ sorting_extractor_full_list = [
     KiloSortSortingExtractor,
     PhySortingExtractor,
     NwbSortingExtractor,
+    NeuroScopeSortingExtractor,
 
     # neo based
     MEArecSortingExtractor
