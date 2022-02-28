@@ -60,7 +60,7 @@ class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-class ItanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+class IntanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = IntanRecordingExtractor
     downloads = ['intan']
     entities = [
@@ -122,6 +122,14 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
     downloads = ['phy']
     entities = [
         'phy/phy_example_0',
+    ]
+
+
+class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroScopeSortingExtractor
+    downloads = ['neuroscope']
+    entities = [
+        {"folder_path": 'neuroscope/dataset_1'},
     ]
 
 
