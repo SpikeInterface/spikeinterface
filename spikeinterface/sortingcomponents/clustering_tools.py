@@ -10,6 +10,168 @@ from ..toolkit import check_equal_template_with_distribution_overlap
 
 
 
+def _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug):
+
+    import sklearn.decomposition
+    import hdbscan
+    
+    valid_size = wfs_and_noise.shape[0] - noise_size
+    
+    local_feature = np.zeros((wfs_and_noise.shape[0], n_components_by_channel * wfs_and_noise.shape[2]))
+    tsvd = sklearn.decomposition.TruncatedSVD(n_components=n_components_by_channel)
+    for c in range(wfs_and_noise.shape[2]):
+        local_feature[:, c*n_components_by_channel:(c+1)*n_components_by_channel] = tsvd.fit_transform(wfs_and_noise[:, :, c])
+    #~ n_components = min(n_components, local_feature.shape[1])
+    #~ pca = sklearn.decomposition.PCA(n_components=n_components, whiten=True)
+    #~ local_feature = pca.fit_transform(local_feature)
+    
+    # hdbscan on pca
+    clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
+    local_labels_with_noise = clustering[0]
+    cluster_probability = clustering[2]
+    persistent_clusters, = np.nonzero(clustering[2] > probability_thr)
+    local_labels_with_noise[~np.in1d(local_labels_with_noise, persistent_clusters)] = -1
+
+    if debug:
+        import matplotlib.pyplot as plt
+        import umap
+        
+        fig, ax = plt.subplots()
+
+        reducer = umap.UMAP()
+        local_feature_plot = reducer.fit_transform(local_feature)
+
+        
+        unique_lab = np.unique(local_labels_with_noise)
+        cmap = plt.get_cmap('jet', unique_lab.size)
+        cmap = { k: cmap(l) for l, k in enumerate(unique_lab) }
+        cmap[-1] = 'k'
+        active_ind = np.arange(local_feature.shape[0])
+        for k in unique_lab:
+            plot_mask_1 = (active_ind < valid_size) & (local_labels_with_noise == k)
+            plot_mask_2 = (active_ind >= valid_size) & (local_labels_with_noise == k)
+            ax.scatter(local_feature_plot[plot_mask_1, 0], local_feature_plot[plot_mask_1, 1], color=cmap[k], marker='o')
+            ax.scatter(local_feature_plot[plot_mask_2, 0], local_feature_plot[plot_mask_2, 1], color=cmap[k], marker='*')
+            
+        #~ plt.show()
+
+    
+    return local_labels_with_noise
+    
+
+def _split_waveforms_nested(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug):
+
+    import sklearn.decomposition
+    import hdbscan
+    
+    valid_size = wfs_and_noise.shape[0] - noise_size
+    
+    local_labels_with_noise =  np.zeros(wfs_and_noise.shape[0], dtype=np.int64)
+    
+    local_count = 1
+    while True:
+        print('  local_count', local_count, np.sum(local_labels_with_noise[:-noise_size] == 0), local_labels_with_noise.size - noise_size)
+        
+        if np.all(local_labels_with_noise[:-noise_size] != 0):
+            break
+        
+        active_ind, = np.nonzero(local_labels_with_noise == 0)
+        
+        # reduce dimention in 2 step
+        active_wfs = wfs_and_noise[active_ind, :, :]
+        local_feature = np.zeros((active_wfs.shape[0], n_components_by_channel * active_wfs.shape[2]))
+        tsvd = sklearn.decomposition.TruncatedSVD(n_components=n_components_by_channel)
+        for c in range(wfs_and_noise.shape[2]):
+            local_feature[:, c*n_components_by_channel:(c+1)*n_components_by_channel] = tsvd.fit_transform(active_wfs[:, :, c])
+        #~ n_components = min(n_components, local_feature.shape[1])
+        #~ pca = sklearn.decomposition.PCA(n_components=n_components, whiten=True)
+        #~ local_feature = pca.fit_transform(local_feature)
+        
+        # hdbscan on pca
+        clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
+        active_labels_with_noise = clustering[0]
+        cluster_probability = clustering[2]
+        persistent_clusters, = np.nonzero(clustering[2] > probability_thr)
+        active_labels_with_noise[~np.in1d(active_labels_with_noise, persistent_clusters)] = -1
+        
+        active_labels = active_labels_with_noise[active_ind < valid_size]
+        active_labels_set = np.unique(active_labels)
+        active_labels_set = active_labels_set[active_labels_set>=0]
+        num_cluster = active_labels_set.size
+
+        if debug:
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+
+            import umap
+
+            reducer = umap.UMAP()
+            local_feature_plot = reducer.fit_transform(local_feature)
+
+            
+            unique_lab = np.unique(active_labels_with_noise)
+            cmap = plt.get_cmap('jet', unique_lab.size)
+            cmap = { k: cmap(l) for l, k in enumerate(unique_lab) }
+            cmap[-1] = 'k'
+            for k in unique_lab:
+                plot_mask_1 = (active_ind < valid_size) & (active_labels_with_noise == k)
+                plot_mask_2 = (active_ind >= valid_size) & (active_labels_with_noise == k)
+                ax.scatter(local_feature_plot[plot_mask_1, 0], local_feature_plot[plot_mask_1, 1], color=cmap[k], marker='o')
+                ax.scatter(local_feature_plot[plot_mask_2, 0], local_feature_plot[plot_mask_2, 1], color=cmap[k], marker='*')
+                
+            #~ plt.show()
+
+        if num_cluster > 1:
+            # take the best one
+            extremum_values = []
+            assert active_ind.size ==  active_labels_with_noise.size
+            for k in active_labels_set:
+                #~ sel = active_labels_with_noise == k
+                #~ sel[-noise_size:] = False
+                sel = (active_ind < valid_size) & (active_labels_with_noise == k)
+                if np.sum(sel) == 1:
+                    # only one spike
+                    extremum_values.append(0)
+                else:
+                    v = np.mean(np.abs(np.mean(active_wfs[sel, nbefore, :], axis=0)))
+                    extremum_values.append(v)
+            best_label = active_labels_set[np.argmax(extremum_values)]
+            #~ inds = active_ind[active_labels_with_noise == best_label]
+            inds = active_ind[(active_ind < valid_size) & (active_labels_with_noise == best_label)]
+            #~ inds_no_noise = inds[inds < valid_size]
+            if inds.size > 1:
+                # avoid cluster with one spike
+                local_labels_with_noise[inds] = local_count
+                local_count += 1
+            else:
+                local_labels_with_noise[inds] = -1
+            
+            local_count += 1
+            
+        elif num_cluster == 1:
+            best_label = active_labels_set[0]
+            #~ inds = active_ind[active_labels_with_noise == best_label]
+            #~ inds_no_noise = inds[inds < valid_size]
+            inds = active_ind[(active_ind < valid_size) & (active_labels_with_noise == best_label)]
+            if inds.size > 1:
+                # avoid cluster with one spike
+                local_labels_with_noise[inds] = local_count
+                local_count += 1
+            else:
+                local_labels_with_noise[inds] = -1
+                
+            # last loop
+            local_labels_with_noise[active_ind[active_labels_with_noise==-1]] = -1
+        else:
+            local_labels_with_noise[active_ind] = -1
+            break
+    
+    #~ local_labels = local_labels_with_noise[:-noise_size]
+    local_labels_with_noise[local_labels_with_noise>0] -= 1
+    
+    return local_labels_with_noise
+    
+
 
 def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefore, nafter, noise,
                 n_components_by_channel=3,
@@ -38,97 +200,31 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
         
         chans, = np.nonzero(sparsity_mask[l, :])
         
+        
+
         wfs_and_noise = np.concatenate([wfs, noise[:, :, chans]], axis=0)
         noise_size = noise.shape[0]
         
-        local_labels_with_noise =  np.zeros(wfs_and_noise.shape[0], dtype=np.int64)
+        local_labels_with_noise = _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug)
+        # local_labels_with_noise = _split_waveforms_nested(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug)
         
-        local_count = 1
-        while True:
-            print('  local_count', local_count, np.sum(local_labels_with_noise[:-noise_size] == 0), wfs.shape[0])
-            
-            if np.all(local_labels_with_noise[:-noise_size] != 0):
-                break
-            
-            active_ind, = np.nonzero(local_labels_with_noise == 0)
-            
-            # reduce dimention in 2 step
-            active_wfs = wfs_and_noise[active_ind, :, :]
-            local_feature = np.zeros((active_wfs.shape[0], n_components_by_channel * active_wfs.shape[2]))
-            tsvd = sklearn.decomposition.TruncatedSVD(n_components=n_components_by_channel)
-            for c in range(wfs_and_noise.shape[2]):
-                local_feature[:, c*n_components_by_channel:(c+1)*n_components_by_channel] = tsvd.fit_transform(active_wfs[:, :, c])
-            n_components = min(n_components, local_feature.shape[1])
-            pca = sklearn.decomposition.PCA(n_components=n_components, whiten=True)
-            local_feature = pca.fit_transform(local_feature)
-            
-            # hdbscan on pca
-            clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
-            active_labels_with_noise = clustering[0]
-            cluster_probability = clustering[2]
-            persistent_clusters, = np.nonzero(clustering[2] > probability_thr)
-            active_labels_with_noise[~np.in1d(active_labels_with_noise, persistent_clusters)] = -1
-            
-            active_labels = active_labels_with_noise[active_ind < wfs.shape[0]]
-            active_labels_set = np.unique(active_labels)
-            active_labels_set = active_labels_set[active_labels_set>=0]
-            num_cluster = active_labels_set.size
-            
-            if num_cluster > 1:
-                # take the best one
-                extremum_values = []
-                for k in active_labels_set:
-                    sel = active_labels_with_noise == k
-                    sel[-noise_size:] = False
-                    if np.sum(sel) == 1:
-                        # only one spike
-                        extremum_values.append(0)
-                    else:
-                        v = np.mean(np.abs(np.mean(active_wfs[sel, nbefore, :], axis=0)))
-                        extremum_values.append(v)
-                best_label = active_labels_set[np.argmax(extremum_values)]
-                inds = active_ind[active_labels_with_noise == best_label]
-                inds_no_noise = inds[inds < wfs.shape[0]]
-                if inds_no_noise.size > 1:
-                    # avoid cluster with one spike
-                    local_labels_with_noise[inds] = local_count
-                    local_count += 1
-                else:
-                    local_labels_with_noise[inds] = -1
-                
-                local_count += 1
-                
-            elif num_cluster == 1:
-                best_label = active_labels_set[0]
-                inds = active_ind[active_labels_with_noise == best_label]
-                inds_no_noise = inds[inds < wfs.shape[0]]
-                if inds_no_noise.size > 1:
-                    # avoid cluster with one spike
-                    local_labels_with_noise[inds] = local_count
-                    local_count += 1
-                else:
-                    local_labels_with_noise[inds] = -1
-                    
-                # last loop
-                local_labels_with_noise[active_ind[active_labels_with_noise==-1]] = -1
-            else:
-                local_labels_with_noise[active_ind] = -1
-                break
         
-        local_labels = local_labels_with_noise[:-noise_size]
-        # assert np.sum(local_labels == 0) == 0
-        
-        local_labels[local_labels>0] -= 1
+        if noise_size > 0:
+            local_labels = local_labels_with_noise[:-noise_size]
+            local_labels_with_noise[-noise_size:] = -2
+        else:
+            local_labels = local_labels_with_noise
+
 
         if debug:
-            local_labels_with_noise[-noise_size:] = -2
+            #~ local_labels_with_noise[-noise_size:] = -2
             import matplotlib.pyplot as plt
             #~ fig, axs = plt.subplots(ncols=3)
             
             fig, ax = plt.subplots()
             plot_labels_set = np.unique(local_labels_with_noise)
             cmap = plt.get_cmap('jet', plot_labels_set.size)
-            cmap = { label: cmap(l) for l, label in enumerate(plot_labels_set) }
+            cmap = { k: cmap(l) for l, k in enumerate(plot_labels_set) }
             cmap[-1] = 'k'
             cmap[-2] = 'b'
             
@@ -147,7 +243,7 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
             if debug_folder is not None:
                 fig.savefig(debug_folder / f'auto_split_{label}.png')
             
-            #~ plt.show()
+            plt.show()
         
         # remove noise labels
         mask, = np.nonzero(peak_labels == label)
