@@ -224,10 +224,8 @@ class NeuroScopeSortingExtractor(UnitsAggregationSorting):
         if exclude_shanks is not None:  # dumping checks do not like having an empty list as default
             assert all([isinstance(x, (int, np.integer)) and x >= 0 for x in
                         exclude_shanks]), "Optional argument 'exclude_shanks' must contain positive integers only!"
-            exclude_shanks_passed = True
         else:
             exclude_shanks = []
-            exclude_shanks_passed = False
         xml_file_path = handle_xml_file_path(
             folder_path=folder_path, initial_xml_file_path=xml_file_path)
         xml_root = et.parse(str(xml_file_path)).getroot()
@@ -266,7 +264,7 @@ class NeuroScopeSortingExtractor(UnitsAggregationSorting):
             )
             shank_sorting = NeuroScopeBaseSortingExtractor(**nse_args)
             all_shanks_list_se.append(shank_sorting)
-            unit_shank_ids.append([shank_id] * len(shank_sorting.unit_ids))
+            unit_shank_ids += [shank_id] * len(shank_sorting.unit_ids)
 
         UnitsAggregationSorting.__init__(self, sorting_list=all_shanks_list_se)
 
