@@ -92,12 +92,12 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 # TODO : this fail, need investigate
-# class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-# ExtractorClass = NeuralynxRecordingExtractor
-# downloads = ['neuralynx']
-# entities = [
-# 'neuralynx/Cheetah_v5.6.3',
-# ]
+class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuralynxRecordingExtractor
+    downloads = ['neuralynx']
+    entities = [
+        'neuralynx/Cheetah_v5.6.3/original_data',
+    ]
 
 
 class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -150,7 +150,6 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skip(reason='Ced extractor depend on sonpy and next neo version')
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
     downloads = [
@@ -163,14 +162,18 @@ class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skip(reason="Maxwell HDF5 compression need a manual installable plugin!!!")
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MaxwellRecordingExtractor
     downloads = ['maxwell']
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
-        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well0000', 'rec_name': 'rec0000'})
+        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well000', 'rec_name': 'rec0000'})
     ]
+
+    def setUp(self):
+        from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
+        auto_install_maxwell_hdf5_compression_plugin()
+        return super().setUp()
 
 
 class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):

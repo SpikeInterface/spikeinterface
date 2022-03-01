@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('')
+@pytest.mark.skip('YASS can be tested after running run_yass()')
+@pytest.mark.extractors
 def test_yassextractors():
     # not tested here, tested in run_yass(...)
     pass

@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('')
+@pytest.mark.skip('Combinato can be tested after running run_combinato()')
+@pytest.mark.extractors
 def test_combinatoextractors():
     # not tested here, tested in run_combinato(...)
     pass

@@ -4,6 +4,7 @@ import numpy as np
 from spikeinterface.extractors import toy_example
 
 
+@pytest.mark.extractors
 def test_toy_example():
     rec, sorting = toy_example(num_segments=2, num_units=10)
     assert rec.get_num_segments() == 2
