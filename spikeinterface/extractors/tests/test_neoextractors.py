@@ -3,11 +3,13 @@ import unittest
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset
+from spikeinterface import download_dataset, get_global_dataset_folder
 from spikeinterface.extractors import *
 
 from spikeinterface.extractors.tests.common_tests import (RecordingCommonTestSuite,
                                                           SortingCommonTestSuite, EventCommonTestSuite)
+
+local_folder = get_global_dataset_folder() / 'ephy_testing_data'
 
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -129,7 +131,7 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeSortingExtractor
     downloads = ['neuroscope']
     entities = [
-        {"folder_path": 'neuroscope/dataset_1'},
+        {"folder_path": local_folder / 'neuroscope/dataset_1'},
     ]
 
 
