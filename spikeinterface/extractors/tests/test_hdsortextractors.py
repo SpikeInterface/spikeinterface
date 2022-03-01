@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('')
+@pytest.mark.skip('HDSort can be tested after running run_hdsort()')
+@pytest.mark.extractors
 def test_hdsortextractors():
     # no tested here, tested un run_hdsort(...)
     pass

@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('')
+@pytest.mark.skip('SpykingCIRCUS can be tested after running run_spykingcircus()')
+@pytest.mark.extractors
 def test_spykingcircusextractors():
     # not tested here, tested in run_spykingcircus(...)
     pass

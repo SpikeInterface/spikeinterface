@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('')
+@pytest.mark.skip('Klusta can be tested after running run_klusta()')
+@pytest.mark.extractors
 def test_klustaextractors():
     # no tested here, tested un run_klusta
     pass

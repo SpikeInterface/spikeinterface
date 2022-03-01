@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('')
+@pytest.mark.skip('WaveClus can be tested after running run_waveclus()')
+@pytest.mark.extractors
 def test_waveclustextractors():
     # not tested here, tested in run_waveclus(...)
     pass
