@@ -82,6 +82,16 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'neuroscope/test1/test1.xml',
     ]
+    
+
+class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroScopeSortingExtractor
+    downloads = ['neuroscope']
+    entities = [
+        'neuroscope/dataset_1',
+        {'resfile_path': local_folder / 'neuroscope/dataset_1/YutaMouse42-15111710.res.1',
+         'clufile_path': local_folder / 'neuroscope/dataset_1/YutaMouse42-15111710.clu.1'},
+    ]
 
 
 class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -124,14 +134,6 @@ class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
     downloads = ['phy']
     entities = [
         'phy/phy_example_0',
-    ]
-
-
-class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = NeuroScopeSortingExtractor
-    downloads = ['neuroscope']
-    entities = [
-        {"folder_path": local_folder / 'neuroscope/dataset_1'},
     ]
 
 

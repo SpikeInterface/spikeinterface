@@ -4,7 +4,8 @@ from .openephys import (OpenEphysLegacyRecordingExtractor,
                         OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys,
                         read_openephys_event)
 from .intan import IntanRecordingExtractor, read_intan
-from .neuroscope import NeuroScopeRecordingExtractor, read_neuroscope_recording
+from .neuroscope import (NeuroScopeRecordingExtractor, NeuroScopeSortingExtractor,
+                         read_neuroscope_recording, read_neuroscope_sorting, read_neuroscope)
 from .plexon import PlexonRecordingExtractor, read_plexon
 from .neuralynx import NeuralynxRecordingExtractor, read_neuralynx
 from .blackrock import BlackrockRecordingExtractor, read_blackrock
