@@ -122,7 +122,7 @@ class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = TdtRecordingExtractor
     downloads = ['tdt']
     entities = [
-        'tdt/aep_05',
+        ('tdt/aep_05', {'stream_id': '1'})
     ]
 
 
@@ -194,7 +194,7 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
     # ~ test = MearecSortingTest()
-    test = SpikeGLXRecordingTest()
+    # test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     # ~ test = OpenEphysLegacyRecordingTest()
     #~ test = OpenEphysBinaryEventTest()
@@ -209,6 +209,9 @@ if __name__ == '__main__':
     # ~ test = CedRecordingTest()
     # ~ test = MaxwellRecordingTest()
     #~ test = SpikeGadgetsRecordingTest()
+    # test = TdTRecordingTest()
+    test = AxonaRecordingTest()
+    # test = BiocamRecordingTest()
 
     test.setUp()
     test.test_open()

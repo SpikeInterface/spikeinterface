@@ -16,4 +16,4 @@ from .nix import NixRecordingExtractor, read_nix
 from .spikegadgets import SpikeGadgetsRecordingExtractor, read_spikegadgets
 from .biocam import BiocamRecordingExtractor, read_biocam
 from .axona import AxonaRecordingExtractor, read_axona
-from .tdt import TdTRecordingExtractor, read_tdt
+from .tdt import TdtRecordingExtractor, read_tdt
