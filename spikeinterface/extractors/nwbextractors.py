@@ -386,4 +386,8 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     if load_sorting:
         sorting = read_nwb_sorting(file_path, electrical_series_name=electrical_series_name)
         outputs = outputs + (sorting,)
+
+    if len(outputs) == 1:
+        outputs = outputs[0]
+
     return outputs
