@@ -1,17 +1,22 @@
 import pytest
 import numpy as np
+from pathlib import Path
 
 from spikeinterface.core import aggregate_units
 
-from spikeinterface.core import NpzSortingExtractor, load_extractor
-from spikeinterface.core.base import BaseExtractor
-
+from spikeinterface.core import NpzSortingExtractor
 from spikeinterface.core.testing_tools import create_sorting_npz
+
+
+if getattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
 
 
 def test_unitsaggregationsorting():
     num_seg = 2
-    file_path = 'test_BaseSorting.npz'
+    file_path = cache_folder / 'test_BaseSorting.npz'
 
     create_sorting_npz(num_seg, file_path)
 
@@ -30,10 +35,14 @@ def test_unitsaggregationsorting():
     unit_ids = sorting1.get_unit_ids()
 
     for seg in range(num_seg):
-        spiketrain1_1 = sorting1.get_unit_spike_train(unit_ids[1], segment_index=seg)
-        spiketrains2_0 = sorting2.get_unit_spike_train(unit_ids[0], segment_index=seg)
-        spiketrains3_2 = sorting3.get_unit_spike_train(unit_ids[2], segment_index=seg)
-        assert np.allclose(spiketrain1_1, sorting_agg.get_unit_spike_train(unit_ids[1], segment_index=seg))
+        spiketrain1_1 = sorting1.get_unit_spike_train(
+            unit_ids[1], segment_index=seg)
+        spiketrains2_0 = sorting2.get_unit_spike_train(
+            unit_ids[0], segment_index=seg)
+        spiketrains3_2 = sorting3.get_unit_spike_train(
+            unit_ids[2], segment_index=seg)
+        assert np.allclose(spiketrain1_1, sorting_agg.get_unit_spike_train(
+            unit_ids[1], segment_index=seg))
         assert np.allclose(spiketrains2_0, sorting_agg.get_unit_spike_train(num_units + unit_ids[0],
                                                                             segment_index=seg))
         assert np.allclose(spiketrains3_2, sorting_agg.get_unit_spike_train(2 * num_units + unit_ids[2],
@@ -41,8 +50,10 @@ def test_unitsaggregationsorting():
 
     # test rename units
     renamed_unit_ids = [f"#Unit {i}" for i in range(3 * num_units)]
-    sorting_agg_renamed = aggregate_units([sorting1, sorting2, sorting3], renamed_unit_ids=renamed_unit_ids)
-    assert all(unit in renamed_unit_ids for unit in sorting_agg_renamed.get_unit_ids())
+    sorting_agg_renamed = aggregate_units(
+        [sorting1, sorting2, sorting3], renamed_unit_ids=renamed_unit_ids)
+    assert all(
+        unit in renamed_unit_ids for unit in sorting_agg_renamed.get_unit_ids())
 
     # test properties
 
@@ -64,6 +75,7 @@ def test_unitsaggregationsorting():
     assert "brain_area" in sorting_agg_prop.get_property_keys()
     assert "quality" not in sorting_agg_prop.get_property_keys()
     print(sorting_agg_prop.get_property("brain_area"))
+
 
 if __name__ == '__main__':
     test_unitsaggregationsorting()
