@@ -8,7 +8,6 @@ from spikeinterface.extractors import *
 
 
 @pytest.mark.skip('Tridesclous can be tested after running run_tridesclous()')
-@pytest.mark.extractors
 def test_tridesclousextractors():
     # not tested here, tested in run_tridesclous(...)
     pass

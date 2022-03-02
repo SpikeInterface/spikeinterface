@@ -8,7 +8,6 @@ from spikeinterface.extractors import *
 
 
 @pytest.mark.skip('HerdingSpikes can be tested after running run_herdingspikes()')
-@pytest.mark.extractors
 def test_herdingspikesextractors():
     # no tested here, tested un run_herdingspikes()
     pass

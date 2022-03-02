@@ -91,7 +91,6 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-# TODO : this fail, need investigate
 class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxRecordingExtractor
     downloads = ['neuralynx']
