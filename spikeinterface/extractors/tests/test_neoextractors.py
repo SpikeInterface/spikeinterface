@@ -26,7 +26,7 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = SpikeGLXRecordingExtractor
     downloads = ['spikeglx']
     entities = [
-       # TODO need to be back when when fixed in neo
+        # TODO need to be back when when fixed in neo
         #('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.ap'}),
         #('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.lf'}),
         #('spikeglx/Noise4Sam_g0', {'stream_id': 'nidq'}),
@@ -153,7 +153,8 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['maxwell']
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
-        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well0000', 'rec_name': 'rec0000'})
+        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5',
+         {'stream_id': 'well0000', 'rec_name': 'rec0000'})
     ]
 
 
@@ -177,12 +178,12 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #~ test = MearecRecordingTest()
-    # ~ test = MearecSortingTest()
-    test = SpikeGLXRecordingTest()
-    #~ test = OpenEphysBinaryRecordingTest()
-    # ~ test = OpenEphysLegacyRecordingTest()
-    #~ test = OpenEphysBinaryEventTest()
+    # test = MearecRecordingTest()
+    # test = MearecSortingTest()
+    # test = SpikeGLXRecordingTest()
+    # test = OpenEphysBinaryRecordingTest()
+    # test = OpenEphysLegacyRecordingTest()
+    # test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
@@ -190,10 +191,10 @@ if __name__ == '__main__':
     # test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
-    # ~ test = Spike2RecordingTest()
-    # ~ test = CedRecordingTest()
-    # ~ test = MaxwellRecordingTest()
-    #~ test = SpikeGadgetsRecordingTest()
+    # test = Spike2RecordingTest()
+    # test = CedRecordingTest()
+    # test = MaxwellRecordingTest()
+    # test = SpikeGadgetsRecordingTest()
 
-    test.setUp()
-    test.test_open()
+    # test.setUp()
+    # test.test_open()
