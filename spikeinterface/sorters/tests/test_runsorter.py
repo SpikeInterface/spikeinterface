@@ -1,4 +1,6 @@
 import os
+import subprocess
+
 import pytest
 
 from spikeinterface import download_dataset
@@ -7,6 +9,13 @@ from spikeinterface.sorters import run_sorter
 
 ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 
+# Courtesy of https://stackoverflow.com/a/67504607/9793651
+try:
+    subprocess.check_output('nvidia-smi')
+    NO_NVIDIA_GPU = False
+except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
+    NO_NVIDIA_GPU = True
+
 
 def test_run_sorter_local():
     local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
@@ -14,7 +23,7 @@ def test_run_sorter_local():
 
     sorter_params = {'detect_threshold': 4.9}
 
-    sorting = run_sorter('tridesclous', recording, output_folder='sorting_tdc_local',
+    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder='sorting_tdc_local',
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, docker_image=None,
                          **sorter_params)
@@ -26,14 +35,13 @@ def test_run_sorter_docker():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5', unlock=True)
     output_folder='sorting_tdc_docker'
 
-
     recording, sorting_true = read_mearec(mearec_filename)
 
     sorter_params = {'detect_threshold': 4.9}
 
     docker_image = 'spikeinterface/tridesclous-base:1.6.4-1'
 
-    sorting = run_sorter('tridesclous', recording, output_folder=output_folder,
+    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder=output_folder,
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, docker_image=docker_image,
                          with_output=False, **sorter_params)
@@ -41,12 +49,10 @@ def test_run_sorter_docker():
     # TODO: Add another run with `with_output=True` and check sorting result
 
 
-
 @pytest.mark.skipif(ON_GITHUB, reason="Singularity tests don't run on github: test it locally")
 def test_run_sorter_singularity():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5', unlock=True)
     output_folder='sorting_tdc_singularity'
-
 
     recording, sorting_true = read_mearec(mearec_filename)
 
@@ -54,7 +60,7 @@ def test_run_sorter_singularity():
 
     singularity_image = 'spikeinterface/tridesclous-base:1.6.4-1'
 
-    sorting = run_sorter('tridesclous', recording, output_folder=output_folder,
+    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder=output_folder,
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, singularity_image=singularity_image,
                          **sorter_params)
