@@ -9,7 +9,7 @@ import spikeinterface.extractors as se
 from spikeinterface.exporters import export_report
 
 
-if getattr(pytest, "global_test_folder"):
+if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "exporters"
 else:
     cache_folder = Path("cache_folder") / "exporters"

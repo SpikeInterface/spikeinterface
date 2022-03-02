@@ -8,7 +8,7 @@ from spikeinterface import extract_waveforms, download_dataset
 import spikeinterface.extractors as se
 from spikeinterface.exporters import export_to_phy
 
-if getattr(pytest, "global_test_folder"):
+if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "exporters"
 else:
     cache_folder = Path("cache_folder") / "exporters"

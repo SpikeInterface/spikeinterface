@@ -14,7 +14,7 @@ except:
     HAVE_SHAREDMEMORY = False
 
 
-if getattr(pytest, "global_test_folder"):
+if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
 else:
     cache_folder = Path("cache_folder") / "core"

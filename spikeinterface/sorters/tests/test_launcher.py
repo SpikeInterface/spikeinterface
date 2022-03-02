@@ -11,7 +11,7 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.sorters import run_sorters, run_sorter_by_property, collect_sorting_outputs
 
 
-if getattr(pytest, "global_test_folder"):
+if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sorters"
 else:
     cache_folder = Path("cache_folder") / "sorters"
@@ -26,8 +26,15 @@ def test_run_sorters_with_list():
     rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
 
     # make dumpable
-    rec0 = rec0.save(folder=cache_folder / 'rec0')
-    rec1 = rec1.save(folder=cache_folder / 'rec1')
+    rec0_folder = cache_folder / 'rec0'
+    rec1_folder = cache_folder / 'rec1'
+    if rec0_folder.is_dir():
+        shutil.rmtree(rec0_folder)
+    if rec1_folder.is_dir():
+        shutil.rmtree(rec1_folder)
+
+    rec0 = rec0.save(folder=rec0_folder)
+    rec1 = rec1.save(folder=rec1_folder)
 
     recording_list = [rec0, rec1]
     sorter_list = ['tridesclous']
@@ -45,7 +52,11 @@ def test_run_sorter_by_property():
     rec0.set_channel_groups(["0"] * 4 + ["1"] * 4)
 
     # make dumpable
-    rec0 = rec0.save(folder=cache_folder / 'rec0')
+    rec0_folder = cache_folder / 'rec0'
+    if rec0_folder.is_dir():
+        shutil.rmtree(rec0_folder)
+
+    rec0 = rec0.save(folder=rec0_folder)
     sorter_name = 'tridesclous'
 
     sorting = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
@@ -62,8 +73,15 @@ def test_run_sorters_with_dict():
     rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
 
     # make dumpable
-    rec0 = rec0.save(folder=cache_folder / 'rec0')
-    rec1 = rec1.save(folder=cache_folder / 'rec1')
+    rec0_folder = cache_folder / 'rec0'
+    rec1_folder = cache_folder / 'rec1'
+    if rec0_folder.is_dir():
+        shutil.rmtree(rec0_folder)
+    if rec1_folder.is_dir():
+        shutil.rmtree(rec1_folder)
+
+    rec0 = rec0.save(folder=rec0_folder)
+    rec1 = rec1.save(folder=rec1_folder)
 
     recording_dict = {'toy_tetrode': rec0, 'toy_octotrode': rec1}
 
