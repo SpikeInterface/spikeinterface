@@ -46,7 +46,7 @@ def test_run_sorter_by_property():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec0')
+    rec0 = rec0.save(name='rec000')
     sorter_name = 'tridesclous'
 
     sorting = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
@@ -64,8 +64,8 @@ def test_run_sorters_with_dict():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec0')
-    rec1 = rec1.save(name='rec1')
+    rec0 = rec0.save(name='rec00')
+    rec1 = rec1.save(name='rec01')
 
     recording_dict = {'toy_tetrode': rec0, 'toy_octotrode': rec1}
 
