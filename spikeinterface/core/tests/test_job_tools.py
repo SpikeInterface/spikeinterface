@@ -42,7 +42,8 @@ def test_ensure_chunk_size():
     # make dumpable
     recording = recording.save()
 
-    chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
+    chunk_size = ensure_chunk_size(
+        recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
     assert chunk_size == 32000000
 
     chunk_size = ensure_chunk_size(recording, chunk_memory="256M")
@@ -56,7 +57,8 @@ def test_ensure_chunk_size():
 
 
 def func(segment_index, start_frame, end_frame, worker_ctx):
-    import os, time
+    import os
+    import time
     #  print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
     time.sleep(0.010)
     # time.sleep(1.0)

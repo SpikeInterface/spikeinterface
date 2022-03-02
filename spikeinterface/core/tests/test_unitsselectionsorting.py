@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from pathlib import Path
 
 from spikeinterface.core import UnitsSelectionSorting
 
@@ -9,9 +10,15 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing_tools import create_sorting_npz
 
 
+if getattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
+
+
 def test_unitsselectionsorting():
     num_seg = 2
-    file_path = 'test_BaseSorting.npz'
+    file_path = cache_folder / 'test_BaseSorting.npz'
 
     create_sorting_npz(num_seg, file_path)
 

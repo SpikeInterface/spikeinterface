@@ -1,4 +1,6 @@
 import platform
+import pytest
+from pathlib import Path
 
 from spikeinterface.core.testing_tools import generate_recording
 
@@ -12,6 +14,12 @@ except:
     HAVE_SHAREDMEMORY = False
 
 
+if getattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
+
+
 def test_write_binary_recording():
     # 2 segments
     recording = generate_recording(num_channels=2, durations=[10.325, 3.5])
@@ -19,19 +27,19 @@ def test_write_binary_recording():
     recording = recording.save()
 
     # write with loop
-    write_binary_recording(recording, file_paths=['binary01.raw', 'binary02.raw'], dtype=None,
-                           verbose=True, n_jobs=1)
+    write_binary_recording(recording, file_paths=[cache_folder / 'binary01.raw', cache_folder / 'binary02.raw'],
+                           dtype=None, verbose=True, n_jobs=1)
 
-    write_binary_recording(recording, file_paths=['binary01.raw', 'binary02.raw'], dtype=None,
-                           verbose=True, n_jobs=1, chunk_memory='100k', progress_bar=True)
-
-    # write parrallel
-    write_binary_recording(recording, file_paths=['binary01.raw', 'binary02.raw'], dtype=None,
-                           verbose=False, n_jobs=2, chunk_memory='100k')
+    write_binary_recording(recording, file_paths=[cache_folder / 'binary01.raw', cache_folder / 'binary02.raw'],
+                           dtype=None, verbose=True, n_jobs=1, chunk_memory='100k', progress_bar=True)
 
     # write parrallel
-    write_binary_recording(recording, file_paths=['binary01.raw', 'binary02.raw'], dtype=None,
-                           verbose=False, n_jobs=2, total_memory='200k', progress_bar=True)
+    write_binary_recording(recording, file_paths=[cache_folder / 'binary01.raw', cache_folder / 'binary02.raw'],
+                           dtype=None, verbose=False, n_jobs=2, chunk_memory='100k')
+
+    # write parrallel
+    write_binary_recording(recording, file_paths=[cache_folder / 'binary01.raw', cache_folder / 'binary02.raw'],
+                           dtype=None, verbose=False, n_jobs=2, total_memory='200k', progress_bar=True)
 
 
 def test_write_memory_recording():
