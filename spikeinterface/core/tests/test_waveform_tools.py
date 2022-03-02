@@ -6,7 +6,7 @@ import platform
 import numpy as np
 
 from spikeinterface.core.testing_tools import generate_recording, generate_sorting
-from spikeinterface.core.waveform_tools import allocate_waveforms, distribute_waveforms_to_buffers
+from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers #allocate_waveforms_buffers, distribute_waveforms_to_buffers
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -44,8 +44,8 @@ def test_waveform_tools():
     nafter = int(4. * sampling_frequency / 1000.)
 
     dtype = recording.get_dtype()
-    return_scaled = False
-
+    # return_scaled = False
+    
     spikes = sorting.to_spike_vector()
 
     unit_ids = sorting.unit_ids
@@ -63,10 +63,11 @@ def test_waveform_tools():
         if wf_folder.is_dir():
             shutil.rmtree(wf_folder)
         wf_folder.mkdir()
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter, mode='memmap',
-                                                         folder=wf_folder, dtype=dtype)
-        distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info,
-                                        nbefore, nafter, return_scaled, **job_kwargs)
+        # wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype)
+        # distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **job_kwargs)
+        wfs_arrays = extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
+                                mode='memmap', return_scaled=False, folder=wf_folder, dtype=dtype,
+                                sparsity_mask=None,  copy=False, **job_kwargs)
         for unit_ind, unit_id in enumerate(unit_ids):
             wf = wfs_arrays[unit_id]
             assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
@@ -79,19 +80,19 @@ def test_waveform_tools():
         # shared memory on windows is buggy...
         list_wfs = []
         for job_kwargs in some_job_kwargs:
-            wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, spikes, unit_ids,
-                                                             nbefore, nafter, mode='shared_memory', folder=None,
-                                                             dtype=dtype)
-            distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info,
-                                            nbefore, nafter, return_scaled, mode='shared_memory', **job_kwargs)
+            # wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='shared_memory', folder=None, dtype=dtype)
+            # distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, mode='shared_memory', **job_kwargs)
+            wfs_arrays = extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
+                                mode='shared_memory', return_scaled=False, folder=None, dtype=dtype,
+                                sparsity_mask=None,  copy=True, **job_kwargs)
             for unit_ind, unit_id in enumerate(unit_ids):
                 wf = wfs_arrays[unit_id]
                 assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
             list_wfs.append(
                 {unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids})
             # to avoid warning we need to first destroy arrays then sharedmemm object
-            del wfs_arrays
-            del wfs_arrays_info
+            # del wfs_arrays
+            # del wfs_arrays_info
         _check_all_wf_equal(list_wfs)
 
     # with sparsity
@@ -99,16 +100,18 @@ def test_waveform_tools():
     if wf_folder.is_dir():
         shutil.rmtree(wf_folder)
     wf_folder.mkdir()
+    
+    
+    sparsity_mask = np.random.randint(0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype='bool')
+    job_kwargs = {'n_jobs': 1, 'chunk_size': 3000, 'progress_bar':True}
 
-    sparsity_mask = np.random.randint(0, 2, size=(
-        unit_ids.size, recording.channel_ids.size), dtype='bool')
+    # wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)
+    # distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, sparsity_mask=sparsity_mask, **job_kwargs)
 
-    wfs_arrays, wfs_arrays_info = allocate_waveforms(recording, spikes, unit_ids, nbefore, nafter,
-                                                     mode='memmap', folder=wf_folder, dtype=dtype,
-                                                     sparsity_mask=sparsity_mask)
-    job_kwargs = {'n_jobs': 1, 'chunk_size': 3000, 'progress_bar': True}
-    distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info,
-                                    nbefore, nafter, return_scaled, sparsity_mask=sparsity_mask, **job_kwargs)
+    wfs_arrays = extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
+                        mode='memmap', return_scaled=False, folder=wf_folder, dtype=dtype,
+                        sparsity_mask=sparsity_mask,  copy=False, **job_kwargs)
+
 
 
 if __name__ == '__main__':
