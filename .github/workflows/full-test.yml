@@ -75,10 +75,36 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
           restore-keys: |
             ${{ runner.os }}-datasets
-      - name: Test with pytest
+      - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest
+          pytest -v -m core
+      # TODO run module tests only if last commit has changed files in them
+      - name: Test extractors
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m extractors
+      - name: Test toolkit
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m toolkit
+      - name: Test sorters
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m sorters
+      - name: Test exporters
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m exporters
+      - name: Test widgets
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m widgets
+      - name: Test sortingcomponents
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m sortingcomponents
+
 
           
 # only on ubuntu because of spkyking-circus and mpich
