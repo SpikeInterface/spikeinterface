@@ -2,8 +2,6 @@ import pytest
 from pathlib import Path
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors import toy_example, SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor
-from spikeinterface.extractors.shybridextractors import HAVE_SBEX
-
 
 if getattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "extractors"

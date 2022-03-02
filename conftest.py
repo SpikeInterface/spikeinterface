@@ -34,6 +34,7 @@ def pytest_collection_modifyitems(config, items):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    # teardown_stuff
-    if pytest.global_test_folder.is_dir():
-        shutil.rmtree(pytest.global_test_folder)
+    # teardown_stuff only if tests passed
+    if exitstatus == 0:
+        if pytest.global_test_folder.is_dir():
+            shutil.rmtree(pytest.global_test_folder)

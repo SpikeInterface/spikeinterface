@@ -178,6 +178,7 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
+    pass
     # test = MearecRecordingTest()
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
