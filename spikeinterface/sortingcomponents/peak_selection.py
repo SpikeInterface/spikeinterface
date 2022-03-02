@@ -145,21 +145,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
         def get_valid_indices(params, snrs):
-            if params['peak_sign'] == 'neg':
-                bins = list(np.linspace(snrs.min(), -params['detect_threshold'], params['n_bins']))
-            elif params['peak_sign'] == 'pos':
-                bins = list(params['detect_threshold'], np.linspace(snrs.max(), params['n_bins']))
-            elif params['peak_sign'] == 'both':
-                if snrs.max() > params['detect_threshold']:
-                    pos_values = list(params['detect_threshold'], np.linspace(snrs.max(), params['n_bins']//2))
-                else:
-                    pos_values = []
-                if snrs.min() < -params['detect_threshold']:
-                    neg_values = list(np.linspace(snrs.min(), -params['detect_threshold'], params['n_bins']//2))
-                else:
-                    neg_values = []
-                bins = neg_values + pos_values
-
+            bins = list(np.linspace(snrs.min(), snrs.max(), params['n_bins']))
             x, y = np.histogram(snrs, bins=bins)
             histograms = {'probability' : x/x.sum(), 'snrs' : y[1:]}
             indices = np.searchsorted(histograms['snrs'], snrs)
