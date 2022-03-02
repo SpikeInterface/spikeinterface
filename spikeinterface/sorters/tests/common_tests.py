@@ -6,7 +6,7 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.sorters import run_sorter
 
 
-if getattr(pytest, "global_test_folder"):
+if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sorters"
 else:
     cache_folder = Path("cache_folder") / "sorters"

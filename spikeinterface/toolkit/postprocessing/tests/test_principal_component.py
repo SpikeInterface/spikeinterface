@@ -1,3 +1,4 @@
+import pytest
 import shutil
 from pathlib import Path
 
@@ -9,30 +10,38 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent, compute_principal_components
 
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "toolkit"
+else:
+    cache_folder = Path("cache_folder") / "toolkit"
+
+
 def setup_module():
-    for folder in ('toy_rec_1seg', 'toy_sorting_1seg', 'toy_waveforms_1seg',
-                   'toy_rec_2seg', 'toy_sorting_2seg', 'toy_waveforms_2seg',
-                   'toy_waveforms_1seg_filt'):
-        if Path(folder).is_dir():
-            shutil.rmtree(folder)
+    for folder_name in ('toy_rec_1seg', 'toy_sorting_1seg', 'toy_waveforms_1seg',
+                        'toy_rec_2seg', 'toy_sorting_2seg', 'toy_waveforms_2seg',
+                        'toy_waveforms_1seg_filt'):
+        if (cache_folder / folder_name).is_dir():
+            shutil.rmtree(cache_folder / folder_name)
 
     recording, sorting = toy_example(num_segments=2, num_units=10)
-    recording = recording.save(folder='toy_rec_2seg')
-    sorting = sorting.save(folder='toy_sorting_2seg')
-    we = extract_waveforms(recording, sorting, 'toy_waveforms_2seg',
+    recording = recording.save(folder=cache_folder / 'toy_rec_2seg')
+    sorting = sorting.save(folder=cache_folder / 'toy_sorting_2seg')
+    we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms_2seg',
                            ms_before=3., ms_after=4., max_spikes_per_unit=500,
                            n_jobs=1, chunk_size=30000)
 
-    recording, sorting = toy_example(num_segments=1, num_units=10, num_channels=12)
-    recording = recording.save(folder='toy_rec_1seg')
-    sorting = sorting.save(folder='toy_sorting_1seg')
-    we = extract_waveforms(recording, sorting, 'toy_waveforms_1seg',
+    recording, sorting = toy_example(
+        num_segments=1, num_units=10, num_channels=12)
+    recording = recording.save(folder=cache_folder / 'toy_rec_1seg')
+    sorting = sorting.save(folder=cache_folder / 'toy_sorting_1seg')
+    we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms_1seg',
                            ms_before=3., ms_after=4., max_spikes_per_unit=500,
                            n_jobs=1, chunk_size=30000)
 
 
 def test_WaveformPrincipalComponent():
-    we = WaveformExtractor.load_from_folder('toy_waveforms_2seg')
+    we = WaveformExtractor.load_from_folder(
+        cache_folder / 'toy_waveforms_2seg')
     unit_ids = we.sorting.unit_ids
     num_channels = we.recording.get_num_channels()
     pc = WaveformPrincipalComponent(we)
@@ -67,13 +76,14 @@ def test_WaveformPrincipalComponent():
             # print(comp.shape)
 
     all_labels, all_components = pc.get_all_components()
-    
+
     # relod as an extension from we
     assert WaveformPrincipalComponent in we.get_available_extensions()
     assert we.is_extension('principal_components')
     pc = we.load_extension('principal_components')
     assert isinstance(pc, WaveformPrincipalComponent)
-    pc = WaveformPrincipalComponent.load_from_folder('toy_waveforms_2seg')
+    pc = WaveformPrincipalComponent.load_from_folder(
+        cache_folder / 'toy_waveforms_2seg')
 
     # import matplotlib.pyplot as plt
     # cmap = plt.get_cmap('jet', len(unit_ids))
@@ -86,16 +96,19 @@ def test_WaveformPrincipalComponent():
 
 
 def test_compute_principal_components_for_all_spikes():
-    we = WaveformExtractor.load_from_folder('toy_waveforms_1seg')
+    we = WaveformExtractor.load_from_folder(
+        cache_folder / 'toy_waveforms_1seg')
     pc = compute_principal_components(we, load_if_exists=True)
     print(pc)
 
-    pc_file1 = 'all_pc1.npy'
-    pc.run_for_all_spikes(pc_file1, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
+    pc_file1 = cache_folder / 'all_pc1.npy'
+    pc.run_for_all_spikes(
+        pc_file1, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
     all_pc1 = np.load(pc_file1)
 
-    pc_file2 = 'all_pc2.npy'
-    pc.run_for_all_spikes(pc_file2, max_channels_per_template=7, chunk_size=10000, n_jobs=2)
+    pc_file2 = cache_folder / 'all_pc2.npy'
+    pc.run_for_all_spikes(
+        pc_file2, max_channels_per_template=7, chunk_size=10000, n_jobs=2)
     all_pc2 = np.load(pc_file2)
 
     assert np.array_equal(all_pc1, all_pc2)
@@ -103,9 +116,11 @@ def test_compute_principal_components_for_all_spikes():
 
 def test_pca_models_and_project_new():
     from sklearn.decomposition import IncrementalPCA
-    if Path('toy_waveforms_1seg/principal_components').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/principal_components')
-    we = WaveformExtractor.load_from_folder('toy_waveforms_1seg')
+    if (cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
+        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
+                      "principal_components")
+    we = WaveformExtractor.load_from_folder(
+        cache_folder / 'toy_waveforms_1seg')
 
     wfs0 = we.get_waveforms(unit_id=we.sorting.unit_ids[0])
     n_samples = wfs0.shape[1]
@@ -124,11 +139,12 @@ def test_pca_models_and_project_new():
     new_proj = pc_local.project_new(new_waveforms)
 
     assert new_proj.shape == (100, n_components, n_channels)
-    
+
     # global
-    if Path('toy_waveforms_1seg/principal_components').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/principal_components')
-        
+    if (cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
+        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
+                      "principal_components")
+
     pc_global = compute_principal_components(we, n_components=n_components,
                                              load_if_exists=True, mode="by_channel_global")
 
@@ -140,11 +156,12 @@ def test_pca_models_and_project_new():
     new_proj = pc_global.project_new(new_waveforms)
 
     assert new_proj.shape == (100, n_components, n_channels)
-    
+
     # concatenated
-    if Path('toy_waveforms_1seg/principal_components').is_dir():
-        shutil.rmtree('toy_waveforms_1seg/principal_components')
-    
+    if Path(cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
+        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
+                      "principal_components")
+
     pc_concatenated = compute_principal_components(we, n_components=n_components,
                                                    load_if_exists=True, mode="concatenated")
 
@@ -156,15 +173,18 @@ def test_pca_models_and_project_new():
     new_proj = pc_concatenated.project_new(new_waveforms)
 
     assert new_proj.shape == (100, n_components)
-    
+
 
 def test_select_units():
-    we = WaveformExtractor.load_from_folder('toy_waveforms_1seg')
+    we = WaveformExtractor.load_from_folder(
+        cache_folder / 'toy_waveforms_1seg')
     pc = compute_principal_components(we, load_if_exists=True)
 
     keep_units = we.sorting.get_unit_ids()[::2]
-    we_filt = we.select_units(keep_units, 'toy_waveforms_1seg_filt')
+    we_filt = we.select_units(
+        keep_units, cache_folder / 'toy_waveforms_1seg_filt')
     assert "principal_components" in we_filt.get_available_extension_names()
+
 
 if __name__ == '__main__':
     #~ setup_module()
