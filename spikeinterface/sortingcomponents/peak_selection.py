@@ -108,11 +108,13 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
     elif method == 'uniform_locations':
 
         params = {'peaks_locations' : None, 
-                  'n_bins' : (10, 10)}
+                  'n_bins' : (50, 50),
+                  'n_peaks' : None}
 
         params.update(method_kwargs)
 
         assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
+        assert params['n_peaks'] is not None, "n_peaks should be defined!"
 
         xmin, xmax = np.min(params['peaks_locations']['x']), np.max(params['peaks_locations']['x'])
         ymin, ymax = np.min(params['peaks_locations']['y']), np.max(params['peaks_locations']['y'])
@@ -145,7 +147,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
         def get_valid_indices(params, snrs):
-            bins = list(np.linspace(snrs.min(), snrs.max(), params['n_bins']))
+            bins = np.linspace(snrs.min(), snrs.max(), params['n_bins'])
             x, y = np.histogram(snrs, bins=bins)
             histograms = {'probability' : x/x.sum(), 'snrs' : y[1:]}
             indices = np.searchsorted(histograms['snrs'], snrs)
@@ -198,7 +200,62 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             valid_indices,  = np.where(valid_indices)
             selected_peaks = [valid_indices]
 
+    elif method == 'smart_sampling_locations':
+
+        ## This method will try to select around n_peaksbut in a non uniform manner
+        ## First, it will look at the distribution of the positions. 
+        ## Once this distribution is known, it will sample from the peaks with a rejection probability
+        ## such that the final distribution of the amplitudes, for the selected peaks, will be as
+        ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
+        ## from the space of all the peaks, using the locations as a discriminative criteria
+        ## To do so, one must provide the peaks locations, and the number of bins for the 
+        ## probability density histogram
+        
+        def reject_rate(x, d, a, target, n_bins):
+            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
+
+        def get_valid_indices(params, positions, nbins):
+            bins = np.linspace(positions.min(), positions.max(), nbins)
+            x, y = np.histogram(positions, bins=bins)
+            histograms = {'probability' : x/x.sum(), 'positions' : y[1:]}
+            indices = np.searchsorted(histograms['positions'], positions)
+
+            probabilities = histograms['probability']
+            z = probabilities[probabilities > 0]
+            c = 1.0 / np.min(z)
+            d = np.ones(len(probabilities))
+            d[probabilities > 0] = 1. / (c * z)
+            d = np.minimum(1, d)
+            d /= np.sum(d)
+            twist = np.sum(probabilities * d)
+            factor = twist * c
+
+            target_rejection = 1 - params['n_peaks']/len(indices)
+            res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, nbins), disp=False)
+            rejection_curve = np.clip(1 - d*res[0], 0, 1)
+
+            acceptation_threshold = rejection_curve[indices]
+            valid_indices = acceptation_threshold < np.random.rand(len(indices))
+
+            return valid_indices
+
+        params = {'peaks_locations' : None, 
+                  'n_bins' : (50, 50),
+                  'n_peaks' : None}
+
+        params.update(method_kwargs)
+
+        assert params['n_peaks'] is not None, "n_peaks should be defined!"
+        assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
+
+        valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], params['n_bins'][0])
+        valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], params['n_bins'][1])
+
+        valid_indices,  = np.where(valid_indices_x*valid_indices_y)
+        selected_peaks = [valid_indices]
+
     else:
+
         raise NotImplementedError(f"No method {method} for peaks selection")
 
     selected_peaks = peaks[np.concatenate(selected_peaks)]
