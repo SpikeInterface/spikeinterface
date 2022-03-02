@@ -19,7 +19,6 @@ class CommonTestSuite:
             download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder)
 
 
-@pytest.mark.extractors
 class RecordingCommonTestSuite(CommonTestSuite):
 
     def test_open(self):
@@ -64,7 +63,6 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 assert trace_scaled.dtype == 'float32'
 
 
-@pytest.mark.extractors
 class SortingCommonTestSuite(CommonTestSuite):
 
     def test_open(self):
@@ -87,7 +85,6 @@ class SortingCommonTestSuite(CommonTestSuite):
                     st = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
 
 
-@pytest.mark.extractors
 class EventCommonTestSuite(CommonTestSuite):
 
     def test_open(self):

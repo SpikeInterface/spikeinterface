@@ -8,7 +8,6 @@ from spikeinterface.extractors import *
 
 
 @pytest.mark.skip('BIDS is tested locally only at the moment')
-@pytest.mark.extractors
 def test_read_bids_folder():
     # gin get NeuralEnsemble/BEP032-examples
     # cd BEP032-examples
