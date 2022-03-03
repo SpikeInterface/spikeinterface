@@ -34,7 +34,7 @@ jobs:
       - name: Module changes
         id: modules-changed
         run: |
-          for file in ${{ steps.changed-files.outputs.any_changed }}; do
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
             if [[ $file == *"/core/"* ]]; then
               echo "Core changed"
               echo "::set-output name=CORE_CHANGED::true"
