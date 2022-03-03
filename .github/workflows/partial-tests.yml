@@ -32,8 +32,8 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v17.2
       - name: Module changes
-          id: modules-changed
-          run: |
+        id: modules-changed
+        run: |
           for file in ${{ steps.changed-files.outputs.added_files }}; do
             if [[ "/core/" == *"$file"* ]]; then
               echo "Core changed"
