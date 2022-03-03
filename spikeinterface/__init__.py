@@ -1,8 +1,4 @@
-"""
-
-"""
-
-from .version import version as __version__
+import pkg_resources
 
 from .core import *
 
@@ -18,3 +14,6 @@ or alternativley you can do
 import spikeinterface.full as si
 
 """
+
+
+__version__ = pkg_resources.get_distribution('spikeinterface').version

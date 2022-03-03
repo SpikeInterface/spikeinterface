@@ -6,7 +6,7 @@ dependencies:
   - python=3.8
   - pip>=21.0
   # numpy 1.21 break numba which break tridesclous
-  - numpy<1.21
+  - numpy<1.22
   - joblib
   - tqdm
   - matplotlib
@@ -26,13 +26,5 @@ dependencies:
   - pip:
 #    - PyQt5
     - ephyviewer
-    - neo>=0.10.0
-    - elephant>=0.10.0
-    - probeinterface
-    - MEArec>=1.7.1
     - spikeinterface[full]
     - spikeinterface-gui
-    - tridesclous>=1.6.3
-    - phy==2.0b5
-    - herdingspikes
-    - mountainsort4>=1.0.0

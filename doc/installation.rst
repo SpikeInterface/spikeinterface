@@ -10,18 +10,35 @@ To install the current release version, you can use:
 
 .. code-block:: bash
 
-   pip install spikeinterface[full]
+  pip install spikeinterface[full]
 
-The :code:`[full]` option installs all the extra dependencies for all the different sub-modules. 
+The :code:`[full]` option installs all spike sorters and extractors; all optional dependencies.
 
 Note that if using Z shell (:code:`zsh` - the default shell on mac), you will need to use quotes (:code:`pip install "spikeinterface[full]"`).
 
-If you wish to only install the :code:`core` module, without optional dependencies, you can use:
+Install individual spike sorters by replacing full with the spike sorter name:
 
 .. code-block:: bash
 
-   pip install spikeinterface
+  pip install spikeinterface[tridesclous, spyking-circus, herdingspikes]
 
+Install all spike sorters:
+
+.. code-block:: bash
+
+  pip install spikeinterface[all_sorters]
+
+Install extractors:
+
+.. code-block:: bash
+
+  pip install spikeinterface[extractors]
+
+Only install the :code:`core` module, without any optional dependency:
+
+.. code-block:: bash
+
+  pip install spikeinterface
 
 From source
 -----------
@@ -57,29 +74,3 @@ For beginners
 We provide here some installation tips for beginners in Python here:
 
 https://github.com/SpikeInterface/spikeinterface/tree/master/installation_tips
-
-
-
-Requirements
-------------
-
-:code:`spikeinterface.core` itself has only a few dependencies:
-
-  * numpy
-  * neo>=0.9.0
-  * joblib
-  * probeinterface
-  * tqdm
-
-Sub-modules have more dependencies, so you should also install:
-
-  * scipy
-  * h5py
-  * pandas
-  * sklearn
-  * matplotlib
-  * networkx
-  * datalad
-  * MEArec
-
-All sorters must installed independently.

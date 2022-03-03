@@ -1,8 +1,0 @@
-h5py
-pandas
-scipy
-scikit-learn
-matplotlib
-networkx
-# datalad
-

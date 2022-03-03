@@ -1,38 +1,98 @@
 [tool.poetry]
 name = "spikeinterface"
-version = "0.1.0"
-description = ""
-authors = ["Can H. Tartanoglu <canhtart@gmail.com>"]
+version = "0.94.0.dev1"
+license = "MIT"
+
+authors = ["Cole Hurwitz", "Jeremy Magland", "Alessio Paolo Buccino <alessiop.buccino@gmail.com>", "Matthias Hennig", "Samuel Garcia"]
+maintainers = ["Alessio Paolo Buccino <alessiop.buccino@gmail.com>"]
+
+homepage = "https://github.com/SpikeInterface/spikeinterface"
+description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
+readme = "README.md"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
-neo = "^0.10.0"
-joblib = "^1.1.0"
-tqdm = "^4.62.3"
+python = ">=3.9,<3.10"
+
 probeinterface = "^0.2.6"
 
-tridesclous = {version = "^1.6.4", optional = true}
-PyQt5 = {version = "^5.15.6", optional = true}
-loky = {version = "^3.0.0", optional = true}
-MEArec = {version = "^1.7.2", optional = true}
+numpy = "^1.21"
+scipy = "^1.8.0"
+networkx = "^2.7"
+neo = "^0.10.0"
+sklearn = "^0.0"
 
-spyking-circus = {version = "^1.1.0", optional = true, extras = ["spyking-circus"]}
-herdingspikes = {version = "^0.3.99", optional = true, extras = ["herdingspikes"]}
+pandas = "^1.4.1"
+h5py = "^3.6.0"
+
+matplotlib = "^3.5.1"
+joblib = "^1.1.0"
+tqdm = "^4.62.3"
+
+datalad = "^0.15.6"
+
+MEArec = {version = "^1.7.2", optional = true}
+sonpy = {version = "^1.9.5", optional = true}
+pynwb = {git = "https://github.com/NeurodataWithoutBorders//pynwb.git", rev = "2.0.0", optional = true}
+
+PyQt5 = {version = "^5.15.6", optional = true}
+
+tridesclous = {version = "^1.6.5", optional = true}
+loky = {version = "^3.0.0", optional = true}
+
+spyking-circus = {version = "^1.1.0", optional = true}
+
+herdingspikes = {version = "^0.3.99", optional = true}
+
+spython = {version = "^0.1.18", optional = true}
+docker = {version = "^5.0.3", optional = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.1"
-MEArec = "^1.7.2"
-
-# for testing
-tridesclous = "^1.6.4"
-PyQt5 = "^5.15.6"
-loky = "^3.0.0"
-spyking-circus = "^1.1.0"
-herdingspikes = "^0.3.99"
 
 [tool.poetry.extras]
 tridesclous = ["tridesclous", "PyQt5", "loky"]
+spyking-circus = ["spyking-circus", "PyQt5"]
+herdingspikes = ["herdingspikes"]
 
+all_sorters = [
+    "PyQt5",
+    "tridesclous", "loky",
+    "spyking-circus",
+    "herdingspikes"
+]
+
+extractors = ["MEArec", "sonpy", "pynwb"]
+
+full = [
+    "MEArec", "sonpy", "pynwb",
+    "PyQt5",
+    "tridesclous", "loky",
+    "spyking-circus",
+    "herdingspikes"
+]
+
+docker = ["docker"]
+spython = ["spython"]
+
+test = [
+    "docker", "spython",
+
+    "MEArec", "sonpy", "pynwb",
+    "PyQt5",
+    "tridesclous", "loky",
+    "spyking-circus",
+    "herdingspikes"
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0.1"
+addopts = "-ra -q --lf"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
