@@ -9,7 +9,7 @@ else:
     cache_folder = Path("cache_folder") / "extractors"
 
 
-@pytest.mark.skipif(True, reason='shybrid not tested')
+@pytest.mark.skipif(True, reason='SHYBRID only tested locally')
 def test_shybrid_extractors():
     rec, sort = toy_example(num_segments=1, num_units=10)
 
