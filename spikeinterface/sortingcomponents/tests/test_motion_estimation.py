@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 import numpy as np
 
 from spikeinterface import download_dataset
@@ -7,39 +8,49 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents import detect_peaks
 from spikeinterface.sortingcomponents import (estimate_motion, make_motion_histogram,
-    compute_pairwise_displacement, compute_global_displacement)
+                                              compute_pairwise_displacement, compute_global_displacement)
 
 
 repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 remote_path = 'mearec/mearec_test_10s.h5'
 
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "sortingcomponents"
+else:
+    cache_folder = Path("cache_folder") / "sortingcomponents"
+
+
 def setup_module():
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-    
+
     # detect and localize
     peaks = detect_peaks(recording,
                          method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, n_shifts=2,
                          chunk_size=10000, verbose=1, progress_bar=True,
-                         localization_dict=dict(method='center_of_mass', local_radius_um=150, ms_before=0.1, ms_after=0.3),
-                         #~ localization_dict=dict(method='monopolar_triangulation', local_radius_um=150, ms_before=0.1, ms_after=0.3, max_distance_um=1000),
+                         localization_dict=dict(method='center_of_mass', local_radius_um=150,
+                                                ms_before=0.1, ms_after=0.3),
                          )
-    np.save('mearec_detected_peaks.npy', peaks)
+    np.save(cache_folder / 'mearec_detected_peaks.npy', peaks)
 
 
 def test_motion_functions():
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-    
-    peaks = np.load('mearec_detected_peaks.npy')
-        
+
+    peaks = np.load(cache_folder / 'mearec_detected_peaks.npy')
+
     bin_um = 2
-    motion_histogram, temporal_bins, spatial_bins = make_motion_histogram(recording, peaks, bin_um=bin_um)
+    motion_histogram, temporal_bins, spatial_bins = make_motion_histogram(
+        recording, peaks, bin_um=bin_um)
     # print(motion_histogram.shape, temporal_bins.size, spatial_bins.size)
 
-    pairwise_displacement = compute_pairwise_displacement(motion_histogram, bin_um, method='conv2d')
+    pairwise_displacement = compute_pairwise_displacement(
+        motion_histogram, bin_um, method='conv2d')
 
     motion = compute_global_displacement(pairwise_displacement)
 
@@ -52,7 +63,6 @@ def test_motion_functions():
 
     # fig, ax = plt.subplots()
     # ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
-    
 
     # fig, ax = plt.subplots()
     # extent = None
@@ -68,16 +78,20 @@ def test_motion_functions():
 
 
 def test_estimate_motion_rigid():
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     print(recording)
-    peaks = np.load('mearec_detected_peaks.npy')
+    peaks = np.load(cache_folder / 'mearec_detected_peaks.npy')
 
     motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations=None,
-                    direction='y', bin_duration_s=1., bin_um=10., margin_um=5,
-                    method='decentralized_registration', method_kwargs={},
-                    non_rigid_kwargs=None,
-                    output_extra_check=True, progress_bar=True, verbose=True)
+                                                                       direction='y', bin_duration_s=1., bin_um=10., 
+                                                                       margin_um=5,
+                                                                       method='decentralized_registration', 
+                                                                       method_kwargs={},
+                                                                       non_rigid_kwargs=None,
+                                                                       output_extra_check=True, progress_bar=True, 
+                                                                       verbose=True)
     # print(motion)
     # print(extra_check)
     print(spatial_bins)
@@ -97,7 +111,6 @@ def test_estimate_motion_rigid():
     # im = ax.imshow(motion_histogram.T, interpolation='nearest',
     #                     origin='lower', aspect='auto', extent=extent)
 
-
     # fig, ax = plt.subplots()
     # pairwise_displacement = extra_check['pairwise_displacement_list'][0]
     # im = ax.imshow(pairwise_displacement, interpolation='nearest',
@@ -110,16 +123,21 @@ def test_estimate_motion_rigid():
 
 
 def test_estimate_motion_non_rigid():
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     print(recording)
-    peaks = np.load('mearec_detected_peaks.npy')
+    peaks = np.load(cache_folder / 'mearec_detected_peaks.npy')
 
     motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations=None,
-                    direction='y', bin_duration_s=1., bin_um=10., margin_um=5,
-                    method='decentralized_registration', method_kwargs={},
-                    non_rigid_kwargs={'bin_step_um':50},
-                    output_extra_check=True, progress_bar=True, verbose=True)
+                                                                       direction='y', bin_duration_s=1., bin_um=10., 
+                                                                       margin_um=5,
+                                                                       method='decentralized_registration', 
+                                                                       method_kwargs={},
+                                                                       non_rigid_kwargs={
+                                                                           'bin_step_um': 50},
+                                                                       output_extra_check=True, progress_bar=True, 
+                                                                       verbose=True)
     # print(motion)
     # print(extra_check.keys())
     # print(spatial_bins)

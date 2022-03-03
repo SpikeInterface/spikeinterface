@@ -186,7 +186,7 @@ class MdaSortingExtractor(BaseSorting):
         firings[1, :] = all_times
         firings[2, :] = all_labels
 
-        writemda64(firings, save_path)
+        writemda64(firings, str(save_path))
 
 
 class MdaSortingSegment(BaseSortingSegment):
