@@ -35,31 +35,31 @@ jobs:
         id: modules-changed
         run: |
           for file in ${{ steps.changed-files.outputs.any_changed }}; do
-            if [[ "/core/" == *"$file"* ]]; then
+            if [[ $file == *"/core/"* ]]; then
               echo "Core changed"
               echo "::set-output name=CORE_CHANGED::true"
             fi
-            if [[ "/extractors/" == *"$file"* ]]; then
+            if [[ $file == *"/extractors/"* ]]; then
               echo "Extractors changed"
               echo "::set-output name=EXTRACTORS_CHANGED::true"
             fi
-            if [[ "/toolkit/" == *"$file"* ]]; then
+            if [[ $file == *"/toolkit/"* ]]; then
               echo "Toolkit changed"
               echo "::set-output name=TOOLKIT_CHANGED::true"
             fi
-            if [[ "/sorters/" == *"$file"* ]]; then
+            if [[ $file == *"/sorters/"* ]]; then
               echo "Sorters changed"
               echo "::set-output name=SORTERS_CHANGED::true"
             fi
-            if [[ "/widgets/" == *"$file"* ]]; then
+            if [[ $file == *"/widgets/"* ]]; then
               echo "Widgets changed"
               echo "::set-output name=WIDGETS_CHANGED::true"
             fi
-            if [[ "/exporters/" == *"$file"* ]]; then
+            if [[ $file == *"/exporters/"* ]]; then
               echo "Exporters changed"
               echo "::set-output name=EXPORTERS_CHANGED::true"
             fi
-            if [[ "/sortingcomponents/" == *"$file"* ]]; then
+            if [[ $file == *"/sortingcomponents/"* ]]; then
               echo "Sortingcomponents changed"
               echo "::set-output name=SORTINGCOMPONENTS_CHANGED::true"
             fi
