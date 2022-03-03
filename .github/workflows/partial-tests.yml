@@ -1,0 +1,175 @@
+name: Full spikeinterface tests
+
+on:
+  pull_request:
+    branches: [master]
+    types: [synchronize, opened, reopened, ready_for_review]
+
+jobs:
+  build-and-test:
+    name: Test on (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # "macos-latest", "windows-latest"
+        os: ["ubuntu-latest", ]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          python-version: 3.8
+      - name: Get current year-month
+        id: date
+        run: echo "::set-output name=date::$(date+'%Y-%m')"
+      - uses: actions/cache@v2
+        id: cache-venv
+        with:
+          path: ~/test_env
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}${{ hashFiles('**/requirements_full.txt') }}-${{ hashFiles('**/requirements_extractors.txt') }}-${{ hashFiles('**/requirements_test.txt') }}-${{ steps.date.outputs.date }}
+          restore-keys: |
+            ${{ runner.os }}-venv
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v17.2
+      - name: Module changes
+          id: modules-changed
+          run: |
+          for file in ${{ steps.changed-files.outputs.added_files }}; do
+            if [[ "/core/" == *"$file"* ]]; then
+              echo "Core changed"
+              echo "::set-output name=CORE_CHANGED::true"
+            fi
+            if [[ "/extractors/" == *"$file"* ]]; then
+              echo "Extractors changed"
+              echo "::set-output name=EXTRACTORS_CHANGED::true"
+            fi
+            if [[ "/toolkit/" == *"$file"* ]]; then
+              echo "Toolkit changed"
+              echo "::set-output name=TOOLKIT_CHANGED::true"
+            fi
+            if [[ "/sorters/" == *"$file"* ]]; then
+              echo "Sorters changed"
+              echo "::set-output name=SORTERS_CHANGED::true"
+            fi
+            if [[ "/widgets/" == *"$file"* ]]; then
+              echo "Widgets changed"
+              echo "::set-output name=WIDGETS_CHANGED::true"
+            fi
+            if [[ "/exporters/" == *"$file"* ]]; then
+              echo "Exporters changed"
+              echo "::set-output name=EXPORTERS_CHANGED::true"
+            fi
+            if [[ "/sortingcomponents/" == *"$file"* ]]; then
+              echo "Sortingcomponents changed"
+              echo "::set-output name=SORTINGCOMPONENTS_CHANGED::true"
+            fi
+          done 
+      - name: Test core
+        if: steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        run: |
+          echo "Running CORE tests"
+      # TODO run module tests only if last commit has changed files in them
+      - name: Test extractors
+        if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true'
+        run: |
+          echo "Running EXTRACTORS tests"
+      - name: Test toolkit
+        if: steps.modules-changed.outputs.TOOLKIT_CHANGED == 'true'
+        run: |
+          echo "Running TOOLKIT tests"
+      - name: Test sorters
+        if: steps.modules-changed.outputs.SORTERS_CHANGED == 'true'
+        run: |
+          echo "Running SORTERS tests"
+      - name: Test widgets
+        if: steps.modules-changed.outputs.WIDGETS_CHANGED == 'true'
+        run: |
+          echo "Running WIDGETS tests"
+      - name: Test exporters
+        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true'
+        run: |
+          echo "Running EXPORTERS tests"
+      - name: Test sortingcomponents
+        if: steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true'
+        run: |
+          echo "Running SORTINGCOMPONENTS tests"
+      # - name: Install dependencies
+      #   run: |
+      #     sudo apt update
+      #     # this is for datalad and download testing datasets
+      #     sudo apt install git git-annex
+      #     # needed for correct operation of git/git-annex/DataLad
+      #     git config --global user.email "CI@example.com"
+      #     git config --global user.name "CI Almighty"
+      #     # this is for spyking circus
+      #     sudo apt install mpich libmpich-dev
+      #     # create an environement (better for cahing)
+      #     python -m venv ~/test_env
+      #     source ~/test_env/bin/activate
+      #     python -m pip install --upgrade pip
+      #     pip install setuptools wheel twine
+      #     ## clean some cache to avoid using old cache
+      #     pip cache remove numpy
+      #     pip cache remove hdbscan
+      #     pip cache remove numba
+      #     # TODO remove it after neo release
+      #     # because it force some version (numpy/numba/dhdbscan...)
+      #     pip install numpy==1.20
+      #     pip install -r requirements_test.txt
+      #     pip install -r requirements.txt
+      #     pip install -r requirements_full.txt
+      #     pip install -r requirements_extractors.txt
+          
+      #     pip install -e .
+      # - name: pip list
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pip list
+      # - name: Get ephy_testing_data current head hash
+      #   # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+      #   id: vars
+      #   run: |
+      #     echo "::set-output name=HASH_EPHY_DATASET::$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+      # - uses: actions/cache@v2
+      #   id: cache-datasets
+      #   env:
+      #     # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+      #     HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
+      #   with:
+      #     path: ~/spikeinterface_datasets
+      #     key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-datasets
+      # - name: Test core
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pytest -v -m core
+      # # TODO run module tests only if last commit has changed files in them
+      # - name: Test extractors
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pytest -v -m extractors
+      # - name: Test toolkit
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pytest -v -m toolkit
+      # - name: Test sorters
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pytest -v -m sorters
+      # - name: Test exporters
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pytest -v -m exporters
+      # - name: Test widgets
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pytest -v -m widgets
+      # - name: Test sortingcomponents
+      #   run: |
+      #     source ~/test_env/bin/activate
+      #     pytest -v -m sortingcomponents
+
+
+          
+# only on ubuntu because of spkyking-circus and mpich
