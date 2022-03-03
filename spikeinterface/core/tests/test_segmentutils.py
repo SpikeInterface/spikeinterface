@@ -15,7 +15,7 @@ def test_append_concatenate_recordings():
     sampling_frequency = 30000
     rec0 = NumpyRecording([traces] * 3, sampling_frequency)
     rec1 = NumpyRecording([traces] * 2, sampling_frequency)
-    
+
     # append
     rec = append_recordings([rec0, rec1])
     #  print(rec)
@@ -61,8 +61,10 @@ def test_append_sortings():
     labels[0::3] = 0
     labels[1::3] = 1
     labels[2::3] = 2
-    sorting0 = NumpySorting.from_times_labels([times] * 3, [labels] * 3, sampling_frequency)
-    sorting1 = NumpySorting.from_times_labels([times] * 2, [labels] * 2, sampling_frequency)
+    sorting0 = NumpySorting.from_times_labels(
+        [times] * 3, [labels] * 3, sampling_frequency)
+    sorting1 = NumpySorting.from_times_labels(
+        [times] * 2, [labels] * 2, sampling_frequency)
 
     sorting = append_sortings([sorting0, sorting1])
     # print(sorting)

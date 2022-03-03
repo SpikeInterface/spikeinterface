@@ -1,5 +1,7 @@
 import unittest
+import pytest
 import sys
+from pathlib import Path
 
 if __name__ != '__main__':
     import matplotlib
@@ -14,11 +16,14 @@ import spikeinterface.comparison as sc
 import spikeinterface.toolkit as st
 
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "widgets"
+else:
+    cache_folder = Path("cache_folder") / "widgets"
+
+
 class TestWidgets(unittest.TestCase):
     def setUp(self):
-        #~ self._rec, self._sorting = se.toy_example(num_channels=10, duration=10, num_segments=1)
-        #~ self._rec = self._rec.save()
-        #~ self._sorting = self._sorting.save()
         local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
         self._rec = se.MEArecRecordingExtractor(local_path)
 
@@ -26,7 +31,7 @@ class TestWidgets(unittest.TestCase):
 
         self.num_units = len(self._sorting.get_unit_ids())
         #  self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
-        self._we = extract_waveforms(self._rec, self._sorting, './mearec_test', load_if_exists=True)
+        self._we = extract_waveforms(self._rec, self._sorting, cache_folder / 'mearec_test', load_if_exists=True)
 
         self._amplitudes = st.compute_spike_amplitudes(self._we, peak_sign='neg', outputs='by_unit')
         self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
@@ -114,7 +119,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.,
                                 weight_with_amplitudes=False, mode='heatmap')
         sw.plot_drift_over_time(self._rec, peaks=peaks, weight_with_amplitudes=False, mode='scatter',
-                                scatter_plot_kwargs={'color':'r'})
+                                scatter_plot_kwargs={'color': 'r'})
 
     def test_plot_peak_activity_map(self):
         sw.plot_peak_activity_map(self._rec)
