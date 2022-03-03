@@ -102,13 +102,12 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-# TODO : this fail, need investigate
-# class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-# ExtractorClass = NeuralynxRecordingExtractor
-# downloads = ['neuralynx']
-# entities = [
-# 'neuralynx/Cheetah_v5.6.3',
-# ]
+class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuralynxRecordingExtractor
+    downloads = ['neuralynx']
+    entities = [
+        'neuralynx/Cheetah_v5.6.3/original_data',
+    ]
 
 
 class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -129,6 +128,22 @@ class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = TdtRecordingExtractor
+    downloads = ['tdt']
+    entities = [
+        ('tdt/aep_05', {'stream_id': '1'})
+    ]
+
+
+class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonaRecordingExtractor
+    downloads = ['axona']
+    entities = [
+        'axona/axona_raw',
+    ]
+
+
 class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = KiloSortSortingExtractor
     downloads = ['phy']
@@ -145,7 +160,6 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skip(reason='Ced extractor depend on sonpy and next neo version')
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
     downloads = [
@@ -158,14 +172,18 @@ class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skip(reason="Maxwell HDF5 compression need a manual installable plugin!!!")
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MaxwellRecordingExtractor
     downloads = ['maxwell']
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
-        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well0000', 'rec_name': 'rec0000'})
+        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well000', 'rec_name': 'rec0000'})
     ]
+
+    def setUp(self):
+        from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
+        auto_install_maxwell_hdf5_compression_plugin()
+        return super().setUp()
 
 
 class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -178,7 +196,6 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skip(reason='Biocam not merged into neo yet')
 class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BiocamRecordingExtractor
     downloads = ['biocam/biocam_hw3.0_fw1.6.brw']
@@ -190,7 +207,7 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     #~ test = MearecRecordingTest()
     # ~ test = MearecSortingTest()
-    test = SpikeGLXRecordingTest()
+    # test = SpikeGLXRecordingTest()
     #~ test = OpenEphysBinaryRecordingTest()
     # ~ test = OpenEphysLegacyRecordingTest()
     #~ test = OpenEphysBinaryEventTest()
@@ -205,6 +222,9 @@ if __name__ == '__main__':
     # ~ test = CedRecordingTest()
     # ~ test = MaxwellRecordingTest()
     #~ test = SpikeGadgetsRecordingTest()
+    # test = TdTRecordingTest()
+    test = AxonaRecordingTest()
+    # test = BiocamRecordingTest()
 
     test.setUp()
     test.test_open()

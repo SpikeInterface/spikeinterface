@@ -7,7 +7,7 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('')
+@pytest.mark.skip('Tridesclous can be tested after running run_tridesclous()')
 def test_tridesclousextractors():
     # not tested here, tested in run_tridesclous(...)
     pass

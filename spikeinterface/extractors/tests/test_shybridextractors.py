@@ -6,8 +6,7 @@ from spikeinterface.extractors import toy_example, SHYBRIDRecordingExtractor, SH
 from spikeinterface.extractors.shybridextractors import HAVE_SBEX
 
 
-# @pytest.mark.skipif(not HAVE_SBEX, reason='shybrid not installed')
-@pytest.mark.skipif(True, reason='shybrid not tested')
+@pytest.mark.skipif(True, reason='SHYBRID only tested locally')
 def test_shybrid_extractors():
     rec, sort = toy_example(num_segments=1, num_units=10)
 
