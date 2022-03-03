@@ -19,6 +19,8 @@ from .neoextractors import (
     NixRecordingExtractor, read_nix,
     SpikeGadgetsRecordingExtractor, read_spikegadgets,
     BiocamRecordingExtractor, read_biocam,
+    AxonaRecordingExtractor, read_axona,
+    TdtRecordingExtractor, read_tdt
 )
 
 # NWB sorting/recording/event
@@ -71,6 +73,9 @@ recording_extractor_full_list = [
     NixRecordingExtractor,
     NwbRecordingExtractor,
     SpikeGadgetsRecordingExtractor,
+    BiocamRecordingExtractor,
+    AxonaRecordingExtractor,
+    TdtRecordingExtractor
 ]
 
 sorting_extractor_full_list = [

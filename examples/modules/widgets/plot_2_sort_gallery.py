@@ -40,3 +40,13 @@ w_ach = sw.plot_autocorrelograms(sorting, window_ms=150.0, bin_ms=5.0, unit_ids=
 w_cch = sw.plot_crosscorrelograms(sorting, window_ms=150.0, bin_ms=5.0, unit_ids=[1, 2, 5], symmetrize=True)
 
 plt.show()
+
+
+##############################################################################
+# plot_presence()
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+w_pr = sw.plot_presence(sorting)
+
+plt.show()
