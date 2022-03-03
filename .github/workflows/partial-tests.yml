@@ -1,4 +1,4 @@
-name: Full spikeinterface tests
+name: Partial spikeinterface tests
 
 on:
   pull_request:
