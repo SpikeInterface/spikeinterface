@@ -14,6 +14,7 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
+# TEST partial
 
 def correct_motion_on_peaks(peaks, peak_locations, times,
                             motion, temporal_bins, spatial_bins,
