@@ -62,7 +62,7 @@ class BaseExtractor:
             if self.get_num_segments() == 1:
                 return 0
             else:
-                raise ValueError()
+                raise ValueError("Multi-segment object. Provide 'segment_index'")
         else:
             return segment_index
 
