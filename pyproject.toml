@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.10"
+python = ">=3.8,<3.10"
 
 probeinterface = "^0.2.6"
 
@@ -37,8 +37,11 @@ tqdm = "^4.62.3"
 datalad = "^0.15.6"
 
 MEArec = {version = "^1.7.2", optional = true}
-sonpy = {version = "^1.9.5", optional = true}
-pynwb = {git = "https://github.com/NeurodataWithoutBorders//pynwb.git", rev = "2.0.0", optional = true}
+pynwb = {version = "^2.0.0", optional = true}
+sonpy = [
+    {version = "^1.8.1", python= "~3.8", optional = true},
+    {version = "^1.9.1", python= "~3.9", optional = true}
+]
 
 PyQt5 = {version = "^5.15.6", optional = true}
 
