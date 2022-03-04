@@ -12,7 +12,8 @@ def test_detect_peaks():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
 
     # by_channel
@@ -34,6 +35,7 @@ def test_detect_peaks():
     subset_peaks = select_peaks(peaks, 'smart_sampling_locations', n_peaks=100, peaks_locations=peak_locations)
     
     assert len(subset_peaks) < len(peaks)
+
 
 if __name__ == '__main__':
     test_detect_peaks()

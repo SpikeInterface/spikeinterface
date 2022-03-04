@@ -1,4 +1,4 @@
-import unittest
+import pytest
 import shutil
 from pathlib import Path
 
@@ -8,10 +8,10 @@ from spikeinterface import extract_waveforms, download_dataset
 import spikeinterface.extractors as se
 from spikeinterface.exporters import export_to_phy
 
-def setup_module():
-    for folder in ('waveforms', 'waveforms_rm', 'phy_output', 'phy_output_rm', 'rec', 'sort'):
-        if Path(folder).is_dir():
-            shutil.rmtree(folder)
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "exporters"
+else:
+    cache_folder = Path("cache_folder") / "exporters"
 
 
 def test_export_to_phy():
@@ -21,8 +21,8 @@ def test_export_to_phy():
     recording = se.MEArecRecordingExtractor(local_path)
     sorting = se.MEArecSortingExtractor(local_path)
 
-    waveform_folder = Path('waveforms')
-    output_folder = Path('phy_output')
+    waveform_folder = cache_folder / 'waveforms'
+    output_folder = cache_folder / 'phy_output'
 
     for f in (waveform_folder, output_folder):
         if f.is_dir():
@@ -43,12 +43,12 @@ def test_export_to_phy_by_property():
     recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
     sorting.set_property("group", [0, 0, 1, 1])
 
-    waveform_folder = Path('waveforms')
-    waveform_folder_rm = Path('waveforms_rm')
-    output_folder = Path('phy_output')
-    output_folder_rm = Path('phy_output_rm')
-    rec_folder = Path("rec")
-    sort_folder = Path("sort")
+    waveform_folder = cache_folder / 'waveforms'
+    waveform_folder_rm = cache_folder / 'waveforms_rm'
+    output_folder = cache_folder / 'phy_output'
+    output_folder_rm = cache_folder / 'phy_output_rm'
+    rec_folder = cache_folder / 'rec'
+    sort_folder = cache_folder / 'sort'
 
     for f in (waveform_folder, waveform_folder_rm, output_folder, output_folder_rm, rec_folder, sort_folder):
         if f.is_dir():
@@ -92,9 +92,9 @@ def test_export_to_phy_by_sparsity():
     recording = se.MEArecRecordingExtractor(local_path)
     sorting = se.MEArecSortingExtractor(local_path)
 
-    waveform_folder = Path('waveforms')
-    output_folder_radius = Path('phy_output_radius')
-    output_folder_thr = Path('phy_output_thr')
+    waveform_folder = cache_folder / 'waveforms'
+    output_folder_radius = cache_folder / 'phy_output_radius'
+    output_folder_thr = cache_folder / 'phy_output_thr'
 
     for f in (waveform_folder, output_folder_radius, output_folder_thr):
         if f.is_dir():
