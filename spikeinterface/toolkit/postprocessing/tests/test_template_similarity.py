@@ -42,7 +42,7 @@ def test_compute_template_similarity():
 
 def test_check_equal_template_with_distribution_overlap():
 
-    we = WaveformExtractor.load_from_folder('mearec_waveforms')
+    we = WaveformExtractor.load_from_folder(cache_folder / 'mearec_waveforms')
     
     
     for unit_id0 in we.sorting.unit_ids:
