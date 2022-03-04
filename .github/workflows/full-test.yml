@@ -113,7 +113,7 @@ jobs:
           source ~/test_env/bin/activate
           pytest -v -m core
       - name: Test extractors
-        if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true'
         run: |
           source ~/test_env/bin/activate
           pytest -v -m extractors
