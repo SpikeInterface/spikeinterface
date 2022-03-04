@@ -30,7 +30,7 @@ Herdingspikes2
 * Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez, Raimon Wintzer: GUI and visualisation
 * Installation::
 
-    pip install herdingspikes
+    pip install spikeinterface[herdingspikes]
 
 HDSort
 -------
@@ -123,11 +123,7 @@ pykilosort
 
 * Installation needs Matlab and cudatoolkit::
 
-    pip install cupy  (or pip install cupy-cudaXXX)  >>> can be quite hard
-    pip install phylib, pypandic
-    git clone https://github.com/MouseLand/pykilosort
-    cd pykilosort
-    python setup.py install
+    pip install spikeinterface[pykilosort]
 
 * See also https://github.com/MouseLand/pykilosort#installation
 
@@ -140,8 +136,7 @@ Klusta
 * Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
 * Installation::
 
-       pip install Cython h5py tqdm
-       pip install click klusta klustakwik2
+       pip install spikeinterface[klusta]
 
 * See also: https://github.com/kwikteam/phy
 
@@ -166,8 +161,7 @@ SpykingCircus
 * Installation::
 
         sudo apt install libmpich-dev
-        pip install mpi4py
-        pip install spyking-circus --no-binary=mpi4py
+        pip install spikeinterface[spyking-circus]
 
 
 Tridesclous
@@ -178,7 +172,7 @@ Tridesclous
 * Authors: Samuel Garcia, Christophe Pouzat
 * Installation::
 
-        pip install tridesclous
+        pip install spikeinterface[tridesclous]
 
 * Optional installation of opencl ICD and pyopencl for hardware acceleration::
 
@@ -186,7 +180,6 @@ Tridesclous
         sudo apt-get install nvidia-opencl-XXX (optional if nvidia GPU)
         sudo apt-get install pocl-opencl-icd (optional for multi core CPU)
         sudo apt-get install opencl-headers ocl-icd-opencl-dev libclc-dev ocl-icd-libopencl1
-        pip install pyopencl
 
 Waveclus
 --------

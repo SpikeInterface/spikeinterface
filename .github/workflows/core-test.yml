@@ -20,9 +20,7 @@ jobs:
           python-version: 3.8
       - name: Install dependencies
         run: |
-          conda install pytest
-          pip install -r requirements.txt
-          pip install -e .
+          pip install . pytest
       - name: Test core with pytest
         run: |
           pytest spikeinterface/core

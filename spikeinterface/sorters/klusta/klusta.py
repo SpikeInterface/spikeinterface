@@ -60,8 +60,7 @@ class KlustaSorter(BaseSorter):
     For more information see https://doi.org/10.1038/nn.4268"""
 
     installation_mesg = """\nTo use Klusta run:\n
-       >>> pip install Cython h5py tqdm
-       >>> pip install click klusta klustakwik2
+       >>> pip install spikeinterface[klusta]
 
     More information on klusta at:
       * https://github.com/kwikteam/phy

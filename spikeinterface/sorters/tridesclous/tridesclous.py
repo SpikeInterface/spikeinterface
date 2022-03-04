@@ -49,7 +49,7 @@ class TridesclousSorter(BaseSorter):
     For more information see https://tridesclous.readthedocs.io"""
 
     installation_mesg = """\nTo use Tridesclous run:\n
-       >>> pip install tridesclous
+       >>> pip install spikeinterface[tridesclous]
 
     More information on tridesclous at:
       * https://github.com/tridesclous/tridesclous

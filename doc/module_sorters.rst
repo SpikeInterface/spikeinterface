@@ -51,12 +51,12 @@ docker needs *almost  root* privilege
 Running spike sorting in a docker container container just requires to:
 
 1) have docker installed
-2) have docker python SDK installed (:code:`pip install docker`)
+2) have docker python SDK installed (:code:`pip install spikeinterface[docker]`)
 
 or
 
 1) have singularity installed
-2) have `singularity python <https://singularityhub.github.io/singularity-cli/>`_ (:code:`pip install spython`)
+2) have `singularity python <https://singularityhub.github.io/singularity-cli/>`_ (:code:`pip install spikeinterface[spython]`)
 
 When docker is installed, you can simply run the sorter in a specified docker image:
 

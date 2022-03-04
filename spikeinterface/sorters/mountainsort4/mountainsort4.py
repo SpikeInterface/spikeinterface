@@ -56,7 +56,7 @@ class Mountainsort4Sorter(BaseSorter):
     method and automatic curation procedures. For more information see https://doi.org/10.1016/j.neuron.2017.08.030"""
 
     installation_mesg = """\nTo use Mountainsort4 run:\n
-       >>> pip install mountainsort4
+       >>> pip install spikeinterface[mountainsort]
 
     More information on mountainsort at:
       * https://github.com/flatironinstitute/mountainsort

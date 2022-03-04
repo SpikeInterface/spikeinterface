@@ -54,7 +54,7 @@ Then, you can start creating a new class:
     }
 
     installation_mesg = """
-        >>> pip install myspikesorter
+        >>> pip install spikeinterface[myspikesorter]
         More information on MySpikesorter at:
             https://myspikesorterwebsite.com
     """

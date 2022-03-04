@@ -20,7 +20,7 @@ Install individual spike sorters by replacing full with the spike sorter name:
 
 .. code-block:: bash
 
-  pip install spikeinterface[tridesclous, spyking-circus, herdingspikes]
+  pip install spikeinterface[tridesclous, spyking-circus, herdingspikes, pykilosort, klusta, mountainsort]
 
 Install all spike sorters:
 

@@ -46,11 +46,23 @@ sonpy = [
 PyQt5 = {version = "^5.15.6", optional = true}
 
 tridesclous = {version = "^1.6.5", optional = true}
+pyopencl = {version = "^2022.1", optional = true}
 loky = {version = "^3.0.0", optional = true}
 
 spyking-circus = {version = "^1.1.0", optional = true}
 
 herdingspikes = {version = "^0.3.99", optional = true}
+
+mountainsort4 = {version = "^1.0.0", optional = true}
+
+cupy = {version = "^10.2.0", optional = true}
+phylib = {version = "^2.4.1", optional = true}
+pypandoc = {version = "^1.7.2", optional = true}
+pykilosort = {git = "https://github.com/MouseLand/pykilosort.git", optional = true}
+
+Cython = {version = "^0.29.28", optional = true}
+klusta = {version = "^3.0.16", optional = true}
+klustakwik2 = {version = "^0.2.7", optional = true}
 
 spython = {version = "^0.1.18", optional = true}
 docker = {version = "^5.0.3", optional = true}
@@ -59,15 +71,21 @@ docker = {version = "^5.0.3", optional = true}
 pytest = "^7.0.1"
 
 [tool.poetry.extras]
-tridesclous = ["tridesclous", "PyQt5", "loky"]
+tridesclous = ["tridesclous", "PyQt5", "loky", "pyopencl"]
 spyking-circus = ["spyking-circus", "PyQt5"]
 herdingspikes = ["herdingspikes"]
+pykilosort = ["cupy", "phylib", "pypandoc", "pykilosort"]
+klusta = ["Cython", "klusta", "klustakwik2"]
+mountainsort = ["mountainsort4"]
 
 all_sorters = [
     "PyQt5",
     "tridesclous", "loky",
     "spyking-circus",
-    "herdingspikes"
+    "herdingspikes",
+    "cupy", "phylib", "pypandoc", "pykilosort",
+    "Cython", "klusta", "klustakwik2",
+    "mountainsort4"
 ]
 
 extractors = ["MEArec", "sonpy", "pynwb"]
@@ -77,7 +95,10 @@ full = [
     "PyQt5",
     "tridesclous", "loky",
     "spyking-circus",
-    "herdingspikes"
+    "herdingspikes",
+    "cupy", "phylib", "pypandoc", "pykilosort",
+    "Cython", "klusta", "klustakwik2",
+    "mountainsort4"
 ]
 
 docker = ["docker"]
