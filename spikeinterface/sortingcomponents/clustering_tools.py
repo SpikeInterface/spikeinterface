@@ -21,9 +21,9 @@ def _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel
     tsvd = sklearn.decomposition.TruncatedSVD(n_components=n_components_by_channel)
     for c in range(wfs_and_noise.shape[2]):
         local_feature[:, c*n_components_by_channel:(c+1)*n_components_by_channel] = tsvd.fit_transform(wfs_and_noise[:, :, c])
-    #~ n_components = min(n_components, local_feature.shape[1])
-    #~ pca = sklearn.decomposition.PCA(n_components=n_components, whiten=True)
-    #~ local_feature = pca.fit_transform(local_feature)
+    n_components = min(n_components, local_feature.shape[1])
+    pca = sklearn.decomposition.PCA(n_components=n_components, whiten=True)
+    local_feature = pca.fit_transform(local_feature)
     
     # hdbscan on pca
     clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
@@ -31,6 +31,22 @@ def _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel
     cluster_probability = clustering[2]
     persistent_clusters, = np.nonzero(clustering[2] > probability_thr)
     local_labels_with_noise[~np.in1d(local_labels_with_noise, persistent_clusters)] = -1
+    
+    # remove super small cluster
+    labels, count = np.unique(local_labels_with_noise[:valid_size], return_counts=True)
+    mask = labels >= 0
+    labels, count = labels[mask], count[mask]
+    minimum_cluster_size_ratio = 0.05
+    
+    print(labels, count)
+    
+    to_remove = labels[(count / valid_size) <minimum_cluster_size_ratio]
+    print('to_remove', to_remove, count / valid_size)
+    if to_remove.size > 0:
+        local_labels_with_noise[np.in1d(local_labels_with_noise, to_remove)] = -1
+    
+    local_labels_with_noise[valid_size:] = -2
+    
 
     if debug:
         import matplotlib.pyplot as plt
@@ -38,8 +54,9 @@ def _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel
         
         fig, ax = plt.subplots()
 
-        reducer = umap.UMAP()
-        local_feature_plot = reducer.fit_transform(local_feature)
+        #~ reducer = umap.UMAP()
+        #~ local_feature_plot = reducer.fit_transform(local_feature)
+        local_feature_plot = local_feature
 
         
         unique_lab = np.unique(local_labels_with_noise)
@@ -50,8 +67,8 @@ def _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel
         for k in unique_lab:
             plot_mask_1 = (active_ind < valid_size) & (local_labels_with_noise == k)
             plot_mask_2 = (active_ind >= valid_size) & (local_labels_with_noise == k)
-            ax.scatter(local_feature_plot[plot_mask_1, 0], local_feature_plot[plot_mask_1, 1], color=cmap[k], marker='o')
-            ax.scatter(local_feature_plot[plot_mask_2, 0], local_feature_plot[plot_mask_2, 1], color=cmap[k], marker='*')
+            ax.scatter(local_feature_plot[plot_mask_1, 0], local_feature_plot[plot_mask_1, 1], color=cmap[k], marker='o', alpha=0.3, s=1)
+            ax.scatter(local_feature_plot[plot_mask_2, 0], local_feature_plot[plot_mask_2, 1], color=cmap[k], marker='*', alpha=0.3, s=1)
             
         #~ plt.show()
 
@@ -113,6 +130,7 @@ def _split_waveforms_nested(wfs_and_noise, noise_size, nbefore, n_components_by_
             cmap = plt.get_cmap('jet', unique_lab.size)
             cmap = { k: cmap(l) for l, k in enumerate(unique_lab) }
             cmap[-1] = 'k'
+            cmap[-2] = 'b'
             for k in unique_lab:
                 plot_mask_1 = (active_ind < valid_size) & (active_labels_with_noise == k)
                 plot_mask_2 = (active_ind >= valid_size) & (active_labels_with_noise == k)
@@ -196,25 +214,30 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
         print()
         print('auto_split_clustering', label, l, len(labels))
         
-        wfs = wfs_arrays[label]
-        
         chans, = np.nonzero(sparsity_mask[l, :])
         
-        
+        wfs = wfs_arrays[label]
+        valid_size = wfs.shape[0]
 
         wfs_and_noise = np.concatenate([wfs, noise[:, :, chans]], axis=0)
         noise_size = noise.shape[0]
         
         local_labels_with_noise = _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug)
         # local_labels_with_noise = _split_waveforms_nested(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug)
-        
-        
-        if noise_size > 0:
-            local_labels = local_labels_with_noise[:-noise_size]
-            local_labels_with_noise[-noise_size:] = -2
-        else:
-            local_labels = local_labels_with_noise
 
+        local_labels = local_labels_with_noise[:valid_size]
+        if noise_size > 0:
+            local_labels_with_noise[valid_size:] = -2
+        
+        
+        for k in  np.unique(local_labels):
+            if k < 0:
+                continue
+            template = np.mean(wfs[local_labels == k, :, :], axis=1)
+            chan_inds, = np.nonzero(sparsity_mask[l, :])
+            assert wfs.shape[2] == chan_inds.size
+            main_chan = chan_inds[np.argmax(np.max(np.abs(template), axis=0))]
+            main_channels[k + nb_clusters] = main_chan
 
         if debug:
             #~ local_labels_with_noise[-noise_size:] = -2
@@ -252,13 +275,13 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
 
         nb_clusters += local_labels.max() + 1
     
-    return split_peak_labels
+    return split_peak_labels, main_channels
     
 
 
 
 def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefore, nafter, channel_distances,
-            radius_um=50, auto_merge_num_shift=7, auto_merge_quantile_limit=0.8):
+            radius_um=50, auto_merge_num_shift=7, auto_merge_quantile_limit=0.8, ratio_num_channel_intersect=0.5):
     """
     
     
@@ -311,13 +334,18 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
             channel_inds1, = np.nonzero(sparsity_mask[l1, :])
             
             intersect_chans = np.intersect1d(channel_inds0, channel_inds1)
-            # union_chans = np.union1d(channel_inds0, channel_inds1)
+            union_chans = np.union1d(channel_inds0, channel_inds1)
             
             # we use
-            radius_chans, = np.nonzero((channel_distances[main_chan0, :] <= radius_um) & (channel_distances[main_chan1, :] <= radius_um))
+            radius_chans, = np.nonzero((channel_distances[main_chan0, :] <= radius_um) | (channel_distances[main_chan1, :] <= radius_um))
             used_chans = np.intersect1d(radius_chans, intersect_chans)
             
-            if len(used_chans) == 0:
+            if used_chans.size == 0:
+                continue
+                
+            if used_chans.size < (union_chans.size * ratio_num_channel_intersect):
+                print('WARNING INTERSECT')
+                print(intersect_chans.size, union_chans.size, radius_chans.size, used_chans.size)
                 continue
             
             wfs0 = wfs_arrays[label0]
@@ -353,7 +381,7 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
                 
                 for c in range(len(used_chans)):
                     ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
-                ax.set_title(f'label0={label0} label1={label1} equal{equal} shift{shift}')
+                ax.set_title(f'label0={label0} label1={label1} equal{equal} shift{shift} chans intersect{intersect_chans.size} union{union_chans.size}  radius{radius_chans.size} used{used_chans.size}')
                 plt.show()
     
     #~ print('auto_merge_list', auto_merge_list)

@@ -656,7 +656,9 @@ class PositionAndPCAClustering:
         "local_radius_um" : 50.,
         'noise_size' : 300,
         "debug" : True,
-        "tmp_folder" : None
+        "tmp_folder" : None,
+        'auto_merge_num_shift': 3,
+        'auto_merge_quantile_limit': 0.8, 
     }
 
     @classmethod
@@ -759,7 +761,7 @@ class PositionAndPCAClustering:
                         num_chunks_per_segment=d['noise_size'], chunk_size=nbefore+nafter, concatenated=False, seed=None)
         noise = np.stack(noise, axis=0)
 
-        split_peak_labels = auto_split_clustering(wfs_arrays, sparsity_mask, spatial_labels, keep_peak_labels, nbefore, nafter, noise, 
+        split_peak_labels, main_channels = auto_split_clustering(wfs_arrays, sparsity_mask, spatial_labels, keep_peak_labels, nbefore, nafter, noise, 
                 n_components_by_channel=d['n_components_by_channel'],
                 n_components=d['n_components'],
                 hdbscan_params=d['hdbscan_params_pca'],
@@ -771,10 +773,53 @@ class PositionAndPCAClustering:
         peak_labels = -2 * np.ones(peaks.size, dtype=np.int64)
         peak_labels[spatial_keep] = split_peak_labels
         
-        labels = np.unique(peak_labels)
+        print(main_channels)
+
+        # auto clean
+        pre_clean_labels = np.unique(peak_labels)
+        pre_clean_labels = pre_clean_labels[pre_clean_labels>=0]
+        print('labels before auto clean', pre_clean_labels.size, pre_clean_labels)
+
+        peaks3 = np.zeros(peaks.size, dtype=peak_dtype)
+        peaks3['sample_ind'] = peaks['sample_ind']
+        peaks3['segment_ind'] = peaks['segment_ind']
+        peaks3['unit_ind'][:] = -1
+        sparsity_mask3 = np.zeros((pre_clean_labels.size, num_chans), dtype='bool')
+        for l, label in enumerate(pre_clean_labels):
+            peaks3['unit_ind'][peak_labels == label] = l
+            main_chan = main_channels[label]
+            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
+            sparsity_mask3[l, closest_chans] = True
+        
+        print(sparsity_mask3)
+        
+        if d['waveform_mode'] == 'shared_memory':
+            wf_folder = None
+        else:
+            if tmp_folder is not None:
+                wf_folder = tmp_folder / 'waveforms_pre_autoclean'
+                wf_folder.mkdir()
+        
+        wfs_arrays3 = extract_waveforms_to_buffers(recording, peaks3, pre_clean_labels, nbefore, nafter,
+                                mode=d['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
+                                sparsity_mask=sparsity_mask3,  copy=(d['waveform_mode'] == 'shared_memory'),
+                                **d['job_kwargs'])
+        print('wfs_arrays3.keys()', wfs_arrays3.keys())
+        
+        
+        
+        clean_peak_labels, peak_sample_shifts = auto_clean_clustering(wfs_arrays3, sparsity_mask3, pre_clean_labels, peak_labels, nbefore, nafter, chan_distances,
+                                radius_um=d['local_radius_um'], auto_merge_num_shift=d['auto_merge_num_shift'], auto_merge_quantile_limit=d['auto_merge_quantile_limit'])
+
+    
+        
+        # final
+        labels = np.unique(clean_peak_labels)
         labels = labels[labels>=0]
         
-        return labels, peak_labels        
+        print('labels before afert clean', labels.size, labels)
+        
+        return labels, clean_peak_labels        
 
 
 clustering_methods = {
