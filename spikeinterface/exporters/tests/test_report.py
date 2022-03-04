@@ -1,4 +1,4 @@
-import unittest
+import pytest
 import shutil
 from pathlib import Path
 
@@ -9,14 +9,20 @@ import spikeinterface.extractors as se
 from spikeinterface.exporters import export_report
 
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "exporters"
+else:
+    cache_folder = Path("cache_folder") / "exporters"
+
+
 def test_export_report():
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     recording, sorting = se.read_mearec(local_path)
 
-    waveform_folder = Path('waveforms')
-    output_folder = Path('mearec_GT_report')
+    waveform_folder = cache_folder / 'waveforms'
+    output_folder = cache_folder / 'mearec_GT_report'
 
     for f in (waveform_folder, output_folder):
         if f.is_dir():
