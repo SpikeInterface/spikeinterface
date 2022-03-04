@@ -1,32 +1,36 @@
-import unittest
+import pytest
 import shutil
 from pathlib import Path
-
-import pytest
 
 from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import read_mearec
 from spikeinterface.toolkit import compute_template_similarity, check_equal_template_with_distribution_overlap
 
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "toolkit"
+else:
+    cache_folder = Path("cache_folder") / "toolkit"
+
+
 def setup_module():
-    for folder in ('mearec_waveforms'):
-        if Path(folder).is_dir():
-            shutil.rmtree(folder)
+    for folder_name in ('mearec_waveforms'):
+        if (cache_folder / folder_name).is_dir():
+            shutil.rmtree(cache_folder / folder_name)
 
     local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting = read_mearec(local_path)
     print(recording)
     print(sorting)
 
-    we = extract_waveforms(recording, sorting, 'mearec_waveforms',
+    we = extract_waveforms(recording, sorting, cache_folder / 'mearec_waveforms',
                            ms_before=3., ms_after=4., max_spikes_per_unit=500,
                            load_if_exists=True,
                            n_jobs=1, chunk_size=30000)
 
 
 def test_compute_template_similarity():
-    we = WaveformExtractor.load_from_folder('mearec_waveforms')
+    we = WaveformExtractor.load_from_folder(cache_folder / 'mearec_waveforms')
     similarity = compute_template_similarity(we)
 
     # DEBUG

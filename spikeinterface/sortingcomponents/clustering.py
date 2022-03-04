@@ -177,6 +177,7 @@ class SlidingHdbscanClustering:
         'n_components_by_channel': 4,
         'auto_merge_num_shift': 3,
         'auto_merge_quantile_limit': 0.8, 
+        'ratio_num_channel_intersect': 0.5,
         #~ 'auto_trash_misalignment_shift' : 4,
         
         'job_kwargs' : {}
@@ -578,7 +579,8 @@ class SlidingHdbscanClustering:
         channel_distances = get_channel_distances(recording)
         
         clean_peak_labels, peak_sample_shifts = auto_clean_clustering(wfs_arrays2, sparsity_mask2, labels, peak_labels, nbefore, nafter, channel_distances,
-                                radius_um=d['radius_um'], auto_merge_num_shift=d['auto_merge_num_shift'], auto_merge_quantile_limit=d['auto_merge_quantile_limit'])
+                                radius_um=d['radius_um'], auto_merge_num_shift=d['auto_merge_num_shift'],
+                                auto_merge_quantile_limit=d['auto_merge_quantile_limit'], ratio_num_channel_intersect=d['ratio_num_channel_intersect'])
         
         return  clean_peak_labels, peak_sample_shifts
         
@@ -659,6 +661,7 @@ class PositionAndPCAClustering:
         "tmp_folder" : None,
         'auto_merge_num_shift': 3,
         'auto_merge_quantile_limit': 0.8, 
+        'ratio_num_channel_intersect': 0.5,
     }
 
     @classmethod
@@ -809,8 +812,8 @@ class PositionAndPCAClustering:
         
         
         clean_peak_labels, peak_sample_shifts = auto_clean_clustering(wfs_arrays3, sparsity_mask3, pre_clean_labels, peak_labels, nbefore, nafter, chan_distances,
-                                radius_um=d['local_radius_um'], auto_merge_num_shift=d['auto_merge_num_shift'], auto_merge_quantile_limit=d['auto_merge_quantile_limit'])
-
+                                radius_um=d['local_radius_um'], auto_merge_num_shift=d['auto_merge_num_shift'],
+                                auto_merge_quantile_limit=d['auto_merge_quantile_limit'], ratio_num_channel_intersect=d['ratio_num_channel_intersect'])
     
         
         # final

@@ -24,7 +24,7 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest spikeinterface/core
+          pytest -v spikeinterface/core
       - name: Publish on PyPI
         env:
           TWINE_USERNAME: __token__
