@@ -1,5 +1,3 @@
-import pytest
-
 import numpy as np
 
 from spikeinterface import download_dataset, get_global_dataset_folder

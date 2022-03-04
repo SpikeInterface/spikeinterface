@@ -637,7 +637,7 @@ class BaseExtractor:
                         print(f'Use cache_folder={folder}')
         else:
             folder = Path(folder)
-        assert not folder.exists(), f'folder {folder} already exists, choose enother name'
+        assert not folder.exists(), f'folder {folder} already exists, choose another name'
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
