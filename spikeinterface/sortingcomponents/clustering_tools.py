@@ -281,7 +281,7 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
 
 
 def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefore, nafter, channel_distances,
-            radius_um=50, auto_merge_num_shift=7, auto_merge_quantile_limit=0.8, ratio_num_channel_intersect=0.5):
+            radius_um=50, auto_merge_num_shift=7, auto_merge_quantile_limit=0.8, ratio_num_channel_intersect=0.8):
     """
     
     
@@ -334,19 +334,20 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
             channel_inds1, = np.nonzero(sparsity_mask[l1, :])
             
             intersect_chans = np.intersect1d(channel_inds0, channel_inds1)
-            union_chans = np.union1d(channel_inds0, channel_inds1)
+            # union_chans = np.union1d(channel_inds0, channel_inds1)
             
             # we use
             radius_chans, = np.nonzero((channel_distances[main_chan0, :] <= radius_um) | (channel_distances[main_chan1, :] <= radius_um))
+            if radius_chans.size < (intersect_chans.size * ratio_num_channel_intersect):
+                print('WARNING INTERSECT')
+                print(intersect_chans.size, radius_chans.size, used_chans.size)
+                continue
+
             used_chans = np.intersect1d(radius_chans, intersect_chans)
             
             if used_chans.size == 0:
                 continue
                 
-            if used_chans.size < (union_chans.size * ratio_num_channel_intersect):
-                print('WARNING INTERSECT')
-                print(intersect_chans.size, union_chans.size, radius_chans.size, used_chans.size)
-                continue
             
             wfs0 = wfs_arrays[label0]
             wfs0 = wfs0[:, :,np.in1d(channel_inds0, used_chans)]
@@ -366,8 +367,8 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
             # DEBUG plot
             #~ plot_debug = debug
             #~ plot_debug = True
-            plot_debug = False
-            #~ plot_debug = equal
+            #~ plot_debug = False
+            plot_debug = equal
             if plot_debug :
                 import matplotlib.pyplot as plt
                 wfs_flat0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1).T
@@ -381,7 +382,7 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
                 
                 for c in range(len(used_chans)):
                     ax.axvline(c * (nbefore + nafter) + nbefore, color='k', ls='--')
-                ax.set_title(f'label0={label0} label1={label1} equal{equal} shift{shift} chans intersect{intersect_chans.size} union{union_chans.size}  radius{radius_chans.size} used{used_chans.size}')
+                ax.set_title(f'label0={label0} label1={label1} equal{equal} shift{shift} \n chans intersect{intersect_chans.size} radius{radius_chans.size} used{used_chans.size}')
                 plt.show()
     
     #~ print('auto_merge_list', auto_merge_list)

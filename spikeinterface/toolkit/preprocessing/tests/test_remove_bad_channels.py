@@ -1,12 +1,9 @@
-import unittest
-import pytest
+import numpy as np
 
 from spikeinterface import NumpyRecording
 from probeinterface import generate_linear_probe
 
 from spikeinterface.toolkit.preprocessing import remove_bad_channels
-
-import numpy as np
 
 
 def test_remove_bad_channels():

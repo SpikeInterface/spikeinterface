@@ -1,9 +1,15 @@
-import unittest
+import pytest
+from pathlib import Path
+import shutil
 
-from spikeinterface.extractors import toy_example, BinaryRecordingExtractor
-from probeinterface import write_probeinterface, read_probeinterface
-
+from spikeinterface.extractors import toy_example
 from spikeinterface.sorters import run_sorter
+
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "sorters"
+else:
+    cache_folder = Path("cache_folder") / "sorters"
 
 
 class SorterCommonTestSuite:
@@ -15,8 +21,13 @@ class SorterCommonTestSuite:
     SorterClass = None
 
     def setUp(self):
-        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
-        self.recording = recording.save(verbose=False, format='binary')
+        recording, sorting_gt = toy_example(
+            num_channels=4, duration=60, seed=0, num_segments=1)
+        rec_folder = cache_folder / "rec"
+        if rec_folder.is_dir():
+            shutil.rmtree(rec_folder)
+        self.recording = recording.save(
+            folder=cache_folder / "rec", verbose=False, format='binary')
         print(self.recording)
 
     def test_with_class(self):
@@ -27,13 +38,15 @@ class SorterCommonTestSuite:
 
         sorter_params = SorterClass.default_params()
 
-        output_folder = None
+        output_folder = cache_folder / SorterClass.sorter_name
         verbose = False
         remove_existing_folder = True
         raise_error = True
 
-        output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
-        SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
+        output_folder = SorterClass.initialize_folder(
+            recording, output_folder, verbose, remove_existing_folder)
+        SorterClass.set_params_to_folder(
+            recording, output_folder, sorter_params, verbose)
         SorterClass.setup_recording(recording, output_folder, verbose)
         SorterClass.run_from_folder(output_folder, raise_error, verbose)
         sorting = SorterClass.get_result_from_folder(output_folder)
@@ -51,9 +64,11 @@ class SorterCommonTestSuite:
 
         sorter_name = self.SorterClass.sorter_name
 
+        output_folder = cache_folder / sorter_name
+
         sorter_params = self.SorterClass.default_params()
 
-        sorting = run_sorter(sorter_name, recording, output_folder=None,
+        sorting = run_sorter(sorter_name, recording, output_folder=output_folder,
                              remove_existing_folder=True, delete_output_folder=False,
                              verbose=False, raise_error=True, **sorter_params)
 
@@ -61,4 +76,4 @@ class SorterCommonTestSuite:
 
     def test_get_version(self):
         version = self.SorterClass.get_sorter_version()
-        print('test_get_version:s', self.SorterClass.sorter_name, version)
+        print('test_get_versions', self.SorterClass.sorter_name, version)
