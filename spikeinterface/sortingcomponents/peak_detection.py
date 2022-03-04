@@ -3,6 +3,7 @@
 import numpy as np
 import scipy
 
+from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 from spikeinterface.toolkit import get_noise_levels, get_channel_distances
 
@@ -20,7 +21,6 @@ except ImportError:
 
 base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
-
 
 
 def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, **method_kwargs):
@@ -173,6 +173,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         Only used if noise_levels is None.
     outputs: 'numpy_compact', 'numpy_split', 'sorting'
         The type of the output. By default, "numpy_compact" returns an array with complex dtype.
+        In case of 'sorting', each unit corresponds to a recording channel.
     localization_dict : dict, optional
         Can optionally do peak localization at the same time as detection.
         This avoids running `localize_peaks` separately and re-reading the entire dataset.
@@ -232,9 +233,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     if outputs == 'numpy_compact':
         return peaks
     elif outputs == 'sorting':
-        # @alessio : here we can do what you did in old API
-        # the output is a sorting where unit_id is in fact one channel
-        raise NotImplementedError
+        return NumpySorting.from_peaks(peaks, sampling_frequency=recording.get_sampling_frequency())
 
 
 detect_peaks.__doc__ = detect_peaks.__doc__.format(_shared_job_kwargs_doc)

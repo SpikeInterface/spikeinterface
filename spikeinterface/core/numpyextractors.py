@@ -199,6 +199,27 @@ class NumpySorting(BaseSorting):
 
         return sorting
 
+    @staticmethod
+    def from_peaks(peaks, sampling_frequency):
+        """
+        Construct a sorting from peaks returned by 'detect_peaks()' function.
+        The unit ids correspond to the recording channel ids and spike trains are the
+        detected spikes for each channel.
+
+        Parameters
+        ----------
+        peaks : structured np.array
+            Peaks array as returned by the 'detect_peaks()' function
+        sampling_frequency : float
+            the sampling frequency in Hz
+
+        Returns
+        -------
+        sorting
+            The NumpySorting object
+        """
+        return NumpySorting.from_times_labels(peaks['sample_ind'], peaks['channel_ind'], sampling_frequency)
+
 
 class NumpySortingSegment(BaseSortingSegment):
     def __init__(self, units_dict):

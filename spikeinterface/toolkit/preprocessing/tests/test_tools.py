@@ -1,6 +1,3 @@
-import unittest
-import pytest
-
 import numpy as np
 
 from spikeinterface.core.testing_tools import generate_recording
