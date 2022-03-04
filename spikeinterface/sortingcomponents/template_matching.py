@@ -692,7 +692,10 @@ if HAVE_NUMBA:
 
 
 from scipy.fft._helper import _init_nd_shape_and_axes
-from scipy.signal.signaltools import  _init_freq_conv_axes, _apply_conv_mode
+try:
+    from scipy.signal.signaltools import  _init_freq_conv_axes, _apply_conv_mode
+except Exception:
+    from scipy.signal._signaltools import  _init_freq_conv_axes, _apply_conv_mode
 from scipy import linalg, fft as sp_fft
 
 
