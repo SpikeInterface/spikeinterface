@@ -9,7 +9,8 @@ from spikeinterface.toolkit import compute_correlograms
 def test_compute_correlograms():
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
     # ~ recording = se.MEArecRecordingExtractor(local_path)
     sorting = se.MEArecSortingExtractor(local_path)
 

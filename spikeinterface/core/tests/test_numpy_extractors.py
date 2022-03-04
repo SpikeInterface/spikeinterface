@@ -8,20 +8,10 @@ from spikeinterface.core import NumpyRecording, NumpySorting, NumpyEvent
 from spikeinterface.core.testing_tools import create_sorting_npz
 from spikeinterface.core import NpzSortingExtractor
 
-cache_folder = Path('./my_cache_folder')
-
-
-def _clean_all():
-    if cache_folder.exists():
-        shutil.rmtree(cache_folder)
-
-
-def setup_module():
-    _clean_all()
-
-
-def teardown_module():
-    _clean_all()
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
 
 
 def test_NumpyRecording():
@@ -33,7 +23,7 @@ def test_NumpyRecording():
 
     rec = NumpyRecording(timeseries_list, sampling_frequency)
     print(rec)
-    
+
     times1 = rec.get_times(1)
 
     rec.save(folder=cache_folder / 'test_NumpyRecording')
@@ -57,13 +47,14 @@ def test_NumpySorting():
     print(sorting)
     assert sorting.get_num_segments() == 1
 
-    sorting = NumpySorting.from_times_labels([times] * 3, [labels] * 3, sampling_frequency)
+    sorting = NumpySorting.from_times_labels(
+        [times] * 3, [labels] * 3, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 3
 
     # from other extracrtor
     num_seg = 2
-    file_path = 'test_NpzSortingExtractor.npz'
+    file_path = cache_folder / 'test_NpzSortingExtractor.npz'
     create_sorting_npz(num_seg, file_path)
     other_sorting = NpzSortingExtractor(file_path)
 
@@ -110,7 +101,6 @@ def test_NumpyEvent():
 
 
 if __name__ == '__main__':
-    _clean_all()
     test_NumpyRecording()
     test_NumpySorting()
     test_NumpyEvent()

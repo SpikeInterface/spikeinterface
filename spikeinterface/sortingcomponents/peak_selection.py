@@ -230,7 +230,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             twist = np.sum(probabilities * d)
             factor = twist * c
 
-            target_rejection = 1 - params['n_peaks']/len(indices)
+            target_rejection = (1 - params['n_peaks']/len(indices))**2
             res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, nbins), disp=False)
             rejection_curve = np.clip(1 - d*res[0], 0, 1)
 
