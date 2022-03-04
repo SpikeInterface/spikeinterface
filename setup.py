@@ -38,7 +38,7 @@ setup(
     extras_require=extras_require,
     classifiers=(
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache Software License",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     )
 )
