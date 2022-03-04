@@ -187,7 +187,7 @@ class SlidingHdbscanClustering:
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, 'SlidingHdbscanClustering need hdbscan to be installed'
         params = cls._check_params(recording, peaks, params)
-        wfs_arrays, wfs_arrays_info, sparsity_mask, noise = cls._initlialize_folder(recording, peaks, params)
+        wfs_arrays, sparsity_mask, noise = cls._initlialize_folder(recording, peaks, params)
         peak_labels = cls._find_clusters(recording, peaks, wfs_arrays, sparsity_mask, noise, params)
         
         wfs_arrays2, sparsity_mask2 = cls._prepare_clean(recording, peaks, wfs_arrays, sparsity_mask, peak_labels, params)
@@ -304,9 +304,6 @@ class SlidingHdbscanClustering:
         actual_label = 1
         
         while True:
-            print()
-            print('actual_label', actual_label, 'remain', np.sum(peak_labels==0))
-
             # update ampltiude percentile and count peak by channel
             for chan_ind in prev_local_chan_inds:
                 if total_count[chan_ind] == 0:
@@ -334,7 +331,7 @@ class SlidingHdbscanClustering:
             local_chan_inds = closest_channels[local_chan_ind]
             
             # take waveforms not label yet for channel in radius
-            t0 = time.perf_counter()
+            #~ t0 = time.perf_counter()
             wfs = []
             local_peak_ind = []
             for chan_ind in local_chan_inds:
@@ -361,12 +358,12 @@ class SlidingHdbscanClustering:
             wfs.append(noise[:, :, local_chan_inds])
             wfs = np.concatenate(wfs, axis=0)
             local_peak_ind = np.concatenate(local_peak_ind, axis=0)
-            t1 = time.perf_counter()
-            print('WFS time',  t1 - t0)
+            #~ t1 = time.perf_counter()
+            #~ print('WFS time',  t1 - t0)
             
 
             # reduce dim : PCA
-            t0 = time.perf_counter()
+            #~ t0 = time.perf_counter()
             n = d['n_components_by_channel']
             local_feature = np.zeros((wfs.shape[0], d['n_components_by_channel'] * len(local_chan_inds)))
 
@@ -382,19 +379,19 @@ class SlidingHdbscanClustering:
                 local_feature[:, c*n:(c+1)*n] = pca.fit_transform(wfs[:, :, c])
 
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
-            t1 = time.perf_counter()
-            print('PCA time',  t1 - t0)
+            #~ t1 = time.perf_counter()
+            #~ print('PCA time',  t1 - t0)
 
             
             # find some clusters
-            t0 = time.perf_counter()
+            #~ t0 = time.perf_counter()
             clusterer = hdbscan.HDBSCAN(min_cluster_size=d['min_cluster_size'], allow_single_cluster=True, metric='l2')
             all_labels = clusterer.fit_predict(local_feature)
-            t1 = time.perf_counter()
-            print('HDBSCAN time',  t1 - t0)
+            #~ t1 = time.perf_counter()
+            #~ print('HDBSCAN time',  t1 - t0)
             
 
-            t0 = time.perf_counter()
+            #~ t0 = time.perf_counter()
             local_labels = all_labels[:-noise.shape[0]]
             noise_labels = all_labels[-noise.shape[0]:]
             
@@ -438,8 +435,8 @@ class SlidingHdbscanClustering:
                     peak_labels[final_peak_inds] = -actual_label
                 actual_label += 1
 
-            t1 = time.perf_counter()
-            print('label time',  t1 - t0)
+            #~ t1 = time.perf_counter()
+            #~ print('label time',  t1 - t0)
             
             # this force recompute amplitude and count at next loop
             prev_local_chan_inds = local_chan_inds
@@ -649,7 +646,7 @@ class PositionAndPCAClustering:
         
         "n_components_by_channel" : 3,
         "n_components": 5,
-        "job_kwargs" : {"n_jobs" : 1, "chunk_memory" : "10M", "progress_bar" : True},
+        "job_kwargs" : {"n_jobs" : 1, "chunk_memory" : "10M", "progress_bar" : False},
         "hdbscan_params_spatial": {"min_cluster_size" : 20, "allow_single_cluster" : True},
         "probability_thr" : 0,
         "hdbscan_params_pca": {"min_cluster_size" : 10, "allow_single_cluster" : True},
@@ -657,7 +654,7 @@ class PositionAndPCAClustering:
         'waveform_mode': 'memmap',
         "local_radius_um" : 50.,
         'noise_size' : 300,
-        "debug" : True,
+        "debug" : False,
         "tmp_folder" : None,
         'auto_merge_num_shift': 3,
         'auto_merge_quantile_limit': 0.8, 
@@ -746,9 +743,9 @@ class PositionAndPCAClustering:
         if d['waveform_mode'] == 'shared_memory':
             wf_folder = None
         else:
-            if tmp_folder is not None:
-                wf_folder = tmp_folder / 'waveforms_pre_cluster'
-                wf_folder.mkdir()
+            assert tmp_folder is not None
+            wf_folder = tmp_folder / 'waveforms_pre_cluster'
+            wf_folder.mkdir()
 
         fs = recording.get_sampling_frequency()
         nbefore = int(d['ms_before'] * fs / 1000.)
@@ -776,12 +773,10 @@ class PositionAndPCAClustering:
         peak_labels = -2 * np.ones(peaks.size, dtype=np.int64)
         peak_labels[spatial_keep] = split_peak_labels
         
-        print(main_channels)
-
         # auto clean
         pre_clean_labels = np.unique(peak_labels)
         pre_clean_labels = pre_clean_labels[pre_clean_labels>=0]
-        print('labels before auto clean', pre_clean_labels.size, pre_clean_labels)
+        #~ print('labels before auto clean', pre_clean_labels.size, pre_clean_labels)
 
         peaks3 = np.zeros(peaks.size, dtype=peak_dtype)
         peaks3['sample_ind'] = peaks['sample_ind']
@@ -794,8 +789,7 @@ class PositionAndPCAClustering:
             closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
             sparsity_mask3[l, closest_chans] = True
         
-        print(sparsity_mask3)
-        
+
         if d['waveform_mode'] == 'shared_memory':
             wf_folder = None
         else:
@@ -807,9 +801,6 @@ class PositionAndPCAClustering:
                                 mode=d['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
                                 sparsity_mask=sparsity_mask3,  copy=(d['waveform_mode'] == 'shared_memory'),
                                 **d['job_kwargs'])
-        print('wfs_arrays3.keys()', wfs_arrays3.keys())
-        
-        
         
         clean_peak_labels, peak_sample_shifts = auto_clean_clustering(wfs_arrays3, sparsity_mask3, pre_clean_labels, peak_labels, nbefore, nafter, chan_distances,
                                 radius_um=d['local_radius_um'], auto_merge_num_shift=d['auto_merge_num_shift'],
@@ -819,8 +810,6 @@ class PositionAndPCAClustering:
         # final
         labels = np.unique(clean_peak_labels)
         labels = labels[labels>=0]
-        
-        print('labels before afert clean', labels.size, labels)
         
         return labels, clean_peak_labels        
 

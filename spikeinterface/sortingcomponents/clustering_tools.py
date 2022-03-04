@@ -38,10 +38,10 @@ def _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel
     labels, count = labels[mask], count[mask]
     minimum_cluster_size_ratio = 0.05
     
-    print(labels, count)
+    #~ print(labels, count)
     
     to_remove = labels[(count / valid_size) <minimum_cluster_size_ratio]
-    print('to_remove', to_remove, count / valid_size)
+    #~ print('to_remove', to_remove, count / valid_size)
     if to_remove.size > 0:
         local_labels_with_noise[np.in1d(local_labels_with_noise, to_remove)] = -1
     
@@ -87,7 +87,7 @@ def _split_waveforms_nested(wfs_and_noise, noise_size, nbefore, n_components_by_
     
     local_count = 1
     while True:
-        print('  local_count', local_count, np.sum(local_labels_with_noise[:-noise_size] == 0), local_labels_with_noise.size - noise_size)
+        #~ print('  local_count', local_count, np.sum(local_labels_with_noise[:-noise_size] == 0), local_labels_with_noise.size - noise_size)
         
         if np.all(local_labels_with_noise[:-noise_size] != 0):
             break
@@ -211,8 +211,8 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
     nb_clusters = 0
     main_channels = {}
     for l, label in enumerate(labels):
-        print()
-        print('auto_split_clustering', label, l, len(labels))
+        #~ print()
+        #~ print('auto_split_clustering', label, l, len(labels))
         
         chans, = np.nonzero(sparsity_mask[l, :])
         
@@ -339,8 +339,8 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
             # we use
             radius_chans, = np.nonzero((channel_distances[main_chan0, :] <= radius_um) | (channel_distances[main_chan1, :] <= radius_um))
             if radius_chans.size < (intersect_chans.size * ratio_num_channel_intersect):
-                print('WARNING INTERSECT')
-                print(intersect_chans.size, radius_chans.size, used_chans.size)
+                #~ print('WARNING INTERSECT')
+                #~ print(intersect_chans.size, radius_chans.size, used_chans.size)
                 continue
 
             used_chans = np.intersect1d(radius_chans, intersect_chans)
@@ -367,8 +367,8 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
             # DEBUG plot
             #~ plot_debug = debug
             #~ plot_debug = True
-            #~ plot_debug = False
-            plot_debug = equal
+            plot_debug = False
+            #~ plot_debug = equal
             if plot_debug :
                 import matplotlib.pyplot as plt
                 wfs_flat0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1).T
