@@ -1,11 +1,20 @@
-import unittest
 import pytest
+from pathlib import Path
+import shutil
 
+from spikeinterface import set_global_tmp_folder
 from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.toolkit.preprocessing import CommonReferenceRecording, common_reference
 
 import numpy as np
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "toolkit"
+else:
+    cache_folder = Path("cache_folder") / "toolkit"
+
+set_global_tmp_folder(cache_folder)
 
 
 def test_common_reference():
@@ -17,16 +26,19 @@ def test_common_reference():
     rec_cmr = common_reference(rec, reference='global', operator='median')
     rec_car = common_reference(rec, reference='global', operator='average')
     rec_sin = common_reference(rec, reference='single', ref_channel_ids=['a'])
-    rec_local_car = common_reference(rec, reference='local', local_radius=(20, 65), operator='median')
-   
+    rec_local_car = common_reference(
+        rec, reference='local', local_radius=(20, 65), operator='median')
+
     rec_cmr.save(verbose=False)
     rec_car.save(verbose=False)
     rec_sin.save(verbose=False)
     rec_local_car.save(verbose=False)
 
     traces = rec.get_traces()
-    assert np.allclose(traces, rec_cmr.get_traces() + np.median(traces, axis=1, keepdims=True), atol=0.01)
-    assert np.allclose(traces, rec_car.get_traces() + np.mean(traces, axis=1, keepdims=True), atol=0.01)
+    assert np.allclose(traces, rec_cmr.get_traces() +
+                       np.median(traces, axis=1, keepdims=True), atol=0.01)
+    assert np.allclose(traces, rec_car.get_traces() +
+                       np.mean(traces, axis=1, keepdims=True), atol=0.01)
     assert not np.all(rec_sin.get_traces()[0])
     assert np.allclose(rec_sin.get_traces()[:, 1], traces[:, 1] - traces[:, 0])
 

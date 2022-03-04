@@ -205,12 +205,13 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #~ test = MearecRecordingTest()
-    # ~ test = MearecSortingTest()
+    pass
+    # test = MearecRecordingTest()
+    # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
-    #~ test = OpenEphysBinaryRecordingTest()
-    # ~ test = OpenEphysLegacyRecordingTest()
-    #~ test = OpenEphysBinaryEventTest()
+    # test = OpenEphysBinaryRecordingTest()
+    # test = OpenEphysLegacyRecordingTest()
+    # test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
@@ -218,13 +219,10 @@ if __name__ == '__main__':
     # test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
-    # ~ test = Spike2RecordingTest()
-    # ~ test = CedRecordingTest()
-    # ~ test = MaxwellRecordingTest()
-    #~ test = SpikeGadgetsRecordingTest()
-    # test = TdTRecordingTest()
-    test = AxonaRecordingTest()
-    # test = BiocamRecordingTest()
+    # test = Spike2RecordingTest()
+    # test = CedRecordingTest()
+    # test = MaxwellRecordingTest()
+    # test = SpikeGadgetsRecordingTest()
 
-    test.setUp()
-    test.test_open()
+    # test.setUp()
+    # test.test_open()
