@@ -34,20 +34,27 @@ def generate_sorting(
         num_units=5,
         sampling_frequency=30000.,  # in Hz
         durations=[10.325, 3.5],  #  in s for 2 segments
+        empty_units=None
 ):
     num_segments = len(durations)
     num_timepoints = [int(sampling_frequency * d) for d in durations]
 
     unit_ids = np.arange(num_units)
 
+    if empty_units is None:
+        empty_units = []
+
     units_dict_list = []
     for seg_index in range(num_segments):
         units_dict = {}
         for unit_id in unit_ids:
-            #  15 Hz for all units
-            n_spike = int(15. * durations[seg_index])
-            spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n_spike)))
-            units_dict[unit_id] = spike_times
+            if unit_id not in empty_units:
+                #  15 Hz for all units
+                n_spike = int(15. * durations[seg_index])
+                spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n_spike)))
+                units_dict[unit_id] = spike_times
+            else:
+                units_dict[unit_id] = np.array([], dtype=int)
         units_dict_list.append(units_dict)
     sorting = NumpySorting.from_dict(units_dict_list, sampling_frequency)
 
