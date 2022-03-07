@@ -159,9 +159,15 @@ def allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mod
             wfs_arrays[unit_id] = arr
             wfs_arrays_info[unit_id] = filename
         elif mode == 'shared_memory':
-            arr, shm = make_shared_array(shape, dtype)
+            if n_spikes == 0:
+                arr = np.zeros(shape, dtype=dtype)
+                shm = None
+                shm_name = None
+            else:
+                arr, shm = make_shared_array(shape, dtype)
+                shm_name = shm.name
             wfs_arrays[unit_id] = arr
-            wfs_arrays_info[unit_id] = (shm, shm.name, dtype.str, shape)
+            wfs_arrays_info[unit_id] = (shm, shm_name, dtype.str, shape)
         else:
             raise ValueError('allocate_waveforms_buffers bad mode')
 
@@ -248,8 +254,11 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info
         wfs_arrays = {}
         shms = {}
         for unit_id, (sm, shm_name, dtype, shape) in wfs_arrays_info.items():
-            shm = SharedMemory(shm_name)
-            arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            if shm_name is None:
+                arr = np.zeros(shape=shape, dtype=dtype)
+            else:
+                shm = SharedMemory(shm_name)
+                arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
             wfs_arrays[unit_id] = arr
             # we need a reference to all sham otherwise we get segment fault!!!
             shms[unit_id] = shm

@@ -2,7 +2,8 @@ import numpy as np
 import scipy.spatial
 
 
-def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, chunk_size=10000, seed=0):
+def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, 
+                chunk_size=10000, concatenated=True, seed=0):
     """
     Exctract random chunks across segments
 
@@ -18,9 +19,10 @@ def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segmen
         Number of chunks per segment
     chunk_size: int
         Size of a chunk in number of frames
+    concatenated: bool (default True)
+        If True chunk are concatenated along time axis.
     seed: int
         Random seed
-
     Returns
     -------
     chunk_list: np.array
@@ -41,7 +43,10 @@ def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segmen
                                          segment_index=segment_index,
                                          return_scaled=return_scaled)
             chunk_list.append(chunk)
-    return np.concatenate(chunk_list, axis=0)
+    if concatenated:
+        return np.concatenate(chunk_list, axis=0)
+    else:
+        return chunk_list
 
 
 def get_channel_distances(recording):
