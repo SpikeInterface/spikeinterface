@@ -3,24 +3,6 @@
 import numpy as np
 import scipy
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from spikeinterface.toolkit import get_noise_levels, get_channel_distances
-
-from ..toolkit import get_chunk_with_margin
-
-from .peak_localization import (dtype_localize_by_method, init_kwargs_dict,
-                                localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation)
-
-try:
-    import numba
-
-    HAVE_NUMBA = True
-except ImportError:
-    HAVE_NUMBA = False
-
-base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
-                   ('amplitude', 'float64'), ('segment_ind', 'int64')]
-
 
 
 def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):

@@ -14,14 +14,12 @@ from .peak_localization import (dtype_localize_by_method, init_kwargs_dict,
 
 try:
     import numba
-
     HAVE_NUMBA = True
 except ImportError:
     HAVE_NUMBA = False
 
 base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
-
 
 
 def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, n_shifts=2,
