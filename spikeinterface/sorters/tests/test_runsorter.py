@@ -1,5 +1,6 @@
 import os
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -17,13 +18,19 @@ except Exception:  # this command not being found can raise quite a few differen
     NO_NVIDIA_GPU = True
 
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "sorters"
+else:
+    cache_folder = Path("cache_folder") / "sorters"
+
+
 def test_run_sorter_local():
     local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting_true = read_mearec(local_path)
 
     sorter_params = {'detect_threshold': 4.9}
 
-    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder='sorting_tdc_local',
+    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder=cache_folder / 'sorting_tdc_local',
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, docker_image=None,
                          **sorter_params)
@@ -33,7 +40,9 @@ def test_run_sorter_local():
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
 def test_run_sorter_docker():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5', unlock=True)
-    output_folder='sorting_tdc_docker'
+
+    mearec_filename = download_dataset(
+        remote_path='mearec/mearec_test_10s.h5', unlock=True)
 
     recording, sorting_true = read_mearec(mearec_filename)
 
@@ -41,7 +50,7 @@ def test_run_sorter_docker():
 
     docker_image = 'spikeinterface/tridesclous-base:1.6.4-1'
 
-    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder=output_folder,
+    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder=cache_folder / 'sorting_tdc_docker',
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, docker_image=docker_image,
                          with_output=False, **sorter_params)
@@ -52,7 +61,6 @@ def test_run_sorter_docker():
 @pytest.mark.skipif(ON_GITHUB, reason="Singularity tests don't run on github: test it locally")
 def test_run_sorter_singularity():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5', unlock=True)
-    output_folder='sorting_tdc_singularity'
 
     recording, sorting_true = read_mearec(mearec_filename)
 
@@ -60,7 +68,7 @@ def test_run_sorter_singularity():
 
     singularity_image = 'spikeinterface/tridesclous-base:1.6.4-1'
 
-    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder=output_folder,
+    sorting = run_sorter(sorter_name='tridesclous', recording=recording, output_folder=cache_folder / 'sorting_tdc_singularity',
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=True, raise_error=True, singularity_image=singularity_image,
                          **sorter_params)

@@ -6,8 +6,6 @@ import copy
 import time
 from pprint import pprint
 
-import distutils.version
-
 from spikeinterface.extractors import TridesclousSortingExtractor
 
 from ..basesorter import BaseSorter
