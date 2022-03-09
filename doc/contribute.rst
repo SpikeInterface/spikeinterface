@@ -4,7 +4,7 @@ Contribute
 To contribute to SpikeInterface, a user/developer can help us integrate in a new recorded file
 format, a new sorted file format, or a new spike sorting algorithm.
 
-This package uses poetry_. Please run tests locally before making a pull request.
+Please run tests locally before making a pull request.
 
 .. toctree::
    :maxdepth: 1
@@ -13,6 +13,3 @@ This package uses poetry_. Please run tests locally before making a pull request
    implement_sorting_extractor
    implement_spike_sorter
    run_tests
-
-
-.. _poetry: https://python-poetry.org/
