@@ -11,4 +11,4 @@ Note that if using Z shell (:code:`zsh` - the default shell on mac), you will ne
 
 .. tip::
 
-  Make a folder name `test_results` on the root of the repository, and run the tests from here :code:`poetry run pytest ..`
+  Make a folder name `test_results` on the root of the repository, and run the tests from here :code:`pytest ..`
