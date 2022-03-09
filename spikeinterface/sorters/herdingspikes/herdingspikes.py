@@ -115,7 +115,7 @@ class HerdingspikesSorter(BaseSorter):
     For more information see https://doi.org/10.1016/j.jneumeth.2016.06.006"""
 
     installation_mesg = """\nTo use HerdingSpikes run:\n
-       >>> pip install spikeinterface[herdingspikes]
+       >>> pip install herdingspikes
     More information on HerdingSpikes at:
       * https://github.com/mhhennig/hs2
     """

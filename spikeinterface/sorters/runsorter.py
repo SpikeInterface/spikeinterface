@@ -284,10 +284,22 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     need_si_install = 'ModuleNotFoundError' in res_output
 
     if need_si_install:
-        if verbose:
-            print(f"Installing spikeinterface=={si.__version__} in {container_image}")
-        cmd = f'pip install --upgrade --no-input spikeinterface[full]=={si.__version__}'
-        res_output = container_client.run_command(cmd)
+        if 'dev' in si_version:
+            if verbose:
+                print(
+                    f"Installing spikeinterface from sources in {container_image}")
+            # TODO later check output
+            cmd = 'pip install --upgrade --no-input MEArec'
+            res_output = container_client.run_command(cmd)
+            cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
+            res_output = container_client.run_command(cmd)
+            cmd = 'pip install --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
+            res_output = container_client.run_command(cmd)
+        else:
+            if verbose:
+                print(f"Installing spikeinterface in {container_image}")
+            cmd = f'pip install --upgrade --no-input .[full]'
+            res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
         if verbose:

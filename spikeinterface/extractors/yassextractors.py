@@ -8,7 +8,7 @@ try:
     import yaml
 
     HAVE_YAML = True
-except:
+except ImportError:
     HAVE_YAML = False
 
 

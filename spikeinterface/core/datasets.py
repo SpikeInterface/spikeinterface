@@ -8,7 +8,7 @@ try:
     import datalad.api
     from datalad.support.gitrepo import GitRepo
     HAVE_DATALAD = True
-except:
+except ImportError:
     HAVE_DATALAD = False
 
 

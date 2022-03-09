@@ -10,7 +10,7 @@ try:
     import pandas as pd
 
     HAVE_PANDAS = True
-except:
+except ImportError:
     HAVE_PANDAS = False
 
 

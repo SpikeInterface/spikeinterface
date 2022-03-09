@@ -34,7 +34,10 @@ class PyKilosortSorter(BaseSorter):
     sorter_description = """pykilosort is a port of kilosort to python"""
 
     installation_mesg = """\nTo use pykilosort:\n
-       >>> pip install spikeinterface[pykilosort]
+       >>> pip install cupy
+        >>> git clone https://github.com/MouseLand/pykilosort
+        >>> cd pykilosort
+        >>>python setup.py install
     More info at https://github.com/MouseLand/pykilosort#installation
     """
 

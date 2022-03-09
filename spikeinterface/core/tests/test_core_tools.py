@@ -10,7 +10,7 @@ try:
     from multiprocessing.shared_memory import SharedMemory
 
     HAVE_SHAREDMEMORY = True
-except:
+except ImportError:
     HAVE_SHAREDMEMORY = False
 
 

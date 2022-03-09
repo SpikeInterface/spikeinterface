@@ -49,7 +49,7 @@ class SpykingcircusSorter(BaseSorter):
     spike sorting. For more information see https://doi.org/10.7554/eLife.34518"""
 
     installation_mesg = """\nTo use Spyking-Circus run:\n
-        >>> pip install spikeinterface[spyking-circus]
+        >>> pip install spyking-circus
 
         Need MPICH working, for ubuntu do:
             sudo apt install libmpich-dev mpich

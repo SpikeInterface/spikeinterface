@@ -17,25 +17,26 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.10"
+python = ">=3.7,<3.10"
 
 probeinterface = "^0.2.6"
 
-numpy = "^1.21"
-scipy = "^1.8.0"
-networkx = "^2.7"
 neo = "^0.10.0"
-sklearn = "^0.0"
-
-pandas = "^1.4.1"
-h5py = "^3.6.0"
-
-matplotlib = "^3.5.1"
 joblib = "^1.1.0"
 tqdm = "^4.62.3"
+numpy = "^1.21"
 
-datalad = "^0.15.6"
+# scipy = {version = "^1.8.0", optional = true}
+scikit-learn = {version = "^1.0.2", optional = true}
+h5py = {version = "^3.6.0", optional = true}
+matplotlib = {version = "^3.5.1", optional = true}
+networkx = {version = "^2.7", python= ">=3.8", optional = true}
+pandas = [
+    {version = "*", python= "~3.7", optional = true},
+    {version = "^1.4.1", python= ">=3.8", optional = true}
+]
 
+datalad = {version = "^0.15.6", optional = true}
 MEArec = {version = "^1.7.2", optional = true}
 pynwb = {version = "^2.0.0", optional = true}
 sonpy = [
@@ -43,76 +44,34 @@ sonpy = [
     {version = "^1.9.1", python= "~3.9", optional = true}
 ]
 
-PyQt5 = {version = "^5.15.6", optional = true}
-
-tridesclous = {version = "^1.6.5", optional = true}
-pyopencl = {version = "^2022.1", optional = true}
-loky = {version = "^3.0.0", optional = true}
-
-spyking-circus = {version = "^1.1.0", optional = true}
-
-herdingspikes = {version = "^0.3.99", optional = true}
-
-mountainsort4 = {version = "^1.0.0", optional = true}
-
-cupy = {version = "^10.2.0", optional = true}
-phylib = {version = "^2.4.1", optional = true}
-pypandoc = {version = "^1.7.2", optional = true}
-pykilosort = {git = "https://github.com/MouseLand/pykilosort.git", optional = true}
-
-Cython = {version = "^0.29.28", optional = true}
-klusta = {version = "^3.0.16", optional = true}
-klustakwik2 = {version = "^0.2.7", optional = true}
-
+# Containerisation frameworks
 spython = {version = "^0.1.18", optional = true}
 docker = {version = "^5.0.3", optional = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.1"
 
+# For testing
+spython = "^0.1.18"
+docker = "^5.0.3"
+
+pyopencl = "^2022.1"
+loky = "^3.0.0"
+PyQt5 = "^5.15.6"
+tridesclous = "^1.6.5"
+
+spyking-circus = "^1.1.0"
+herdingspikes = "^0.3.99"
+
 [tool.poetry.extras]
-tridesclous = ["tridesclous", "PyQt5", "loky", "pyopencl"]
-spyking-circus = ["spyking-circus", "PyQt5"]
-herdingspikes = ["herdingspikes"]
-pykilosort = ["cupy", "phylib", "pypandoc", "pykilosort"]
-klusta = ["Cython", "klusta", "klustakwik2"]
-mountainsort = ["mountainsort4"]
-
-all_sorters = [
-    "PyQt5",
-    "tridesclous", "loky",
-    "spyking-circus",
-    "herdingspikes",
-    "cupy", "phylib", "pypandoc", "pykilosort",
-    "Cython", "klusta", "klustakwik2",
-    "mountainsort4"
-]
-
 extractors = ["MEArec", "sonpy", "pynwb"]
 
 full = [
-    "MEArec", "sonpy", "pynwb",
-    "PyQt5",
-    "tridesclous", "loky",
-    "spyking-circus",
-    "herdingspikes",
-    "cupy", "phylib", "pypandoc", "pykilosort",
-    "Cython", "klusta", "klustakwik2",
-    "mountainsort4"
+    "h5py", "pandas", "scipy", "scikit-learn", "matplotlib", "networkx"
 ]
 
 docker = ["docker"]
 spython = ["spython"]
-
-test = [
-    "docker", "spython",
-
-    "MEArec", "sonpy", "pynwb",
-    "PyQt5",
-    "tridesclous", "loky",
-    "spyking-circus",
-    "herdingspikes"
-]
 
 [tool.pytest.ini_options]
 minversion = "7.0.1"

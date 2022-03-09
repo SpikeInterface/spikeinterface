@@ -228,7 +228,7 @@ class HDSortSorter(BaseSorter):
     def write_hdsort_input_format(cls, recording, save_path, chunk_memory='500M'):
         try:
             import h5py
-        except:
+        except ImportError:
             raise Exception("To use HDSort, install h5py: pip install h5py")
 
         # check if already in write format

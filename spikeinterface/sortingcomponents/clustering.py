@@ -12,7 +12,7 @@ import sklearn.decomposition
 try:
     import hdbscan
     HAVE_HDBSCAN = True
-except:
+except ImportError:
     HAVE_HDBSCAN = False
 
 

@@ -4,13 +4,19 @@ from pathlib import Path
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment)
 
-import h5py
+try:
+    import h5py
+    HAVE_H5PY = True
+except ImportError:
+    HAVE_H5PY = False
 
 
 class CombinatoSortingExtractor(BaseSorting):
     extractor_name = 'CombinatoSortingExtractor'
     installation_mesg = ""
+    installed = HAVE_H5PY
     is_writable = False
+    installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
 
     def __init__(self, folder_path, sampling_frequency=None, user='simple', det_sign='both', keep_good_only=True):
 

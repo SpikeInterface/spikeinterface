@@ -10,31 +10,13 @@ To install the current release version, you can use:
 
 .. code-block:: bash
 
-  pip install spikeinterface[full]
+   pip install spikeinterface[full]
 
-The :code:`[full]` option installs all spike sorters and extractors; all optional dependencies.
+The :code:`[full]` option installs all extra dependencies.
 
 Note that if using Z shell (:code:`zsh` - the default shell on mac), you will need to use quotes (:code:`pip install "spikeinterface[full]"`).
 
-Install individual spike sorters by replacing full with the spike sorter name:
-
-.. code-block:: bash
-
-  pip install spikeinterface[tridesclous, spyking-circus, herdingspikes, pykilosort, klusta, mountainsort]
-
-Install all spike sorters:
-
-.. code-block:: bash
-
-  pip install spikeinterface[all_sorters]
-
-Install extractors:
-
-.. code-block:: bash
-
-  pip install spikeinterface[extractors]
-
-Only install the :code:`core` module, without any optional dependency:
+If you wish to only install the :code:`core` module, without optional dependencies, you can use:
 
 .. code-block:: bash
 
