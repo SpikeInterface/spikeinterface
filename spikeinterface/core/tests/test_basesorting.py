@@ -10,7 +10,7 @@ import numpy as np
 from spikeinterface.core import NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.testing_tools import create_sorting_npz
+from spikeinterface.core.testing_tools import create_sorting_npz, generate_sorting
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -65,6 +65,19 @@ def test_BaseSorting():
 
     spikes = sorting.to_spike_vector()
     # print(spikes)
+    
+    # select units
+    keep_units = [0, 1]
+    sorting_select = sorting.select_units(unit_ids=keep_units)
+    for unit in sorting_select.get_unit_ids():
+        assert unit in keep_units
+        
+    # remove empty units
+    empty_units = [1, 3]
+    sorting_empty = generate_sorting(empty_units=empty_units)
+    sorting_clean = sorting_empty.remove_empty_units()
+    for unit in sorting_clean.get_unit_ids():
+        assert unit not in empty_units
 
 
 if __name__ == '__main__':
