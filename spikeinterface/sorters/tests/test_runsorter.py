@@ -13,9 +13,9 @@ ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 # Courtesy of https://stackoverflow.com/a/67504607/9793651
 try:
     subprocess.check_output('nvidia-smi')
-    NO_NVIDIA_GPU = False
+    NVIDIA_GPU_INSTALLED = True
 except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
-    NO_NVIDIA_GPU = True
+    NVIDIA_GPU_INSTALLED = False
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -40,9 +40,6 @@ def test_run_sorter_local():
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
 def test_run_sorter_docker():
     mearec_filename = download_dataset(remote_path='mearec/mearec_test_10s.h5', unlock=True)
-
-    mearec_filename = download_dataset(
-        remote_path='mearec/mearec_test_10s.h5', unlock=True)
 
     recording, sorting_true = read_mearec(mearec_filename)
 

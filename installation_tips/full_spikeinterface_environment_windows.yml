@@ -23,6 +23,6 @@ dependencies:
   - compilers
   - pip:
     - ephyviewer
-    - spikeinterface[full]
+    - spikeinterface[full, extractors]
     - spikeinterface-gui
     - phy==2.0b5

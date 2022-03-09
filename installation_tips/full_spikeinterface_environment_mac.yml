@@ -24,7 +24,6 @@ dependencies:
   - compilers
   - pyqt
   - pip:
-#    - PyQt5
     - ephyviewer
-    - spikeinterface[full]
+    - spikeinterface[full, extractors]
     - spikeinterface-gui
