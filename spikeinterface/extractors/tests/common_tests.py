@@ -68,12 +68,13 @@ class SortingCommonTestSuite(CommonTestSuite):
 
             if isinstance(entity, tuple):
                 path, kwargs = entity
+                sorting = self.ExtractorClass(local_folder / path, **kwargs)
             elif isinstance(entity, str):
                 path = entity
-                kwargs = {}
-
-            sorting = self.ExtractorClass(local_folder / path, **kwargs)
-            # print(sorting)
+                sorting = self.ExtractorClass(local_folder / path)
+            elif isinstance(entity, dict):
+                kwargs = entity
+                sorting = self.ExtractorClass(**kwargs)
 
             num_seg = sorting.get_num_segments()
             unit_ids = sorting.unit_ids
