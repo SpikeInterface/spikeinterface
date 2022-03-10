@@ -6,6 +6,7 @@ from spikeinterface.core import (BaseRecording, BaseSorting,
 
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False

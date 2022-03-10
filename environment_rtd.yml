@@ -7,10 +7,8 @@ dependencies:
   - git-annex
   - datalad
   - pyqt=5
-  - numpy=1.20
+  - numpy<1.22
   - pip:
-    - joblib
-    - tqdm
     - pillow
     - matplotlib
     - h5py
@@ -19,8 +17,6 @@ dependencies:
     - networkx
     - pybind11
     - loky
-    - neo>=0.10.0
-    - probeinterface
     - MEArec>=1.7.1
     - isosplit5
     - mountainsort4>=1.0.0    
@@ -28,7 +24,6 @@ dependencies:
     - herdingspikes
     - sphinx-gallery
     - numpydoc
-    - numpy<1.22
     - git+https://github.com/scikit-learn-contrib/hdbscan.git
     - numba==0.54.1
     - git+https://github.com/SpikeInterface/spikeinterface.git

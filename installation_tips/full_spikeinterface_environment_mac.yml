@@ -5,7 +5,6 @@ channels:
 dependencies:
   - python=3.8
   - pip>=21.0
-  # numpy 1.21 break numba which break tridesclous
   - numpy<1.22
   - joblib
   - tqdm
@@ -22,9 +21,11 @@ dependencies:
   - mpi
   - mpi4py
   - compilers
-  - pyqt
   - pip:
-#    - PyQt5
+    - tridesclous>=1.6.3
+    - phy==2.0b5
+    - herdingspikes
+    - mountainsort4>=1.0.0
     - ephyviewer
-    - spikeinterface[full]
+    - spikeinterface[full, extractors]
     - spikeinterface-gui

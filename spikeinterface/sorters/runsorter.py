@@ -148,7 +148,12 @@ class ContainerClient:
         self.mode = mode
 
         if mode == 'docker':
-            import docker
+            try:
+                import docker
+            except ImportError:
+                msg = "Run pip install spikeinterface[docker] for running with docker"
+                raise ImportError(msg)
+
             client = docker.from_env()
             if extra_kwargs.get('requires_gpu', False):
                 extra_kwargs.pop('requires_gpu')
@@ -167,7 +172,12 @@ class ContainerClient:
                     container_image, tty=True, volumes=volumes, **extra_kwargs)
 
         elif mode == 'singularity':
-            from spython.main import Client
+            try:
+                from spython.main import Client
+            except ImportError:
+                msg = "Run pip install spikeinterface[singularity] for running with singularity"
+                raise ImportError(msg)
+
             # load local image file if it exists, otherwise search dockerhub
             if Path(container_image).exists():
                 self.singularity_image = container_image
@@ -284,7 +294,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     need_si_install = 'ModuleNotFoundError' in res_output
 
     if need_si_install:
-        if 'dev' in si_version:
+        if 'dev' in si.__version__:
             if verbose:
                 print(
                     f"Installing spikeinterface from sources in {container_image}")
@@ -297,8 +307,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
-                print(f"Installing spikeinterface in {container_image}")
-            cmd = f'pip install --upgrade --no-input .[full]'
+                print(f"Installing spikeinterface=={si.__version__} in {container_image}")
+            cmd = f'pip install --upgrade --no-input spikeinterface[full]=={si.__version__}'
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
