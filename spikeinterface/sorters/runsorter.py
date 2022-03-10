@@ -148,7 +148,12 @@ class ContainerClient:
         self.mode = mode
 
         if mode == 'docker':
-            import docker
+            try:
+                import docker
+            except ImportError:
+                msg = "Run pip install spikeinterface[docker] for running with docker"
+                raise ImportError(msg)
+
             client = docker.from_env()
             if extra_kwargs.get('requires_gpu', False):
                 extra_kwargs.pop('requires_gpu')
@@ -167,7 +172,12 @@ class ContainerClient:
                     container_image, tty=True, volumes=volumes, **extra_kwargs)
 
         elif mode == 'singularity':
-            from spython.main import Client
+            try:
+                from spython.main import Client
+            except ImportError:
+                msg = "Run pip install spikeinterface[singularity] for running with singularity"
+                raise ImportError(msg)
+
             # load local image file if it exists, otherwise search dockerhub
             if Path(container_image).exists():
                 self.singularity_image = container_image
