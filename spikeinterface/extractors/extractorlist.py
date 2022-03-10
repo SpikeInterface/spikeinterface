@@ -8,7 +8,8 @@ from .neoextractors import (
     SpikeGLXRecordingExtractor, read_spikeglx,
     OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys,
     IntanRecordingExtractor, read_intan,
-    NeuroScopeRecordingExtractor, read_neuroscope,
+    NeuroScopeRecordingExtractor, read_neuroscope_recording, NeuroScopeSortingExtractor, read_neuroscope_sorting,
+    read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
     NeuralynxRecordingExtractor, read_neuralynx,
     BlackrockRecordingExtractor, read_blackrock,
@@ -98,6 +99,7 @@ sorting_extractor_full_list = [
     KiloSortSortingExtractor,
     PhySortingExtractor,
     NwbSortingExtractor,
+    NeuroScopeSortingExtractor,
 
     # neo based
     MEArecSortingExtractor
