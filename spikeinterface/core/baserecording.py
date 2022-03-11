@@ -426,18 +426,22 @@ class BaseRecording(BaseExtractor):
             raise ValueError('set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
         self.set_property('location', locations, ids=channel_ids)
 
-    def get_channel_locations(self, channel_ids=None, dimensions: str='XY'):
+    def get_channel_locations(self, channel_ids=None, dimensions: str='xy'):
         def apply_dimensions_to_positions(positions: np.ndarray):
-            if dimensions == 'XY':
+            if dimensions == 'xy':
+                assert positions.shape[0] >=2, f'positions.shape[0] must be at least 2'
                 return positions[[0, 1]]
-            elif dimensions == 'XZ':
+            elif dimensions == 'xz':
+                assert positions.shape[0] >=3, f'positions.shape[0] must be at least 3'
                 return positions[[0, 2]]
-            elif dimensions == 'YZ':
+            elif dimensions == 'yz':
+                assert positions.shape[0] >=3, f'positions.shape[0] must be at least 3'
                 return positions[[1, 2]]
-            elif dimensions == 'XYZ':
+            elif dimensions == 'xyz':
+                assert positions.shape[0] >=3, f'positions.shape[0] must be at least 3'
                 return positions[[0, 1, 2]]
             else:
-                raise Exception(f'Invalid dimensions: {dimensions}')
+                raise Exception(f'Invalid dimensions parameter: {dimensions}')
 
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
