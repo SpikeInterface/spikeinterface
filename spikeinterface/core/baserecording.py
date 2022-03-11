@@ -429,17 +429,17 @@ class BaseRecording(BaseExtractor):
     def get_channel_locations(self, channel_ids=None, dimensions: str='xy'):
         def apply_dimensions_to_positions(positions: np.ndarray):
             if dimensions == 'xy':
-                assert positions.shape[0] >=2, f'positions.shape[0] must be at least 2'
-                return positions[[0, 1]]
+                assert positions.shape[1] >=2, f'positions.shape[1] must be at least 2'
+                return positions[:, [0, 1]]
             elif dimensions == 'xz':
-                assert positions.shape[0] >=3, f'positions.shape[0] must be at least 3'
-                return positions[[0, 2]]
+                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
+                return positions[:, [0, 2]]
             elif dimensions == 'yz':
-                assert positions.shape[0] >=3, f'positions.shape[0] must be at least 3'
-                return positions[[1, 2]]
+                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
+                return positions[:, [1, 2]]
             elif dimensions == 'xyz':
-                assert positions.shape[0] >=3, f'positions.shape[0] must be at least 3'
-                return positions[[0, 1, 2]]
+                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
+                return positions[:, [0, 1, 2]]
             else:
                 raise Exception(f'Invalid dimensions parameter: {dimensions}')
 
