@@ -28,31 +28,12 @@ def test_detect_peaks():
                                     n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
 
     subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100)
-    print(len(subset_peaks))
     subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100, select_per_channel=False)
-    print(len(subset_peaks))
-
     subset_peaks = select_peaks(peaks, 'uniform_locations', n_peaks=100, peaks_locations=peak_locations)
-    print(len(subset_peaks))
-
-    print('Amplitudes')
     subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels)
-    print(len(subset_peaks))
-
-    print('Amplitudes global')
-
     subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels, select_per_channel=False)
-    print(len(subset_peaks))
-
-    print('Locations')
-
     subset_peaks = select_peaks(peaks, 'smart_sampling_locations', n_peaks=100, peaks_locations=peak_locations)
-    print(len(subset_peaks))
-
-    print('All')
-
     subset_peaks = select_peaks(peaks, 'smart_sampling_locations_and_time', n_peaks=100, peaks_locations=peak_locations)
-    print(len(subset_peaks))
     
     assert len(subset_peaks) < len(peaks)
 
