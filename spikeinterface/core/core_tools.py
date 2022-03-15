@@ -146,6 +146,19 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
     return samples
 
 
+def apply_dimensions_to_positions(positions: np.ndarray, dimensions: str):
+    dim_map = {"x": 0, "y": 1, "z": 2}
+
+    dims = []
+    for dim in dimensions:
+        assert dim in dim_map, "'dimensions' can contain 'x', 'y', or 'z' only!"
+        dims.append(dim_map[dim])
+    dims = np.array(dims)
+
+    assert positions.shape[1] >= len(dims), "Inconsistent shapes between positions and dimensions"
+    return positions[:, dims]
+
+
 # used by write_binary_recording + ChunkRecordingExecutor
 def _init_binary_worker(recording, rec_memmaps_dict, dtype):
     # create a local dict per worker

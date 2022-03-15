@@ -7,7 +7,7 @@ import numpy as np
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface
 
 from .base import BaseExtractor, BaseSegment
-from .core_tools import write_binary_recording, write_memory_recording
+from .core_tools import write_binary_recording, write_memory_recording, apply_dimensions_to_positions
 
 from warnings import warn
 
@@ -416,8 +416,17 @@ class BaseRecording(BaseExtractor):
         return probegroup
 
     def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}):
-        probe = Probe()
-        probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
+        ndim = locations.shape[1]
+        plane_axes = None
+        if ndim == 3:
+            # probeinterface 3d probes need plane_axes
+            num_channels = locations.shape[0]
+            plane_axes = np.zeros((num_channels, 2, 3))
+            plane_axes[:, 0] = [1, 0, 0] * num_channels
+            plane_axes[:, 1] = [0, 1, 0] * num_channels
+        probe = Probe(ndim=ndim)
+        probe.set_contacts(locations, shapes=shape, shape_params=shape_params, 
+                           plane_axes=plane_axes)
         probe.set_device_channel_indices(np.arange(self.get_num_channels()))
         self.set_probe(probe, in_place=True)
 
@@ -426,23 +435,7 @@ class BaseRecording(BaseExtractor):
             raise ValueError('set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
         self.set_property('location', locations, ids=channel_ids)
 
-    def get_channel_locations(self, channel_ids=None, dimensions: str='xy'):
-        def apply_dimensions_to_positions(positions: np.ndarray):
-            if dimensions == 'xy':
-                assert positions.shape[1] >=2, f'positions.shape[1] must be at least 2'
-                return positions[:, [0, 1]]
-            elif dimensions == 'xz':
-                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
-                return positions[:, [0, 2]]
-            elif dimensions == 'yz':
-                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
-                return positions[:, [1, 2]]
-            elif dimensions == 'xyz':
-                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
-                return positions[:, [0, 1, 2]]
-            else:
-                raise Exception(f'Invalid dimensions parameter: {dimensions}')
-
+    def get_channel_locations(self, channel_ids=None, dimensions: str = 'xy'):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
@@ -470,14 +463,17 @@ class BaseRecording(BaseExtractor):
                                             for cp in probe_j.contact_positions])):
                             raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
                 all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-                positions = all_positions[channel_indices]  
-            return apply_dimensions_to_positions(positions)
+                positions = all_positions[channel_indices]
+            return apply_dimensions_to_positions(positions, dimensions)
         else:
             locations = self.get_property('location')
             if locations is None:
                 raise Exception('There are no channel locations')
             locations = np.asarray(locations)[channel_indices]
-            return apply_dimensions_to_positions(locations)
+            return apply_dimensions_to_positions(locations, dimensions)
+
+    def has_3d_locations(self):
+        return self.get_property('location').shape[1] == 3
 
     def clear_channel_locations(self, channel_ids=None):
         if channel_ids is None:
@@ -556,6 +552,48 @@ class BaseRecording(BaseExtractor):
             elif outputs == 'dict':
                 recordings[value] = subrec
         return recordings
+
+    def planarize(self, dimensions: str = "xy"):
+        """
+        Returns a Recording with a 2D probe from one with a 3D probe
+
+        Parameters
+        ----------
+        dimensions : str, optional
+            The dimensions to keep, by default "xy"
+
+        Returns
+        -------
+        BaseRecording
+            The recording with 2D positions
+        """
+        assert self.has_3d_locations, "The 'planarize' function needs a recording with 3d locations"
+        assert len(dimensions) == 2, "You need to specify 2 dimensions (e.g. 'xy', 'zy')"
+
+        probe3d = self.get_probe()
+        positions3d = probe3d.contact_positions
+        probe2d = Probe(ndim=2, si_units=probe3d.si_units)
+
+        # contacts
+        positions2d = apply_dimensions_to_positions(positions3d, dimensions)
+
+        probe2d.set_contacts(
+            positions=positions2d,
+            shapes=probe3d.contact_shapes.copy(),
+            shape_params=probe3d.contact_shape_params.copy())
+
+        # shape
+        if probe3d.probe_planar_contour is not None:
+            vertices3d = probe3d.probe_planar_contour
+            vertices2d = apply_dimensions_to_positions(vertices3d, dimensions)
+            probe2d.set_planar_contour(vertices2d)
+
+        probe2d.set_device_channel_indices(probe3d.device_channel_indices)
+
+        recording2d = self.clone()
+        recording2d.set_probe(probe2d, in_place=True)
+
+        return recording2d
 
 
 class BaseRecordingSegment(BaseSegment):
