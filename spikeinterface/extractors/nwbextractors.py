@@ -128,6 +128,7 @@ class NwbRecordingExtractor(BaseRecording):
         else:
             channel_ids = [self._es.electrodes.table.id[x] for x in self._es.electrodes.data]
 
+        dtype = self._es.data.dtype
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         recording_segment = NwbRecordingSegment(nwbfile=self._nwbfile,
                                                 electrical_series_name=self._electrical_series_name,
