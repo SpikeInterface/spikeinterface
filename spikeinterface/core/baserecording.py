@@ -426,7 +426,23 @@ class BaseRecording(BaseExtractor):
             raise ValueError('set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
         self.set_property('location', locations, ids=channel_ids)
 
-    def get_channel_locations(self, channel_ids=None, locations_2d=True):
+    def get_channel_locations(self, channel_ids=None, dimensions: str='xy'):
+        def apply_dimensions_to_positions(positions: np.ndarray):
+            if dimensions == 'xy':
+                assert positions.shape[1] >=2, f'positions.shape[1] must be at least 2'
+                return positions[:, [0, 1]]
+            elif dimensions == 'xz':
+                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
+                return positions[:, [0, 2]]
+            elif dimensions == 'yz':
+                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
+                return positions[:, [1, 2]]
+            elif dimensions == 'xyz':
+                assert positions.shape[1] >=3, f'positions.shape[1] must be at least 3'
+                return positions[:, [0, 1, 2]]
+            else:
+                raise Exception(f'Invalid dimensions parameter: {dimensions}')
+
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
@@ -455,13 +471,13 @@ class BaseRecording(BaseExtractor):
                             raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
                 all_positions = np.vstack([probe.contact_positions for probe in all_probes])
                 positions = all_positions[channel_indices]  
-            return positions
+            return apply_dimensions_to_positions(positions)
         else:
             locations = self.get_property('location')
             if locations is None:
                 raise Exception('There are no channel locations')
             locations = np.asarray(locations)[channel_indices]
-            return locations
+            return apply_dimensions_to_positions(locations)
 
     def clear_channel_locations(self, channel_ids=None):
         if channel_ids is None:
