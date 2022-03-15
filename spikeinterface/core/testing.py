@@ -6,10 +6,7 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
     for segment_idx in range(RX1.get_num_segments()):
         N = RX1.get_num_frames(segment_idx)
         # get_channel_ids
-        if np.issubdtype(RX1.get_channel_ids().dtype, np.character):
-            assert np.array_equal(RX1.get_channel_ids(), RX2.get_channel_ids())
-        else:
-            assert np.allclose(RX1.get_channel_ids(), RX2.get_channel_ids())
+        assert np.array_equal(RX1.get_channel_ids(), RX2.get_channel_ids())
         # get_num_channels
         assert np.allclose(RX1.get_num_channels(), RX2.get_num_channels())
         # get_num_frames
