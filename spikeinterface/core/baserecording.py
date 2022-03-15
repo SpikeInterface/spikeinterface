@@ -3,11 +3,12 @@ from pathlib import Path
 import warnings
 
 import numpy as np
+import zarr
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface
 
 from .base import BaseExtractor, BaseSegment
-from .core_tools import write_binary_recording, write_memory_recording
+from .core_tools import write_binary_recording, write_memory_recording, write_zarr_recording
 
 from warnings import warn
 
@@ -212,8 +213,27 @@ class BaseRecording(BaseExtractor):
                                     channel_ids=self.channel_ids)
 
         elif format == 'zarr':
-            # TODO implement a format based on zarr
-            raise NotImplementedError
+            folder = save_kwargs['folder']
+
+            root_path = folder / 'traces.zarr'
+            root = zarr.open(str(root_path), mode='w')
+            root.attrs["sampling_frequency"] = self.get_sampling_frequency()
+
+            dataset_paths = [f'traces_cached_seg{i}' for i in range(self.get_num_segments())]
+            dtype = save_kwargs.get('dtype', None)
+            if dtype is None:
+                dtype = self.get_dtype()
+            compressor = save_kwargs.get('compressor', None)
+            filters = save_kwargs.get('filters', None)
+
+            job_kwargs = {k: save_kwargs[k]
+                          for k in self._job_keys if k in save_kwargs}
+            write_zarr_recording(self, root_path, root=root, dataset_paths=dataset_paths,
+                                 dtype=dtype, compressor=compressor, filters=filters, **job_kwargs)
+            cached = ZarrRecordingExtractor(root_path, channel_ids=self.get_channel_ids(), 
+                                            t_starts=t_starts,
+                                            gain_to_uV=self.get_channel_gains(),
+                                            offset_to_uV=self.get_channel_offsets())
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
