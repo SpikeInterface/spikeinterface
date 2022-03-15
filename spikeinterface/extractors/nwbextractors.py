@@ -142,8 +142,9 @@ class NwbRecordingExtractor(BaseRecording):
         properties = dict()
         for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, self._es.electrodes.data)):
             if 'rel_x' in self._nwbfile.electrodes:
-                ndim = 2 # assume 2 dimensions
-                if 'rel_z' in self._nwbfile.electrodes: ndim = 3 # if we have rel_z, it is 3 dimensions
+                ndim = 2  # assume 2 dimensions
+                if 'rel_z' in self._nwbfile.electrodes:
+                    ndim = 3  # if we have rel_z, it is 3 dimensions
 
                 if 'location' not in properties:
                     properties['location'] = np.zeros((self.get_num_channels(), ndim), dtype=float)

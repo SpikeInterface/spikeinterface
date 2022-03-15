@@ -13,6 +13,8 @@ from probeinterface import Probe
 from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
+from spikeinterface.core.testing_tools import generate_recording
+
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
 else:
@@ -197,6 +199,25 @@ def test_BaseRecording():
     assert np.allclose(times1, rec2.get_times(1))
     rec3 = load_extractor(folder)
     assert np.allclose(times1, rec3.get_times(1))
+
+    # test 3d probe
+    rec_3d = generate_recording(ndim=3, num_channels=30)
+    locations_3d = rec_3d.get_property("location")
+
+    locations_xy = rec_3d.get_channel_locations(dimensions="xy")
+    assert np.allclose(locations_xy, locations_3d[:, [0, 1]])
+
+    locations_xz = rec_3d.get_channel_locations(dimensions="xz")
+    assert np.allclose(locations_xz, locations_3d[:, [0, 2]])
+
+    locations_zy = rec_3d.get_channel_locations(dimensions="zy")
+    assert np.allclose(locations_zy, locations_3d[:, [2, 1]])
+
+    locations_xzy = rec_3d.get_channel_locations(dimensions="xzy")
+    assert np.allclose(locations_xzy, locations_3d[:, [0, 2, 1]])
+
+    rec_2d = rec_3d.planarize(dimensions="zy")
+    assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
 
 if __name__ == '__main__':
