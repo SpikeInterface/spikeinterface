@@ -1,3 +1,15 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     formats: ipynb,py:sphinx
+#     text_representation:
+#       extension: .py
+#       format_name: sphinx
+#       format_version: '1.1'
+#       jupytext_version: 1.13.7
+# ---
+
 """
 Getting started tutorial
 ========================
@@ -201,6 +213,7 @@ export_to_phy(we_TDC, './phy_folder_for_TDC',
 ##############################################################################
 # Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
 # and manually curate the results.
+
 
 
 ##############################################################################
