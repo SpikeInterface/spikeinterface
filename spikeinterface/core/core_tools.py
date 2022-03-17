@@ -518,7 +518,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     return save_path
 
 
-def write_zarr_recording(recording, root_path, root=None, dataset_paths=None, dtype=None, add_file_extension=True,
+def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=None,
                          verbose=False, compressor=None,
                          filters=None, **job_kwargs):
     '''
@@ -545,7 +545,6 @@ def write_zarr_recording(recording, root_path, root=None, dataset_paths=None, dt
     {}
     '''
     assert dataset_paths is not None, "Provide 'file_path'"
-    assert root is not None
 
     if not isinstance(dataset_paths, list):
         dataset_paths = [dataset_paths]
@@ -563,26 +562,26 @@ def write_zarr_recording(recording, root_path, root=None, dataset_paths=None, dt
         num_channels = recording.get_num_channels()
         dset_name = dataset_paths[segment_index]
         shape = (num_frames, num_channels)
-        z = root.create_dataset(name=dset_name, shape=shape,
-                                chunks=(chunk_size, None), dtype=dtype,
-                                filters=filters,
-                                compressor=compressor,
-                                synchronizer=zarr.ThreadSynchronizer())
+        _ = zarr_root.create_dataset(name=dset_name, shape=shape,
+                                     chunks=(chunk_size, None), dtype=dtype,
+                                     filters=filters,
+                                     compressor=compressor,)
+                                # synchronizer=zarr.ThreadSynchronizer())
 
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     if n_jobs == 1:
-        init_args = (recording, root_path, dataset_paths, dtype)
+        init_args = (recording, zarr_path, dataset_paths, dtype)
     else:
-        init_args = (recording.to_dict(), root_path, dataset_paths, dtype)
+        init_args = (recording.to_dict(), zarr_path, dataset_paths, dtype)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_zarr_recording', **job_kwargs)
     executor.run()
 
 
 # used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, root_path, dataset_paths, dtype):
+def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
@@ -592,7 +591,7 @@ def _init_zarr_worker(recording, root_path, dataset_paths, dtype):
         worker_ctx['recording'] = recording
 
     # reload root and datasets
-    root = zarr.open(str(root_path), mode="r+")
+    root = zarr.open(str(zarr_path), mode="r+")
     zarr_datasets = []
     for dset_name in dataset_paths:
         z = root[dset_name]

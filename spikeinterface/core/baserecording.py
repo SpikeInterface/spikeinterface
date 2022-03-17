@@ -8,7 +8,7 @@ import zarr
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface
 
 from .base import BaseExtractor, BaseSegment
-from .core_tools import write_binary_recording, write_memory_recording, write_zarr_recording
+from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
 
 from warnings import warn
 
@@ -213,13 +213,14 @@ class BaseRecording(BaseExtractor):
                                     channel_ids=self.channel_ids)
 
         elif format == 'zarr':
-            folder = save_kwargs['folder']
+            zarr_root = save_kwargs.get('zarr_root', None)
+            zarr_path = save_kwargs.get('zarr_path', None)
 
-            root_path = folder / 'traces.zarr'
-            root = zarr.open(str(root_path), mode='w')
-            root.attrs["sampling_frequency"] = self.get_sampling_frequency()
+            zarr_root.attrs["sampling_frequency"] = self.get_sampling_frequency()
+            zarr_root.attrs["num_segments"] = self.get_num_segments()
+            zarr_root.attrs["channel_ids"] = list(self.get_channel_ids())
 
-            dataset_paths = [f'traces_cached_seg{i}' for i in range(self.get_num_segments())]
+            dataset_paths = [f'traces_seg{i}' for i in range(self.get_num_segments())]
             dtype = save_kwargs.get('dtype', None)
             if dtype is None:
                 dtype = self.get_dtype()
@@ -228,12 +229,35 @@ class BaseRecording(BaseExtractor):
 
             job_kwargs = {k: save_kwargs[k]
                           for k in self._job_keys if k in save_kwargs}
-            write_zarr_recording(self, root_path, root=root, dataset_paths=dataset_paths,
+            write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, dataset_paths=dataset_paths,
                                  dtype=dtype, compressor=compressor, filters=filters, **job_kwargs)
-            cached = ZarrRecordingExtractor(root_path, channel_ids=self.get_channel_ids(), 
-                                            t_starts=t_starts,
-                                            gain_to_uV=self.get_channel_gains(),
-                                            offset_to_uV=self.get_channel_offsets())
+
+            # save probe
+            if self.get_property('contact_vector') is not None:
+                probegroup = self.get_probegroup()
+                zarr_root.attrs["probe"] = check_json(probegroup.to_dict())
+
+            # save time vector if any
+            t_starts = np.zeros(self.get_num_segments(), dtype='float64') * np.nan
+            for segment_index, rs in enumerate(self._recording_segments):
+                d = rs.get_times_kwargs()
+                time_vector = d['time_vector']
+                if time_vector is not None:
+                    _ = zarr_root.create_dataset(name=f'times_seg{segment_index}', data=time_vector,
+                                                 filters=filters,
+                                                 compressor=compressor)
+                elif d["t_start"] is not None:
+                    t_starts[segment_index] = d["t_start"]
+            
+            if np.any(~np.isnan(t_starts)):
+                zarr_root.create_dataset(name="t_starts", values=t_starts)
+
+
+            from .zarrrecordingextractor import ZarrRecordingExtractor
+            cached = ZarrRecordingExtractor(zarr_root)
+            # , channel_ids=self.get_channel_ids(),
+            #                                 gain_to_uV=self.get_channel_gains(),
+            #                                 offset_to_uV=self.get_channel_offsets())
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
@@ -280,6 +304,23 @@ class BaseRecording(BaseExtractor):
             time_vector = d['time_vector']
             if time_vector is not None:
                 np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
+
+    # def _extra_metadata_to_zarr(self, zarr_root, compressor, filters):
+    #     # save probe
+    #     if self.get_property('contact_vector') is not None:
+    #         probegroup = self.get_probegroup()
+    #         zarr_root.attrs["probe"] = probegroup.to_dict()
+
+    #     # save time vector if any
+    #     for segment_index, rs in enumerate(self._recording_segments):
+    #         d = rs.get_times_kwargs()
+    #         time_vector = d['time_vector']
+    #         if time_vector is not None:
+    #             z = zarr_root.create_dataset(name=f'times_seg{segment_index}', data=time_vector,
+    #                                          chunks=(chunk_size, None), dtype=dtype,
+    #                                          filters=filters,
+    #                                          compressor=compressor)
+    #             np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
 
     def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """
