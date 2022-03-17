@@ -25,7 +25,10 @@ def setup_module():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-
+    
+    cache_folder.mkdir(parents=True, exist_ok=True)
+    print(cache_folder)
+    
     # detect and localize
     peaks = detect_peaks(recording,
                          method='locally_exclusive',
@@ -48,33 +51,43 @@ def test_motion_functions():
     motion_histogram, temporal_bins, spatial_bins = make_motion_histogram(
         recording, peaks, bin_um=bin_um)
     # print(motion_histogram.shape, temporal_bins.size, spatial_bins.size)
-
-    pairwise_displacement = compute_pairwise_displacement(
+    
+    # conv2d + gradient_descent
+    pairwise_displacement, pairwise_displacement_error = compute_pairwise_displacement(
         motion_histogram, bin_um, method='conv2d')
+    motion = compute_global_displacement(pairwise_displacement, method='gradient_descent',)
 
-    motion = compute_global_displacement(pairwise_displacement)
+    #~ # phase_cross_correlation + gradient_descent_robust
+    #~ pairwise_displacement, pairwise_displacement_error = compute_pairwise_displacement(
+                        #~ motion_histogram, bin_um, method='phase_cross_correlation')
+    #~ motion = compute_global_displacement(pairwise_displacement,
+                    #~ pairwise_displacement_error=pairwise_displacement_error, 
+                    #~ method='gradient_descent_robust',)
+
+
+
 
     # # DEBUG
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
     # extent = (temporal_bins[0], temporal_bins[-1], spatial_bins[0], spatial_bins[-1])
     # im = ax.imshow(motion_histogram.T, interpolation='nearest',
     #                     origin='lower', aspect='auto', extent=extent)
 
-    # fig, ax = plt.subplots()
-    # ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
+    fig, ax = plt.subplots()
+    ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
 
-    # fig, ax = plt.subplots()
-    # extent = None
-    # im = ax.imshow(pairwise_displacement, interpolation='nearest',
-    #                     cmap='PiYG', origin='lower', aspect='auto', extent=extent)
-    # im.set_clim(-40, 40)
-    # ax.set_aspect('equal')
-    # fig.colorbar(im)
+    fig, ax = plt.subplots()
+    extent = None
+    im = ax.imshow(pairwise_displacement, interpolation='nearest',
+                        cmap='PiYG', origin='lower', aspect='auto', extent=extent)
+    im.set_clim(-40, 40)
+    ax.set_aspect('equal')
+    fig.colorbar(im)
 
     # fig, ax = plt.subplots()
     # ax.plot(temporal_bins[:-1], motion)
-    # plt.show()
+    plt.show()
 
 
 def test_estimate_motion_rigid():
@@ -168,7 +181,7 @@ def test_estimate_motion_non_rigid():
 
 
 if __name__ == '__main__':
-    # setup_module()
-    # test_motion_functions()
+    # setup_module()
+    test_motion_functions()
     # test_estimate_motion_rigid()
-    test_estimate_motion_non_rigid()
+    # test_estimate_motion_non_rigid()
