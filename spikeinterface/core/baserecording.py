@@ -3,7 +3,6 @@ from pathlib import Path
 import warnings
 
 import numpy as np
-import zarr
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface
 
@@ -248,16 +247,12 @@ class BaseRecording(BaseExtractor):
                                                  compressor=compressor)
                 elif d["t_start"] is not None:
                     t_starts[segment_index] = d["t_start"]
-            
+
             if np.any(~np.isnan(t_starts)):
                 zarr_root.create_dataset(name="t_starts", values=t_starts)
 
-
             from .zarrrecordingextractor import ZarrRecordingExtractor
             cached = ZarrRecordingExtractor(zarr_root)
-            # , channel_ids=self.get_channel_ids(),
-            #                                 gain_to_uV=self.get_channel_gains(),
-            #                                 offset_to_uV=self.get_channel_offsets())
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
