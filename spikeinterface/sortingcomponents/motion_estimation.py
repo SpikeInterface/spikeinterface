@@ -135,7 +135,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
             if verbose:
                 print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
-            pairwise_displacement = compute_pairwise_displacement(motion_hist, bin_um,
+            pairwise_displacement, pairwise_displacement_error = compute_pairwise_displacement(motion_hist, bin_um,
                                                                   method=method_kwargs['pairwise_displacement_method'],
                                                                   progress_bar=progress_bar)
             if output_extra_check:
@@ -227,26 +227,38 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
                 conv = np.convolve(motion_hist[i, :], motion_hist[j, ::-1], mode='same')
                 ind_max = np.argmax(conv)
                 pairwise_displacement[i, j] = possible_displacement[ind_max]
+        pairwise_displacement_error = None
+
     elif method == 'phase_cross_correlation':
         try:
             import skimage.registration
         except ImportError:
             raise ImportError("To use 'phase_cross_correlation' method install scikit-image")
-
-        for i in range(size):
+        
+        pairwise_displacement_error = np.zeros((size, size), dtype='float32')
+        
+        loop = range(size)
+        if progress_bar:
+            loop = tqdm(loop)
+        for i in loop:
             for j in range(size):
                 shift, error, diffphase = skimage.registration.phase_cross_correlation(motion_hist[i, :], 
                                                                                        motion_hist[j, :])
                 pairwise_displacement[i, j] = shift
+                pairwise_displacement_error[i, j] = error
     else:
         raise ValueError(f'method do not exists for compute_pairwise_displacement {method}')
 
-    return pairwise_displacement
+    return pairwise_displacement, pairwise_displacement_error
 
 
-def compute_global_displacement(pairwise_displacement, method='gradient_descent', max_iter=1000):
+def compute_global_displacement(pairwise_displacement, pairwise_displacement_error=None, method='gradient_descent', max_iter=1000):
     """
     Compute global displacement
+    
+    This come from
+    https://github.com/int-brain-lab/spikes_localization_registration/blob/main/registration_pipeline/image_based_motion_estimate.py#L211
+    
     """
     if method == 'gradient_descent':
         size = pairwise_displacement.shape[0]
@@ -269,26 +281,38 @@ def compute_global_displacement(pairwise_displacement, method='gradient_descent'
             else:
                 p_prev = p.copy()
 
-    elif method == 'robust':
-        raise NotImplementedError
-        # error_mat_S = error_mat[np.where(S != 0)]
-        # W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
+    elif method == 'gradient_descent_robust':
+        from scipy.spatial.distance import pdist, squareform
+        from scipy.sparse import csr_matrix
+        from scipy.sparse.linalg import lsqr
+        from scipy.stats import zscore
+        
+        # TODO expose this in signature
+        error_sigma = 0.1
+        time_sigma = 1
+        robust_regression_sigma = 1
+        n_iter = 20
 
-        # W2 = np.exp(-squareform(pdist(np.arange(error_mat.shape[0])[:,None]))/time_sigma)
-        # W2 = W2[np.where(S != 0)]
+        assert pairwise_displacement_error is not None
+        S = np.ones(pairwise_displacement.shape, dtype='bool')
+        error_mat_S = pairwise_displacement_error[np.where(S != 0)]
+        W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
+        W2 = np.exp(-squareform(pdist(np.arange(pairwise_displacement.shape[0])[:,None]))/time_sigma)
+        W2 = W2[np.where(S != 0)]
 
-        # W = (W2*W1)[:,None]
+        W = (W2*W1)[:,None]
 
-        # I, J = np.where(S != 0)
-        # V = displacement_matrix[np.where(S != 0)]
-        # M = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),I)))
-        # N = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),J)))
-        # A = M - N
-        # idx = np.ones(A.shape[0]).astype(bool)
-        # for i in notebook.tqdm(range(n_iter)):
-        #     p = lsqr(A[idx].multiply(W[idx]), V[idx]*W[idx][:,0])[0]
-        #     idx = np.where(np.abs(zscore(A@p-V)) <= robust_regression_sigma)
-        # return p
+        I, J = np.where(S != 0)
+        V = pairwise_displacement[np.where(S != 0)]
+        M = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),I)))
+        N = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),J)))
+        A = M - N
+        idx = np.ones(A.shape[0]).astype(bool)
+        for i in range(n_iter):
+            p = lsqr(A[idx].multiply(W[idx]), V[idx]*W[idx][:,0])[0]
+            idx = np.where(np.abs(zscore(A@p-V)) <= robust_regression_sigma)
+        displacement = p
+
     else:
         raise ValueError(f"Method {method} doesn't exists for compute_global_displacement")
 
