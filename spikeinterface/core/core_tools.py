@@ -3,7 +3,6 @@ import os
 import datetime
 
 import numpy as np
-import zarr
 from tqdm import tqdm
 
 from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
@@ -582,6 +581,8 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=N
 
 # used by write_zarr_recording + ChunkRecordingExecutor
 def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
+    import zarr
+
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):

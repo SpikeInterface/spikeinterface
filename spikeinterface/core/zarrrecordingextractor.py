@@ -1,16 +1,18 @@
 from typing import List, Union
 
-import zarr
 from pathlib import Path
 from probeinterface import Probe
 
 import numpy as np
 
-from spike_sorting.phy.phy.phy.cluster.tests.test_supervisor import data
-
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .core_tools import read_binary_recording, write_binary_recording
-from .job_tools import _shared_job_kwargs_doc
+
+
+try:
+    import zarr
+    HAVE_ZARR = True
+except ImportError:
+    HAVE_ZARR = False
 
 
 class ZarrRecordingExtractor(BaseRecording):
@@ -41,12 +43,13 @@ class ZarrRecordingExtractor(BaseRecording):
     """
     extractor_name = 'ZarrRecordingExtractor'
     has_default_locations = False
-    installed = True  # check at class level if installed or not
-    is_writable = True
+    installed = HAVE_ZARR  # check at class level if installed or not
     mode = 'file'
-    installation_mesg = ""  # error message when not installed
+    # error message when not installed
+    installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
 
     def __init__(self, root_path):
+        assert self.installed, self.installation_mesg
         root_path = Path(root_path)
         self._root = zarr.open(str(root_path), mode="r")
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
