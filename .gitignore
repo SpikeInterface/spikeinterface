@@ -38,10 +38,20 @@ spikeinterface/widgets/tests/mearec_test/*
 
 examples/getting_started/*_output/*
 examples/getting_started/waveforms/*
+examples/*/*.ipynb
+examples/*/*/*.ipynb
 examples/*/*/*/*.raw
 examples/*/*/*/*/*.npy
 examples/*/*/sorter_outputs
 examples/*/*/*_to_phy
+
+examples/*/phy_folder_for_TDC/
+examples/*/redringspikes_output2/
+phy_examples/
+phy_example/
+toy_example_recording/
+tridesclous_waveforms/
+spykingcircus_waveforms/
 
 .vscode/*
 
