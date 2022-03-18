@@ -39,10 +39,6 @@ class ResampleRecording(BasePreprocessor):
     """
 
     name = "resample"
-    installed = HAVE_RR  # check at class level if installed or not
-    installation_mesg = (
-        "To use the ResampleRecording, install scipy: \n\n pip install scipy\n\n"  # err
-    )
 
     def __init__(
         self,
