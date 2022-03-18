@@ -1,6 +1,8 @@
 from spikeinterface.core.testing_tools import generate_recording
 
-# from spikeinterface.toolkit.preprocessing import resample
+import pytest
+
+from spikeinterface.toolkit.preprocessing import resample
 
 import numpy as np
 
