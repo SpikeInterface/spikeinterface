@@ -17,7 +17,7 @@ except ImportError:
 
 class ResampleRecording(BasePreprocessor):
     """
-    Generic resample class based the previous SpikeToolkits API.
+    Resamples the recording extractor traces.
 
     If the resampling rate is multiple of the sampling rate, the faster
     scipy decimate function is used.
