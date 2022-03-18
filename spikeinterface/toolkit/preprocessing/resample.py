@@ -45,7 +45,7 @@ class ResampleRecording(BasePreprocessor):
         self._orig_samp_freq = recording.get_sampling_frequency()
         self._resample_rate = resample_rate
         self._sampling_frequency = resample_rate
-        dtype = fix_dtype(recording, dtype)
+        dtype = fix_dtype(recording, dtype).str
         self.dtype = dtype
 
         BasePreprocessor.__init__(
