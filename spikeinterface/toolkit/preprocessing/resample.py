@@ -50,8 +50,6 @@ class ResampleRecording(BasePreprocessor):
         resample_rate,
         dtype=None,
     ):
-        # Check that scipy is present
-        assert self.installed, self.installation_mesg
         # Original sampling frequency
         self._orig_samp_freq = recording.get_sampling_frequency()
         self._resample_rate = resample_rate
