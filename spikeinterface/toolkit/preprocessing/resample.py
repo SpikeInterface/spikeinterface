@@ -1,12 +1,11 @@
 import numpy as np
 import scipy.signal
 
-from spikeinterface.toolkit.preprocessing.basepreprocessor import (
+from .basepreprocessor import (
     BasePreprocessor,
     BasePreprocessorSegment,
 )
-from spikeinterface.toolkit.preprocessing.filter import fix_dtype
-from warnings import warn
+from .filter import fix_dtype
 
 try:
     from scipy import special, signal
