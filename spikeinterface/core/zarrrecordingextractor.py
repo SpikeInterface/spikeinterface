@@ -1,7 +1,7 @@
 from typing import List, Union
 
 from pathlib import Path
-from probeinterface import Probe
+from probeinterface import ProbeGroup
 
 import numpy as np
 
@@ -48,13 +48,14 @@ class ZarrRecordingExtractor(BaseRecording):
     # error message when not installed
     installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
 
-    def __init__(self, root_path):
+    def __init__(self, root_path: Union[Path, str]):
         assert self.installed, self.installation_mesg
         root_path = Path(root_path)
         self._root = zarr.open(str(root_path), mode="r")
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
-        channel_ids = self._root.attrs.get("channel_ids", None)
         num_segments = self._root.attrs.get("num_segments", None)
+        assert "channel_ids" in self._root.keys()
+        channel_ids = self._root["channel_ids"][:]
 
         assert sampling_frequency is not None
         assert channel_ids is not None
@@ -94,8 +95,8 @@ class ZarrRecordingExtractor(BaseRecording):
         # load probe
         probe_dict = self._root.attrs.get("probe", None)
         if probe_dict is not None:
-            probe = Probe.from_dict(probe_dict)
-            self.set_probe(probe, in_place=True)
+            probegroup = ProbeGroup.from_dict(probe_dict)
+            self.set_probegroup(probegroup, in_place=True)
 
         # load properties
         if 'properties' in self._root:
@@ -104,6 +105,11 @@ class ZarrRecordingExtractor(BaseRecording):
                 values = self._root['properties'][key]
                 self.set_property(key, values)
 
+        # load annotations
+        annotations = self._root.attrs.get("annotations", None)
+        if annotations is not None:
+            self.annotate(**annotations)
+        
         self._kwargs = {'root_path': str(root_path.absolute())}
 
 
@@ -143,3 +149,28 @@ def read_zarr(*args, **kwargs):
 
 
 read_zarr.__doc__ = ZarrRecordingExtractor.__doc__
+
+
+def get_default_zarr_compressor(clevel=5):
+    """
+    Return default Zarr compressor object for good preformance in int16 
+    electrophysiology data.
+
+    cname: zstd (zstandard)
+    clevel: 5
+    shuffle: BITSHUFFLE
+
+    Parameters
+    ----------
+    clevel : int, optional
+        Compression level (higher -> more compressed).
+        Minimum 1, maximum 9. By default 5
+
+    Returns
+    -------
+    Blosc.compressor
+        The compressor object that can be used with the save to zarr function
+    """
+    assert ZarrRecordingExtractor.installed, ZarrRecordingExtractor.installation_mesg
+    from numcodecs import Blosc
+    return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)

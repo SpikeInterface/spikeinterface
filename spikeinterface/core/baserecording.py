@@ -215,9 +215,11 @@ class BaseRecording(BaseExtractor):
             zarr_root = save_kwargs.get('zarr_root', None)
             zarr_path = save_kwargs.get('zarr_path', None)
 
-            zarr_root.attrs["sampling_frequency"] = self.get_sampling_frequency()
-            zarr_root.attrs["num_segments"] = self.get_num_segments()
-            zarr_root.attrs["channel_ids"] = list(self.get_channel_ids())
+            zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
+            zarr_root.attrs["num_segments"] = int(self.get_num_segments())
+            
+            zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(),
+                                     compressor=None)
 
             dataset_paths = [f'traces_seg{i}' for i in range(self.get_num_segments())]
             dtype = save_kwargs.get('dtype', None)
@@ -234,7 +236,7 @@ class BaseRecording(BaseExtractor):
             # save probe
             if self.get_property('contact_vector') is not None:
                 probegroup = self.get_probegroup()
-                zarr_root.attrs["probe"] = check_json(probegroup.to_dict())
+                zarr_root.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
 
             # save time vector if any
             t_starts = np.zeros(self.get_num_segments(), dtype='float64') * np.nan
@@ -249,10 +251,11 @@ class BaseRecording(BaseExtractor):
                     t_starts[segment_index] = d["t_start"]
 
             if np.any(~np.isnan(t_starts)):
-                zarr_root.create_dataset(name="t_starts", values=t_starts)
+                zarr_root.create_dataset(name="t_starts", data=t_starts,
+                                         compressor=None)
 
             from .zarrrecordingextractor import ZarrRecordingExtractor
-            cached = ZarrRecordingExtractor(zarr_root)
+            cached = ZarrRecordingExtractor(zarr_path)
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
