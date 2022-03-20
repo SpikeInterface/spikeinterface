@@ -730,10 +730,13 @@ class BaseExtractor:
         cached = self._save(folder=None, verbose=verbose, **save_kwargs)
 
         # save properties
-        prop_group = zarr.create_group('properties')
+        prop_group = zarr_root.create_group('properties')
         for key in self.get_property_keys():
             values = self.get_property(key)
             prop_group.create_dataset(name=key, data=values, compressor=None)
+
+        # save annotations
+        zarr_root.attrs["annotations"] = check_json(self._annotations)
 
         # copy properties/
         self.copy_metadata(cached)

@@ -10,8 +10,9 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor
+from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.testing import check_recordings_equal
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -197,6 +198,14 @@ def test_BaseRecording():
     assert np.allclose(times1, rec2.get_times(1))
     rec3 = load_extractor(folder)
     assert np.allclose(times1, rec3.get_times(1))
+
+
+    # Test save to zarr
+    compressor = get_default_zarr_compressor()
+    rec_zarr = rec2.save(format="zarr", zarr_path=cache_folder / "recording.zarr",
+                         compressor=compressor)
+    check_recordings_equal(rec2, rec_zarr, return_scaled=False)
+
 
 
 if __name__ == '__main__':
