@@ -54,12 +54,11 @@ class ZarrRecordingExtractor(BaseRecording):
         self._root = zarr.open(str(root_path), mode="r")
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
-        assert "channel_ids" in self._root.keys()
+        assert "channel_ids" in self._root.keys(), "'channel_ids' dataset not found!"
         channel_ids = self._root["channel_ids"][:]
 
-        assert sampling_frequency is not None
-        assert channel_ids is not None
-        assert num_segments is not None
+        assert sampling_frequency is not None, "'sampling_frequency' attiribute not found!"
+        assert num_segments is not None, "'num_segments' attiribute not found!"
 
         channel_ids = np.array(channel_ids)
 

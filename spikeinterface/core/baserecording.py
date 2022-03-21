@@ -217,7 +217,6 @@ class BaseRecording(BaseExtractor):
 
             zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
             zarr_root.attrs["num_segments"] = int(self.get_num_segments())
-            
             zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(),
                                      compressor=None)
 
