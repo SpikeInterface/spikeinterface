@@ -71,7 +71,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if cluster_info is None:
                     cluster_info = new_property
                 else:
-                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id')
+                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id',suffixes=[None,'_repeat'])
 
         # in case no tsv/csv files are found populate cluster info with minimal info
         if cluster_info is None:
