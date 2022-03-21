@@ -9,6 +9,8 @@ from pathlib import Path
 
 import numpy as np
 
+import probeinterface as pi
+
 from .neobaseextractor import (NeoBaseRecordingExtractor,
                                NeoBaseSortingExtractor,
                                NeoBaseEventExtractor)
@@ -17,16 +19,16 @@ from .neobaseextractor import (NeoBaseRecordingExtractor,
 class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from a OpenEphy board.
-    
+
     This open the openephys "legacy" format: one file per channel.
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Open-Ephys-format.html
-    
+
     Based on neo.rawio.OpenEphysRawIO
-    
+
     Parameters
     ----------
     folder_path: str
-        
+
     stream_id: str or None
         stream for instance : 'imec0.ap' 'nidq' or 'imec0.lf'
     """
@@ -43,16 +45,16 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
 class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading traces from a OpenEphy board.
-    
+
     This open the openephys "new" "binary" format: one file per continuous stream.
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html
-    
+
     Based on neo.rawio.OpenEphysBinaryRawIO
-    
+
     Parameters
     ----------
     folder_path: str
-        
+
     stream_id: str or None
         stream for instance : 'imec0.ap' 'nidq' or 'imec0.lf'
     """
@@ -63,22 +65,30 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'dirname': folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
+        if hasattr(pi, "read_openephys"):
+            try:
+                probe = pi.read_openephys(folder_path)
+                self.set_probe(probe, in_place=True)
+            except Exception:
+                # probe not supported by OE version
+                pass
+
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     """
     Class for reading events from a OpenEphy board.
-    
+
     This open the openephys "new" "binary" format: one file per continuous stream.
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html
-    
+
     Based on neo.rawio.OpenEphysBinaryRawIO
-    
+
     Parameters
     ----------
     folder_path: str
-        
+
     """
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
