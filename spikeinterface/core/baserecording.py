@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 
-from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface
+from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor, BaseSegment
 from .core_tools import write_binary_recording, write_memory_recording
@@ -415,10 +415,30 @@ class BaseRecording(BaseExtractor):
                     probe.set_planar_contour(contour)
         return probegroup
 
-    def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}):
-        probe = Probe()
+    def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1},
+                                       axes="xy"):
+        """
+        Sets a 'dummy' probe based on locations.
+
+        Parameters
+        ----------
+        locations : np.array
+            Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
+        shape : str, optional
+            Electrode shapes, by default "circle"
+        shape_params : dict, optional
+            Shape parameters, by default {"radius": 1}
+        axes : str, optional
+            If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
+        """
+        ndim = locations.shape[1]
+        probe = Probe(ndim=ndim)
         probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
         probe.set_device_channel_indices(np.arange(self.get_num_channels()))
+
+        if ndim == 3:
+            probe = probe.to_3d(axes=axes)
+
         self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):
@@ -426,7 +446,7 @@ class BaseRecording(BaseExtractor):
             raise ValueError('set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
         self.set_property('location', locations, ids=channel_ids)
 
-    def get_channel_locations(self, channel_ids=None, locations_2d=True):
+    def get_channel_locations(self, channel_ids=None, axes: str = 'xy'):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
@@ -454,14 +474,17 @@ class BaseRecording(BaseExtractor):
                                             for cp in probe_j.contact_positions])):
                             raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
                 all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-                positions = all_positions[channel_indices]  
-            return positions
+                positions = all_positions[channel_indices]
+            return select_axes(positions, axes)
         else:
             locations = self.get_property('location')
             if locations is None:
                 raise Exception('There are no channel locations')
             locations = np.asarray(locations)[channel_indices]
-            return locations
+            return select_axes(locations, axes)
+
+    def has_3d_locations(self):
+        return self.get_property('location').shape[1] == 3
 
     def clear_channel_locations(self, channel_ids=None):
         if channel_ids is None:
@@ -540,6 +563,29 @@ class BaseRecording(BaseExtractor):
             elif outputs == 'dict':
                 recordings[value] = subrec
         return recordings
+
+    def planarize(self, axes: str = "xy"):
+        """
+        Returns a Recording with a 2D probe from one with a 3D probe
+
+        Parameters
+        ----------
+        axes : str, optional
+            The axes to keep, by default "xy"
+
+        Returns
+        -------
+        BaseRecording
+            The recording with 2D positions
+        """
+        assert self.has_3d_locations, "The 'planarize' function needs a recording with 3d locations"
+        assert len(axes) == 2, "You need to specify 2 dimensions (e.g. 'xy', 'zy')"
+
+        probe2d = self.get_probe().to_2d(axes=axes)
+        recording2d = self.clone()
+        recording2d.set_probe(probe2d, in_place=True)
+
+        return recording2d
 
 
 class BaseRecordingSegment(BaseSegment):
