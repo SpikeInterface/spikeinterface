@@ -19,6 +19,7 @@ if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
 else:
     cache_folder = Path("cache_folder") / "core"
+    cache_folder.mkdir(exist_ok=True, parents=True)
 
 
 def test_BaseRecording():
@@ -204,19 +205,19 @@ def test_BaseRecording():
     rec_3d = generate_recording(ndim=3, num_channels=30)
     locations_3d = rec_3d.get_property("location")
 
-    locations_xy = rec_3d.get_channel_locations(dimensions="xy")
+    locations_xy = rec_3d.get_channel_locations(axes="xy")
     assert np.allclose(locations_xy, locations_3d[:, [0, 1]])
 
-    locations_xz = rec_3d.get_channel_locations(dimensions="xz")
+    locations_xz = rec_3d.get_channel_locations(axes="xz")
     assert np.allclose(locations_xz, locations_3d[:, [0, 2]])
 
-    locations_zy = rec_3d.get_channel_locations(dimensions="zy")
+    locations_zy = rec_3d.get_channel_locations(axes="zy")
     assert np.allclose(locations_zy, locations_3d[:, [2, 1]])
 
-    locations_xzy = rec_3d.get_channel_locations(dimensions="xzy")
+    locations_xzy = rec_3d.get_channel_locations(axes="xzy")
     assert np.allclose(locations_xzy, locations_3d[:, [0, 2, 1]])
 
-    rec_2d = rec_3d.planarize(dimensions="zy")
+    rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
 
