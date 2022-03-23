@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import sys
 import datetime
 
 import numpy as np
@@ -337,7 +338,8 @@ def make_shared_array(shape, dtype):
         raise Exception('SharedMemory is available only for python>=3.8')
 
     dtype = np.dtype(dtype)
-    nbytes = shape[0] * shape[1] * dtype.itemsize
+    # nbytes = shape[0] * shape[1] * dtype.itemsize
+    nbytes = np.prod(shape) * dtype.itemsize
     shm = SharedMemory(name=None, create=True, size=nbytes)
     arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
     arr[:] = 0
@@ -514,3 +516,103 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     if save_path is not None:
         file_handle.close()
     return save_path
+
+
+def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=None,
+                         verbose=False, compressor=None,
+                         filters=None, **job_kwargs):
+    '''
+    Save the trace of a recording extractor in several zarr format.
+
+    Note :
+        time_axis is always 0 (contrary to previous version.
+        to get time_axis=1 (which is a bad idea) use `write_binary_recording_file_handle()`
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor object to be saved in .dat format
+    file_path: str
+        The path to the file.
+    dtype: dtype
+        Type of the saved data. Default float32.
+    add_file_extension: bool
+        If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
+    verbose: bool
+        If True, output is verbose (when chunks are used)
+    byte_offset: int
+        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
+    {}
+    '''
+    assert dataset_paths is not None, "Provide 'file_path'"
+
+    if not isinstance(dataset_paths, list):
+        dataset_paths = [dataset_paths]
+    assert len(dataset_paths) == recording.get_num_segments()
+
+    if dtype is None:
+        dtype = recording.get_dtype()
+
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
+
+    # create zarr datasets files
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        num_channels = recording.get_num_channels()
+        dset_name = dataset_paths[segment_index]
+        shape = (num_frames, num_channels)
+        _ = zarr_root.create_dataset(name=dset_name, shape=shape,
+                                     chunks=(chunk_size, None), dtype=dtype,
+                                     filters=filters,
+                                     compressor=compressor,)
+                                # synchronizer=zarr.ThreadSynchronizer())
+
+    # use executor (loop or workers)
+    func = _write_zarr_chunk
+    init_func = _init_zarr_worker
+    if n_jobs == 1:
+        init_args = (recording, zarr_path, dataset_paths, dtype)
+    else:
+        init_args = (recording.to_dict(), zarr_path, dataset_paths, dtype)
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
+                                      job_name='write_zarr_recording', **job_kwargs)
+    executor.run()
+
+
+# used by write_zarr_recording + ChunkRecordingExecutor
+def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
+    import zarr
+
+    # create a local dict per worker
+    worker_ctx = {}
+    if isinstance(recording, dict):
+        from spikeinterface.core import load_extractor
+        worker_ctx['recording'] = load_extractor(recording)
+    else:
+        worker_ctx['recording'] = recording
+
+    # reload root and datasets
+    root = zarr.open(str(zarr_path), mode="r+")
+    zarr_datasets = []
+    for dset_name in dataset_paths:
+        z = root[dset_name]
+        zarr_datasets.append(z)
+    worker_ctx['zarr_datasets'] = zarr_datasets
+    worker_ctx['dtype'] = np.dtype(dtype)
+
+    return worker_ctx
+
+
+# used by write_zarr_recording + ChunkRecordingExecutor
+def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    # recover variables of the worker
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    zarr_dataset = worker_ctx['zarr_datasets'][segment_index]
+
+    # apply function
+    traces = recording.get_traces(
+        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = traces.astype(dtype)
+    zarr_dataset[start_frame:end_frame, :] = traces

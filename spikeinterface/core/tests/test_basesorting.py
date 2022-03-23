@@ -10,26 +10,17 @@ import numpy as np
 from spikeinterface.core import NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.testing_tools import create_sorting_npz
+from spikeinterface.core.testing_tools import create_sorting_npz, generate_sorting
 
-
-def _clean_all():
-    cache_folder = './my_cache_folder'
-    if Path(cache_folder).exists():
-        shutil.rmtree(cache_folder)
-
-
-def setup_module():
-    _clean_all()
-
-
-def teardown_module():
-    _clean_all()
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
 
 
 def test_BaseSorting():
     num_seg = 2
-    file_path = 'test_BaseSorting.npz'
+    file_path = cache_folder / 'test_BaseSorting.npz'
 
     create_sorting_npz(num_seg, file_path)
 
@@ -53,26 +44,41 @@ def test_BaseSorting():
     sorting3 = load_extractor(d)
 
     # dump/load json
-    sorting.dump_to_json('test_BaseSorting.json')
-    sorting2 = BaseExtractor.load('test_BaseSorting.json')
-    sorting3 = load_extractor('test_BaseSorting.json')
+    sorting.dump_to_json(cache_folder / 'test_BaseSorting.json')
+    sorting2 = BaseExtractor.load(cache_folder / 'test_BaseSorting.json')
+    sorting3 = load_extractor(cache_folder / 'test_BaseSorting.json')
 
     # dump/load pickle
-    sorting.dump_to_pickle('test_BaseSorting.pkl')
-    sorting2 = BaseExtractor.load('test_BaseSorting.pkl')
-    sorting3 = load_extractor('test_BaseSorting.pkl')
+    sorting.dump_to_pickle(cache_folder / 'test_BaseSorting.pkl')
+    sorting2 = BaseExtractor.load(cache_folder / 'test_BaseSorting.pkl')
+    sorting3 = load_extractor(cache_folder / 'test_BaseSorting.pkl')
 
     # cache
-    folder = Path('./my_cache_folder') / 'simple_sorting'
+    folder = cache_folder / 'simple_sorting'
     sorting.save(folder=folder)
     sorting2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     sorting3 = BaseExtractor.load(folder)
 
     spikes = sorting.get_all_spike_trains()
-    print(spikes)
+    # print(spikes)
+
+    spikes = sorting.to_spike_vector()
+    # print(spikes)
+    
+    # select units
+    keep_units = [0, 1]
+    sorting_select = sorting.select_units(unit_ids=keep_units)
+    for unit in sorting_select.get_unit_ids():
+        assert unit in keep_units
+        
+    # remove empty units
+    empty_units = [1, 3]
+    sorting_empty = generate_sorting(empty_units=empty_units)
+    sorting_clean = sorting_empty.remove_empty_units()
+    for unit in sorting_clean.get_unit_ids():
+        assert unit not in empty_units
 
 
 if __name__ == '__main__':
-    _clean_all()
     test_BaseSorting()

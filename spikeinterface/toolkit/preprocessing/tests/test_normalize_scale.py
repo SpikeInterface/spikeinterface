@@ -1,11 +1,20 @@
-import unittest
 import pytest
+from pathlib import Path
 
+from spikeinterface import set_global_tmp_folder
 from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.toolkit.preprocessing import normalize_by_quantile, scale, center
 
 import numpy as np
+
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "toolkit"
+else:
+    cache_folder = Path("cache_folder") / "toolkit"
+
+set_global_tmp_folder(cache_folder)
 
 
 def test_normalize_by_quantile():
@@ -53,6 +62,5 @@ def test_center():
 
 if __name__ == '__main__':
     test_normalize_by_quantile()
-
     test_scale()
     test_center()

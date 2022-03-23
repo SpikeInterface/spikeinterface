@@ -7,7 +7,8 @@ import numpy as np
 from .base import load_extractor
 
 from .core_tools import check_json
-from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
+from .job_tools import _shared_job_kwargs_doc
+from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 
 _possible_template_modes = ('average', 'std', 'median')
 
@@ -411,7 +412,7 @@ class WaveformExtractor:
                 raise Exception('Waveforms not extracted yet: '
                                 'please do WaveformExtractor.run_extract_waveforms() first')
             if memmap:
-                wfs = np.load(waveform_file, mmap_mode="r")
+                wfs = np.load(str(waveform_file), mmap_mode="r")
             else:
                 wfs = np.load(waveform_file)
             if cache:
@@ -646,12 +647,10 @@ class WaveformExtractor:
         nbefore = self.nbefore
         nafter = self.nafter
         return_scaled = self.return_scaled
-
-        n_jobs = ensure_n_jobs(self.recording, job_kwargs.get('n_jobs', None))
+        unit_ids = self.sorting.unit_ids
 
         selected_spikes = self.sample_spikes()
 
-        # get spike times
         selected_spike_times = {}
         for unit_id in self.sorting.unit_ids:
             selected_spike_times[unit_id] = []
@@ -659,29 +658,31 @@ class WaveformExtractor:
                 spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sel = selected_spikes[unit_id][segment_index]
                 selected_spike_times[unit_id].append(spike_times[sel])
+        
+        spikes = []
+        for segment_index in range(self.sorting.get_num_segments()):
+            num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids])
+            spike_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+            spikes_ = np.zeros(num_in_seg,  dtype=spike_dtype)
+            pos = 0
+            for unit_ind, unit_id in enumerate(unit_ids):
+                spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                sel = selected_spikes[unit_id][segment_index]
+                n = sel.size
+                spikes_[pos:pos+n]['sample_ind'] = spike_times[sel]
+                spikes_[pos:pos+n]['unit_ind'] = unit_ind
+                spikes_[pos:pos+n]['segment_ind'] = segment_index
+                pos += n
+            order = np.argsort(spikes_)
+            spikes_ = spikes_[order]
+            spikes.append(spikes_)
+        spikes = np.concatenate(spikes)
 
-        # prepare memmap
-        wfs_memmap = {}
-        for unit_id in self.sorting.unit_ids:
-            file_path = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
-            n_spikes = np.sum([e.size for e in selected_spike_times[unit_id]])
-            shape = (n_spikes, self.nsamples, num_chans)
-            wfs = np.zeros(shape, dtype=p['dtype'])
-            np.save(file_path, wfs)
-            # wfs = np.load(file_path, mmap_mode='r+')
-            wfs_memmap[unit_id] = file_path
+        wf_folder = self.folder / 'waveforms'
+        wfs_arrays = extract_waveforms_to_buffers(self.recording, spikes, unit_ids, nbefore, nafter,
+                                mode='memmap', return_scaled=return_scaled, folder=wf_folder, dtype=p['dtype'],
+                                sparsity_mask=None,  copy=False, **job_kwargs)        
 
-        # and run
-        func = _waveform_extractor_chunk
-        init_func = _init_worker_waveform_extractor
-        if n_jobs == 1:
-            init_args = (self.recording, self.sorting,)
-        else:
-            init_args = (self.recording.to_dict(), self.sorting.to_dict(),)
-        init_args = init_args + (wfs_memmap, selected_spikes, selected_spike_times, nbefore, nafter, return_scaled)
-        processor = ChunkRecordingExecutor(self.recording, func, init_func, init_args, job_name='extract waveforms',
-                                           **job_kwargs)
-        processor.run()
 
 
 def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None):
@@ -726,89 +727,6 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
     return selected_spikes
 
 
-# used by WaveformExtractor + ChunkRecordingExecutor
-def _init_worker_waveform_extractor(recording, sorting, wfs_memmap,
-                                    selected_spikes, selected_spike_times, nbefore, nafter, return_scaled):
-    # create a local dict per worker
-    worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
-    worker_ctx['recording'] = recording
-
-    if isinstance(sorting, dict):
-        from spikeinterface.core import load_extractor
-        sorting = load_extractor(sorting)
-    worker_ctx['sorting'] = sorting
-
-    worker_ctx['wfs_memmap_files'] = wfs_memmap
-    worker_ctx['selected_spikes'] = selected_spikes
-    worker_ctx['selected_spike_times'] = selected_spike_times
-    worker_ctx['nbefore'] = nbefore
-    worker_ctx['nafter'] = nafter
-    worker_ctx['return_scaled'] = return_scaled
-
-    num_seg = sorting.get_num_segments()
-    unit_cum_sum = {}
-    for unit_id in sorting.unit_ids:
-        # spike per segment
-        n_per_segment = [selected_spikes[unit_id][i].size for i in range(num_seg)]
-        cum_sum = [0] + np.cumsum(n_per_segment).tolist()
-        unit_cum_sum[unit_id] = cum_sum
-    worker_ctx['unit_cum_sum'] = unit_cum_sum
-
-    return worker_ctx
-
-
-# used by WaveformExtractor + ChunkRecordingExecutor
-def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx['recording']
-    sorting = worker_ctx['sorting']
-    wfs_memmap_files = worker_ctx['wfs_memmap_files']
-    selected_spikes = worker_ctx['selected_spikes']
-    selected_spike_times = worker_ctx['selected_spike_times']
-    nbefore = worker_ctx['nbefore']
-    nafter = worker_ctx['nafter']
-    return_scaled = worker_ctx['return_scaled']
-    unit_cum_sum = worker_ctx['unit_cum_sum']
-
-    seg_size = recording.get_num_samples(segment_index=segment_index)
-
-    to_extract = {}
-    for unit_id in sorting.unit_ids:
-        spike_times = selected_spike_times[unit_id][segment_index]
-        i0 = np.searchsorted(spike_times, start_frame)
-        i1 = np.searchsorted(spike_times, end_frame)
-        if i0 != i1:
-            # protect from spikes on border :  spike_time<0 or spike_time>seg_size
-            # useful only when max_spikes_per_unit is not None
-            # waveform will not be extracted and a zeros will be left in the memmap file
-            while (spike_times[i0] - nbefore) < 0 and (i0!=i1):
-                i0 = i0 + 1
-            while (spike_times[i1-1] + nafter) > seg_size and (i0!=i1):
-                i1 = i1 - 1
-
-        if i0 != i1:
-            to_extract[unit_id] = i0, i1, spike_times[i0:i1]
-
-    if len(to_extract) > 0:
-        start = min(st[0] for _, _, st in to_extract.values()) - nbefore
-        end = max(st[-1] for _, _, st in to_extract.values()) + nafter
-        start = int(start)
-        end = int(end)
-
-        # load trace in memory
-        traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index,
-                                      return_scaled=return_scaled)
-
-        for unit_id, (i0, i1, local_spike_times) in to_extract.items():
-            wfs = np.load(wfs_memmap_files[unit_id], mmap_mode="r+")
-            for i in range(local_spike_times.size):
-                st = local_spike_times[i]
-                st = int(st)
-                pos = unit_cum_sum[unit_id][segment_index] + i0 + i
-                wfs[pos, :, :] = traces[st - start - nbefore:st - start + nafter, :]
 
 
 def extract_waveforms(recording, sorting, folder,
@@ -816,6 +734,7 @@ def extract_waveforms(recording, sorting, folder,
                       precompute_template=('average', ),
                       ms_before=3., ms_after=4.,
                       max_spikes_per_unit=500,
+                      unselect_spike_on_border=True,
                       overwrite=False,
                       return_scaled=True,
                       dtype=None,

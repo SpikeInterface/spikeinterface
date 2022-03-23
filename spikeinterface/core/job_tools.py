@@ -20,6 +20,8 @@ _shared_job_kwargs_doc = \
                     Memory usage for each job (e.g. '100M', '1G'
                 - total_memory: str
                     Total memory usage (e.g. '500M', '2G')
+                - chunk_duration : str or float or None
+                    Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
             * n_jobs: int
                 Number of jobs to use. With -1 the number of jobs is the same as number of cores
             * progress_bar: bool
@@ -89,7 +91,7 @@ def ensure_n_jobs(recording, n_jobs=1):
     return n_jobs
 
 
-def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memory=None, n_jobs=1, **other_kwargs):
+def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs):
     """
     'chunk_size' is the traces.shape[0] for each worker.
 
@@ -109,6 +111,9 @@ def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memor
         must endswith 'k', 'M' or 'G'
     total_memory: str or None
         must endswith 'k', 'M' or 'G'
+    chunk_duration: None or float or str
+        Units are second if float.
+        If str then the str must contain units(e.g. '1s', '500ms')
     """
     if chunk_size is not None:
         # manual setting
@@ -127,6 +132,19 @@ def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memor
         n_bytes = np.dtype(recording.get_dtype()).itemsize
         num_channels = recording.get_num_channels()
         chunk_size = int(total_memory / (num_channels * n_bytes * n_jobs))
+    elif chunk_duration is not None:
+        if isinstance(chunk_duration, float):
+            chunk_size = int(chunk_duration * recording.get_sampling_frequency())
+        elif isinstance(chunk_duration, str):
+            if chunk_duration.endswith('ms'):
+                chunk_duration = float(chunk_duration.replace('ms', '')) / 1000.
+            elif chunk_duration.endswith('s'):
+                chunk_duration = float(chunk_duration.replace('s', ''))
+            else:
+                raise ValueError('chunk_duration must ends with s or ms') 
+            chunk_size = int(chunk_duration * recording.get_sampling_frequency())
+        else:
+            raise ValueError('chunk_duration must be str or float') 
     else:
         if n_jobs == 1:
             # not chunk computing
@@ -173,6 +191,8 @@ class ChunkRecordingExecutor:
         Memory per chunk (RAM) to use (e.g. "1G", "500M")
     chunk_size: int or None
         Size of each chunk in number of samples. If 'total_memory' or 'chunk_memory' are used, it is ignored.
+    chunk_duration : str or float or None
+        Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
     job_name: str
         Job name
 
@@ -183,7 +203,7 @@ class ChunkRecordingExecutor:
     """
 
     def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
-                 n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None,
+                 n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None,
                  job_name=''):
 
         self.recording = recording
@@ -199,7 +219,8 @@ class ChunkRecordingExecutor:
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
         self.chunk_size = ensure_chunk_size(recording,
                                             total_memory=total_memory, chunk_size=chunk_size,
-                                            chunk_memory=chunk_memory, n_jobs=self.n_jobs)
+                                            chunk_memory=chunk_memory, chunk_duration=chunk_duration,
+                                            n_jobs=self.n_jobs)
         self.job_name = job_name
 
         if verbose:
