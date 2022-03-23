@@ -1,45 +1,100 @@
 import numpy as np
 from scipy.fft import rfft, irfft
 
+from .tools import get_chunk_with_margin
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
-class DestripeRecording(BasePreprocessor):
-    name = 'destripe'
+# TODO:
+#   * handle the dtype to cast back to the input or upcast when wanted
+#   * find the correct margin_ms
 
-    def __init__(self, recording, inter_sample_shift=None):
+
+class PhaseShiftRecording(BasePreprocessor):
+    """
+    This apply a phase shift to a recording to cancel the small sampling
+    delay across for some recording system.
+    
+    This is particularly relevant for neuropixel recording.
+    
+    This code is from  IBL lib.
+    https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
+    
+    Parameters
+    ----------
+    recording: Recording
+        The recording. It need to have  "inter_sample_shift" in properties.
+    inter_sample_shift: None or numpy array
+        If "inter_sample_shift" is not in recording.properties
+        we can externaly provide one.
+    Returns
+    -------
+    filter_recording: PhaseShiftRecording
+        The phase shifted recording object
+    """
+    name = 'phase_shift'
+    def __init__(self, recording, margin_ms=50.,  inter_sample_shift=None):
         if inter_sample_shift is None:
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
-            inter_sample_shift = recording.get_property("sample_shift")
+            sample_shifts = recording.get_property("inter_sample_shift")
         else:
-            assert len(inter_sample_shift) == recording.get_num_channels(), "..."
+            assert len(inter_sample_shift) == recording.get_num_channels(), "sample "
+            sample_shifts = np.asarray(inter_sample_shift)
+        
+        margin = int(margin_ms * recording.get_sampling_frequency() / 1000.)
+        
         BasePreprocessor.__init__(self, recording)
         for parent_segment in recording._recording_segments:
-            rec_segment = DestripeRecordingSegment(parent_segment)
-            self.add_recording_segment(rec_segment, inter_sample_shift)
-        self._kwargs = dict(recording=recording.to_dict())
+            rec_segment = DestripeRecordingSegment(parent_segment, sample_shifts, margin)
+            self.add_recording_segment(rec_segment)
+        
+        # for dumpability
+        if inter_sample_shift is not None:
+            inter_sample_shift = list(inter_sample_shift)
+        self._kwargs = dict(recording=recording.to_dict(), margin_ms=float(margin_ms),
+                             inter_sample_shift=inter_sample_shift)
 
 
 class DestripeRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, sample_shifts):
+    def __init__(self, parent_recording_segment, sample_shifts, margin):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
+        self.margin = margin
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        traces_shift = _fshift(traces, self.sample_shifts, axis=1)
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
+                                                                        start_frame, end_frame, channel_indices,
+                                                                        self.margin, add_zeros=True)
+        
+        traces_shift = apply_fshift(traces_chunk, self.sample_shifts, axis=0)
+
+
+        if right_margin > 0:
+            traces_shift = traces_shift[left_margin:-right_margin, :]
+        else:
+            traces_shift = traces_shift[left_margin:, :]
+        
         return traces_shift
+        
+        # TODO handle the dtype
+        # return filtered_traces.astype(self.dtype)
 
 
 # function for API
-def destripe(*args, **kwargs):
-    return DestripeRecording(*args, **kwargs)
+def phase_shift(*args, **kwargs):
+    return PhaseShiftRecording(*args, **kwargs)
 
 
-destripe.__doc__ = DestripeRecording.__doc__
+phase_shift.__doc__ = PhaseShiftRecording.__doc__
 
 
-def _fshift(w, s, axis=-1, ns=None):
+def apply_fshift(w, s, axis=0, ns=None):
     """
     Function from IBLIB: https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
 
@@ -57,7 +112,8 @@ def _fshift(w, s, axis=-1, ns=None):
     shape = np.array(w.shape) * 0 + 1
     shape[axis] = ns
     dephas = np.zeros(shape)
-    np.put(dephas, 1, 1)
+    # np.put(dephas, 1, 1)
+    dephas[1] = 1
     dephas = rfft(dephas, axis=axis)
     # fft the data along the axis and the dephas
     do_fft = np.invert(np.iscomplexobj(w))
