@@ -10,8 +10,9 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor
+from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core.testing_tools import generate_recording
 
@@ -219,6 +220,14 @@ def test_BaseRecording():
 
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
+
+
+    # Test save to zarr
+    compressor = get_default_zarr_compressor()
+    rec_zarr = rec2.save(format="zarr", zarr_path=cache_folder / "recording.zarr",
+                         compressor=compressor)
+    check_recordings_equal(rec2, rec_zarr, return_scaled=False)
+
 
 
 if __name__ == '__main__':
