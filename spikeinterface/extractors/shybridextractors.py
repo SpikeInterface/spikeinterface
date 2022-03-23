@@ -17,7 +17,7 @@ except ImportError:
 
 
 class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
-    extractor_name = 'MdaRecording'
+    extractor_name = 'SHYBRIDRecording'
     has_default_locations = True
     has_unscaled = False
     installed = HAVE_SBEX  # check at class level if installed or not

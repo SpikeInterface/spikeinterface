@@ -5,9 +5,9 @@ import probeinterface as pi
 
 import neo
 
-import distutils.version
+from packaging import version
 
-HAS_NEO_11 = distutils.version.LooseVersion(neo.__version__) >= '0.11'
+HAS_NEO_10_2 = version.parse(neo.__version__) >= version.parse('0.10.2')
 
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
@@ -33,13 +33,13 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     def __init__(self, folder_path, stream_id=None):
         neo_kwargs = {'dirname': str(folder_path)}
-        if HAS_NEO_11:
+        if HAS_NEO_10_2:
             neo_kwargs['load_sync_channel'] = False
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        # open the corresponding stream probe
-        if HAS_NEO_11 and '.ap' in self.stream_id:
-            signals_info_dict = {e['stream_name']: e for e in self.neo_reader.signals_info_list}
+        #~ # open the corresponding stream probe
+        if HAS_NEO_10_2 and '.ap' in self.stream_id:
+            signals_info_dict = {e['stream_name'] : e for e  in self.neo_reader.signals_info_list}
             meta_filename = signals_info_dict[self.stream_id]['meta_file']
             probe = pi.read_spikeglx(meta_filename)
             self.set_probe(probe, in_place=True)

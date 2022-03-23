@@ -1,11 +1,7 @@
-import unittest
-import pytest
+import numpy as np
 
 from spikeinterface.core.testing_tools import generate_recording
-
 from spikeinterface.toolkit.preprocessing import remove_artifacts
-
-import numpy as np
 
 
 def test_remove_artifacts():

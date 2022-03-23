@@ -1,26 +1,17 @@
-import shutil
+import pytest
 from pathlib import Path
 import numpy as np
 
 from spikeinterface.core.testing_tools import generate_recording, generate_sorting
 
 
-def _clean_all():
-    cache_folder = './my_cache_folder'
-    if Path(cache_folder).exists():
-        shutil.rmtree(cache_folder)
-
-
-def setup_module():
-    _clean_all()
-
-
-def teardown_module():
-    _clean_all()
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
 
 
 def test_time_handling():
-    cache_folder = Path('./my_cache_folder')
     durations = [[10], [10, 5]]
 
     # test multi-segment
@@ -81,5 +72,4 @@ def test_frame_slicing():
 
 
 if __name__ == '__main__':
-    _clean_all()
     test_frame_slicing()
