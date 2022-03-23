@@ -65,13 +65,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'dirname': folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
-        if hasattr(pi, "read_openephys"):
-            try:
-                probe = pi.read_openephys(folder_path)
-                self.set_probe(probe, in_place=True)
-            except Exception:
-                # probe not supported by OE version
-                pass
+        probe = pi.read_openephys(folder_path, raise_error=False)
+        if probe is not None:
+            self.set_probe(probe, in_place=True)
 
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
