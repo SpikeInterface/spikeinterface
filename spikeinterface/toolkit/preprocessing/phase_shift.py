@@ -72,7 +72,9 @@ class DestripeRecordingSegment(BasePreprocessorSegment):
                                                                         start_frame, end_frame, channel_indices,
                                                                         self.margin, add_zeros=True)
         
-        traces_shift = apply_fshift(traces_chunk, self.sample_shifts, axis=0)
+        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
+        # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
+        
 
 
         if right_margin > 0:
@@ -94,7 +96,21 @@ def phase_shift(*args, **kwargs):
 phase_shift.__doc__ = PhaseShiftRecording.__doc__
 
 
-def apply_fshift(w, s, axis=0, ns=None):
+def apply_fshift_sam(sig, sample_shifts, axis=0):
+    sig_f = np.fft.rfft(sig, axis=axis)
+    omega = np.linspace(0, np.pi, sig_f.shape[axis])
+    # broadcast omega and sample_shifts
+    if axis == 0:
+        shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
+    else:
+        shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
+    sig_shift = np.fft.irfft(sig_f * np.exp(- 1j  * shifts), axis=axis)
+    return sig_shift
+
+apply_fshift = apply_fshift_sam
+    
+
+def apply_fshift_ibl(w, s, axis=0, ns=None):
     """
     Function from IBLIB: https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
 
