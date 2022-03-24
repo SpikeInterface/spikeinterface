@@ -1,6 +1,71 @@
 import numpy as np
 
 
+try:
+    import numba
+    HAVE_NUMBA = True
+except ModuleNotFoundError as err:
+    HAVE_NUMBA = False
+
+def compute_autocorrelogram_from_spiketrain(spike_train, max_time, bin_size, sampling_f):
+    """
+    Compute the auto-correlogram from a given spike train.
+
+    This implementation only works if you have numba installed, to accelerate the
+    computation time.
+
+    Parameters
+    ----------
+    spike_train: np.ndarray
+        The ordered spike train to compute the auto-correlogram.
+    max_time: float
+        Compute the auto-correlogram between -max_time and +max_time (in ms).
+    bin_size: float
+        Size of a bin (in ms).
+    sampling_f: float:
+        Sampling rate/frequency (in Hz).
+
+    Returns
+    -------
+    tuple (auto_corr, bins)
+    auto_corr: np.ndarray[int64]
+        The computed auto-correlogram.
+    bins: np.ndarray[float64]
+        The bins for the auto-correlogram.
+    """
+    if not HAVE_NUMBA:
+        print("Error: numba is not installed.")
+        print("compute_autocorrelogram_from_spiketrain cannot run without numba.")
+        return 0
+
+    return _compute_autocorr_numba(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
+
+if HAVE_NUMBA:
+    @numba.jit((numba.int64[::1], numba.float32, numba.float32, numba.float32), nopython=True,
+                nogil=True, cache=True)
+    def _compute_autocorr_numba(spike_train, max_time, bin_size, sampling_f):
+        bin_size_c = int(round(bin_size * 1e-3 * sampling_f))
+        max_time_c = int(round(max_time * 1e-3 * sampling_f))
+        max_time -= max_time / bin_size
+        n_bins = 2 * int(max_time_c / bin_size_c)
+
+        bins = np.arange(-max_time_c, max_time_c+bin_size_c, bin_size_c) * 1e3 / sampling_f
+        auto_corr = np.zeros(n_bins, dtype=np.int64)
+
+        for i in range(len(spike_train)):
+            for j in range(i+1, len(spike_train)):
+                diff = spike_train[j] - spike_train[i]
+
+                if diff >= max_time_c:
+                    break
+
+                bin = int(diff / bin_size_c)
+                auto_corr[n_bins//2 - bin - 1] += 1
+                auto_corr[n_bins//2 + bin] += 1
+
+        return (auto_corr, bins)
+
+
 def compute_correlograms(sorting,
                          window_ms=100.0, bin_ms=5.0,
                          symmetrize=False):

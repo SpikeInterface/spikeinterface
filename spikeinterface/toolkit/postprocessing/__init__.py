@@ -13,7 +13,7 @@ from .principal_component import (WaveformPrincipalComponent,
 
 from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculator
 
-from .correlograms import compute_correlograms
+from .correlograms import compute_autocorrelogram_from_spiketrain, compute_correlograms
 
 
 from .unit_localization import localize_units, compute_center_of_mass
