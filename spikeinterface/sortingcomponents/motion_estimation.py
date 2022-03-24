@@ -111,6 +111,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
             contact_pos = probe.contact_positions[:, dim]
 
             bin_step_um = non_rigid_kwargs['bin_step_um']
+            sigma_um = non_rigid_kwargs.get('sigma', 3) * bin_step_um
             min_ = np.min(contact_pos) - margin_um
             max_ = np.max(contact_pos) + margin_um
 
@@ -119,8 +120,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
 
             # TODO check this gaussian with julien
             for win_center in spatial_bins:
-                sigma = bin_step_um
-                win = np.exp(-(spatial_hist_bins[:-1] - win_center) ** 2 / (2 * sigma ** 2))
+                win = np.exp(-(spatial_hist_bins[:-1] - win_center) ** 2 / (sigma_um ** 2))
                 non_rigid_windows.append(win)
 
             if output_extra_check:
@@ -135,7 +135,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
             if verbose:
                 print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
-            pairwise_displacement, pairwise_displacement_error = compute_pairwise_displacement(motion_hist, bin_um,
+            pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(motion_hist, bin_um,
                                                                   method=method_kwargs['pairwise_displacement_method'],
                                                                   progress_bar=progress_bar)
             if output_extra_check:
@@ -145,7 +145,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
                 print(f'Computing global displacement: {i + 1} / {len(non_rigid_windows)}')
 
             one_motion = compute_global_displacement(pairwise_displacement,
-                        pairwise_displacement_error=pairwise_displacement_error,
+                        pairwise_displacement_weight=pairwise_displacement_weight,
                         convergence_method=method_kwargs['convergence_method']
                         )
             motion.append(one_motion[:, np.newaxis])
@@ -208,31 +208,60 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
     return motion_histogram, temporal_bins, spatial_bins
 
 
-def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress_bar=False): 
+def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d',
+                                  weight_mode='exp', error_sigma = 0.2,
+                                  conv_engine='numpy',
+                                  progress_bar=False): 
     """
     Compute pairwise displacement
     """
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype='float32')
-    pairwise_displacement_error = np.zeros((size, size), dtype='float32')
+    
+    if conv_engine == 'torch':
+        import torch
 
     if method == 'conv2d':
         n = motion_hist.shape[1] // 2
         possible_displacement = np.arange(motion_hist.shape[1]) * bin_um
         possible_displacement -= possible_displacement[n]
-
+        conv_values = np.zeros((size, size), dtype='float32')
+        
         # TODO find something faster
         loop = range(size)
         if progress_bar:
             loop = tqdm(loop)
-        for i in loop:
-            # print(i, size)
-            for j in range(size):
-                conv = np.convolve(motion_hist[i, :], motion_hist[j, ::-1], mode='same')
-                ind_max = np.argmax(conv)
-                pairwise_displacement[i, j] = possible_displacement[ind_max]
-        #pairwise_displacement_error = None
-                pairwise_displacement_error[i, j] = conv[ind_max]
+        if conv_engine == 'numpy':
+            for i in loop:
+                for j in range(size):
+                    conv = np.convolve(motion_hist[i, :], motion_hist[j, ::-1], mode='same')
+                    ind_max = np.argmax(conv)
+                    pairwise_displacement[i, j] = possible_displacement[ind_max]
+                    # norm = np.linalg.norm(conv)  ## this is wring Erdem!
+                    norm = np.sqrt(np.sum(motion_hist[i, :]**2) * np.sum(motion_hist[j, :]**2))
+                    conv_values[i, j] = conv[ind_max]  / norm
+                    if (ind_max == 0) or (ind_max == possible_displacement.size -1):
+                        conv_values[i, j] = -1
+        elif conv_engine == 'torch':
+            # TODO clip to -max_disp + max_disp
+            # possible_displacement = np.arange(-disp, disp + step_size, step_size)
+            motion_hist_torch = torch.from_numpy(motion_hist[:, np.newaxis, :]).cuda().float()
+            c2d = torch.nn.Conv2d(in_channels=1, out_channels=size,
+                                    kernel_size=[1, motion_hist_torch.shape[-1]],
+                                    stride=1, 
+                                    padding=[0, possible_displacement.size//2],
+                                    bias=False).cuda()
+            c2d.weight[:, 0] = motion_hist_torch
+            for i in loop:
+                res = c2d(motion_hist_torch[i:i+1, None])[:,:,0,:].argmax(2)
+                pairwise_displacement[i:i+1] = possible_displacement[res.cpu()]
+                del res
+            del c2d
+            del motion_hist_torch
+            torch.cuda.empty_cache()
+
+        # put in range 0-1
+        errors = - conv_values * 0.5 + 0.5
 
     elif method == 'phase_cross_correlation':
         try:
@@ -240,8 +269,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
         except ImportError:
             raise ImportError("To use 'phase_cross_correlation' method install scikit-image")
         
-        pairwise_displacement_error = np.zeros((size, size), dtype='float32')
-        
+        errors = np.zeros((size, size), dtype='float32')
         loop = range(size)
         if progress_bar:
             loop = tqdm(loop)
@@ -250,14 +278,25 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d', progress
                 shift, error, diffphase = skimage.registration.phase_cross_correlation(motion_hist[i, :], 
                                                                                        motion_hist[j, :])
                 pairwise_displacement[i, j] = shift * bin_um 
-                pairwise_displacement_error[i, j] = error
+                errors[i, j] = error
+        
+        # print(errors.min(), errors.max())
+        # pairwise_displacement_weight = np.exp(-((errors - errors.min()) / (errors.max() - errors.min()))/ error_sigma )
+        
+
     else:
         raise ValueError(f'method do not exists for compute_pairwise_displacement {method}')
 
-    return pairwise_displacement, pairwise_displacement_error
+    if weight_mode == 'linear':
+        # between 0 and 1
+        pairwise_displacement_weight = 1 - errors
+    elif weight_mode == 'exp':
+        pairwise_displacement_weight = np.exp(- errors / error_sigma )
+
+    return pairwise_displacement, pairwise_displacement_weight
 
 
-def compute_global_displacement(pairwise_displacement, pairwise_displacement_error=None, convergence_method='gradient_descent', max_iter=1000):
+def compute_global_displacement(pairwise_displacement, pairwise_displacement_weight=None, convergence_method='gradient_descent', max_iter=1000):
     """
     Compute global displacement
     
@@ -265,13 +304,20 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_err
     https://github.com/int-brain-lab/spikes_localization_registration/blob/main/registration_pipeline/image_based_motion_estimate.py#L211
     
     """
+    from scipy.spatial.distance import pdist, squareform
+    size = pairwise_displacement.shape[0]
+
     if convergence_method == 'gradient_descent':
-        size = pairwise_displacement.shape[0]
+        
         displacement = np.zeros(size, dtype='float64')
 
         # use variable name from paper
         # DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
         # Erdem Varol1, Julien Boussard, Hyun Dong Lee
+
+        # time_sigma = 20
+        # W2 = np.exp(-squareform(pdist(np.arange(size)[:,None]))/time_sigma)
+
         D = pairwise_displacement
         p = displacement
         p_prev = p.copy()
@@ -279,14 +325,16 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_err
             # print(i)
             repeat1 = np.tile(p[:, np.newaxis], [1, size])
             repeat2 = np.tile(p[np.newaxis, :], [size, 1])
-            mat_norm = D + repeat1 - repeat2
-            p += 2 * (np.sum(D - np.diag(D), axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
+            mat_norm = D + (repeat1 - repeat2)
+            # mat_norm = mat_norm * W2
+            p += 2 * (np.sum(D - np.diag(D) , axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
+            # p += 2 * (np.sum(D * W2 - np.diag(D * W2) , axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
             if np.allclose(p_prev, p):
                 break
             else:
                 p_prev = p.copy()
 
-    elif convergence_method == 'gradient_descent_robust':
+    elif convergence_method == 'lsqr_robust':
         from scipy.spatial.distance import pdist, squareform
         from scipy.sparse import csr_matrix
         from scipy.sparse.linalg import lsqr
@@ -294,19 +342,25 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_err
         
         # TODO expose this in signature
         error_sigma = 0.1
-        time_sigma = 20
+        time_sigma = 45
         robust_regression_sigma = 1
         # n_iter = 20
         n_iter = 1
 
-        assert pairwise_displacement_error is not None
+        assert pairwise_displacement_weight is not None
         S = np.ones(pairwise_displacement.shape, dtype='bool')
-        error_mat_S = pairwise_displacement_error[np.where(S != 0)]
-        W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
-        W2 = np.exp(-squareform(pdist(np.arange(pairwise_displacement.shape[0])[:,None]))/time_sigma)
-        W2 = W2[np.where(S != 0)]
+        # error_mat_S = pairwise_displacement_error[np.where(S != 0)]
+        # W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
+        # W1 = pairwise_displacement_weight
+        # W2 = np.exp(-squareform(pdist(np.arange(size)[:,None]))/time_sigma)
+        # W2 = W2[np.where(S != 0)]
         # W = (W2*W1)[:,None]
-        W = W1[:,None]
+        # W = W1[:,None]
+        # W = W2[:,None]
+        # W = np.ones((size, size)).flatten()[:, None]
+        W = pairwise_displacement_weight[np.where(S != 0)][:,None]
+        
+
 
 
         # import matplotlib.pyplot as plt
