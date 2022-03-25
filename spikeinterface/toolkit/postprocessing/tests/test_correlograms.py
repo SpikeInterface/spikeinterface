@@ -33,7 +33,7 @@ def test_compute_autocorrelogram_from_spiketrain():
     # ~ recording = se.MEArecRecordingExtractor(local_path)
     sorting = se.MEArecSortingExtractor(local_path)
 
-    spike_train = sorting.get_unit_spike_train(sorting.get_unit_ids[0])
+    spike_train = sorting.get_unit_spike_train(sorting.get_unit_ids()[0])
     correlograms, bins = compute_autocorrelogram_from_spiketrain(spike_train, max_time=35.0, bin_size=0.5, sampling_f=sorting.get_sampling_frequency())
 
 
