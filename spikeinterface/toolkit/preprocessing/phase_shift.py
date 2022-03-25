@@ -25,6 +25,8 @@ class PhaseShiftRecording(BasePreprocessor):
     ----------
     recording: Recording
         The recording. It need to have  "inter_sample_shift" in properties.
+    margin_ms: float
+        margin in ms for computation
     inter_sample_shift: None or numpy array
         If "inter_sample_shift" is not in recording.properties
         we can externaly provide one.
@@ -34,7 +36,7 @@ class PhaseShiftRecording(BasePreprocessor):
         The phase shifted recording object
     """
     name = 'phase_shift'
-    def __init__(self, recording, margin_ms=10.,  inter_sample_shift=None):
+    def __init__(self, recording, margin_ms=20.,  inter_sample_shift=None):
         if inter_sample_shift is None:
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
@@ -75,13 +77,12 @@ class DestripeRecordingSegment(BasePreprocessorSegment):
         traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
         
-
-
         if right_margin > 0:
             traces_shift = traces_shift[left_margin:-right_margin, :]
         else:
             traces_shift = traces_shift[left_margin:, :]
         
+
         return traces_shift
         
         # TODO handle the dtype
@@ -104,7 +105,7 @@ def apply_fshift_sam(sig, sample_shifts, axis=0):
         shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
     else:
         shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
-    sig_shift = np.fft.irfft(sig_f * np.exp(- 1j  * shifts), axis=axis)
+    sig_shift = np.fft.irfft(sig_f * np.exp(- 1j  * shifts), n=sig.shape[axis], axis=axis)
     return sig_shift
 
 apply_fshift = apply_fshift_sam

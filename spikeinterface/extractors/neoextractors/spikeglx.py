@@ -72,3 +72,4 @@ def _get_sample_shifts(num_contact, imDatPrb_type):
     sample_shift = np.zeros_like(adc)
     for a in adc:
         sample_shift[adc == a] = np.arange(adc_channels) / adc_channels
+    return sample_shift
