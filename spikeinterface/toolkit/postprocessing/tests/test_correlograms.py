@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface import download_dataset, extract_waveforms
 import spikeinterface.extractors as se
-from spikeinterface.toolkit import compute_correlograms
+from spikeinterface.toolkit import compute_autocorrelogram_from_spiketrain, compute_correlograms
 
 try:
     import numba
