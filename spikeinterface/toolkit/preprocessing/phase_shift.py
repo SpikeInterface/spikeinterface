@@ -72,10 +72,20 @@ class DestripeRecordingSegment(BasePreprocessorSegment):
                                                                         start_frame, end_frame, channel_indices,
                                                                         self.margin, add_zeros=True)
         
+        need_dtype = None
         if self.dtype is not None:
+            # this imply a copy always
             traces_chunk = traces_chunk.astype(self.dtype)
+        else:
+            if traces_chunk.dtype.kind == 'i':
+                # force float computing ebcause of the taper
+                need_dtype = traces_chunk.dtype
+                traces_chunk = traces_chunk.astype('float32')
+            else:
+                # a copy is needed  because the taper is inplace
+                traces_chunk = traces_chunk.copy()
 
-        # apply some windows on border
+        # apply some windows on border : !!!this is inplace!!!!
         taper = (1 - np.cos(np.arange(self.margin) / self.margin * np.pi)) / 2
         taper = taper[:, np.newaxis]
         traces_chunk[:self.margin] *= taper
@@ -84,7 +94,10 @@ class DestripeRecordingSegment(BasePreprocessorSegment):
         traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
+
         traces_shift = traces_shift[left_margin:-right_margin, :]
+        if need_dtype:
+            traces_shift =traces_shift.astype(need_dtype)
         
         return traces_shift
         

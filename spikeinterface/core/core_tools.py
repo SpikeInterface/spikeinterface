@@ -395,7 +395,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
     if n_jobs > 1:
         init_args = (recording.to_dict(), None, shm_names, shapes, dtype)
     else:
-        init_args = (recording.to_dict(), arrays, None, None, dtype)
+        init_args = (recording, arrays, None, None, dtype)
 
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_memory_recording', **job_kwargs)
