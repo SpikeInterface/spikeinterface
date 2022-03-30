@@ -621,6 +621,23 @@ class BaseRecording(BaseExtractor):
             elif outputs == 'dict':
                 recordings[value] = subrec
         return recordings
+    
+    def select_segments(self, segment_indices):
+        """
+        Return a recording with the segments specified by 'segment_indices'
+
+        Parameters
+        ----------
+        segment_indices : list of int
+            List of segment indices to keep in the returned recording
+
+        Returns
+        -------
+        SelectSegmentRecording
+            The recording with the selected segments
+        """
+        from .segmentutils import SelectSegmentRecording
+        return SelectSegmentRecording(self, segment_indices=segment_indices)
 
     def planarize(self, axes: str = "xy"):
         """
