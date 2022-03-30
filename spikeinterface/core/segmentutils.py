@@ -14,6 +14,8 @@ import numpy as np
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
+from typing import List
+
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
     assert sampling_frequency_max_diff >= 0
@@ -227,23 +229,24 @@ class SelectSegmentRecording(BaseRecording):
     ----------
     recording : BaseRecording
         The multi-segment recording
-    segment_index : int
-        The segment index to select
+    segment_indices : list of int
+        The segment indices to select
     """
 
-    def __init__(self, recording: BaseRecording, segment_index: int):
+    def __init__(self, recording: BaseRecording, segment_indices: List[int]):
         BaseRecording.__init__(self, recording.get_sampling_frequency(), 
                                recording.channel_ids, recording.get_dtype())
         recording.copy_metadata(self)
         
         num_segments = recording.get_num_segments()
-        assert segment_index < num_segments, f"'segment_index' must be between 0 and {num_segments - 1}"
+        assert len(segment_indices) < num_segments, f"'segment_index' must be between 0 and {num_segments - 1}"
 
-        rec_seg = recording._recording_segments[segment_index]
-        self.add_recording_segment(rec_seg)
+        for segment_index in segment_indices:
+            rec_seg = recording._recording_segments[segment_index]
+            self.add_recording_segment(rec_seg)
 
         self._kwargs = {'recording': recording.to_dict(),
-                        'segment_index': segment_index}
+                        'segment_indices': segment_indices}
         
 
 def split_recording(recording: BaseRecording):
@@ -262,7 +265,8 @@ def split_recording(recording: BaseRecording):
     """
     recording_list = []
     for segment_index in range(recording.get_num_segments()):
-        rec_mono = SelectSegmentRecording(recording=recording, segment_index=segment_index)
+        rec_mono = SelectSegmentRecording(
+            recording=recording, segment_indices=[segment_index])
         recording_list.append(rec_mono)
     return recording_list
 
