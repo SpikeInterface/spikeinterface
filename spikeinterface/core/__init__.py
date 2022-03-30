@@ -32,6 +32,7 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 from .segmentutils import (
     append_recordings, AppendSegmentRecording,
     concatenate_recordings, ConcatenateSegmentRecording,
+    split_recording, SplitSegmentRecording,
     append_sortings, AppendSegmentSorting, 
     split_sorting, SplitSegmentSorting)
 
