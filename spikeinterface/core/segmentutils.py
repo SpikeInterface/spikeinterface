@@ -14,7 +14,6 @@ import numpy as np
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
-from typing import List
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
     assert sampling_frequency_max_diff >= 0
@@ -216,6 +215,54 @@ def concatenate_recordings(*args, **kwargs):
 
 
 concatenate_recordings.__doc__ == ConcatenateSegmentRecording.__doc__
+
+
+class SplitSegmentRecording(BaseRecording):
+    """
+    Return a new recording with a single segment from a multi-segment recording.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The multi-segment recording
+    segment_index : int
+        The segment index to select
+    """
+
+    def __init__(self, recording: BaseRecording, segment_index: int):
+        BaseRecording.__init__(self, recording.get_sampling_frequency(), 
+                               recording.channel_ids, recording.get_dtype())
+        recording.copy_metadata(self)
+        
+        num_segments = recording.get_num_segments()
+        assert segment_index < num_segments, f"'segment_index' must be between 0 and {num_segments - 1}"
+
+        rec_seg = recording._recording_segments[segment_index]
+        self.add_recording_segment(rec_seg)
+
+        self._kwargs = {'recording': recording.to_dict(),
+                        'segment_index': segment_index}
+        
+
+def split_recording(recording: BaseRecording):
+    """
+    Return a list of mono-segment recordings from a multi-segment recording.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The multi-segment recording
+
+    Returns
+    -------
+    recording_list
+        A list of mono-segment recordings
+    """
+    recording_list = []
+    for segment_index in range(recording.get_num_segments()):
+        rec_mono = SplitSegmentRecording(recording=recording, segment_index=segment_index)
+        recording_list.append(rec_mono)
+    return recording_list
 
 
 class AppendSegmentSorting(BaseSorting):
