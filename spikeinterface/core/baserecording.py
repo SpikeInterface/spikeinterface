@@ -165,7 +165,7 @@ class BaseRecording(BaseExtractor):
                           'times are not always propagated to across preprocessing'
                           'Use use this carefully!')
 
-    _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
+    _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 'verbose']
 
     def _save(self, format='binary', **save_kwargs):
         """
