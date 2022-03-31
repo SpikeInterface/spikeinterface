@@ -1,3 +1,4 @@
+zarr
 h5py
 pandas
 scipy

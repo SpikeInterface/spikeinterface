@@ -219,7 +219,8 @@ class ChunkRecordingExecutor:
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
         self.chunk_size = ensure_chunk_size(recording,
                                             total_memory=total_memory, chunk_size=chunk_size,
-                                            chunk_memory=chunk_memory, chunk_duration=chunk_duration, n_jobs=self.n_jobs)
+                                            chunk_memory=chunk_memory, chunk_duration=chunk_duration,
+                                            n_jobs=self.n_jobs)
         self.job_name = job_name
 
         if verbose:
