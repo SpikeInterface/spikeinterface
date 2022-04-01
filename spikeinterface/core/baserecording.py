@@ -8,6 +8,7 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 
 from .base import BaseExtractor, BaseSegment
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
+from .job_tools import job_keys
 
 from warnings import warn
 
@@ -165,8 +166,6 @@ class BaseRecording(BaseExtractor):
                           'times are not always propagated to across preprocessing'
                           'Use use this carefully!')
 
-    _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
-
     def _save(self, format='binary', **save_kwargs):
         """
         This function replaces the old CacheRecordingExtractor, but enables more engines
@@ -193,7 +192,7 @@ class BaseRecording(BaseExtractor):
             if dtype is None:
                 dtype = self.get_dtype()
 
-            job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
+            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
@@ -204,7 +203,7 @@ class BaseRecording(BaseExtractor):
                                               offset_to_uV=self.get_channel_offsets())
 
         elif format == 'memory':
-            job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
+            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
             from .numpyextractors import NumpyRecording
 
@@ -228,7 +227,7 @@ class BaseRecording(BaseExtractor):
             filters = save_kwargs.get('filters', None)
 
             job_kwargs = {k: save_kwargs[k]
-                          for k in self._job_keys if k in save_kwargs}
+                          for k in job_keys if k in save_kwargs}
             write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, dataset_paths=dataset_paths,
                                  dtype=dtype, compressor=compressor, filters=filters, **job_kwargs)
 
@@ -621,6 +620,23 @@ class BaseRecording(BaseExtractor):
             elif outputs == 'dict':
                 recordings[value] = subrec
         return recordings
+    
+    def select_segments(self, segment_indices):
+        """
+        Return a recording with the segments specified by 'segment_indices'
+
+        Parameters
+        ----------
+        segment_indices : list of int
+            List of segment indices to keep in the returned recording
+
+        Returns
+        -------
+        SelectSegmentRecording
+            The recording with the selected segments
+        """
+        from .segmentutils import SelectSegmentRecording
+        return SelectSegmentRecording(self, segment_indices=segment_indices)
 
     def planarize(self, axes: str = "xy"):
         """
