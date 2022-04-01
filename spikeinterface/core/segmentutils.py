@@ -14,7 +14,7 @@ import numpy as np
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
-from typing import List
+from typing import List, Union
 
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
@@ -233,20 +233,24 @@ class SelectSegmentRecording(BaseRecording):
         The segment indices to select
     """
 
-    def __init__(self, recording: BaseRecording, segment_indices: List[int]):
+    def __init__(self, recording: BaseRecording, segment_indices: Union[int, List[int]]):
         BaseRecording.__init__(self, recording.get_sampling_frequency(), 
                                recording.channel_ids, recording.get_dtype())
         recording.copy_metadata(self)
         
+        if isinstance(segment_indices, int):
+            segment_indices = [segment_indices]
+        
         num_segments = recording.get_num_segments()
-        assert len(segment_indices) < num_segments, f"'segment_index' must be between 0 and {num_segments - 1}"
+        assert all(0 <= s < num_segments for s in segment_indices), \
+            f"'segment_index' must be between 0 and {num_segments - 1}"
 
         for segment_index in segment_indices:
             rec_seg = recording._recording_segments[segment_index]
             self.add_recording_segment(rec_seg)
 
         self._kwargs = {'recording': recording.to_dict(),
-                        'segment_indices': segment_indices}
+                        'segment_indices': [int(s) for s in segment_indices]}
         
 
 def split_recording(recording: BaseRecording):

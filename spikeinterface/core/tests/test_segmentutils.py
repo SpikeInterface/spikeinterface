@@ -64,6 +64,7 @@ def test_split_recordings():
     rec_list = split_recording(rec0)
     rec1 = select_segment_recording(rec0, segment_indices=[1])
     rec2 = rec0.select_segments(segment_indices=[1, 2])
+    rec3 = select_segment_recording(rec0, segment_indices=2)
 
     for i, rec in enumerate(rec_list):
         assert rec.get_num_segments() == 1
@@ -74,6 +75,7 @@ def test_split_recordings():
     
     assert np.allclose(rec2.get_traces(segment_index=0), rec0.get_traces(segment_index=1))
     assert np.allclose(rec2.get_traces(segment_index=1), rec0.get_traces(segment_index=2))
+    assert np.allclose(rec3.get_traces(), rec0.get_traces(segment_index=2))
 
 
 def test_append_sortings():
