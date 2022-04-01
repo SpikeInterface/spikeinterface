@@ -43,15 +43,31 @@ def test_run_sorter_by_property():
 
     rec0, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
     rec0.set_channel_groups(["0"] * 4 + ["1"] * 4)
+    rec0_by = rec0.split_by("group")
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
     rec0 = rec0.save(name='rec000')
     sorter_name = 'tridesclous'
 
-    sorting = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
+    sorting0 = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
+                                      engine='loop', verbose=False)
+    assert "group" in sorting0.get_property_keys()
+    assert all(g for g in sorting0.get_property("group") in rec0_by)
+    
+    rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
+    rec1.set_channel_groups([0] * 4 + [1] * 4)
+    rec1_by = rec0.split_by("group")
+
+    # make dumpable
+    set_global_tmp_folder(cache_folder)
+    rec1 = rec1.save(name='rec001')
+    sorter_name = 'tridesclous'
+
+    sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder,
                                      engine='loop', verbose=False)
-    assert "group" in sorting.get_property_keys()
+    assert "group" in sorting1.get_property_keys()
+    assert all(g for g in sorting1.get_property("group") in rec1_by)
 
 
 def test_run_sorters_with_dict():
