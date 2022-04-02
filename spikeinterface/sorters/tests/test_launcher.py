@@ -53,7 +53,7 @@ def test_run_sorter_by_property():
     sorting0 = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
                                       engine='loop', verbose=False)
     assert "group" in sorting0.get_property_keys()
-    assert all(g for g in sorting0.get_property("group") in rec0_by)
+    assert all([g  in rec0_by for g in sorting0.get_property("group")])
     
     rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
     rec1.set_channel_groups([0] * 4 + [1] * 4)
@@ -67,7 +67,7 @@ def test_run_sorter_by_property():
     sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder,
                                      engine='loop', verbose=False)
     assert "group" in sorting1.get_property_keys()
-    assert all(g for g in sorting1.get_property("group") in rec1_by)
+    assert all([g in rec1_by for g in sorting1.get_property("group")])
 
 
 def test_run_sorters_with_dict():
