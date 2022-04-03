@@ -61,7 +61,7 @@ def test_run_sorter_by_property():
     
     rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
     rec1.set_channel_groups([0] * 4 + [1] * 4)
-    rec1_by = rec0.split_by("group")
+    rec1_by = rec1.split_by("group")
     group_names1 = list(rec1_by.keys())
 
     # make dumpable
@@ -70,7 +70,7 @@ def test_run_sorter_by_property():
     sorter_name = 'tridesclous'
 
     sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder2,
-                                     engine='loop', verbose=False)
+                                      engine='loop', verbose=False)
     assert "group" in sorting1.get_property_keys()
     assert all([g in group_names1 for g in sorting1.get_property("group")])
 
@@ -191,10 +191,10 @@ def test_sorter_installation():
 
 
 if __name__ == '__main__':
-    pass
+    #pass
     # test_run_sorters_with_list()
 
-    # test_run_sorter_by_property()
+    test_run_sorter_by_property()
 
     # test_run_sorters_with_dict()
 
