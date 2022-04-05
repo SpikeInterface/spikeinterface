@@ -52,8 +52,9 @@ def test_phase_shift():
     rec.set_property('inter_sample_shift', inter_sample_shift)
     #~ rec = rec.save()
     
-    for  margin_ms in (10., 30., 40.):
-        for chunk_size in (100, 500, 1000, 2000):
+    for  margin_ms in (10., 30., 40., 100.):
+        #~ for chunk_size in (100, 500, 1000, 2000):
+        for chunk_size in (500, ):
             rec2 = phase_shift(rec, margin_ms=margin_ms)
             
             # save by chunk rec3 is the cached version
@@ -80,6 +81,7 @@ def test_phase_shift():
             #~ import matplotlib.pyplot as plt
             #~ fig, axs = plt.subplots(nrows=3, sharex=True)
             #~ ax = axs[0]
+            #~ ax.set_title(f'{margin_ms} {chunk_size}')
             #~ ax.plot(traces[:, 0], color='r', label='no delay')
             #~ ax.plot(traces[:, 1], color='b', label='delay')
             #~ ax.plot(traces2[:, 1], color='c', ls='--', label='shift no chunk')

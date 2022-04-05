@@ -18,8 +18,10 @@ class PhaseShiftRecording(BasePreprocessor):
     
     This is particularly relevant for neuropixel recording.
     
-    This code is from  IBL lib.
+    This code is inspired from from  IBL lib.
     https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
+    and also the one from spikeglx
+    https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/
     
     Parameters
     ----------
