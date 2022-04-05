@@ -7,15 +7,16 @@ from ..utils import get_random_data_chunks
 
 class ScaleRecordingSegment(BasePreprocessorSegment):
     # use by NormalizeByQuantileRecording/ScaleRecording/CenterRecording
-    def __init__(self, parent_recording_segment, gain, offset):
+    def __init__(self, parent_recording_segment, gain, offset, dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.gain = gain
         self.offset = offset
+        self.dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
-        return scaled_traces
+        return scaled_traces.astype(self.dtype)
 
 
 class NormalizeByQuantileRecording(BasePreprocessor):
@@ -121,7 +122,6 @@ class ScaleRecording(BasePreprocessor):
             gain = np.asarray(gain)
         if gain.ndim == 1:
             gain = gain[None, :]
-        gain = gain.astype(dtype)
         assert gain.shape == (1, num_chans)
 
         if np.isscalar(offset):
@@ -136,7 +136,7 @@ class ScaleRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset)
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), gain=gain, offset=offset, dtype=np.dtype(dtype).str)
