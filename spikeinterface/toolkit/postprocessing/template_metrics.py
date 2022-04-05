@@ -78,7 +78,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
                                                               outputs='id')
 
         template_metrics = pd.DataFrame(
-            index=unit_ids, columns=[feature_names])
+            index=unit_ids, columns=feature_names)
     else:
         extremum_channels_ids = get_template_channel_sparsity(
             waveform_extractor, **sparsity_dict)

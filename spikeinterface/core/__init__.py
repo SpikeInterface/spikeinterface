@@ -17,6 +17,7 @@ from .baseevent import BaseEvent, BaseEventSegment
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
 from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent
+from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslicerecording import ChannelSliceRecording
@@ -31,6 +32,7 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 from .segmentutils import (
     append_recordings, AppendSegmentRecording,
     concatenate_recordings, ConcatenateSegmentRecording,
+    split_recording, select_segment_recording, SelectSegmentRecording,
     append_sortings, AppendSegmentSorting, 
     split_sorting, SplitSegmentSorting)
 

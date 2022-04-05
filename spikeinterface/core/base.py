@@ -278,7 +278,6 @@ class BaseExtractor:
         except AttributeError:
             version = 'unknown'
 
-
         dump_dict = {
             'class': class_name,
             'module': module,
@@ -575,6 +574,8 @@ class BaseExtractor:
         format = kwargs.get('format', None)
         if format == 'memory':
             loaded_extractor = self.save_to_memory(**kwargs)
+        elif format == 'zarr':
+            loaded_extractor = self.save_to_zarr(**kwargs)
         else:
             loaded_extractor = self.save_to_folder(**kwargs)
         return loaded_extractor
@@ -587,6 +588,7 @@ class BaseExtractor:
         self.copy_metadata(cached)
         return cached
 
+    # TODO rename to saveto_binary_folder
     def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kwargs):
         """
         Save extractor to folder.
@@ -660,6 +662,84 @@ class BaseExtractor:
 
         # dump
         cached.dump(folder / f'cached.{dump_ext}', relative_to=folder, folder_metadata=folder)
+
+        return cached
+
+    def save_to_zarr(self, name=None, zarr_path=None, verbose=True, **save_kwargs):
+        """
+        Save extractor to zarr.
+
+        The save consist of:
+            * extracting traces by calling get_trace() method in chunks
+            * saving data into a zarr file 
+            * dumping the original extractor for provenance in attributes
+
+        This replaces the use of the old CacheRecordingExtractor and CacheSortingExtractor.
+
+        There are 2 option for the 'folder' argument:
+            * explicit folder: `extractor.save(folder="/path-for-saving/")`
+            * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
+            * generated: `extractor.save()`
+
+        The second option saves to subfolder "extarctor_name" in
+        "get_global_tmp_folder()". You can set the global tmp folder with:
+        "set_global_tmp_folder("path-to-global-folder")"
+
+        The folder must not exist. If it exists, remove it before.
+
+        Parameters
+        ----------
+        name: None str or Path
+            Name of the subfolder in get_global_tmp_folder()
+            If 'name' is given, 'folder' must be None.
+        folder: None str or Path
+            Name of the folder.
+            If 'folder' is given, 'name' must be None.
+
+        Returns
+        -------
+        cached: saved copy of the extractor.
+        """
+        import zarr
+        if zarr_path is None:
+            cache_folder = get_global_tmp_folder()
+            if name is None:
+                name = ''.join(random.choices(
+                    string.ascii_uppercase + string.digits, k=8))
+                zarr_path = cache_folder / f"{name}.zarr"
+                if verbose:
+                    print(f'Use cache_folder={zarr_path}')
+            else:
+                zarr_path = cache_folder / f"{name}.zarr"
+                if not is_set_global_tmp_folder():
+                    if verbose:
+                        print(f'Use cache_folder={zarr_path}')
+        else:
+            zarr_path = Path(zarr_path)
+        assert not zarr_path.exists(), f'Path {zarr_path} already exists, choose another name'
+        zarr_root = zarr.open(str(zarr_path), "w")
+
+        if self.check_if_dumpable():
+            zarr_root.attrs["provenance"] = check_json(self.to_dict())
+        else:
+            zarr_root.attrs["provenance"] = None
+
+        # save data (done the subclass)
+        save_kwargs['zarr_root'] = zarr_root
+        save_kwargs['zarr_path'] = zarr_path
+        cached = self._save(folder=None, verbose=verbose, **save_kwargs)
+
+        # save properties
+        prop_group = zarr_root.create_group('properties')
+        for key in self.get_property_keys():
+            values = self.get_property(key)
+            prop_group.create_dataset(name=key, data=values, compressor=None)
+
+        # save annotations
+        zarr_root.attrs["annotations"] = check_json(self._annotations)
+
+        # copy properties/
+        self.copy_metadata(cached)
 
         return cached
 
