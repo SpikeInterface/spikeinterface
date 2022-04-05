@@ -10,13 +10,17 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor
+from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.testing import check_recordings_equal
+
+from spikeinterface.core.testing_tools import generate_recording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
 else:
     cache_folder = Path("cache_folder") / "core"
+    cache_folder.mkdir(exist_ok=True, parents=True)
 
 
 def test_BaseRecording():
@@ -197,6 +201,33 @@ def test_BaseRecording():
     assert np.allclose(times1, rec2.get_times(1))
     rec3 = load_extractor(folder)
     assert np.allclose(times1, rec3.get_times(1))
+
+    # test 3d probe
+    rec_3d = generate_recording(ndim=3, num_channels=30)
+    locations_3d = rec_3d.get_property("location")
+
+    locations_xy = rec_3d.get_channel_locations(axes="xy")
+    assert np.allclose(locations_xy, locations_3d[:, [0, 1]])
+
+    locations_xz = rec_3d.get_channel_locations(axes="xz")
+    assert np.allclose(locations_xz, locations_3d[:, [0, 2]])
+
+    locations_zy = rec_3d.get_channel_locations(axes="zy")
+    assert np.allclose(locations_zy, locations_3d[:, [2, 1]])
+
+    locations_xzy = rec_3d.get_channel_locations(axes="xzy")
+    assert np.allclose(locations_xzy, locations_3d[:, [0, 2, 1]])
+
+    rec_2d = rec_3d.planarize(axes="zy")
+    assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
+
+
+    # Test save to zarr
+    compressor = get_default_zarr_compressor()
+    rec_zarr = rec2.save(format="zarr", zarr_path=cache_folder / "recording.zarr",
+                         compressor=compressor)
+    check_recordings_equal(rec2, rec_zarr, return_scaled=False)
+
 
 
 if __name__ == '__main__':

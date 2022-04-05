@@ -88,7 +88,10 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
                 pc_metrics['l_ratio'][unit_id] = l_ratio
 
         if 'd_prime' in metric_names:
-            d_prime = lda_metrics(pcs_flat, labels, unit_id)
+            if len(unit_ids) == 1:
+                d_prime = np.nan
+            else:
+                d_prime = lda_metrics(pcs_flat, labels, unit_id)
             pc_metrics['d_prime'][unit_id] = d_prime
 
         if 'nearest_neighbor' in metric_names:
