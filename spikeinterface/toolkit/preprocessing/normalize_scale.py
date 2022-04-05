@@ -75,13 +75,10 @@ class NormalizeByQuantileRecording(BasePreprocessor):
             gain = gain[None, :]
             offset = offset[None, :]
 
-        gain = gain.astype(recording.get_dtype())
-        offset = offset.astype(recording.get_dtype())
-
         BasePreprocessor.__init__(self, recording)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset)
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=recording.get_dtype())
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), scale=scale, median=median,
@@ -158,14 +155,12 @@ class CenterRecording(BasePreprocessor):
         elif mode == 'median':
             offset = -np.median(random_data, axis=0)
         offset = offset[None, :]
-        offset = offset.astype(recording.get_dtype())
-
-        gain = np.ones(offset.shape, dtype=offset.dtype)
+        gain = np.ones(offset.shape)
 
         BasePreprocessor.__init__(self, recording)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset)
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=recording.get_dtype())
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), mode=mode,
