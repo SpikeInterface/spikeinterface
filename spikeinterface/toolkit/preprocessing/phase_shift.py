@@ -6,10 +6,6 @@ from .tools import get_chunk_with_margin
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
-# TODO:
-#   * handle the dtype to cast back to the input or upcast when wanted
-#   * find the correct margin_ms
-
 
 class PhaseShiftRecording(BasePreprocessor):
     """
@@ -27,6 +23,8 @@ class PhaseShiftRecording(BasePreprocessor):
     ----------
     recording: Recording
         The recording. It need to have  "inter_sample_shift" in properties.
+    margin_ms: float (default 30ms)
+        margin in ms for computation
     inter_sample_shift: None or numpy array
         If "inter_sample_shift" is not in recording.properties
         we can externaly provide one.
@@ -36,7 +34,7 @@ class PhaseShiftRecording(BasePreprocessor):
         The phase shifted recording object
     """
     name = 'phase_shift'
-    def __init__(self, recording, margin_ms=10.,  inter_sample_shift=None):
+    def __init__(self, recording, margin_ms=30.,  inter_sample_shift=None, dtype=None):
         if inter_sample_shift is None:
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
@@ -45,10 +43,11 @@ class PhaseShiftRecording(BasePreprocessor):
             sample_shifts = np.asarray(inter_sample_shift)
         
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000.)
-        
-        BasePreprocessor.__init__(self, recording)
+
+
+        BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            rec_segment = DestripeRecordingSegment(parent_segment, sample_shifts, margin)
+            rec_segment = DestripeRecordingSegment(parent_segment, sample_shifts, margin, dtype)
             self.add_recording_segment(rec_segment)
         
         # for dumpability
@@ -59,10 +58,11 @@ class PhaseShiftRecording(BasePreprocessor):
 
 
 class DestripeRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, sample_shifts, margin):
+    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
         self.margin = margin
+        self.dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -74,15 +74,32 @@ class DestripeRecordingSegment(BasePreprocessorSegment):
                                                                         start_frame, end_frame, channel_indices,
                                                                         self.margin, add_zeros=True)
         
+        need_dtype = None
+        if self.dtype is not None:
+            # this imply a copy always
+            traces_chunk = traces_chunk.astype(self.dtype)
+        else:
+            if traces_chunk.dtype.kind == 'i':
+                # force float computing ebcause of the taper
+                need_dtype = traces_chunk.dtype
+                traces_chunk = traces_chunk.astype('float32')
+            else:
+                # a copy is needed  because the taper is inplace
+                traces_chunk = traces_chunk.copy()
+
+        # apply some windows on border : !!!this is inplace!!!!
+        taper = (1 - np.cos(np.arange(self.margin) / self.margin * np.pi)) / 2
+        taper = taper[:, np.newaxis]
+        traces_chunk[:self.margin] *= taper
+        traces_chunk[-self.margin:] *= taper[::-1]
+
         traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
-        
 
 
-        if right_margin > 0:
-            traces_shift = traces_shift[left_margin:-right_margin, :]
-        else:
-            traces_shift = traces_shift[left_margin:, :]
+        traces_shift = traces_shift[left_margin:-right_margin, :]
+        if need_dtype:
+            traces_shift =traces_shift.astype(need_dtype)
         
         return traces_shift
         
@@ -99,14 +116,23 @@ phase_shift.__doc__ = PhaseShiftRecording.__doc__
 
 
 def apply_fshift_sam(sig, sample_shifts, axis=0):
+    """
+    Apply the shift on a traces buffer.
+    """
+    n = sig.shape[axis]
     sig_f = np.fft.rfft(sig, axis=axis)
-    omega = np.linspace(0, np.pi, sig_f.shape[axis])
+    if n % 2 == 0:
+        # n is even sig_f[-1] is nyquist and so pi
+        omega = np.linspace(0, np.pi, sig_f.shape[axis])
+    else:
+        # n is odd sig_f[-1] is exactly nyquist!! we need (n-1) / n factor!!
+        omega = np.linspace(0, np.pi * (n - 1) / n, sig_f.shape[axis])
     # broadcast omega and sample_shifts depend the axis
     if axis == 0:
         shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
     else:
         shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
-    sig_shift = np.fft.irfft(sig_f * np.exp(- 1j  * shifts), axis=axis)
+    sig_shift = np.fft.irfft(sig_f * np.exp(- 1j  * shifts), n=n, axis=axis)
     return sig_shift
 
 apply_fshift = apply_fshift_sam
