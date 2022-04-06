@@ -23,8 +23,9 @@ class PhaseShiftRecording(BasePreprocessor):
     ----------
     recording: Recording
         The recording. It need to have  "inter_sample_shift" in properties.
-    margin_ms: float (default 30ms)
+    margin_ms: float (default 40)
         margin in ms for computation
+        40ms ensure a very small error when doing chunk processing
     inter_sample_shift: None or numpy array
         If "inter_sample_shift" is not in recording.properties
         we can externaly provide one.
@@ -34,7 +35,7 @@ class PhaseShiftRecording(BasePreprocessor):
         The phase shifted recording object
     """
     name = 'phase_shift'
-    def __init__(self, recording, margin_ms=30.,  inter_sample_shift=None, dtype=None):
+    def __init__(self, recording, margin_ms=40.,  inter_sample_shift=None, dtype=None):
         if inter_sample_shift is None:
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
@@ -43,11 +44,18 @@ class PhaseShiftRecording(BasePreprocessor):
             sample_shifts = np.asarray(inter_sample_shift)
         
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000.)
-
-
+        
+        force_dtype_back = None
+        if dtype is None:
+            if recording.get_dtype().kind in ('i', 'u'):
+                # because of the tapper on margin we need to force the computation to float32
+                # and then go back to the original buffer unless dtype is explicitly forced
+                dtype = np.dtype('float32')
+                force_dtype_back = traces_chunk.dtype
+ 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            rec_segment = DestripeRecordingSegment(parent_segment, sample_shifts, margin, dtype)
+            rec_segment = DestripeRecordingSegment(parent_segment, sample_shifts, margin, dtype, force_dtype_back)
             self.add_recording_segment(rec_segment)
         
         # for dumpability
@@ -58,53 +66,32 @@ class PhaseShiftRecording(BasePreprocessor):
 
 
 class DestripeRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype):
+    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, force_dtype_back):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
         self.margin = margin
         self.dtype = dtype
+        self.force_dtype_back = force_dtype_back
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
-
-        traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
-                                                                        start_frame, end_frame, channel_indices,
-                                                                        self.margin, add_zeros=True)
         
-        need_dtype = None
-        if self.dtype is not None:
-            # this imply a copy always
-            traces_chunk = traces_chunk.astype(self.dtype)
-        else:
-            if traces_chunk.dtype.kind == 'i':
-                # force float computing ebcause of the taper
-                need_dtype = traces_chunk.dtype
-                traces_chunk = traces_chunk.astype('float32')
-            else:
-                # a copy is needed  because the taper is inplace
-                traces_chunk = traces_chunk.copy()
-
-        # apply some windows on border : !!!this is inplace!!!!
-        taper = (1 - np.cos(np.arange(self.margin) / self.margin * np.pi)) / 2
-        taper = taper[:, np.newaxis]
-        traces_chunk[:self.margin] *= taper
-        traces_chunk[-self.margin:] *= taper[::-1]
-
+        # this return a copy with margin  + taper on border always
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
+                                                                        start_frame, end_frame, channel_indices, self.margin, 
+                                                                         dtype=self.dtype, add_zeros=True, window_on_margin=True)
+        
         traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
-
         traces_shift = traces_shift[left_margin:-right_margin, :]
-        if need_dtype:
-            traces_shift =traces_shift.astype(need_dtype)
+        if self.force_dtype_back:
+            traces_shift = traces_shift.astype(self.force_dtype_back)
         
         return traces_shift
-        
-        # TODO handle the dtype
-        # return filtered_traces.astype(self.dtype)
 
 
 # function for API
