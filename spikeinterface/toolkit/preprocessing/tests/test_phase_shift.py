@@ -84,7 +84,7 @@ def test_phase_shift():
                 #~ import matplotlib.pyplot as plt
                 #~ fig, axs = plt.subplots(nrows=3, sharex=True)
                 #~ ax = axs[0]
-                #~ ax.set_title(f'margin_ms{margin_ms} chunk_size{chunk_size}')
+                #~ ax.set_title(f'margin_ms{margin_ms} chunk_size{chunk_size} {error_max/rms:.6f} {error_mean/rms:.6f}')
                 #~ ax.plot(traces[:, 0], color='r', label='no delay')
                 #~ ax.plot(traces[:, 1], color='b', label='delay')
                 #~ ax.plot(traces2[:, 1], color='c', ls='--', label='shift no chunk')
