@@ -123,11 +123,12 @@ class NwbRecordingExtractor(BaseRecording):
             unique_grp_names = list(np.unique(self._nwbfile.electrodes['group_name'][:]))
 
         # Fill channel properties dictionary from electrodes table
-        channel_ids = [self._es.electrodes.table.id[x]
-                       for x in self._es.electrodes.data]
+        if "channel_name" in self._nwbfile.electrodes.colnames:
+            channel_ids = self._es.electrodes["channel_name"][:].astype("str")
+        else:
+            channel_ids = [self._es.electrodes.table.id[x] for x in self._es.electrodes.data]
 
         dtype = self._es.data.dtype
-
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         recording_segment = NwbRecordingSegment(nwbfile=self._nwbfile,
                                                 electrical_series_name=self._electrical_series_name,
@@ -142,11 +143,17 @@ class NwbRecordingExtractor(BaseRecording):
         properties = dict()
         for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, self._es.electrodes.data)):
             if 'rel_x' in self._nwbfile.electrodes:
+                ndim = 2  # assume 2 dimensions
+                if 'rel_z' in self._nwbfile.electrodes:
+                    ndim = 3  # if we have rel_z, it is 3 dimensions
+
                 if 'location' not in properties:
-                    properties['location'] = np.zeros((self.get_num_channels(), 2), dtype=float)
+                    properties['location'] = np.zeros((self.get_num_channels(), ndim), dtype=float)
                 properties['location'][es_ind, 0] = self._nwbfile.electrodes['rel_x'][electrode_table_index]
                 if 'rel_y' in self._nwbfile.electrodes:
                     properties['location'][es_ind, 1] = self._nwbfile.electrodes['rel_y'][electrode_table_index]
+                if 'rel_z' in self._nwbfile.electrodes:
+                    properties['location'][es_ind, 2] = self._nwbfile.electrodes['rel_z'][electrode_table_index]
 
             for col in self._nwbfile.electrodes.colnames:
                 if isinstance(self._nwbfile.electrodes[col][electrode_table_index], ElectrodeGroup):
@@ -167,7 +174,7 @@ class NwbRecordingExtractor(BaseRecording):
                     if 'offset' not in properties:
                         properties['offset'] = np.zeros(self.get_num_channels(), dtype=type(offset))
                     properties['offset'][es_ind] = offset
-                elif col in ['x', 'y', 'z', 'rel_x', 'rel_y']:
+                elif col in ['x', 'y', 'z', 'rel_x', 'rel_y', 'rel_z']:
                     continue
                 else:
                     val = self._nwbfile.electrodes[col][electrode_table_index]
@@ -386,4 +393,8 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     if load_sorting:
         sorting = read_nwb_sorting(file_path, electrical_series_name=electrical_series_name)
         outputs = outputs + (sorting,)
+
+    if len(outputs) == 1:
+        outputs = outputs[0]
+
     return outputs

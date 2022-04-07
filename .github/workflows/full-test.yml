@@ -26,8 +26,6 @@ jobs:
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}${{ hashFiles('**/requirements_full.txt') }}-${{ hashFiles('**/requirements_extractors.txt') }}-${{ hashFiles('**/requirements_test.txt') }}-${{ steps.date.outputs.date }}
-          restore-keys: |
-            ${{ runner.os }}-venv
       - name: Install dependencies
         run: |
           sudo apt update

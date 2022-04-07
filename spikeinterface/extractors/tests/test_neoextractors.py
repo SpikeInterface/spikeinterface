@@ -3,11 +3,13 @@ import unittest
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset
+from spikeinterface import download_dataset, get_global_dataset_folder
 from spikeinterface.extractors import *
 
 from spikeinterface.extractors.tests.common_tests import (RecordingCommonTestSuite,
                                                           SortingCommonTestSuite, EventCommonTestSuite)
+
+local_folder = get_global_dataset_folder() / 'ephy_testing_data'
 
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -60,7 +62,7 @@ class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-class ItanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+class IntanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = IntanRecordingExtractor
     downloads = ['intan']
     entities = [
@@ -79,6 +81,16 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['neuroscope']
     entities = [
         'neuroscope/test1/test1.xml',
+    ]
+    
+
+class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroScopeSortingExtractor
+    downloads = ['neuroscope']
+    entities = [
+        'neuroscope/dataset_1',
+        {'resfile_path': local_folder / 'neuroscope/dataset_1/YutaMouse42-15111710.res.1',
+         'clufile_path': local_folder / 'neuroscope/dataset_1/YutaMouse42-15111710.clu.1'},
     ]
 
 

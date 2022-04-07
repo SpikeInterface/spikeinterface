@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "spikeinterface"
-version = "0.94.0.dev1"
+version = "0.95.0.dev0"
 license = "MIT"
 
 authors = ["Cole Hurwitz", "Jeremy Magland", "Alessio Paolo Buccino <alessiop.buccino@gmail.com>", "Matthias Hennig", "Samuel Garcia"]
@@ -19,13 +19,14 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
 
-probeinterface = "^0.2.6"
+probeinterface = "^0.2.8"
 
 neo = "^0.10.0"
 joblib = "^1.1.0"
 tqdm = "^4.62.3"
 numpy = "^1.21"
 
+zarr = {version = "^2.11.3", optional = true}
 scikit-learn = {version = "^1.0.2", optional = true}
 h5py = {version = "^3.6.0", optional = true}
 matplotlib = {version = "^3.5.1", optional = true}
@@ -66,17 +67,18 @@ pytest = "^7.0.1"
 extractors = ["MEArec", "sonpy", "pynwb"]
 
 full = [
-    "h5py", "pandas", "scipy", "scikit-learn", "matplotlib", "networkx"
+    "h5py", "pandas", "scipy", "scikit-learn", "matplotlib", "networkx", "zarr"
 ]
 
 docker = ["docker"]
 singularity = ["spython"]
 
+test_core = ["pytest", "zarr"]
 test = [
-    "MEArec", "sonpy", "pynwb",
+    "pytest",
+    "zarr", "datalad", "MEArec", "sonpy", "pynwb",
     "tridesclous", "loky",
-    "spyking-circus",
-    "herdingspikes"
+    "spyking-circus", "herdingspikes"
 ]
 
 [tool.pytest.ini_options]

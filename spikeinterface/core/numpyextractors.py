@@ -234,7 +234,7 @@ class NumpySortingSegment(BaseSortingSegment):
         if start_frame is not None:
             times = times[times >= start_frame]
         if end_frame is not None:
-            times = times[times <= end_frame]
+            times = times[times < end_frame]
         return times
 
 

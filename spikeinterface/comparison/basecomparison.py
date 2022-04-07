@@ -175,8 +175,8 @@ class BaseMultiComparison(BaseComparison):
         self._new_units = {}
 
         # save new units
-        self.subgraphs = (self.clean_graph.subgraph(c).copy()
-                          for c in nx.connected_components(self.clean_graph))
+        self.subgraphs = [self.clean_graph.subgraph(c).copy()
+                          for c in nx.connected_components(self.clean_graph)]
         for new_unit, sg in enumerate(self.subgraphs):
             edges = list(sg.edges(data=True))
             if len(edges) > 0:
