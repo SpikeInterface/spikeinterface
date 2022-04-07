@@ -594,6 +594,12 @@ class BaseRecording(BaseExtractor):
         from spikeinterface import ChannelSliceRecording
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
+    
+    def remove_channels(self, remove_channel_ids):
+        from spikeinterface import ChannelSliceRecording
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, removed_channel_ids)]
+        sub_recording = ChannelSliceRecording(self, new_channel_ids)
+        return sub_recording
 
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceRecording
