@@ -18,7 +18,7 @@ jobs:
           python-version: 3.8
       - name: Install dependencies for testing
         run: |
-          pip install . pytest
+          pip install .[test_core]
       - name: Test core with pytest
         run: |
           pytest -v spikeinterface/core
