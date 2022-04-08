@@ -47,14 +47,13 @@ class TimeseriesWidget(BaseWidget):
     """
 
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
-                 time_range=None,
-                 mode='auto', cmap='RdBu', show_channel_ids=False,
-                 color_groups=False, color=None,
-                 figure=None, ax=None):
+                 time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
+                 color_groups=False, color=None, figure=None, ax=None, **plot_kwargs):
         BaseWidget.__init__(self, figure, ax)
         self.recording = recording
         self._sampling_frequency = recording.get_sampling_frequency()
         self.visible_channel_ids = channel_ids
+        self._plot_kwargs = plot_kwargs
 
         if segment_index is None:
             nseg = recording.get_num_segments()
@@ -165,7 +164,7 @@ class TimeseriesWidget(BaseWidget):
                     color = self._colors[group_color_idx]
                 else:
                     color = self._color
-                self._plots[m] = ax.plot(times, self._plot_offsets[m] + chunk0[:, im], color=color)
+                self._plots[m] = ax.plot(times, self._plot_offsets[m] + chunk0[:, im], color=color, **self._plot_kwargs)
                 offset0 = offset0 - self._vspacing
 
             if self.show_channel_ids:
