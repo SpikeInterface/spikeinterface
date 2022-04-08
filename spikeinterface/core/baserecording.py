@@ -489,8 +489,12 @@ class BaseRecording(BaseExtractor):
             If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
         """
         ndim = locations.shape[1]
-        probe = Probe(ndim=ndim)
-        probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
+        probe = Probe(ndim=2)
+        if ndim == 3:
+            locations_2d = select_axes(locations, axes)
+        else:
+            locations_2d = locations
+        probe.set_contacts(locations_2d, shapes=shape, shape_params=shape_params)
         probe.set_device_channel_indices(np.arange(self.get_num_channels()))
 
         if ndim == 3:
