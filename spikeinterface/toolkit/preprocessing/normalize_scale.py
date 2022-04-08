@@ -11,12 +11,12 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.gain = gain
         self.offset = offset
-        self.dtype = dtype
+        self._dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
-        return scaled_traces.astype(self.dtype)
+        return scaled_traces.astype(self._dtype)
 
 
 class NormalizeByQuantileRecording(BasePreprocessor):
@@ -82,11 +82,11 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self.dtype)
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), scale=scale, median=median,
-                            q1=q1, q2=q2, mode=mode, dtype=np.dtype(self.dtype).str)
+                            q1=q1, q2=q2, mode=mode, dtype=np.dtype(self._dtype).str)
         self._kwargs.update(random_chunk_kwargs)
 
 
@@ -140,11 +140,11 @@ class ScaleRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, self.dtype)
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, self._dtype)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), gain=gain, 
-                            offset=offset, dtype=np.dtype(self.dtype).str)
+                            offset=offset, dtype=np.dtype(self._dtype).str)
 
 
 class CenterRecording(BasePreprocessor):
@@ -184,10 +184,10 @@ class CenterRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self.dtype)
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), mode=mode)
+        self._kwargs = dict(recording=recording.to_dict(), mode=mode, dtype=np.dtype(self._dtype).str)
         self._kwargs.update(random_chunk_kwargs)
 
 
