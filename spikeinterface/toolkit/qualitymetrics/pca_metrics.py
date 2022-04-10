@@ -347,7 +347,9 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     
     # if target unit has fewer than `min_spikes_for_nn` spikes, print out a warning and return NaN
     if n_spikes_all_units[all_units_ids==this_unit_id] < min_spikes_for_nn:
-        print(f'Warning: unit {this_unit_id} has too few spikes; returning NaN as the quality metric...')
+        print(f'Warning: unit {this_unit_id} has fewer spikes than ',
+              f'specified by `min_spikes_for_nn` ({min_spikes_for_nn}); ',
+              'returning NaN as the quality metric...')
         return np.NaN
     else:
         # first remove the units with too few spikes
@@ -469,7 +471,9 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     
     # if target unit has fewer than `min_spikes_for_nn` spikes, print out a warning and return NaN
     if n_spikes_all_units[all_units_ids==this_unit_id] < min_spikes_for_nn:
-        print(f'Warning: unit {this_unit_id} has too few spikes; returning NaN as the quality metric...')
+        print(f'Warning: unit {this_unit_id} has fewer spikes than ',
+              f'specified by `min_spikes_for_nn` ({min_spikes_for_nn}); ',
+              'returning NaN as the quality metric...')
         return np.NaN
     else:
         # get random snippets from the recording to create a noise cluster
@@ -542,7 +546,7 @@ def _subtract_clip_component(clip1, component):
     return V1.reshape(clip1.shape)
 
 
-def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors:int):
+def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     """Computes the isolation score used for nn_isolation and nn_noise_overlap
 
     Parameters
