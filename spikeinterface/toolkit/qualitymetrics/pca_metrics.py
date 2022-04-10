@@ -19,7 +19,8 @@ _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
 
 
 def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
-                         n_neighbors=4, n_components=10, radius_um=100, seed=0):
+                         min_spikes_for_nn=10, n_neighbors=4, n_components=10,
+                         radius_um=100, seed=0):
     """Calculate principal component derived metrics.
 
     Parameters
@@ -32,6 +33,9 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
     max_spikes_for_nn : int, optional, default: 10000
         The maximum number of spikes to use per cluster.
         This is used for the nearest neighbors isolation and noise overlap measures.
+    min_spikes_for_nn : int, optional, default: 10
+        The minimum number of spikes each cluster must have for metric computation.
+        If less than this value, numpy.NaN is returned as the metric.
     n_neighbors : int, optional, default: 4
         The number of neighbors to use.
         This is used for the nearest neighbors isolation and noise overlap measures.
@@ -103,14 +107,14 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
 
         if 'nn_isolation' in metric_names:
             nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
-                                                       n_neighbors, n_components,
-                                                       radius_um, seed)
+                                                       min_spikes_for_nn, n_neighbors,
+                                                       n_components,radius_um, seed)
             pc_metrics['nn_isolation'][unit_id] = nn_isolation
 
         if 'nn_noise_overlap' in metric_names:
             nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
-                                                               n_neighbors, n_components,
-                                                               radius_um, seed)
+                                                               min_spikes_for_nn, n_neighbors,
+                                                               n_components, radius_um, seed)
             pc_metrics['nn_noise_overlap'][unit_id] = nn_noise_overlap
 
     return pc_metrics
