@@ -290,10 +290,10 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     this_unit_id : int
         The ID for the unit to calculate these metrics for.
     max_spikes_for_nn : int, optional, default: 1000
-        Max number of spikes to use per cluster.
+        Max number of spikes to use per unit.
     min_spikes_for_nn : int, optional, defalt: 10
-        Min number of spikes a cluster must have to go through with metric computation
-        Clusters with spikes < min_spikes_for_nn gets `nan` as the quality metric
+        Min number of spikes a unit must have to go through with metric computation.
+        Units with spikes < min_spikes_for_nn gets numpy.NaN as the quality metric.
     n_neighbors : int, optional, default: 5
         Number of neighbors to check membership of.
     n_components : int, optional, default: 10
@@ -411,8 +411,8 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
 
 def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
                                     this_unit_id: int, max_spikes_for_nn: int=1000,
-                                    n_neighbors: int=5, n_components: int=10,
-                                    radius_um: float=100, seed: int=0):
+                                    min_spikes_for_nn: int=10, n_neighbors: int=5,
+                                    n_components: int=10, radius_um: float=100, seed: int=0):
     """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
     Parameters
@@ -423,6 +423,9 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         The ID of the unit to calculate this metric on.
     max_spikes_for_nn : int, optional, default: 1000
         The max number of spikes to use per cluster.
+    min_spikes_for_nn : int, optional, defalt: 10
+        Min number of spikes a unit must have to go through with metric computation.
+        Units with spikes < min_spikes_for_nn gets numpy.NaN as the quality metric.
     n_neighbors : int, optional, default: 5
         The number of neighbors to check membership.
     n_components : int, optional, default: 10
@@ -436,14 +439,15 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     -------
     nn_noise_overlap : float
         The computed nearest neighbor noise estimate.
+        If the unit has fewer than `min_spikes_for_nn`, returns numpy.NaN instead.
 
     Notes
     -----
     The general logic of this measure is:
-    1) Generate a noise cluster by randomly sampling voltage snippets from recording.
-    2) Subtract projection onto the weighted average of noise snippets
+    1. Generate a noise cluster by randomly sampling voltage snippets from recording.
+    2. Subtract projection onto the weighted average of noise snippets
        of both the target and noise clusters to correct for bias in sampling.
-    3) Compute the isolation score between the noise cluster and the target cluster.
+    3. Compute the isolation score between the noise cluster and the target cluster.
 
     As with nn_isolation, the clusters that are compared (target and noise clusters)
     have the same number of spikes.
@@ -455,68 +459,78 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
     """
 
-    # set random seed
     rng = np.random.default_rng(seed=seed)
 
-    # get random snippets from the recording to create a noise cluster
-    recording = waveform_extractor.recording
-    noise_cluster = get_random_data_chunks(recording, return_scaled=waveform_extractor.return_scaled,
-                                           num_chunks_per_segment=max_spikes_for_nn,
-                                           chunk_size=waveform_extractor.nsamples, seed=seed)
-
-    noise_cluster = np.reshape(noise_cluster, (max_spikes_for_nn, waveform_extractor.nsamples, -1))
-
-    # get waveforms for target cluster
-    waveforms = waveform_extractor.get_waveforms(unit_id=this_unit_id)
-
-    # adjust the size of the target and noise clusters to be equal
-    if waveforms.shape[0] > max_spikes_for_nn:
-        wf_ind = rng.choice(waveforms.shape[0], max_spikes_for_nn, replace=False)
-        waveforms = waveforms[wf_ind]
-        n_snippets = max_spikes_for_nn
-    elif waveforms.shape[0] < max_spikes_for_nn:
-        noise_ind = rng.choice(noise_cluster.shape[0], waveforms.shape[0], replace=False)
-        noise_cluster = noise_cluster[noise_ind]
-        n_snippets = waveforms.shape[0]
+    sorting = waveform_extractor.sorting
+    all_units_ids = sorting.get_unit_ids()
+    n_spikes_all_units = []
+    for unit_id in range(len(all_units_ids)):
+        n_spikes_all_units.append(len(sorting.get_unit_spike_train(unit_id)))
+    
+    # if target unit has fewer than `min_spikes_for_nn` spikes, print out a warning and return NaN
+    if n_spikes_all_units[all_units_ids==this_unit_id] < min_spikes_for_nn:
+        print(f'Warning: unit {this_unit_id} has too few spikes; returning NaN as the quality metric...')
+        return np.NaN
     else:
-        n_snippets = max_spikes_for_nn
+        # get random snippets from the recording to create a noise cluster
+        recording = waveform_extractor.recording
+        noise_cluster = get_random_data_chunks(recording, return_scaled=waveform_extractor.return_scaled,
+                                               num_chunks_per_segment=max_spikes_for_nn,
+                                               chunk_size=waveform_extractor.nsamples, seed=seed)
 
-    # restrict to channels with significant signal
-    closest_chans_idx = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                      outputs='index', peak_sign='both',
-                                                      radius_um=radius_um)
-    waveforms = waveforms[:,:,closest_chans_idx[this_unit_id]]
-    noise_cluster = noise_cluster[:,:,closest_chans_idx[this_unit_id]]
+        noise_cluster = np.reshape(noise_cluster, (max_spikes_for_nn, waveform_extractor.nsamples, -1))
 
-    # compute weighted noise snippet (Z)
-    median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode='median')
-    median_waveform = median_waveform[:, closest_chans_idx[this_unit_id]]
-    tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)
-    weights = [noise_clip[tmax, chmax] for noise_clip in noise_cluster]
-    weights = np.asarray(weights)
-    weights = weights / np.sum(weights)
-    weighted_noise_snippet = np.sum(weights * noise_cluster.swapaxes(0, 2), axis=2).swapaxes(0, 1)
+        # get waveforms for target cluster
+        waveforms = waveform_extractor.get_waveforms(unit_id=this_unit_id)
 
-    # subtract projection onto weighted noise snippet
-    for snippet in range(n_snippets):
-        waveforms[snippet, :, :] = _subtract_clip_component(\
-            waveforms[snippet, :, :], weighted_noise_snippet)
-        noise_cluster[snippet, :, :] = _subtract_clip_component(\
-            noise_cluster[snippet, :, :], weighted_noise_snippet)
+        # adjust the size of the target and noise clusters to be equal
+        if waveforms.shape[0] > max_spikes_for_nn:
+            wf_ind = rng.choice(waveforms.shape[0], max_spikes_for_nn, replace=False)
+            waveforms = waveforms[wf_ind]
+            n_snippets = max_spikes_for_nn
+        elif waveforms.shape[0] < max_spikes_for_nn:
+            noise_ind = rng.choice(noise_cluster.shape[0], waveforms.shape[0], replace=False)
+            noise_cluster = noise_cluster[noise_ind]
+            n_snippets = waveforms.shape[0]
+        else:
+            n_snippets = max_spikes_for_nn
 
-    # compute principal components after concatenation
-    all_snippets = np.concatenate([waveforms.reshape((n_snippets, -1)),
-                                   noise_cluster.reshape((n_snippets, -1))], axis=0)
-    pca = IncrementalPCA(n_components=n_components)
-    pca.partial_fit(all_snippets)
-    projected_snippets = pca.transform(all_snippets)
+        # restrict to channels with significant signal
+        closest_chans_idx = get_template_channel_sparsity(waveform_extractor, method='radius',
+                                                          outputs='index', peak_sign='both',
+                                                          radius_um=radius_um)
+        waveforms = waveforms[:,:,closest_chans_idx[this_unit_id]]
+        noise_cluster = noise_cluster[:,:,closest_chans_idx[this_unit_id]]
 
-    # compute overlap
-    nn_noise_overlap = 1 - _compute_isolation(projected_snippets[:n_snippets,:],
-                                              projected_snippets[n_snippets:,:],
-                                              n_neighbors)
+        # compute weighted noise snippet (Z)
+        median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode='median')
+        median_waveform = median_waveform[:, closest_chans_idx[this_unit_id]]
+        tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)
+        weights = [noise_clip[tmax, chmax] for noise_clip in noise_cluster]
+        weights = np.asarray(weights)
+        weights = weights / np.sum(weights)
+        weighted_noise_snippet = np.sum(weights * noise_cluster.swapaxes(0, 2), axis=2).swapaxes(0, 1)
 
-    return nn_noise_overlap
+        # subtract projection onto weighted noise snippet
+        for snippet in range(n_snippets):
+            waveforms[snippet, :, :] = _subtract_clip_component(\
+                waveforms[snippet, :, :], weighted_noise_snippet)
+            noise_cluster[snippet, :, :] = _subtract_clip_component(\
+                noise_cluster[snippet, :, :], weighted_noise_snippet)
+
+        # compute principal components after concatenation
+        all_snippets = np.concatenate([waveforms.reshape((n_snippets, -1)),
+                                    noise_cluster.reshape((n_snippets, -1))], axis=0)
+        pca = IncrementalPCA(n_components=n_components)
+        pca.partial_fit(all_snippets)
+        projected_snippets = pca.transform(all_snippets)
+
+        # compute overlap
+        nn_noise_overlap = 1 - _compute_isolation(projected_snippets[:n_snippets,:],
+                                                  projected_snippets[n_snippets:,:],
+                                                  n_neighbors)
+
+        return nn_noise_overlap
 
 
 def _subtract_clip_component(clip1, component):
