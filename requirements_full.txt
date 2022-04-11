@@ -4,6 +4,7 @@ pandas
 scipy
 scikit-learn
 matplotlib
+distinctipy
 networkx
 # datalad
 

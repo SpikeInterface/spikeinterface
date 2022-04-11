@@ -27,6 +27,9 @@ _shared_job_kwargs_doc = \
             * progress_bar: bool
                 If True, a progress bar is printed
     """
+    
+job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 'verbose']
+
 
 
 def divide_segment_into_chunks(num_frames, chunk_size):

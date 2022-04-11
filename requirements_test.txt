@@ -59,7 +59,7 @@ tridesclous>=1.6.4
 spyking-circus
 
 ## herdingspikes
-herdingspikes
+herdingspikes<=0.3.99
 
 ## mearec
 mearec

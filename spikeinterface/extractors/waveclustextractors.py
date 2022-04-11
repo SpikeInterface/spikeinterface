@@ -29,7 +29,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
 
         self.add_sorting_segment(WaveClustSortingSegment(unit_ids, spiketrains))
         self.set_property('unsorted', np.array([c == 0 for c in unit_ids]))
-        self._kwargs = {'file_path': str(Path(file_path).absolute())}
+        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'keep_good_only':keep_good_only}
 
 
 class WaveClustSortingSegment(BaseSortingSegment):
