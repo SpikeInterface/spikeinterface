@@ -4,9 +4,9 @@ import random
 
 try:
     import distinctipy
-    HAVE_DISTINCPY = True
+    HAVE_DISTINCTIPY = True
 except ImportError:
-    HAVE_DISTINCPY = False
+    HAVE_DISTINCTIPY = False
 
 
 def get_unit_colors(sorting, map_name='gist_ncar', format='RGBA', shuffle=False):
