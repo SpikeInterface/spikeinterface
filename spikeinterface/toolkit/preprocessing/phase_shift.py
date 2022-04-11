@@ -51,7 +51,7 @@ class PhaseShiftRecording(BasePreprocessor):
                 # because of the tapper on margin we need to force the computation to float32
                 # and then go back to the original buffer unless dtype is explicitly forced
                 dtype = np.dtype('float32')
-                force_dtype_back = traces_chunk.dtype
+                force_dtype_back = recording.get_dtype()
  
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
