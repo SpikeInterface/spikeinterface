@@ -17,7 +17,7 @@ class ProbeMapWidget(BaseWidget):
     channel_ids: list
         The channel ids to display
     with_channel_ids: bool False default
-        add channel ids text on the probe
+        Add channel ids text on the probe
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
