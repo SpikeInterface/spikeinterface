@@ -32,7 +32,7 @@ class PeakActivityMapWidget(BaseWidget):
     with_interpolated_map: bool (default True)
         Plot rates with interpolated map
     with_channel_ids: bool False default
-        add channel ids text on the probe
+        Add channel ids text on the probe
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
