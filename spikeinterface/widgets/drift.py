@@ -3,7 +3,6 @@ import matplotlib.pylab as plt
 
 from .basewidget import BaseWidget
 
-from probeinterface.plotting import plot_probe
 
 
 class DriftOverTimeWidget(BaseWidget):
