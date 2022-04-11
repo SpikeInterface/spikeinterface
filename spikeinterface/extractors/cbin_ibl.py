@@ -3,9 +3,11 @@ import numpy as np
 from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
-
+from spikeinterface.extractors.neoextractors.spikeglx import _get_sample_shifts
 
 import probeinterface as pi 
+
+
 
 try:
     import mtscomp
@@ -84,6 +86,12 @@ class CompressedBinaryIblExtractor(BaseRecording):
         self.set_channel_offsets(offsets)
         probe = pi.read_spikeglx(meta_file)
         self.set_probe(probe, in_place=True)
+
+        # load sample shifts
+        imDatPrb_type = probe.annotations["imDatPrb_type"]
+        sample_shifts = _get_sample_shifts(self.get_num_channels(), imDatPrb_type)
+        self.set_property("inter_sample_shift", sample_shifts)
+        
 
         self._kwargs = {'file_path': str(folder_path.absolute()), 'load_sync_channel': load_sync_channel}
 
