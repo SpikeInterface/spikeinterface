@@ -55,7 +55,7 @@ class PhaseShiftRecording(BasePreprocessor):
  
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            rec_segment = DestripeRecordingSegment(parent_segment, sample_shifts, margin, dtype, force_dtype_back)
+            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, force_dtype_back)
             self.add_recording_segment(rec_segment)
         
         # for dumpability
@@ -65,7 +65,7 @@ class PhaseShiftRecording(BasePreprocessor):
                              inter_sample_shift=inter_sample_shift)
 
 
-class DestripeRecordingSegment(BasePreprocessorSegment):
+class PhaseShiftRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, force_dtype_back):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
