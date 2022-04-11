@@ -14,6 +14,8 @@ from ..postprocessing import get_template_channel_sparsity
 
 from ..postprocessing import WaveformPrincipalComponent
 
+from .misc_metrics import compute_num_spikes
+
 _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
                              'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
 
@@ -345,19 +347,18 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     
     sorting = waveform_extractor.sorting
     all_units_ids = sorting.get_unit_ids()
-    n_spikes_all_units = []
-    for unit_id in range(len(all_units_ids)):
-        n_spikes_all_units.append(len(sorting.get_unit_spike_train(unit_id)))
+    n_spikes_all_units = compute_num_spikes(waveform_extractor)
     
     # if target unit has fewer than `min_spikes_for_nn` spikes, print out a warning and return NaN
-    if n_spikes_all_units[all_units_ids==this_unit_id] < min_spikes_for_nn:
+    if n_spikes_all_units[this_unit_id] < min_spikes_for_nn:
         print(f'Warning: unit {this_unit_id} has fewer spikes than ',
               f'specified by `min_spikes_for_nn` ({min_spikes_for_nn}); ',
               'returning NaN as the quality metric...')
-        return np.NaN
+        return np.nan
     else:
         # first remove the units with too few spikes
-        unit_ids_to_keep = all_units_ids[n_spikes_all_units >= min_spikes_for_nn]
+        unit_ids_to_keep = np.array([unit for unit, num_spikes in n_spikes_all_units.items() \
+            if num_spikes >= min_spikes_for_nn])
         sorting = sorting.select_units(unit_ids=unit_ids_to_keep)
         
         all_units_ids = sorting.get_unit_ids()
@@ -469,16 +470,14 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
 
     sorting = waveform_extractor.sorting
     all_units_ids = sorting.get_unit_ids()
-    n_spikes_all_units = []
-    for unit_id in range(len(all_units_ids)):
-        n_spikes_all_units.append(len(sorting.get_unit_spike_train(unit_id)))
+    n_spikes_all_units = compute_num_spikes(waveform_extractor)
     
     # if target unit has fewer than `min_spikes_for_nn` spikes, print out a warning and return NaN
-    if n_spikes_all_units[all_units_ids==this_unit_id] < min_spikes_for_nn:
+    if n_spikes_all_units[this_unit_id] < min_spikes_for_nn:
         print(f'Warning: unit {this_unit_id} has fewer spikes than ',
               f'specified by `min_spikes_for_nn` ({min_spikes_for_nn}); ',
               'returning NaN as the quality metric...')
-        return np.NaN
+        return np.nan
     else:
         # get random snippets from the recording to create a noise cluster
         recording = waveform_extractor.recording
