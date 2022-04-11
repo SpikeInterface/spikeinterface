@@ -4,8 +4,7 @@ from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 
-import neo
-from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
+
 import probeinterface as pi 
 
 try:
@@ -45,9 +44,13 @@ class CompressedBinaryIblExtractor(BaseRecording):
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
 
     def __init__(self, folder_path, load_sync_channel=False):
+        
+        # this work only for futur neo
+        from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
+
         assert HAVE_MTSCOMP
         folder_path = Path(folder_path)
-        
+
         # explore files
         cbin_files = list(folder_path.glob('*.cbin'))
         assert len(cbin_files) == 1
