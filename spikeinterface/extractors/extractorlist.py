@@ -27,6 +27,8 @@ from .neoextractors import (
 # NWB sorting/recording/event
 from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
                             read_nwb, read_nwb_recording, read_nwb_sorting)
+                            
+from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
 
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor, read_klusta
@@ -76,7 +78,10 @@ recording_extractor_full_list = [
     SpikeGadgetsRecordingExtractor,
     BiocamRecordingExtractor,
     AxonaRecordingExtractor,
-    TdtRecordingExtractor
+    TdtRecordingExtractor,
+    
+    # others
+    CompressedBinaryIblExtractor,
 ]
 
 sorting_extractor_full_list = [

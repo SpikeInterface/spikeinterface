@@ -22,11 +22,12 @@ class UnitProbeMapWidget(BaseWidget):
         The channel ids to display
     animated: True/False
         animation for amplitude on time
-        
+    with_channel_ids: bool False default
+        add channel ids text on the probe
     """
 
     def __init__(self, waveform_extractor, unit_ids=None, channel_ids=None,
-                 animated=None, colorbar=True,
+                 animated=None, with_channel_ids=False, colorbar=True,
                  ncols=5,  axes=None):
 
         self.waveform_extractor = waveform_extractor
@@ -38,6 +39,7 @@ class UnitProbeMapWidget(BaseWidget):
         self.channel_ids = channel_ids
 
         self.animated = animated
+        self.with_channel_ids = with_channel_ids
         self.colorbar = colorbar
         
         probes = waveform_extractor.recording.get_probes()
@@ -68,8 +70,12 @@ class UnitProbeMapWidget(BaseWidget):
                 contacts_values = np.zeros(template.shape[1])
             else:
                 contacts_values = np.max(np.abs(template), axis=0)
+            text_on_contact = None
+            if self.with_channel_ids:
+                text_on_contact = self.channel_ids
             poly_contact, poly_contour = plot_probe(probe, contacts_values=contacts_values,
-                                                    ax=ax, probe_shape_kwargs=probe_shape_kwargs)
+                                                    ax=ax, probe_shape_kwargs=probe_shape_kwargs,
+                                                    text_on_contact=text_on_contact)
 
             poly_contact.set_zorder(2)
             if poly_contour is not None:
