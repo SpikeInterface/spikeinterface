@@ -86,9 +86,9 @@ def test_compute_quality_metrics_peak_sign():
     metrics_inv = compute_quality_metrics(
         we_inv, metric_names=['snr', 'amplitude_cutoff'], peak_sign="pos")
 
-    assert np.allclose(metrics["snr"].values, metrics_inv["snr"].values)
+    assert np.allclose(metrics["snr"].values, metrics_inv["snr"].values, atol=1e-4)
     assert np.allclose(metrics["amplitude_cutoff"].values,
-                       metrics_inv["amplitude_cutoff"].values)
+                       metrics_inv["amplitude_cutoff"].values, atol=1e-4)
 
 
 def test_select_units():
