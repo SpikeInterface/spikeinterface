@@ -58,11 +58,12 @@ def test_motion_functions():
     motion = compute_global_displacement(pairwise_displacement, convergence_method='gradient_descent')
 
     # phase_cross_correlation + gradient_descent_robust
-    pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
-                        motion_histogram, bin_um, method='phase_cross_correlation')
-    motion = compute_global_displacement(pairwise_displacement,
-                    pairwise_displacement_weight=pairwise_displacement_weight, 
-                    convergence_method='lsqr_robust',)
+    # not tested yet on GH because need skimage
+    # pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
+    #                     motion_histogram, bin_um, method='phase_cross_correlation')
+    # motion = compute_global_displacement(pairwise_displacement,
+    #                 pairwise_displacement_weight=pairwise_displacement_weight, 
+    #                 convergence_method='lsqr_robust',)
 
     # # DEBUG
     # import matplotlib.pyplot as plt
@@ -168,7 +169,7 @@ def test_estimate_motion_non_rigid():
     # for w, win in enumerate(non_rigid_windows):
     #     ax.plot(temporal_bins, motion[:, w])
 
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':
