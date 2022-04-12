@@ -149,24 +149,24 @@ def test_estimate_motion_non_rigid():
     assert spatial_bins is not None
     assert len(spatial_bins) == motion.shape[1]
 
-    # # # DEBUG
-    import matplotlib.pyplot as plt
-    probe = recording.get_probe()
+    ### DEBUG
+    # import matplotlib.pyplot as plt
+    # probe = recording.get_probe()
 
-    from probeinterface.plotting import plot_probe
-    fig, ax = plt.subplots()
-    plot_probe(probe, ax=ax)
+    # from probeinterface.plotting import plot_probe
+    # fig, ax = plt.subplots()
+    # plot_probe(probe, ax=ax)
 
-    non_rigid_windows = extra_check['non_rigid_windows']
-    spatial_hist_bins = extra_check['spatial_hist_bins']
-    fig, ax = plt.subplots()
-    for w, win in enumerate(non_rigid_windows):
-        ax.plot(win, spatial_hist_bins[:-1])
-        ax.axhline(spatial_bins[w])
+    # non_rigid_windows = extra_check['non_rigid_windows']
+    # spatial_hist_bins = extra_check['spatial_hist_bins']
+    # fig, ax = plt.subplots()
+    # for w, win in enumerate(non_rigid_windows):
+    #     ax.plot(win, spatial_hist_bins[:-1])
+    #     ax.axhline(spatial_bins[w])
 
-    fig, ax = plt.subplots()
-    for w, win in enumerate(non_rigid_windows):
-        ax.plot(temporal_bins, motion[:, w])
+    # fig, ax = plt.subplots()
+    # for w, win in enumerate(non_rigid_windows):
+    #     ax.plot(temporal_bins, motion[:, w])
 
     plt.show()
 
