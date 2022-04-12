@@ -33,7 +33,7 @@ def test_get_chunk_with_margin():
     assert l == 10
     assert r == 10
     assert np.all(traces[:5] == 0)
-
+    
     traces, l, r = get_chunk_with_margin(rec_seg, length - 1005, length - 5, None, 10, add_zeros=True)
     assert traces.shape[0] == 1020
     assert np.all(traces[-5:] == 0)
@@ -45,6 +45,19 @@ def test_get_chunk_with_margin():
     assert np.all(traces[-510:] == 0)
     assert l == 10
     assert r == 510
+    
+    # add zeros + window and/or dtype
+    traces_windowed, l, r = get_chunk_with_margin(rec_seg, 5, 1005, None, 20, add_zeros=True, window_on_margin=True)
+    traces_windowed, l, r = get_chunk_with_margin(rec_seg, length - 1005, length - 5, None, 20, add_zeros=True, window_on_margin=True)
+    traces_windowed, l, r = get_chunk_with_margin(rec_seg, length - 500, length + 500, None, 10, add_zeros=True, window_on_margin=True)
+    traces, l, r = get_chunk_with_margin(rec_seg, length - 1005, length - 5, None, 20, add_zeros=True, dtype='float64')
+    assert traces.dtype == 'float64'
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # ax.plot(traces_windowed[:, 0], color='r', ls='--')
+    # plt.show()
+    
 
 
 if __name__ == '__main__':

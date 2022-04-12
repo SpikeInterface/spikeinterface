@@ -29,6 +29,8 @@ class UnitLocalizationWidget(BaseWidget):
     unit_colors: None or dict
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used.
+    with_channel_ids: bool False default
+        add channel ids text on the probe        
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
@@ -42,7 +44,7 @@ class UnitLocalizationWidget(BaseWidget):
 
     def __init__(self, waveform_extractor, unit_location=None,
                  method='center_of_mass', method_kwargs={},
-                 unit_colors=None,
+                 unit_colors=None, with_channel_ids=False,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
@@ -54,6 +56,8 @@ class UnitLocalizationWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(waveform_extractor.sorting)
         self.unit_colors = unit_colors
+        
+        self.with_channel_ids = with_channel_ids
 
     def plot(self):
         we = self.waveform_extractor
@@ -69,9 +73,15 @@ class UnitLocalizationWidget(BaseWidget):
         contacts_kargs = dict(alpha=1., edgecolor='k', lw=0.5)
         
         for probe in probegroup.probes:
+
+            text_on_contact = None
+            if self.with_channel_ids:
+                text_on_contact = self.waveform_extractor.recording.channel_ids
+            
             poly_contact, poly_contour = plot_probe(probe, ax=ax,
                                                     contacts_colors='w', contacts_kargs=contacts_kargs,
-                                                    probe_shape_kwargs=probe_shape_kwargs)
+                                                    probe_shape_kwargs=probe_shape_kwargs,
+                                                    text_on_contact=text_on_contact)
             poly_contact.set_zorder(2)
             if poly_contour is not None:
                 poly_contour.set_zorder(1)
