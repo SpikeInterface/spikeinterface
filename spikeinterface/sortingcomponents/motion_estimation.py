@@ -7,7 +7,7 @@ possible_motion_estimation_methods = ['decentralized_registration', ]
 def init_kwargs_dict(method, method_kwargs):
     # handle kwargs by method
     if method == 'decentralized_registration':
-        method_kwargs_ = dict(pairwise_displacement_method='conv2d', convergence_method = 'gradient_descent') # , maximum_displacement_um=400
+        method_kwargs_ = dict(pairwise_displacement_method='conv2d', convergence_method='gradient_descent') # , maximum_displacement_um=400
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
 

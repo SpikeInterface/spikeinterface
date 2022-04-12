@@ -74,7 +74,7 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
         neighbor_channel_ids = channel_ids
         # END DEBUG
 
-        labels, pcs = pca.get_all_components(
+        labels, pcs = pca.get_all_projections(
             channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
 
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
