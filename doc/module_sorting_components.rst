@@ -15,8 +15,20 @@ Another advantage of *modularization* is that we can accurately benchmark every 
 For example, what is the performance of peak detection method 1 or 2, provided that the rest of the pipeline is the
 same?
 
-For now, we have methods for peak detection and peak localization. We are going to port methods for drift-correction,
-clustering, template-matching, and postprocessing/cleaning in the future.
+For now, we have methods for:
+ * peak detection
+ * peak localization
+ * peak selection
+ * motion estimation
+ * motion correction
+ * clustering
+ * template matching
+
+For some of theses steps, implementations are in early stage and are still a bit drafty.
+Signature and behavior may change from time to time.
+
+You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where have have more detailled notebook
+on sorting components.
 
 
 Peak detection
@@ -29,9 +41,11 @@ Peaks can be detected with the :code:`detect_peaks()` function as follows:
 
 .. code-block:: python
 
-    import spikeinterface.sortingcomponents as scp
-
-    peaks = scp.detect_peaks(recording, method='by_channel',
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    
+    job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
+    
+    peaks = detect_peaks(recording, method='by_channel',
                              peak_sign='neg', detect_threshold=5, n_shifts=2,
                              local_radius_um=100,
                              noise_levels=None,
@@ -60,39 +74,130 @@ Peak localization
 Peak localization estimates the spike *location* on the probe. An estimate of location can be important to correct for
 drifts or cluster spikes into different units.
 
-Currently, only the "center of  mass" method is implemented.
+
 
 Peak localization can be run as follows:
 
 .. code-block:: python
 
-    import spikeinterface.sortingcomponents as scp
+    from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+    
+    job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
-    peak_locations = scp.localize_peaks(recording, peaks, method='center_of_mass',
+    peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
                                         local_radius_um=150, ms_before=0.3, ms_after=0.6,
                                         **job_kwargs)
 
+                                        
+Currently, following methods are implemented:
 
-The output :code:`peak_locations` is a numpy array with dimension (num_spikes, 2), where the second dimension represent
-the x-y axis.
+  * 'center_of_mass' 
+  * 'monopolar_triangulation' with optimizer='least_square'
+    This methid is from Julien Boussard, Erdem Varol and Charlie Windolf from Paninski lab.
+  * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
+
+Theses methods are the same implemented in :code:`spieinterface.toolkit.postprocessing.unit_localization`
 
 
-Drift correction
-----------------
 
-**COMING SOON**
+The output :code:`peak_locations` is a 1d numpy array with a dtype that depend on the choosen method.
+
+For instance 'monopolar_triangulation' method will have:
+
+.. code-block:: python
+
+    localization_dtype = [('x', 'float64'),  ('y', 'float64'), ('z', 'float64'), ('alpha', 'float64')]
+
+.. note::
+
+   By convention in spikeinterface, when a probe is describe in 2d
+     * **'x'** is the width of the probe
+     * **'y'** is the depth
+     * **'z'** is the orthogonal to the probe plane
+
+
+Peak selection
+--------------
+
+When too much peaks are detected a strategy can be to select only some of then before clustering.
+This is the strategy used by spyking-circus or tridesclous for instance.
+Then the template are extracted from theses sub selection and a template matching step can be run.
+
+The way the *peak vector* is reduce (aka sampled) is a crutial step because units with small firing rate
+can be *hidden* by this process.
+
+
+.. code-block:: python
+
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    
+    many_peaks = detect_peaks(...)
+    
+    from spikeinterface.sortingcomponents.peak_selection import select_peaks
+    
+    some_peaks = select_peaks(many_peaks, method='uniform', n_peaks=10000)
+
+Implemented methods are the following:
+
+  * 'uniform'
+  * 'uniform_locations'
+  * 'smart_sampling_amplitudes'
+  * 'smart_sampling_locations'
+  * 'smart_sampling_locations_and_time'
+
+
+
+Motion estimation
+-----------------
+
+Recently drift estimation have been added in the sorting pipeline.
+Neuropixel datsets have shown that this is crucials step.
+
+Several methods have been proposed for this. Only one is implemented in spikeinterface at the moment.
+See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_
+This steps is after peak detection and peak localization.
+It divide the duration in time bin and estimate the relative motion in between temporal bins.
+
+This methods have 2 flavor:
+
+  * rigid drift : on motion vector for the entire probe is estimated
+  * non rigid drift : one motion vector per depth bins
+
+Here an example with non rigid motion estimation
+  
+.. code-block:: python
+
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    peaks = detect_peaks(recording, ...)
+    
+    from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+    peak_locations = localize_peaks(recording, peaks, ...)
+    
+    motion, temporal_bins, spatial_bins,
+                extra_check = estimate_motion(recording, peaks, peak_locations=peak_locations,
+                                              direction='y', bin_duration_s=1., bin_um=10., 
+                                              margin_um=5,
+                                              method='decentralized_registration', 
+                                              method_kwargs={},
+                                              non_rigid_kwargs={
+                                                  'bin_step_um': 50},
+                                              output_extra_check=True,
+                                              progress_bar=True, 
+                                              verbose=True)    
+In this example, because it is a non rigid estimation, :code:`motion` is a 2d array (num_time_bin, num_spatial_bin)
+
+
+Motion correction
+-----------------
+
+
+
 
 Clustering
 ----------
 
-**COMING SOON**
 
 Template matching
 -----------------
 
-**COMING SOON**
 
-Postprocessing
---------------
-
-**COMING SOON**
