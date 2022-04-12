@@ -22,6 +22,8 @@ jobs:
         run: |
           conda install pytest
           pip install -r requirements.txt
+          # zarr is needed to test core
+          pip install zarr  
           pip install -e .
       - name: Test core with pytest
         run: |
