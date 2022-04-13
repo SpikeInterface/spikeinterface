@@ -224,19 +224,51 @@ feature.
 
 So the way this step is build is it take as input recording and peaks give a label for every peaks.
 
+At the moment, implemenation are quite experimental.
+Theses have been implemented:
+  * "position_clustering": use hdbscan on peaks position.
+  * "sliding_hdbscan": clustering taken from tridesclous. This have a sliding spatial windows
+    and run PCA + hdascn on local waveforms
+  * "position_pca_clustering": try to use peak location for a first clustering step.
+    And then split clusters using PCA + hdbscan
 
+Different methods need different inputs. For instance some of then need peak location some not.
+    
 .. code-block:: python
+  
+  from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+  peaks = peaks = detect_peaks(recording, ...)
 
-   from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-   
-   
-   
-   
+  from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+  labels, peak_labels = find_cluster_from_peaks(recording, peaks, method="sliding_hdbscan")
 
 
+* **labels** : represent all possible labels
+* **peak_labels** : vector with same size as peaks which is the label per peak
 
 
 Template matching
 -----------------
+
+template matching is the final step used in many tools (kilosort, spyking-circus, yass, tridesclous, hdsort...)
+
+In this step, from a given catalogue (aka dictionnary) of template (aka atoms), algorithms explain traces as 
+a linear sum of template plus residual noise.
+
+At the moment 4 methods are implemented:
+
+  * 'naive' : a very naive implemenation used as  a reference for benchmarks
+  * 'tridesclous' : the algo of template matching implemented in tridesclous
+  * 'circus' : the algo of template matching implemented in spyking circus
+  * 'circus-omp' : a updated algo similar than circus but with OMP (orthogonal macthing pursuit) in mind
+
+Very basic benchmarks give:
+ * 'circus-omp' as the most accurate but a bit slow.
+ * 'tridesclous' as the fastest with very descent accuracy
+
+
+
+
+
 
 

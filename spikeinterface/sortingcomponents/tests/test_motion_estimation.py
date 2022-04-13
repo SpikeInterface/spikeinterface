@@ -5,9 +5,8 @@ import numpy as np
 from spikeinterface import download_dataset
 from spikeinterface.extractors import MEArecRecordingExtractor
 
-
-from spikeinterface.sortingcomponents import detect_peaks
-from spikeinterface.sortingcomponents import (estimate_motion, make_motion_histogram,
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion, make_motion_histogram,
                                               compute_pairwise_displacement, compute_global_displacement)
 
 
@@ -106,27 +105,27 @@ def test_estimate_motion_rigid():
     assert spatial_bins is None
 
     # # DEBUG
-    import matplotlib.pyplot as plt
+    #~ import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots()
-    ax.plot(temporal_bins, motion)
+    #~ fig, ax = plt.subplots()
+    #~ ax.plot(temporal_bins, motion)
 
-    motion_histogram = extra_check['motion_histogram']
-    spatial_hist_bins = extra_check['spatial_hist_bins']
-    fig, ax = plt.subplots()
-    extent = (temporal_bins[0], temporal_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
-    im = ax.imshow(motion_histogram.T, interpolation='nearest',
-                        origin='lower', aspect='auto', extent=extent)
+    #~ motion_histogram = extra_check['motion_histogram']
+    #~ spatial_hist_bins = extra_check['spatial_hist_bins']
+    #~ fig, ax = plt.subplots()
+    #~ extent = (temporal_bins[0], temporal_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
+    #~ im = ax.imshow(motion_histogram.T, interpolation='nearest',
+                        #~ origin='lower', aspect='auto', extent=extent)
 
-    fig, ax = plt.subplots()
-    pairwise_displacement = extra_check['pairwise_displacement_list'][0]
-    im = ax.imshow(pairwise_displacement, interpolation='nearest',
-                        cmap='PiYG', origin='lower', aspect='auto', extent=None)
-    im.set_clim(-40, 40)
-    ax.set_aspect('equal')
-    fig.colorbar(im)
+    #~ fig, ax = plt.subplots()
+    #~ pairwise_displacement = extra_check['pairwise_displacement_list'][0]
+    #~ im = ax.imshow(pairwise_displacement, interpolation='nearest',
+                        #~ cmap='PiYG', origin='lower', aspect='auto', extent=None)
+    #~ im.set_clim(-40, 40)
+    #~ ax.set_aspect('equal')
+    #~ fig.colorbar(im)
 
-    plt.show()
+    #~ plt.show()
 
 
 def test_estimate_motion_non_rigid():
@@ -173,7 +172,7 @@ def test_estimate_motion_non_rigid():
 
 
 if __name__ == '__main__':
-    # setup_module()
-    # test_motion_functions()
-    # test_estimate_motion_rigid()
+    setup_module()
+    test_motion_functions()
+    test_estimate_motion_rigid()
     test_estimate_motion_non_rigid()
