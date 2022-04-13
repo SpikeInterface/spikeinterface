@@ -24,11 +24,11 @@ For now, we have methods for:
  * clustering
  * template matching
 
-For some of theses steps, implementations are in early stage and are still a bit drafty.
-Signature and behavior may change from time to time.
+For some of theses steps, implementations are in avery early stage and are still a bit *drafty*.
+Signature and behavior may change from time to time in this alpha period development.
 
-You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where have have more detailled notebook
-on sorting components.
+You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailled 
+notebooks on sorting components.
 
 
 Peak detection
@@ -65,7 +65,8 @@ Different methods are available with the :code:`method` argument:
 * 'by_channel' (default): peaks are detected separately for each channel
 * 'locally_exclusive': peaks on neighboring channels within a certain radius are excluded (not counted multiple times)
 
-Peak detection, as many sorting components, can be run in parallel.
+Peak detection, as many sorting components, can be run in parallel. Note that the 'locally_exclusive' method requires
+:code:`numba` to be installed.
 
 
 Peak localization
@@ -73,7 +74,6 @@ Peak localization
 
 Peak localization estimates the spike *location* on the probe. An estimate of location can be important to correct for
 drifts or cluster spikes into different units.
-
 
 
 Peak localization can be run as follows:
@@ -85,24 +85,24 @@ Peak localization can be run as follows:
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                        local_radius_um=150, ms_before=0.3, ms_after=0.6,
-                                        **job_kwargs)
+                                    local_radius_um=150, ms_before=0.3, ms_after=0.6,
+                                    **job_kwargs)
 
                                         
-Currently, following methods are implemented:
+Currently, the following methods are implemented:
 
   * 'center_of_mass' 
   * 'monopolar_triangulation' with optimizer='least_square'
-    This methid is from Julien Boussard, Erdem Varol and Charlie Windolf from Paninski lab.
+    This method is from Julien Boussard, Erdem Varol and Charlie Windolf from the Paninski lab.
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
 Theses methods are the same implemented in :code:`spieinterface.toolkit.postprocessing.unit_localization`
 
 
 
-The output :code:`peak_locations` is a 1d numpy array with a dtype that depend on the choosen method.
+The output :code:`peak_locations` is a 1d numpy array with a dtype that depends on the chosen method.
 
-For instance 'monopolar_triangulation' method will have:
+For instance, the 'monopolar_triangulation' method will have:
 
 .. code-block:: python
 
@@ -119,11 +119,12 @@ For instance 'monopolar_triangulation' method will have:
 Peak selection
 --------------
 
-When too much peaks are detected a strategy can be to select only some of then before clustering.
-This is the strategy used by spyking-circus or tridesclous for instance.
-Then the template are extracted from theses sub selection and a template matching step can be run.
+When too many peaks are detected a strategy can be used to select (or sub-sample) only some of them before clustering.
+This is the strategy used by spyking-circus or tridesclous, for instance.
+Then, clustering is run on this subset of peaks, templates are extracted, and a template-matching step is run to find 
+all spikes.
 
-The way the *peak vector* is reduce (aka sampled) is a crutial step because units with small firing rate
+The way the *peak vector* is reduced (or sub-sampled) is a crutial step because units with small firing rate
 can be *hidden* by this process.
 
 
@@ -150,21 +151,22 @@ Implemented methods are the following:
 Motion estimation
 -----------------
 
-Recently drift estimation have been added in some the sorting pipeline (kilosort 2.5, ...)
-Some Neuropixel datasets have shown that this is crucials step.
+Recently, drift estimation has been added in some the available spike sorters (Kilosort 2.5, 3)
+Especially for Neuropixels-like probes, this is crucials step.
 
-Several methods have been proposed for this.
-Only one is implemented in spikeinterface at the moment, the one from Paninski lab.
-See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_
-This steps is after peak detection and peak localization.
-The idea is to divide the recording in time bin and estimate the relative motion in between temporal bins.
+Several methods have been proposed to correct for drifts, but only one is currently implemented in spikeinterface 
+at the moment. See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_ 
+for more details.
 
-This methods have 2 flavor:
+The motion estimation step comes after peak detection and peak localization.
+The idea is to divide the recording in time bins and estimate the relative motion between temporal bins.
 
-  * rigid drift : on motion vector for the entire probe is estimated
-  * non rigid drift : one motion vector per depth bins
+This method has two options:
 
-Here an example with non rigid motion estimation
+  * rigid drift : one motion vector is estimated for the entire probe 
+  * non-rigid drift : one motion vector is estimated per depth bin
+
+Here is an example with non-rigid motion estimation
   
 .. code-block:: python
 
@@ -182,24 +184,24 @@ Here an example with non rigid motion estimation
                                               margin_um=5,
                                               method='decentralized_registration', 
                                               method_kwargs={},
-                                              non_rigid_kwargs={
-                                                  'bin_step_um': 50},
+                                              non_rigid_kwargs={'bin_step_um': 50},
                                               output_extra_check=True,
                                               progress_bar=True, 
                                               verbose=True)    
-In this example, because it is a non rigid estimation, :code:`motion` is a 2d array (num_time_bin, num_spatial_bin)
+
+In this example, because it is a non-rigid estimation, :code:`motion` is a 2d array (num_time_bins, num_spatial_bins).
 
 
 Motion correction
 -----------------
 
-The estimated motion can be used to correct the motion, aka drift correction.
-One possible way is to make a interpolation sample by sample to compensate the motion.
-The :code:`CorrectMotionRecording` is a preprocessing doing this.
-This preprocessing is lazy in a sens that the inperpolation is done the fly but the class needed as input the 
-"motion vector". So it need a long computation before (pead detection, localization and motion estimation)
+The estimated motion can be used to correct the motion, in other words, for drift correction.
+One possible way is to make an interpolation sample-by-sample to compensate for the motion.
+The :code:`CorrectMotionRecording` is a preprocessing step doing this.
+This preprocessing is *lazy*, so that inperpolation is done the on-the-fly. However, the class needs the "motion vector" 
+as input, which requires a relatively long computation (peak detection, localization and motion estimation).
 
-Here a small example the depend on "Motion estimation"
+Here is a short example the depends on the output of "Motion estimation":
 
 
 .. code-block:: python
@@ -208,67 +210,62 @@ Here a small example the depend on "Motion estimation"
   
   recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins)
 
-Important note : at the moment border of the probe in the direction are NOT handle properly.
-So it is safer to remove channel on border after this step.
+**Important note**: currently, the borders of the probe in the y direction are NOT handled properly.
+Therefore, it is safer to remove channel on the border after this step.
 We plan to handle this directly in the class but this is NOT implemented yet.
-Use this class carrfully.
+Use this class carefully.
 
 Clustering
 ----------
 
-The clustering remain the central step of the spike sorting.
-Historically this step was separted in two distinct part: feature reduction and clustering.
+The clustering step remains the central step of the spike sorting.
+Historically this step was separted into two distinct parts: feature reduction and clustering.
 In spikeinterface, we decided to regroup this two steps in the same module.
-This allow to compute feature reduction on the fly and avoid long computation and big storage of 
-feature.
+This allows one to compute feature reduction on-the-fly and avoid long computations and storage of 
+large features.
 
-So the way this step is build is it take as input recording and peaks give a label for every peaks.
+The clustering step takes the recording and detected (and optionally selected) peaks as input and returns 
+a label for every peak.
 
-At the moment, implemenation are quite experimental.
-Theses have been implemented:
-  * "position_clustering": use hdbscan on peaks position.
-  * "sliding_hdbscan": clustering taken from tridesclous. This have a sliding spatial windows
-    and run PCA + hdascn on local waveforms
-  * "position_pca_clustering": try to use peak location for a first clustering step.
-    And then split clusters using PCA + hdbscan
+At the moment, the implemenation is quite experimental.
+These methods have been implemented:
+  * "position_clustering": use HDBSCAN on peak locations.
+  * "sliding_hdbscan": clustering approach from tridesclous, with sliding spatial windows. PCA and HDBSCAN are run 
+    on local/sparse waveforms.
+  * "position_pca_clustering": this method tries to use peak locations for a first clustering step and then perform 
+  further splits using PCA + HDBSCAN
 
-Different methods need different inputs. For instance some of then need peak location some not.
+Different methods may need different inputs (for instance some of them require need peak locations and some do not).
     
 .. code-block:: python
   
   from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-  peaks = peaks = detect_peaks(recording, ...)
+  peaks = detect_peaks(recording, ...)
 
   from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
   labels, peak_labels = find_cluster_from_peaks(recording, peaks, method="sliding_hdbscan")
 
 
-* **labels** : represent all possible labels
-* **peak_labels** : vector with same size as peaks which is the label per peak
+* **labels** : contains all possible labels
+* **peak_labels** : vector with the same size as peaks containing the label for each peak
 
 
 Template matching
 -----------------
 
-template matching is the final step used in many tools (kilosort, spyking-circus, yass, tridesclous, hdsort...)
+Template matching is the final step used in many tools (kilosort, spyking-circus, yass, tridesclous, hdsort...)
 
-In this step, from a given catalogue (aka dictionnary) of template (aka atoms), algorithms explain traces as 
-a linear sum of template plus residual noise.
+In this step, from a given catalogue (or dictionnary) of templates (or atoms), the algorithms try to *explain* the 
+traces as a linear sum of template plus a residual noise.
 
-At the moment 4 methods are implemented:
+At the moment, there are four methods implemented:
 
-  * 'naive' : a very naive implemenation used as  a reference for benchmarks
-  * 'tridesclous' : the algo of template matching implemented in tridesclous
-  * 'circus' : the algo of template matching implemented in spyking circus
-  * 'circus-omp' : a updated algo similar than circus but with OMP (orthogonal macthing pursuit) in mind
+  * 'naive': a very naive implemenation used as  a reference for benchmarks
+  * 'tridesclous': the algorithm for template matching implemented in tridesclous
+  * 'circus': the algorithm for template matching implemented in spyking-circus
+  * 'circus-omp': a updated algorithm similar to the spyking-circus one circus but with OMP (orthogonal macthing 
+    pursuit)
 
-Very basic benchmarks give:
- * 'circus-omp' as the most accurate but a bit slow.
- * 'tridesclous' as the fastest with very descent accuracy
-
-
-
-
-
-
-
+Very preliminary benchmarks suggest that:
+ * 'circus-omp' is the most accurate, but a bit slow.
+ * 'tridesclous' is the fastest and has very decent accuracy
