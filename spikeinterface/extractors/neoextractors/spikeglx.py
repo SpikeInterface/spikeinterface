@@ -37,9 +37,14 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
         #~ # open the corresponding stream probe
-        if HAS_NEO_10_2 and '.ap' in self.stream_id:
+        if HAS_NEO_10_2 and '.nidq' not in self.stream_id:
             signals_info_dict = {e['stream_name'] : e for e  in self.neo_reader.signals_info_list}
             meta_filename = signals_info_dict[self.stream_id]['meta_file']
+            # Load probe geometry if available
+            try:
+                self.set_probe(probe, in_place=True, group_mode='by_shank')
+            except: 
+                self.set_probe(probe, in_place=True)
             probe = pi.read_spikeglx(meta_filename)
             self.set_probe(probe, in_place=True)
 
