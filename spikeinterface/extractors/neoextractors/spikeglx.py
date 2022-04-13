@@ -27,7 +27,6 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     stream_id: str or None
         stream for instance : 'imec0.ap' 'nidq' or 'imec0.lf'
     """
-
     mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
 
