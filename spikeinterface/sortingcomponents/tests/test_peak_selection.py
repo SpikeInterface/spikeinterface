@@ -2,10 +2,13 @@ import pytest
 import numpy as np
 
 from spikeinterface import download_dataset
-from spikeinterface.sortingcomponents import detect_peaks, select_peaks, localize_peaks
-from spikeinterface.toolkit import get_noise_levels
 
+from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import MEArecRecordingExtractor
+
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
 
 def test_detect_peaks():
