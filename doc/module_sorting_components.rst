@@ -150,13 +150,14 @@ Implemented methods are the following:
 Motion estimation
 -----------------
 
-Recently drift estimation have been added in the sorting pipeline.
-Neuropixel datsets have shown that this is crucials step.
+Recently drift estimation have been added in some the sorting pipeline (kilosort 2.5, ...)
+Some Neuropixel datasets have shown that this is crucials step.
 
-Several methods have been proposed for this. Only one is implemented in spikeinterface at the moment.
+Several methods have been proposed for this.
+Only one is implemented in spikeinterface at the moment, the one from Paninski lab.
 See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_
 This steps is after peak detection and peak localization.
-It divide the duration in time bin and estimate the relative motion in between temporal bins.
+The idea is to divide the recording in time bin and estimate the relative motion in between temporal bins.
 
 This methods have 2 flavor:
 
@@ -173,6 +174,8 @@ Here an example with non rigid motion estimation
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
     peak_locations = localize_peaks(recording, peaks, ...)
     
+    
+    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     motion, temporal_bins, spatial_bins,
                 extra_check = estimate_motion(recording, peaks, peak_locations=peak_locations,
                                               direction='y', bin_duration_s=1., bin_um=10., 
@@ -190,11 +193,47 @@ In this example, because it is a non rigid estimation, :code:`motion` is a 2d ar
 Motion correction
 -----------------
 
+The estimated motion can be used to correct the motion, aka drift correction.
+One possible way is to make a interpolation sample by sample to compensate the motion.
+The :code:`CorrectMotionRecording` is a preprocessing doing this.
+This preprocessing is lazy in a sens that the inperpolation is done the fly but the class needed as input the 
+"motion vector". So it need a long computation before (pead detection, localization and motion estimation)
+
+Here a small example the depend on "Motion estimation"
 
 
+.. code-block:: python
+
+  from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+  
+  recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins)
+
+Important note : at the moment border of the probe in the direction are NOT handle properly.
+So it is safer to remove channel on border after this step.
+We plan to handle this directly in the class but this is NOT implemented yet.
+Use this class carrfully.
 
 Clustering
 ----------
+
+The clustering remain the central step of the spike sorting.
+Historically this step was separted in two distinct part: feature reduction and clustering.
+In spikeinterface, we decided to regroup this two steps in the same module.
+This allow to compute feature reduction on the fly and avoid long computation and big storage of 
+feature.
+
+So the way this step is build is it take as input recording and peaks give a label for every peaks.
+
+
+.. code-block:: python
+
+   from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+   
+   
+   
+   
+
+
 
 
 Template matching
