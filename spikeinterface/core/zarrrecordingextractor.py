@@ -69,6 +69,9 @@ class ZarrRecordingExtractor(BaseRecording):
         dtype = np.dtype(dtype)
         t_starts = self._root.get("t_starts", None)
 
+        total_nbytes = 0
+        total_nbytes_stored = 0
+        cr_by_segment = {}
         for segment_index in range(num_segments):
             trace_name = f"traces_seg{segment_index}"
             assert len(channel_ids) == self._root[trace_name].shape[1], \
@@ -89,6 +92,13 @@ class ZarrRecordingExtractor(BaseRecording):
                 time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
+            
+            nbytes_segment = self._root[trace_name].nbytes
+            nbytes_stored_segment = self._root[trace_name].nbytes_stored
+            cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
+            
+            total_nbytes += nbytes_segment
+            total_nbytes_stored += nbytes_stored_segment
             self.add_recording_segment(rec_segment)
 
         # load probe
@@ -108,6 +118,9 @@ class ZarrRecordingExtractor(BaseRecording):
         annotations = self._root.attrs.get("annotations", None)
         if annotations is not None:
             self.annotate(**annotations)
+        # annotate compression ratios
+        cr = total_nbytes / total_nbytes_stored
+        self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
         
         self._kwargs = {'root_path': str(root_path.absolute())}
 
