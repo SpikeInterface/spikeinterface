@@ -5,10 +5,12 @@ from pathlib import Path
 from spikeinterface import NumpySorting
 from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
-from spikeinterface.sortingcomponents import find_spikes_from_templates, template_matching_methods
-
 from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import read_mearec
+
+
+from spikeinterface.sortingcomponents.template_matching import find_spikes_from_templates, template_matching_methods
+
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sortingcomponents"
