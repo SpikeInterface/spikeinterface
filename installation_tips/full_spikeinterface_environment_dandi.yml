@@ -25,6 +25,7 @@ dependencies:
   - libxcb
   - pyqt=5
   - pyqtgraph
+  - htop
   - pip:
     - ephyviewer
     - neo>=0.10.2
