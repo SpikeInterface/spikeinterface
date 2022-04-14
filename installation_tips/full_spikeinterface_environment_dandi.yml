@@ -1,12 +1,13 @@
-name: si_env
+name: si_env_py39
 channels:
   - conda-forge
   - defaults
 dependencies:
   - python=3.9
   - pip>=21.0
-  # numpy 1.21 break numba which break tridesclous
-  - numpy<1.22
+  - mamba
+  # numpy 1.22 break numba which break tridesclous
+  - numpy==1.21
   - joblib
   - tqdm
   - matplotlib
@@ -18,14 +19,14 @@ dependencies:
   - loky
   - hdbscan
   - numba
-#  - jupyter
-  - mpi
+  - jupyter
   - mpi4py
-  - compilers
+  - cxx-compiler
+  - libxcb
   - pyqt=5
   - pyqtgraph
+  - htop
   - pip:
-#    - PyQt5
     - ephyviewer
     - neo>=0.10.2
     - elephant>=0.10.0
@@ -33,7 +34,6 @@ dependencies:
     - MEArec>=1.7.1
     - spikeinterface[full]
     - spikeinterface-gui
-    - tridesclous>=1.6.3
+    - tridesclous>=1.6.5
+    - spyking-circus>=1.1.0
     - phy==2.0b5
-    - herdingspikes
-    - mountainsort4>=1.0.0
