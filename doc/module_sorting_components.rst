@@ -93,7 +93,9 @@ Currently, the following methods are implemented:
 
   * 'center_of_mass' 
   * 'monopolar_triangulation' with optimizer='least_square'
-    This method is from Julien Boussard, Erdem Varol and Charlie Windolf from the Paninski lab.
+    This method is from Julien Boussard and Erdem Varol from the Paninski lab.
+    This has been presented at [NeurIPS](https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709)
+    see also [here](https://openreview.net/forum?id=ohfi44BZPC4)
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
 Theses methods are the same implemented in :code:`spieinterface.toolkit.postprocessing.unit_localization`
