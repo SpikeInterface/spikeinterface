@@ -554,7 +554,7 @@ class BaseExtractor:
         Parameters
         ----------
         kwargs: Keyword arguments for saving.
-            * format: "memory" or "binary" (for recording) / "memory" or "npz" for sorting.
+            * format: "memory", "zarr", or "binary" (for recording) / "memory" or "npz" for sorting.
                 In case format is not memory, the recording is saved to a folder
             * folder: if provided, the folder path where the object is saved
             * name: if provided and folder is not given, the name of the folder in the global temporary
@@ -728,6 +728,7 @@ class BaseExtractor:
         save_kwargs['zarr_root'] = zarr_root
         save_kwargs['zarr_path'] = zarr_path
         cached = self._save(folder=None, verbose=verbose, **save_kwargs)
+        cached_annotations = deepcopy(cached._annotations)
 
         # save properties
         prop_group = zarr_root.create_group('properties')
@@ -740,6 +741,8 @@ class BaseExtractor:
 
         # copy properties/
         self.copy_metadata(cached)
+        # append annotations on compression
+        cached._annotations.update(cached_annotations)
 
         return cached
 
