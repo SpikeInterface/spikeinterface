@@ -25,12 +25,12 @@ NEW API
 Version 0.94.0
 ==============
 
-* Refactor waveformextractor with waveform_tools.
+* Refactor WaveformExtractor with waveform_tools
 * Implement Zarr backend for save()
-* Read IBL compress files. 
+* Read IBL compressed files
 * Phase shift (destripe) preprocessor
 * Test are run partially : faster GH actions
-* Many improvement in sorting compnents: template matching, select_peak, motion_estimation, motion_correction
+* Many improvement in sorting compnents: template matching, select_peaks, motion_estimation, motion_correction
 
 Version 0.93.0
 ==============
