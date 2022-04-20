@@ -8,6 +8,7 @@ import os
 import random
 import string
 import warnings
+from packaging.version import parse
 
 import numpy as np
 
@@ -874,9 +875,12 @@ def _get_class_from_string(class_string):
 def _check_same_version(class_string, version):
     module = class_string.split('.')[0]
     imported_module = importlib.import_module(module)
+    
+    current_version = parse(imported_module.__version__)
+    saved_version = parse(version)
 
     try:
-        return imported_module.__version__ == version
+        return current_version.major == saved_version.major and current_version.minor == saved_version.minor
     except AttributeError:
         return 'unknown'
 
