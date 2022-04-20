@@ -114,7 +114,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_isi_distribution(self._sorting, axes=axes)
 
     def test_plot_drift_over_time(self):
-        from spikeinterface.sortingcomponents import detect_peaks
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         peaks = detect_peaks(self._rec, method='locally_exclusive')
         sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.,
                                 weight_with_amplitudes=True, mode='heatmap')

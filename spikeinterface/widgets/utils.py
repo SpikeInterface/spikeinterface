@@ -21,6 +21,8 @@ def get_unit_colors(sorting, map_name='gist_ncar', format='RGBA', shuffle=False)
     
     if HAVE_DISTINCTIPY:
         colors = distinctipy.get_colors(unit_ids.size)
+        # add the alpha
+        colors = [ color + (1., ) for color in colors]
     else:
         # some map have black or white at border so +10
         margin = max(4, len(unit_ids) // 20) // 2
