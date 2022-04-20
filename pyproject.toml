@@ -4,7 +4,7 @@ version = "0.95.0.dev0"
 license = "MIT"
 
 authors = ["Alessio Paolo Buccino <alessiop.buccino@gmail.com>", "Samuel Garcia", "Cole Hurwitz", "Jeremy Magland", "Matthias Hennig"]
-maintainers = ["Alessio Paolo Buccino <alessiop.buccino@gmail.com>"]
+maintainers = ["Alessio Paolo Buccino <alessiop.buccino@gmail.com>", "Samuel Garcia"]
 
 homepage = "https://github.com/SpikeInterface/spikeinterface"
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
