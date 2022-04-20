@@ -3,7 +3,7 @@ name = "spikeinterface"
 version = "0.95.0.dev0"
 license = "MIT"
 
-authors = ["Cole Hurwitz", "Jeremy Magland", "Alessio Paolo Buccino <alessiop.buccino@gmail.com>", "Matthias Hennig", "Samuel Garcia"]
+authors = ["Alessio Paolo Buccino <alessiop.buccino@gmail.com>", "Samuel Garcia", "Cole Hurwitz", "Jeremy Magland", "Matthias Hennig"]
 maintainers = ["Alessio Paolo Buccino <alessiop.buccino@gmail.com>"]
 
 homepage = "https://github.com/SpikeInterface/spikeinterface"
@@ -19,13 +19,14 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
 
-probeinterface = "^0.2.8"
+probeinterface = "^0.2.9"
 
-neo = "^0.10.0"
+neo = "^0.10.2"
 joblib = "^1.1.0"
 tqdm = "^4.62.3"
 numpy = "^1.21"
 
+distinctipy = {version = "^1.2.1", optional = true}
 zarr = {version = "^2.11.3", optional = true}
 scikit-learn = {version = "^1.0.2", optional = true}
 h5py = {version = "^3.6.0", optional = true}
@@ -64,7 +65,7 @@ herdingspikes = {version = "^0.3.99", optional = true}
 extractors = ["MEArec", "sonpy", "pynwb"]
 
 full = [
-    "h5py", "pandas", "scipy", "scikit-learn", "matplotlib", "networkx", "zarr"
+    "h5py", "pandas", "scipy", "scikit-learn", "matplotlib", "networkx", "zarr", "distinctipy"
 ]
 
 docker = ["docker"]
