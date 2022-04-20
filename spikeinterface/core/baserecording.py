@@ -211,6 +211,8 @@ class BaseRecording(BaseExtractor):
                                     channel_ids=self.channel_ids)
 
         elif format == 'zarr':
+            from .zarrrecordingextractor import get_default_zarr_compressor, ZarrRecordingExtractor
+            
             zarr_root = save_kwargs.get('zarr_root', None)
             zarr_path = save_kwargs.get('zarr_path', None)
 
@@ -224,6 +226,12 @@ class BaseRecording(BaseExtractor):
             if dtype is None:
                 dtype = self.get_dtype()
             compressor = save_kwargs.get('compressor', None)
+            
+            if compressor is None:
+                compressor = get_default_zarr_compressor()
+                print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
+                      f"'compressor' argument")
+            
             filters = save_kwargs.get('filters', None)
 
             job_kwargs = {k: save_kwargs[k]
@@ -252,7 +260,6 @@ class BaseRecording(BaseExtractor):
                 zarr_root.create_dataset(name="t_starts", data=t_starts,
                                          compressor=None)
 
-            from .zarrrecordingextractor import ZarrRecordingExtractor
             cached = ZarrRecordingExtractor(zarr_path)
 
         elif format == 'nwb':

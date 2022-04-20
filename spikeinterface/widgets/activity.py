@@ -66,7 +66,7 @@ class PeakActivityMapWidget(BaseWidget):
         rec = self.recording
         peaks = self.peaks
         if peaks is None:
-            from spikeinterface.sortingcomponents import detect_peaks
+            from spikeinterface.sortingcomponents.peak_detection import detect_peaks
             self.detect_peaks_kwargs['outputs'] = 'numpy_compact'
             peaks = detect_peaks(rec, **self.detect_peaks_kwargs)
 
