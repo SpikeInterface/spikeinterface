@@ -5,9 +5,8 @@ import numpy as np
 from spikeinterface import download_dataset
 from spikeinterface.extractors import MEArecRecordingExtractor
 
-
-from spikeinterface.sortingcomponents import detect_peaks
-from spikeinterface.sortingcomponents import (estimate_motion, make_motion_histogram,
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion, make_motion_histogram,
                                               compute_pairwise_displacement, compute_global_displacement)
 
 
@@ -25,7 +24,10 @@ def setup_module():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-
+    
+    cache_folder.mkdir(parents=True, exist_ok=True)
+    print(cache_folder)
+    
     # detect and localize
     peaks = detect_peaks(recording,
                          method='locally_exclusive',
@@ -48,11 +50,19 @@ def test_motion_functions():
     motion_histogram, temporal_bins, spatial_bins = make_motion_histogram(
         recording, peaks, bin_um=bin_um)
     # print(motion_histogram.shape, temporal_bins.size, spatial_bins.size)
-
-    pairwise_displacement = compute_pairwise_displacement(
+    
+    # conv2d + gradient_descent
+    pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
         motion_histogram, bin_um, method='conv2d')
+    motion = compute_global_displacement(pairwise_displacement, convergence_method='gradient_descent')
 
-    motion = compute_global_displacement(pairwise_displacement)
+    # phase_cross_correlation + gradient_descent_robust
+    # not tested yet on GH because need skimage
+    # pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
+    #                     motion_histogram, bin_um, method='phase_cross_correlation')
+    # motion = compute_global_displacement(pairwise_displacement,
+    #                 pairwise_displacement_weight=pairwise_displacement_weight, 
+    #                 convergence_method='lsqr_robust',)
 
     # # DEBUG
     # import matplotlib.pyplot as plt
@@ -92,34 +102,30 @@ def test_estimate_motion_rigid():
                                                                        non_rigid_kwargs=None,
                                                                        output_extra_check=True, progress_bar=True, 
                                                                        verbose=True)
-    # print(motion)
-    # print(extra_check)
-    print(spatial_bins)
-
     assert spatial_bins is None
 
     # # DEBUG
-    # import matplotlib.pyplot as plt
+    #~ import matplotlib.pyplot as plt
 
-    # fig, ax = plt.subplots()
-    # ax.plot(temporal_bins[:-1], motion)
+    #~ fig, ax = plt.subplots()
+    #~ ax.plot(temporal_bins, motion)
 
-    # motion_histogram = extra_check['motion_histogram']
-    # spatial_hist_bins = extra_check['spatial_hist_bins']
-    # fig, ax = plt.subplots()
-    # extent = (temporal_bins[0], temporal_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
-    # im = ax.imshow(motion_histogram.T, interpolation='nearest',
-    #                     origin='lower', aspect='auto', extent=extent)
+    #~ motion_histogram = extra_check['motion_histogram']
+    #~ spatial_hist_bins = extra_check['spatial_hist_bins']
+    #~ fig, ax = plt.subplots()
+    #~ extent = (temporal_bins[0], temporal_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
+    #~ im = ax.imshow(motion_histogram.T, interpolation='nearest',
+                        #~ origin='lower', aspect='auto', extent=extent)
 
-    # fig, ax = plt.subplots()
-    # pairwise_displacement = extra_check['pairwise_displacement_list'][0]
-    # im = ax.imshow(pairwise_displacement, interpolation='nearest',
-    #                     cmap='PiYG', origin='lower', aspect='auto', extent=None)
-    # im.set_clim(-40, 40)
-    # ax.set_aspect('equal')
-    # fig.colorbar(im)
+    #~ fig, ax = plt.subplots()
+    #~ pairwise_displacement = extra_check['pairwise_displacement_list'][0]
+    #~ im = ax.imshow(pairwise_displacement, interpolation='nearest',
+                        #~ cmap='PiYG', origin='lower', aspect='auto', extent=None)
+    #~ im.set_clim(-40, 40)
+    #~ ax.set_aspect('equal')
+    #~ fig.colorbar(im)
 
-    # plt.show()
+    #~ plt.show()
 
 
 def test_estimate_motion_non_rigid():
@@ -138,14 +144,12 @@ def test_estimate_motion_non_rigid():
                                                                            'bin_step_um': 50},
                                                                        output_extra_check=True, progress_bar=True, 
                                                                        verbose=True)
-    # print(motion)
-    # print(extra_check.keys())
-    # print(spatial_bins)
+
 
     assert spatial_bins is not None
     assert len(spatial_bins) == motion.shape[1]
 
-    # # # DEBUG
+    ### DEBUG
     # import matplotlib.pyplot as plt
     # probe = recording.get_probe()
 
@@ -162,13 +166,13 @@ def test_estimate_motion_non_rigid():
 
     # fig, ax = plt.subplots()
     # for w, win in enumerate(non_rigid_windows):
-    #     ax.plot(temporal_bins[:-1], motion[:, w])
+    #     ax.plot(temporal_bins, motion[:, w])
 
     # plt.show()
 
 
 if __name__ == '__main__':
-    # setup_module()
-    # test_motion_functions()
-    # test_estimate_motion_rigid()
+    setup_module()
+    test_motion_functions()
+    test_estimate_motion_rigid()
     test_estimate_motion_non_rigid()

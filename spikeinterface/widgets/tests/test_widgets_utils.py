@@ -15,7 +15,7 @@ def test_get_unit_colors():
 
     colors = get_unit_colors(sorting)
     print(colors)
-
+    
 
 if __name__ == '__main__':
     test_get_unit_colors()
