@@ -27,7 +27,7 @@ class MCSH5RecordingExtractor(BaseRecording):
         The recording extractor for the MCS h5 file
     """
     extractor_name = 'MCSH5Recording'
-    installed = False  # check at class level if installed or not
+    installed = HAVE_MCSH5  # check at class level if installed or not
     is_writable = False
     mode = 'file'
     installation_mesg = "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
@@ -36,13 +36,14 @@ class MCSH5RecordingExtractor(BaseRecording):
         assert self.installed, self.installation_mesg
         self._file_path = file_path
 
-        mcs_info = openMCSH5File(self._recording_file, stream_id)
+        mcs_info = openMCSH5File(self._file_path, stream_id)
         self._rf = mcs_info["filehandle"]
 
         BaseRecording.__init__(self, sampling_frequency=mcs_info["sampling_frequency"], channel_ids=mcs_info["channel_ids"],
                                dtype=mcs_info["dtype"])
         
-        recording_segment = MCSH5RecordingSegment(sampling_frequency=mcs_info["sampling_frequency"])
+        recording_segment = MCSH5RecordingSegment(self._rf, stream_id, mcs_info["num_frames"], 
+                                                  sampling_frequency=mcs_info["sampling_frequency"])
         self.add_recording_segment(recording_segment)
         
         # set gain
@@ -113,9 +114,9 @@ def openMCSH5File(filename, stream_id):
     gain = convFact.astype(float) * (10.0 ** exponent)
 
     nRecCh, nFrames = data.shape
-    channel_ids = info['ChannelID']
+    channel_ids = [f"Ch{ch}" for ch in info['ChannelID']]
     assert len(np.unique(channel_ids)) == len(channel_ids), 'Duplicate MCS channel IDs found'
-    electrodeLabels = info['Label']
+    electrodeLabels = [l.decode() for l in info['Label']]
 
     assert timestamps[0][0] < timestamps[0][2], 'Please check the validity of \'ChannelDataTimeStamps\' in the stream.'
     TimeVals = np.arange(timestamps[0][0], timestamps[0][2] + 1, 1) * Tick
@@ -129,8 +130,8 @@ def openMCSH5File(filename, stream_id):
         (timestep_min, timestep_max)) - timestep_avg) / timestep_avg < 1e-6), 'Time steps vary by more than 1 ppm'
     samplingRate = 1. / timestep_avg
 
-    mcs_info = {"filehandle": rf, "num_frames": nFrames, "sampling_rate": samplingRate, 
-                "num_channels": nRecCh, "electrode_labels": electrodeLabels, "gain": gain,
+    mcs_info = {"filehandle": rf, "num_frames": nFrames, "sampling_frequency": samplingRate, 
+                "num_channels": nRecCh, "channel_ids": channel_ids, "electrode_labels": electrodeLabels, "gain": gain,
                 "dtype": dtype}
 
     return mcs_info
