@@ -25,10 +25,10 @@ dependencies:
     - isosplit5
     - mountainsort4>=1.0.0    
     - tridesclous>=1.6.4
-    - herdingspikes
+    - herdingspikes<=0.3.99
     - sphinx-gallery
     - numpydoc
-    - numpy<1.21
-    - git+https://github.com/scikit-learn-contrib/hdbscan.git
+    - numpy<1.22
+    - hdbscan
     - numba==0.54.1
     - git+https://github.com/SpikeInterface/spikeinterface.git
