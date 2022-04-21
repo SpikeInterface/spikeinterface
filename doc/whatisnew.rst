@@ -6,6 +6,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.94.0.rst
   releases/0.93.0.rst
   releases/0.92.0.rst
   releases/0.91.0.rst
@@ -20,6 +21,16 @@ Release notes
 
 NEW API
 -------
+
+Version 0.94.0
+==============
+
+* Refactor WaveformExtractor with waveform_tools
+* Implement Zarr backend for save()
+* Read IBL compressed files
+* Phase shift (destripe) preprocessor
+* Test are run partially : faster GH actions
+* Many improvement in sorting compnents: template matching, select_peaks, motion_estimation, motion_correction
 
 Version 0.93.0
 ==============

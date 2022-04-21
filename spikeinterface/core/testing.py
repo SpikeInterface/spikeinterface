@@ -1,13 +1,12 @@
 import numpy as np
 
-
 def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
     assert RX1.get_num_segments() == RX2.get_num_segments()
 
     for segment_idx in range(RX1.get_num_segments()):
         N = RX1.get_num_frames(segment_idx)
         # get_channel_ids
-        assert np.allclose(RX1.get_channel_ids(), RX2.get_channel_ids())
+        assert np.array_equal(RX1.get_channel_ids(), RX2.get_channel_ids())
         # get_num_channels
         assert np.allclose(RX1.get_num_channels(), RX2.get_num_channels())
         # get_num_frames
@@ -17,7 +16,9 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
         # get_traces
         if force_dtype is None:
             assert np.allclose(RX1.get_traces(segment_index=segment_idx,
-                                              return_scaled=return_scaled), RX2.get_traces(return_scaled=return_scaled))
+                                              return_scaled=return_scaled), 
+                               RX2.get_traces(segment_index=segment_idx, 
+                                              return_scaled=return_scaled))
         else:
             assert np.allclose(
                 RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),

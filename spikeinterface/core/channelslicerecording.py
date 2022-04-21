@@ -26,8 +26,9 @@ class ChannelSliceRecording(BaseRecording):
         parents_chan_ids = self._parent_recording.get_channel_ids()
 
         # some checks
-        assert all(chan_id in parents_chan_ids for chan_id in self._channel_ids), 'channel ids are not all in parents'
-        assert len(self._channel_ids) == len(self._renamed_channel_ids), 'renamed channel_ids must be the same size'
+        assert all(chan_id in parents_chan_ids for chan_id in self._channel_ids), 'ChannelSliceRecording : channel ids are not all in parents'
+        assert len(self._channel_ids) == len(self._renamed_channel_ids), 'ChannelSliceRecording: renamed channel_ids must be the same size'
+        assert self._channel_ids.size == np.unique(self._channel_ids).size, 'ChannelSliceRecording : channel_ids not unique'
 
         sampling_frequency = parent_recording.get_sampling_frequency()
 

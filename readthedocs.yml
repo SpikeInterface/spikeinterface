@@ -6,10 +6,10 @@ build:
 conda:
   environment: environment_rtd.yml
 
-python:
-  install:
-    - method: pip
-      path: .
+# python:
+#   install:
+#     - method: pip
+#       path: .
   
 # python:
 #   version: 3.8

@@ -8,7 +8,7 @@ from .base import load_extractor
 
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc
-from spikeinterface.core.waveform_tools import allocate_waveforms, distribute_waveforms_to_buffers
+from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 
 _possible_template_modes = ('average', 'std', 'median')
 
@@ -412,7 +412,7 @@ class WaveformExtractor:
                 raise Exception('Waveforms not extracted yet: '
                                 'please do WaveformExtractor.run_extract_waveforms() first')
             if memmap:
-                wfs = np.load(waveform_file, mmap_mode="r")
+                wfs = np.load(str(waveform_file), mmap_mode="r")
             else:
                 wfs = np.load(waveform_file)
             if cache:
@@ -679,8 +679,9 @@ class WaveformExtractor:
         spikes = np.concatenate(spikes)
 
         wf_folder = self.folder / 'waveforms'
-        wfs_arrays, wfs_arrays_info = allocate_waveforms(self.recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=p['dtype'])
-        distribute_waveforms_to_buffers(self.recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **job_kwargs)
+        wfs_arrays = extract_waveforms_to_buffers(self.recording, spikes, unit_ids, nbefore, nafter,
+                                mode='memmap', return_scaled=return_scaled, folder=wf_folder, dtype=p['dtype'],
+                                sparsity_mask=None,  copy=False, **job_kwargs)        
 
 
 
@@ -733,6 +734,7 @@ def extract_waveforms(recording, sorting, folder,
                       precompute_template=('average', ),
                       ms_before=3., ms_after=4.,
                       max_spikes_per_unit=500,
+                      unselect_spike_on_border=True,
                       overwrite=False,
                       return_scaled=True,
                       dtype=None,

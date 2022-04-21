@@ -31,6 +31,8 @@ class PeakActivityMapWidget(BaseWidget):
         Plot rates with contact colors
     with_interpolated_map: bool (default True)
         Plot rates with interpolated map
+    with_channel_ids: bool False default
+        Add channel ids text on the probe
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
@@ -45,6 +47,7 @@ class PeakActivityMapWidget(BaseWidget):
     def __init__(self, recording, peaks=None, detect_peaks_kwargs={},
                  weight_with_amplitudes=True, bin_duration_s=None,
                  with_contact_color=True, with_interpolated_map=True,
+                 with_channel_ids=False, with_color_bar=True,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
@@ -57,12 +60,13 @@ class PeakActivityMapWidget(BaseWidget):
         self.bin_duration_s = bin_duration_s
         self.with_contact_color = with_contact_color
         self.with_interpolated_map = with_interpolated_map
+        self.with_channel_ids = with_channel_ids
 
     def plot(self):
         rec = self.recording
         peaks = self.peaks
         if peaks is None:
-            from spikeinterface.sortingcomponents import detect_peaks
+            from spikeinterface.sortingcomponents.peak_detection import detect_peaks
             self.detect_peaks_kwargs['outputs'] = 'numpy_compact'
             peaks = detect_peaks(rec, **self.detect_peaks_kwargs)
 
@@ -101,9 +105,15 @@ class PeakActivityMapWidget(BaseWidget):
 
         artists = ()
         if self.with_contact_color:
+            text_on_contact = None
+            if self.with_channel_ids:
+                text_on_contact = self.recording.channel_ids
+            
+                
             poly, poly_contour = plot_probe(probe, ax=self.ax, contacts_values=rates,
                                             probe_shape_kwargs={'facecolor': 'w', 'alpha': .1},
-                                            contacts_kargs={'alpha': 1.}
+                                            contacts_kargs={'alpha': 1.},
+                                            text_on_contact=text_on_contact,
                                             )
             artists = artists + (poly, poly_contour)
 

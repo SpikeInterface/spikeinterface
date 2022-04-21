@@ -103,7 +103,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         warnings.warn("The 'get_components()' function has been substituted by the 'get_projections()' "
                       "function and it will be removed in the next release", DeprecationWarning)
         return self.get_projections(unit_id)
-    
+
     def load_pca_model(self):
         """
         Load PCA model from folder.
@@ -115,20 +115,23 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 pca_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
                 if not pca_file.is_file() and chan_ind == 0:
                     _ = self._fit_by_channel_local()
-                pca = pickle.load(pca_file.open("rb"))
+                with open(pca_file, 'rb') as fid:
+                    pca = pickle.load(fid)
                 pca_model.append(pca)
         elif mode == "by_channel_global":
             pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
             if not pca_file.is_file():
                 _ = self._fit_by_channel_global()
-            pca_model = pickle.load(pca_file.open("rb"))
+            with open(pca_file, 'rb') as fid:
+                pca_model = pickle.load(fid)
         elif mode == "concatenated":
             pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
             if not pca_file.is_file():
                 _ = self._fit_concatenated()
-            pca_model = pickle.load(pca_file.open("rb"))
-        self._pca_model = pca_model        
-    
+            with open(pca_file, 'rb') as fid:
+                pca_model = pickle.load(fid)
+        self._pca_model = pca_model
+
     def get_pca_model(self):
         """
         Returns the scikit-learn PCA model objects.
@@ -266,7 +269,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 shape = (n_spike, p['n_components'])
             proj = np.zeros(shape, dtype=p['dtype'])
             np.save(projection_file, proj)
-            comp = np.load(projection_file, mmap_mode='r+')
+            comp = np.load(str(projection_file), mmap_mode='r+')
             projection_memmap[unit_id] = comp
 
         # run ...
@@ -354,7 +357,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # fit
         for unit_id in unit_ids:
             wfs = we.get_waveforms(unit_id)
-            if wfs.size == 0:
+            if len(wfs) < p['n_components']:
                 continue
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca = pca_model[chan_ind]
