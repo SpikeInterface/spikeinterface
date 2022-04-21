@@ -19,12 +19,13 @@ jobs:
       - name: Install dependencies for testing
         run: |
           pip install pytest
+          pip install zarr
           pip install setuptools wheel twine
           pip install -r requirements.txt
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest spikeinterface/core
+          pytest -v spikeinterface/core
       - name: Publish on PyPI
         env:
           TWINE_USERNAME: __token__

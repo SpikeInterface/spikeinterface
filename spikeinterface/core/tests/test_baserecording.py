@@ -10,25 +10,17 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor
+from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.testing import check_recordings_equal
 
+from spikeinterface.core.testing_tools import generate_recording
 
-# file and folder created
-
-
-def _clean_all():
-    cache_folder = './my_cache_folder'
-    if Path(cache_folder).exists():
-        shutil.rmtree(cache_folder)
-
-
-def setup_module():
-    _clean_all()
-
-
-def teardown_module():
-    _clean_all()
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
+    cache_folder.mkdir(exist_ok=True, parents=True)
 
 
 def test_BaseRecording():
@@ -38,17 +30,20 @@ def test_BaseRecording():
     sampling_frequency = 10000
     dtype = 'int16'
 
-    file_paths = [f'test_base_recording_{i}.raw' for i in range(num_seg)]
+    file_paths = [cache_folder / f'test_base_recording_{i}.raw' for i in range(num_seg)]
     for i in range(num_seg):
-        a = np.memmap(file_paths[i], dtype=dtype, mode='w+', shape=(num_samples, num_chan))
+        a = np.memmap(file_paths[i], dtype=dtype,
+                      mode='w+', shape=(num_samples, num_chan))
         a[:] = np.random.randn(*a.shape).astype(dtype)
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths, sampling_frequency, num_chan, dtype)
 
     assert rec.get_num_segments() == 2
     assert rec.get_num_channels() == 3
 
     assert np.all(rec.ids_to_indices([0, 1, 2]) == [0, 1, 2])
-    assert np.all(rec.ids_to_indices([0, 1, 2], prefer_slice=True) == slice(0, 3, None))
+    assert np.all(rec.ids_to_indices(
+        [0, 1, 2], prefer_slice=True) == slice(0, 3, None))
 
     # annotations / properties
     rec.annotate(yep='yop')
@@ -59,23 +54,24 @@ def test_BaseRecording():
     rec.set_property('quality', [1., 3.3, np.nan])
     values = rec.get_property('quality')
     assert np.all(values[:2] == [1., 3.3, ])
-    
+
     # missing property
     rec.set_property('string_property', ["ciao", "bello"], ids=[0, 1])
     values = rec.get_property('string_property')
     assert values[2] == ""
-    
+
     # setting an different type raises an error
-    assert_raises(Exception, rec.set_property, key='string_property_nan', values=["ciao", "bello"], ids=[0, 1], 
+    assert_raises(Exception, rec.set_property, key='string_property_nan', values=["ciao", "bello"], ids=[0, 1],
                   missing_value=np.nan)
-    
+
     # int properties without missing values raise an error
-    assert_raises(Exception, rec.set_property, key='int_property', values=[5, 6], ids=[1, 2])
-    
+    assert_raises(Exception, rec.set_property,
+                  key='int_property', values=[5, 6], ids=[1, 2])
+
     rec.set_property('int_property', [5, 6], ids=[1, 2], missing_value=200)
     values = rec.get_property('int_property')
     assert values.dtype.kind == "i"
-    
+
     times0 = rec.get_times(segment_index=0)
 
     # dump/load dict
@@ -84,27 +80,27 @@ def test_BaseRecording():
     rec3 = load_extractor(d)
 
     # dump/load json
-    rec.dump_to_json('test_BaseRecording.json')
-    rec2 = BaseExtractor.load('test_BaseRecording.json')
-    rec3 = load_extractor('test_BaseRecording.json')
+    rec.dump_to_json(cache_folder / 'test_BaseRecording.json')
+    rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording.json')
+    rec3 = load_extractor(cache_folder / 'test_BaseRecording.json')
 
     # dump/load pickle
-    rec.dump_to_pickle('test_BaseRecording.pkl')
-    rec2 = BaseExtractor.load('test_BaseRecording.pkl')
-    rec3 = load_extractor('test_BaseRecording.pkl')
+    rec.dump_to_pickle(cache_folder / 'test_BaseRecording.pkl')
+    rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording.pkl')
+    rec3 = load_extractor(cache_folder / 'test_BaseRecording.pkl')
 
     # dump/load dict - relative
-    d = rec.to_dict(relative_to=".")
-    rec2 = BaseExtractor.from_dict(d, base_folder=".")
-    rec3 = load_extractor(d, base_folder=".")
+    d = rec.to_dict(relative_to=cache_folder)
+    rec2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
+    rec3 = load_extractor(d, base_folder=cache_folder)
 
     # dump/load json
-    rec.dump_to_json('test_BaseRecording_rel.json', relative_to=".")
-    rec2 = BaseExtractor.load('test_BaseRecording_rel.json', base_folder=".")
-    rec3 = load_extractor('test_BaseRecording_rel.json', base_folder=".")
+    rec.dump_to_json(cache_folder / 'test_BaseRecording_rel.json', relative_to=cache_folder)
+    rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording_rel.json', base_folder=cache_folder)
+    rec3 = load_extractor(
+        cache_folder / 'test_BaseRecording_rel.json', base_folder=cache_folder)
 
     # cache to binary
-    cache_folder = Path('./my_cache_folder')
     folder = cache_folder / 'simple_recording'
     rec.save(format='binary', folder=folder)
     rec2 = BaseExtractor.load_from_folder(folder)
@@ -118,7 +114,7 @@ def test_BaseRecording():
     assert np.array_equal(groups, [0, 0, 1])
 
     # but also possible
-    rec3 = BaseExtractor.load('./my_cache_folder/simple_recording')
+    rec3 = BaseExtractor.load(cache_folder / 'simple_recording')
 
     # cache to memory
     rec4 = rec3.save(format='memory')
@@ -135,7 +131,8 @@ def test_BaseRecording():
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
     positions = [[0., 0.], [0., 15.], [0, 30.]]
-    probe.set_contacts(positions=positions, shapes='circle', shape_params={'radius': 5})
+    probe.set_contacts(positions=positions, shapes='circle',
+                       shape_params={'radius': 5})
     probe.set_device_channel_indices([2, -1, 0])
     probe.create_auto_shape()
 
@@ -182,31 +179,56 @@ def test_BaseRecording():
     rec_int16.set_property('offset_to_uV', [0.] * 5)
     traces_float32 = rec_int16.get_traces(return_scaled=True)
     assert traces_float32.dtype == 'float32'
-    
+
     # test with t_start
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype, t_starts=np.arange(num_seg)*10.)
+    rec = BinaryRecordingExtractor(
+        file_paths, sampling_frequency, num_chan, dtype, t_starts=np.arange(num_seg)*10.)
     times1 = rec.get_times(1)
     folder = cache_folder / 'recording_with_t_start'
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
-    
+
     # test with time_vector
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
-    rec.set_times(np.arange(num_samples) / sampling_frequency + 30., segment_index=0)
-    rec.set_times(np.arange(num_samples) / sampling_frequency + 40., segment_index=1)
+    rec = BinaryRecordingExtractor(
+        file_paths, sampling_frequency, num_chan, dtype)
+    rec.set_times(np.arange(num_samples) /
+                  sampling_frequency + 30., segment_index=0)
+    rec.set_times(np.arange(num_samples) /
+                  sampling_frequency + 40., segment_index=1)
     times1 = rec.get_times(1)
     folder = cache_folder / 'recording_with_times'
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
     rec3 = load_extractor(folder)
     assert np.allclose(times1, rec3.get_times(1))
-    
-    
+
+    # test 3d probe
+    rec_3d = generate_recording(ndim=3, num_channels=30)
+    locations_3d = rec_3d.get_property("location")
+
+    locations_xy = rec_3d.get_channel_locations(axes="xy")
+    assert np.allclose(locations_xy, locations_3d[:, [0, 1]])
+
+    locations_xz = rec_3d.get_channel_locations(axes="xz")
+    assert np.allclose(locations_xz, locations_3d[:, [0, 2]])
+
+    locations_zy = rec_3d.get_channel_locations(axes="zy")
+    assert np.allclose(locations_zy, locations_3d[:, [2, 1]])
+
+    locations_xzy = rec_3d.get_channel_locations(axes="xzy")
+    assert np.allclose(locations_xzy, locations_3d[:, [0, 2, 1]])
+
+    rec_2d = rec_3d.planarize(axes="zy")
+    assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
 
-    
+    # Test save to zarr
+    compressor = get_default_zarr_compressor()
+    rec_zarr = rec2.save(format="zarr", zarr_path=cache_folder / "recording.zarr",
+                         compressor=compressor)
+    check_recordings_equal(rec2, rec_zarr, return_scaled=False)
+
 
 
 if __name__ == '__main__':
-    _clean_all()
     test_BaseRecording()

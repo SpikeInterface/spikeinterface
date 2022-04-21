@@ -4,10 +4,11 @@ import warnings
 
 import numpy as np
 
-from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface
+from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor, BaseSegment
-from .core_tools import write_binary_recording, write_memory_recording
+from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
+from .job_tools import job_keys
 
 from warnings import warn
 
@@ -165,8 +166,6 @@ class BaseRecording(BaseExtractor):
                           'times are not always propagated to across preprocessing'
                           'Use use this carefully!')
 
-    _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
-
     def _save(self, format='binary', **save_kwargs):
         """
         This function replaces the old CacheRecordingExtractor, but enables more engines
@@ -193,7 +192,7 @@ class BaseRecording(BaseExtractor):
             if dtype is None:
                 dtype = self.get_dtype()
 
-            job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
+            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
@@ -204,7 +203,7 @@ class BaseRecording(BaseExtractor):
                                               offset_to_uV=self.get_channel_offsets())
 
         elif format == 'memory':
-            job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
+            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
             from .numpyextractors import NumpyRecording
 
@@ -212,8 +211,56 @@ class BaseRecording(BaseExtractor):
                                     channel_ids=self.channel_ids)
 
         elif format == 'zarr':
-            # TODO implement a format based on zarr
-            raise NotImplementedError
+            from .zarrrecordingextractor import get_default_zarr_compressor, ZarrRecordingExtractor
+            
+            zarr_root = save_kwargs.get('zarr_root', None)
+            zarr_path = save_kwargs.get('zarr_path', None)
+
+            zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
+            zarr_root.attrs["num_segments"] = int(self.get_num_segments())
+            zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(),
+                                     compressor=None)
+
+            dataset_paths = [f'traces_seg{i}' for i in range(self.get_num_segments())]
+            dtype = save_kwargs.get('dtype', None)
+            if dtype is None:
+                dtype = self.get_dtype()
+            compressor = save_kwargs.get('compressor', None)
+            
+            if compressor is None:
+                compressor = get_default_zarr_compressor()
+                print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
+                      f"'compressor' argument")
+            
+            filters = save_kwargs.get('filters', None)
+
+            job_kwargs = {k: save_kwargs[k]
+                          for k in job_keys if k in save_kwargs}
+            write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, dataset_paths=dataset_paths,
+                                 dtype=dtype, compressor=compressor, filters=filters, **job_kwargs)
+
+            # save probe
+            if self.get_property('contact_vector') is not None:
+                probegroup = self.get_probegroup()
+                zarr_root.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
+
+            # save time vector if any
+            t_starts = np.zeros(self.get_num_segments(), dtype='float64') * np.nan
+            for segment_index, rs in enumerate(self._recording_segments):
+                d = rs.get_times_kwargs()
+                time_vector = d['time_vector']
+                if time_vector is not None:
+                    _ = zarr_root.create_dataset(name=f'times_seg{segment_index}', data=time_vector,
+                                                 filters=filters,
+                                                 compressor=compressor)
+                elif d["t_start"] is not None:
+                    t_starts[segment_index] = d["t_start"]
+
+            if np.any(~np.isnan(t_starts)):
+                zarr_root.create_dataset(name="t_starts", data=t_starts,
+                                         compressor=None)
+
+            cached = ZarrRecordingExtractor(zarr_path)
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
@@ -260,6 +307,23 @@ class BaseRecording(BaseExtractor):
             time_vector = d['time_vector']
             if time_vector is not None:
                 np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
+
+    # def _extra_metadata_to_zarr(self, zarr_root, compressor, filters):
+    #     # save probe
+    #     if self.get_property('contact_vector') is not None:
+    #         probegroup = self.get_probegroup()
+    #         zarr_root.attrs["probe"] = probegroup.to_dict()
+
+    #     # save time vector if any
+    #     for segment_index, rs in enumerate(self._recording_segments):
+    #         d = rs.get_times_kwargs()
+    #         time_vector = d['time_vector']
+    #         if time_vector is not None:
+    #             z = zarr_root.create_dataset(name=f'times_seg{segment_index}', data=time_vector,
+    #                                          chunks=(chunk_size, None), dtype=dtype,
+    #                                          filters=filters,
+    #                                          compressor=compressor)
+    #             np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
 
     def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """
@@ -415,10 +479,34 @@ class BaseRecording(BaseExtractor):
                     probe.set_planar_contour(contour)
         return probegroup
 
-    def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}):
-        probe = Probe()
-        probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
+    def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1},
+                                       axes="xy"):
+        """
+        Sets a 'dummy' probe based on locations.
+
+        Parameters
+        ----------
+        locations : np.array
+            Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
+        shape : str, optional
+            Electrode shapes, by default "circle"
+        shape_params : dict, optional
+            Shape parameters, by default {"radius": 1}
+        axes : str, optional
+            If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
+        """
+        ndim = locations.shape[1]
+        probe = Probe(ndim=2)
+        if ndim == 3:
+            locations_2d = select_axes(locations, axes)
+        else:
+            locations_2d = locations
+        probe.set_contacts(locations_2d, shapes=shape, shape_params=shape_params)
         probe.set_device_channel_indices(np.arange(self.get_num_channels()))
+
+        if ndim == 3:
+            probe = probe.to_3d(axes=axes)
+
         self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):
@@ -426,7 +514,7 @@ class BaseRecording(BaseExtractor):
             raise ValueError('set_channel_locations(..) destroy the probe description, prefer set_probes(..)')
         self.set_property('location', locations, ids=channel_ids)
 
-    def get_channel_locations(self, channel_ids=None, locations_2d=True):
+    def get_channel_locations(self, channel_ids=None, axes: str = 'xy'):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
@@ -454,14 +542,17 @@ class BaseRecording(BaseExtractor):
                                             for cp in probe_j.contact_positions])):
                             raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
                 all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-                positions = all_positions[channel_indices]  
-            return positions
+                positions = all_positions[channel_indices]
+            return select_axes(positions, axes)
         else:
             locations = self.get_property('location')
             if locations is None:
                 raise Exception('There are no channel locations')
             locations = np.asarray(locations)[channel_indices]
-            return locations
+            return select_axes(locations, axes)
+
+    def has_3d_locations(self):
+        return self.get_property('location').shape[1] == 3
 
     def clear_channel_locations(self, channel_ids=None):
         if channel_ids is None:
@@ -514,6 +605,12 @@ class BaseRecording(BaseExtractor):
         from spikeinterface import ChannelSliceRecording
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
+    
+    def remove_channels(self, remove_channel_ids):
+        from spikeinterface import ChannelSliceRecording
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, removed_channel_ids)]
+        sub_recording = ChannelSliceRecording(self, new_channel_ids)
+        return sub_recording
 
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceRecording
@@ -540,6 +637,46 @@ class BaseRecording(BaseExtractor):
             elif outputs == 'dict':
                 recordings[value] = subrec
         return recordings
+    
+    def select_segments(self, segment_indices):
+        """
+        Return a recording with the segments specified by 'segment_indices'
+
+        Parameters
+        ----------
+        segment_indices : list of int
+            List of segment indices to keep in the returned recording
+
+        Returns
+        -------
+        SelectSegmentRecording
+            The recording with the selected segments
+        """
+        from .segmentutils import SelectSegmentRecording
+        return SelectSegmentRecording(self, segment_indices=segment_indices)
+
+    def planarize(self, axes: str = "xy"):
+        """
+        Returns a Recording with a 2D probe from one with a 3D probe
+
+        Parameters
+        ----------
+        axes : str, optional
+            The axes to keep, by default "xy"
+
+        Returns
+        -------
+        BaseRecording
+            The recording with 2D positions
+        """
+        assert self.has_3d_locations, "The 'planarize' function needs a recording with 3d locations"
+        assert len(axes) == 2, "You need to specify 2 dimensions (e.g. 'xy', 'zy')"
+
+        probe2d = self.get_probe().to_2d(axes=axes)
+        recording2d = self.clone()
+        recording2d.set_probe(probe2d, in_place=True)
+
+        return recording2d
 
 
 class BaseRecordingSegment(BaseSegment):

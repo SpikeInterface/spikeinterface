@@ -58,7 +58,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, n_jobs=n_jobs)
         self.set_frames_and_frequency(self.object_list)
         self._spiketrain_mode = spiketrain_mode
-        self.spiketrains = None
+        self._spiketrains = None
 
         if do_matching:
             self._compute_all()
@@ -82,7 +82,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
                 self.graph.add_node(node)
 
     def _populate_spiketrains(self):
-        self.spiketrains = []
+        self._spiketrains = []
         for (unit_id, sg) in zip(self._new_units, self.subgraphs):
             sorter_unit_ids = self._new_units[unit_id]["unit_ids"]
             edges = list(sg.edges(data=True))

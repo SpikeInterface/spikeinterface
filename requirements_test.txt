@@ -6,6 +6,8 @@ pytest
 numpy==1.20
 git+https://github.com/scikit-learn-contrib/hdbscan.git
 numba==0.54.1
+# zarr is needed for testing
+zarr
 
 # this also work but pynwb don't want numpy==1.22
 # numpy==1.22
@@ -21,25 +23,28 @@ git+https://github.com/NeuralEnsemble/python-neo.git
 # so we use an old one here
 datalad==0.14.4
 
+# lxml for neuroscope
+lxml
+
 ## install sorters ##
-# python based only
+# python based only
 # no GPU (no pykilosort, no yass)
 
 ## mountainsort4
 # have some problems with dask
 # temporary removed from tests
-# pybind11
-# isosplit5
-# mountainsort4
+# pybind11
+# isosplit5
+# mountainsort4
 
 ## klusta
 # is removed from test
 # do not work anymore on python3.8
-# Cython
-# tqdm
-# click
-# klusta
-# klustakwik2==0.2.7
+# Cython
+# tqdm
+# click
+# klusta
+# klustakwik2==0.2.7
 
 ## tridesclous
 pyqt5
@@ -54,7 +59,7 @@ tridesclous>=1.6.4
 spyking-circus
 
 ## herdingspikes
-herdingspikes
+herdingspikes<=0.3.99
 
 ## mearec
 mearec

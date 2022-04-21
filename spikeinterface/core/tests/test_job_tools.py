@@ -42,7 +42,8 @@ def test_ensure_chunk_size():
     # make dumpable
     recording = recording.save()
 
-    chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
+    chunk_size = ensure_chunk_size(
+        recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
     assert chunk_size == 32000000
 
     chunk_size = ensure_chunk_size(recording, chunk_memory="256M")
@@ -54,9 +55,20 @@ def test_ensure_chunk_size():
     chunk_size = ensure_chunk_size(recording, chunk_memory="1G")
     assert chunk_size == 125000000
 
+    chunk_size = ensure_chunk_size(recording, chunk_duration=1.5)
+    assert chunk_size == 45000
+
+    chunk_size = ensure_chunk_size(recording, chunk_duration='1.5s')
+    assert chunk_size == 45000
+    
+    chunk_size = ensure_chunk_size(recording, chunk_duration='500ms')
+    assert chunk_size == 15000
+    
+
 
 def func(segment_index, start_frame, end_frame, worker_ctx):
-    import os, time
+    import os
+    import time
     #  print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
     time.sleep(0.010)
     # time.sleep(1.0)
@@ -93,7 +105,8 @@ def test_ChunkRecordingExecutor():
     # chunk + parralel
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        verbose=True, progress_bar=True,
-                                       n_jobs=2, total_memory="200k",
+                                       #~ n_jobs=2, total_memory="200k",
+                                       n_jobs=2, chunk_duration="200ms",
                                        job_name='job_name')
     processor.run()
 

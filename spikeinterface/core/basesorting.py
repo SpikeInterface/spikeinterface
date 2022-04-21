@@ -119,8 +119,9 @@ class BaseSorting(BaseExtractor):
                     "The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
         else:
-            raise ValueError(f'format {format} not supported')
-
+            from .numpyextractors import NumpySorting
+            cached = NumpySorting.from_extractor(self)
+            
         return cached
 
     def get_unit_property(self, unit_id, key):
@@ -129,12 +130,43 @@ class BaseSorting(BaseExtractor):
         return v
 
     def select_units(self, unit_ids, renamed_unit_ids=None):
+        """
+        Selects a subset of units
+
+        Parameters
+        ----------
+        unit_ids : numpy.array or list
+            List of unit ids to keep
+        renamed_unit_ids : numpy.array or list, optional
+            If given, the kept unit ids are renamed, by default None
+
+        Returns
+        -------
+        BaseSorting
+            Sorting object with selected units
+        """
         from spikeinterface import UnitsSelectionSorting
         sub_sorting = UnitsSelectionSorting(
             self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
-    # add tests
+    def remove_empty_units(self):
+        """
+        Removes units with empty spike trains
+
+        Returns
+        -------
+        BaseSorting
+            Sorting object with non-empty units
+        """
+        units_to_keep = []
+        for segment_index in range(self.get_num_segments()):
+            for unit in self.get_unit_ids():
+                if len(self.get_unit_spike_train(unit, segment_index=segment_index)) > 0:
+                    units_to_keep.append(unit)
+        units_to_keep = np.unique(units_to_keep)
+        return self.select_units(units_to_keep)
+
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceSorting
         sub_sorting = FrameSliceSorting(
