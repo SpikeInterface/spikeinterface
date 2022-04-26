@@ -148,11 +148,11 @@ def test_resample_by_chunks():
     # Also, sometimes decimate might give warnings about filter designs
     # If only resample is used, everything works nicely, so removed the option
     for resample_rate in [500, 1000, 2500]:
-        for margin_ms in (30, 40, 100):
+        for margin_ms in (10, 40, 100):
             for chunk_size in (sr*1, sr*1.5, sr*2):
                 # This looks like the minimum ratio of chunksize and resample that works
                 chunk_size = int(chunk_size * (resample_rate/1000))
-                print(f'resmple_rate = {resample_rate}; margin_ms = {margin_ms}; chunk_size={chunk_size}')
+                # print(f'resmple_rate = {resample_rate}; margin_ms = {margin_ms}; chunk_size={chunk_size}')
                 rec2 = resample(parent_rec, resample_rate, margin_ms=margin_ms)
                 # save by chunk rec3 is the cached version
                 rec3 = rec2.save(format='memory', chunk_size=chunk_size, n_jobs=1, progress_bar=False)
@@ -175,59 +175,6 @@ def test_resample_by_chunks():
                 assert error_max / rms < 0.02
 
 
-
-
-def test_resample():
-    """simple tests for resample preprocessor.
-
-    - Check that total number of frames make sense
-    - Check that resample durations are the same
-
-    """
-    parent_sf = 30000
-    resamp_sf = 1000
-    duration = [1.5]
-    parent_rec = generate_recording(
-        num_channels=4, sampling_frequency=parent_sf, durations=duration, set_probe=True
-    )
-    resamp_rec = resample(parent_rec, resamp_sf)
-    # check that the number of samples makes sense
-    assert np.isclose(
-        (parent_sf / resamp_sf),
-        (parent_rec.get_num_samples() / resamp_rec.get_num_samples()),
-         )
-    # check that durations are the same
-    assert (parent_rec.get_total_duration() == resamp_rec.get_total_duration())
-    # check that first and last times are similar enough, with tolerance resampling rate
-    assert np.all(
-        np.isclose(
-            parent_rec.get_times()[[0, -1]],
-            resamp_rec.get_times()[[0, -1]],
-            atol=1/resamp_sf
-        )
-    )
-    # check that for different resamp_rates, it still the same
-    resamp_fss = (np.linspace(0.1, 0.45, 10) * parent_sf).astype(int)
-    resamp_recs = [resample(parent_rec, resamp_fs) for resamp_fs in resamp_fss]
-    # that they all have the correct number of frames:
-    assert np.allclose([resamp_rec.get_num_frames() for resamp_rec in resamp_recs], resamp_fss * duration)
-    # They all last 1 second
-    assert np.allclose([resamp_rec.get_total_duration() for resamp_rec in resamp_recs], duration)
-    # check that the first and last time points are similar with tolerance
-    assert np.all(
-        [
-            np.isclose(
-                parent_rec.get_times()[[0, -1]],
-                resamp_rec.get_times()[[0, -1]],
-                atol=1/resamp_fs,
-            )
-            for resamp_fs, resamp_rec in zip(resamp_fss, resamp_recs)
-        ]
-    )
-
-
-
-
 if __name__ == '__main__':
-    # test_resample()
-    pass
+    test_resample_freq_domain()
+    test_resample_by_chunks()
