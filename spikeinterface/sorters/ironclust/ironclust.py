@@ -59,7 +59,6 @@ class IronClustSorter(BaseSorter):
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)
 
     requires_locations = True
-
     docker_requires_gpu = True
 
     _default_params = {
