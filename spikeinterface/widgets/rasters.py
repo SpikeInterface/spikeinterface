@@ -52,7 +52,7 @@ class RasterWidget(BaseWidget):
         for unit_id in self._sorting.get_unit_ids():
             spike_train = self._sorting.get_unit_spike_train(unit_id,
                                                              segment_index=self.segment_index)
-            if len(spike_train) > 0:
+            if spike_train.size > 0:
                 curr_max_frame = np.max(spike_train)
                 if curr_max_frame > self._max_frame:
                     self._max_frame = curr_max_frame
