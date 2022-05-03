@@ -64,9 +64,9 @@ class BaseSorting(BaseExtractor):
                 times = self.get_times(segment_index=segment_index)
                 return times[spike_train]
             else:
-                return spike_train / self.get_sampling_frequency()
+                return np.atleast_1d(spike_train / self.get_sampling_frequency())
         else:
-            return spike_train
+            return np.atleast_1d(spike_train)
 
     def register_recording(self, recording):
         assert np.isclose(self.get_sampling_frequency(),
