@@ -329,6 +329,8 @@ def iter_working_folder(working_folder):
                 sorter_name = job_dict["sorter_name"]
                 yield rec_name, sorter_name, output_folder
             else:
+                rec_name = rec_folder.name
+                sorter_name = output_folder.name
                 if not output_folder.is_dir():
                     continue
                 if not is_log_ok(output_folder):
