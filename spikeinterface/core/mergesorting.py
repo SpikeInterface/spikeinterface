@@ -15,8 +15,8 @@ class MergeSorting(BaseSorting):
     units2merge: Sorting
         The sorting object
     merge_unit_id: list
-        The folder where waveforms are cached
-    rm_dup_delta_time: float or None
+        Unit id to use for the combined unit. It could be one for the merged ones.
+    delta_time: float or None
         Number of ms to consider duplicated spikes. None to don't check duplications
     cache: bool
         True to precompute duplicated events and sort times
@@ -26,7 +26,7 @@ class MergeSorting(BaseSorting):
         Sorting object with the selected units merged
     """
 
-    def __init__(self, parent_sorting, units2merge, merge_unit_id=None, rm_dup_delta_time=0.4, cache=False):
+    def __init__(self, parent_sorting, units2merge, merge_unit_id=None, delta_time=0.4, cache=False):
         if merge_unit_id is None:
             merge_unit_id = units2merge[0]
 
@@ -39,9 +39,11 @@ class MergeSorting(BaseSorting):
         assert all(u in parents_unit_ids for u in units2merge), 'units to merge are not all in parent'
         keep_units = [u for u in parents_unit_ids if u not in units2merge]
         units_ids = keep_units + [merge_unit_id]
-
         BaseSorting.__init__(self, sampling_frequency, units_ids)
-        rm_dup_delta = int(rm_dup_delta_time / 1000 * sampling_frequency)
+        if delta_time is None:
+            rm_dup_delta = None
+        else:
+            rm_dup_delta = int(delta_time / 1000 * sampling_frequency)
         for parent_segment in self._parent_sorting._sorting_segments:
             sub_segment = MergeSortingSegment(parent_segment, units2merge, merge_unit_id, rm_dup_delta, cache)
             self.add_sorting_segment(sub_segment)

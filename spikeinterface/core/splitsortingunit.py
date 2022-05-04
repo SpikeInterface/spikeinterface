@@ -26,11 +26,16 @@ class SplitSortingUnit(BaseSorting):
         Sorting object with the selected unit splited
     """
 
-    def __init__(self, parent_sorting, unit2split, indices_list, new_units_ids):
+    def __init__(self, parent_sorting, unit2split, indices_list, new_units_ids=None):
 
         self._parent_sorting = parent_sorting
         indices_list = deepcopy(indices_list)
         parents_unit_ids = parent_sorting.get_unit_ids()
+        if new_units_ids is None:
+            if np.issubdtype(parents_unit_ids.dtype, np.character):
+                new_units_ids = max([0]+[int(p) for p in parents_unit_ids if p.isdigit()])
+            else:
+                new_units_ids = max(parents_unit_ids)+1
         sampling_frequency = parent_sorting.get_sampling_frequency()
         unchanged_units = parents_unit_ids[parents_unit_ids!=unit2split]
         units_ids = np.concatenate([unchanged_units, new_units_ids])
