@@ -65,6 +65,7 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
         self._rf = rf
         self._stream_id = stream_id
         self._num_samples = int(num_frames)
+        self._stream = self._rf.require_group('/Data/Recording_0/AnalogStream/Stream_' + str(self._stream_id))
 
     def get_num_samples(self):
         return self._num_samples
@@ -73,10 +74,9 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
                    start_frame=None, 
                    end_frame=None, 
                    channel_indices=None):
-        stream = self._rf.require_group('/Data/Recording_0/AnalogStream/Stream_' + str(self._stream_id))
 
         if isinstance(channel_indices, slice):
-            traces = stream.get('ChannelData')[channel_indices, start_frame:end_frame].T
+            traces = self._stream.get('ChannelData')[channel_indices, start_frame:end_frame].T
         else:
             # channel_indices is np.ndarray
             if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
@@ -84,10 +84,10 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
                 # to be indexed out of order
                 sorted_channel_indices = np.sort(channel_indices)
                 resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
-                recordings = stream.get('ChannelData')[sorted_channel_indices, start_frame:end_frame].T
+                recordings = self._stream.get('ChannelData')[sorted_channel_indices, start_frame:end_frame].T
                 traces = recordings[:, resorted_indices]
             else:
-                traces = stream.get('ChannelData')[channel_indices, start_frame:end_frame].T
+                traces = self._stream.get('ChannelData')[channel_indices, start_frame:end_frame].T
 
         return traces
 
