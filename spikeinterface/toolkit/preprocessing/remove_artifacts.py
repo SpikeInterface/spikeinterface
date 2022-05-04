@@ -114,7 +114,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         if self.mode == 'zeros':
             for trig in triggers:
                 if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
-                    traces[trig - pad[0]:trig + pad[1], :] = 0
+                    traces[trig - pad[0]:trig + pad[1] + 1, :] = 0
                 elif trig - pad[0] <= 0 and trig + pad[1] >= end_frame - start_frame:
                     traces[:] = 0
                 elif trig - pad[0] <= 0:
