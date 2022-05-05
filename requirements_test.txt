@@ -22,6 +22,7 @@ git+https://github.com/NeuralEnsemble/python-neo.git
 # recent datalad need a too recent version for git-annex
 # so we use an old one here
 #datalad ==0.14.4
+datalad-installer
 datalad==0.16.2
 
 # lxml for neuroscope
