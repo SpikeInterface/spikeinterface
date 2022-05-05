@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt update
           # this is for datalad and download testing datasets
-          sudo apt install git # git-annex
+          sudo apt install git git-annex=10.20220504
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
