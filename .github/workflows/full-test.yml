@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt update
           # this is for datalad and download testing datasets
-          sudo apt install git # git-annex=10.20220504
+          sudo apt install git git-annex-standalone # use standalone to get version 10
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
@@ -53,8 +53,6 @@ jobs:
           pip install -r requirements_full.txt
           pip install -r requirements_extractors.txt
 
-          conda install -c conda-forge datalad
-          
           pip install -e .
       - name: pip list
         run: |
