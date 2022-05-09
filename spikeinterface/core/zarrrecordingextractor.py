@@ -61,8 +61,6 @@ class ZarrRecordingExtractor(BaseRecording):
             root_path_kwarg = str(root_path.absolute())
         self._root = zarr.open(root_path_init, mode="r")
 
-        root_path = Path(root_path)
-        self._root = zarr.open(str(root_path), mode="r")
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
         assert "channel_ids" in self._root.keys(), "'channel_ids' dataset not found!"
