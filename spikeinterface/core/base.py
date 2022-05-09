@@ -716,9 +716,15 @@ class BaseExtractor:
                     if verbose:
                         print(f'Use cache_folder={zarr_path}')
         else:
-            zarr_path = Path(zarr_path)
-        assert not zarr_path.exists(), f'Path {zarr_path} already exists, choose another name'
-        zarr_root = zarr.open(str(zarr_path), "w")
+            if isinstance(zarr_path, str):
+                zarr_path = Path(zarr_path)
+                zarr_path_init = str(zarr_path)
+            else: # mapper
+                zarr_path_init = zarr_path
+
+        if isinstance(zarr_path, Path):
+            assert not zarr_path.exists(), f'Path {zarr_path} already exists, choose another name'
+        zarr_root = zarr.open(zarr_path_init, "w")
 
         if self.check_if_dumpable():
             zarr_root.attrs["provenance"] = check_json(self.to_dict())

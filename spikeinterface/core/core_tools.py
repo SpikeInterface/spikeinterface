@@ -593,7 +593,12 @@ def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
         worker_ctx['recording'] = recording
 
     # reload root and datasets
-    root = zarr.open(str(zarr_path), mode="r+")
+    if isinstance(zarr_path, Path):
+        zarr_path_init = str(zarr_path)
+    else: # mapper
+        zarr_path_init = zarr_path
+
+    root = zarr.open(zarr_path_init, mode="r+")
     zarr_datasets = []
     for dset_name in dataset_paths:
         z = root[dset_name]
