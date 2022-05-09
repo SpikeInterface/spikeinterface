@@ -50,6 +50,17 @@ class ZarrRecordingExtractor(BaseRecording):
 
     def __init__(self, root_path: Union[Path, str]):
         assert self.installed, self.installation_mesg
+        if isinstance(root_path, str):
+            root_path = Path(root_path)
+            
+        if not isinstance(root_path, Path):
+            root_path_init = root_path
+            root_path_kwarg = root_path
+        else:
+            root_path_init = str(root_path)
+            root_path_kwarg = str(root_path.absolute())
+        self._root = zarr.open(root_path_init, mode="r")
+
         root_path = Path(root_path)
         self._root = zarr.open(str(root_path), mode="r")
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
@@ -122,7 +133,7 @@ class ZarrRecordingExtractor(BaseRecording):
         cr = total_nbytes / total_nbytes_stored
         self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
         
-        self._kwargs = {'root_path': str(root_path.absolute())}
+        self._kwargs = {'root_path': root_path_kwarg}
 
 
 class ZarrRecordingSegment(BaseRecordingSegment):
