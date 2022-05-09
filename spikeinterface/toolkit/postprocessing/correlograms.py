@@ -40,13 +40,47 @@ def compute_autocorrelogram_from_spiketrain(spike_train, max_time, bin_size, sam
 
     return _compute_autocorr_numba(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
 
+def compute_crosscorrelogram_from_spiketrain(spike_train1, spike_train2, max_time, bin_size, sampling_f):
+    """
+    Compute the cros-correlogram between two given spike trains.
+
+    This implementation only works if you have numba installed, to accelerate the
+    computation time.
+
+    Parameters
+    ----------
+    spike_train1: np.ndarray
+        The ordered spike train to compare against the second one.
+    spike_train2: np.ndarray
+        The ordered spike train that serves as a reference for the cross-correlogram.
+    max_time: float
+        Compute the auto-correlogram between -max_time and +max_time (in ms).
+    bin_size: float
+        Size of a bin (in ms).
+    sampling_f: float:
+        Sampling rate/frequency (in Hz).
+
+    Returns
+    -------
+    tuple (auto_corr, bins)
+    auto_corr: np.ndarray[int64]
+        The computed auto-correlogram.
+    bins: np.ndarray[float64]
+        The bins for the auto-correlogram.
+    """
+    if not HAVE_NUMBA:
+        print("Error: numba is not installed.")
+        print("compute_crosscorrelogram_from_spiketrain cannot run without numba.")
+        return 0
+
+    return _compute_crosscorr_numba(spike_train1.astype(np.int64), spike_train2.astype(np.int64), max_time, bin_size, sampling_f)
+
 if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.float32, numba.float32, numba.float32), nopython=True,
                 nogil=True, cache=True)
     def _compute_autocorr_numba(spike_train, max_time, bin_size, sampling_f):
         bin_size_c = int(round(bin_size * 1e-3 * sampling_f))
         max_time_c = int(round(max_time * 1e-3 * sampling_f))
-        max_time -= max_time / bin_size
         n_bins = 2 * int(max_time_c / bin_size_c)
 
         bins = np.arange(-max_time_c, max_time_c+bin_size_c, bin_size_c) * 1e3 / sampling_f
@@ -64,6 +98,32 @@ if HAVE_NUMBA:
                 auto_corr[n_bins//2 + bin] += 1
 
         return (auto_corr, bins)
+
+    @numba.jit((numba.int64[::1], numba.int64[::1], numba.float32, numba.float32, numba.float32),
+                nopython=True, nogil=True, cache=True)
+    def _compute_crosscorr_numba(spike_train1, spike_train2, max_time, bin_size, sampling_f):
+        bin_size_c = int(round(bin_size * 1e-3 * sampling_f))
+        max_time_c = int(round(max_time * 1e-3 * sampling_f))
+        n_bins = 2 * int(max_time_c / bin_size_c)
+
+        bins = np.arange(-max_time_c, max_time_c+bin_size_c, bin_size_c) * 1e3 / sampling_f
+        cross_corr = np.zeros(n_bins, dtype=np.int64)
+
+        start_j = 0
+        for i in range(len(spike_train1)):
+            for j in range(start_j, len(spike_train2)):
+                diff = spike_train1[i] - spike_train2[j]
+
+                if diff >= max_time_c:
+                    start_j += 1
+                    continue
+                if diff <= -max_time_c:
+                    break
+
+                bin = int(diff / bin_size_c) - (0 if diff >= 0 else 1)
+                cross_corr[n_bins//2 + bin] += 1
+
+        return (cross_corr, bins)
 
 
 def compute_correlograms(sorting,
