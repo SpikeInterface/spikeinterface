@@ -518,9 +518,10 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     return save_path
 
 
-def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=None,
-                         verbose=False, compressor=None,
-                         filters=None, **job_kwargs):
+def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options, 
+                         dataset_paths, dtype=None,
+                         compressor=None, filters=None, 
+                         verbose=False, **job_kwargs):
     '''
     Save the trace of a recording extractor in several zarr format.
 
@@ -532,16 +533,22 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=N
     ----------
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
-    file_path: str
-        The path to the file.
+    zarr_root: zarr.Group
+        The zarr root
+    zarr_path: str or Path
+        The path to the zarr file
+    storage_options: dict or None
+        Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+    dataset_paths: list
+        List of paths to traces datasets in the zarr group
     dtype: dtype
         Type of the saved data. Default float32.
-    add_file_extension: bool
-        If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
+    compressor: zarr compressor or None
+        Zarr compressor
+    filters: list
+        List of zarr filters
     verbose: bool
         If True, output is verbose (when chunks are used)
-    byte_offset: int
-        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     {}
     '''
     assert dataset_paths is not None, "Provide 'file_path'"
@@ -572,16 +579,16 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=N
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     if n_jobs == 1:
-        init_args = (recording, zarr_path, dataset_paths, dtype)
+        init_args = (recording, zarr_path, storage_options, dataset_paths, dtype)
     else:
-        init_args = (recording.to_dict(), zarr_path, dataset_paths, dtype)
+        init_args = (recording.to_dict(), zarr_path, storage_options, dataset_paths, dtype)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_zarr_recording', **job_kwargs)
     executor.run()
 
 
 # used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
+def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtype):
     import zarr
 
     # create a local dict per worker
@@ -593,12 +600,16 @@ def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
         worker_ctx['recording'] = recording
 
     # reload root and datasets
-    if isinstance(zarr_path, Path):
-        zarr_path_init = str(zarr_path)
-    else: # mapper
+    if storage_options is None:
+        if isinstance(zarr_path, str):
+            zarr_path_init = zarr_path
+            zarr_path = Path(zarr_path)
+        else:
+            zarr_path_init = str(zarr_path)
+    else:
         zarr_path_init = zarr_path
 
-    root = zarr.open(zarr_path_init, mode="r+")
+    root = zarr.open(zarr_path_init, mode="r+", storage_options=storage_options)
     zarr_datasets = []
     for dset_name in dataset_paths:
         z = root[dset_name]
