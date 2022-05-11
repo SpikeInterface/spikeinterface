@@ -519,7 +519,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
 
 
 def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options, 
-                         dataset_paths, dtype=None,
+                         dataset_paths, channel_chunk_size=None, dtype=None,
                          compressor=None, filters=None, 
                          verbose=False, **job_kwargs):
     '''
@@ -541,6 +541,8 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options,
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
     dataset_paths: list
         List of paths to traces datasets in the zarr group
+    channel_chunk_size: int or None
+        Channels per chunk. Default None (chunking in time only)
     dtype: dtype
         Type of the saved data. Default float32.
     compressor: zarr compressor or None
@@ -570,7 +572,8 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options,
         dset_name = dataset_paths[segment_index]
         shape = (num_frames, num_channels)
         _ = zarr_root.create_dataset(name=dset_name, shape=shape,
-                                     chunks=(chunk_size, None), dtype=dtype,
+                                     chunks=(chunk_size, channel_chunk_size), 
+                                     dtype=dtype,
                                      filters=filters,
                                      compressor=compressor,)
                                 # synchronizer=zarr.ThreadSynchronizer())
