@@ -1,5 +1,6 @@
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
+import numpy as np
 import probeinterface as pi
 
 import neo
