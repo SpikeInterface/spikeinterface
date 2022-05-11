@@ -44,9 +44,9 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             meta_filename = signals_info_dict[self.stream_id]["meta_file"]
             # Load probe geometry if available
             probe = pi.read_spikeglx(meta_filename)
-            try:
+            if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
-            except:
+            else:
                 self.set_probe(probe, in_place=True)
             self.set_probe(probe, in_place=True)
 
