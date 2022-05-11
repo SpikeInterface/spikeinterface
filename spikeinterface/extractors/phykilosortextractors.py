@@ -71,7 +71,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if cluster_info is None:
                     cluster_info = new_property
                 else:
-                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id')
+                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id', suffixes=[None,'_repeat'])
 
         # in case no tsv/csv files are found populate cluster info with minimal info
         if cluster_info is None:
@@ -147,7 +147,7 @@ class PhySortingSegment(BaseSortingSegment):
             spike_times = spike_times[spike_times >= start_frame]
         if end_frame is not None:
             spike_times = spike_times[spike_times < end_frame]
-        return spike_times.copy().squeeze()
+        return np.atleast_1d(spike_times.copy().squeeze())
 
 
 class PhySortingExtractor(BasePhyKilosortSortingExtractor):

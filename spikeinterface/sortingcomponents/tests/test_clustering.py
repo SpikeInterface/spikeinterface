@@ -5,9 +5,9 @@ from spikeinterface import NumpySorting
 from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
 
-from spikeinterface.sortingcomponents import detect_peaks
-from spikeinterface.sortingcomponents import localize_peaks
-from spikeinterface.sortingcomponents import find_cluster_from_peaks, clustering_methods
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
 
 from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import read_mearec
@@ -40,11 +40,9 @@ def test_find_cluster_from_peaks():
         t0 = time.perf_counter()
         labels, peak_labels = find_cluster_from_peaks(recording, peaks, method=method, method_kwargs=method_kwargs)
         t1 = time.perf_counter()
-        print(method, 'found', len(labels), 'clustersin ',t1 - t0)
-    
-    
-    
-    
-    
+        print(method, 'found', len(labels), 'clusters in ',t1 - t0)
+
+
+
 if __name__ == '__main__':
     test_find_cluster_from_peaks()

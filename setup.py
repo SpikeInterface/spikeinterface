@@ -25,7 +25,7 @@ pkg_name = "spikeinterface"
 setup(
     name=pkg_name,
     version=version,
-    author="Cole Hurwitz, Jeremy Magland, Alessio Paolo Buccino, Matthias Hennig, Samuel Garcia",
+    author="Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, , Matthias Hennig",
     author_email="alessiop.buccino@gmail.com",
     description="Python toolkit for analysis, visualization, and comparison of spike sorting output",
     long_description=long_description,

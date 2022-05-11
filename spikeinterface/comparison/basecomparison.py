@@ -147,22 +147,31 @@ class BaseMultiComparison(BaseComparison):
                         for e in edges:
                             edges_duplicates.append(e)
                             weights_duplicates.append(e[2]['weight'])
-                    # remove edges
-                    edges_to_remove = len(nodes_duplicate) - 1
-                    remove_idxs = np.argsort(weights_duplicates)[
-                        :edges_to_remove]
-                    for idx in remove_idxs:
-                        if self._verbose:
-                            print('Removed edge', edges_duplicates[idx])
+
+                    # remove extra edges
+                    n_edges_to_remove = len(nodes_duplicate) - 1
+                    remove_idxs = np.argsort(weights_duplicates)[:n_edges_to_remove]
+                    edges_to_remove = np.array(edges_duplicates, dtype=object)[remove_idxs]
+
+                    for edge_to_remove in edges_to_remove:
                         clean_graph.remove_edge(
-                            edges_duplicates[idx][0], edges_duplicates[idx][1])
+                            edge_to_remove[0], edge_to_remove[1])
                         sg.remove_edge(
-                            edges_duplicates[idx][0], edges_duplicates[idx][1])
-                        if edges_duplicates[idx][0] in nodes_duplicate:
-                            sg.remove_node(edges_duplicates[idx][0])
+                            edge_to_remove[0], edge_to_remove[1])
+                        if self._verbose:
+                            print(f"Removed edge: {edge_to_remove}")
+
+                    # remove extra nodes (as a second step to not affect edge removal)
+                    for edge_to_remove in edges_to_remove:
+                        if edge_to_remove[0] in nodes_duplicate:
+                            node_to_remove = edge_to_remove[0]
                         else:
-                            sg.remove_node(edges_duplicates[idx][1])
-                        removed_nodes += 1
+                            node_to_removed = edge_to_remove[1]
+                        if node_to_remove in sg.nodes:
+                            sg.remove_node(node_to_remove)
+                            print(f"Removed node: {node_to_remove}")
+                            removed_nodes += 1
+
         if self._verbose:
             print(f'Removed {removed_nodes} duplicate nodes')
         self.clean_graph = clean_graph
@@ -175,8 +184,8 @@ class BaseMultiComparison(BaseComparison):
         self._new_units = {}
 
         # save new units
-        self.subgraphs = (self.clean_graph.subgraph(c).copy()
-                          for c in nx.connected_components(self.clean_graph))
+        self.subgraphs = [self.clean_graph.subgraph(c).copy()
+                          for c in nx.connected_components(self.clean_graph)]
         for new_unit, sg in enumerate(self.subgraphs):
             edges = list(sg.edges(data=True))
             if len(edges) > 0:

@@ -54,16 +54,22 @@ def test_compute_monopolar_triangulation():
     unit_location = localize_units(
         we, method='monopolar_triangulation', radius_um=150)
     unit_location_dict = localize_units(
-        we, method='monopolar_triangulation', radius_um=150, output='dict')
+        we, method='monopolar_triangulation', radius_um=150, output='dict',
+        optimizer='least_square')
 
-    # ~ import matplotlib.pyplot as plt
-    # ~ from probeinterface.plotting import plot_probe
-    # ~ fig, ax = plt.subplots()
+    unit_location_dict = localize_units(
+        we, method='monopolar_triangulation', radius_um=150, output='dict',
+        optimizer='minimize_with_log_penality')
+
+
+    #~ import matplotlib.pyplot as plt
+    #~ from probeinterface.plotting import plot_probe
+    #~ fig, ax = plt.subplots()
     #~ plot_probe(we.recording.get_probe(), ax=ax)
     #~ ax.scatter(unit_location[:, 0], unit_location[:, 1])
-    # ~ fig = plt.figure()
-    # ~ ax = fig.add_subplot(1, 1, 1, projection='3d')
-    #~ plot_probe(we.recording.get_probe().to_3d(plane='xy'), ax=ax)
+    #~ fig = plt.figure()
+    #~ ax = fig.add_subplot(1, 1, 1, projection='3d')
+    #~ plot_probe(we.recording.get_probe().to_3d(axes='xy'), ax=ax)
     #~ ax.scatter(unit_location[:, 0], unit_location[:, 1], unit_location[:, 2])
     #~ plt.show()
 
