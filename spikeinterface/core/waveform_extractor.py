@@ -717,6 +717,7 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
                 # clean border when sub selection
                 assert nafter is not None
                 spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                #spike_times = np.atleast_1d(spike_times) ## YONI CHANGE: allows for 0 dim spiketrains, fixing bug.
                 sampled_spike_times = spike_times[inds]
                 num_samples = recording.get_num_samples(segment_index=segment_index)
                 mask = (sampled_spike_times >= nbefore) & (sampled_spike_times < (num_samples - nafter))

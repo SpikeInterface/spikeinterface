@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import load_extractor
-from spikeinterface.extractors import BinaryRecordingExtractor
+from spikeinterface.extractors import BinaryRecordingExtractor,read_kilosort
 from ..basesorter import BaseSorter
 
 try:
@@ -97,5 +97,6 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
-        raise NotImplementedError
+        # raise NotImplementedError
         # return sorting
+        return read_kilosort(output_folder,*args, **kwargs)
