@@ -216,6 +216,7 @@ class BaseRecording(BaseExtractor):
             zarr_root = save_kwargs.get('zarr_root', None)
             zarr_path = save_kwargs.get('zarr_path', None)
             storage_options = save_kwargs.get('storage_options', None)
+            channel_chunk_size = save_kwargs.get('channel_chunk_size', None)
 
             zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
             zarr_root.attrs["num_segments"] = int(self.get_num_segments())
@@ -238,7 +239,8 @@ class BaseRecording(BaseExtractor):
             job_kwargs = {k: save_kwargs[k]
                           for k in job_keys if k in save_kwargs}
             write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, storage_options=storage_options,
-                                 dataset_paths=dataset_paths, dtype=dtype, compressor=compressor, filters=filters,
+                                 channel_chunk_size=channel_chunk_size, dataset_paths=dataset_paths, dtype=dtype, 
+                                 compressor=compressor, filters=filters,
                                  **job_kwargs)
 
             # save probe

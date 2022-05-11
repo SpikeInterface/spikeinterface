@@ -667,7 +667,8 @@ class BaseExtractor:
 
         return cached
 
-    def save_to_zarr(self, name=None, zarr_path=None, storage_options=None, verbose=True, **save_kwargs):
+    def save_to_zarr(self, name=None, zarr_path=None, storage_options=None, 
+                     channel_chunk_size=None, verbose=True, **save_kwargs):
         """
         Save extractor to zarr.
 
@@ -686,7 +687,9 @@ class BaseExtractor:
         storage_options: dict or None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
-
+        channel_chunk_size: int or None
+            Channels per chunk. Default None (chunking in time only)
+        
         Returns
         -------
         cached: saved copy of the extractor.
@@ -729,6 +732,7 @@ class BaseExtractor:
         save_kwargs['zarr_root'] = zarr_root
         save_kwargs['zarr_path'] = zarr_path
         save_kwargs['storage_options'] = storage_options
+        save_kwargs['channel_chunk_size'] = channel_chunk_size
         cached = self._save(folder=None, verbose=verbose, **save_kwargs)
         cached_annotations = deepcopy(cached._annotations)
 
