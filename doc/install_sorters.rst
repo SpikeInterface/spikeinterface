@@ -121,13 +121,26 @@ pykilosort
 * Url: https://github.com/MouseLand/pykilosort
 * Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyril Rossant
 
-* Installation needs Matlab and cudatoolkit::
+* Install the python cuda toolkit. In principle, this should work::
+    
+    pip install cupy  (or pip install cupy-cudaXXX)
 
-    pip install cupy  (or pip install cupy-cudaXXX)  >>> can be quite hard
-    pip install phylib, pypandic
+* However, I had to use conda to complete this installation successfully::
+    
+    conda install cupy 
+
+* Next, install pykilosort::
+
+    pip install phylib, pypandoc
     git clone https://github.com/MouseLand/pykilosort
     cd pykilosort
     python setup.py install
+    
+* Finally, a few package dependencies may be missing. I fixed this with::
+
+    pip install numba, pydantic
+    
+* Finally the pykilosort install may not copy the cuda files to the installed location. I had to copy these manually to my install location, e.g. ~/.conda/MY-ENV/lib/site-packages/pykilosort/pykilosort-ibl_1.3.0-py3.8.egg/pykilosort/cuda.
 
 * See also https://github.com/MouseLand/pykilosort#installation
 
