@@ -37,21 +37,42 @@ def test_run_sorters_with_list():
 
 
 def test_run_sorter_by_property():
-    working_folder = cache_folder / 'test_run_sorter_by_property'
-    if working_folder.is_dir():
-        shutil.rmtree(working_folder)
+    working_folder1 = cache_folder / 'test_run_sorter_by_property1'
+    if working_folder1.is_dir():
+        shutil.rmtree(working_folder1)
+    working_folder2 = cache_folder / 'test_run_sorter_by_property2'
+    if working_folder2.is_dir():
+        shutil.rmtree(working_folder2)
 
     rec0, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
     rec0.set_channel_groups(["0"] * 4 + ["1"] * 4)
+    rec0_by = rec0.split_by("group")
+    group_names0 = list(rec0_by.keys())
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
     rec0 = rec0.save(name='rec000')
     sorter_name = 'tridesclous'
 
-    sorting = run_sorter_by_property(sorter_name, rec0, "group", working_folder,
-                                     engine='loop', verbose=False)
-    assert "group" in sorting.get_property_keys()
+    sorting0 = run_sorter_by_property(sorter_name, rec0, "group", working_folder1,
+                                      engine='loop', verbose=False)
+    assert "group" in sorting0.get_property_keys()
+    assert all([g in group_names0 for g in sorting0.get_property("group")])
+    
+    rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
+    rec1.set_channel_groups([0] * 4 + [1] * 4)
+    rec1_by = rec1.split_by("group")
+    group_names1 = list(rec1_by.keys())
+
+    # make dumpable
+    set_global_tmp_folder(cache_folder)
+    rec1 = rec1.save(name='rec001')
+    sorter_name = 'tridesclous'
+
+    sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder2,
+                                      engine='loop', verbose=False)
+    assert "group" in sorting1.get_property_keys()
+    assert all([g in group_names1 for g in sorting1.get_property("group")])
 
 
 def test_run_sorters_with_dict():
@@ -170,10 +191,10 @@ def test_sorter_installation():
 
 
 if __name__ == '__main__':
-    pass
+    #pass
     # test_run_sorters_with_list()
 
-    # test_run_sorter_by_property()
+    test_run_sorter_by_property()
 
     # test_run_sorters_with_dict()
 

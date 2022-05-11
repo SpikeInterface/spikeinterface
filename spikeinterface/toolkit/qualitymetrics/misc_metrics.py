@@ -237,12 +237,17 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             num_spikes += len(spike_train)
             num_violations += np.sum(isis < isi_threshold_samples)
         violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
-        total_rate = num_spikes / total_duration
-        violation_rate = num_violations / violation_time
-
-        isi_violations_ratio[unit_id] = violation_rate / total_rate
-        isi_violations_rate[unit_id] = num_violations / total_duration
-        isi_violations_count[unit_id] = num_violations
+        
+        if num_spikes > 0:
+            total_rate = num_spikes / total_duration
+            violation_rate = num_violations / violation_time
+            isi_violations_ratio[unit_id] = violation_rate / total_rate
+            isi_violations_rate[unit_id] = num_violations / total_duration
+            isi_violations_count[unit_id] = num_violations      
+        else:
+            isi_violations_ratio[unit_id] = np.nan
+            isi_violations_rate[unit_id] = np.nan
+            isi_violations_count[unit_id] = np.nan
 
     res = namedtuple('isi_violation',
                      ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
