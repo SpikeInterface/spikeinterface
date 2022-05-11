@@ -49,6 +49,11 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 self.set_probe(probe, in_place=True)
             self.set_probe(probe, in_place=True)
+            
+            # load sample shifts
+            imDatPrb_type = probe.annotations["imDatPrb_type"]
+            sample_shifts = _get_sample_shifts(self.get_num_channels(), imDatPrb_type)
+            self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
@@ -59,3 +64,17 @@ def read_spikeglx(*args, **kwargs):
 
 
 read_spikeglx.__doc__ = SpikeGLXRecordingExtractor.__doc__
+
+def _get_sample_shifts(num_contact, imDatPrb_type):
+    # calculate sample_shift
+    # See adc_shift: https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
+    if imDatPrb_type == 0:
+        adc_channels = 12
+    elif imDatPrb_type >= 2:
+        adc_channels = 16
+
+    adc = np.floor(np.arange(num_contact) / (adc_channels * 2)) * 2 + np.mod(np.arange(num_contact), 2)
+    sample_shift = np.zeros_like(adc)
+    for a in adc:
+        sample_shift[adc == a] = np.arange(adc_channels) / adc_channels
+    return sample_shift
