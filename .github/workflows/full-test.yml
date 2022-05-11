@@ -61,7 +61,9 @@ jobs:
           export PATH=$PATH:$(pwd)/git-annex.linux
           echo $PATH
       - name: git-annex version
-        run: git-annex
+        run: |
+          echo $PATH 
+          git-annex
       - name: pip list
         run: |
           source ~/test_env/bin/activate
