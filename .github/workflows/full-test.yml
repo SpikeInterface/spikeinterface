@@ -61,8 +61,7 @@ jobs:
           echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
       - name: git-annex version
         run: |
-          echo $GITHUB_PATH 
-          git-annex
+          git-annex version
       - name: pip list
         run: |
           source ~/test_env/bin/activate
