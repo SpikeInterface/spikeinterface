@@ -58,11 +58,10 @@ jobs:
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
           tar xvzf git-annex-standalone-amd64.tar.gz
-          export PATH=$PATH:$(pwd)/git-annex.linux
-          echo $PATH
+          echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
       - name: git-annex version
         run: |
-          echo $PATH 
+          echo $GITHUB_PATH 
           git-annex
       - name: pip list
         run: |
