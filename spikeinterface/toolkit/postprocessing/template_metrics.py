@@ -183,7 +183,7 @@ def get_half_width(template, **kwargs):
         cross_post_pk = cpost_idx[-1] + 1 + trough_idx
 
         hw = (cross_post_pk - cross_pre_pk) / sampling_frequency
-        return hw
+    return hw
 
 
 def get_repolarization_slope(template, **kwargs):
