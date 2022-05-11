@@ -221,7 +221,7 @@ if __name__ == '__main__':
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
     # test = NeuralynxRecordingTest()
-    # test = BlackrockRecordingTest()
+    test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
@@ -229,5 +229,5 @@ if __name__ == '__main__':
     # test = MaxwellRecordingTest()
     # test = SpikeGadgetsRecordingTest()
 
-    # test.setUp()
-    # test.test_open()
+    test.setUp()
+    test.test_open()
