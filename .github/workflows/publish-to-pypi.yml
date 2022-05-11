@@ -19,6 +19,7 @@ jobs:
       - name: Install dependencies for testing
         run: |
           pip install pytest
+          pip install zarr
           pip install setuptools wheel twine
           pip install -r requirements.txt
           pip install -e .

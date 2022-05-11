@@ -35,6 +35,10 @@ class TimeseriesWidget(BaseWidget):
         If True groups are plotted with different colors
     color: matplotlib color, default: None
         The color used to draw the traces.
+    clim: None or tupple
+        When mode='map' this control color lims
+    with_colorbar: bool default True
+        When mode='map' add colorbar
     figure: matplotlib figure
         The figure to be used. If not given a figure is created
     ax: matplotlib axis
@@ -47,14 +51,14 @@ class TimeseriesWidget(BaseWidget):
     """
 
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
-                 time_range=None,
-                 mode='auto', cmap='RdBu', show_channel_ids=False,
-                 color_groups=False, color=None,
-                 figure=None, ax=None):
+                 time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
+                 color_groups=False, color=None, clim=None, with_colorbar=True,
+                 figure=None, ax=None, **plot_kwargs):
         BaseWidget.__init__(self, figure, ax)
         self.recording = recording
         self._sampling_frequency = recording.get_sampling_frequency()
         self.visible_channel_ids = channel_ids
+        self._plot_kwargs = plot_kwargs
 
         if segment_index is None:
             nseg = recording.get_num_segments()
@@ -92,7 +96,6 @@ class TimeseriesWidget(BaseWidget):
             else:
                 mode = 'map'
         self.mode = mode
-
         self.cmap = cmap
 
         self.show_channel_ids = show_channel_ids
@@ -101,7 +104,10 @@ class TimeseriesWidget(BaseWidget):
         a_max = self.recording.get_num_frames(segment_index=self.segment_index)
         self._frame_range = np.clip(self._frame_range, 0, a_max)
         self._time_range = [e / fs for e in self._frame_range]
-
+        
+        self.clim = clim
+        self.with_colorbar = with_colorbar
+        
         self._initialize_stats()
 
         # self._vspacing = self._mean_channel_std * 20
@@ -165,7 +171,7 @@ class TimeseriesWidget(BaseWidget):
                     color = self._colors[group_color_idx]
                 else:
                     color = self._color
-                self._plots[m] = ax.plot(times, self._plot_offsets[m] + chunk0[:, im], color=color)
+                self._plots[m] = ax.plot(times, self._plot_offsets[m] + chunk0[:, im], color=color, **self._plot_kwargs)
                 offset0 = offset0 - self._vspacing
 
             if self.show_channel_ids:
@@ -176,9 +182,16 @@ class TimeseriesWidget(BaseWidget):
             extent = (self._time_range[0], self._time_range[1], 0, self.recording.get_num_channels())
             im = ax.imshow(chunk0.T, interpolation='nearest',
                            origin='upper', aspect='auto', extent=extent, cmap=self.cmap)
-            im.set_clim(-self._max_channel_amp, self._max_channel_amp)
-            self.figure.colorbar(im, ax=ax)
+            
+            if self.clim is None:
+                im.set_clim(-self._max_channel_amp, self._max_channel_amp)
+            else:
+                im.set_clim(*self.clim)
+            
+            if self.with_colorbar:
+                self.figure.colorbar(im, ax=ax)
 
+            
             if self.show_channel_ids:
                 ax.set_yticks(np.arange(n) + 0.5)
                 ax.set_yticklabels([str(chan_id) for chan_id in self.visible_channel_ids[::-1]])

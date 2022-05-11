@@ -16,7 +16,9 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
         # get_traces
         if force_dtype is None:
             assert np.allclose(RX1.get_traces(segment_index=segment_idx,
-                                              return_scaled=return_scaled), RX2.get_traces(return_scaled=return_scaled))
+                                              return_scaled=return_scaled), 
+                               RX2.get_traces(segment_index=segment_idx, 
+                                              return_scaled=return_scaled))
         else:
             assert np.allclose(
                 RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
