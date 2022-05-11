@@ -228,7 +228,7 @@ def test_BaseRecording():
                          compressor=compressor)
     check_recordings_equal(rec2, rec_zarr, return_scaled=False)
 
-    rec_zarr2 = rec2.save(format="zarr", zarr_path=cache_folder / "recording.zarr",
+    rec_zarr2 = rec2.save(format="zarr", zarr_path=cache_folder / "recording_channel_chunk.zarr",
                           compressor=compressor, channel_chunk_size=2)
     check_recordings_equal(rec2, rec_zarr2, return_scaled=False)
 
