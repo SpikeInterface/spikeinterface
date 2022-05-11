@@ -119,8 +119,9 @@ class BaseSorting(BaseExtractor):
                     "The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
         else:
-            raise ValueError(f'format {format} not supported')
-
+            from .numpyextractors import NumpySorting
+            cached = NumpySorting.from_extractor(self)
+            
         return cached
 
     def get_unit_property(self, unit_id, key):
