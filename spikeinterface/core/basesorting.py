@@ -59,7 +59,7 @@ class BaseSorting(BaseExtractor):
         segment = self._sorting_segments[segment_index]
         spike_train = segment.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
-        spike_train = np.atleast_1d(spike_train) ## YONI CHANGE
+        spike_train = np.atleast_1d(spike_train) ## Changed to handle the special case in which pykilosort finds <=1 spike, returns a 0 dim array
         if return_times:
             if self.has_recording():
                 times = self.get_times(segment_index=segment_index)

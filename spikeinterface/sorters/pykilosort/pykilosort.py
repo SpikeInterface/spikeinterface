@@ -97,6 +97,5 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
-        # raise NotImplementedError
         # return sorting
-        return read_kilosort(output_folder,*args, **kwargs)
+        return read_kilosort(output_folder,*args, **kwargs) # Changed to use existing reader
