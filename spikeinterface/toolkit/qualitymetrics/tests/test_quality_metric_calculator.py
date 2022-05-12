@@ -23,13 +23,13 @@ def setup_module():
         if (cache_folder / folder_name).is_dir():
             shutil.rmtree(cache_folder / folder_name)
 
-    recording, sorting = toy_example(num_segments=2, num_units=10)
+    recording, sorting = toy_example(num_segments=2, num_units=10, duration=60)
     recording = recording.save(folder=cache_folder / 'toy_rec')
     sorting = sorting.save(folder=cache_folder / 'toy_sorting')
 
     we = WaveformExtractor.create(
         recording, sorting, cache_folder / 'toy_waveforms')
-    we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
+    we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
     we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
 
 
@@ -76,7 +76,7 @@ def test_compute_quality_metrics_peak_sign():
 
     we_inv = WaveformExtractor.create(
         rec_inv, sort, cache_folder / 'toy_waveforms_inv')
-    we_inv.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
+    we_inv.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
     we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
     print(we_inv)
 
