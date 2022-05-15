@@ -1,16 +1,16 @@
 from pathlib import Path
 import os
-import sys
 import numpy as np
 from typing import Union
+import scipy.io
 import shutil
-import json
 
+from .generate_configs import generate_configs
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import get_git_commit, ShellScript
+from ..utils import get_git_commit
 
-from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
+from spikeinterface.extractors import BinaryRecordingExtractor
 
 PathType = Union[str, Path]
 
@@ -156,20 +156,10 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         # read the template txt files
         with (source_dir / 'kilosort3_master.m').open('r') as f:
             kilosort3_master_txt = f.read()
-        with (source_dir / 'kilosort3_config.m').open('r') as f:
-            kilosort3_config_txt = f.read()
         with (source_dir / 'kilosort3_channelmap.m').open('r') as f:
             kilosort3_channelmap_txt = f.read()
 
-        # make substitutions in txt files
-        kilosort3_master_txt = kilosort3_master_txt.format(
-            kilosort3_path=str(Path(Kilosort3Sorter.kilosort3_path).absolute()),
-            output_folder=str(output_folder.absolute()),
-            channel_path=str((output_folder / 'kilosort3_channelmap.m').absolute()),
-            config_path=str((output_folder / 'kilosort3_config.m').absolute()),
-        )
-
-        kilosort3_config_txt = kilosort3_config_txt.format(
+        configs_options = dict(
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),
             dat_file=str((output_folder / 'recording.dat').absolute()),
@@ -186,7 +176,20 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             nPCs=int(p['nPCs']),
             ntbuff=int(p['ntbuff']),
             nfilt_factor=int(p['nfilt_factor']),
-            NT=int(p['NT'])
+            NT=int(p['NT']),
+            root=str(output_folder.absolute()),
+            temp_wh_file = str((output_folder / 'temp_wh.dat').absolute()),
+        )
+
+        ops = generate_configs(configs_options)
+        scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
+
+        # make substitutions in txt files
+        kilosort3_master_txt = kilosort3_master_txt.format(
+            k='{k}',
+            kilosort3_path=str(Path(Kilosort3Sorter.kilosort3_path).absolute()),
+            output_folder=str(output_folder.absolute()),
+            channel_path=str((output_folder / 'kilosort3_channelmap.m').absolute()),
         )
 
         kilosort3_channelmap_txt = kilosort3_channelmap_txt.format(
@@ -197,10 +200,8 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             kcoords=groups
         )
 
-        for fname, txt in zip(['kilosort3_master.m', 'kilosort3_config.m',
-                               'kilosort3_channelmap.m'],
-                              [kilosort3_master_txt, kilosort3_config_txt,
-                               kilosort3_channelmap_txt]):
+        for fname, txt in zip(['kilosort3_master.m', 'kilosort3_channelmap.m'],
+                              [kilosort3_master_txt, kilosort3_channelmap_txt]):
             with (output_folder / fname).open('w') as f:
                 f.write(txt)
 
