@@ -12,9 +12,14 @@ try
     run(fullfile('{channel_path}'));
 
     % Run the configuration file, it builds the structure of options (ops)
-    run(fullfile('{config_path}'))
+    ops = load('{output_folder}/ops.mat');
 
     ops.trange = [0 Inf]; % time range to sort
+
+    fn = fieldnames(ops);
+    for k=1:numel(fn)
+        fprintf('%s: %s.\n', fn{k}, class(ops.(fn{k})))
+    end
 
     % preprocess data to create temp_wh.dat
     rez = preprocessDataSub(ops);
