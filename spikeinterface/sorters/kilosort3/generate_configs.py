@@ -6,6 +6,9 @@ def generate_configs(options):
     Based on kilosort3_config.m file, creates a python dict to be saved as
     .mat file and loaded in kilosort3_main.m
 
+    Loading example in Matlab (should be assigned to a variable called `ops`):
+    >> ops = load('/output_folder/ops.mat');
+
     Args:
         options (dict): Dict with user parameters
 
