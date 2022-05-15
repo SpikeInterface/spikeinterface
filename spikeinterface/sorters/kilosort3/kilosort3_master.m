@@ -16,11 +16,6 @@ try
 
     ops.trange = [0 Inf]; % time range to sort
 
-    fn = fieldnames(ops);
-    for k=1:numel(fn)
-        fprintf('%s: %s.\n', fn{k}, class(ops.(fn{k})))
-    end
-
     % preprocess data to create temp_wh.dat
     rez = preprocessDataSub(ops);
 
