@@ -6,6 +6,7 @@ import scipy.io
 import shutil
 
 from .generate_configs import generate_configs
+from .generate_channelmap import generate_channel_map
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit
@@ -192,16 +193,17 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             channel_path=str((output_folder / 'kilosort3_channelmap.m').absolute()),
         )
 
-        kilosort3_channelmap_txt = kilosort3_channelmap_txt.format(
+        chan_map = generate_channel_map(
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),
             xcoords=[p[0] for p in positions],
             ycoords=[p[1] for p in positions],
             kcoords=groups
         )
+        scipy.io.savemat(str(output_folder / 'chanMap.mat'), chan_map)
 
-        for fname, txt in zip(['kilosort3_master.m', 'kilosort3_channelmap.m'],
-                              [kilosort3_master_txt, kilosort3_channelmap_txt]):
+        for fname, txt in zip(['kilosort3_master.m'],
+                              [kilosort3_master_txt]):
             with (output_folder / fname).open('w') as f:
                 f.write(txt)
 

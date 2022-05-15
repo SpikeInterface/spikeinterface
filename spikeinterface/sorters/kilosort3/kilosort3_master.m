@@ -8,10 +8,10 @@ try
     % add npy-matlab functions (copied in the output folder)
     addpath(genpath(fpath));
 
-    % create channel map file
-    run(fullfile('{channel_path}'));
+    % Load channel map file
+    load('{output_folder}/chanMap.mat')
 
-    % Run the configuration file, it builds the structure of options (ops)
+    % Load the configuration file, it builds the structure of options (ops)
     ops = load('{output_folder}/ops.mat');
 
     ops.trange = [0 Inf]; % time range to sort
