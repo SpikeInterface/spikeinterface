@@ -1,11 +1,12 @@
 import numpy as np
+import scipy.io
 
-def generate_channel_map(nchan, sample_rate, xcoords, ycoords, kcoords):
+
+def generate_channel_map_file(nchan, sample_rate, xcoords, ycoords, kcoords, output_folder):
     """
-    This function is to generate kilosort channel map
+    This function generates kilosort3 channel map data and saves as `chanMap.mat`
 
-    Based on kilosort3_channelmap.m file, creates a python dict to be saved as
-    .mat file and loaded in kilosort3_main.m
+    Based on kilosort3_channelmap.m file, creates a .mat file to be loaded in kilosort3_main.m
 
     Loading example in Matlab (shouldn't be assigned to a variable):
     >> load('/output_folder/chanMap.mat');
@@ -16,9 +17,6 @@ def generate_channel_map(nchan, sample_rate, xcoords, ycoords, kcoords):
         xcoords (lists): List of xcoords
         ycoords (lists): List of ycoords
         kcoords (lists): List of kcoords
-
-    Returns:
-        channel_map (dict): dict with kilosort's channel_map variables data.
     """
     channel_map = {}
     channel_map['connected'] = np.full((nchan, 1), True)
@@ -30,4 +28,4 @@ def generate_channel_map(nchan, sample_rate, xcoords, ycoords, kcoords):
     channel_map['kcoords'] = np.array(kcoords).astype(float)
 
     channel_map['fs'] = float(sample_rate)
-    return channel_map
+    scipy.io.savemat(str(output_folder / 'chanMap.mat'), channel_map)
