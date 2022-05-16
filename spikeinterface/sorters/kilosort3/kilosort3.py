@@ -5,8 +5,8 @@ from typing import Union
 import scipy.io
 import shutil
 
-from .generate_configs import generate_configs
-from .generate_channelmap import generate_channel_map
+from .kilosort3_config import generate_ops_file
+from .kilosort3_channelmap import generate_channel_map_file
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit
@@ -182,8 +182,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             temp_wh_file = str((output_folder / 'temp_wh.dat').absolute()),
         )
 
-        ops = generate_configs(configs_options)
-        scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
+        generate_ops_file(configs_options, output_folder)
 
         # make substitutions in txt files
         kilosort3_master_txt = kilosort3_master_txt.format(
@@ -193,14 +192,14 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             channel_path=str((output_folder / 'kilosort3_channelmap.m').absolute()),
         )
 
-        chan_map = generate_channel_map(
+        generate_channel_map_file(
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),
             xcoords=[p[0] for p in positions],
             ycoords=[p[1] for p in positions],
-            kcoords=groups
+            kcoords=groups,
+            output_folder=output_folder
         )
-        scipy.io.savemat(str(output_folder / 'chanMap.mat'), chan_map)
 
         for fname, txt in zip(['kilosort3_master.m'],
                               [kilosort3_master_txt]):

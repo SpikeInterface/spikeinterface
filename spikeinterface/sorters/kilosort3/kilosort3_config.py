@@ -1,19 +1,19 @@
+import numpy as np
+import scipy.io
 
-def generate_configs(options):
+
+def generate_ops_file(options, output_folder):
     """
-    This function is to generate kilosort ops (configs) for kilosort3
+    This function generates kilosort3 ops (configs) and saves as `ops.mat`
 
-    Based on kilosort3_config.m file, creates a python dict to be saved as
-    .mat file and loaded in kilosort3_main.m
+    Based on kilosort3_config.m file, creates a .mat file to be loaded in kilosort3_main.m
 
     Loading example in Matlab (should be assigned to a variable called `ops`):
     >> ops = load('/output_folder/ops.mat');
 
     Args:
         options (dict): Dict with user parameters
-
-    Returns:
-        ops (dict): dict with kilosort's ops structure.
+        output_folder (pathlib.Path): Path to save `ops.mat`
     """
 
     # Converting integer values into float
@@ -32,6 +32,7 @@ def generate_configs(options):
     ops['fbinary'] = options['dat_file']  # will be created for 'openEphys'
     ops['fproc'] = options['temp_wh_file']  # residual from RAM of preprocessed data
     ops['root'] = options['root']  # 'openEphys' only: where raw files are
+    ops['trange'] = [0, np.Inf] #  time range to sort
 
     # define the channel map as a filename (string) or simply an array
     ops['chanMap'] = 'chanMap.mat'
@@ -88,4 +89,4 @@ def generate_configs(options):
     ops['nPCs'] = options['nPCs']  # how many PCs to project the spikes into
     ops['useRAM'] = 0.0  # not yet available
 
-    return ops
+    scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
