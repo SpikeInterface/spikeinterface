@@ -64,7 +64,7 @@ class PyKilosortSorter(BaseSorter):
         recording.save(format='binary', folder=output_folder / 'bin_folder')
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, output_folder, params, verbose,*args,**kwargs):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
         assert isinstance(recording, BinaryRecordingExtractor)
@@ -93,6 +93,7 @@ class PyKilosortSorter(BaseSorter):
             n_channels=num_chans,
             dtype=recording.get_dtype(),
             sample_rate=recording.get_sampling_frequency(),
+            *args,**kwargs,
         )
 
     @classmethod

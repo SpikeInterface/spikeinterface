@@ -108,6 +108,9 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
             if upsampling_factor > 1:
                 assert isinstance(
                     upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
+                # Handles a known bug in resample_poly, shich will not support int16 or int32 types
+                if isinstance(template_single[0], (int,np.integer)):
+                     template_single = template_single.astype(float)
                 template_upsampled = resample_poly(
                     template_single, up=upsampling_factor, down=1)
                 sampling_frequency_up = upsampling_factor * sampling_frequency
