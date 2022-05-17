@@ -157,8 +157,6 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         # read the template txt files
         with (source_dir / 'kilosort3_master.m').open('r') as f:
             kilosort3_master_txt = f.read()
-        with (source_dir / 'kilosort3_channelmap.m').open('r') as f:
-            kilosort3_channelmap_txt = f.read()
 
         configs_options = dict(
             nchan=recording.get_num_channels(),
