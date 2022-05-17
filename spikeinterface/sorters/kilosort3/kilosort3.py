@@ -204,14 +204,14 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             shell_cmd = f'''
                         {disk_move}
                         cd {output_folder}
-                        matlab -nosplash -wait -log -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
+                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
                     '''
         else:
             kilosort3_path = str(Path(Kilosort3Sorter.kilosort3_path).absolute())
             shell_cmd = f'''
                         #!/bin/bash
                         cd "{output_folder}"
-                        matlab -nosplash -nodisplay -log -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
+                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
                     '''
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
