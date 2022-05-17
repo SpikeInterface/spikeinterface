@@ -2,14 +2,14 @@ from pathlib import Path
 import os
 import numpy as np
 from typing import Union
-import scipy.io
+import sys
 import shutil
 
 from .kilosort3_config import generate_ops_file
 from .kilosort3_channelmap import generate_channel_map_file
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import get_git_commit
+from ..utils import get_git_commit, ShellScript
 
 from spikeinterface.extractors import BinaryRecordingExtractor
 
@@ -154,10 +154,6 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         else:
             use_car = 0
 
-        # read the template txt files
-        with (source_dir / 'kilosort3_master.m').open('r') as f:
-            kilosort3_master_txt = f.read()
-
         configs_options = dict(
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),
@@ -182,14 +178,6 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         generate_ops_file(configs_options, output_folder)
 
-        # make substitutions in txt files
-        kilosort3_master_txt = kilosort3_master_txt.format(
-            k='{k}',
-            kilosort3_path=str(Path(Kilosort3Sorter.kilosort3_path).absolute()),
-            output_folder=str(output_folder.absolute()),
-            channel_path=str((output_folder / 'kilosort3_channelmap.m').absolute()),
-        )
-
         generate_channel_map_file(
             nchan=recording.get_num_channels(),
             sample_rate=recording.get_sampling_frequency(),
@@ -199,10 +187,36 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             output_folder=output_folder
         )
 
-        for fname, txt in zip(['kilosort3_master.m'],
-                              [kilosort3_master_txt]):
-            with (output_folder / fname).open('w') as f:
-                f.write(txt)
-
+        shutil.copy(str(source_dir / 'kilosort3_master.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
+
+    # TODO: This is a copy/Adaptation of KilosortBase.
+    # If/When all versions of kilosort are changed according to this approach,
+    # _run_from_folder should be moved to KilosortBase again
+    @classmethod
+    def _run_from_folder(cls, output_folder, params, verbose):
+
+        print('KilosortBase._run_from_folder', cls)
+
+        if 'win' in sys.platform and sys.platform != 'darwin':
+            disk_move = str(output_folder)[:2]
+            shell_cmd = f'''
+                        {disk_move}
+                        cd {output_folder}
+                        matlab -nosplash -wait -log -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
+                    '''
+        else:
+            kilosort3_path = str(Path(Kilosort3Sorter.kilosort3_path).absolute())
+            shell_cmd = f'''
+                        #!/bin/bash
+                        cd "{output_folder}"
+                        matlab -nosplash -nodisplay -log -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
+                    '''
+        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
+                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script.start()
+        retcode = shell_script.wait()
+
+        if retcode != 0:
+            raise Exception(f'{cls.sorter_name} returned a non-zero exit code')
