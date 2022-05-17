@@ -3,9 +3,11 @@ pytest
 # some version are forced because of
 # numba and hdbscan and numpy internal API
 
+# tridesclous
 numpy==1.20
 git+https://github.com/scikit-learn-contrib/hdbscan.git
 numba==0.54.1
+
 # zarr is needed for testing
 zarr
 
@@ -14,14 +16,13 @@ zarr
 # git+https://github.com/numba/numba.git
 # hdbscan
 
-
-
 # neo is from master because of several IO (spikeglx, ...)
 git+https://github.com/NeuralEnsemble/python-neo.git
 
 # recent datalad need a too recent version for git-annex
 # so we use an old one here
-datalad==0.14.4
+# datalad ==0.14.4
+datalad==0.16.2
 
 # lxml for neuroscope
 lxml
