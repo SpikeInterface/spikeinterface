@@ -35,7 +35,7 @@ def generate_ops_file(options, output_folder):
     ops['trange'] = [0, np.Inf] #  time range to sort
 
     # define the channel map as a filename (string) or simply an array
-    ops['chanMap'] = 'chanMap.mat'
+    ops['chanMap'] = options['chan_map']
 
     # sample rate
     ops['fs'] = options['sample_rate']
