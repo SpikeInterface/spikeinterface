@@ -174,6 +174,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             NT=int(p['NT']),
             root=str(output_folder.absolute()),
             temp_wh_file = str((output_folder / 'temp_wh.dat').absolute()),
+            chan_map = str((output_folder / 'chanMap.mat').absolute()),
         )
 
         generate_ops_file(configs_options, output_folder)
