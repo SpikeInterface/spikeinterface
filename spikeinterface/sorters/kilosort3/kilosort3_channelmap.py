@@ -11,12 +11,20 @@ def generate_channel_map_file(nchan, sample_rate, xcoords, ycoords, kcoords, out
     Loading example in Matlab (shouldn't be assigned to a variable):
     >> load('/output_folder/chanMap.mat');
 
-    Args:
-        nchan (int): Number of channels
-        sample_rate (float): Sample Rate
-        xcoords (lists): List of xcoords
-        ycoords (lists): List of ycoords
-        kcoords (lists): List of kcoords
+    Parameters
+    ----------
+        nchan: int
+            Number of channels
+        sample_rate: float
+            Sample Rate
+        xcoords: list
+            List of xcoords
+        ycoords: list
+            List of ycoords
+        kcoords: list
+            List of kcoords
+        output_folder: pathlib.Path
+            Path object to save `ops.mat` file
     """
     channel_map = {}
     channel_map['connected'] = np.full((nchan, 1), True)
