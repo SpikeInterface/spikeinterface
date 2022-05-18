@@ -11,9 +11,12 @@ def generate_ops_file(options, output_folder):
     Loading example in Matlab (should be assigned to a variable called `ops`):
     >> ops = load('/output_folder/ops.mat');
 
-    Args:
-        options (dict): Dict with user parameters
-        output_folder (pathlib.Path): Path to save `ops.mat`
+    Parameters
+    ----------
+        options: dict
+            Dict with user parameters
+        output_folder: pathlib.Path
+            Path object to save `ops.mat` file
     """
 
     # Converting integer values into float

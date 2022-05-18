@@ -32,12 +32,12 @@ def check_if_installed(kilosort3_path: Union[str, None]):
 
 def check_compiled():
     """
-    Checks if the sorter is running inside an image with matlab-compiled ironclust
+    Checks if the sorter is running inside an image with matlab-compiled kilosort3
 
     Returns
     -------
     is_compiled: bool
-        Boolean indicating if a bash command p_ironclust exists or not
+        Boolean indicating if a bash command ks3_compiled exists or not
 
     """
     shell_cmd = '''
@@ -229,24 +229,26 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         print('KilosortBase._run_from_folder', cls)
 
+        output_folder = output_folder.absolute()
         if check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
-                ks3_compiled {output_folder.absolute()}
+                ks3_compiled {output_folder}
             '''
         elif 'win' in sys.platform and sys.platform != 'darwin':
+            kilosort3_path = Path(Kilosort3Sorter.kilosort3_path).absolute()
             disk_move = str(output_folder)[:2]
             shell_cmd = f'''
                         {disk_move}
                         cd {output_folder}
-                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
+                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{kilosort3_path}')"
                     '''
         else:
-            kilosort3_path = str(Path(Kilosort3Sorter.kilosort3_path).absolute())
+            kilosort3_path = Path(Kilosort3Sorter.kilosort3_path).absolute()
             shell_cmd = f'''
                         #!/bin/bash
                         cd "{output_folder}"
-                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder.absolute()}', '{kilosort3_path}')"
+                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{kilosort3_path}')"
                     '''
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
