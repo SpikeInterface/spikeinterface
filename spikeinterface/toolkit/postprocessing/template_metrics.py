@@ -25,7 +25,7 @@ def get_template_metric_names():
 
 
 def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign='neg',
-                               upsampling_factor=10, sparsity_dict=None,
+                               upsampling_factor=10, sparsity_dict=None, sparsity=None,
                                **kwargs):
     """
     Compute template metrics including:
@@ -57,6 +57,9 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
            * by SNR threshold: sparsity_dict=dict(method="threshold", threshold=2)
            * by property: sparsity_dict=dict(method="by_property", by_property="group")
         For more info, see the toolkit.get_template_channel_sparsity() function.
+    sparsity: dict or None
+        In alternative to 'sparsity_dict', the 'sparsity' can be a dictionary with unit_id as key
+        and channel id(s) as values (either a scalar or an array).
     **kwargs: keyword arguments for get_recovery_slope function:
         * window_ms: window in ms after the positiv peak to compute slope
 
@@ -73,15 +76,18 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     if feature_names is None:
         feature_names = list(_metric_name_to_func.keys())
 
-    if sparsity_dict is None:
+    if sparsity_dict is None and sparsity is None:
         extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign,
                                                               outputs='id')
 
         template_metrics = pd.DataFrame(
             index=unit_ids, columns=feature_names)
     else:
-        extremum_channels_ids = get_template_channel_sparsity(
-            waveform_extractor, **sparsity_dict)
+        if sparsity is None:
+            extremum_channels_ids = get_template_channel_sparsity(
+                waveform_extractor, **sparsity_dict)
+        else:
+            extremum_channels_ids = sparsity
         unit_ids = []
         channel_ids = []
         for unit_id, sparse_channels in extremum_channels_ids.items():
@@ -101,7 +107,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         template = template_all_chans[:, chan_ind]
 
         for i, template_single in enumerate(template.T):
-            if sparsity_dict is None:
+            if sparsity_dict is None and sparsity is None:
                 index = unit_id
             else:
                 index = (unit_id, chan_ids[i])
