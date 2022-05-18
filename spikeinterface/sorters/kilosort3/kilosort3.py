@@ -30,6 +30,31 @@ def check_if_installed(kilosort3_path: Union[str, None]):
     else:
         return False
 
+def check_compiled():
+    """
+    Checks if the sorter is running inside an image with matlab-compiled ironclust
+
+    Returns
+    -------
+    is_compiled: bool
+        Boolean indicating if a bash command p_ironclust exists or not
+
+    """
+    shell_cmd = '''
+    #!/bin/bash
+    if ! [ -x "$(command -v ks3_compiled)" ]; then
+        echo 'Error: ks3_compiled is not installed.' >&2
+        exit 1
+    fi
+    '''
+    shell_script = ShellScript(shell_cmd)
+    shell_script.start()
+    shell_script.wait()
+    retcode = shell_script.wait()
+    if retcode != 0:
+        return False
+    return True
+
 
 class Kilosort3Sorter(KilosortBase, BaseSorter):
     """Kilosort3 Sorter object."""
@@ -102,10 +127,14 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if check_compiled():
+            return True
         return check_if_installed(cls.kilosort3_path)
 
     @classmethod
     def get_sorter_version(cls):
+        if check_compiled():
+            return 'compiled'
         commit = get_git_commit(os.getenv('KILOSORT3_PATH', None))
         if commit is None:
             return 'unknown'
@@ -200,7 +229,12 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         print('KilosortBase._run_from_folder', cls)
 
-        if 'win' in sys.platform and sys.platform != 'darwin':
+        if check_compiled():
+            shell_cmd = f'''
+                #!/bin/bash
+                ks3_compiled {output_folder.absolute()}
+            '''
+        elif 'win' in sys.platform and sys.platform != 'darwin':
             disk_move = str(output_folder)[:2]
             shell_cmd = f'''
                         {disk_move}
