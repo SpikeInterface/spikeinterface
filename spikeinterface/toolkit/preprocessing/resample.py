@@ -11,6 +11,8 @@ class ResampleRecording(BasePreprocessor):
     """
     Resample the recording extractor traces.
 
+    If the resample_rate is multiple of the original sampling rate, the faster
+    scipy.signal.decimate is used.
 
     Parameters
     ----------
@@ -119,26 +121,27 @@ class ResampleRecordingSegment(BasePreprocessorSegment):
             parent_start_frame, parent_end_frame, channel_indices, self._margin,
             window_on_margin=False, add_zeros=False, dtype=np.float32,
         )
-
         # Decimate can missbehave on some cases, while resample allways looks
         # nice enough.
-        # # Check which method to use:
-        # if np.mod(parent_samp_fr, current_samp_fr) == 1.j:
-        #     # Ratio between sampling frequencies
-        #     q = parent_samp_fr // current_samp_fr
-        #     # Decimate can have issues for some cases, returning NaNs
-        #     resampled_traces = signal.decimate(parent_traces, q=q, axis=0)
-        #     # If that's the case, use signal.resample
-        #     if np.any(np.isnan(resampled_traces)):
-        #         resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
-        # else:
-        #     resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
-        resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
+        # Check which method to use:
+        if np.mod(parent_samp_fr, current_samp_fr) == 0:
+            # Ratio between sampling frequencies
+            q = int(parent_samp_fr / current_samp_fr)
+            # Decimate can have issues for some cases, returning NaNs
+            resampled_traces = signal.decimate(parent_traces, q=q, axis=0)
+            # If that's the case, use signal.resample
+            if np.any(np.isnan(resampled_traces)):
+                resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
+        else:
+            resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
+        # resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
+        # Get left and right margins for the reampled case
+        left_margin_rs, right_margin_rs = [int((margin/parent_samp_fr)*current_samp_fr) for margin in [left_margin, right_margin]]
         # Now take care of the edges:
         if right_margin > 0:
-            resampled_traces = resampled_traces[left_margin:-right_margin, :]
+            resampled_traces = resampled_traces[left_margin_rs:-right_margin_rs, :]
         else:
-            resampled_traces = resampled_traces[left_margin:, :]
+            resampled_traces = resampled_traces[left_margin_rs:, :]
         return resampled_traces.astype(self._dtype)
 
 
