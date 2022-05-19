@@ -30,36 +30,12 @@ def check_if_installed(kilosort3_path: Union[str, None]):
     else:
         return False
 
-def check_compiled():
-    """
-    Checks if the sorter is running inside an image with matlab-compiled kilosort3
-
-    Returns
-    -------
-    is_compiled: bool
-        Boolean indicating if a bash command ks3_compiled exists or not
-
-    """
-    shell_cmd = '''
-    #!/bin/bash
-    if ! [ -x "$(command -v ks3_compiled)" ]; then
-        echo 'Error: ks3_compiled is not installed.' >&2
-        exit 1
-    fi
-    '''
-    shell_script = ShellScript(shell_cmd)
-    shell_script.start()
-    shell_script.wait()
-    retcode = shell_script.wait()
-    if retcode != 0:
-        return False
-    return True
-
 
 class Kilosort3Sorter(KilosortBase, BaseSorter):
     """Kilosort3 Sorter object."""
 
     sorter_name: str = 'kilosort3'
+    compiled_name: str = 'ks3_compiled'
     kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
     docker_requires_gpu = True
@@ -127,13 +103,13 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        if check_compiled():
+        if cls.check_compiled():
             return True
         return check_if_installed(cls.kilosort3_path)
 
     @classmethod
     def get_sorter_version(cls):
-        if check_compiled():
+        if cls.check_compiled():
             return 'compiled'
         commit = get_git_commit(os.getenv('KILOSORT3_PATH', None))
         if commit is None:
@@ -221,16 +197,14 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
 
-    # TODO: This is a copy/Adaptation of KilosortBase.
-    # If/When all versions of kilosort are changed according to this approach,
+    # TODO: This is a copy/adaptation from KilosortBase
+    # If all versions of kilosort are changed according to this approach,
     # _run_from_folder should be moved to KilosortBase again
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
 
-        print('KilosortBase._run_from_folder', cls)
-
         output_folder = output_folder.absolute()
-        if check_compiled():
+        if cls.check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
                 ks3_compiled {output_folder}
