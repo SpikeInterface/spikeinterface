@@ -15,9 +15,11 @@ class SplitUnitSorting(BaseSorting):
     parent_unit_id: int
         Unit id of the unit to split        
     indices_list: list
-        A list of boolean arrays selecting the spikes to split in each segmet 
+        A list of index arrays selecting the spikes to split in each segment. 
+        Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should 
+        be the exact same length as the spike train (for each segment)
     new_unit_ids: int
-        Units id of the new units to be created. [False flag, True flag]  
+        Units id of the new units to be created.
     properties_policy: str
         Policy used to propagate propierties. If 'keep' the properties will be pass to the new units
          (if the units_to_merge have the same value). If 'remove' the new units will have an empty 
