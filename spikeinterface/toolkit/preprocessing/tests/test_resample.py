@@ -106,7 +106,7 @@ def test_resample_freq_domain():
         ]
     ), msg3
     ## Test that traces and times are the same lenght
-    msg4 = "The time and traces vectors must be of equal lenght. Non integer resampling rates can lead to this."
+    msg4 = "The time and traces vectors must be of equal length. Non integer resampling rates can lead to this."
     assert np.all(
         [rec.get_traces().shape[0] == rec.get_times().shape[0] for rec in resamp_recs]
     ), msg4
@@ -124,7 +124,7 @@ def test_resample_freq_domain():
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[10, 7], num='Fourier spectrums')
     xfs, nyfs = np.array(
         [
-            get_fft(rec.get_traces(), resamp_fs)
+            get_fft(rec.get_traces().ravel(), resamp_fs)
             for rec, resamp_fs in zip(resamp_recs, resamp_fss)
         ]
         , dtype='object'
@@ -146,12 +146,9 @@ def test_resample_by_chunks():
     # The chunk_size must be always at least some 1 second of the resample, else it breaks.
     # Does this makes sense?
     # Also, sometimes decimate might give warnings about filter designs
-    # If only resample is used, everything works nicely, so removed the option
-    import matplotlib as plt
     for resample_rate in [500, 1000, 2500]:
         for margin_ms in (100, 200, 1000):
-            for chunk_size in (resample_rate*1, resample_rate*1.5, resample_rate*2):
-                # This looks like the minimum ratio of chunksize and resample that works
+            for chunk_size in (resample_rate*1, resample_rate*1.1, resample_rate*2):
                 chunk_size = int(chunk_size)
                 # print(f'resmple_rate = {resample_rate}; margin_ms = {margin_ms}; chunk_size={chunk_size}')
                 rec2 = resample(parent_rec, resample_rate, margin_ms=margin_ms)
@@ -168,13 +165,17 @@ def test_resample_by_chunks():
                 # this will never be possible:
                 #      assert np.allclose(traces2, traces3)
                 # so we check that the diff between chunk processing and not chunked is small
-                #~ print()
-                #~ print(dtype, margin_ms, chunk_size)
-                #~ print(error_mean, rms, error_mean / rms)
-                #~ print(error_max, rms, error_max / rms)
+                # print()
+                # print(dtype, margin_ms, chunk_size)
+                # print(error_mean, rms, error_mean / rms)
+                # print(error_max, rms, error_max / rms)
+                # The original thrshold are too restrictive, but in all cases
+                # The signals look quite similar, with error that are small enough
+                # But, when using signal.resample, the last edge becomes too noisy
                 assert error_mean / rms < 0.01
-                assert error_max / rms < 0.1
-                # plot_test = """
+                assert error_max / rms < 0.05
+                plot_test = """
+                import matplotlib as plt
                 fig, axs = plt.subplots(nrows=2)
                 ax = axs[0]
                 ax.plot(traces2, color='g', label='no chunk')
