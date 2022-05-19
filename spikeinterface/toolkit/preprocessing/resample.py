@@ -11,8 +11,10 @@ class ResampleRecording(BasePreprocessor):
     """
     Resample the recording extractor traces.
 
-    If the resample_rate is multiple of the original sampling rate, the faster
-    scipy.signal.decimate is used.
+    If the original sampling rate is multiple of the resample_rate, it will use
+    the signal.decimate method. In other cases, it uses signal.resample. In the
+    later case, the resulting signal can have issues on the edges, mainly on the
+    rightmost.
 
     Parameters
     ----------
@@ -121,6 +123,16 @@ class ResampleRecordingSegment(BasePreprocessorSegment):
             parent_start_frame, parent_end_frame, channel_indices, self._margin,
             window_on_margin=False, add_zeros=False, dtype=np.float32,
         )
+        # Get left and right margins for the reampled case
+        left_margin_rs, right_margin_rs = [
+            int((margin/parent_samp_fr)*current_samp_fr)
+            for margin in [left_margin, right_margin]
+        ]
+        # Get the size for the resampled traces in case of resample:
+        if right_margin > 0:
+            num = int((end_frame + right_margin_rs) - (start_frame - left_margin_rs))
+        else:
+            num = int((end_frame) - (start_frame - left_margin_rs))
         # Decimate can missbehave on some cases, while resample allways looks
         # nice enough.
         # Check which method to use:
@@ -131,12 +143,9 @@ class ResampleRecordingSegment(BasePreprocessorSegment):
             resampled_traces = signal.decimate(parent_traces, q=q, axis=0)
             # If that's the case, use signal.resample
             if np.any(np.isnan(resampled_traces)):
-                resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
+                resampled_traces = signal.resample(parent_traces, num, axis=0)
         else:
-            resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
-        # resampled_traces = signal.resample(parent_traces, int(end_frame - start_frame), axis=0)
-        # Get left and right margins for the reampled case
-        left_margin_rs, right_margin_rs = [int((margin/parent_samp_fr)*current_samp_fr) for margin in [left_margin, right_margin]]
+            resampled_traces = signal.resample(parent_traces, num, axis=0)
         # Now take care of the edges:
         if right_margin > 0:
             resampled_traces = resampled_traces[left_margin_rs:-right_margin_rs, :]
