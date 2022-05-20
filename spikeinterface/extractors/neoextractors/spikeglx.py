@@ -38,7 +38,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
         # ~ # open the corresponding stream probe
-        if HAS_NEO_10_2 and ".nidq" not in self.stream_id:
+        if HAS_NEO_10_2 and "nidq" not in self.stream_id:
             signals_info_dict = {
                 e["stream_name"]: e for e in self.neo_reader.signals_info_list
             }
