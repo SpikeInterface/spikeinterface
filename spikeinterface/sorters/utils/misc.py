@@ -1,3 +1,4 @@
+from subprocess import check_output
 from typing import List, Union
 
 import numpy as np
