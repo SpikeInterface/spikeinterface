@@ -10,6 +10,7 @@ Implementations here have been refactored to support the multi-segment API of sp
 from collections import namedtuple
 
 import numpy as np
+import warnings
 import scipy.ndimage
 
 from ..utils import get_noise_levels
@@ -319,8 +320,14 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         support = b[:-1]
         bin_size = np.mean(np.diff(support))
         peak_index = np.argmax(pdf)
+        
+        pdf_above = np.abs(pdf[peak_index:] - pdf[0])
 
-        G = np.argmin(np.abs(pdf[peak_index:] - pdf[0])) + peak_index
+        if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
+            warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
+                          "amplitude_cutoff computation!")
+        
+        G = np.argmin(pdf_above) + peak_index
         fraction_missing = np.sum(pdf[G:]) * bin_size
         fraction_missing = np.min([fraction_missing, 0.5])
         all_fraction_missing[unit_id] = fraction_missing
