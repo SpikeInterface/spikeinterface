@@ -41,7 +41,8 @@ class MergeUnitsSorting(BaseSorting):
                 new_unit_id = max([0]+[int(p) for p in parents_unit_ids if p.isdigit()])+1
             else:
                 new_unit_id = max(parents_unit_ids)+1
-
+        else:
+            assert new_unit_id not in parents_unit_ids, 'new_unit_id already in parent_sorting'
         # some checks
         assert all(u in parents_unit_ids for u in units_to_merge), 'units to merge are not all in parent'
         assert properties_policy=='keep' or properties_policy=='remove', 'properties_policy must be ''keep'' or ''remove'''
@@ -77,8 +78,8 @@ class MergeUnitsSorting(BaseSorting):
                         new_values[keep_inds] = values[keep_parent_inds]
                     self.set_property(k, new_values)
                     continue
-            self.set_property(k, values[keep_parent_inds], keep_units)
-
+            if len(keep_units)>0:
+                self.set_property(k, values[keep_parent_inds], keep_units)
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
