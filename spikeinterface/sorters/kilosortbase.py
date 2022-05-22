@@ -1,19 +1,60 @@
 from pathlib import Path
-import sys
-import numpy as np
 import json
+import sys
 
-from .utils import get_git_commit, ShellScript
+import numpy as np
+import scipy.io
 
+from .utils import ShellScript
 from spikeinterface.extractors import KiloSortSortingExtractor
 
 
 class KilosortBase:
     """
     Shared class for all kilosort implementation:
-      * _run_from_folder
-      * get_result_from_folder
+        * generate_channel_map_file
+        * _run_from_folder
+        * get_result_from_folder
     """
+
+    @staticmethod
+    def generate_channel_map_file(recording, output_folder):
+        """
+        This function generates channel map data for kilosort and saves as `chanMap.mat`
+
+        Loading example in Matlab (shouldn't be assigned to a variable):
+        >> load('/path/to/output_folder/chanMap.mat');
+
+        Parameters
+        ----------
+            recording: BaseRecording
+                The recording to generate the channel map file
+            output_folder: pathlib.Path
+                Path object to save `chanMap.mat` file
+        """
+        # prepare electrode positions for this group (only one group, the split is done in basesorter)
+        groups = [1] * recording.get_num_channels()
+        positions = np.array(recording.get_channel_locations())
+        if positions.shape[1] != 2:
+            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
+
+        nchan = recording.get_num_channels()
+        xcoords = [p[0] for p in positions],
+        ycoords = [p[1] for p in positions],
+        kcoords = groups,
+
+        channel_map = {}
+        channel_map['connected'] = np.full((nchan, 1), True)
+        channel_map['chanMap0ind'] = np.arange(nchan)
+        channel_map['chanMap'] = channel_map['chanMap0ind'] + 1
+
+        channel_map['xcoords'] = np.array(xcoords).astype(float)
+        channel_map['ycoords'] = np.array(ycoords).astype(float)
+        channel_map['kcoords'] = np.array(kcoords).astype(float)
+
+        sample_rate = recording.get_sampling_frequency()
+        channel_map['fs'] = float(sample_rate)
+        scipy.io.savemat(str(output_folder / 'chanMap.mat'), channel_map)
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):

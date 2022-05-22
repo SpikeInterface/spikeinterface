@@ -6,7 +6,6 @@ import sys
 import shutil
 
 from .kilosort3_config import generate_ops_file
-from .kilosort3_channelmap import generate_channel_map_file
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
@@ -140,13 +139,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     def _setup_recording(cls, recording, output_folder, params, verbose):
         p = params
 
-        source_dir = Path(Path(__file__).parent)
-
-        # prepare electrode positions for this group (only one group, the split is done in basesorter)
-        groups = [1] * recording.get_num_channels()
-        positions = np.array(recording.get_channel_locations())
-        if positions.shape[1] != 2:
-            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
+        cls.generate_channel_map_file(recording, output_folder)
 
         # save binary file
         input_file_path = output_folder / 'recording.dat'
@@ -184,14 +177,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         generate_ops_file(configs_options, output_folder)
 
-        generate_channel_map_file(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            xcoords=[p[0] for p in positions],
-            ycoords=[p[1] for p in positions],
-            kcoords=groups,
-            output_folder=output_folder
-        )
+        source_dir = Path(Path(__file__).parent)
 
         shutil.copy(str(source_dir / 'kilosort3_master.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
