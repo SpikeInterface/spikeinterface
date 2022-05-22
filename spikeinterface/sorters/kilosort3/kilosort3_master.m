@@ -1,5 +1,7 @@
 function kilosort3_master(output_folder, kilosort_path)
     try
+        set(groot,'defaultFigureVisible', 'off');
+
         % prepare for kilosort execution
         addpath(genpath(kilosort_path));
 
