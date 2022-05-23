@@ -1,3 +1,4 @@
+from copy import deepcopy
 import shutil
 import os
 from pathlib import Path
@@ -98,6 +99,24 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     return sorting
 
 
+def path_to_unix(path):
+    path = Path(path)
+    path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
+    return path_unix
+
+
+def path_to_windows(path, prefix="C:"):
+    path = Path(path)
+    path_windows = Path(prefix + str(path))
+    return path_windows
+
+
+def get_windows_drive_path(path):
+    path = str(path)
+    assert ":" in path, "Cannot find windows drive path"
+    return path[:path.find(":") + 1]
+
+
 def find_recording_folder(d):
     if "kwargs" in d.keys():
         # handle nested
@@ -138,6 +157,73 @@ def find_recording_folder(d):
             return folder_to_mount
 
 
+def windows_extractor_dict_to_unix(d):
+    dc = deepcopy(d)
+    if "kwargs" in dc.keys():
+        # handle nested
+        kwargs = dc["kwargs"]
+        nested_extractor_dict = None
+        for k, v in kwargs.items():
+            if isinstance(v, dict) and is_dict_extractor(v):
+                nested_extractor_dict = v
+        if nested_extractor_dict is None:
+            windows_extractor_dict_to_unix(kwargs)
+        else:
+            windows_extractor_dict_to_unix(nested_extractor_dict)
+        return dc
+    else:
+        for k, v in d.items():
+            if "path" in k:
+                # paths can be str or list of str
+                if isinstance(v, str):
+                    # one path
+                    abs_path = Path(v)
+                    d[k] = path_to_unix(abs_path)
+                elif isinstance(v, list):
+                    # list of path
+                    unix_paths = []
+                    for abs_path in v:
+                        abs_path = Path(abs_path)
+                        unix_paths.append(path_to_unix(abs_path))
+                    d[k] = unix_paths
+                else:
+                    raise ValueError(
+                        f'{k} key for path  must be str or list[str]')
+
+
+def unix_extractor_dict_to_windows(d, prefix="C:"):
+    dc = deepcopy(d)
+    if "kwargs" in dc.keys():
+        # handle nested
+        kwargs = dc["kwargs"]
+        nested_extractor_dict = None
+        for k, v in kwargs.items():
+            if isinstance(v, dict) and is_dict_extractor(v):
+                nested_extractor_dict = v
+        if nested_extractor_dict is None:
+            unix_extractor_dict_to_windows(kwargs)
+        else:
+            unix_extractor_dict_to_windows(nested_extractor_dict)
+        return dc
+    else:
+        for k, v in d.items():
+            if "path" in k:
+                # paths can be str or list of str
+                if isinstance(v, str):
+                    # one path
+                    abs_path = Path(v)
+                    d[k] = path_to_windows(abs_path)
+                elif isinstance(v, list):
+                    # list of path
+                    unix_paths = []
+                    for abs_path in v:
+                        abs_path = Path(abs_path)
+                        unix_paths.append(path_to_windows(abs_path))
+                    d[k] = unix_paths
+                else:
+                    raise ValueError(
+                        f'{k} key for path  must be str or list[str]')
+
 class ContainerClient:
     """
     Small abstraction class to run commands in:
@@ -162,6 +248,7 @@ class ContainerClient:
                 repo_tags.extend(image.attrs['RepoTags'])
 
             if container_image not in repo_tags:
+                print(f"Docker: pulling image {container_image}")
                 client.images.pull(container_image)
 
             self.docker_container = client.containers.create(
@@ -173,6 +260,7 @@ class ContainerClient:
             if Path(container_image).exists():
                 self.singularity_image = container_image
             else:
+                print(f"Singularity: pulling image {container_image}")
                 self.singularity_image = Client.pull(f'docker://{container_image}')
 
             if not Path(self.singularity_image).exists():
@@ -218,10 +306,6 @@ def run_sorter_container(sorter_name, recording, mode, container_image, output_f
                          remove_existing_folder=True, delete_output_folder=False,
                          verbose=False, raise_error=True, with_output=True, **sorter_params):
     # common code for docker and singularity
-
-    assert platform.system() in ('Linux', 'Darwin'), \
-        'run_sorter() with docker is supported only on linux/macos platform '
-
     if output_folder is None:
         output_folder = sorter_name + '_output'
 
@@ -233,29 +317,45 @@ def run_sorter_container(sorter_name, recording, mode, container_image, output_f
     rec_dict = recording.to_dict()
     recording_input_folder = find_recording_folder(rec_dict)
 
+    if platform.system() == 'Windows':
+        rec_dict_unix = windows_extractor_dict_to_unix(rec_dict)
+        windows_drive = get_windows_drive_path(parent_folder)
+    else:
+        rec_dict_unix = rec_dict
+        windows_drive = None
+
     # create 3 files for communication with container
     # recording dict inside
     (parent_folder / 'in_container_recording.json').write_text(
-        json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
+        json.dumps(check_json(rec_dict_unix), indent=4), encoding='utf8')
     # need to share specific parameters
     (parent_folder / 'in_container_params.json').write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
-    # the py script
 
+    # the py script
+    if platform.system() == 'Windows':
+        # skip C:
+        parent_folder_unix = path_to_unix(parent_folder)
+        output_folder_unix = path_to_unix(output_folder)
+        recording_input_folder_unix = path_to_unix(recording_input_folder)
+    else:
+        parent_folder_unix = parent_folder
+        output_folder_unix = output_folder
+        recording_input_folder_unix = recording_input_folder
     py_script = f"""
 import json
 from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
 # load recording in docker
-recording = load_extractor('{parent_folder}/in_container_recording.json')
+recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
 
 # load params in docker
-with open('{parent_folder}/in_container_params.json', encoding='utf8', mode='r') as f:
+with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
     sorter_params = json.load(f)
 
 # run in docker
-output_folder = '{output_folder}'
+output_folder = '{output_folder_unix}'
 run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
             verbose={verbose}, raise_error={raise_error}, **sorter_params)
@@ -264,8 +364,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
 
     volumes = {}
     volumes[str(recording_input_folder)] = {
-        'bind': str(recording_input_folder), 'mode': 'ro'}
-    volumes[str(parent_folder)] = {'bind': str(parent_folder), 'mode': 'rw'}
+        'bind': str(recording_input_folder_unix), 'mode': 'ro'}
+    volumes[str(parent_folder)] = {'bind': str(parent_folder_unix), 'mode': 'rw'}
 
     extra_kwargs = {}
     if SorterClass.docker_requires_gpu:
@@ -314,17 +414,22 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     # this do not work with singularity:
     # cmd = 'python "{}"'.format(parent_folder/'in_container_sorter_script.py')
     # this approach is better
-    cmd = ['python', '{}'.format(parent_folder/'in_container_sorter_script.py')]
+    in_container_script_path_unix = (Path(parent_folder_unix) / 'in_container_sorter_script.py').as_posix()
+    cmd = ['python', f'{in_container_script_path_unix}']
     res_output = container_client.run_command(cmd)
     run_sorter_output = res_output
 
     # chown folder to user uid
-    uid = os.getuid()
-    # this do not work with singularity:
-    # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
-    # this approach is better
-    cmd = ['chown', f'{uid}:{uid}', '-R', '{output_folder}']
-    res_output = container_client.run_command(cmd)
+    if platform.system() != "Windows":
+        uid = os.getuid()
+        # this do not work with singularity:
+        # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
+        # this approach is better
+        cmd = ['chown', f'{uid}:{uid}', '-R', '{output_folder}']
+        res_output = container_client.run_command(cmd)
+    else:
+        # not needed for Windows
+        pass
 
     if verbose:
         print('Stopping container')
