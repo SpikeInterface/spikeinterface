@@ -814,16 +814,6 @@ def _check_if_dumpable(d):
         return d['dumpable']
 
 
-# def is_dict_extractor(d):
-#     """
-#     Check if a dict describe an extractor.
-#     """
-#     if not isinstance(d, dict):
-#         return False
-#     is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
-#     return is_extractor
-
-
 def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
