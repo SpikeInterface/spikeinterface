@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import sys
 import datetime
+from copy import deepcopy
 
 import numpy as np
 from tqdm import tqdm
@@ -635,3 +636,56 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
+
+
+
+def is_dict_extractor(d):
+    """
+    Check if a dict describe an extractor.
+    """
+    if not isinstance(d, dict):
+        return False
+    is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
+    return is_extractor
+
+
+def recursive_path_modifier(d, func, target='path', copy=True):
+    """
+    Generic function for recurssive modification of path.
+    A recording can be nested of several preprocessing step.
+    This explore the full tree in recurssive way.
+
+    Usefull for :
+      * relative/absolut path change
+      * docker rebase path change
+
+    Modificatopn is inplace with a optional copy.
+    """
+    if copy:
+        dc = deepcopy(d)
+    else:
+        dc = d
+    
+    if "kwargs" in dc.keys():
+        # handle nested
+        kwargs = dc["kwargs"]
+        nested_extractor_dict = None
+        for k, v in kwargs.items():
+            if isinstance(v, dict) and is_dict_extractor(v):
+                nested_extractor_dict = v
+        if nested_extractor_dict is None:
+            recursive_path_modifier(kwargs, func)
+        else:
+            recursive_path_modifier(nested_extractor_dict, func)
+        return dc
+    else:
+        for k, v in d.items():
+            if target in k:
+                # paths can be str or list of str
+                if isinstance(v, str):
+                    d[k] =func(v)
+                elif isinstance(v, list):
+                    d[k] = [func(e) for e in v]
+                else:
+                    raise ValueError(
+                        f'{k} key for path  must be str or list[str]')

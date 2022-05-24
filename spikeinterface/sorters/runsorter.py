@@ -7,8 +7,7 @@ import platform
 
 
 from ..version import version as si_version
-from spikeinterface.core.base import is_dict_extractor
-from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError
 
@@ -99,22 +98,6 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     return sorting
 
 
-def path_to_unix(path):
-    path = Path(path)
-    path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
-    return path_unix
-
-
-def path_to_windows(path, prefix="C:"):
-    path = Path(path)
-    path_windows = Path(prefix + str(path))
-    return path_windows
-
-
-def get_windows_drive_path(path):
-    path = str(path)
-    assert ":" in path, "Cannot find windows drive path"
-    return path[:path.find(":") + 1]
 
 
 def find_recording_folder(d):
@@ -157,72 +140,33 @@ def find_recording_folder(d):
             return folder_to_mount
 
 
+
+def path_to_unix(path):
+    path = Path(path)
+    path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
+    return path_unix
+
+
+# def path_to_windows(path, prefix="C:"):
+#     path = Path(path)
+#     path_windows = Path(prefix + str(path))
+#     return path_windows
+
+
+# def get_windows_drive_path(path):
+#     path = str(path)
+#     assert ":" in path, "Cannot find windows drive path"
+#     return path[:path.find(":") + 1]
+
 def windows_extractor_dict_to_unix(d):
-    dc = deepcopy(d)
-    if "kwargs" in dc.keys():
-        # handle nested
-        kwargs = dc["kwargs"]
-        nested_extractor_dict = None
-        for k, v in kwargs.items():
-            if isinstance(v, dict) and is_dict_extractor(v):
-                nested_extractor_dict = v
-        if nested_extractor_dict is None:
-            windows_extractor_dict_to_unix(kwargs)
-        else:
-            windows_extractor_dict_to_unix(nested_extractor_dict)
-        return dc
-    else:
-        for k, v in d.items():
-            if "path" in k:
-                # paths can be str or list of str
-                if isinstance(v, str):
-                    # one path
-                    abs_path = Path(v)
-                    d[k] = path_to_unix(abs_path)
-                elif isinstance(v, list):
-                    # list of path
-                    unix_paths = []
-                    for abs_path in v:
-                        abs_path = Path(abs_path)
-                        unix_paths.append(path_to_unix(abs_path))
-                    d[k] = unix_paths
-                else:
-                    raise ValueError(
-                        f'{k} key for path  must be str or list[str]')
+    d = recursive_path_modifier(d, path_to_unix, target='path', copy=True)
+    return d
+
+# def unix_extractor_dict_to_windows(d):
+#     d = recursive_path_modifier(d, path_to_windows, target='path', copy=True)
+#     return d
 
 
-def unix_extractor_dict_to_windows(d, prefix="C:"):
-    dc = deepcopy(d)
-    if "kwargs" in dc.keys():
-        # handle nested
-        kwargs = dc["kwargs"]
-        nested_extractor_dict = None
-        for k, v in kwargs.items():
-            if isinstance(v, dict) and is_dict_extractor(v):
-                nested_extractor_dict = v
-        if nested_extractor_dict is None:
-            unix_extractor_dict_to_windows(kwargs)
-        else:
-            unix_extractor_dict_to_windows(nested_extractor_dict)
-        return dc
-    else:
-        for k, v in d.items():
-            if "path" in k:
-                # paths can be str or list of str
-                if isinstance(v, str):
-                    # one path
-                    abs_path = Path(v)
-                    d[k] = path_to_windows(abs_path)
-                elif isinstance(v, list):
-                    # list of path
-                    unix_paths = []
-                    for abs_path in v:
-                        abs_path = Path(abs_path)
-                        unix_paths.append(path_to_windows(abs_path))
-                    d[k] = unix_paths
-                else:
-                    raise ValueError(
-                        f'{k} key for path  must be str or list[str]')
 
 class ContainerClient:
     """
@@ -318,16 +262,13 @@ def run_sorter_container(sorter_name, recording, mode, container_image, output_f
     recording_input_folder = find_recording_folder(rec_dict)
 
     if platform.system() == 'Windows':
-        rec_dict_unix = windows_extractor_dict_to_unix(rec_dict)
-        windows_drive = get_windows_drive_path(parent_folder)
-    else:
-        rec_dict_unix = rec_dict
-        windows_drive = None
+        rec_dict = windows_extractor_dict_to_unix(rec_dict)
+        # windows_drive = get_windows_drive_path(parent_folder)
 
     # create 3 files for communication with container
     # recording dict inside
     (parent_folder / 'in_container_recording.json').write_text(
-        json.dumps(check_json(rec_dict_unix), indent=4), encoding='utf8')
+        json.dumps(check_json(rec_dict), indent=4), encoding='utf8')
     # need to share specific parameters
     (parent_folder / 'in_container_params.json').write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
