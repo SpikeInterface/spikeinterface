@@ -96,7 +96,7 @@ class CommonReferenceRecording(BasePreprocessor):
                                                           neighbors)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups,
+        self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups, operator=operator,
                             ref_channel_ids=ref_channel_ids, local_radius=local_radius)
 
 
