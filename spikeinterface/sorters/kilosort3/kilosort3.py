@@ -9,8 +9,6 @@ from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
 
-from spikeinterface.extractors import BinaryRecordingExtractor
-
 PathType = Union[str, Path]
 
 
@@ -139,10 +137,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         cls._generate_channel_map_file(recording, output_folder)
 
-        # save binary file
-        BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
-                                                 dtype='int16', total_memory=params["total_memory"],
-                                                 n_jobs=params["n_jobs_bin"], verbose=False, progress_bar=verbose)
+        cls._write_recording(recording, output_folder, params, verbose)
 
         generate_ops_file(recording, params, output_folder)
 

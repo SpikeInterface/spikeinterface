@@ -6,7 +6,7 @@ import numpy as np
 import scipy.io
 
 from .utils import ShellScript
-from spikeinterface.extractors import KiloSortSortingExtractor
+from spikeinterface.extractors import KiloSortSortingExtractor, BinaryRecordingExtractor
 
 
 class KilosortBase:
@@ -55,6 +55,13 @@ class KilosortBase:
         sample_rate = recording.get_sampling_frequency()
         channel_map['fs'] = float(sample_rate)
         scipy.io.savemat(str(output_folder / 'chanMap.mat'), channel_map)
+
+    @staticmethod
+    def _write_recording(recording, output_folder, params, verbose):
+        # save binary file
+        BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
+                                                 dtype='int16', total_memory=params["total_memory"],
+                                                 n_jobs=params["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
