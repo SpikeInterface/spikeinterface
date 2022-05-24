@@ -651,15 +651,31 @@ def is_dict_extractor(d):
 
 def recursive_path_modifier(d, func, target='path', copy=True):
     """
-    Generic function for recurssive modification of path.
-    A recording can be nested of several preprocessing step.
-    This explore the full tree in recurssive way.
+    Generic function for recursive modification of paths in an extractor dict.
+    A recording can be nested and this function explores the dictionary recursively
+    to find the parent file or folder paths.
 
-    Usefull for :
-      * relative/absolut path change
+    Useful for :
+      * relative/absolute path change
       * docker rebase path change
 
-    Modificatopn is inplace with a optional copy.
+    Modification is inplace with an optional copy.
+
+    Parameters
+    ----------
+    d : dict
+        Extractor dictionary
+    func : function
+        Function to apply to the path. It must take a path as input and return a path
+    target : str, optional
+        String to match to dictionary key, by default 'path'
+    copy : bool, optional
+        If True the original dictionary is deep copied, by default True
+
+    Returns
+    -------
+    dict
+        Modified dictionary
     """
     if copy:
         dc = deepcopy(d)

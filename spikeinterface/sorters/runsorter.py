@@ -11,6 +11,7 @@ from spikeinterface.core.core_tools import check_json, recursive_path_modifier, 
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError
 
+
 _common_param_doc = """
     Parameters
     ----------
@@ -98,8 +99,6 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     return sorting
 
 
-
-
 def find_recording_folder(d):
     if "kwargs" in d.keys():
         # handle nested
@@ -147,25 +146,9 @@ def path_to_unix(path):
     return path_unix
 
 
-# def path_to_windows(path, prefix="C:"):
-#     path = Path(path)
-#     path_windows = Path(prefix + str(path))
-#     return path_windows
-
-
-# def get_windows_drive_path(path):
-#     path = str(path)
-#     assert ":" in path, "Cannot find windows drive path"
-#     return path[:path.find(":") + 1]
-
 def windows_extractor_dict_to_unix(d):
     d = recursive_path_modifier(d, path_to_unix, target='path', copy=True)
     return d
-
-# def unix_extractor_dict_to_windows(d):
-#     d = recursive_path_modifier(d, path_to_windows, target='path', copy=True)
-#     return d
-
 
 
 class ContainerClient:
@@ -263,7 +246,6 @@ def run_sorter_container(sorter_name, recording, mode, container_image, output_f
 
     if platform.system() == 'Windows':
         rec_dict = windows_extractor_dict_to_unix(rec_dict)
-        # windows_drive = get_windows_drive_path(parent_folder)
 
     # create 3 files for communication with container
     # recording dict inside
@@ -380,7 +362,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         # this do not work with singularity:
         # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
         # this approach is better
-        cmd = ['chown', f'{uid}:{uid}', '-R', '{output_folder}']
+        cmd = ['chown', f'{uid}:{uid}', '-R', f'{output_folder}']
         res_output = container_client.run_command(cmd)
     else:
         # not needed for Windows
