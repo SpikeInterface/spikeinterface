@@ -22,7 +22,7 @@ def compute_autocorrelogram_from_spiketrain(spike_train, max_time, bin_size, sam
         Compute the auto-correlogram between -max_time and +max_time (in ms).
     bin_size: float
         Size of a bin (in ms).
-    sampling_f: float:
+    sampling_f: float
         Sampling rate/frequency (in Hz).
 
     Returns
@@ -126,12 +126,31 @@ if HAVE_NUMBA:
         return (cross_corr, bins)
 
 
-def compute_correlograms(sorting,
+def compute_correlograms(sorting, window_ms=100.0,
+                         bin_ms=5.0, symmetrize=False,
+                         method="auto"):
+    """
+    Computes several cross-correlogram in one course from several clusters.
+    """
+
+    assert method in ("auto", "numba", "numpy")
+
+    if method == "auto":
+        method = "numba" if HAVE_NUMBA else "numpy"
+    
+    if method == "numpy":
+        return compute_correlograms_numpy(sorting, window_ms, bin_ms, symmetrize)
+    if method == "numba":
+        return compute_correlograms_numba(sorting, window_ms, bin_ms, symmetrize)
+
+
+
+def compute_correlograms_numpy(sorting,
                          window_ms=100.0, bin_ms=5.0,
                          symmetrize=False):
     """
-    Compute several cross-correlogram in one course
-    from sevral cluster.
+    Computes several cross-correlogram in one course
+    from several cluster.
     
     This very elegant implementation is copy from phy package written by Cyril Rossant.
     https://github.com/cortex-lab/phylib/blob/master/phylib/stats/ccg.py
@@ -217,3 +236,19 @@ def compute_correlograms(sorting,
         bins = np.arange(correlograms.shape[2] + 1) * real_bin_duration_ms
 
     return correlograms, bins
+
+
+def compute_correlograms_numba(sorting,
+                         window_ms=100.0, bin_ms=5.0,
+                         symmetrize=False):
+    """
+    Computes several cross-correlogram in one course
+    from several cluster.
+    
+    This is a "brute force" method using compiled code (numba)
+    to accelerate the computation.
+    
+    Adaptation: Aurélien Wyngaard
+    """
+
+    raise NotImplementedError()
