@@ -1,6 +1,5 @@
 from pathlib import Path
 import os
-import numpy as np
 from typing import Union
 import sys
 import shutil
@@ -137,48 +136,17 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        p = params
 
-        cls.generate_channel_map_file(recording, output_folder)
+        cls._generate_channel_map_file(recording, output_folder)
 
         # save binary file
-        input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
-                                                 dtype='int16', total_memory=p["total_memory"],
-                                                 n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
+        BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
+                                                 dtype='int16', total_memory=params["total_memory"],
+                                                 n_jobs=params["n_jobs_bin"], verbose=False, progress_bar=verbose)
 
-        if p['car']:
-            use_car = 1
-        else:
-            use_car = 0
-
-        configs_options = dict(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            dat_file=str((output_folder / 'recording.dat').absolute()),
-            nblocks=p['nblocks'],
-            sig=p['sig'],
-            projection_threshold=p['projection_threshold'],
-            preclust_threshold=p['preclust_threshold'],
-            minfr_goodchannels=p['minfr_goodchannels'],
-            minFR=p['minFR'],
-            freq_min=p['freq_min'],
-            sigmaMask=p['sigmaMask'],
-            detect_threshold=p['detect_threshold'],
-            use_car=use_car,
-            nPCs=int(p['nPCs']),
-            ntbuff=int(p['ntbuff']),
-            nfilt_factor=int(p['nfilt_factor']),
-            NT=int(p['NT']),
-            root=str(output_folder.absolute()),
-            temp_wh_file = str((output_folder / 'temp_wh.dat').absolute()),
-            chan_map = str((output_folder / 'chanMap.mat').absolute()),
-        )
-
-        generate_ops_file(configs_options, output_folder)
+        generate_ops_file(recording, params, output_folder)
 
         source_dir = Path(Path(__file__).parent)
-
         shutil.copy(str(source_dir / 'kilosort3_master.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
