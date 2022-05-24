@@ -32,9 +32,10 @@ def test_compute_autocorrelogram_from_spiketrain():
         repo=repo, remote_path=remote_path, local_folder=None)
     # ~ recording = se.MEArecRecordingExtractor(local_path)
     sorting = se.MEArecSortingExtractor(local_path)
+    fs = sorting.get_sampling_frequency()
 
     spike_train = sorting.get_unit_spike_train(sorting.get_unit_ids()[0])
-    correlograms, bins = compute_autocorrelogram_from_spiketrain(spike_train, max_time=35.0, bin_size=0.5, sampling_f=sorting.get_sampling_frequency())
+    correlograms, bins = compute_autocorrelogram_from_spiketrain(spike_train, max_time=int(35.0*fs), bin_size=int(0.5*fs), sampling_f=fs)
 
 
 if __name__ == '__main__':
