@@ -13,8 +13,10 @@ def generate_ops_file(recording, params, output_folder):
 
     Parameters
     ----------
-        options: dict
-            Dict with user parameters
+        recording: BaseRecording
+            The recording to generate the channel map file
+        params: dict
+            Custom parameters dictionary for kilosort3
         output_folder: pathlib.Path
             Path object to save `ops.mat` file
     """
