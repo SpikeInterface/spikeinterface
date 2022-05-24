@@ -18,7 +18,7 @@ class KilosortBase:
     """
 
     @staticmethod
-    def generate_channel_map_file(recording, output_folder):
+    def _generate_channel_map_file(recording, output_folder):
         """
         This function generates channel map data for kilosort and saves as `chanMap.mat`
 
