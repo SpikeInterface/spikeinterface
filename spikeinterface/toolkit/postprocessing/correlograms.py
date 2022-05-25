@@ -247,6 +247,7 @@ def compute_correlograms_numba(sorting,
     Adaptation: Aurélien Wyngaard
     """
 
+    assert HAVE_NUMBA
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
 
@@ -269,19 +270,20 @@ def compute_correlograms_numba(sorting,
     
     return correlograms, bins
 
-@numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
-            nopython=True, nogil=True, cache=True, parallel=True)
-def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
-    n_units = correlograms.shape[0]
+if HAVE_NUMBA:
+    @numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
+                nopython=True, nogil=True, cache=True, parallel=True)
+    def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
+        n_units = correlograms.shape[0]
 
-    for i in numba.prange(n_units):
-        spike_train1 = spike_trains[spike_clusters==i]
+        for i in numba.prange(n_units):
+            spike_train1 = spike_trains[spike_clusters==i]
 
-        for j in range(i, n_units):
-            spike_train2 = spike_trains[spike_clusters==j]
+            for j in range(i, n_units):
+                spike_train2 = spike_trains[spike_clusters==j]
 
-            if i == j:
-                correlograms[i, j] += _compute_autocorr_numba(spike_train1, max_time, bin_size, sampling_f)[0]
-            else:
-                correlograms[i, j] += _compute_crosscorr_numba(spike_train1, spike_train2, max_time, bin_size, sampling_f)[0]
-                correlograms[j, i] = correlograms[i, j, ::-1]
+                if i == j:
+                    correlograms[i, j] += _compute_autocorr_numba(spike_train1, max_time, bin_size, sampling_f)[0]
+                else:
+                    correlograms[i, j] += _compute_crosscorr_numba(spike_train1, spike_train2, max_time, bin_size, sampling_f)[0]
+                    correlograms[j, i] = correlograms[i, j, ::-1]

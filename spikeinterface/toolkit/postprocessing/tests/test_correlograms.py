@@ -25,6 +25,7 @@ def test_compute_correlograms():
     correlograms, bins = compute_correlograms(sorting2)
 
 
+@pytest.mark.skipif(not HAVE_NUMBA, reason="requires numba")
 def test_compute_autocorrelogram_from_spiketrain():
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
