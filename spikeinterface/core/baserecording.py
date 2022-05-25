@@ -215,6 +215,8 @@ class BaseRecording(BaseExtractor):
             
             zarr_root = save_kwargs.get('zarr_root', None)
             zarr_path = save_kwargs.get('zarr_path', None)
+            storage_options = save_kwargs.get('storage_options', None)
+            channel_chunk_size = save_kwargs.get('channel_chunk_size', None)
 
             zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
             zarr_root.attrs["num_segments"] = int(self.get_num_segments())
@@ -225,19 +227,21 @@ class BaseRecording(BaseExtractor):
             dtype = save_kwargs.get('dtype', None)
             if dtype is None:
                 dtype = self.get_dtype()
+            
             compressor = save_kwargs.get('compressor', None)
+            filters = save_kwargs.get('filters', None)
             
             if compressor is None:
                 compressor = get_default_zarr_compressor()
                 print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
                       f"'compressor' argument")
             
-            filters = save_kwargs.get('filters', None)
-
             job_kwargs = {k: save_kwargs[k]
                           for k in job_keys if k in save_kwargs}
-            write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, dataset_paths=dataset_paths,
-                                 dtype=dtype, compressor=compressor, filters=filters, **job_kwargs)
+            write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, storage_options=storage_options,
+                                 channel_chunk_size=channel_chunk_size, dataset_paths=dataset_paths, dtype=dtype, 
+                                 compressor=compressor, filters=filters,
+                                 **job_kwargs)
 
             # save probe
             if self.get_property('contact_vector') is not None:
@@ -260,7 +264,7 @@ class BaseRecording(BaseExtractor):
                 zarr_root.create_dataset(name="t_starts", data=t_starts,
                                          compressor=None)
 
-            cached = ZarrRecordingExtractor(zarr_path)
+            cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
