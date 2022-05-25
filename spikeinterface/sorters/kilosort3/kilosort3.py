@@ -182,6 +182,21 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
     @classmethod
     def _get_specific_options(cls, ops, params):
+        """
+        Adds specific options for Kilosort3 in the ops dict and returns the final dict
+
+        Parameters
+        ----------
+        ops: dict
+            options data
+        params: dict
+            Custom parameters dictionary for kilosort3
+
+        Returns
+        ----------
+        ops: dict
+            Final ops data
+        """
         # frequency for high pass filtering (150)
         ops['fshigh'] = params['freq_min']
 
