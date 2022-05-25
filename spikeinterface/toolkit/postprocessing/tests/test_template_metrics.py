@@ -7,7 +7,7 @@ import pytest
 from spikeinterface import extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import toy_example
 
-from spikeinterface.toolkit.postprocessing import calculate_template_metrics
+from spikeinterface.toolkit.postprocessing import calculate_template_metrics, get_template_channel_sparsity
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "toolkit"
@@ -37,9 +37,9 @@ def test_calculate_template_metrics():
     features_up = calculate_template_metrics(we, upsampling_factor=2)
     print(features_up)
 
+    sparsity = get_template_channel_sparsity(we, method="radius", radius_um=20)
     features_sparse = calculate_template_metrics(we, upsampling_factor=2,
-                                                 sparsity_dict=dict(method="radius",
-                                                                    radius_um=20))
+                                                 sparsity=sparsity)
     print(features_sparse)
 
 
