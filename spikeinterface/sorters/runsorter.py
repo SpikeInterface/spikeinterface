@@ -297,11 +297,14 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         install_si_from_source = True
         # Making sure to get rid of last / or \
         si_dev_path = str(Path(si_dev_path).absolute().resolve())
-        si_dev_path_unix = path_to_unix(si_dev_path)
+        if platform.system() == 'Windows':
+            si_dev_path_unix = path_to_unix(si_dev_path)
+        else:
+            si_dev_path_unix = si_dev_path
         volumes[si_dev_path] = {'bind': si_dev_path_unix, 'mode': 'ro'}
     else:
         install_si_from_source = False
-
+        
     extra_kwargs = {}
     if SorterClass.docker_requires_gpu:
         extra_kwargs['requires_gpu'] = True
