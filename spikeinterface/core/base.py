@@ -8,6 +8,7 @@ import os
 import random
 import string
 import warnings
+from packaging.version import parse
 
 import numpy as np
 
@@ -549,13 +550,14 @@ class BaseExtractor:
 
     def save(self, **kwargs):
         """
-        Save a SpikeInterface object
+        Save a SpikeInterface object. 
 
         Parameters
         ----------
         kwargs: Keyword arguments for saving.
             * format: "memory", "zarr", or "binary" (for recording) / "memory" or "npz" for sorting.
-                In case format is not memory, the recording is saved to a folder
+                In case format is not memory, the recording is saved to a folder. See format specific functions for 
+                more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
             * folder: if provided, the folder path where the object is saved
             * name: if provided and folder is not given, the name of the folder in the global temporary
                     folder (use set_global_tmp_folder() to change this folder) where the object is saved.
@@ -665,7 +667,8 @@ class BaseExtractor:
 
         return cached
 
-    def save_to_zarr(self, name=None, zarr_path=None, verbose=True, **save_kwargs):
+    def save_to_zarr(self, name=None, zarr_path=None, storage_options=None, 
+                     channel_chunk_size=None, verbose=True, **save_kwargs):
         """
         Save extractor to zarr.
 
@@ -674,28 +677,19 @@ class BaseExtractor:
             * saving data into a zarr file 
             * dumping the original extractor for provenance in attributes
 
-        This replaces the use of the old CacheRecordingExtractor and CacheSortingExtractor.
-
-        There are 2 option for the 'folder' argument:
-            * explicit folder: `extractor.save(folder="/path-for-saving/")`
-            * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
-            * generated: `extractor.save()`
-
-        The second option saves to subfolder "extarctor_name" in
-        "get_global_tmp_folder()". You can set the global tmp folder with:
-        "set_global_tmp_folder("path-to-global-folder")"
-
-        The folder must not exist. If it exists, remove it before.
-
         Parameters
         ----------
-        name: None str or Path
+        name: str or None
             Name of the subfolder in get_global_tmp_folder()
             If 'name' is given, 'folder' must be None.
-        folder: None str or Path
-            Name of the folder.
-            If 'folder' is given, 'name' must be None.
-
+        zarr_path: str, Path, or None
+            Name of the zarr folder (.zarr).
+        storage_options: dict or None
+            Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+            For cloud storage locations, this should not be None (in case of default values, use an empty dict)
+        channel_chunk_size: int or None
+            Channels per chunk. Default None (chunking in time only)
+        
         Returns
         -------
         cached: saved copy of the extractor.
@@ -708,16 +702,26 @@ class BaseExtractor:
                     string.ascii_uppercase + string.digits, k=8))
                 zarr_path = cache_folder / f"{name}.zarr"
                 if verbose:
-                    print(f'Use cache_folder={zarr_path}')
+                    print(f'Use zarr_path={zarr_path}')
             else:
                 zarr_path = cache_folder / f"{name}.zarr"
                 if not is_set_global_tmp_folder():
                     if verbose:
-                        print(f'Use cache_folder={zarr_path}')
+                        print(f'Use zarr_path={zarr_path}')
         else:
-            zarr_path = Path(zarr_path)
-        assert not zarr_path.exists(), f'Path {zarr_path} already exists, choose another name'
-        zarr_root = zarr.open(str(zarr_path), "w")
+            if storage_options is None:
+                if isinstance(zarr_path, str):
+                    zarr_path_init = zarr_path
+                    zarr_path = Path(zarr_path)
+                else:
+                    zarr_path_init = str(zarr_path)
+            else:
+                zarr_path_init = zarr_path
+
+        if isinstance(zarr_path, Path):
+            assert not zarr_path.exists(), f'Path {zarr_path} already exists, choose another name'
+        
+        zarr_root = zarr.open(zarr_path_init, mode="w", storage_options=storage_options)
 
         if self.check_if_dumpable():
             zarr_root.attrs["provenance"] = check_json(self.to_dict())
@@ -727,6 +731,8 @@ class BaseExtractor:
         # save data (done the subclass)
         save_kwargs['zarr_root'] = zarr_root
         save_kwargs['zarr_path'] = zarr_path
+        save_kwargs['storage_options'] = storage_options
+        save_kwargs['channel_chunk_size'] = channel_chunk_size
         cached = self._save(folder=None, verbose=verbose, **save_kwargs)
         cached_annotations = deepcopy(cached._annotations)
 
@@ -874,9 +880,12 @@ def _get_class_from_string(class_string):
 def _check_same_version(class_string, version):
     module = class_string.split('.')[0]
     imported_module = importlib.import_module(module)
+    
+    current_version = parse(imported_module.__version__)
+    saved_version = parse(version)
 
     try:
-        return imported_module.__version__ == version
+        return current_version.major == saved_version.major and current_version.minor == saved_version.minor
     except AttributeError:
         return 'unknown'
 

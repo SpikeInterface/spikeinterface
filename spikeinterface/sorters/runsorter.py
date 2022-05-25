@@ -266,6 +266,12 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     volumes[str(recording_input_folder)] = {
         'bind': str(recording_input_folder), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder), 'mode': 'rw'}
+    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
+    if si_dev_path:
+        # Making sure to get rid of last / or \
+        si_dev_path = str(Path(si_dev_path))
+    if 'dev' in si_version and si_dev_path:
+        volumes[si_dev_path] = {'bind': si_dev_path, 'mode': 'ro'}
 
     extra_kwargs = {}
     if SorterClass.docker_requires_gpu:
@@ -287,12 +293,20 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     if need_si_install:
         if 'dev' in si_version:
             if verbose:
-                print(
-                    f"Installing spikeinterface from sources in {container_image}")
+                print(f"Installing spikeinterface from sources in {container_image}")
             # TODO later check output
             cmd = 'pip install --upgrade --no-input MEArec'
             res_output = container_client.run_command(cmd)
-            cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
+
+            if si_dev_path in volumes:
+                si_source = 'local machine'
+                res_output = container_client.run_command(f'cp -rf {si_dev_path} /opt')
+                cmd = f'pip install /opt/spikeinterface[full]'
+            else:
+                si_source = 'remote repository'
+                cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
+            if verbose:
+                print(f'Installing dev spikeinterface from {si_source}')
             res_output = container_client.run_command(cmd)
             cmd = 'pip install --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
             res_output = container_client.run_command(cmd)
