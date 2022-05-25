@@ -12,9 +12,10 @@ from spikeinterface.extractors import KiloSortSortingExtractor, BinaryRecordingE
 class KilosortBase:
     """
     Shared class for all kilosort implementation:
-        * generate_channel_map_file
-        * _run_from_folder
-        * get_result_from_folder
+      * _generate_channel_map_file
+      * _generate_ops_file
+      * _run_from_folder
+      * _get_result_from_folder
     """
 
     @staticmethod
@@ -27,10 +28,10 @@ class KilosortBase:
 
         Parameters
         ----------
-            recording: BaseRecording
-                The recording to generate the channel map file
-            output_folder: pathlib.Path
-                Path object to save `chanMap.mat` file
+        recording: BaseRecording
+            The recording to generate the channel map file
+        output_folder: pathlib.Path
+            Path object to save `chanMap.mat` file
         """
         # prepare electrode positions for this group (only one group, the split is done in basesorter)
         groups = [1] * recording.get_num_channels()
@@ -62,6 +63,49 @@ class KilosortBase:
         BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
                                                  dtype='int16', total_memory=params["total_memory"],
                                                  n_jobs=params["n_jobs_bin"], verbose=False, progress_bar=verbose)
+
+    @classmethod
+    def _generate_ops_file(cls, recording, params, output_folder):
+        """
+        This function generates ops (configs) data for kilosort and saves as `ops.mat`
+
+        Loading example in Matlab (should be assigned to a variable called `ops`):
+        >> ops = load('/output_folder/ops.mat');
+
+        Parameters
+        ----------
+        recording: BaseRecording
+            The recording to generate the channel map file
+        params: dict
+            Custom parameters dictionary for kilosort3
+        output_folder: pathlib.Path
+            Path object to save `ops.mat`
+        """
+        ops = {}
+
+        nchan = recording.get_num_channels()
+        ops['NchanTOT'] = nchan  # total number of channels (omit if already in chanMap file)
+        ops['Nchan'] = nchan  # number of active channels (omit if already in chanMap file)
+
+        ops['datatype'] = 'dat'  # binary ('dat', 'bin') or 'openEphys'
+        ops['fbinary'] = str((output_folder / 'recording.dat').absolute())  # will be created for 'openEphys'
+        ops['fproc'] = str((output_folder / 'temp_wh.dat').absolute())  # residual from RAM of preprocessed data
+        ops['root'] = str(output_folder.absolute())  # 'openEphys' only: where raw files are
+        ops['trange'] = [0, np.Inf] #  time range to sort
+        ops['chanMap'] = str((output_folder / 'chanMap.mat').absolute())
+
+        # sample rate
+        ops['fs'] = recording.get_sampling_frequency()
+
+        ops = cls._get_specific_options(ops, params)
+
+        # Converting integer values into float
+        # Kilosort interprets ops fields as double
+        for k, v in ops.items():
+            if isinstance(v, int):
+                ops[k] = float(v)
+
+        scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
@@ -97,49 +141,6 @@ class KilosortBase:
         keep_good_only = sorter_params.get('keep_good_only', False)
         sorting = KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=keep_good_only)
         return sorting
-
-    @classmethod
-    def _generate_ops_file(cls, recording, params, output_folder):
-        """
-        This function generates ops (configs) data for kilosort and saves as `ops.mat`
-
-        Loading example in Matlab (should be assigned to a variable called `ops`):
-        >> ops = load('/output_folder/ops.mat');
-
-        Parameters
-        ----------
-            recording: BaseRecording
-                The recording to generate the channel map file
-            params: dict
-                Custom parameters dictionary for kilosort3
-            output_folder: pathlib.Path
-                Path object to save `ops.mat`
-        """
-        ops = {}
-
-        nchan = recording.get_num_channels()
-        ops['NchanTOT'] = nchan  # total number of channels (omit if already in chanMap file)
-        ops['Nchan'] = nchan  # number of active channels (omit if already in chanMap file)
-
-        ops['datatype'] = 'dat'  # binary ('dat', 'bin') or 'openEphys'
-        ops['fbinary'] = str((output_folder / 'recording.dat').absolute())  # will be created for 'openEphys'
-        ops['fproc'] = str((output_folder / 'temp_wh.dat').absolute())  # residual from RAM of preprocessed data
-        ops['root'] = str(output_folder.absolute())  # 'openEphys' only: where raw files are
-        ops['trange'] = [0, np.Inf] #  time range to sort
-        ops['chanMap'] = str((output_folder / 'chanMap.mat').absolute())
-
-        # sample rate
-        ops['fs'] = recording.get_sampling_frequency()
-
-        ops = cls._get_specific_options(ops, params)
-
-        # Converting integer values into float
-        # Kilosort interprets ops fields as double
-        for k, v in ops.items():
-            if isinstance(v, int):
-                ops[k] = float(v)
-
-        scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
 
     @classmethod
     def _get_specific_options(cls):
