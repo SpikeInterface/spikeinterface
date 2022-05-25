@@ -17,9 +17,6 @@ class KilosortBase:
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-
-        print('KilosortBase._run_from_folder', cls)
-
         if 'win' in sys.platform and sys.platform != 'darwin':
             disk_move = str(output_folder)[:2]
             shell_cmd = f'''
