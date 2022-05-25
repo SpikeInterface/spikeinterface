@@ -16,12 +16,15 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         Path to maxwell h5 file
-    stream_id: str or None
-        For MaxTwo when there are several wells at the same time you
-        need to specify stream_id='well000' or 'well0001' or ...
     rec_name: str or None
         When the file contains several blocks (aka recordings) you need to specify the one
         you want to extract. (rec_name='rec0000')
+    stream_id: str or None
+        If several stream, specify the one you want.
+        For MaxTwo when there are several wells at the same time you
+        need to specify stream_id='well000' or 'well0001' or ...
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'MaxwellRawIO'

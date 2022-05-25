@@ -30,7 +30,10 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     folder_path: str
 
     stream_id: str or None
-        stream for instance : 'imec0.ap' 'nidq' or 'imec0.lf'
+        If several stream, specify the one you want.
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
+
     """
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysRawIO'

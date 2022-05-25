@@ -12,6 +12,9 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
     file_path: str
     
     stream_id: str or None
+        If several stream, specify the one you want.
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'NIXRawIO'
