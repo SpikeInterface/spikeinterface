@@ -617,12 +617,13 @@ class WaveformExtractor:
         elif mode == 'std':
             return np.std(waveforms_segment, axis=0)
 
-    def sample_spikes(self):
+    def sample_spikes(self, seed=None):
         nbefore = self.nbefore
         nafter = self.nafter
 
         selected_spikes = select_random_spikes_uniformly(self.recording, self.sorting,
-                                                         self._params['max_spikes_per_unit'], nbefore, nafter)
+                                                         self._params['max_spikes_per_unit'], 
+                                                         nbefore, nafter, seed)
 
         # store in a 2 columns (spike_index, segment_index) in a npy file
         for unit_id in self.sorting.unit_ids:
@@ -640,7 +641,7 @@ class WaveformExtractor:
 
         return selected_spikes
 
-    def run_extract_waveforms(self, **job_kwargs):
+    def run_extract_waveforms(self, seed=None, **job_kwargs):
         p = self._params
         sampling_frequency = self.recording.get_sampling_frequency()
         num_chans = self.recording.get_num_channels()
@@ -649,7 +650,7 @@ class WaveformExtractor:
         return_scaled = self.return_scaled
         unit_ids = self.sorting.unit_ids
 
-        selected_spikes = self.sample_spikes()
+        selected_spikes = self.sample_spikes(seed=seed)
 
         selected_spike_times = {}
         for unit_id in self.sorting.unit_ids:
@@ -685,7 +686,7 @@ class WaveformExtractor:
 
 
 
-def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None):
+def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None, seed=None):
     """
     Uniform random selection of spike across segment per units.
 
@@ -693,6 +694,9 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
     """
     unit_ids = sorting.unit_ids
     num_seg = sorting.get_num_segments()
+
+    if seed is not None:
+        np.random.seed(int(seed))
 
     selected_spikes = {}
     for unit_id in unit_ids:
@@ -739,6 +743,7 @@ def extract_waveforms(recording, sorting, folder,
                       return_scaled=True,
                       dtype=None,
                       use_relative_path=False,
+                      seed=None,
                       **job_kwargs):
     """
     Extracts waveform on paired Recording-Sorting objects.
@@ -776,6 +781,8 @@ def extract_waveforms(recording, sorting, folder,
         This allows portability of the waveform folder provided that the relative paths are the same, 
         but forces all the data files to be in the same drive.
         Default is False.
+    seed: int or None
+        Random seed for spike selection
 
     {}
 
@@ -795,7 +802,7 @@ def extract_waveforms(recording, sorting, folder,
         we = WaveformExtractor.create(recording, sorting, folder, use_relative_path=use_relative_path)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
                       return_scaled=return_scaled)
-        we.run_extract_waveforms(**job_kwargs)
+        we.run_extract_waveforms(seed=seed, **job_kwargs)
 
         if precompute_template is not None:
             we.precompute_templates(modes=precompute_template)
