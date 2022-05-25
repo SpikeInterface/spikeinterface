@@ -256,26 +256,32 @@ def compute_correlograms_numba(sorting,
     num_bins = 2 * int(window_size / bin_size)
 
     bins = np.arange(-window_size, window_size+bin_size, bin_size) * 1e3 / fs
+    spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
     assert num_bins >= 1
 
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
 
-    for i, unit1 in enumerate(sorting.unit_ids):
-        for j, unit2 in enumerate(sorting.unit_ids):
-            if j < i:
-                continue
-
-            for seg_index in range(sorting.get_num_segments()):
-                if i == j:
-                    spike_train = sorting.get_unit_spike_train(unit1, segment_index=seg_index)
-                    correlograms[i, j] += compute_autocorrelogram_from_spiketrain(spike_train, window_size, bin_size, fs)[0]
-                else:
-                    spike_train1 = sorting.get_unit_spike_train(unit1, segment_index=seg_index)
-                    spike_train2 = sorting.get_unit_spike_train(unit2, segment_index=seg_index)
-                    correlograms[i, j] += compute_crosscorrelogram_from_spiketrain(spike_train1, spike_train2, window_size, bin_size, fs)[0]
-
-            if i != j:
-                correlograms[j, i] = correlograms[i, j, ::-1]
-
+    for seg_index in range(sorting.get_num_segments()):
+        _compute_correlograms_numba(correlograms, spikes[seg_index][0].astype(np.int64),
+                                    spikes[seg_index][1].astype(np.int32),
+                                    window_size, bin_size, fs)
+    
     return correlograms, bins
+
+@numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
+            nopython=True, nogil=True, cache=True, parallel=True)
+def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
+    n_units = correlograms.shape[0]
+
+    for i in numba.prange(n_units):
+        spike_train1 = spike_trains[spike_clusters==i]
+
+        for j in range(i, n_units):
+            spike_train2 = spike_trains[spike_clusters==j]
+
+            if i == j:
+                correlograms[i, j] += _compute_autocorr_numba(spike_train1, max_time, bin_size, sampling_f)[0]
+            else:
+                correlograms[i, j] += _compute_crosscorr_numba(spike_train1, spike_train2, max_time, bin_size, sampling_f)[0]
+                correlograms[j, i] = correlograms[i, j, ::-1]
