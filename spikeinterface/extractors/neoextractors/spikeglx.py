@@ -44,11 +44,9 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             }
             meta_filename = signals_info_dict[self.stream_id]["meta_file"]
             # Load probe geometry if available
-            try:
-                probe = pi.read_spikeglx(meta_filename)
-            except KeyError:
+            if "lf" in self.stream_id:
                 meta_filename = meta_filename.replace(".lf", ".ap")
-                probe = pi.read_spikeglx(meta_filename)
+            probe = pi.read_spikeglx(meta_filename)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
@@ -71,6 +69,8 @@ def read_spikeglx(*args, **kwargs):
 
 read_spikeglx.__doc__ = SpikeGLXRecordingExtractor.__doc__
 
+
+# TODO check sample shifts for different configurations!!!
 def _get_sample_shifts(num_contact, imDatPrb_type):
     # calculate sample_shift
     # See adc_shift: https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
