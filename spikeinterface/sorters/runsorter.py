@@ -237,12 +237,14 @@ def run_sorter_container(sorter_name, recording, mode, container_image, output_f
         output_folder = sorter_name + '_output'
 
     SorterClass = sorter_dict[sorter_name]
-    output_folder = Path(output_folder).absolute()
-    parent_folder = output_folder.parent
+    output_folder = Path(output_folder).absolute().resolve()
+    parent_folder = output_folder.parent.absolute().resolve()
+    if not output_folder.is_dir():
+        output_folder.mkdir(parents=True)
 
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
-    recording_input_folder = find_recording_folder(rec_dict)
+    recording_input_folder = find_recording_folder(rec_dict).absolute().resolve()
 
     if platform.system() == 'Windows':
         rec_dict = windows_extractor_dict_to_unix(rec_dict)
@@ -290,11 +292,15 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         'bind': str(recording_input_folder_unix), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder_unix), 'mode': 'rw'}
     si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
-    if si_dev_path:
+
+    if 'dev' in si_version and si_dev_path is not None:
+        install_si_from_source = True
         # Making sure to get rid of last / or \
-        si_dev_path = str(Path(si_dev_path))
-    if 'dev' in si_version and si_dev_path:
-        volumes[si_dev_path] = {'bind': si_dev_path, 'mode': 'ro'}
+        si_dev_path = str(Path(si_dev_path).absolute().resolve())
+        si_dev_path_unix = path_to_unix(si_dev_path)
+        volumes[si_dev_path] = {'bind': si_dev_path_unix, 'mode': 'ro'}
+    else:
+        install_si_from_source = False
 
     extra_kwargs = {}
     if SorterClass.docker_requires_gpu:
@@ -321,9 +327,9 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             cmd = 'pip install --upgrade --no-input MEArec'
             res_output = container_client.run_command(cmd)
 
-            if si_dev_path in volumes:
+            if install_si_from_source:
                 si_source = 'local machine'
-                res_output = container_client.run_command(f'cp -rf {si_dev_path} /opt')
+                res_output = container_client.run_command(f'cp -rf {si_dev_path_unix} /opt')
                 cmd = f'pip install /opt/spikeinterface[full]'
             else:
                 si_source = 'remote repository'
