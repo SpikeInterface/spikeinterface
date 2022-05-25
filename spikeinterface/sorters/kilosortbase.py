@@ -143,6 +143,5 @@ class KilosortBase:
         return sorting
 
     @classmethod
-    def _get_specific_options(cls):
-        # need to be implemented in subclass
-        raise NotImplementedError
+    def _get_specific_options(cls, ops, params):
+        return ops
