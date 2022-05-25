@@ -86,6 +86,8 @@ Module :mod:`spikeinterface.extractors`
     .. autofunction:: read_shybrid_recording
     .. autofunction:: read_shybrid_sorting
     .. autofunction:: read_alf_sorting
+    .. autofunction:: read_alphaomega
+    .. autofunction:: read_alphaomega_event
 
 
 Module :mod:`spikeinterface.toolkit`
