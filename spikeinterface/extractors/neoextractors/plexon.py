@@ -19,11 +19,10 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
     mode = 'file'
     NeoRawIOClass = 'PlexonRawIO'
 
-    def __init__(self, file_path, stream_id=None):
+    def __init__(self, file_path, stream_id=None, all_annotations=False):
         neo_kwargs = {'filename': file_path}
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
-
-        self._kwargs = {'file_path': str(file_path), 'stream_id': stream_id}
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
+        self._kwargs.update({'file_path': str(file_path)})
 
 
 def read_plexon(*args, **kwargs):
