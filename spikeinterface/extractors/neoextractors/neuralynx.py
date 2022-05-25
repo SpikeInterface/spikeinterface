@@ -19,11 +19,10 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'
 
-    def __init__(self, folder_path, stream_id=None):
+    def __init__(self, folder_path, stream_id=None, all_annotations=False):
         neo_kwargs = {'dirname': folder_path}
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
-
-        self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
+        self._kwargs.update(dict(folder_path=str(folder_path)))
 
 
 def read_neuralynx(*args, **kwargs):

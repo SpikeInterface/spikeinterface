@@ -73,7 +73,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property('offset_to_uV', final_offsets)
         self.set_property('channel_name', signal_channels["name"])
         
-        print('all_annotations', all_annotations)
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations['blocks'][0]
             # in neo annotation are for every segment!
@@ -90,9 +89,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             for k, values in sig_ann['__array_annotations__'].items():
                 self.set_property(k, values)
             
-            print(self._properties)
-            print(self._annotations)
-
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
             rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index)
