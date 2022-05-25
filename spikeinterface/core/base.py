@@ -13,7 +13,7 @@ from packaging.version import parse
 import numpy as np
 
 from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json
+from .core_tools import check_json, is_dict_extractor
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -812,16 +812,6 @@ def _check_if_dumpable(d):
                 return _check_if_dumpable(v)
     else:
         return d['dumpable']
-
-
-def is_dict_extractor(d):
-    """
-    Check if a dict describe an extractor.
-    """
-    if not isinstance(d, dict):
-        return False
-    is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
-    return is_extractor
 
 
 def _load_extractor_from_dict(dic):
