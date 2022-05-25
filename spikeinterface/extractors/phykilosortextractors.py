@@ -147,7 +147,7 @@ class PhySortingSegment(BaseSortingSegment):
             spike_times = spike_times[spike_times >= start_frame]
         if end_frame is not None:
             spike_times = spike_times[spike_times < end_frame]
-        return spike_times.copy().squeeze()
+        return np.atleast_1d(spike_times.copy().squeeze())
 
 
 class PhySortingExtractor(BasePhyKilosortSortingExtractor):

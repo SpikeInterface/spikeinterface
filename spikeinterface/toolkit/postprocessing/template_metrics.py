@@ -90,7 +90,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         multi_index = pd.MultiIndex.from_tuples(list(zip(unit_ids, channel_ids)),
                                                 names=["unit_id", "channel_id"])
         template_metrics = pd.DataFrame(
-            index=multi_index, columns=[feature_names])
+            index=multi_index, columns=feature_names)
 
     for unit_id in unit_ids:
         template_all_chans = waveform_extractor.get_template(unit_id)
@@ -183,7 +183,7 @@ def get_half_width(template, **kwargs):
         cross_post_pk = cpost_idx[-1] + 1 + trough_idx
 
         hw = (cross_post_pk - cross_pre_pk) / sampling_frequency
-        return hw
+    return hw
 
 
 def get_repolarization_slope(template, **kwargs):
