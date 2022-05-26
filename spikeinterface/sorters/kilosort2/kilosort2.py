@@ -1,16 +1,12 @@
 from pathlib import Path
 import os
 import sys
-import numpy as np
 from typing import Union
 import shutil
-import json
 
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import get_git_commit, ShellScript
-
-from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
 PathType = Union[str, Path]
 
@@ -121,75 +117,108 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        p = params
+
+        cls._generate_channel_map_file(recording, output_folder)
+
+        cls._write_recording(recording, output_folder, params, verbose)
+
+        cls._generate_ops_file(recording, params, output_folder)
 
         source_dir = Path(Path(__file__).parent)
-
-        # prepare electrode positions for this group (only one group, the split is done in basesorter)
-        groups = [1] * recording.get_num_channels()
-        positions = np.array(recording.get_channel_locations())
-        if positions.shape[1] != 2:
-            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
-
-        # save binary file
-        input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
-                                                 dtype='int16', total_memory=p["total_memory"],
-                                                 n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
-
-        if p['car']:
-            use_car = 1
-        else:
-            use_car = 0
-
-        # read the template txt files
-        with (source_dir / 'kilosort2_master.m').open('r') as f:
-            kilosort2_master_txt = f.read()
-        with (source_dir / 'kilosort2_config.m').open('r') as f:
-            kilosort2_config_txt = f.read()
-        with (source_dir / 'kilosort2_channelmap.m').open('r') as f:
-            kilosort2_channelmap_txt = f.read()
-
-        # make substitutions in txt files
-        kilosort2_master_txt = kilosort2_master_txt.format(
-            kilosort2_path=str(Path(Kilosort2Sorter.kilosort2_path).absolute()),
-            output_folder=str(output_folder.absolute()),
-            channel_path=str((output_folder / 'kilosort2_channelmap.m').absolute()),
-            config_path=str((output_folder / 'kilosort2_config.m').absolute()),
-        )
-
-        kilosort2_config_txt = kilosort2_config_txt.format(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            dat_file=str((output_folder / 'recording.dat').absolute()),
-            projection_threshold=p['projection_threshold'],
-            preclust_threshold=p['preclust_threshold'],
-            minfr_goodchannels=p['minfr_goodchannels'],
-            minFR=p['minFR'],
-            freq_min=p['freq_min'],
-            sigmaMask=p['sigmaMask'],
-            kilo_thresh=p['detect_threshold'],
-            use_car=use_car,
-            nPCs=int(p['nPCs']),
-            ntbuff=int(p['ntbuff']),
-            nfilt_factor=int(p['nfilt_factor']),
-            NT=int(p['NT'])
-        )
-
-        kilosort2_channelmap_txt = kilosort2_channelmap_txt.format(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            xcoords=[p[0] for p in positions],
-            ycoords=[p[1] for p in positions],
-            kcoords=groups
-        )
-
-        for fname, txt in zip(['kilosort2_master.m', 'kilosort2_config.m',
-                               'kilosort2_channelmap.m'],
-                              [kilosort2_master_txt, kilosort2_config_txt,
-                               kilosort2_channelmap_txt]):
-            with (output_folder / fname).open('w') as f:
-                f.write(txt)
-
+        shutil.copy(str(source_dir / 'kilosort2_master.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
+
+    @classmethod
+    def _run_from_folder(cls, output_folder, params, verbose):
+
+        output_folder = output_folder.absolute()
+        if 'win' in sys.platform and sys.platform != 'darwin':
+            kilosort2_path = Path(Kilosort2Sorter.kilosort2_path).absolute()
+            disk_move = str(output_folder)[:2]
+            shell_cmd = f'''
+                        {disk_move}
+                        cd {output_folder}
+                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{kilosort2_path}')"
+                    '''
+        else:
+            kilosort2_path = Path(Kilosort2Sorter.kilosort2_path).absolute()
+            shell_cmd = f'''
+                        #!/bin/bash
+                        cd "{output_folder}"
+                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{kilosort2_path}')"
+                    '''
+        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
+                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script.start()
+        retcode = shell_script.wait()
+
+        if retcode != 0:
+            raise Exception(f'{cls.sorter_name} returned a non-zero exit code')
+
+    @classmethod
+    def _get_specific_options(cls, ops, params):
+        """
+        Adds specific options for Kilosort2 in the ops dict and returns the final dict
+
+        Parameters
+        ----------
+        ops: dict
+            options data
+        params: dict
+            Custom parameters dictionary for kilosort3
+
+        Returns
+        ----------
+        ops: dict
+            Final ops data
+        """
+
+        # frequency for high pass filtering (150)
+        ops['fshigh'] = params['freq_min']
+
+        # minimum firing rate on a "good" channel (0 to skip)
+        ops['minfr_goodchannels'] = params['minfr_goodchannels']
+
+        projection_threshold = [float(pt) for pt in params['projection_threshold']]
+        # threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
+        ops['Th'] = projection_threshold
+
+        # how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
+        ops['lam'] = 10.0
+
+        # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
+        ops['AUCsplit'] = 0.9
+
+        # minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
+        ops['minFR'] = params['minFR']
+
+        # number of samples to average over (annealed from first to second value)
+        ops['momentum'] = [20.0, 400.0]
+
+        # spatial constant in um for computing residual variance of spike
+        ops['sigmaMask'] = params['sigmaMask']
+
+        # threshold crossings for pre-clustering (in PCA projection space)
+        ops['ThPre'] = params['preclust_threshold']
+
+        ops['CAR'] = 1 if params['car'] else 0
+
+        ## danger, changing these settings can lead to fatal errors
+        # options for determining PCs
+        ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)
+        ops['reorder'] = 1.0  # whether to reorder batches for drift correction.
+        ops['nskip'] = 25.0  # how many batches to skip for determining spike PCs
+
+        ops['GPU'] = 1.0  # has to be 1, no CPU version yet, sorry
+        # ops['Nfilt'] = 1024 # max number of clusters
+        ops['nfilt_factor'] = params['nfilt_factor']  # max number of clusters per good channel (even temporary ones)
+        ops['ntbuff'] = params['ntbuff']  # samples of symmetrical buffer for whitening and spike detection
+        ops['NT'] = params['NT']  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
+        ops['whiteningRange'] = 32.0  # number of channels to use for whitening each channel
+        ops['nSkipCov'] = 25.0  # compute whitening matrix from every N-th batch
+        ops['scaleproc'] = 200.0  # int16 scaling of whitened data
+        ops['nPCs'] = params['nPCs']  # how many PCs to project the spikes into
+        ops['useRAM'] = 0.0  # not yet available
+
+        return ops
