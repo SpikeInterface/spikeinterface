@@ -45,6 +45,7 @@ class KilosortBase:
         kcoords = groups,
 
         channel_map = {}
+        channel_map['Nchannels'] = nchan
         channel_map['connected'] = np.full((nchan, 1), True)
         channel_map['chanMap0ind'] = np.arange(nchan)
         channel_map['chanMap'] = channel_map['chanMap0ind'] + 1
@@ -69,8 +70,8 @@ class KilosortBase:
         """
         This function generates ops (configs) data for kilosort and saves as `ops.mat`
 
-        Loading example in Matlab (should be assigned to a variable called `ops`):
-        >> ops = load('/output_folder/ops.mat');
+        Loading example in Matlab (shouldn't be assigned to a variable):
+        >> load('/output_folder/ops.mat');
 
         Parameters
         ----------
@@ -83,7 +84,7 @@ class KilosortBase:
         """
         ops = {}
 
-        nchan = recording.get_num_channels()
+        nchan = float(recording.get_num_channels())
         ops['NchanTOT'] = nchan  # total number of channels (omit if already in chanMap file)
         ops['Nchan'] = nchan  # number of active channels (omit if already in chanMap file)
 
@@ -94,8 +95,7 @@ class KilosortBase:
         ops['trange'] = [0, np.Inf] #  time range to sort
         ops['chanMap'] = str((output_folder / 'chanMap.mat').absolute())
 
-        # sample rate
-        ops['fs'] = recording.get_sampling_frequency()
+        ops['fs'] = recording.get_sampling_frequency() # sample rate
 
         ops = cls._get_specific_options(ops, params)
 
@@ -105,6 +105,7 @@ class KilosortBase:
             if isinstance(v, int):
                 ops[k] = float(v)
 
+        ops = {'ops': ops}
         scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
 
     @classmethod
