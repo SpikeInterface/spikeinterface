@@ -13,7 +13,7 @@ function kilosort2_5_master(output_folder, kilosort_path)
         load(fullfile(fpath, 'chanMap.mat'));
 
         % Load the configuration file, it builds the structure of options (ops)
-        ops = load(fullfile(fpath, 'ops.mat'));
+        load(fullfile(fpath, 'ops.mat'));
 
         % preprocess data to create temp_wh.dat
         rez = preprocessDataSub(ops);
