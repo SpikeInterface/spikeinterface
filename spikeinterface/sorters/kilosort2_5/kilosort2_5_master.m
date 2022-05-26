@@ -1,56 +1,56 @@
-try
-    % prepare for kilosort execution
-    addpath(genpath('{kilosort2_5_path}'));
+function kilosort2_5_master(output_folder, kilosort_path)
+    try
+        % prepare for kilosort execution
+        addpath(genpath(kilosort_path));
 
-    % set file path
-    fpath = '{output_folder}';
+        % set file path
+        fpath = output_folder;
 
-    % add npy-matlab functions (copied in the output folder)
-    addpath(genpath(fpath));
+        % add npy-matlab functions (copied in the output folder)
+        addpath(genpath(fpath));
 
-    % create channel map file
-    run(fullfile('{channel_path}'));
+        % Load channel map file
+        load(fullfile(fpath, 'chanMap.mat'));
 
-    % Run the configuration file, it builds the structure of options (ops)
-    run(fullfile('{config_path}'))
+        % Load the configuration file, it builds the structure of options (ops)
+        ops = load(fullfile(fpath, 'ops.mat'));
 
-    ops.trange = [0 Inf]; % time range to sort
+        % preprocess data to create temp_wh.dat
+        rez = preprocessDataSub(ops);
 
-    % preprocess data to create temp_wh.dat
-    rez = preprocessDataSub(ops);
+        % NEW STEP TO DO DATA REGISTRATION
+        rez = datashift2(rez, 1); % last input is for shifting data
 
-    % NEW STEP TO DO DATA REGISTRATION
-    rez = datashift2(rez, 1); % last input is for shifting data
+        % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
+        iseed = 1;
 
-    % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
-    iseed = 1;
+        % main tracking and template matching algorithm
+        rez = learnAndSolve8b(rez, iseed);
 
-    % main tracking and template matching algorithm
-    rez = learnAndSolve8b(rez, iseed);
+        % OPTIONAL: remove double-counted spikes - solves issue in which individual spikes are assigned to multiple templates.
+        % See issue 29: https://github.com/MouseLand/Kilosort/issues/29
+        %rez = remove_ks2_duplicate_spikes(rez);
 
-    % OPTIONAL: remove double-counted spikes - solves issue in which individual spikes are assigned to multiple templates.
-    % See issue 29: https://github.com/MouseLand/Kilosort/issues/29
-    %rez = remove_ks2_duplicate_spikes(rez);
+        % final merges
+        rez = find_merges(rez, 1);
 
-    % final merges
-    rez = find_merges(rez, 1);
+        % final splits by SVD
+        rez = splitAllClusters(rez, 1);
 
-    % final splits by SVD
-    rez = splitAllClusters(rez, 1);
+        % decide on cutoff
+        rez = set_cutoff(rez);
+        % eliminate widely spread waveforms (likely noise)
+        rez.good = get_good_units(rez);
 
-    % decide on cutoff
-    rez = set_cutoff(rez);
-    % eliminate widely spread waveforms (likely noise)
-    rez.good = get_good_units(rez);
+        fprintf('found %d good units \n', sum(rez.good>0))
 
-    fprintf('found %d good units \n', sum(rez.good>0))
-
-    % write to Phy
-    fprintf('Saving results to Phy  \n')
-    rezToPhy(rez, fullfile(fpath));
-catch
-    fprintf('----------------------------------------');
-    fprintf(lasterr());
-    quit(1);
+        % write to Phy
+        fprintf('Saving results to Phy  \n')
+        rezToPhy(rez, fullfile(fpath));
+    catch
+        fprintf('----------------------------------------');
+        fprintf(lasterr());
+        quit(1);
+    end
+    quit(0);
 end
-quit(0);
