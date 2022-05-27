@@ -233,6 +233,8 @@ class BaseExtractor:
 
         if ids is None:
             inds = slice(None)
+        elif len(ids) == 0:
+            inds = slice(0, 0)
         else:
             inds = self.ids_to_indices(ids)
 
