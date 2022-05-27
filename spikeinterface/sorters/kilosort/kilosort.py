@@ -1,13 +1,12 @@
 from pathlib import Path
 import os
-import sys
 from typing import Union
 import shutil
 import numpy as np
 
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import ShellScript, get_git_commit
+from ..utils import get_git_commit
 
 
 def check_if_installed(kilosort_path: Union[str, None]):
@@ -124,33 +123,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
         shutil.copy(str(source_dir / 'kilosort_master.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-
-    @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-
-        output_folder = output_folder.absolute()
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            kilosort_path = Path(KilosortSorter.kilosort_path).absolute()
-            disk_move = str(output_folder)[:2]
-            shell_cmd = f'''
-                        {disk_move}
-                        cd {output_folder}
-                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{kilosort_path}')"
-                    '''
-        else:
-            kilosort_path = Path(KilosortSorter.kilosort_path).absolute()
-            shell_cmd = f'''
-                        #!/bin/bash
-                        cd "{output_folder}"
-                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{kilosort_path}')"
-                    '''
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
-        shell_script.start()
-        retcode = shell_script.wait()
-
-        if retcode != 0:
-            raise Exception(f'{cls.sorter_name} returned a non-zero exit code')
 
     @classmethod
     def _get_specific_options(cls, ops, params):

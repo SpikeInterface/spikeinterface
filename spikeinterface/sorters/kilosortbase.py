@@ -110,19 +110,28 @@ class KilosortBase:
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            disk_move = str(output_folder)[:2]
+        output_folder = output_folder.absolute()
+        if cls.check_compiled():
             shell_cmd = f'''
-                        {disk_move}
-                        cd {output_folder}
-                        matlab -nosplash -wait -log -r {cls.sorter_name}_master
-                    '''
+                #!/bin/bash
+                {cls.compiled_name} {output_folder}
+            '''
         else:
-            shell_cmd = f'''
-                        #!/bin/bash
-                        cd "{output_folder}"
-                        matlab -nosplash -nodisplay -log -r {cls.sorter_name}_master
-                    '''
+            sorter_path = getattr(cls, f'{cls.sorter_name}_path')
+            sorter_path = Path(sorter_path).absolute()
+            if 'win' in sys.platform and sys.platform != 'darwin':
+                disk_move = str(output_folder)[:2]
+                shell_cmd = f'''
+                    {disk_move}
+                    cd {output_folder}
+                    matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
+                '''
+            else:
+                shell_cmd = f'''
+                    #!/bin/bash
+                    cd "{output_folder}"
+                    matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
+                '''
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()

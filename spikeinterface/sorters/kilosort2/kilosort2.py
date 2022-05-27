@@ -1,12 +1,11 @@
 from pathlib import Path
 import os
-import sys
 from typing import Union
 import shutil
 
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import get_git_commit, ShellScript
+from ..utils import get_git_commit
 
 PathType = Union[str, Path]
 
@@ -128,33 +127,6 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         shutil.copy(str(source_dir / 'kilosort2_master.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-
-    @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-
-        output_folder = output_folder.absolute()
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            kilosort2_path = Path(Kilosort2Sorter.kilosort2_path).absolute()
-            disk_move = str(output_folder)[:2]
-            shell_cmd = f'''
-                        {disk_move}
-                        cd {output_folder}
-                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{kilosort2_path}')"
-                    '''
-        else:
-            kilosort2_path = Path(Kilosort2Sorter.kilosort2_path).absolute()
-            shell_cmd = f'''
-                        #!/bin/bash
-                        cd "{output_folder}"
-                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{kilosort2_path}')"
-                    '''
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
-        shell_script.start()
-        retcode = shell_script.wait()
-
-        if retcode != 0:
-            raise Exception(f'{cls.sorter_name} returned a non-zero exit code')
 
     @classmethod
     def _get_specific_options(cls, ops, params):
