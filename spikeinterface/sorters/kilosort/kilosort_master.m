@@ -1,4 +1,4 @@
-function kilosort2_master(output_folder, kilosort_path)
+function kilosort_master(output_folder, kilosort_path)
     try
         % prepare for kilosort execution
         addpath(genpath(kilosort_path));
