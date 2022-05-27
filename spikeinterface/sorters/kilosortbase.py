@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import shutil
 import sys
 
 import numpy as np
@@ -109,6 +110,25 @@ class KilosortBase:
         scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
 
     @classmethod
+    def _get_specific_options(cls, ops, params):
+        """Specific options should be implemented in subclass"""
+        return ops
+
+    @classmethod
+    def _setup_recording(cls, recording, output_folder, params, verbose):
+
+        cls._generate_channel_map_file(recording, output_folder)
+
+        cls._write_recording(recording, output_folder, params, verbose)
+
+        cls._generate_ops_file(recording, params, output_folder)
+
+        source_dir = Path(Path(__file__).parent)
+        shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(output_folder))
+        shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(output_folder))
+        shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(output_folder))
+
+    @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         output_folder = output_folder.absolute()
         if cls.check_compiled():
@@ -148,7 +168,3 @@ class KilosortBase:
         keep_good_only = sorter_params.get('keep_good_only', False)
         sorting = KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=keep_good_only)
         return sorting
-
-    @classmethod
-    def _get_specific_options(cls, ops, params):
-        return ops

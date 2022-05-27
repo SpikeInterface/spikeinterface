@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 from typing import Union
-import shutil
 
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
@@ -126,20 +125,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         else:
             p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
         return p
-
-    @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
-
-        cls._generate_channel_map_file(recording, output_folder)
-
-        cls._write_recording(recording, output_folder, params, verbose)
-
-        cls._generate_ops_file(recording, params, output_folder)
-
-        source_dir = Path(Path(__file__).parent)
-        shutil.copy(str(source_dir / 'kilosort2_5_master.m'), str(output_folder))
-        shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
-        shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
 
     @classmethod
     def _get_specific_options(cls, ops, params):
