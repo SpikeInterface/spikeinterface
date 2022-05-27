@@ -402,7 +402,7 @@ class BaseRecording(BaseExtractor):
         order = np.argsort(inds)
         inds = inds[order]
         # check
-        if np.max(inds) >= self.get_num_channels():
+        if np.max(list(inds) + [0]) >= self.get_num_channels():
             raise ValueError('The given Probe have "device_channel_indices" that do not match channel count')
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
