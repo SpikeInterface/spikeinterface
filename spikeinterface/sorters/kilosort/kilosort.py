@@ -1,4 +1,3 @@
-import copy
 from pathlib import Path
 import os
 import sys
@@ -9,8 +8,6 @@ import numpy as np
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
 from ..utils import ShellScript, get_git_commit
-
-from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
 
 def check_if_installed(kilosort_path: Union[str, None]):
@@ -33,7 +30,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
     sorter_name: str = 'kilosort'
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
-
     requires_locations = False
     docker_requires_gpu = True
 
@@ -117,79 +113,116 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        p = params
 
-        source_dir = Path(__file__).parent
+        cls._generate_channel_map_file(recording, output_folder)
 
-        # prepare electrode positions for this group (only one group, the split is done in basesorter)
-        groups = [1] * recording.get_num_channels()
-        positions = np.array(recording.get_channel_locations())
-        if positions.shape[1] != 2:
-            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
+        cls._write_recording(recording, output_folder, params, verbose)
 
-        # save binary file : handle only one segment
-        input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
-                                                 dtype='int16', total_memory=p["total_memory"],
-                                                 n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
+        cls._generate_ops_file(recording, params, output_folder)
 
-        # set up kilosort config files and run kilosort on data
-        with (source_dir / 'kilosort_master.m').open('r') as f:
-            kilosort_master_txt = f.read()
-        with (source_dir / 'kilosort_config.m').open('r') as f:
-            kilosort_config_txt = f.read()
-        with (source_dir / 'kilosort_channelmap.m').open('r') as f:
-            kilosort_channelmap_txt = f.read()
-
-        nchan = recording.get_num_channels()
-
-        if p['useGPU']:
-            useGPU = 1
-        else:
-            useGPU = 0
-
-        if p['car']:
-            use_car = 1
-        else:
-            use_car = 0
-
-        # make substitutions in txt files
-        kilosort_master_txt = kilosort_master_txt.format(
-            kilosort_path=str(Path(KilosortSorter.kilosort_path).absolute()),
-            output_folder=str(output_folder.absolute()),
-            channel_path=str((output_folder / 'kilosort_channelmap.m').absolute()),
-            config_path=str((output_folder / 'kilosort_config.m').absolute()),
-            useGPU=useGPU,
-        )
-
-        kilosort_config_txt = kilosort_config_txt.format(
-            nchanTOT=recording.get_num_channels(),
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            dat_file=str((output_folder / 'recording.dat').absolute()),
-            Nfilt=int(p['Nfilt']),
-            ntbuff=int(p['ntbuff']),
-            NT=int(p['NT']),
-            kilo_thresh=p['detect_threshold'],
-            use_car=use_car,
-            freq_min=p['freq_min'],
-            freq_max=p['freq_max']
-        )
-
-        kilosort_channelmap_txt = kilosort_channelmap_txt.format(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            xcoords=[p[0] for p in positions],
-            ycoords=[p[1] for p in positions],
-            kcoords=groups
-        )
-
-        for fname, value in zip(['kilosort_master.m', 'kilosort_config.m',
-                                 'kilosort_channelmap.m'],
-                                [kilosort_master_txt, kilosort_config_txt,
-                                 kilosort_channelmap_txt]):
-            with (output_folder / fname).open('w') as f:
-                f.writelines(value)
-
+        source_dir = Path(Path(__file__).parent)
+        shutil.copy(str(source_dir / 'kilosort_master.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
         shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
+
+    @classmethod
+    def _run_from_folder(cls, output_folder, params, verbose):
+
+        output_folder = output_folder.absolute()
+        if 'win' in sys.platform and sys.platform != 'darwin':
+            kilosort_path = Path(KilosortSorter.kilosort_path).absolute()
+            disk_move = str(output_folder)[:2]
+            shell_cmd = f'''
+                        {disk_move}
+                        cd {output_folder}
+                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{kilosort_path}')"
+                    '''
+        else:
+            kilosort_path = Path(KilosortSorter.kilosort_path).absolute()
+            shell_cmd = f'''
+                        #!/bin/bash
+                        cd "{output_folder}"
+                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{kilosort_path}')"
+                    '''
+        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
+                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script.start()
+        retcode = shell_script.wait()
+
+        if retcode != 0:
+            raise Exception(f'{cls.sorter_name} returned a non-zero exit code')
+
+    @classmethod
+    def _get_specific_options(cls, ops, params):
+        """
+        Adds specific options for Kilosort in the ops dict and returns the final dict
+
+        Parameters
+        ----------
+        ops: dict
+            options data
+        params: dict
+            Custom parameters dictionary for kilosort3
+
+        Returns
+        ----------
+        ops: dict
+            Final ops data
+        """
+
+        # TODO: Check GPU option!
+        ops['GPU'] = params['useGPU']  # whether to run this code on an Nvidia GPU (much faster, mexGPUall first)
+        ops['parfor'] = 0.0  # whether to use parfor to accelerate some parts of the algorithm
+        ops['verbose'] = 1.0  # whether to print command line progress
+        ops['showfigures'] = 0.0  # whether to plot figures during optimization
+
+        ops['Nfilt'] = params['Nfilt']  # number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)
+        ops['nNeighPC'] = min(12.0, ops['Nchan'])  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
+        ops['nNeigh'] = 16.0  # visualization only (Phy): number of neighboring templates to retain projections of (16)
+
+        # options for channel whitening
+        ops['whitening'] = 'full'  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
+        ops['nSkipCov'] = 1.0  # compute whitening matrix from every N-th batch (1)
+        ops['whiteningRange'] = 32.0  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
+
+        # ops['criterionNoiseChannels'] = 0.2  # fraction of "noise" templates allowed to span all channel groups (see createChannelMapFile for more info).
+
+        # other options for controlling the model and optimization
+        ops['Nrank'] = 3.0  # matrix rank of spike template model (3)
+        ops['nfullpasses'] = 6.0  # number of complete passes through data during optimization (6)
+        ops['maxFR'] = 20000  # maximum number of spikes to extract per batch (20000)
+        ops['fshigh'] = params['freq_min']  # frequency for high pass filtering
+        ops['fslow'] =  params['freq_max']  # frequency for low pass filtering (optional)
+        ops['ntbuff'] = params['ntbuff']  # samples of symmetrical buffer for whitening and spike detection
+        ops['scaleproc'] = 200.0  # int16 scaling of whitened data
+        ops['NT'] = params['NT']  # 32*1024+ ops.ntbuff;
+        # this is the batch size (try decreasing if out of memory)
+        # for GPU should be multiple of 32 + ntbuff
+
+        # the following options can improve/deteriorate results.
+        # when multiple values are provided for an option, the first two are beginning and ending anneal values,
+        # the third is the value used in the final pass.
+        ops['Th'] = [4.0, 10.0, 10.0]  # threshold for detecting spikes on template-filtered data ([6 12 12])
+        ops['lam'] = [5.0, 5.0, 5.0]  # large means amplitudes are forced around the mean ([10 30 30])
+        ops['nannealpasses'] = 4.0  # should be less than nfullpasses (4)
+        ops['momentum'] = [1/20, 1/400]  # start with high momentum and anneal (1./[20 1000])
+        ops['shuffle_clusters'] = 1.0  # allow merges and splits during optimization (1)
+        ops['mergeT'] = 0.1  # upper threshold for merging (.1)
+        ops['splitT'] = 0.1  # lower threshold for splitting (.1)
+
+        ops['initialize'] = 'fromData'  # 'fromData' or 'no'
+        ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)
+        ops['loc_range'] = [3.0, 1.0]  # ranges to detect peaks; plus/minus in time and channel ([3 1])
+        ops['long_range'] = [30.0, 6.0]  # ranges to detect isolated peaks ([30 6])
+        ops['maskMaxChannels'] = 5.0  # how many channels to mask up/down ([5])
+        ops['crit'] = 0.65  # upper criterion for discarding spike repeates (0.65)
+        ops['nFiltMax'] = 10000.0  # maximum "unique" spikes to consider (10000)
+        ops['CAR'] = 1 if params['car'] else 0  # if 1 common reference is used
+
+        # options for posthoc merges (under construction)
+        ops['fracse'] = 0.1  # binning step along discriminant axis for posthoc merges (in units of sd)
+        ops['epu'] = np.Inf
+
+        ops['ForceMaxRAMforDat'] = 20e9  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
+
+        return ops
