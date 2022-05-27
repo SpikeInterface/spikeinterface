@@ -69,23 +69,31 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
         keep = np.in1d(channel_ids, recording_channel_ids)
         channel_ids = channel_ids[keep]
         contact_ids = contact_ids[keep]
+        channel_indexes = []
 
         # contact_id > channel_id
-        contact_id_to_channel_id = dict(zip(contact_ids, channel_ids))
+        # contact_id_to_channel_id = dict(zip(contact_ids, channel_ids))
 
         # contact_id > channel_index
         contact_id_to_channel_index = dict()
         rec_chan_ids = list(recording_channel_ids.astype('U'))
-        for contact_id, channel_id in contact_id_to_channel_id.items():
+        for contact_id, channel_id in zip(contact_ids, channel_ids):
             channel_index = rec_chan_ids.index(channel_id)
-            contact_id_to_channel_index[contact_id] = channel_index
+            channel_indexes.append(channel_index)
 
         # vector of channel indices
         # needed for probe wiring
         device_channel_indices = []
         for contact_id in probe.contact_ids:
-            chan_index = contact_id_to_channel_index[contact_id]
-            device_channel_indices.append(chan_index)
+            if contact_id in contact_ids:
+                indexes = np.where(contact_ids == contact_id)[0]
+                # TODO: this needs to updated once probeinterface supports multiple channels per contact
+                if len(indexes) >= 1:
+                    indexes = indexes[0]
+                chan_index = channel_indexes[indexes]
+                device_channel_indices.append(chan_index)
+            else:
+                device_channel_indices.append('-1')
         probe.set_device_channel_indices(device_channel_indices)
 
     return probegroup
