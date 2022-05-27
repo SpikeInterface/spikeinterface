@@ -174,7 +174,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops['maskMaxChannels'] = 5.0  # how many channels to mask up/down ([5])
         ops['crit'] = 0.65  # upper criterion for discarding spike repeates (0.65)
         ops['nFiltMax'] = 10000.0  # maximum "unique" spikes to consider (10000)
-        ops['CAR'] = 1 if params['car'] else 0  # if 1 common reference is used
 
         # options for posthoc merges (under construction)
         ops['fracse'] = 0.1  # binning step along discriminant axis for posthoc merges (in units of sd)
