@@ -97,6 +97,7 @@ class KilosortBase:
         ops['chanMap'] = str((output_folder / 'chanMap.mat').absolute())
 
         ops['fs'] = recording.get_sampling_frequency() # sample rate
+        ops['CAR'] = 1.0 if params['car'] else 0.0
 
         ops = cls._get_specific_options(ops, params)
 

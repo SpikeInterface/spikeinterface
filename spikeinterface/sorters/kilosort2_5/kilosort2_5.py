@@ -177,8 +177,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         # threshold crossings for pre-clustering (in PCA projection space)
         ops['ThPre'] = params['preclust_threshold']
 
-        ops['CAR'] = 1 if params['car'] else 0
-
         ## danger, changing these settings can lead to fatal errors
         # options for determining PCs
         ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)

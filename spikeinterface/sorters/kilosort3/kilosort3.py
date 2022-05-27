@@ -177,8 +177,6 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         # type of data shifting (0 = none, 1 = rigid, 2 = nonrigid)
         ops['nblocks'] = params['nblocks']
 
-        ops['CAR'] = 1 if params['car'] else 0
-
         ## danger, changing these settings can lead to fatal errors
         # options for determining PCs
         ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)
