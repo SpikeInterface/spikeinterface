@@ -30,6 +30,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     """Kilosort2.5 Sorter object."""
 
     sorter_name: str = 'kilosort2_5'
+    compiled_name: str = 'ks2_5_compiled'
     kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
     requires_locations = False
     docker_requires_gpu = True
@@ -97,10 +98,14 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if cls.check_compiled():
+            return True
         return check_if_installed(cls.kilosort2_5_path)
 
-    @staticmethod
-    def get_sorter_version():
+    @classmethod
+    def get_sorter_version(cls):
+        if cls.check_compiled():
+            return 'compiled'
         commit = get_git_commit(os.getenv('KILOSORT2_5_PATH', None))
         if commit is None:
             return 'unknown'
