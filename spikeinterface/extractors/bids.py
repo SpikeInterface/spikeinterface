@@ -65,8 +65,8 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
         channel_ids = channels['channel_id'].values.astype('U')
         # contact ids are not unique
         # a single contact can be associated with multiple channels, contact_ids can be n/a
-        channels['contact_id'][channels['contact_id'].isnull()] = -1
-        contact_ids = channels['contact_id'].values.astype('int').astype('U')
+        channels['contact_id'][channels['contact_id'].isnull()] = 'unconnected'
+        contact_ids = channels['contact_id'].values.astype('U')
 
         # extracting information of requested channels
         keep = np.in1d(channel_ids, recording_channel_ids)
@@ -76,10 +76,10 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
         rec_chan_ids = list(recording_channel_ids.astype('U'))
 
         # contact_id > channel_id
-        # this overwrites if there's multiple contact_ids = -1
+        # this overwrites if there's multiple contact_ids = unconnected
         contact_id_to_channel_id = dict(zip(contact_ids, channel_ids))
         # remove unconnected contact entry
-        contact_id_to_channel_id.pop(-1, None)
+        contact_id_to_channel_id.pop('unconnected', None)
         # contact_id > channel_index within recording
         contact_id_to_channel_index = {con_id: rec_chan_ids.index(chan_id)
                                        for con_id, chan_id in
@@ -93,7 +93,7 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
                 device_channel_indices.append(contact_id_to_channel_index[contact_id])
             else:
                 # using -1 for unconnected channels
-                device_channel_indices.append('-1')
+                device_channel_indices.append(-1)
         probe.set_device_channel_indices(device_channel_indices)
 
     return probegroup
