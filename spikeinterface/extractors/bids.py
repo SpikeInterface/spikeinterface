@@ -57,42 +57,42 @@ def read_bids(folder_path):
 def _read_probe_group(folder, bids_name, recording_channel_ids):
     probegroup = read_BIDS_probe(folder)
 
-    # make maps between : channel_id	and contact_id
-    # use _channels.tsv
+    # make maps between : channel_id and contact_id using _channels.tsv
     for probe in probegroup.probes:
         channels_file = folder / bids_name.replace('_ephys', '_channels.tsv')
         channels = pd.read_csv(channels_file, sep='\t')
+        # channel_ids are unique
         channel_ids = channels['channel_id'].values.astype('U')
+        # contact ids are not unique
+        # a single contact can be associated with multiple channels, contact_ids can be n/a
         channels['contact_id'][channels['contact_id'].isnull()] = -1
         contact_ids = channels['contact_id'].values.astype('int').astype('U')
 
+        # extracting information of requested channels
         keep = np.in1d(channel_ids, recording_channel_ids)
         channel_ids = channel_ids[keep]
         contact_ids = contact_ids[keep]
-        channel_indexes = []
+
+        rec_chan_ids = list(recording_channel_ids.astype('U'))
 
         # contact_id > channel_id
-        # contact_id_to_channel_id = dict(zip(contact_ids, channel_ids))
+        # this overwrites if there's multiple contact_ids = -1
+        contact_id_to_channel_id = dict(zip(contact_ids, channel_ids))
+        # remove unconnected contact entry
+        contact_id_to_channel_id.pop(-1, None)
+        # contact_id > channel_index within recording
+        contact_id_to_channel_index = {con_id: rec_chan_ids.index(chan_id)
+                                       for con_id, chan_id in
+                                       contact_id_to_channel_id.items()}
 
-        # contact_id > channel_index
-        contact_id_to_channel_index = dict()
-        rec_chan_ids = list(recording_channel_ids.astype('U'))
-        for contact_id, channel_id in zip(contact_ids, channel_ids):
-            channel_index = rec_chan_ids.index(channel_id)
-            channel_indexes.append(channel_index)
-
-        # vector of channel indices
+        # vector of channel indices within recording ordered by probe contact_ids
         # needed for probe wiring
         device_channel_indices = []
         for contact_id in probe.contact_ids:
-            if contact_id in contact_ids:
-                indexes = np.where(contact_ids == contact_id)[0]
-                # TODO: this needs to updated once probeinterface supports multiple channels per contact
-                if len(indexes) >= 1:
-                    indexes = indexes[0]
-                chan_index = channel_indexes[indexes]
-                device_channel_indices.append(chan_index)
+            if contact_id in contact_id_to_channel_index:
+                device_channel_indices.append(contact_id_to_channel_index[contact_id])
             else:
+                # using -1 for unconnected channels
                 device_channel_indices.append('-1')
         probe.set_device_channel_indices(device_channel_indices)
 
