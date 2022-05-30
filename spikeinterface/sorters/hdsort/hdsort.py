@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from typing import Union
+import shutil
 import sys
 
 import numpy as np
@@ -112,8 +113,8 @@ class HDSortSorter(BaseSorter):
     def _check_apply_filter_in_params(cls, params):
         return params['filter']
 
-    @classmethod
-    def _generate_params_file(cls, output_folder, params):
+    @staticmethod
+    def _generate_configs_file(output_folder, params, file_name, file_format):
         P = {}
 
         # preprocess
@@ -175,14 +176,24 @@ class HDSortSorter(BaseSorter):
 
         }
 
-        scipy.io.savemat(str(output_folder / 'Params.mat'), {'P': P})
+        # configs
+        sort_name = 'hdsort_output'
+        cfgs = {}
+        cfgs['rawFile'] = file_name
+        cfgs['sortingName'] = sort_name
+        cfgs['fileFormat'] = file_format
+        cfgs['chunkSize'] = float(params['chunk_size'])
+        cfgs['loopMode'] = params['loop_mode']
+
+        data = {
+            'P': P,
+            **cfgs
+        }
+
+        scipy.io.savemat(str(output_folder / 'configsParams.mat'), data)
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        cls._generate_params_file(output_folder, params)
-        source_dir = Path(__file__).parent
-        utils_path = source_dir.parent / 'utils'
-
         #  if isinstance(recording, MaxOneRecordingExtractor):
         if False:  # TODO
             # ~ self.params['file_name'] = str(Path(recording._file_path).absolute())
@@ -199,34 +210,7 @@ class HDSortSorter(BaseSorter):
             # ~ self.params['file_format'] = 'mea1k'
             file_format = 'mea1k'
 
-        p = params
-        # ~ p['sort_name'] = 'hdsort_output'
-        sort_name = 'hdsort_output'
-
-        # read the template txt files
-        with (source_dir / 'hdsort_master.m').open('r') as f:
-            hdsort_master_txt = f.read()
-
-        # make substitutions in txt files
-        hdsort_master_txt = hdsort_master_txt.format(
-            hdsort_path=str(
-                Path(HDSortSorter.hdsort_path).absolute()),
-            utils_path=str(utils_path.absolute()),
-            output_folder=str(output_folder.absolute()),
-            # ~ file_name=p['file_name'],
-            file_name=trace_file_name,
-            # ~ file_format=p['file_format'],
-            file_format=file_format,
-            # ~ sort_name=p['sort_name'],
-            sort_name=sort_name,
-            chunk_size=p['chunk_size'],
-            loop_mode=p['loop_mode']
-        )
-
-        for fname, txt in zip(['hdsort_master.m'],
-                              [hdsort_master_txt]):
-            with (output_folder / fname).open('w') as f:
-                f.write(txt)
+        cls._generate_configs_file(output_folder, params, trace_file_name, file_format)
 
         # store sample rate in a file
         samplerate = recording.get_sampling_frequency()
@@ -234,22 +218,27 @@ class HDSortSorter(BaseSorter):
         with open(samplerate_fname, 'w') as f:
             f.write('{}'.format(samplerate))
 
+        source_dir = Path(Path(__file__).parent)
+        shutil.copy(str(source_dir / 'hdsort_master.m'), str(output_folder))
+
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        tmpdir = output_folder
+        output_folder = output_folder.absolute()
+        hdsort_path = Path(cls.hdsort_path).absolute()
 
         if "win" in sys.platform and sys.platform != 'darwin':
-            shell_cmd = '''
+            disk_move = str(output_folder)[:2]
+            shell_cmd = f'''
                         {disk_move}
-                        cd {tmpdir}
-                        matlab -nosplash -wait -r hdsort_master
-                    '''.format(disk_move=str(output_folder)[:2], tmpdir=output_folder)
+                        cd {output_folder}
+                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                    '''
         else:
-            shell_cmd = '''
+            shell_cmd = f'''
                         #!/bin/bash
-                        cd "{tmpdir}"
-                        matlab -nosplash -nodisplay -r hdsort_master
-                    '''.format(tmpdir=output_folder)
+                        cd "{output_folder}"
+                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                    '''
 
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
