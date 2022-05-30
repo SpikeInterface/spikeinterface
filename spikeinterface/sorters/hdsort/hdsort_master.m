@@ -6,7 +6,6 @@ try
     setup()
 
     mainFolder = '.';
-    run(fullfile('{config_path}'));
     rawFile = '{file_name}';
 
     %% Get a handle onto the raw file, which will then be used as input to the sorter:
@@ -14,7 +13,7 @@ try
     fileFormat = '{file_format}';
 
     %% Load params
-    run(fullfile('{config_path}'))
+    load(fullfile('{output_folder}', 'Params.mat'))
 
     if (strcmp(fileFormat, 'maxwell'))
         RAW = hdsort.file.MaxWellFile(rawFile);

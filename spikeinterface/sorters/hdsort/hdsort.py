@@ -1,8 +1,10 @@
 from pathlib import Path
 import os
 from typing import Union
-import numpy as np
 import sys
+
+import numpy as np
+import scipy.io
 
 from spikeinterface.core.core_tools import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
@@ -111,7 +113,73 @@ class HDSortSorter(BaseSorter):
         return params['filter']
 
     @classmethod
+    def _generate_params_file(cls, output_folder, params):
+        P = {}
+
+        # preprocess
+        P['filter'] = 1.0 if params['filter'] else 0.0
+        P['parfor'] = True if params['parfor'] else False
+        P['hpf'] = float(params['freq_min'])
+        P['lpf'] = float(params['freq_max'])
+
+        # leg creationg
+        P['legs'] = {
+            'maxElPerGroup': float(params['max_el_per_group']),
+            'minElPerGroup': float(params['min_el_per_group']),
+            'addIfNearerThan': float(params['add_if_nearer_than']),  # always add direct neighbors
+            'maxDistanceWithinGroup': float(params['max_distance_within_group'])
+        }
+
+        # spike detection
+        P['spikeDetection'] = {
+            'method': '-',
+            'thr': float(params['detect_threshold'])
+        }
+        P['artefactDetection'] = {'use': 0.0}
+
+        # pre-clustering
+        P['noiseEstimation'] = {'minDistFromSpikes': 80.0}
+        P['spikeAlignment'] = {
+            'initAlignment': '-',
+            'maxSpikes': 50000.0  # so many spikes will be clustered
+        }
+        P['featureExtraction'] = {'nDims': float(params['n_pc_dims'])}  # 6
+        P['clustering'] = {
+            'maxSpikes': 50000.0,  # dont align spikes you dont cluster...
+            'meanShiftBandWidthFactor': 1.8
+            # 'meanShiftBandWidth': sqrt(1.8*6)  # todo: check this!
+        }
+
+        # template matching
+        P['botm'] = {
+            'run': 0.0,
+            'Tf': 75.0,
+            'cutLeft': 20.0
+        }
+        P['spikeCutting'] = {
+            'maxSpikes': 200000000000.0,  # Set this to basically inf
+            'blockwise': False
+        }
+        P['templateEstimation'] = {
+            'cutLeft': 10.0,
+            'Tf': 55.0,
+            'maxSpikes': 100.0
+        }
+
+        # merging
+        P['mergeTemplates'] = {
+            'merge': 1.0,
+            'upsampleFactor': 3.0,
+            'atCorrelation': .93,  # DONT SET THIS TOO LOW! USE OTHER ELECTRODES ON FULL FOOTPRINT TO MERGE
+            'ifMaxRelDistSmallerPercent': 30.0
+
+        }
+
+        scipy.io.savemat(str(output_folder / 'Params.mat'), {'P': P})
+
+    @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
+        cls._generate_params_file(output_folder, params)
         source_dir = Path(__file__).parent
         utils_path = source_dir.parent / 'utils'
 
@@ -138,15 +206,13 @@ class HDSortSorter(BaseSorter):
         # read the template txt files
         with (source_dir / 'hdsort_master.m').open('r') as f:
             hdsort_master_txt = f.read()
-        with (source_dir / 'hdsort_config.m').open('r') as f:
-            hdsort_config_txt = f.read()
 
         # make substitutions in txt files
         hdsort_master_txt = hdsort_master_txt.format(
             hdsort_path=str(
                 Path(HDSortSorter.hdsort_path).absolute()),
             utils_path=str(utils_path.absolute()),
-            config_path=str((output_folder / 'hdsort_config.m').absolute()),
+            output_folder=str(output_folder.absolute()),
             # ~ file_name=p['file_name'],
             file_name=trace_file_name,
             # ~ file_format=p['file_format'],
@@ -157,31 +223,8 @@ class HDSortSorter(BaseSorter):
             loop_mode=p['loop_mode']
         )
 
-        if p['filter']:
-            filter = 1
-        else:
-            filter = 0
-
-        if p['parfor']:
-            parfor = 'true'
-        else:
-            parfor = 'false'
-
-        hdsort_config_txt = hdsort_config_txt.format(
-            filter=filter,
-            parfor=parfor,
-            hpf=p['freq_min'],
-            lpf=p['freq_max'],
-            max_el_per_group=p['max_el_per_group'],
-            min_el_per_group=p['min_el_per_group'],
-            add_if_nearer_than=p['add_if_nearer_than'],
-            max_distance_within_group=p['max_distance_within_group'],
-            detect_threshold=p['detect_threshold'],
-            n_pc_dims=p['n_pc_dims'],
-        )
-
-        for fname, txt in zip(['hdsort_master.m', 'hdsort_config.m'],
-                              [hdsort_master_txt, hdsort_config_txt]):
+        for fname, txt in zip(['hdsort_master.m'],
+                              [hdsort_master_txt]):
             with (output_folder / fname).open('w') as f:
                 f.write(txt)
 
