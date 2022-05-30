@@ -1,10 +1,9 @@
-function kilosort2_master(output_folder, kilosort_path)
+function kilosort2_master(fpath, kilosortPath)
     try
-        % prepare for kilosort execution
-        addpath(genpath(kilosort_path));
+        set(groot,'defaultFigureVisible', 'off');
 
-        % set file path
-        fpath = output_folder;
+        % prepare for kilosort execution
+        addpath(genpath(kilosortPath));
 
         % add npy-matlab functions (copied in the output folder)
         addpath(genpath(fpath));
