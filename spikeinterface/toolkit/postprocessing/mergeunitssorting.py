@@ -78,8 +78,7 @@ class MergeUnitsSorting(BaseSorting):
                         new_values[keep_inds] = values[keep_parent_inds]
                     self.set_property(k, new_values)
                     continue
-            if len(keep_units)>0:
-                self.set_property(k, values[keep_parent_inds], keep_units)
+            self.set_property(k, values[keep_parent_inds], keep_units)
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)

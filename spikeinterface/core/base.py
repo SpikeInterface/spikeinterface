@@ -87,7 +87,7 @@ class BaseExtractor:
                 indices = self._main_ids
         else:
             _main_ids = self._main_ids.tolist()
-            indices = np.array([_main_ids.index(id) for id in ids])
+            indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
             if prefer_slice:
                 if np.all(np.diff(indices) == 1):
                     indices = slice(indices[0], indices[-1] + 1)
@@ -198,6 +198,8 @@ class BaseExtractor:
                     empty_values = np.zeros(shape, dtype=dtype)
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
+                    if ids.size==0:
+                        return
                 else:
                     assert dtype_kind == self._properties[key].dtype.kind, ("Mismatch between existing property dtype "
                                                                             "values dtype.")
