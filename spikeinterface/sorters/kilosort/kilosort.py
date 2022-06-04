@@ -47,7 +47,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'Nfilt': None,
         'NT': None,
         'total_memory': '500M',
-        'n_jobs_bin': 1
+        'n_jobs_bin': 1,
+        'wave_length': 61,
     }
 
     _params_description = {
@@ -60,7 +61,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'Nfilt': "Number of clusters to use (if None it is automatically computed)",
         'NT': "Batch size (if None it is automatically computed)",
         'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
+        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)",
+        'wave_length': "size of the waveform extracted around each detected peak (default 61)",
     }
 
     sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter.
@@ -113,6 +115,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
             p['NT'] = 64 * 1024 + p['ntbuff']
         else:
             p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
+        if p['wave_length'] % 2 != 1:
+            p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
         return p
 
     @classmethod
@@ -173,7 +177,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
             kilo_thresh=p['detect_threshold'],
             use_car=use_car,
             freq_min=p['freq_min'],
-            freq_max=p['freq_max']
+            freq_max=p['freq_max'],
+            wave_length=p['wave_length'],
         )
 
         kilosort_channelmap_txt = kilosort_channelmap_txt.format(
