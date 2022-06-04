@@ -82,7 +82,7 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'neuroscope/test1/test1.xml',
     ]
-    
+
 
 class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeSortingExtractor
@@ -206,6 +206,22 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['biocam/biocam_hw3.0_fw1.6.brw']
     entities = [
         'biocam/biocam_hw3.0_fw1.6.brw'
+    ]
+
+
+class AlphaOmegaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AlphaOmegaRecordingExtractor
+    downloads = ["alphaomega"]
+    entities = [
+        "alphaomega/mpx_map_version4",
+    ]
+
+
+class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AlphaOmegaEventExtractor
+    downloads = ["alphaomega"]
+    entities = [
+        "alphaomega/mpx_map_version4",
     ]
 
 

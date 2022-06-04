@@ -52,7 +52,7 @@ class GroundTruthStudy:
         setup_comparison_study(study_folder, gt_dict, **job_kwargs)
         return cls(study_folder)
 
-    def run_sorters(self, sorter_list, mode_if_folder_exists='keep', **kwargs):
+    def run_sorters(self, sorter_list, mode_if_folder_exists='keep', remove_sorter_folders=False, **kwargs):
 
         sorter_folders = self.study_folder / 'sorter_folders'
         recording_dict = get_recordings(self.study_folder)
@@ -62,6 +62,9 @@ class GroundTruthStudy:
 
         # results are copied so the heavy sorter_folders can be removed
         self.copy_sortings()
+
+        if remove_sorter_folders:
+            shutil.rmtree(self.study_folder / 'sorter_folders')
 
     def _check_rec_name(self, rec_name):
         if not self._is_scanned:

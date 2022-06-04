@@ -40,6 +40,17 @@ def test_remove_artifacts():
 
     assert not np.allclose(traces_all_0, traces_all_0_clean)
     assert not np.allclose(traces_all_1, traces_all_1_clean)
+    
+    # test removing single samples
+    rec_rmart_0= remove_artifacts(rec, triggers, ms_before=None, ms_after=None)
+    traces_first_0 = rec_rmart_0.get_traces(start_frame=triggers[0], end_frame=triggers[0] + 1).squeeze()
+    traces_second_0 = rec_rmart_0.get_traces(start_frame=triggers[0], end_frame=triggers[0] + 1).squeeze()
+    assert np.allclose(traces_first_0, np.zeros(rec.get_num_channels()))
+    assert np.allclose(traces_second_0, np.zeros(rec.get_num_channels()))
+
+    rec_rmart_lin = remove_artifacts(rec, triggers, ms_before=None, ms_after=None, mode="linear")
+    rec_rmart_cub = remove_artifacts(rec, triggers, ms_before=None, ms_after=None, mode="cubic")
+
 
 
 if __name__ == '__main__':

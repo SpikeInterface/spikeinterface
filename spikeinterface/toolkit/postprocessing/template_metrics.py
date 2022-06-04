@@ -25,7 +25,7 @@ def get_template_metric_names():
 
 
 def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign='neg',
-                               upsampling_factor=10, sparsity_dict=None,
+                               upsampling_factor=10, sparsity=None,
                                **kwargs):
     """
     Compute template metrics including:
@@ -48,15 +48,10 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         "pos" | "neg", by default 'neg'
     upsampling_factor : int, optional
         Upsample factor, by default 10
-    sparsity_dict: dict or None
-        Default is sparsity_dict=None and template metric is computed on extremum channel only.
-        If given, the dictionary should contain a sparsity method (e.g. "best_channels") and optionally
-        arguments associated with the method (e.g. "num_channels" for "best_channels" method).
-        Other examples are:
-           * by radius: sparsity_dict=dict(method="radius", radius_um=100)
-           * by SNR threshold: sparsity_dict=dict(method="threshold", threshold=2)
-           * by property: sparsity_dict=dict(method="by_property", by_property="group")
-        For more info, see the toolkit.get_template_channel_sparsity() function.
+    sparsity: dict or None
+        Default is sparsity=None and template metric is computed on extremum channel only.
+        If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
+        For more generating a sparsity dict, see the toolkit.get_template_channel_sparsity() function.
     **kwargs: keyword arguments for get_recovery_slope function:
         * window_ms: window in ms after the positiv peak to compute slope
 
@@ -64,8 +59,8 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     -------
     tempalte_metrics : pd.DataFrame
         Dataframe with the computed template metrics.
-        If 'sparsity_dict' is None, the index is the unit_id.
-        If 'sparsity_dict' is given, the index is a multi-index (unit_id, channel_id)
+        If 'sparsity' is None, the index is the unit_id.
+        If 'sparsity' is given, the index is a multi-index (unit_id, channel_id)
     """
     unit_ids = waveform_extractor.sorting.unit_ids
     sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
@@ -73,15 +68,14 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     if feature_names is None:
         feature_names = list(_metric_name_to_func.keys())
 
-    if sparsity_dict is None:
+    if sparsity is None:
         extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign,
                                                               outputs='id')
 
         template_metrics = pd.DataFrame(
             index=unit_ids, columns=feature_names)
     else:
-        extremum_channels_ids = get_template_channel_sparsity(
-            waveform_extractor, **sparsity_dict)
+        extremum_channels_ids = sparsity
         unit_ids = []
         channel_ids = []
         for unit_id, sparse_channels in extremum_channels_ids.items():
@@ -101,7 +95,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         template = template_all_chans[:, chan_ind]
 
         for i, template_single in enumerate(template.T):
-            if sparsity_dict is None:
+            if sparsity is None:
                 index = unit_id
             else:
                 index = (unit_id, chan_ids[i])
