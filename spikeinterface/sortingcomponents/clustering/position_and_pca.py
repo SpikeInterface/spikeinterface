@@ -1,5 +1,7 @@
 # """Sorting components: clustering"""
 from pathlib import Path
+import random
+import string
 
 import numpy as np
 try:
@@ -7,6 +9,11 @@ try:
     HAVE_HDBSCAN = True
 except:
     HAVE_HDBSCAN = False
+
+from spikeinterface.core import get_global_tmp_folder
+from spikeinterface.toolkit import get_channel_distances, get_random_data_chunks
+from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
+from .clustering_tools import auto_clean_clustering, auto_split_clustering
 
 class PositionAndPCAClustering:
     """
@@ -17,22 +24,24 @@ class PositionAndPCAClustering:
     """
     _default_params = {
         'peak_locations' : None,
+        'use_amplitude' : True,
         'peak_localization_kwargs' : {'method' : 'center_of_mass'},
         'ms_before': 1.5,
         'ms_after': 2.5,
         'n_components_by_channel' : 3,
         'n_components': 5,
         'job_kwargs' : {'n_jobs' : 1, 'chunk_memory' : '10M', 'progress_bar' : False},
-        'hdbscan_kwargs_spatial': {'min_cluster_size' : 20, 'allow_single_cluster' : True},
-        'hdbscan_kwargs_pca': {'min_cluster_size' : 10, 'allow_single_cluster' : True},
+        'hdbscan_global_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True},
+        'hdbscan_local_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True},
         'waveform_mode': 'memmap',
-        'local_radius_um' : 50.,
+        'radius_um' : 50.,
         'noise_size' : 300,
         'debug' : False,
         'tmp_folder' : None,
-#        'auto_merge_num_shift': 3,
-#        'auto_merge_quantile_limit': 0.8, 
-#        'ratio_num_channel_intersect': 0.5,
+        'auto_merge_num_shift': 3,
+        'auto_merge_quantile_limit': 0.8, 
+        'ratio_num_channel_intersect': 0.5,
+        'job_kwargs' : {}
     }
 
     @classmethod
@@ -41,7 +50,7 @@ class PositionAndPCAClustering:
         params2 = params.copy()
         
         tmp_folder = params['tmp_folder']
-        if d['waveform_mode'] == 'memmap':
+        if params['waveform_mode'] == 'memmap':
             if tmp_folder is None:
                 name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 tmp_folder = get_global_tmp_folder() / f'PositionAndPcaClustering_{name}'
@@ -49,85 +58,42 @@ class PositionAndPCAClustering:
                 tmp_folder = Path(tmp_folder)
             tmp_folder.mkdir()
             params2['tmp_folder'] = tmp_folder
-        elif d['waveform_mode'] ==  'shared_memory':
-            assert tmp_folder is None, 'temp_folder must be None for shared_memory'
+        elif params['waveform_mode'] ==  'shared_memory':
+            assert tmp_folder is None, 'tmp_folder must be None for shared_memory'
         else:
             raise ValueError('shared_memory')        
         
         return params2
-    
-    @classmethod
-    def _initialize_folder(cls, recording, peaks, params):
-        d = params
-        tmp_folder = params['tmp_folder']
-        
-        num_chans = recording.channel_ids.size
-        
-        # important sparsity is 2 times radius sparsity because closest channel will be 1 time radius
-        chan_distances = get_channel_distances(recording)
-        sparsity_mask = np.zeros((num_chans, num_chans), dtype='bool')
-        for c in range(num_chans):
-            chans, = np.nonzero(chan_distances[c, :] <= d['radius_um'])
-            sparsity_mask[c, chans] = True
-        
-        # create a new peak vector to extract waveforms
-        dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
-        peaks2 = np.zeros(peaks.size, dtype=dtype)
-        peaks2['sample_ind'] = peaks['sample_ind']
-        peaks2['unit_ind'] = peaks['channel_ind']
-        peaks2['segment_ind'] = peaks['segment_ind']
-        
-        fs = recording.get_sampling_frequency()
-        dtype = recording.get_dtype()
-        
-        nbefore = int(d['ms_before'] * fs / 1000.)
-        nafter = int(d['ms_after'] * fs / 1000.)
-        
-        if tmp_folder is None:
-            wf_folder = None
-        else:
-            wf_folder = tmp_folder / 'waveforms_pre_cluster'
-            wf_folder.mkdir()
-            
-        ids = np.arange(num_chans, dtype='int64')
-        wfs_arrays = extract_waveforms_to_buffers(recording, peaks2, ids, nbefore, nafter,
-                                mode=d['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=dtype,
-                                sparsity_mask=sparsity_mask, copy=(d['waveform_mode'] == 'shared_memory'),
-                                **d['job_kwargs'])
-
-        # noise
-        noise = get_random_data_chunks(recording, return_scaled=False,
-                        num_chunks_per_segment=d['noise_size'], chunk_size=nbefore+nafter, concatenated=False, seed=None)
-        noise = np.stack(noise, axis=0)
-
-
-        return wfs_arrays, sparsity_mask, noise
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert HAVE_HDBSCAN, 'sliding_hdbscan clustering need hdbscan to be installed'
+        assert HAVE_HDBSCAN, 'position_and_pca clustering need hdbscan to be installed'
 
         params = cls._check_params(recording, peaks, params)
-        wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params)
-
-        tmp_folder = d['tmp_folder']
-        if tmp_folder is not None:
-            tmp_folder = Path(tmp_folder)
-            tmp_folder.mkdir(exist_ok=True)
+        #wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params)
         
         # step1 : clustering on peak location
-        peak_locations = d['peak_locations']
+        if params['peak_locations'] is None:
+            from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+            peak_locations = localize_peaks(recording, peaks, **params['peak_localization_kwargs'])
+        else:
+            peak_locations = params['peak_locations']
         
         location_keys = ['x', 'y']
         locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
-                
-        clustering = hdbscan.hdbscan(locations, **d['hdbscan_kwargs_spatial'])
+        
+        if params['use_amplitude']:
+            to_cluster_from = np.hstack((locations, peaks['amplitude'][:, np.newaxis]))
+        else:
+            to_cluster_from = locations
+
+        clustering = hdbscan.hdbscan(to_cluster_from, **params['hdbscan_global_kwargs'])
         spatial_peak_labels = clustering[0]
-
+        
         spatial_labels = np.unique(spatial_peak_labels)
-        spatial_labels = spatial_labels[spatial_labels>=0]
+        spatial_labels = spatial_labels[spatial_labels >= 0]
 
-        # if d['debug']:
+        # if params['debug']:
         #     import matplotlib.pyplot as plt
         #     import spikeinterface.full as si
         #     fig1, ax = plt.subplots()
@@ -147,7 +113,7 @@ class PositionAndPCAClustering:
 
         # step2 : extract waveform by cluster
         spatial_keep, = np.nonzero(spatial_peak_labels >= 0)
-        #~ num_keep = np.sum(spatial_keep)
+
         keep_peak_labels = spatial_peak_labels[spatial_keep]
         
         peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
@@ -167,37 +133,36 @@ class PositionAndPCAClustering:
             main_chan = np.argmin(np.linalg.norm(chan_locs - center[np.newaxis, :], axis=1))
             
             # TODO take a radius that depend on the cluster dispertion itself
-            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
+            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['radius_um'])
             sparsity_mask[l, closest_chans] = True
-        
-        if d['waveform_mode'] == 'shared_memory':
+
+        if params['waveform_mode'] == 'shared_memory':
             wf_folder = None
         else:
-            assert tmp_folder is not None
-            wf_folder = tmp_folder / 'waveforms_pre_cluster'
+            assert params['tmp_folder'] is not None
+            wf_folder = params['tmp_folder'] / 'waveforms_pre_cluster'
             wf_folder.mkdir()
 
         fs = recording.get_sampling_frequency()
-        nbefore = int(d['ms_before'] * fs / 1000.)
-        nafter = int(d['ms_after'] * fs / 1000.)
+        nbefore = int(params['ms_before'] * fs / 1000.)
+        nafter = int(params['ms_after'] * fs / 1000.)
 
         ids = np.arange(num_chans, dtype='int64')
         wfs_arrays = extract_waveforms_to_buffers(recording, peaks2, spatial_labels, nbefore, nafter,
-                                mode=d['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
-                                sparsity_mask=sparsity_mask,  copy=(d['waveform_mode'] == 'shared_memory'),
-                                **d['job_kwargs'])
+                                mode=params['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
+                                sparsity_mask=sparsity_mask,  copy=(params['waveform_mode'] == 'shared_memory'),
+                                **params['job_kwargs'])
 
         noise = get_random_data_chunks(recording, return_scaled=False,
-                        num_chunks_per_segment=d['noise_size'], chunk_size=nbefore+nafter, concatenated=False, seed=None)
+                        num_chunks_per_segment=params['noise_size'], chunk_size=nbefore+nafter, concatenated=False, seed=None)
         noise = np.stack(noise, axis=0)
 
         split_peak_labels, main_channels = auto_split_clustering(wfs_arrays, sparsity_mask, spatial_labels, keep_peak_labels, nbefore, nafter, noise, 
-                n_components_by_channel=d['n_components_by_channel'],
-                n_components=d['n_components'],
-                hdbscan_params=d['hdbscan_params_pca'],
-                probability_thr=d['probability_thr'],
-                debug=d['debug'],
-                debug_folder=tmp_folder,
+                n_components_by_channel=params['n_components_by_channel'],
+                n_components=params['n_components'],
+                hdbscan_params=params['hdbscan_local_kwargs'],
+                debug=params['debug'],
+                debug_folder=params['tmp_folder'],
                 )
         
         peak_labels = -2 * np.ones(peaks.size, dtype=np.int64)
@@ -216,25 +181,25 @@ class PositionAndPCAClustering:
         for l, label in enumerate(pre_clean_labels):
             peaks3['unit_ind'][peak_labels == label] = l
             main_chan = main_channels[label]
-            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
+            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['radius_um'])
             sparsity_mask3[l, closest_chans] = True
         
 
-        if d['waveform_mode'] == 'shared_memory':
+        if params['waveform_mode'] == 'shared_memory':
             wf_folder = None
         else:
-            if tmp_folder is not None:
-                wf_folder = tmp_folder / 'waveforms_pre_autoclean'
+            if params['tmp_folder'] is not None:
+                wf_folder = params['tmp_folder'] / 'waveforms_pre_autoclean'
                 wf_folder.mkdir()
         
         wfs_arrays3 = extract_waveforms_to_buffers(recording, peaks3, pre_clean_labels, nbefore, nafter,
-                                mode=d['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
-                                sparsity_mask=sparsity_mask3,  copy=(d['waveform_mode'] == 'shared_memory'),
-                                **d['job_kwargs'])
+                                mode=params['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
+                                sparsity_mask=sparsity_mask3,  copy=(params['waveform_mode'] == 'shared_memory'),
+                                **params['job_kwargs'])
         
         clean_peak_labels, peak_sample_shifts = auto_clean_clustering(wfs_arrays3, sparsity_mask3, pre_clean_labels, peak_labels, nbefore, nafter, chan_distances,
-                                radius_um=d['local_radius_um'], auto_merge_num_shift=d['auto_merge_num_shift'],
-                                auto_merge_quantile_limit=d['auto_merge_quantile_limit'], ratio_num_channel_intersect=d['ratio_num_channel_intersect'])
+                                radius_um=params['radius_um'], auto_merge_num_shift=params['auto_merge_num_shift'],
+                                auto_merge_quantile_limit=params['auto_merge_quantile_limit'], ratio_num_channel_intersect=params['ratio_num_channel_intersect'])
     
         
         # final
