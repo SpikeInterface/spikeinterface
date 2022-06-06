@@ -47,13 +47,12 @@ class SlidingHdbscanClustering:
         'auto_merge_quantile_limit': 0.8, 
         'ratio_num_channel_intersect': 0.5,
         #~ 'auto_trash_misalignment_shift' : 4,
-        
         'job_kwargs' : {}
     }
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert HAVE_HDBSCAN, 'SlidingHdbscanClustering need hdbscan to be installed'
+        assert HAVE_HDBSCAN, 'sliding_hdbscan clustering need hdbscan to be installed'
         params = cls._check_params(recording, peaks, params)
         wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params)
         peak_labels = cls._find_clusters(recording, peaks, wfs_arrays, sparsity_mask, noise, params)

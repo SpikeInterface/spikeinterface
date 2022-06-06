@@ -14,15 +14,14 @@ class PositionClustering:
     """
     _default_params = {
         "peak_locations" : None,
-        "hdbscan_params": {"min_cluster_size" : 20,  "allow_single_cluster" : True, 'metric' : 'l2'},
-        "probability_thr" : 0,
-        "apply_norm" : True,
+        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True},
         "debug" : False,
         "tmp_folder" : None,
     }
 
     @classmethod
     def main_function(cls, recording, peaks, params):
+        assert HAVE_HDBSCAN, 'position clustering need hdbscan to be installed'
         d = params
 
         assert d['peak_locations'] is not None, "peak_locations should not be None!"
@@ -36,21 +35,8 @@ class PositionClustering:
         location_keys = ['x', 'y']
         locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
         
-        if d['apply_norm']:
-            locations_n = locations.copy()
-            locations_n -= np.mean(locations_n, axis=0)
-            locations_n /= np.std(locations_n, axis=0)
-        else:
-            locations_n = locations
-        
-        clustering = hdbscan.hdbscan(locations_n, **d['hdbscan_params'])
+        clustering = hdbscan.hdbscan(locations, **d['hdbscan_kwargs'])
         peak_labels = clustering[0]
-        cluster_probability = clustering[2]
-        
-        # keep only persistent
-        persistent_clusters, = np.nonzero(clustering[2] > d['probability_thr'])
-        mask = np.in1d(peak_labels, persistent_clusters)
-        peak_labels[~mask] = -2
         
         labels = np.unique(peak_labels)
         labels = labels[labels>=0]

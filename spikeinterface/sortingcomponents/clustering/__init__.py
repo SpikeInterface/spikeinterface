@@ -1,11 +1,13 @@
 from .dummy import DummyClustering
 from .position import PositionClustering
 from .sliding_hdbscan import SlidingHdbscanClustering
+from .umap import UMAPClustering
 
 clustering_methods = {
     'dummy' : DummyClustering,
     'position' : PositionClustering,
-    'sliding_hdbscan' : SlidingHdbscanClustering
+    'sliding_hdbscan' : SlidingHdbscanClustering,
+    'umap' : UMAPClustering
 }
 
 
