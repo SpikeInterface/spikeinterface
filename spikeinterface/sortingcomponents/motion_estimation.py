@@ -203,7 +203,13 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
         weights = np.abs(peaks['amplitude'])
     else:
         weights = None
+
     motion_histogram, edges = np.histogramdd(arr, bins=(sample_bins, spatial_bins), weights=weights)
+
+    # average amplitude in each bin
+    if weight_with_amplitude:
+        bin_counts, _ = np.histogramdd(arr, bins=(sample_bins, spatial_bins))
+        motion_histogram = motion_histogram / bin_counts
 
     return motion_histogram, temporal_bins, spatial_bins
 
