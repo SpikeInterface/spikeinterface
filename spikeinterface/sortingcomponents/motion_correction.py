@@ -118,7 +118,7 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
             # interpolation is done with Inverse Distance Weighted
             # because it is simple to implement
             # Instead vwe should use use the convex hull, Delaunay triangulation http://www.qhull.org/
-            # scipy.interpolate.LinearNDInterpolator and qhull.Delaunay should help for this
+            # scipy.interpolate.LinearNDInterpolator and qhull.Delaunay should help for this
             distances = sklearn.metrics.pairwise_distances(channel_locations_moved, channel_locations,
                                                            metric='euclidean')
             num_chans = channel_locations.shape[0]

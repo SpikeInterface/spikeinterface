@@ -7,7 +7,7 @@ possible_motion_estimation_methods = ['decentralized_registration', ]
 def init_kwargs_dict(method, method_kwargs):
     # handle kwargs by method
     if method == 'decentralized_registration':
-        method_kwargs_ = dict(pairwise_displacement_method='conv2d', convergence_method='gradient_descent') # , maximum_displacement_um=400
+        method_kwargs_ = dict(pairwise_displacement_method='conv2d', convergence_method='gradient_descent') #, maximum_displacement_um=400
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
 
@@ -237,14 +237,14 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d',
                     conv = np.convolve(motion_hist[i, :], motion_hist[j, ::-1], mode='same')
                     ind_max = np.argmax(conv)
                     pairwise_displacement[i, j] = possible_displacement[ind_max]
-                    # norm = np.linalg.norm(conv)  ## this is wring Erdem!
+                    # norm = np.linalg.norm(conv)  ## this is wring Erdem!
                     norm = np.sqrt(np.sum(motion_hist[i, :]**2) * np.sum(motion_hist[j, :]**2))
                     conv_values[i, j] = conv[ind_max]  / norm
                     if (ind_max == 0) or (ind_max == possible_displacement.size -1):
                         conv_values[i, j] = -1
         elif conv_engine == 'torch':
             # TODO clip to -max_disp + max_disp
-            # possible_displacement = np.arange(-disp, disp + step_size, step_size)
+            # possible_displacement = np.arange(-disp, disp + step_size, step_size)
             motion_hist_torch = torch.from_numpy(motion_hist[:, np.newaxis, :]).cuda().float()
             c2d = torch.nn.Conv2d(in_channels=1, out_channels=size,
                                     kernel_size=[1, motion_hist_torch.shape[-1]],
@@ -313,7 +313,7 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_wei
 
         # use variable name from paper
         # DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
-        # Erdem Varol1, Julien Boussard, Hyun Dong Lee
+        # Erdem Varol1, Julien Boussard, Hyun Dong Lee
 
         # time_sigma = 20
         # W2 = np.exp(-squareform(pdist(np.arange(size)[:,None]))/time_sigma)
@@ -326,9 +326,9 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_wei
             repeat1 = np.tile(p[:, np.newaxis], [1, size])
             repeat2 = np.tile(p[np.newaxis, :], [size, 1])
             mat_norm = D + (repeat1 - repeat2)
-            # mat_norm = mat_norm * W2
+            # mat_norm = mat_norm * W2
             p += 2 * (np.sum(D - np.diag(D) , axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
-            # p += 2 * (np.sum(D * W2 - np.diag(D * W2) , axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
+            # p += 2 * (np.sum(D * W2 - np.diag(D * W2) , axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
             if np.allclose(p_prev, p):
                 break
             else:
@@ -344,20 +344,20 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_wei
         error_sigma = 0.1
         time_sigma = 45
         robust_regression_sigma = 1
-        # n_iter = 20
+        # n_iter = 20
         n_iter = 1
 
         assert pairwise_displacement_weight is not None
         S = np.ones(pairwise_displacement.shape, dtype='bool')
-        # error_mat_S = pairwise_displacement_error[np.where(S != 0)]
-        # W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
+        # error_mat_S = pairwise_displacement_error[np.where(S != 0)]
+        # W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
         # W1 = pairwise_displacement_weight
-        # W2 = np.exp(-squareform(pdist(np.arange(size)[:,None]))/time_sigma)
-        # W2 = W2[np.where(S != 0)]
-        # W = (W2*W1)[:,None]
-        # W = W1[:,None]
-        # W = W2[:,None]
-        # W = np.ones((size, size)).flatten()[:, None]
+        # W2 = np.exp(-squareform(pdist(np.arange(size)[:,None]))/time_sigma)
+        # W2 = W2[np.where(S != 0)]
+        # W = (W2*W1)[:,None]
+        # W = W1[:,None]
+        # W = W2[:,None]
+        # W = np.ones((size, size)).flatten()[:, None]
         W = pairwise_displacement_weight[np.where(S != 0)][:,None]
         
 
@@ -377,10 +377,10 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_wei
         N = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),J)))
         A = M - N
         idx = np.ones(A.shape[0]).astype(bool)
-        # fig, ax = plt.subplots()
+        # fig, ax = plt.subplots()
         for i in range(n_iter):
             p = lsqr(A[idx].multiply(W[idx]), V[idx]*W[idx][:,0])[0]
-            # ax.plot(p)
+            # ax.plot(p)
             idx = np.where(np.abs(zscore(A@p-V)) <= robust_regression_sigma)
         displacement = p
 
