@@ -69,3 +69,6 @@ ops.fracse  = 0.1; % binning step along discriminant axis for posthoc merges (in
 ops.epu     = Inf;
 
 ops.ForceMaxRAMforDat   = 20e9; % maximum RAM the algorithm will try to use; on Windows it will autodetect.
+
+% option for wavelength
+ops.nt0 = {wave_length}; % size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.

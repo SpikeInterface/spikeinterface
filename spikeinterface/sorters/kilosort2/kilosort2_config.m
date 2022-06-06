@@ -54,4 +54,7 @@ ops.scaleproc           = 200;   % int16 scaling of whitened data
 ops.nPCs                = {nPCs}; % how many PCs to project the spikes into
 ops.useRAM              = 0; % not yet available
 
+%% option for wavelength
+ops.nt0 = {wave_length}; % size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
+
 %%

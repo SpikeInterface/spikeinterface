@@ -56,7 +56,8 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'NT': None,
         'keep_good_only': False,
         'total_memory': '500M',
-        'n_jobs_bin': 1
+        'n_jobs_bin': 1,
+        'wave_length': 61,
     }
 
     _params_description = {
@@ -76,7 +77,8 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
         'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
+        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)",
+        'wave_length': "size of the waveform extracted around each detected peak, (Defaul 61, maximum 81)",
     }
 
     sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
@@ -129,6 +131,10 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             p['NT'] = 64 * 1024 + p['ntbuff']
         else:
             p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
+        if p['wave_length'] % 2 != 1:
+            p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
+        if p['wave_length'] > 81:
+            p['wave_length'] = 81 # The wave_length must be less than 81.
         return p
 
     @classmethod
@@ -187,7 +193,8 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             nPCs=int(p['nPCs']),
             ntbuff=int(p['ntbuff']),
             nfilt_factor=int(p['nfilt_factor']),
-            NT=int(p['NT'])
+            NT=int(p['NT']),
+            wave_length=p['wave_length'],
         )
 
         kilosort2_5_channelmap_txt = kilosort2_5_channelmap_txt.format(
