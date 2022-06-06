@@ -14,6 +14,7 @@ class PositionClustering:
     """
     _default_params = {
         "peak_locations" : None,
+        "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True},
         "debug" : False,
         "tmp_folder" : None,
@@ -24,13 +25,15 @@ class PositionClustering:
         assert HAVE_HDBSCAN, 'position clustering need hdbscan to be installed'
         d = params
 
-        assert d['peak_locations'] is not None, "peak_locations should not be None!"
+        if d['peak_locations'] is None:
+            from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+            peak_locations = localize_peaks(recording, peaks, **d['peak_localization_kwargs'])
+        else:
+            peak_locations = d['peak_locations']
 
         tmp_folder = d['tmp_folder']
         if tmp_folder is not None:
             tmp_folder.mkdir(exist_ok=True)
-
-        peak_locations = d['peak_locations']
         
         location_keys = ['x', 'y']
         locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
