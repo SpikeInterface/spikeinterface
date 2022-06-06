@@ -117,7 +117,7 @@ class SlidingHdbscanClustering:
         if tmp_folder is None:
             wf_folder = None
         else:
-            wf_folder = tmp_folder / 'waveforms_pre_cluster'
+            wf_folder = tmp_folder / 'waveforms'
             wf_folder.mkdir()
             
         ids = np.arange(num_chans, dtype='int64')

@@ -32,9 +32,9 @@ def test_find_cluster_from_peaks():
     
     for method in clustering_methods.keys():
         method_kwargs = {}
-        if method in ('position', 'position_pca'):
+        if method in ('position', 'position_and_pca'):
             method_kwargs['peak_locations'] = peak_locations
-        if method in  ('sliding_hdbscan', 'position_pca'):
+        if method in  ('sliding_hdbscan', 'position_and_pca'):
             method_kwargs['waveform_mode'] = 'shared_memory'
         
         t0 = time.perf_counter()

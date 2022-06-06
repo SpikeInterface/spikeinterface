@@ -14,6 +14,7 @@ class PositionClustering:
     """
     _default_params = {
         "peak_locations" : None,
+        "use_amplitude" : True,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True},
         "debug" : False,
@@ -34,11 +35,16 @@ class PositionClustering:
         tmp_folder = d['tmp_folder']
         if tmp_folder is not None:
             tmp_folder.mkdir(exist_ok=True)
-        
+    
         location_keys = ['x', 'y']
         locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
         
-        clustering = hdbscan.hdbscan(locations, **d['hdbscan_kwargs'])
+        if d['use_amplitude']:
+            to_cluster_from = np.hstack((locations, peaks['amplitude'][:, np.newaxis]))
+        else:
+            to_cluster_from = locations
+
+        clustering = hdbscan.hdbscan(to_cluster_from, **d['hdbscan_kwargs'])
         peak_labels = clustering[0]
         
         labels = np.unique(peak_labels)
