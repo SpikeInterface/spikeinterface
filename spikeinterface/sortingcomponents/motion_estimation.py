@@ -216,7 +216,7 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
 
 def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d',
                                   weight_mode='exp', error_sigma = 0.2,
-                                  conv_engine='numpy',
+                                  conv_engine='numpy', torch_device=None,
                                   progress_bar=False): 
     """
     Compute pairwise displacement
@@ -226,6 +226,8 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d',
     
     if conv_engine == 'torch':
         import torch
+        if torch_device is None:
+            torch_device = torch.device("cuda" if torch.cuda.is_available() else None)
 
     if method == 'conv2d':
         n = motion_hist.shape[1] // 2
@@ -251,7 +253,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d',
         elif conv_engine == 'torch':
             # TODO clip to -max_disp + max_disp
             # possible_displacement = np.arange(-disp, disp + step_size, step_size)
-            motion_hist_torch = torch.from_numpy(motion_hist[:, np.newaxis, :]).cuda().float()
+            motion_hist_torch = torch.as_tensor(motion_hist[:, np.newaxis, :], device=torch_device, dtype=torch.float)
             c2d = torch.nn.Conv2d(in_channels=1, out_channels=size,
                                     kernel_size=[1, motion_hist_torch.shape[-1]],
                                     stride=1, 
