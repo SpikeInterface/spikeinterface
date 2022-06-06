@@ -14,7 +14,7 @@ import datetime
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 
 
-class UMAPClustering:
+class SlidingNNClustering:
 
     """_summary_
 
@@ -50,7 +50,6 @@ class UMAPClustering:
         "n_channel_neighbors" : 8,
         "n_neighbors" : 5,
         "embedding_dim" : None,
-        "knn_verbose" : True,
         "low_memory" : True,
         "mde_negative_to_positive_samples" : 5,
         "mde_device" : "cpu",
@@ -58,7 +57,7 @@ class UMAPClustering:
         "cluster_embedding" : True,
         "debug" : False,
         "tmp_folder" : None,
-        "suppress_tqdm" : True,
+        "verbose" : False,
         "tmp_folder" : None,
         'job_kwargs' : {'n_jobs' : -1}
     } 
@@ -166,7 +165,7 @@ class UMAPClustering:
         #    parallelized, and bandwidth is limited for reading from raw data)
         end_last = -1
         explore = range(n_chunks - 1)
-        if not d['suppress_tqdm']:
+        if d['verbose']:
             explore = tqdm(explore, desc="chunk")
 
         for chunk in explore:
@@ -176,7 +175,8 @@ class UMAPClustering:
             if end_frame > n_frames:
                 end_frame = n_frames
 
-            print("Extracting waveforms: {}".format(datetime.datetime.now()))
+            if d['verbose']:
+                print("Extracting waveforms: {}".format(datetime.datetime.now()))
             # grab all spikes
             all_spikes, all_chan_idx, peaks_in_chunk_idx = get_chunk_spike_waveforms(
                 recording,
@@ -194,7 +194,8 @@ class UMAPClustering:
             idx_next = peaks_in_chunk_idx > end_last
             idx_cur = peaks_in_chunk_idx <= end_last
 
-            print("Computing nearest neighbors: {}".format(datetime.datetime.now()))
+            if d['verbose']:
+                print("Computing nearest neighbors: {}".format(datetime.datetime.now()))
             # grab nearest neighbors
             knn_indices, knn_distances = get_spike_nearest_neighbors(
                 all_spikes,
@@ -203,7 +204,7 @@ class UMAPClustering:
                 n_neighbors=d['n_neighbors'],
                 n_channel_neighbors=d['n_channel_neighbors'],
                 low_memory=d['low_memory'],
-                knn_verbose=d['knn_verbose'],
+                knn_verbose=d['verbose'],
                 n_jobs=d['job_kwargs']['n_jobs'],
             )
             # remove the first nearest neighbor (which should be self)
@@ -244,7 +245,8 @@ class UMAPClustering:
 
             # create embedding
             if d['create_embedding']:
-                print("Computing MDE embeddings: {}".format(datetime.datetime.now()))
+                if d['verbose']:
+                    print("Computing MDE embeddings: {}".format(datetime.datetime.now()))
 
                 chunk_csr = construct_symmetric_graph_from_idx_vals(
                     knn_indices, knn_distances
@@ -312,7 +314,7 @@ class UMAPClustering:
 
         peak_labels = clusters
 
-        labels = np.unique(labels)
+        labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
 
         # return (
