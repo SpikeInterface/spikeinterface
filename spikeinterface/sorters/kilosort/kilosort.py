@@ -42,7 +42,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'Nfilt': None,
         'NT': None,
         'total_memory': '500M',
-        'n_jobs_bin': 1
+        'n_jobs_bin': 1,
+        'wave_length': 61,
     }
 
     _params_description = {
@@ -55,7 +56,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'Nfilt': "Number of clusters to use (if None it is automatically computed)",
         'NT': "Batch size (if None it is automatically computed)",
         'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
+        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)",
+        'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
     }
 
     sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter.
@@ -112,6 +114,10 @@ class KilosortSorter(KilosortBase, BaseSorter):
             p['NT'] = 64 * 1024 + p['ntbuff']
         else:
             p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
+        if p['wave_length'] % 2 != 1:
+            p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
+        if p['wave_length'] > 81:
+            p['wave_length'] = 81 # The wave_length must be less than 81.
         return p
 
     @classmethod
@@ -186,4 +192,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         ops['ForceMaxRAMforDat'] = 20e9  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
 
+        ## option for wavelength
+        ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
         return ops
