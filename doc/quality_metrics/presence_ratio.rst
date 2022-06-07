@@ -18,6 +18,13 @@ Expectation and use
 Complete units are expected to have a presence ratio of 90% or more.
 Low presence ratio (close to 0) can indicate incompleteness (type II error) or highly selective firing pattern.
 
+References
+----------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_presence_ratio
+
 Literature
 ----------
 

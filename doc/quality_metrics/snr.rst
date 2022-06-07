@@ -18,6 +18,13 @@ Expectation and use
 A high SNR unit has a signal which is greater in amplitude than the background noise and is likely to correspond to a neuron [Jackson]_, [Lemon]_.
 A low SNR value (close to 0) suggests that the unit is highly contaminated by noise (type I error).
 
+References
+----------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_snrs
+
 Literature
 ----------
 
