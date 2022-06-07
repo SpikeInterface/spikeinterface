@@ -47,6 +47,7 @@ jobs:
           pip cache remove numba
           # TODO remove it after neo release
           # because it force some version (numpy/numba/dhdbscan...)
+          conda install -c conda-forge "h5py>3.3=mpi*"  # ros3 support
           pip install numpy==1.20
           pip install -r requirements_test.txt
           pip install -r requirements.txt
