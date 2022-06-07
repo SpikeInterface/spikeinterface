@@ -137,7 +137,9 @@ def estimate_motion(recording, peaks, peak_locations=None,
 
         motion = []
         for i, win in enumerate(non_rigid_windows):
-            motion_hist = win[np.newaxis, :] * motion_histogram
+            window_slice = np.flatnonzero(win > 1e-5)
+            window_slice = slice(window_slice[0], window_slice[-1])
+            motion_hist = win[np.newaxis, window_slice] * motion_histogram[:, window_slice]
             if verbose:
                 print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
