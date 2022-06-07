@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+from tqdm.auto import trange
 
 possible_motion_estimation_methods = ['decentralized_registration', ]
 
@@ -214,62 +215,90 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
     return motion_histogram, temporal_bins, spatial_bins
 
 
-def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d',
-                                  weight_mode='exp', error_sigma = 0.2,
+def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
+                                  weight_mode='exp', error_sigma=0.2,
                                   conv_engine='numpy', torch_device=None,
-                                  progress_bar=False): 
+                                  batch_size=1,
+                                  corr_threshold=0, time_horizon_s=None,
+                                  sampling_frequency=None, progress_bar=False): 
     """
     Compute pairwise displacement
     """
+    from scipy import sparse
+    assert conv_engine in ("torch", "numpy")
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype='float32')
+
+    if time_horizon_s is not None:
+        band_width = int(np.ceil(time_horizon_s * sampling_frequency))
     
     if conv_engine == 'torch':
         import torch
         if torch_device is None:
-            torch_device = torch.device("cuda" if torch.cuda.is_available() else None)
+            torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if method == 'conv2d':
+    if method == 'conv':
         n = motion_hist.shape[1] // 2
-        possible_displacement = np.arange(motion_hist.shape[1]) * bin_um
-        possible_displacement -= possible_displacement[n]
+        possible_displacement = np.arange(-n, n + 1) * bin_um
         conv_values = np.zeros((size, size), dtype='float32')
-        
-        # TODO find something faster
-        loop = range(size)
-        if progress_bar:
-            loop = tqdm(loop)
-        if conv_engine == 'numpy':
-            for i in loop:
-                for j in range(size):
-                    conv = np.convolve(motion_hist[i, :], motion_hist[j, ::-1], mode='same')
-                    ind_max = np.argmax(conv)
-                    pairwise_displacement[i, j] = possible_displacement[ind_max]
-                    # norm = np.linalg.norm(conv)  ## this is wring Erdem!
-                    norm = np.sqrt(np.sum(motion_hist[i, :]**2) * np.sum(motion_hist[j, :]**2))
-                    conv_values[i, j] = conv[ind_max]  / norm
-                    if (ind_max == 0) or (ind_max == possible_displacement.size -1):
-                        conv_values[i, j] = -1
-        elif conv_engine == 'torch':
-            # TODO clip to -max_disp + max_disp
-            # possible_displacement = np.arange(-disp, disp + step_size, step_size)
-            motion_hist_torch = torch.as_tensor(motion_hist[:, np.newaxis, :], device=torch_device, dtype=torch.float)
-            c2d = torch.nn.Conv2d(in_channels=1, out_channels=size,
-                                    kernel_size=[1, motion_hist_torch.shape[-1]],
-                                    stride=1, 
-                                    padding=[0, possible_displacement.size//2],
-                                    bias=False).cuda()
-            c2d.weight[:, 0] = motion_hist_torch
-            for i in loop:
-                res = c2d(motion_hist_torch[i:i+1, None])[:,:,0,:].argmax(2)
-                pairwise_displacement[i:i+1] = possible_displacement[res.cpu()]
-                del res
-            del c2d
-            del motion_hist_torch
-            torch.cuda.empty_cache()
+        xrange = trange if progress_bar else range
 
-        # put in range 0-1
-        errors = - conv_values * 0.5 + 0.5
+        motion_hist_engine = motion_hist
+        if conv_engine == "torch":
+            motion_hist_engine = torch.as_tensor(motion_hist, dtype=torch.float32, device=torch_device)
+
+        if time_horizon_s is not None and time_horizon_s > 0:
+            pairwise_displacement = sparse.dok_matrix((size, size), dtype=np.float32)
+            correlation = sparse.dok_matrix((size, size), dtype=motion_hist.dtype)
+
+            for i in xrange(size):
+                hist_i = motion_hist_engine[None, i]
+                pairwise_displacement[i, i] = 0
+                correlation[i, i] = 1
+                j_max = size if time_horizon_s is None else min(size, i + band_width)
+                for j in range(i + 1, j_max):
+                    corr = normxcorr1d(
+                        hist_i,
+                        motion_hist_engine[None, j],
+                        padding=possible_displacement.size // 2,
+                        conv_engine=conv_engine,
+                    )
+                    ind_max = np.argmax(corr)
+                    max_corr = corr[0, 0, ind_max]
+                    if max_corr > corr_threshold:
+                        pairwise_displacement[i, j] = possible_displacement[ind_max]
+                        pairwise_displacement[j, i] = -possible_displacement[ind_max]
+                        correlation[i, j] = correlation[j, i] = max_corr
+
+            pairwise_displacement = pairwise_displacement.tocsr()
+            correlation = correlation.tocsr()
+
+        else:
+            pairwise_displacement = np.empty((size, size), dtype=np.float32)
+            correlation = np.empty((size, size), dtype=motion_hist.dtype)
+
+            for i in xrange(0, size, batch_size):
+                corr = normxcorr1d(
+                    motion_hist_engine,
+                    motion_hist_engine[i : i + batch_size],
+                    padding=possible_displacement.size // 2,
+                    conv_engine=conv_engine,
+                )
+                if conv_engine == "torch":
+                    max_corr, best_disp_inds = torch.max(corr, dim=2)
+                    best_disp = possible_displacement[best_disp_inds.cpu()]
+                    pairwise_displacement[i : i + batch_size] = best_disp
+                    correlation[i : i + batch_size] = max_corr.cpu()
+                elif conv_engine == "numpy":
+                    best_disp_inds = np.argmax(corr, axis=2)
+                    max_corr = corr[best_disp_inds]
+                    pairwise_displacement[i : i + batch_size] = best_disp
+                    correlation[i : i + batch_size] = max_corr
+
+            if corr_threshold > 0:
+                which = correlation > corr_threshold
+                pairwise_displacement *= which
+                correlation *= which
 
     elif method == 'phase_cross_correlation':
         try:
@@ -287,24 +316,33 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv2d',
                                                                                        motion_hist[j, :])
                 pairwise_displacement[i, j] = shift * bin_um 
                 errors[i, j] = error
+        correlation = 1 - errors
         
         # print(errors.min(), errors.max())
         # pairwise_displacement_weight = np.exp(-((errors - errors.min()) / (errors.max() - errors.min()))/ error_sigma )
-        
 
     else:
         raise ValueError(f'method do not exists for compute_pairwise_displacement {method}')
 
     if weight_mode == 'linear':
         # between 0 and 1
-        pairwise_displacement_weight = 1 - errors
+        pairwise_displacement_weight = correlation
     elif weight_mode == 'exp':
-        pairwise_displacement_weight = np.exp(- errors / error_sigma )
+        pairwise_displacement_weight = np.exp((correlation - 1) / error_sigma )
 
     return pairwise_displacement, pairwise_displacement_weight
 
 
-def compute_global_displacement(pairwise_displacement, pairwise_displacement_weight=None, convergence_method='gradient_descent', max_iter=1000):
+def compute_global_displacement(
+    pairwise_displacement,
+    pairwise_displacement_weight=None,
+    sparse_mask=None,
+    convergence_method='lsqr_robust',
+    robust_regression_sigma=1,
+    gradient_descent_max_iter=1000,
+    lsqr_robust_n_iter=20,
+    progress_bar=False,
+):
     """
     Compute global displacement
     
@@ -329,7 +367,7 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_wei
         D = pairwise_displacement
         p = displacement
         p_prev = p.copy()
-        for i in range(max_iter):
+        for i in range(gradient_descent_max_iter):
             # print(i)
             repeat1 = np.tile(p[:, np.newaxis], [1, size])
             repeat2 = np.tile(p[np.newaxis, :], [size, 1])
@@ -343,56 +381,137 @@ def compute_global_displacement(pairwise_displacement, pairwise_displacement_wei
                 p_prev = p.copy()
 
     elif convergence_method == 'lsqr_robust':
-        from scipy.spatial.distance import pdist, squareform
         from scipy.sparse import csr_matrix
         from scipy.sparse.linalg import lsqr
         from scipy.stats import zscore
-        
-        # TODO expose this in signature
-        error_sigma = 0.1
-        time_sigma = 45
-        robust_regression_sigma = 1
-        # n_iter = 20
-        n_iter = 1
 
-        assert pairwise_displacement_weight is not None
-        S = np.ones(pairwise_displacement.shape, dtype='bool')
-        # error_mat_S = pairwise_displacement_error[np.where(S != 0)]
-        # W1 = np.exp(-((error_mat_S-error_mat_S.min())/(error_mat_S.max()-error_mat_S.min()))/error_sigma)
-        # W1 = pairwise_displacement_weight
-        # W2 = np.exp(-squareform(pdist(np.arange(size)[:,None]))/time_sigma)
-        # W2 = W2[np.where(S != 0)]
-        # W = (W2*W1)[:,None]
-        # W = W1[:,None]
-        # W = W2[:,None]
-        # W = np.ones((size, size)).flatten()[:, None]
-        W = pairwise_displacement_weight[np.where(S != 0)][:,None]
-        
+        if sparse_mask is not None:
+            I, J = np.where(sparse_mask > 0)
+        elif pairwise_displacement_weight is not None:
+            I, J = np.where(pairwise_displacement_weight > 0)
+        else:
+            I, J = np.where(np.ones_like(pairwise_displacement, dtype=bool))
 
-
-
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots()
-        # ax.plot(W1, color='g')
-        # ax.plot(W2, color='r')
-        # fig, ax = plt.subplots()
-        # ax.plot(W[:, 0])
-
-
-        I, J = np.where(S != 0)
-        V = pairwise_displacement[np.where(S != 0)]
-        M = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),I)))
-        N = csr_matrix((np.ones(I.shape[0]), (np.arange(I.shape[0]),J)))
+        nnz_ones = np.ones(I.shape[0], dtype=pairwise_displacement.dtype)
+        if pairwise_displacement_weight is not None:
+            W = pairwise_displacement_weight[I, J][:,None]
+        else:
+            W = nnz_ones[:, None]
+        V = pairwise_displacement[I, J]
+        M = csr_matrix((nnz_ones, (range(I.shape[0]), I)))
+        N = csr_matrix((nnz_ones, (range(I.shape[0]), J)))
         A = M - N
-        idx = np.ones(A.shape[0]).astype(bool)
-        # fig, ax = plt.subplots()
-        for i in range(n_iter):
+        idx = np.ones(A.shape[0], dtype=bool)
+        xrange = trange if progress_bar else range
+        for i in xrange(lsqr_robust_n_iter):
             p = lsqr(A[idx].multiply(W[idx]), V[idx]*W[idx][:,0])[0]
-            # ax.plot(p)
-            idx = np.where(np.abs(zscore(A@p-V)) <= robust_regression_sigma)
+            idx = np.where(np.abs(zscore(A @ p - V)) <= robust_regression_sigma)
         displacement = p
 
     else:
         raise ValueError(f"Method {method} doesn't exists for compute_global_displacement")
 
     return displacement
+
+
+def normxcorr1d(template, x, padding="same", conv_engine="torch"):
+    """normxcorr1d: 1-D normalized cross-correlation
+
+    Returns the cross-correlation of `template` and `x` at spatial lags
+    determined by `mode`. Useful for estimating the location of `template`
+    within `x`.
+    This might not be the most efficient implementation -- ideas welcome.
+    It uses a direct convolutional translation of the formula
+        corr = (E[XY] - EX EY) / sqrt(var X * var Y)
+
+    Arguments
+    ---------
+    template : tensor, shape (num_templates, length)
+        The reference template signal
+    x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
+        The signal in which to find `template`
+    padding : int, optional
+        How far to look? if unset, we'll use half the length
+    assume_centered : bool
+        Avoid a copy if your data is centered already.
+
+    Returns
+    -------
+    corr : tensor
+    """
+    if conv_engine == "torch":
+        import torch
+        import torch.nn.functional as F
+        conv1d = F.conv1d
+        npx = torch
+    elif conv_engine == "numpy":
+        conv1d = scipy_conv1d
+        npx = np
+    else:
+        raise ValueError(f"Unknown conv_engine {conv_engine}")
+
+    x = npx.atleast_2d(x)
+    num_templates, length = template.shape
+    num_inputs, length_ = template.shape
+    assert length == length_
+
+    # compute expectations
+    if conv_engine == "torch":
+        ones = npx.ones((1, 1, length), dtype=x.dtype, device=x.device)
+    else:
+        ones = npx.ones((1, 1, length), dtype=x.dtype)
+    # how many points in each window? seems necessary to normalize
+    # for numerical stability.
+    N = conv1d(ones, ones, padding=padding)
+    Et = conv1d(ones, template[:, None, :], padding=padding) / N
+    Ex = conv1d(x[:, None, :], ones, padding=padding) / N
+
+    # compute covariance
+    corr = conv1d(x[:, None, :], template[:, None, :], padding=padding) / N
+    corr -= Ex * Et
+
+    # compute variances for denominator, using var X = E[X^2] - (EX)^2
+    var_template = conv1d(
+        ones, npx.square(template)[:, None, :], padding=padding
+    )
+    var_template = var_template / N - npx.square(Et)
+    var_x = conv1d(
+        npx.square(x)[:, None, :], ones, padding=padding
+    )
+    var_x = var_x / N - npx.square(Ex)
+
+    # now find the final normxcorr and get rid of NaNs in zero-variance areas
+    corr /= npx.sqrt(var_x * var_template)
+    corr[~npx.isfinite(corr)] = 0
+
+    return corr
+
+
+def scipy_conv1d(input, weights, padding="valid"):
+    """SciPy translation of torch F.conv1d"""
+    from scipy.signal import correlate
+
+    n, c_in, length = input.shape
+    c_out, in_by_groups, kernel_size = weights.shape
+    assert in_by_groups == 1
+
+    if padding == "same":
+        mode = "same"
+        length_out = length
+    elif padding == "valid":
+        mode = "valid"
+        length_out = length - 2 * (kernel_size // 2)
+    elif isinstance(padding, int):
+        mode = "valid"
+        input = np.pad(input, [*[(0,0)] * (input.ndim - 1), (padding, padding)])
+        length_out = length - 2 * (kernel_size // 2) + 2 * padding + 1
+    else:
+        raise ValueError(f"Unknown padding {padding}")
+
+    output = np.zeros((n, c_out, length_out), dtype=input.dtype)
+    for m in range(n):
+        for c in range(c_out):
+            output[m, c] = correlate(input, weights, mode=mode)
+
+    return output
+
