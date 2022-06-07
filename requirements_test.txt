@@ -68,3 +68,8 @@ mearec
 ## container packages for local testing
 #docker
 #spython
+
+## sliding_nn
+pymde
+torch
+pynndescent
