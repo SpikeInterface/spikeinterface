@@ -1,4 +1,4 @@
-from .method_list import *
+
 from threadpoolctl import threadpool_limits
 import numpy as np
 
@@ -37,7 +37,8 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
     Templates are represented as WaveformExtractor so statistics can be extracted.
     """
 
-    assert method in matching_methods
+    from .method_list import matching_methods
+    assert method in matching_methods, "The method %s is not a valid one" %method
     
     method_class = matching_methods[method]
     
@@ -73,6 +74,7 @@ def _init_worker_find_spikes(recording, method, method_kwargs):
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
 
+    from .method_list import matching_methods
     method_class = matching_methods[method]
     method_kwargs = method_class.unserialize_in_worker(method_kwargs)
 
