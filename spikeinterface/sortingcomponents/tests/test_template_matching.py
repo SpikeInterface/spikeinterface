@@ -9,7 +9,7 @@ from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import read_mearec
 
 
-from spikeinterface.sortingcomponents.template_matching import find_spikes_from_templates, template_matching_methods
+from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
 
 
 if hasattr(pytest, "global_test_folder"):
