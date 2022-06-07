@@ -83,6 +83,15 @@ With SpikeInterface:
 
     isi_violations_ratio, isi_violations_rate, isi_violations_count = st.compute_isi_violations(wvf_extractor, isi_threshold_ms=1.0)
 
+References
+----------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_isi_violations
+
+
+
 Links to source code
 --------------------
 
