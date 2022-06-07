@@ -171,6 +171,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'noise_levels': None,
         'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,
+        'waveform_extractor': None,
     }
 
     @classmethod
@@ -517,6 +518,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.25,
         'progess_bar_steps' : True,
+        'waveform_extractor': None,
     }
 
     @classmethod
