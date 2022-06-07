@@ -45,7 +45,6 @@ jobs:
           pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
-          conda install --yes -c conda-forge "h5py>3.3=mpi*"  # ros3 support
           # TODO remove it after neo release
           # because it force some version (numpy/numba/dhdbscan...)
           pip install numpy==1.20
@@ -53,6 +52,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements_full.txt
           pip install -r requirements_extractors.txt
+          conda install --yes -c conda-forge "h5py>3.3=mpi*"  # ros3 support
 
           pip install -e .
       - name: git-annex install
