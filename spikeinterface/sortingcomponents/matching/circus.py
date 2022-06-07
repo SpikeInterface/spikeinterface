@@ -7,6 +7,13 @@ import scipy.spatial
 from tqdm import tqdm
 import scipy
 
+try:
+    import sklearn
+    from sklearn.feature_extraction.image import extract_patches_2d, reconstruct_from_patches_2d
+    HAVE_SKLEARN = True
+except ImportError:
+    HAVE_SKLEARN = False
+
 from spikeinterface.core import WaveformExtractor
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
 from spikeinterface.toolkit import (get_noise_levels, get_template_channel_sparsity,
@@ -690,6 +697,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
 
+        assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
         d = cls._default_params.copy()
         d.update(kwargs)
 
