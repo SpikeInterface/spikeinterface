@@ -44,26 +44,7 @@ def get_electrical_series(nwbfile, electrical_series_name):
 
 
 class NwbRecordingExtractor(BaseRecording):
-    """
-    Load an NWBFile as a RecordingExtractor.
 
-    Parameters
-    ----------
-    file_path: str or Path
-        Path to NWB file
-    electrical_series_name: str, optional
-        The name of the ElectricalSeries (if multiple ElectricalSeries are present)
-    load_time_vector: bool
-        If True, the time vector is loaded to the recording object (default False)
-    samples_for_rate_estimation: int
-        If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
-        to estimate the rate (default 100000)
-
-    Returns
-    -------
-    recording: NwbRecordingExtractor
-        The recording extractor for the NWB file
-    """
     extractor_name = 'NwbRecording'
     has_default_locations = True
     has_unscaled = False
@@ -73,12 +54,34 @@ class NwbRecordingExtractor(BaseRecording):
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
     def __init__(self, file_path: PathType, electrical_series_name: str = None, load_time_vector: bool = False,
-                 samples_for_rate_estimation: int = 100000):
+                 samples_for_rate_estimation: int = 100000, driver=None):
+        """
+        Load an NWBFile as a RecordingExtractor.
+
+        Parameters
+        ----------
+        file_path: str or Path
+            Path to NWB file or s3 url
+        electrical_series_name: str, optional
+            The name of the ElectricalSeries (if multiple ElectricalSeries are present)
+        load_time_vector: bool, optional
+            If True, the time vector is loaded to the recording object (default False)
+        samples_for_rate_estimation: int, optional
+            If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
+            to estimate the rate (default 100000)
+        driver: str, optional
+            Specify the HDF5 driver. To read from an S3 url, set to "ros3".
+
+        Returns
+        -------
+        recording: NwbRecordingExtractor
+            The recording extractor for the NWB file
+        """
         check_nwb_install()
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
 
-        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
+        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver=driver)
         self._nwbfile = self.io.read()
         self._es = get_electrical_series(
             self._nwbfile, self._electrical_series_name)
