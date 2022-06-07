@@ -26,6 +26,14 @@ Example code
 	# fraction_missing is a dict containing the units' ID as keys,
 	# and their estimated fraction of missing spikes as values.
 
+Reference
+---------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_amplitudes_cutoff
+
+
 Links to source code
 --------------------
 

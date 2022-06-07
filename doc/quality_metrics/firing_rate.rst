@@ -46,6 +46,14 @@ With SpikeInterface:
     # firing_rate is a dict containing the units' ID as keys,
     # and their firing rate across segments as values (in Hz).
 
+References
+----------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_firing_rate
+
+
 Links to source code
 --------------------
 
