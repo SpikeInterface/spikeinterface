@@ -8,8 +8,7 @@ from spikeinterface import extract_waveforms
 from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.extractors import read_mearec
 
-
-from spikeinterface.sortingcomponents.template_matching import find_spikes_from_templates, template_matching_methods
+from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -40,7 +39,7 @@ def test_find_spikes_from_templates():
 
     result = {}
 
-    for method in template_matching_methods.keys():
+    for method in matching_methods.keys():
         spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
                                             n_jobs=1, chunk_size=30000, progress_bar=True)
 
