@@ -21,6 +21,7 @@ nrm2, = scipy.linalg.get_blas_funcs(('nrm2', ), dtype=np.float32)
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
+from .main import BaseTemplateMatchingEngine
 
 #################
 # Circus peeler #

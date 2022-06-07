@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 from spikeinterface.core import WaveformExtractor
 from spikeinterface.toolkit import (get_noise_levels, get_template_channel_sparsity,
     get_channel_distances, get_chunk_with_margin, get_template_extremum_channel, get_random_data_chunks)
@@ -8,7 +9,14 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
+from .main import BaseTemplateMatchingEngine
 
+try:
+    import numba
+    from numba import jit, prange
+    HAVE_NUMBA = True
+except ImportError:
+    HAVE_NUMBA = False
 
 class TridesclousPeeler(BaseTemplateMatchingEngine):
     """
@@ -42,7 +50,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
         
-        assert HAVE_NUMBA
+        assert HAVE_NUMBA, "TridesclousPeeler need numba to be installed"
         
         d = cls.default_params.copy()
         d.update(kwargs)

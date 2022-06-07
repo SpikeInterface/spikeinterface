@@ -37,9 +37,9 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
     Templates are represented as WaveformExtractor so statistics can be extracted.
     """
 
-    assert method in template_matching_methods
+    assert method in matching_methods
     
-    method_class = template_matching_methods[method]
+    method_class = matching_methods[method]
     
     # initialize
     method_kwargs = method_class.initialize_and_check_kwargs(recording, method_kwargs)
@@ -73,7 +73,7 @@ def _init_worker_find_spikes(recording, method, method_kwargs):
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
 
-    method_class = template_matching_methods[method]
+    method_class = matching_methods[method]
     method_kwargs = method_class.unserialize_in_worker(method_kwargs)
 
 
