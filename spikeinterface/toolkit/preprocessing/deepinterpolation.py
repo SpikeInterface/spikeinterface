@@ -54,11 +54,37 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         self.local_std = local_std
         
     def get_traces(self, start_frame, end_frame, channel_indices):        
+        
+        n_frames = self.parent_recording_segment.get_num_samples()
 
+        if start_frame==None:
+            start_frame = 0
+        
+        if end_frame==None:
+            end_frame=n_frames
+
+        # only apply DI to frames that have full training data
+        # for those that don't, just return uninterpolated data
+        if start_frame<self.pre_frames+self.pre_post_omission:
+            true_start_frame = self.pre_frames+self.pre_post_omission
+            array_to_append_front = self.parent_recording_segment.get_traces(start_frame=0,
+                                                                             end_frame=true_start_frame,
+                                                                             channel_indices=None)
+        else:
+            true_start_frame = start_frame
+            
+        if end_frame>n_frames-self.post_frames-self.pre_post_omission:
+            true_end_frame = n_frames-self.post_frames-self.pre_post_omission
+            array_to_append_back = self.parent_recording_segment.get_traces(start_frame=true_end_frame,
+                                                                            end_frame=n_frames,
+                                                                            channel_indices=None)
+        else:
+            true_end_frame = end_frame
+        
         # prepare input
-        raw_data = self.parent_recording_segment.get_traces(start_frame-self.pre_frames-self.pre_post_omission, 
-                                                     end_frame+self.post_frames+self.pre_post_omission,
-                                                     channel_indices=None)
+        raw_data = self.parent_recording_segment.get_traces(start_frame=true_start_frame,
+                                                            end_frame=true_end_frame,
+                                                            channel_indices=None)
         
         shape = (raw_data.shape[0], int(384 / 2), 2)
         raw_data = np.reshape(raw_data, newshape=shape)
@@ -73,6 +99,12 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         
         # prepare output
         out_traces = self.get_output(di_output)
+        
+        if true_start_frame != start_frame:
+            out_traces = np.concatenate((array_to_append_front, out_traces),axis=0)
+
+        if true_end_frame != end_frame:
+            out_traces = np.concatenate((out_traces, array_to_append_back),axis=0)
 
         return out_traces[:, channel_indices]
     
