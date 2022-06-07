@@ -131,7 +131,8 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
     """
 
     def __init__(self, comp, templates, unit_ids=None, metric='cosine_similarity', figure=None, ax=None, 
-        mode='heatmap', similarity_bins=np.linspace(-0.4, 1, 8), cmap='winter', good_only=True):
+        mode='heatmap', similarity_bins=np.linspace(-0.4, 1, 8), cmap='winter', good_only=True,  show_legend=False,
+        ylim = (0, 1)):
         BaseWidget.__init__(self, figure, ax)
 
         assert mode in ['heatmap', 'lines']
@@ -143,6 +144,8 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         self.comp = comp
         self.cmap = cmap
         self.mode = mode
+        self.ylim = ylim
+        self.show_legend = show_legend
         self.similarity_bins = similarity_bins
         self.templates = templates
         self.unit_ids = unit_ids
@@ -174,8 +177,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         n = len(self.unit_ids)
 
         similarities, recall_scores, pair_names = self.comp.compute_collision_by_similarity(similarity_matrix, unit_ids=self.unit_ids, good_only=self.good_only)
-
-        
 
         if self.mode == 'heatmap':
 
@@ -234,7 +235,9 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
                 colorVal = scalarMap.to_rgba((cmin+cmax)/2)
                 ax.plot(lags[:-1] + (lags[1]-lags[0]) / 2, mean_recall_scores, label='CS in [%g,%g]' %(cmin, cmax), c=colorVal)
 
-            ax.legend()
+            if self.show_legend:
+                ax.legend()
+            ax.set_ylim(self.ylim)
             ax.set_xlabel('lags (ms)')        
 
 
