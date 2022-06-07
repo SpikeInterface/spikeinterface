@@ -22,6 +22,15 @@ Expectation and use
 
 Isolation distance can be interpreted as a measure of distance from the unit to the nearest cluster.
 
+References
+----------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_isolation_distance
+
+
+
 Literature
 ----------
 

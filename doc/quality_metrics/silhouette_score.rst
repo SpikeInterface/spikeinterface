@@ -13,6 +13,11 @@ Expectation and use
 A good clustering with well separated and compact clusters will have a silhouette score close to 1.
 A low silhouette score (close to -1) indicates a poorly isolated cluster (both type I and type II error).
 
+References
+----------
+
+# code todo
+
 Literature
 ----------
 
