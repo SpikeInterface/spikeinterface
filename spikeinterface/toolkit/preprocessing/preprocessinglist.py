@@ -1,6 +1,7 @@
 from .filter import (FilterRecording, filter,
                      BandpassFilterRecording, bandpass_filter,
                      NotchFilterRecording, notch_filter,
+                     HighpassFilterRecording, highpass_filter,
                      )
 from .normalize_scale import (
     NormalizeByQuantileRecording, normalize_by_quantile,
