@@ -3,7 +3,7 @@ import numpy as np
 from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
-from spikeinterface.extractors.neoextractors.spikeglx import _get_sample_shifts
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
 import probeinterface as pi 
 
