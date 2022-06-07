@@ -1,14 +1,32 @@
-import numba
+
+try:
+    import numba
+    HAVE_NUMBA = True
+except ImportError:
+    HAVE_NUMBA = False
+
 import numpy as np
 from sklearn.utils import check_random_state
-from pynndescent import NNDescent
+
+try:
+    from pynndescent import NNDescent
+    HAVE_NNDESCENT = True
+except ImportError:
+    HAVE_NNDESCENT = False
+
 from spikeinterface.toolkit import get_channel_distances
 from tqdm.auto import tqdm
 import hdbscan
 import copy
 from scipy.sparse import coo_matrix
 import pymde
-import torch
+
+try:
+    import torch
+    HAVE_TORCH = True
+except ImportError:
+    HAVE_TORCH = False
+
 import datetime
 
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
@@ -64,6 +82,11 @@ class SlidingNNClustering:
 
     @classmethod
     def _initialize_folder(cls, recording, peaks, params):
+
+        assert HAVE_NUMBA, "SlidingNN needs numba to work"
+        assert HAVE_TORCH, "SlidingNN needs torch to work"
+        assert HAVE_PYNNDESCENT, "SlidingNN needs pynndescent to work"
+
         d = params
         tmp_folder = params['tmp_folder']
         
