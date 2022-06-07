@@ -4,9 +4,7 @@ This gather some function usefull for some clusetring algos.
 
 import numpy as np
 
-
-
-from ..toolkit import check_equal_template_with_distribution_overlap
+from spikeinterface.toolkit import check_equal_template_with_distribution_overlap
 
 
 
