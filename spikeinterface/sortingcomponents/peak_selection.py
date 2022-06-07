@@ -282,4 +282,4 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
     selected_peaks = peaks[np.concatenate(selected_peaks)]
     selected_peaks = selected_peaks[np.argsort(selected_peaks['sample_ind'])]
 
-    return 
+    return selected_peaks
