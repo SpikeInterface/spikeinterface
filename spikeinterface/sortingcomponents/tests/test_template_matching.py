@@ -40,7 +40,7 @@ def test_find_spikes_from_templates():
 
     result = {}
 
-    for method in template_matching_methods.keys():
+    for method in matching_methods.keys():
         spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
                                             n_jobs=1, chunk_size=30000, progress_bar=True)
 
