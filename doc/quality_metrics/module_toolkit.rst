@@ -58,11 +58,15 @@ Quality metrics allows to quantitatively assess to *goodness* of a spike sorting
 :code:`toolkit.qualitymetrics` sub-module includes functions to compute a large variety of available metrics
 ('sort' - spike times based; 'rec+sort' - based on waveforms; 'pc' - based on PC scores):
 
-.. toctree::
-    :maxdepth: 1
-    :glob:
-
-    quality_metrics/*
+* firing rate (sort)
+* ISI violation ratio (sort)
+* presence_ratio (sort)
+* amplitude_cutoff (rec+sort)
+* snr (rec+sort)
+* isolation_distance (pc)
+* l_ratio (pc)
+* d_prime (pc)
+* nearest_neighbor (pc)
 
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_
