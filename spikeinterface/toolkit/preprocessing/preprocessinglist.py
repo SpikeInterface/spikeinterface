@@ -21,6 +21,7 @@ preprocessers_full_list = [
     # filter stuff
     FilterRecording,
     BandpassFilterRecording,
+    HighpassFilterRecording,
     NotchFilterRecording,
 
     # gain offset stuff
