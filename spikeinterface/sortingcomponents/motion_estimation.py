@@ -17,7 +17,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
                     method='decentralized_registration', method_kwargs={},
                     non_rigid_kwargs=None, output_extra_check=False, progress_bar=False,
-                    verbose=False):
+                    upsample_to_histogram_bin=False, verbose=False):
     """
     Estimate motion given peaks and their localization.
 
@@ -53,6 +53,9 @@ def estimate_motion(recording, peaks, peak_locations=None,
     output_extra_check: bool
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
+    upsample_to_histogram_bin: bool
+        If True then upsample the returned motion array to the number of depth bins specified
+        by bin_um
     progress_bar: bool
         Display progress bar or not.
     verbose: bool
@@ -65,6 +68,8 @@ def estimate_motion(recording, peaks, peak_locations=None,
         Shape (temporal bins, spatial bins)
         motion.shape[0] = temporal_bins.shape[0]
         motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)
+        If upsample_to_histogram_bin, motion.shape[1] corresponds to spatial
+        bins given by bin_um.
     temporal_bins: numpy.array 1d
         temporal bins (bin center)
     spatial_bins: numpy.array 1d or None
@@ -155,6 +160,13 @@ def estimate_motion(recording, peaks, peak_locations=None,
 
     # replace nan by zeros
     motion[np.isnan(motion)] = 0
+
+    if upsample_to_histogram_bin:
+        # do upsample
+        non_rigid_windows = np.array(non_rigid_windows)
+        non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
+        spatial_bins = spatial_hist_bins
+        motion = motion @ non_rigid_windows
 
     if output_extra_check:
         return motion, temporal_bins, spatial_bins, extra_check
