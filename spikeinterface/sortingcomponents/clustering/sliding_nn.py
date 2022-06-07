@@ -19,7 +19,12 @@ from tqdm.auto import tqdm
 import hdbscan
 import copy
 from scipy.sparse import coo_matrix
-import pymde
+
+try:
+    import pymde
+    HAVE_PYMDE = True
+except ImportError:
+    HAVE_PYMDE = False
 
 try:
     import torch
@@ -86,6 +91,7 @@ class SlidingNNClustering:
         assert HAVE_NUMBA, "SlidingNN needs numba to work"
         assert HAVE_TORCH, "SlidingNN needs torch to work"
         assert HAVE_PYNNDESCENT, "SlidingNN needs pynndescent to work"
+        assert HAVE_PYMDE, "SlidingNN needs pymde to work"
 
         d = params
         tmp_folder = params['tmp_folder']
