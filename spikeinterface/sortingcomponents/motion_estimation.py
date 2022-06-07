@@ -368,31 +368,57 @@ def compute_global_displacement(
     size = pairwise_displacement.shape[0]
 
     if convergence_method == 'gradient_descent':
-        
-        displacement = np.zeros(size, dtype='float64')
-
-        # use variable name from paper
-        # DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
-        # Erdem Varol1, Julien Boussard, Hyun Dong Lee
-
-        # time_sigma = 20
-        # W2 = np.exp(-squareform(pdist(np.arange(size)[:,None]))/time_sigma)
+        from scipy.optimize import minimize
+        from scipy.sparse import csr_matrix
 
         D = pairwise_displacement
-        p = displacement
-        p_prev = p.copy()
-        for i in range(gradient_descent_max_iter):
-            # print(i)
-            repeat1 = np.tile(p[:, np.newaxis], [1, size])
-            repeat2 = np.tile(p[np.newaxis, :], [size, 1])
-            mat_norm = D + (repeat1 - repeat2)
-            # mat_norm = mat_norm * W2
-            p += 2 * (np.sum(D - np.diag(D) , axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
-            # p += 2 * (np.sum(D * W2 - np.diag(D * W2) , axis=1) - (size - 1) * p) / np.linalg.norm(mat_norm)
-            if np.allclose(p_prev, p):
-                break
-            else:
-                p_prev = p.copy()
+        if pairwise_displacement_weight is not None or sparse_mask is not None:
+            # weighted problem
+            if pairwise_displacement_weight is None:
+                pairwise_displacement_weight = np.ones_like(D)
+            if sparse_mask is None:
+                sparse_mask = np.ones_like(D)
+
+            W = pairwise_displacement_weight * sparse_mask
+            I, J = np.where(W > 0)
+            Wij = W[I, J]
+            Dij = D[I, J]
+            W = csr_matrix((Wij, (I, J)), shape=W.shape)
+            WD = csr_matrix((Wij * Dij, (I, J)), shape=W.shape)
+            WW = W @ W
+            WDWT = WD @ W 
+            WTWD = W @ WD
+            diag_WDWT = WDWT.diagonal()
+            diag_WTWD = WTWD.diagonal()
+            fixed_terms = diag_WTWD - diag_WDWT
+            diag_WW = WW.diagonal()
+            Wsq = W.power(2)
+
+            def obj(p):
+                v = np.square(Wij * (Dij - (p[I] - p[J]))).sum()
+                return 0.5 * v
+
+            def jac(p):
+                jjj = (
+                    fixed_terms
+                    - 2 * (Wsq @ p)
+                    + 2 * p * diag_WW
+                )
+                return jjj
+        else:
+            # unweighted problem, it's faster when we have no weights
+            fixed_terms = -D.sum(axis=1) + D.sum(axis=0)
+            def obj(p):
+                v = np.square((D - (p[:, None] - p[None, :]))).sum()
+                return 0.5 * v
+            def jac(p):
+                return fixed_terms + 2 * (size * p - p.sum())
+        print("hi", size, flush=True)
+
+        res = minimize(fun=obj, jac=jac, x0=D.mean(axis=1), method="L-BFGS-B", tol=1e-12)
+        if not res.success:
+            print("Global displacement gradient descent had an error")
+        displacement = res.x
 
     elif convergence_method == 'lsqr_robust':
         from scipy.sparse import csr_matrix
@@ -418,7 +444,7 @@ def compute_global_displacement(
         idx = np.ones(A.shape[0], dtype=bool)
         xrange = trange if progress_bar else range
         for i in xrange(lsqr_robust_n_iter):
-            p = lsqr(A[idx].multiply(W[idx]), V[idx]*W[idx][:,0])[0]
+            p = lsqr(A[idx].multiply(W[idx]), V[idx] * W[idx][:,0])[0]
             idx = np.where(np.abs(zscore(A @ p - V)) <= robust_regression_sigma)
         displacement = p
 
