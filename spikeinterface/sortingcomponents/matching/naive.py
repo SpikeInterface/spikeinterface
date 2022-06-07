@@ -11,6 +11,9 @@ spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind'
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
+from .main import BaseTemplateMatchingEngine
+
+
 class NaiveMatching(BaseTemplateMatchingEngine):
     """
     This is a naive template matching that does not resolve collision
