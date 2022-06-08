@@ -119,7 +119,7 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m core
+          pytest -v -m --cov=./ --cov-report xml:./spikeinterface/coverage.xml core
       - name: Test extractors
         if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true'
         run: |
@@ -150,3 +150,11 @@ jobs:
         run: |
           source ~/test_env/bin/activate
           pytest -v -m sortingcomponents
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          version: "v0.1.15"
+          fail_ci_if_error: true
+          file: ./spikeinterface/coverage.xml
+          flags: unittests
