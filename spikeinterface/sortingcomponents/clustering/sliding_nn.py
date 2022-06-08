@@ -90,7 +90,7 @@ class SlidingNNClustering:
 
         assert HAVE_NUMBA, "SlidingNN needs numba to work"
         assert HAVE_TORCH, "SlidingNN needs torch to work"
-        assert HAVE_PYNNDESCENT, "SlidingNN needs pynndescent to work"
+        assert HAVE_NNDESCENT, "SlidingNN needs pynndescent to work"
         assert HAVE_PYMDE, "SlidingNN needs pymde to work"
 
         d = params
@@ -473,49 +473,50 @@ def build_windowed_nn_graph(
     return nn_idx, nn_dist
 
 
-@numba.jit(fastmath=True, cache=True)
-def sparse_euclidean(x, y, n_samples, n_dense):
-    """Euclidean distance metric over sparse vectors, where first n_dense
-    elements are indices, and n_samples is the length of the second dimension
-    """
-    # break out sparse into columns and data
-    x_best = x[:n_dense]  # dense indices
-    x = x[n_dense:]
-    y_best = y[:n_dense]
-    y = y[n_dense:]
-    result = 0.0
+if HAVE_NUMBA:
+    @numba.jit(fastmath=True, cache=True)
+    def sparse_euclidean(x, y, n_samples, n_dense):
+        """Euclidean distance metric over sparse vectors, where first n_dense
+        elements are indices, and n_samples is the length of the second dimension
+        """
+        # break out sparse into columns and data
+        x_best = x[:n_dense]  # dense indices
+        x = x[n_dense:]
+        y_best = y[:n_dense]
+        y = y[n_dense:]
+        result = 0.0
 
-    xi = 0
-    for xb in x_best:
-        calc = False
+        xi = 0
+        for xb in x_best:
+            calc = False
+            yi = 0
+            for yb in y_best:
+                if xb == yb:
+                    calc = True
+                    # calculate euclidean
+                    for i in range(n_samples):
+                        result += (x[xi * n_samples + i] -
+                                y[yi * n_samples + i]) ** 2
+
+                yi += 1
+            if calc == False:
+                # add x squared
+                for i in range(n_samples):
+                    result += x[xi * n_samples + i] ** 2
+            xi += 1
         yi = 0
         for yb in y_best:
-            if xb == yb:
-                calc = True
-                # calculate euclidean
+            calc = False
+            for xb in x_best:
+                if xb == yb:
+                    calc = True
+            if calc == False:
+                # add y squared
                 for i in range(n_samples):
-                    result += (x[xi * n_samples + i] -
-                               y[yi * n_samples + i]) ** 2
+                    result += y[yi * n_samples + i] ** 2
 
             yi += 1
-        if calc == False:
-            # add x squared
-            for i in range(n_samples):
-                result += x[xi * n_samples + i] ** 2
-        xi += 1
-    yi = 0
-    for yb in y_best:
-        calc = False
-        for xb in x_best:
-            if xb == yb:
-                calc = True
-        if calc == False:
-            # add y squared
-            for i in range(n_samples):
-                result += y[yi * n_samples + i] ** 2
-
-        yi += 1
-    return np.sqrt(result)
+        return np.sqrt(result)
 
 
 # HACK: this function only exists because I couldn't get the spikeinterface one to work...
