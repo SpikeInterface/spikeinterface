@@ -26,9 +26,4 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-def read_mcsraw(*args, **kwargs):
-    recording = MCSRawRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_mcsraw.__doc__ = MCSRawRecordingExtractor.__doc__
+read_mcsraw = MCSRawRecordingExtractor.define_reader_function(name="read_maxwell_event")
