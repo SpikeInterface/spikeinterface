@@ -138,9 +138,4 @@ class KlustSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_klusta(*args, **kwargs):
-    sorting = KlustaSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_klusta.__doc__ = KlustaSortingExtractor.__doc__
+read_klusta = KlustaSortingExtractor.define_reader_function(name="read_klusta")

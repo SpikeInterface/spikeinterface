@@ -137,7 +137,4 @@ def openMCSH5File(filename, stream_id):
     return mcs_info
 
 
-def read_mcsh5(*args, **kwargs):
-    return MCSH5RecordingExtractor(*args, **kwargs)
-
-read_mcsh5.__doc__ = MCSH5RecordingExtractor.__doc__
+read_mcsh5 = MCSH5RecordingExtractor.define_reader_function(name="read_mcsh5")
