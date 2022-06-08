@@ -20,9 +20,7 @@ from .job_tools import _shared_job_kwargs_doc
 
 def copy_signature(source_fct):
     def copy(target_fct):
-        sig = inspect.signature(source_fct)
-        # remove "self"
-        target_fct.__signature__ = inspect.Signature([x for x in list(sig.parameters.values())[1:]])
+        target_fct.__signature__ = inspect.signature(source_fct)
         return target_fct
     return copy
 
@@ -42,21 +40,13 @@ class BaseExtractor:
     _main_properties = []
     _main_features = []
 
-    @classmethod
-    def convert_class_name(cls):
-        if "RecordingExtractor" in cls.__name__:
-            return f"read_{cls.__name__[:cls.__name__.find('RecordingExtractor')].lower()}"
-        elif "SortingExtractor" in cls.__name__:
-            return f"read_{cls.__name__[:cls.__name__.find('SortingExtractorExtractor')].lower()}"
-        raise ValueError("cannot automatically rename reader function")
-
 
     @classmethod
     def define_reader_function(cls, name):
 
-        @copy_signature(cls.__init__)
+        @copy_signature(cls)
         def reader_func(*args, **kwargs):
-            cls.__init__(*args, **kwargs)
+            cls(*args, **kwargs)
 
         reader_func.__doc__ = cls.__doc__
         reader_func.__name__ = name
