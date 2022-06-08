@@ -5,7 +5,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading neuralynx folder
     
-    Based on neo.rawio.NeuralynxRawIO
+    Based on :py:class:`neo.rawio.NeuralynxRawIO`
     
     Parameters
     ----------
