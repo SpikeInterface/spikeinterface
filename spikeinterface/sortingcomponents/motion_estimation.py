@@ -8,7 +8,7 @@ possible_motion_estimation_methods = ['decentralized_registration', ]
 def init_kwargs_dict(method, method_kwargs):
     # handle kwargs by method
     if method == 'decentralized_registration':
-        method_kwargs_ = dict(pairwise_displacement_method='conv', convergence_method='gradient_descent') #, maximum_displacement_um=400
+        method_kwargs_ = dict(pairwise_displacement_method='conv', convergence_method='gradient_descent', max_displacement_um=400)
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
 
@@ -145,6 +145,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
 
             pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(motion_hist, bin_um,
                                                                   method=method_kwargs['pairwise_displacement_method'],
+                                                                  max_displacement_um=method_kwargs['max_displacement_um'],
                                                                   progress_bar=progress_bar)
             if output_extra_check:
                 extra_check['pairwise_displacement_list'].append(pairwise_displacement)
@@ -232,7 +233,7 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
 def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                                   weight_scale='linear', error_sigma=0.2,
                                   conv_engine='numpy', torch_device=None,
-                                  batch_size=1,
+                                  batch_size=1, max_displacement_um=None,
                                   corr_threshold=0, time_horizon_s=None,
                                   sampling_frequency=None, progress_bar=False): 
     """
@@ -252,8 +253,15 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if method == 'conv':
-        n = motion_hist.shape[1] // 2
+        if max_displacement_um is None:
+            n = motion_hist.shape[1] // 2
+        else:
+            n = min(
+                motion_hist.shape[1] // 2,
+                int(np.ceil(max_displacement_um // bin_um)),
+            )
         possible_displacement = np.arange(-n, n + 1) * bin_um
+
         conv_values = np.zeros((size, size), dtype='float32')
         xrange = trange if progress_bar else range
 
@@ -320,7 +328,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             import skimage.registration
         except ImportError:
             raise ImportError("To use 'phase_cross_correlation' method install scikit-image")
-        
+
         errors = np.zeros((size, size), dtype='float32')
         loop = range(size)
         if progress_bar:
