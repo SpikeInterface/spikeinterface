@@ -23,9 +23,4 @@ class RectifyRecordingSegment(BasePreprocessorSegment):
         return np.abs(traces)
 
 
-# function for API
-def rectify(*args, **kwargs):
-    return RectifyRecording(*args, **kwargs)
-
-
-rectify.__doc__ = RectifyRecording.__doc__
+rectify = RectifyRecording.define_reader_function(name="rectify")

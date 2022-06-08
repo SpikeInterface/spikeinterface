@@ -154,9 +154,4 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         return zip(selected_channels, selected_groups)
 
 
-# function for API
-def common_reference(*args, **kwargs):
-    return CommonReferenceRecording(*args, **kwargs)
-
-
-common_reference.__doc__ = CommonReferenceRecording.__doc__
+common_reference = CommonReferenceRecording.define_reader_function(name="common_reference")

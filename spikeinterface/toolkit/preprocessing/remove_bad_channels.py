@@ -45,9 +45,4 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
         self._kwargs.update(random_chunk_kwargs)
 
 
-# function for API
-def remove_bad_channels(*args, **kwargs):
-    return RemoveBadChannelsRecording(*args, **kwargs)
-
-
-remove_bad_channels.__doc__ = RemoveBadChannelsRecording.__doc__
+remove_bad_channels = RemoveBadChannelsRecording.define_reader_function(name="remove_bad_channels")
