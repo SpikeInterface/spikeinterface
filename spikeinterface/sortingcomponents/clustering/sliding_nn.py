@@ -90,7 +90,7 @@ class SlidingNNClustering:
 
         assert HAVE_NUMBA, "SlidingNN needs numba to work"
         assert HAVE_TORCH, "SlidingNN needs torch to work"
-        assert HAVE_PYNNDESCENT, "SlidingNN needs pynndescent to work"
+        assert HAVE_NNDESCENT, "SlidingNN needs pynndescent to work"
         assert HAVE_PYMDE, "SlidingNN needs pymde to work"
 
         d = params
@@ -471,6 +471,7 @@ def build_windowed_nn_graph(
         knn_distances_list,
     )
     return nn_idx, nn_dist
+
 
 if HAVE_NUMBA:
     @numba.jit(fastmath=True, cache=True)
