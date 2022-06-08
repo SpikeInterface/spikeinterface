@@ -226,7 +226,6 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
             output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
             peak_locations[i] = tuple(output['x'])
         elif optimizer == 'minimize_with_log_penality':
-            x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
             x0 = x0[:3]
             bounds = [(bounds[0][i], bounds[1][i]) for i in range(3)]
             maxptp = wf_ptp.max()
