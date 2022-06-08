@@ -30,7 +30,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
     compiled_name: str = 'ks_compiled'
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
     requires_locations = False
-    docker_requires_gpu = True
+    requires_gpu = None
 
     _default_params = {
         'detect_threshold': 6,
@@ -89,6 +89,13 @@ class KilosortSorter(KilosortBase, BaseSorter):
             return 'unknown'
         else:
             return 'git-' + commit
+        
+    @classmethod
+    def use_gpu(cls, params):
+        if params["useGPU"]:
+            return 'nvidia'
+        else:
+            return None
 
     @classmethod
     def set_kilosort_path(cls, kilosort_path: str):

@@ -18,6 +18,7 @@ class KilosortBase:
       * _run_from_folder
       * _get_result_from_folder
     """
+    requires_gpu = 'nvidia'
 
     @staticmethod
     def _generate_channel_map_file(recording, output_folder):
