@@ -1,6 +1,4 @@
 from pathlib import Path
-import numpy as np
-from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.extractors.neoextractors.spikeglx import _get_sample_shifts
@@ -118,8 +116,4 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def read_cbin_ibl(*args, **kwargs):
-    recording = CompressedBinaryIblExtractor(*args, **kwargs)
-    return recording
-
-read_cbin_ibl.__doc__ = CompressedBinaryIblExtractor.__doc__
+read_cbin_ibl = CompressedBinaryIblExtractor.define_reader_function(name="read_cbin_ibl")

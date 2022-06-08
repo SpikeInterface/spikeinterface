@@ -24,9 +24,4 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = {'file_path': str(file_path), 'stream_id': stream_id}
 
 
-def read_spike2(*args, **kwargs):
-    recording = Spike2RecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_spike2.__doc__ = Spike2RecordingExtractor.__doc__
+read_spike2 = Spike2RecordingExtractor.define_reader_function(name="read_spike2")

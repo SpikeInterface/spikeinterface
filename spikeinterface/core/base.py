@@ -52,14 +52,14 @@ class BaseExtractor:
 
 
     @classmethod
-    def define_reader_function(cls):
+    def define_reader_function(cls, name):
 
         @copy_signature(cls.__init__)
         def reader_func(*args, **kwargs):
             cls.__init__(*args, **kwargs)
 
         reader_func.__doc__ = cls.__doc__
-        reader_func.__name__ = cls.convert_class_name()
+        reader_func.__name__ = name
 
         return reader_func
 

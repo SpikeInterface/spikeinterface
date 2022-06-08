@@ -59,4 +59,4 @@ class TridesclousSortingSegment(BaseSortingSegment):
         return spike_times.copy()
 
 
-read_tridesclous = TridesclousSortingExtractor.define_reader_function()
+read_tridesclous = TridesclousSortingExtractor.define_reader_function(name="read_tridesclous")

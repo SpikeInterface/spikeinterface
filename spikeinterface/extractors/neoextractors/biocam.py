@@ -39,9 +39,4 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id, mea_pitch=mea_pitch)
 
 
-def read_biocam(*args, **kwargs):
-    recording = BiocamRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_biocam.__doc__ = BiocamRecordingExtractor.__doc__
+read_biocam = BiocamRecordingExtractor.define_reader_function(name="read_biocam")
