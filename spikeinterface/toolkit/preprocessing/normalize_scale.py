@@ -199,15 +199,5 @@ def normalize_by_quantile(*args, **kwargs):
 normalize_by_quantile.__doc__ = NormalizeByQuantileRecording.__doc__
 
 
-def scale(*args, **kwargs):
-    return ScaleRecording(*args, **kwargs)
-
-
-scale.__doc__ = ScaleRecording.__doc__
-
-
-def center(*args, **kwargs):
-    return CenterRecording(*args, **kwargs)
-
-
-center.__doc__ = CenterRecording.__doc__
+scale = ScaleRecording.define_reader_function(name="scale")
+center = CenterRecording.define_reader_function(name="center")

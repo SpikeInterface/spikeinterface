@@ -223,9 +223,4 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         return traces
 
 
-# function for API
-def remove_artifacts(*args, **kwargs):
-    return RemoveArtifactsRecording(*args, **kwargs)
-
-
-remove_artifacts.__doc__ = RemoveArtifactsRecording.__doc__
+remove_artifacts = RemoveArtifactsRecording.define_reader_function(name="remove_artifacts")
