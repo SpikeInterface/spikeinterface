@@ -23,9 +23,4 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
-def read_tdt(*args, **kwargs):
-    recording = TdtRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_tdt.__doc__ = TdtRecordingExtractor.__doc__
+read_tdt = TdtRecordingExtractor.define_reader_function(name="read_tdt")

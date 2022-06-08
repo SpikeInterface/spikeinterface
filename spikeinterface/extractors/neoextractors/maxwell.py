@@ -109,9 +109,4 @@ class MaxwellEventSegment(BaseEventSegment):
         return event
 
 
-def read_maxwell_event(*args, **kwargs):
-    event = MaxwellEventExtractor(*args, **kwargs)
-    return event
-
-
-read_maxwell_event.__doc__ = MaxwellEventExtractor.__doc__
+read_maxwell_event = MaxwellEventExtractor.define_reader_function(name="read_maxwell_event")

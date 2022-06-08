@@ -34,7 +34,7 @@ class IronClustSorter(BaseSorter):
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)
 
     requires_locations = True
-    docker_requires_gpu = True
+    docker_requires_gpu = False
 
     _default_params = {
         'detect_sign': -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording

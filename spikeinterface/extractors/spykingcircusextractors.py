@@ -101,4 +101,4 @@ def _load_sample_rate(params_file):
     return sample_rate
 
 
-read_spykingcircus = SpykingCircusSortingExtractor.define_reader_function()
+read_spykingcircus = SpykingCircusSortingExtractor.define_reader_function(name="read_spykingcircus")

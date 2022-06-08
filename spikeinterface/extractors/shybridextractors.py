@@ -184,14 +184,8 @@ class SHYBRIDSortingSegment(BaseSortingSegment):
         return train[idxs]
 
 
-def read_shybrid_recording(file_path):
-    recording = SHYBRIDRecordingExtractor(file_path)
-    return recording
-
-
-def read_shybrid_sorting(file_path, sampling_frequency, delimiter=','):
-    sorting = SHYBRIDSortingExtractor(file_path, sampling_frequency, delimiter=',')
-    return sorting
+read_shybrid_recording = SHYBRIDRecordingExtractor.define_reader_function(name="read_shybrid_recording")
+read_shybrid_sorting = SHYBRIDSortingExtractor.define_reader_function(name="read_shybrid_sorting")
 
 
 class GeometryNotLoadedError(Exception):

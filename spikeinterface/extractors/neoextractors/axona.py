@@ -1,4 +1,4 @@
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor
 
 
 class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
@@ -23,9 +23,4 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path))
 
 
-def read_axona(*args, **kwargs):
-    recording = AxonaRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_axona.__doc__ = AxonaRecordingExtractor.__doc__
+read_axona = AxonaRecordingExtractor.define_reader_function(name="read_axona")

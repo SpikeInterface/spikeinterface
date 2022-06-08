@@ -258,20 +258,8 @@ def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType
     return xml_file_path
 
 
-def read_neuroscope_recording(*args, **kwargs):
-    recording = NeuroScopeRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_neuroscope_recording.__doc__ = NeuroScopeRecordingExtractor.__doc__
-
-
-def read_neuroscope_sorting(*args, **kwargs):
-    sorting = NeuroScopeSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_neuroscope_sorting.__doc__ = NeuroScopeSortingExtractor.__doc__
+read_neuroscope_recording = NeuroScopeRecordingExtractor.define_reader_function(name="read_neuroscope_recording")
+read_neuroscope_sorting = NeuroScopeSortingExtractor.define_reader_function(name="read_neuroscope_sorting")
 
 
 def read_neuroscope(file_path, stream_id=None, keep_mua_units=False,

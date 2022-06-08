@@ -22,9 +22,4 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-def read_spikegadgets(*args, **kwargs):
-    recording = SpikeGadgetsRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_spikegadgets.__doc__ = SpikeGadgetsRecordingExtractor.__doc__
+read_spikegadgets = SpikeGadgetsRecordingExtractor.define_reader_function(name="read_spikegadgets")
