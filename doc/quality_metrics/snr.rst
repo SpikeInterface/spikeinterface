@@ -10,8 +10,6 @@ Calculation
 .. math::
     \textrm{SNR} = \frac{A_{\mu s}}{\sigma_b}
 
-
-
 Expectation and use
 -------------------
 
@@ -56,6 +54,12 @@ From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/8524
 
 From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#SNR>`_
 
+References
+----------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_snrs
 
 Literature
 ----------
