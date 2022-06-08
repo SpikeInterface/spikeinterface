@@ -15,7 +15,7 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
+        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices] #/self.standard_dev
         return scaled_traces.astype(self._dtype)
 
 
@@ -191,6 +191,47 @@ class CenterRecording(BasePreprocessor):
         self._kwargs.update(random_chunk_kwargs)
 
 
+class ZScoreRecording(BasePreprocessor):
+    """
+    Centers traces from the given recording extractor by removing the median/mean of each channel.
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor to be centered
+    mode: str
+        'median' (default) | 'mean'
+    dtype: str or np.dtype
+        The dtype of the output traces. Default "float32"
+    **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
+    
+    Returns
+    -------
+    centered_traces: ScaleRecording
+        The centered traces recording extractor object
+    """
+    name = 'center'
+
+    def __init__(self, recording,
+                 dtype="float32", **random_chunk_kwargs):
+
+        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
+
+        offset = -np.median(random_data, axis=0)
+        offset = offset[None, :]
+        gain = 1/np.median(np.abs(random_data + offset), axis=0)/0.6745
+        gain = gain[None, :]
+
+        BasePreprocessor.__init__(self, recording, dtype=dtype)
+
+        for parent_segment in recording._recording_segments:
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = dict(recording=recording.to_dict(), dtype=np.dtype(self._dtype).str)
+        self._kwargs.update(random_chunk_kwargs)
+
+
 # function for API
 def normalize_by_quantile(*args, **kwargs):
     return NormalizeByQuantileRecording(*args, **kwargs)
@@ -211,3 +252,12 @@ def center(*args, **kwargs):
 
 
 center.__doc__ = CenterRecording.__doc__
+
+
+def scale_zscore(*args, **kwargs):
+    return ZScoreRecording(*args, **kwargs)
+
+
+scale_zscore.__doc__ = ZScoreRecording.__doc__
+
+
