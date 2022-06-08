@@ -191,17 +191,6 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
                         'keep_good_only': keep_good_only}
 
 
-def read_phy(*args, **kwargs):
-    sorting = PhySortingExtractor(*args, **kwargs)
-    return sorting
+read_phy = PhySortingExtractor.define_reader_function()
 
-
-read_phy.__doc__ = PhySortingExtractor.__doc__
-
-
-def read_kilosort(*args, **kwargs):
-    sorting = KiloSortSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_kilosort.__doc__ = KiloSortSortingExtractor.__doc__
+read_kilosort = KiloSortSortingExtractor.define_reader_function()
