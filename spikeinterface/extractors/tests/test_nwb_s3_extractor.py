@@ -1,9 +1,13 @@
 import unittest
 
-from .test_nwbextractors import NwbRecordingTest
+from spikeinterface.extractors import NwbRecordingExtractor
+
+from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite
 
 
-class S3NwbRecordingTest(NwbRecordingTest, unittest.TestCase):
+class S3NwbRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NwbRecordingExtractor
+    downloads = []
     entities = [(
         "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc",
         dict(driver="ros3")
