@@ -53,41 +53,59 @@ Module :mod:`spikeinterface.core`
 
 Module :mod:`spikeinterface.extractors`
 ---------------------------------------
+NEO-based
+~~~~~~~~~
 .. automodule:: spikeinterface.extractors
 
-    .. autofunction:: toy_example
-    .. autofunction:: read_bids_folder
-    .. autofunction:: read_mearec
-    .. autofunction:: read_spikeglx
-    .. autofunction:: read_openephys
-    .. autofunction:: read_openephys_event
-    .. autofunction:: read_intan
-    .. autofunction:: read_neuroscope
-    .. autofunction:: read_plexon
-    .. autofunction:: read_neuralynx
-    .. autofunction:: read_blackrock
-    .. autofunction:: read_mcsraw
-    .. autofunction:: read_kilosort
-    .. autofunction:: read_spike2
-    .. autofunction:: read_ced
-    .. autofunction:: read_maxwell
-    .. autofunction:: read_nix
-    .. autofunction:: read_spikegadgets
-    .. autofunction:: read_klusta
-    .. autofunction:: read_hdsort
-    .. autofunction:: read_waveclust
-    .. autofunction:: read_yass
-    .. autofunction:: read_combinato
-    .. autofunction:: read_tridesclous
-    .. autofunction:: read_spykingcircus
-    .. autofunction:: read_herdingspikes
-    .. autofunction:: read_mda_recording
-    .. autofunction:: read_mda_sorting
-    .. autofunction:: read_shybrid_recording
-    .. autofunction:: read_shybrid_sorting
-    .. autofunction:: read_alf_sorting
     .. autofunction:: read_alphaomega
     .. autofunction:: read_alphaomega_event
+    .. autofunction:: read_axona
+    .. autofunction:: read_biocam
+    .. autofunction:: read_blackrock
+    .. autofunction:: read_ced
+    .. autofunction:: read_intan
+    .. autofunction:: read_kilosort
+    .. autofunction:: read_maxwell
+    .. autofunction:: read_mearec
+    .. autofunction:: read_mcsraw
+    .. autofunction:: read_neuralynx
+    .. autofunction:: read_neuroscope
+    .. autofunction:: read_nix
+    .. autofunction:: read_openephys
+    .. autofunction:: read_openephys_event
+    .. autofunction:: read_plexon
+    .. autofunction:: read_spike2
+    .. autofunction:: read_spikegadgets
+    .. autofunction:: read_spikeglx
+    .. autofunction:: read_tdt
+
+
+Non-NEO-based
+~~~~~~~~~~~~~
+.. automodule:: spikeinterface.extractors
+
+    .. autofunction:: read_alf_sorting
+    .. autofunction:: read_bids_folder
+    .. autofunction:: read_cbin_ibl
+    .. autofunction:: read_combinato
+    .. autofunction:: read_hdsort
+    .. autofunction:: read_herdingspikes
+    .. autofunction:: read_klusta
+    .. autofunction:: read_mcsh5
+    .. autofunction:: read_mda_recording
+    .. autofunction:: read_mda_sorting
+    .. autofunction:: read_nwb
+    .. autofunction:: read_phy
+    .. autofunction:: read_shybrid_recording
+    .. autofunction:: read_shybrid_sorting
+    .. autofunction:: read_spykingcircus
+    .. autofunction:: toy_example
+    .. autofunction:: read_tridesclous
+    .. autofunction:: read_waveclust
+    .. autofunction:: read_yass
+
+
+
 
 
 Module :mod:`spikeinterface.toolkit`
