@@ -38,6 +38,13 @@ From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/8524
 
 From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Presence-ratio>`_
 
+References
+----------
+
+.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+
+    .. autofunction:: compute_presence_ratio
+
 Literature
 ----------
 
