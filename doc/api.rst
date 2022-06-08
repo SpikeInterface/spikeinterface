@@ -128,19 +128,20 @@ Preprocessing
 
 .. automodule:: spikeinterface.toolkit.preprocessing
 
-    .. autofunction:: filter
     .. autofunction:: bandpass_filter
-    .. autofunction:: notch_filter
-    .. autofunction:: normalize_by_quantile
-    .. autofunction:: scale
-    .. autofunction:: center
-    .. autofunction:: whiten
-    .. autofunction:: rectify
     .. autofunction:: blank_staturation
+    .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
+    .. autofunction:: filter
+    .. autofunction:: normalize_by_quantile
+    .. autofunction:: notch_filter
+    .. autofunction:: rectify
     .. autofunction:: remove_artifacts
     .. autofunction:: remove_bad_channels
+    .. autofunction:: scale
+    .. autofunction:: whiten
+
 
 
 Postprocessing
