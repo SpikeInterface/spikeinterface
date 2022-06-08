@@ -10,8 +10,10 @@ from spikeinterface.widgets import plot_sorting_performance, plot_agreement_matr
 
 
 import time
+import os
 import string, random
 import pylab as plt
+import numpy as np
 
 class BenchmarkMatching:
 
@@ -29,7 +31,7 @@ class BenchmarkMatching:
 
         self.tmp_folder = tmp_folder
         if self.tmp_folder is None:
-            self.tmp_folder = ''.join('waveforms')
+            self.tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
 
         self.we = extract_waveforms(self.recording_f, self.gt_sorting, self.tmp_folder, load_if_exists=True,
                                    ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500,
@@ -38,6 +40,10 @@ class BenchmarkMatching:
         self.method_kwargs.update({'waveform_extractor' : self.we})
         self.templates = self.we.get_all_templates(mode='median')
    
+    def __del__(self):
+        import shutil
+        shutil.rmtree(self.tmp_folder)
+
     def run(self):
         t_start = time.time()
         spikes = find_spikes_from_templates(self.recording_f, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
@@ -72,7 +78,7 @@ class BenchmarkMatching:
         ax.legend(['accuracy', 'recall', 'precision'])
         
         ax = axs[1, 1]
-        plot_comparison_average_performance(self.comp, ax=ax, colors=['g', 'b', 'r'])
+        #plot_comparison_average_performance(self.comp, ax=ax, colors=['g', 'b', 'r'])
 
         ax = axs[0, 1]
         plot_comparison_collision_by_similarity(self.comp, self.templates, ax=ax, show_legend=True, mode='lines')
@@ -81,6 +87,7 @@ def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
     
     benchmark.we.sorting.get_unit_spike_train(unit_id)
+    template = benchmark.we.get_template(unit_id)
     a = template.reshape(template.size, 1).T
     count = 0
     colors = ['r', 'b']
@@ -124,6 +131,8 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
         unit_id = benchmark.we.sorting.unit_ids[i]
         idx_2 = benchmark.we.get_sampled_indices(unit_id)['spike_index']
         wfs = benchmark.we.get_waveforms(unit_id)
+        template = benchmark.we.get_template(unit_id)
+        a = template.reshape(template.size, 1).T
         
         for label in ['TP', 'FN']:
             idx_1 = np.where(benchmark.comp.get_labels1(unit_id) == label)[0] 
@@ -136,7 +145,6 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
             all_spikes = len(wfs_sliced)
             if all_spikes > 0:
                 b = wfs_sliced.reshape(all_spikes, -1)
-                a = templates[i].reshape(template.size, 1).T
                 distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
                 results[label]['mean'] += [np.nanmean(distances)]
                 results[label]['std'] += [np.nanstd(distances)]
@@ -156,9 +164,9 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
         ax.set_ylabel(metric)
 
 
-def plot_comparison_matching(benchmarks, performance_names=['recall'], ylim=(0.5, 1)):
+def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall', 'precision'], ylim=(0.5, 1)):
     nb_benchmarks = len(benchmarks)
-    fig, axs = plt.subplots(ncols=nb_benchmarks, nrows=nb_benchmarks - 1)
+    fig, axs = plt.subplots(ncols=nb_benchmarks, nrows=nb_benchmarks - 1, figsize=(10, 10))
     for i in range(nb_benchmarks - 1):
         for j in range(nb_benchmarks):
             ax = axs[i, j]
@@ -188,7 +196,7 @@ def plot_comparison_matching(benchmarks, performance_names=['recall'], ylim=(0.5
                 ax.set_yticks([], [])
                 ax.set_xticks([], [])
                 if (i == 0) and (j == 0):
-                    ax.plot([0,0],[0,0])
-                    ax.plot([0,0],[0,0])
+                    for k in range(len(performance_names)):
+                        ax.plot([0,0],[0,0])
                     ax.legend(performance_names)
     plt.tight_layout()
