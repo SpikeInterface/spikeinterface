@@ -5,6 +5,7 @@ from .filter import (FilterRecording, filter,
 from .normalize_scale import (
     NormalizeByQuantileRecording, normalize_by_quantile,
     ScaleRecording, scale,
+    ZScoreRecording, scale_zscore,
     CenterRecording, center)
 from .whiten import WhitenRecording, whiten
 from .rectify import RectifyRecording, rectify
