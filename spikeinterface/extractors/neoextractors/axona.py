@@ -5,7 +5,7 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading Axona RAW format
 
-    Based on :py:class:`~neo.rawio.AxonaRawIO`
+    Based on :py:class:`neo.rawio.AxonaRawIO`
 
     Parameters
     ----------
