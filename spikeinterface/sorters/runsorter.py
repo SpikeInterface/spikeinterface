@@ -9,7 +9,7 @@ import platform
 from ..version import version as si_version
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
-from .utils import SpikeSortingError
+from .utils import SpikeSortingError, has_nvidia
 
 
 _common_param_doc = """
@@ -160,12 +160,14 @@ class ContainerClient:
     def __init__(self, mode, container_image, volumes, extra_kwargs):
         assert mode in ('docker', 'singularity')
         self.mode = mode
+        container_requires_gpu = extra_kwargs.get(
+            'container_requires_gpu', None)
 
         if mode == 'docker':
             import docker
             client = docker.from_env()
-            if extra_kwargs.get('requires_gpu', False):
-                extra_kwargs.pop('requires_gpu')
+            if container_requires_gpu is not None:
+                extra_kwargs.pop('container_requires_gpu')
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
 
@@ -198,7 +200,7 @@ class ContainerClient:
             options=['--bind', singularity_bind]
 
             # gpu options
-            if extra_kwargs.get('requires_gpu', False):
+            if container_requires_gpu == "nvidia":
                 # only nvidia at the moment
                 options += ['--nv']
 
@@ -306,8 +308,16 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         install_si_from_source = False
         
     extra_kwargs = {}
-    if SorterClass.docker_requires_gpu:
-        extra_kwargs['requires_gpu'] = True
+    use_gpu = SorterClass.use_gpu(sorter_params)
+    if use_gpu is not None:
+        if use_gpu == 'nvidia':
+            if has_nvidia():
+                extra_kwargs['container_requires_gpu'] = True
+            else:
+                raise Exception("The container requires a NVIDIA GPU capability, but it is not available")
+        else:
+            # TODO: make opencl machanism
+            raise NotImplementedError("Only nvidia support is available")
     
     container_client = ContainerClient(mode, container_image, volumes, extra_kwargs)
     if verbose:

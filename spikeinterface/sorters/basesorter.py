@@ -26,7 +26,7 @@ class BaseSorter:
     compiled_name = None
     SortingExtractor_Class = None  # convenience to get the extractor
     requires_locations = False
-    docker_requires_gpu = False
+    requires_gpu = None
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': True}
     _default_params = {}
     _params_description = {}
@@ -289,6 +289,10 @@ class BaseSorter:
         if retcode != 0:
             return False
         return True
+    
+    @classmethod
+    def use_gpu(cls, params):
+        return cls.requires_gpu
 
     #############################################
 
