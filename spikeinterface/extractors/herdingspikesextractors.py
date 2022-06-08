@@ -126,9 +126,4 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
     """
 
 
-def read_herdingspikes(*args, **kwargs):
-    sorting = HerdingspikesSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_herdingspikes.__doc__ = HerdingspikesSortingExtractor.__doc__
+read_herdingspikes = HerdingspikesSortingExtractor.define_reader_function(name="read_herdingspikes")

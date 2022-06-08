@@ -24,9 +24,4 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-def read_intan(*args, **kwargs):
-    recording = IntanRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_intan.__doc__ = IntanRecordingExtractor.__doc__
+read_intan = IntanRecordingExtractor.define_reader_function(name="read_intan")
