@@ -670,7 +670,7 @@ def recursive_path_modifier(d, func, target='path', copy=True):
     target : str, optional
         String to match to dictionary key, by default 'path'
     copy : bool, optional
-        If True the original dictionary is deep copied, by default True
+        If True the original dictionary is deep copied, by default True (at first call)
 
     Returns
     -------
@@ -690,18 +690,18 @@ def recursive_path_modifier(d, func, target='path', copy=True):
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
         if nested_extractor_dict is None:
-            recursive_path_modifier(kwargs, func)
+            recursive_path_modifier(kwargs, func, copy=False)
         else:
-            recursive_path_modifier(nested_extractor_dict, func)
+            recursive_path_modifier(nested_extractor_dict, func, copy=False)
         return dc
     else:
         for k, v in d.items():
             if target in k:
                 # paths can be str or list of str
                 if isinstance(v, str):
-                    d[k] =func(v)
+                    dc[k] =func(v)
                 elif isinstance(v, list):
-                    d[k] = [func(e) for e in v]
+                    dc[k] = [func(e) for e in v]
                 else:
                     raise ValueError(
                         f'{k} key for path  must be str or list[str]')
