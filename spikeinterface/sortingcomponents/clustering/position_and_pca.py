@@ -30,7 +30,7 @@ class PositionAndPCAClustering:
         'ms_after': 2.5,
         'n_components_by_channel' : 3,
         'n_components': 5,
-        'job_kwargs' : {'n_jobs' : 1, 'chunk_memory' : '10M', 'progress_bar' : False},
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M'},
         'hdbscan_global_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
         'hdbscan_local_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
         'waveform_mode': 'memmap',
@@ -41,7 +41,6 @@ class PositionAndPCAClustering:
         'auto_merge_num_shift': 3,
         'auto_merge_quantile_limit': 0.8, 
         'ratio_num_channel_intersect': 0.5,
-        'job_kwargs' : {}
     }
 
     @classmethod
@@ -75,7 +74,7 @@ class PositionAndPCAClustering:
         # step1 : clustering on peak location
         if params['peak_locations'] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-            peak_locations = localize_peaks(recording, peaks, **params['peak_localization_kwargs'])
+            peak_locations = localize_peaks(recording, peaks, **params['peak_localization_kwargs'], **params['job_kwargs'])
         else:
             peak_locations = params['peak_locations']
         

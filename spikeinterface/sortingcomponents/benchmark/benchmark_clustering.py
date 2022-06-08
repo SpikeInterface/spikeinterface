@@ -8,7 +8,7 @@ from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import plot_probe_map, plot_agreement_matrix, plot_comparison_collision_by_similarity, plot_unit_templates, plot_unit_waveforms
 from spikeinterface.toolkit.postprocessing import compute_principal_components
-
+from spikeinterface.comparison.comparisontools import make_matching_events
 
 import time
 import string, random
@@ -17,17 +17,15 @@ import os
 
 class BenchmarkClustering:
 
-    def __init__(self, mearec_file, method, method_kwargs={}, tmp_folder=None, job_kwargs={}, verbose=True):
+    def __init__(self, mearec_file, method, tmp_folder=None, job_kwargs={}, verbose=True):
         self.mearec_file = mearec_file
         self.method = method
         self.verbose = verbose
-        self.method_kwargs = method_kwargs
         self.recording, self.gt_sorting = read_mearec(mearec_file)
         self.recording_f = bandpass_filter(self.recording, dtype='float32')
         self.recording_f = common_reference(self.recording_f)
         self.sampling_rate = self.recording_f.get_sampling_frequency()
         self.job_kwargs = job_kwargs
-        self.method_kwargs = method_kwargs
 
         self.tmp_folder = tmp_folder
         if self.tmp_folder is None:
@@ -79,14 +77,16 @@ class BenchmarkClustering:
             print(f'Localizing peaks with method {method}')
         self._positions = localize_peaks(self.recording_f, self.selected_peaks, **method_kwargs, **self.job_kwargs)
 
-    def run(self, peaks=None):
+    def run(self, peaks=None, positions=None, method_kwargs={}):
         t_start = time.time()
         if self.verbose:
-            print(f'Launching the clustering algorithm')
+            print(f'Launching the {self.method} clustering algorithm')
         if peaks is not None:
             self._peaks = peaks
             self._selected_peaks = peaks
-        labels, peak_labels = find_cluster_from_peaks(self.recording_f, self.selected_peaks, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
+        if positions is not None:
+            self._positions = positions
+        labels, peak_labels = find_cluster_from_peaks(self.recording_f, self.selected_peaks, method=self.method, method_kwargs=method_kwargs, **self.job_kwargs)
         self.noise = peak_labels == -1
         self.run_time = time.time() - t_start
         self.selected_peaks_labels = peak_labels
@@ -94,14 +94,14 @@ class BenchmarkClustering:
 
         self.clustering = NumpySorting.from_times_labels(self.selected_peaks['sample_ind'][~self.noise], self.selected_peaks_labels[~self.noise], self.sampling_rate)
         if self.verbose:
-            print("Performing the comparison with ground truth")
+            print("Performing the comparison with (sliced) ground truth")
 
         times1 = self.gt_sorting.get_all_spike_trains()[0]
         times2 = self.clustering.get_all_spike_trains()[0]
         matches = make_matching_events(times1[0], times2[0], int(0.1*self.sampling_rate/1000))
 
         idx = matches['index1']
-        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], self.times1[1][idx], self.sampling_rate)
+        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], times1[1][idx], self.sampling_rate)
 
         self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering)
 
@@ -109,7 +109,7 @@ class BenchmarkClustering:
         self.pcas = {}
         self.templates = {}
         if self.verbose:
-            print("Extracting waveforms and computing pcs")
+            print("Extracting waveforms")
 
         for label, sorting in zip(['gt', 'clustering'], [self.sliced_gt_sorting, self.clustering]):
             tmp_folder = os.path.join(self.tmp_folder, label)
@@ -128,21 +128,31 @@ class BenchmarkClustering:
             self.templates[label] = self.waveforms[label].get_all_templates(mode='median')
     
 
-    def plot(self, title=None, metric='cosine'):
+    def plot(self, title=None, metric='cosine', show_probe=True):
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
         ax = axs[0, 0]
+        if show_probe:
+            plot_probe_map(self.recording_f, ax=ax)
         ax.scatter(self.positions['x'][~self.noise], self.positions['y'][~self.noise], c=self.selected_peaks_labels[~self.noise], s=1, alpha=0.5)
-        ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.5)
+        ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
 
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        metrics = compute_quality_metrics(self.waveforms['gt'], metric_names=['snr'], load_if_exists=True)
+        metrics = compute_quality_metrics(self.waveforms['gt'], metric_names=['snr'], load_if_exists=False)
 
         ax = axs[0, 1]
         plot_agreement_matrix(self.comp, ax=ax)
-        a = self.templates['gt'].reshape(len(self.templates['gt']), -1)
-        b = self.templates['clustering'].reshape(len(self.templates['clustering']), -1)
+
+        scores = self.comp.get_ordered_agreement_scores()
+        unit_ids1 = scores.index.values
+        ids_2 = scores.columns.values
+        ids_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
+
+
+        a = self.templates['gt'].reshape(len(self.templates['gt']), -1)[ids_1]
+        b = self.templates['clustering'].reshape(len(self.templates['clustering']), -1)[ids_2]
         
+
         import sklearn
         distances = sklearn.metrics.pairwise_distances(a, b, metric)
         ax = axs[1, 0]
