@@ -1,11 +1,11 @@
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor
 
 
 class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading Axona RAW format
 
-    Based on neo.rawio.AxonaRawIO
+    Based on :py:class:`~neo.rawio.AxonaRawIO`
 
     Parameters
     ----------

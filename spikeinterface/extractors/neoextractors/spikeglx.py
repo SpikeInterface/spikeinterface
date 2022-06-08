@@ -15,7 +15,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading data from a SpikeGLX system  (NI-DAQ for neuropixel probe)
     See https://billkarsh.github.io/SpikeGLX/
 
-    Based on neo.rawio.SpikeGLXRawIO
+    Based on :py:class:`neo.rawio.SpikeGLXRawIO`
 
     Contrary to older verion this reader is folder based.
     So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
