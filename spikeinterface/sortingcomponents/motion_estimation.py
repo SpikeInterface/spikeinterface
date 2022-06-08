@@ -1,6 +1,5 @@
 import numpy as np
-from tqdm import tqdm
-from tqdm.auto import trange
+from tqdm.auto import tqdm, trange
 
 possible_motion_estimation_methods = ['decentralized_registration', ]
 
@@ -8,7 +7,7 @@ possible_motion_estimation_methods = ['decentralized_registration', ]
 def init_kwargs_dict(method, method_kwargs):
     # handle kwargs by method
     if method == 'decentralized_registration':
-        method_kwargs_ = dict(pairwise_displacement_method='conv', convergence_method='gradient_descent', max_displacement_um=400)
+        method_kwargs_ = dict(pairwise_displacement_method='conv', convergence_method='gradient_descent', max_displacement_um=1500)
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
 
@@ -121,7 +120,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
             min_ = np.min(contact_pos) - margin_um
             max_ = np.max(contact_pos) + margin_um
 
-            num_win = int(np.ceil((max_ - min_) / bin_step_um))
+            num_win = (max_ - min_) // bin_step_um
             spatial_bins = np.arange(num_win) * bin_step_um + bin_step_um / 2. + min_
 
             # TODO check this gaussian with julien
@@ -136,27 +135,45 @@ def estimate_motion(recording, peaks, peak_locations=None,
             extra_check['pairwise_displacement_list'] = []
 
         motion = []
-        for i, win in enumerate(non_rigid_windows):
+        windows_iter = non_rigid_windows
+        if progress_bar:
+            windows_iter = tqdm(windows_iter, desc="windows")
+        for i, win in enumerate(windows_iter):
             window_slice = np.flatnonzero(win > 1e-5)
             window_slice = slice(window_slice[0], window_slice[-1])
             motion_hist = win[np.newaxis, window_slice] * motion_histogram[:, window_slice]
             if verbose:
                 print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
-            pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(motion_hist, bin_um,
-                                                                  method=method_kwargs['pairwise_displacement_method'],
-                                                                  max_displacement_um=method_kwargs['max_displacement_um'],
-                                                                  progress_bar=progress_bar)
+            pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
+                motion_hist, bin_um,
+                method=method_kwargs['pairwise_displacement_method'],
+                weight_scale=method_kwargs.get("weight_scale", 'linear'),
+                error_sigma=method_kwargs.get("error_sigma", 0.2),
+                conv_engine=method_kwargs.get("conv_engine", 'numpy'),
+                torch_device=method_kwargs.get("torch_device", None),
+                batch_size=method_kwargs.get("batch_size", 1),
+                max_displacement_um=method_kwargs.get("max_displacement_um", 1500),
+                corr_threshold=method_kwargs.get("corr_threshold", 0),
+                time_horizon_s=method_kwargs.get("time_horizon_s", None),
+                sampling_frequency=method_kwargs.get("sampling_frequency", None),
+                progress_bar=False
+            )
             if output_extra_check:
                 extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
             if verbose:
                 print(f'Computing global displacement: {i + 1} / {len(non_rigid_windows)}')
 
-            one_motion = compute_global_displacement(pairwise_displacement,
-                        pairwise_displacement_weight=pairwise_displacement_weight,
-                        convergence_method=method_kwargs['convergence_method']
-                        )
+            one_motion = compute_global_displacement(
+                pairwise_displacement,
+                pairwise_displacement_weight=pairwise_displacement_weight,
+                convergence_method=method_kwargs['convergence_method'],
+                robust_regression_sigma=method_kwargs.get("robust_regression_sigma", 2),
+                gradient_descent_max_iter=method_kwargs.get("gradient_descent_max_iter", 1000),
+                lsqr_robust_n_iter=method_kwargs.get("lsqr_robust_n_iter", 20),
+                progress_bar=False,
+            )
             motion.append(one_motion[:, np.newaxis])
 
         motion = np.concatenate(motion, axis=1)
@@ -225,6 +242,7 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
     # average amplitude in each bin
     if weight_with_amplitude:
         bin_counts, _ = np.histogramdd(arr, bins=(sample_bins, spatial_bins))
+        bin_counts[bin_counts == 0] = 1
         motion_histogram = motion_histogram / bin_counts
 
     return motion_histogram, temporal_bins, spatial_bins
@@ -233,7 +251,7 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
 def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                                   weight_scale='linear', error_sigma=0.2,
                                   conv_engine='numpy', torch_device=None,
-                                  batch_size=1, max_displacement_um=None,
+                                  batch_size=1, max_displacement_um=1500,
                                   corr_threshold=0, time_horizon_s=None,
                                   sampling_frequency=None, progress_bar=False): 
     """
@@ -357,8 +375,8 @@ def compute_global_displacement(
     pairwise_displacement,
     pairwise_displacement_weight=None,
     sparse_mask=None,
-    convergence_method='lsqr_robust',
-    robust_regression_sigma=1,
+    convergence_method='gradient_descent',
+    robust_regression_sigma=2,
     gradient_descent_max_iter=1000,
     lsqr_robust_n_iter=20,
     progress_bar=False,
@@ -376,7 +394,6 @@ def compute_global_displacement(
     https://github.com/int-brain-lab/spikes_localization_registration/blob/main/registration_pipeline/image_based_motion_estimate.py#L211
     
     """
-    from scipy.spatial.distance import pdist, squareform
     size = pairwise_displacement.shape[0]
 
     if convergence_method == 'gradient_descent':
@@ -390,43 +407,36 @@ def compute_global_displacement(
                 pairwise_displacement_weight = np.ones_like(D)
             if sparse_mask is None:
                 sparse_mask = np.ones_like(D)
-
             W = pairwise_displacement_weight * sparse_mask
+
             I, J = np.where(W > 0)
             Wij = W[I, J]
             Dij = D[I, J]
             W = csr_matrix((Wij, (I, J)), shape=W.shape)
             WD = csr_matrix((Wij * Dij, (I, J)), shape=W.shape)
-            WW = W @ W
-            WDWT = WD @ W 
-            WTWD = W @ WD
-            diag_WDWT = WDWT.diagonal()
-            diag_WTWD = WTWD.diagonal()
-            fixed_terms = diag_WTWD - diag_WDWT
-            diag_WW = WW.diagonal()
+            fixed_terms = (W @ WD).diagonal() - (WD @ W).diagonal()
+            diag_WW = (W @ W).diagonal()
             Wsq = W.power(2)
 
             def obj(p):
-                v = np.square(Wij * (Dij - (p[I] - p[J]))).sum()
-                return 0.5 * v
+                return 0.5 * np.square(Wij * (Dij - (p[I] - p[J]))).sum()
 
             def jac(p):
-                jjj = (
-                    fixed_terms
-                    - 2 * (Wsq @ p)
-                    + 2 * p * diag_WW
-                )
-                return jjj
+                return fixed_terms - 2 * (Wsq @ p) + 2 * p * diag_WW
         else:
             # unweighted problem, it's faster when we have no weights
             fixed_terms = -D.sum(axis=1) + D.sum(axis=0)
+
             def obj(p):
                 v = np.square((D - (p[:, None] - p[None, :]))).sum()
                 return 0.5 * v
+
             def jac(p):
                 return fixed_terms + 2 * (size * p - p.sum())
 
-        res = minimize(fun=obj, jac=jac, x0=D.mean(axis=1), method="L-BFGS-B", tol=1e-12)
+        res = minimize(
+            fun=obj, jac=jac, x0=D.mean(axis=1), method="L-BFGS-B"
+        )
         if not res.success:
             print("Global displacement gradient descent had an error")
         displacement = res.x
@@ -555,7 +565,7 @@ def scipy_conv1d(input, weights, padding="valid"):
     elif isinstance(padding, int):
         mode = "valid"
         input = np.pad(input, [*[(0,0)] * (input.ndim - 1), (padding, padding)])
-        length_out = length - 2 * (kernel_size // 2) + 2 * padding + 1
+        length_out = length - (kernel_size - 1) + 2 * padding
     else:
         raise ValueError(f"Unknown padding {padding}")
 
