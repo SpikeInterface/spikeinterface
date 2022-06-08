@@ -119,7 +119,7 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m --cov=./ --cov-report xml:./spikeinterface/coverage.xml core
+          pytest -v -m core --cov=./ --cov-report xml:./spikeinterface/coverage.xml
       - name: Test extractors
         if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true'
         run: |
