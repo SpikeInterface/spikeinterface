@@ -7,6 +7,7 @@ import pickle
 import os
 import random
 import string
+import inspect
 import warnings
 from packaging.version import parse
 
@@ -15,6 +16,13 @@ import numpy as np
 from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
 from .job_tools import _shared_job_kwargs_doc
+
+
+def copy_signature(source_fct):
+    def copy(target_fct):
+        target_fct.__signature__ = inspect.signature(source_fct)
+        return target_fct
+    return copy
 
 
 class BaseExtractor:
@@ -31,6 +39,19 @@ class BaseExtractor:
     _main_annotations = []
     _main_properties = []
     _main_features = []
+
+
+    @classmethod
+    def define_reader_function(cls, name):
+
+        @copy_signature(cls)
+        def reader_func(*args, **kwargs):
+            cls(*args, **kwargs)
+
+        reader_func.__doc__ = cls.__doc__
+        reader_func.__name__ = name
+
+        return reader_func
 
     def __init__(self, main_ids):
         # store init kwargs for nested serialisation

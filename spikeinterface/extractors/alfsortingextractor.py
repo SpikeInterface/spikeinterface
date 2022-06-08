@@ -1,10 +1,7 @@
-from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording
-from probeinterface import read_prb, write_prb
-
-import json
 import numpy as np
 from pathlib import Path
+
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 
 try:
     import pandas as pd
@@ -134,6 +131,4 @@ class ALFSortingSegment(BaseSortingSegment):
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
 
 
-def read_alf_sorting(folder_path, sampling_frequency=30000):
-    sorting = ALFSortingExtractor(folder_path, sampling_frequency=sampling_frequency)
-    return sorting
+read_alf_sorting = ALFSortingExtractor.define_reader_function(name="read_alf_sorting")

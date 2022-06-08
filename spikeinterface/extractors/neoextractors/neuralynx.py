@@ -23,9 +23,4 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
-def read_neuralynx(*args, **kwargs):
-    recording = NeuralynxRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_neuralynx.__doc__ = NeuralynxRecordingExtractor.__doc__
+read_neuralynx = NeuralynxRecordingExtractor.define_reader_function(name="read_neuralynx")
