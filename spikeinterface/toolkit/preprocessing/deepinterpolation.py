@@ -63,7 +63,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         if end_frame==None:
             end_frame=n_frames
 
-        # only apply DI to frames that have full training data
+        # only apply DI to frames that have full training data (i.e. pre and post frames including omissinos)
         # for those that don't, just return uninterpolated data
         if start_frame<self.pre_frames+self.pre_post_omission:
             true_start_frame = self.pre_frames+self.pre_post_omission
@@ -82,16 +82,16 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
             true_end_frame = end_frame
         
         # prepare input
-        raw_data = self.parent_recording_segment.get_traces(start_frame=true_start_frame,
-                                                            end_frame=true_end_frame,
+        raw_data = self.parent_recording_segment.get_traces(start_frame=true_start_frame-self.pre_frames-self.pre_post_omission,
+                                                            end_frame=true_end_frame+self.post_frames+self.pre_post_omission,
                                                             channel_indices=None)
         
         shape = (raw_data.shape[0], int(384 / 2), 2)
         raw_data = np.reshape(raw_data, newshape=shape)
         
-        di_input = np.zeros((end_frame-start_frame, 384, 2, self.pre_frames+self.post_frames))
+        di_input = np.zeros((true_end_frame-true_start_frame, 384, 2, self.pre_frames+self.post_frames))
         for index_frame in range(self.pre_frames+self.pre_post_omission,
-                                 end_frame-start_frame+self.pre_frames+self.pre_post_omission):
+                                 true_end_frame-true_start_frame+self.pre_frames+self.pre_post_omission):
             di_input[index_frame-self.pre_frames-self.pre_post_omission] = self.get_input(index_frame, raw_data)
         
         # run model
