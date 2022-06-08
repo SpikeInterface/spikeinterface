@@ -8,7 +8,7 @@ possible_motion_estimation_methods = ['decentralized_registration', ]
 def init_kwargs_dict(method, method_kwargs):
     # handle kwargs by method
     if method == 'decentralized_registration':
-        method_kwargs_ = dict(pairwise_displacement_method='conv2d', convergence_method='gradient_descent') #, maximum_displacement_um=400
+        method_kwargs_ = dict(pairwise_displacement_method='conv', convergence_method='gradient_descent') #, maximum_displacement_um=400
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
 
@@ -17,7 +17,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
                     method='decentralized_registration', method_kwargs={},
                     non_rigid_kwargs=None, output_extra_check=False, progress_bar=False,
-                    upsample_to_histogram_bin=False, verbose=False):
+                    upsample_to_histogram_bin=True, verbose=False):
     """
     Estimate motion given peaks and their localization.
 
@@ -167,7 +167,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
         # do upsample
         non_rigid_windows = np.array(non_rigid_windows)
         non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
-        spatial_bins = spatial_hist_bins
+        spatial_bins = spatial_hist_bins[:-1] + bin_um / 2
         motion = motion @ non_rigid_windows
 
     if output_extra_check:
@@ -230,7 +230,7 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
 
 
 def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
-                                  weight_mode='exp', error_sigma=0.2,
+                                  weight_scale='linear', error_sigma=0.2,
                                   conv_engine='numpy', torch_device=None,
                                   batch_size=1,
                                   corr_threshold=0, time_horizon_s=None,
@@ -305,7 +305,8 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                     correlation[i : i + batch_size] = max_corr.cpu()
                 elif conv_engine == "numpy":
                     best_disp_inds = np.argmax(corr, axis=2)
-                    max_corr = corr[best_disp_inds]
+                    max_corr = np.take_along_axis(corr, best_disp_inds[..., None], 2).squeeze()
+                    best_disp = possible_displacement[best_disp_inds]
                     pairwise_displacement[i : i + batch_size] = best_disp
                     correlation[i : i + batch_size] = max_corr
 
@@ -332,16 +333,13 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                 errors[i, j] = error
         correlation = 1 - errors
         
-        # print(errors.min(), errors.max())
-        # pairwise_displacement_weight = np.exp(-((errors - errors.min()) / (errors.max() - errors.min()))/ error_sigma )
-
     else:
         raise ValueError(f'method do not exists for compute_pairwise_displacement {method}')
 
-    if weight_mode == 'linear':
+    if weight_scale == 'linear':
         # between 0 and 1
         pairwise_displacement_weight = correlation
-    elif weight_mode == 'exp':
+    elif weight_scale == 'exp':
         pairwise_displacement_weight = np.exp((correlation - 1) / error_sigma )
 
     return pairwise_displacement, pairwise_displacement_weight
@@ -359,6 +357,12 @@ def compute_global_displacement(
 ):
     """
     Compute global displacement
+
+    Reference:
+    DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
+    Erdem Varol1, Julien Boussard, Hyun Dong Lee
+
+    Improved during Spike Sorting Hackathon 2022 by Erdem Varol and Charlie Windolf.
     
     This come from
     https://github.com/int-brain-lab/spikes_localization_registration/blob/main/registration_pipeline/image_based_motion_estimate.py#L211
@@ -413,7 +417,6 @@ def compute_global_displacement(
                 return 0.5 * v
             def jac(p):
                 return fixed_terms + 2 * (size * p - p.sum())
-        print("hi", size, flush=True)
 
         res = minimize(fun=obj, jac=jac, x0=D.mean(axis=1), method="L-BFGS-B", tol=1e-12)
         if not res.success:
@@ -533,7 +536,7 @@ def scipy_conv1d(input, weights, padding="valid"):
 
     n, c_in, length = input.shape
     c_out, in_by_groups, kernel_size = weights.shape
-    assert in_by_groups == 1
+    assert in_by_groups == c_in == 1
 
     if padding == "same":
         mode = "same"
@@ -551,7 +554,7 @@ def scipy_conv1d(input, weights, padding="valid"):
     output = np.zeros((n, c_out, length_out), dtype=input.dtype)
     for m in range(n):
         for c in range(c_out):
-            output[m, c] = correlate(input, weights, mode=mode)
+            output[m, c] = correlate(input[m, 0], weights[c, 0], mode=mode)
 
     return output
 
