@@ -213,8 +213,18 @@ def filter(recording, engine='scipy', **kwargs):
 filter.__doc__ = FilterRecording.__doc__.format(_common_filter_docs)
 
 
-bandpass_filter = BandpassFilterRecording.define_reader_function(name="bandpass_filter")
-notch_filter= NotchFilterRecording.define_reader_function(name="notch_filter")
+def bandpass_filter(*args, **kwargs):
+    return BandpassFilterRecording(*args, **kwargs)
+
+
+bandpass_filter.__doc__ = BandpassFilterRecording.__doc__.format(_common_filter_docs)
+
+
+def notch_filter(*args, **kwargs):
+    return NotchFilterRecording(*args, **kwargs)
+
+
+notch_filter.__doc__ = NotchFilterRecording.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
