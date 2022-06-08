@@ -15,7 +15,7 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices] #/self.standard_dev
+        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices] 
         return scaled_traces.astype(self._dtype)
 
 
@@ -193,14 +193,15 @@ class CenterRecording(BasePreprocessor):
 
 class ZScoreRecording(BasePreprocessor):
     """
-    Centers traces from the given recording extractor by removing the median/mean of each channel.
+    Centers traces from the given recording extractor by removing the median of each channel
+    and dividing by the MAD.
 
     Parameters
     ----------
     recording: RecordingExtractor
         The recording extractor to be centered
     mode: str
-        'median' (default) | 'mean'
+        "median+mad" (default) or "mean+std"
     dtype: str or np.dtype
         The dtype of the output traces. Default "float32"
     **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
@@ -212,16 +213,28 @@ class ZScoreRecording(BasePreprocessor):
     """
     name = 'center'
 
-    def __init__(self, recording,
+    def __init__(self, recording, mode="median+mad",
                  dtype="float32", **random_chunk_kwargs):
+        
+        assert mode in ("median+mad", "mean+std")
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
-        offset = -np.median(random_data, axis=0)
-        offset = offset[None, :]
-        gain = 1/np.median(np.abs(random_data + offset), axis=0)/0.6745
-        gain = gain[None, :]
-
+        if mode == "median+mad":
+            medians = np.median(random_data, axis=0)
+            medians = medians[None, :]
+            mads = np.median(np.abs(random_data - medians), axis=0) / 0.6745
+            mads = mads[None, :] 
+            gain = 1 / mads
+            offset = -medians / mads
+        else:
+            means = np.mean(random_data, axis=0)
+            means = means[None, :]
+            stds = np.std(random_data, axis=0)
+            stds = stds[None, :] 
+            gain = 1 / stds
+            offset = -means / stds
+        
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
@@ -254,10 +267,10 @@ def center(*args, **kwargs):
 center.__doc__ = CenterRecording.__doc__
 
 
-def scale_zscore(*args, **kwargs):
+def zscore(*args, **kwargs):
     return ZScoreRecording(*args, **kwargs)
 
 
-scale_zscore.__doc__ = ZScoreRecording.__doc__
+zscore.__doc__ = ZScoreRecording.__doc__
 
 
