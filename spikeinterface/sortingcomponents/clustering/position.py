@@ -16,7 +16,7 @@ class PositionClustering:
         "peak_locations" : None,
         "use_amplitude" : True,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
-        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True},
+        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1},
         "debug" : False,
         "tmp_folder" : None,
     }
