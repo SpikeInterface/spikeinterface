@@ -58,40 +58,37 @@ def test_motion_functions():
 
     # phase_cross_correlation + gradient_descent_robust
     # not tested yet on GH because need skimage
-    motions = []
-    for conv_engine in ("numpy", "torch"):
+    try:
+        import skimage
         pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
-                            motion_histogram, bin_um, method='phase_cross_correlation')
+                        motion_histogram, bin_um, method='phase_cross_correlation')
         motion = compute_global_displacement(pairwise_displacement,
                         pairwise_displacement_weight=pairwise_displacement_weight, 
-                        convergence_method='lsqr_robust',)
-        motions.append(motion)
+                        convergence_method='lsqr_robust')
+    except ImportError:
+        print("No skimage, not running phase_cross_correlation test.")
 
-        # DEBUG
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots()
-        # extent = (temporal_bins[0], temporal_bins[-1], spatial_bins[0], spatial_bins[-1])
-        # im = ax.imshow(motion_histogram.T, interpolation='nearest',
-        #                     origin='lower', aspect='auto', extent=extent)
+    # DEBUG
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # extent = (temporal_bins[0], temporal_bins[-1], spatial_bins[0], spatial_bins[-1])
+    # im = ax.imshow(motion_histogram.T, interpolation='nearest',
+    #                     origin='lower', aspect='auto', extent=extent)
 
-        # fig, ax = plt.subplots()
-        # ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
+    # fig, ax = plt.subplots()
+    # ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
 
-        # fig, ax = plt.subplots()
-        # extent = None
-        # im = ax.imshow(pairwise_displacement, interpolation='nearest',
-        #                     cmap='PiYG', origin='lower', aspect='auto', extent=extent)
-        # im.set_clim(-40, 40)
-        # ax.set_aspect('equal')
-        # fig.colorbar(im)
+    # fig, ax = plt.subplots()
+    # extent = None
+    # im = ax.imshow(pairwise_displacement, interpolation='nearest',
+    #                     cmap='PiYG', origin='lower', aspect='auto', extent=extent)
+    # im.set_clim(-40, 40)
+    # ax.set_aspect('equal')
+    # fig.colorbar(im)
 
-        # fig, ax = plt.subplots()
-        # ax.plot(temporal_bins[:-1], motion)
-        # plt.show()
-
-    motion_numpy, motion_torch = motions
-    assert (motion_numpy == motion_torch).all()
-
+    # fig, ax = plt.subplots()
+    # ax.plot(temporal_bins[:-1], motion)
+    # plt.show()
 
 def test_estimate_motion_rigid():
     local_path = download_dataset(
