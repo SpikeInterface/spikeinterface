@@ -52,10 +52,9 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
         corrected_peak_locations[direction] -= shift
     else:
         # non rigid motion = interpolation 2D
-        sample_bins = np.searchsorted(times, temporal_bins)
-        f = scipy.interpolate.RegularGridInterpolator((sample_bins, spatial_bins), motion,
+        f = scipy.interpolate.RegularGridInterpolator((temporal_bins, spatial_bins), motion,
                                                       method='linear', bounds_error=False, fill_value=None)
-        shift = f(list(zip(peaks['sample_ind'], peak_locations[direction])))
+        shift = f(np.c_[times, peak_locations[direction]])
         corrected_peak_locations[direction] -= shift
 
     return corrected_peak_locations
