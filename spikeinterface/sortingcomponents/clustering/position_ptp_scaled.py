@@ -1,7 +1,5 @@
 # """Sorting components: clustering"""
 from pathlib import Path
-from tkinter.ttk import Scale
-
 import numpy as np
 
 try:
