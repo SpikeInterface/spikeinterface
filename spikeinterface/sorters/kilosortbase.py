@@ -124,11 +124,6 @@ class KilosortBase:
 
         cls._generate_ops_file(recording, params, output_folder)
 
-        source_dir = Path(Path(__file__).parent)
-        shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(output_folder))
-        shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(output_folder))
-        shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(output_folder))
-
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         output_folder = output_folder.absolute()
@@ -138,6 +133,11 @@ class KilosortBase:
                 {cls.compiled_name} {output_folder}
             '''
         else:
+            source_dir = Path(Path(__file__).parent)
+            shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(output_folder))
+
             sorter_path = getattr(cls, f'{cls.sorter_name}_path')
             sorter_path = Path(sorter_path).absolute()
             if 'win' in sys.platform and sys.platform != 'darwin':
