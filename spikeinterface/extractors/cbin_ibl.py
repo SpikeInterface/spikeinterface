@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.neoextractors.spikeglx import _get_sample_shifts
 
 import probeinterface as pi 
@@ -117,4 +117,4 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-read_cbin_ibl = define_reader_function(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")
+read_cbin_ibl = define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")

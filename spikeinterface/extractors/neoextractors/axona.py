@@ -1,4 +1,4 @@
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
 
@@ -25,4 +25,4 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path))
 
 
-read_axona = define_reader_function(source_class=AxonaRecordingExtractor, name="read_axona")
+read_axona = define_function_from_class(source_class=AxonaRecordingExtractor, name="read_axona")

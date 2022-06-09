@@ -1,5 +1,5 @@
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from spikeinterface.core.core_tools import write_binary_recording
 
@@ -214,8 +214,8 @@ class MdaSortingSegment(BaseSortingSegment):
         return np.rint(self._spike_times[inds]).astype(int)
 
 
-read_mda_recording = define_reader_function(source_class=MdaRecordingExtractor, name="read_mda_recording")
-read_mda_sorting = define_reader_function(source_class=MdaSortingExtractor, name="read_mda_sorting")
+read_mda_recording = define_function_from_class(source_class=MdaRecordingExtractor, name="read_mda_recording")
+read_mda_sorting = define_function_from_class(source_class=MdaSortingExtractor, name="read_mda_sorting")
 
 def _concatenate(list):
     if len(list) == 0:

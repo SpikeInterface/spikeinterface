@@ -1,5 +1,7 @@
 import numpy as np
 
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..utils import get_random_data_chunks
@@ -191,23 +193,7 @@ class CenterRecording(BasePreprocessor):
         self._kwargs.update(random_chunk_kwargs)
 
 
-# function for API
-def normalize_by_quantile(*args, **kwargs):
-    return NormalizeByQuantileRecording(*args, **kwargs)
-
-
-normalize_by_quantile.__doc__ = NormalizeByQuantileRecording.__doc__
-
-
-def scale(*args, **kwargs):
-    return ScaleRecording(*args, **kwargs)
-
-
-scale.__doc__ = ScaleRecording.__doc__
-
-
-def center(*args, **kwargs):
-    return CenterRecording(*args, **kwargs)
-
-
-center.__doc__ = CenterRecording.__doc__
+# functions for API
+normalize_by_quantile = define_function_from_class(source_class=NormalizeByQuantileRecording, name="normalize_by_quantile")
+scale = define_function_from_class(source_class=ScaleRecording, name="scale")
+center = define_function_from_class(source_class=CenterRecording, name="center")

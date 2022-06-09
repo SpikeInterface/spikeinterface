@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
 
 
@@ -47,4 +47,4 @@ class WaveClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_waveclust = define_reader_function(source_class=WaveClusSortingExtractor, name="read_waveclust")
+read_waveclust = define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclust")

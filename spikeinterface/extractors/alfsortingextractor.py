@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import pandas as pd
@@ -147,4 +147,4 @@ class ALFSortingSegment(BaseSortingSegment):
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
 
 
-read_alf_sorting = define_reader_function(source_class=ALFSortingExtractor, name="read_alf_sorting")
+read_alf_sorting = define_function_from_class(source_class=ALFSortingExtractor, name="read_alf_sorting")

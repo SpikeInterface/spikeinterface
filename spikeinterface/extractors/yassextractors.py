@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 try:
@@ -62,4 +62,4 @@ class YassSortingSegment(BaseSortingSegment):
         return times
 
 
-read_yass = define_reader_function(source_class=YassSortingExtractor, name="read_yass")
+read_yass = define_function_from_class(source_class=YassSortingExtractor, name="read_yass")

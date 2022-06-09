@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment)
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from .matlabhelpers import MatlabHelper
 
@@ -260,4 +260,4 @@ def _squeeze(arr):
     return arr
 
 
-read_hdsort = define_reader_function(source_class=HDSortSortingExtractor, name="read_hdsort")
+read_hdsort = define_function_from_class(source_class=HDSortSortingExtractor, name="read_hdsort")

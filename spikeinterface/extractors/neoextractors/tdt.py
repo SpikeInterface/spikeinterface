@@ -1,4 +1,4 @@
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -25,4 +25,4 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
-read_tdt = define_reader_function(source_class=TdtRecordingExtractor, name="read_tdt")
+read_tdt = define_function_from_class(source_class=TdtRecordingExtractor, name="read_tdt")
