@@ -13,7 +13,6 @@ The calculation works under the assumption that the contaminant events happen ra
 
 Different formulas were developped over the years.
 
-
 Calculation from the Hill_ paper
 --------------------------------
 
@@ -31,7 +30,6 @@ For a recording with a duration of :math:`T_r` seconds, and a unit with :math:`N
 .. math::
 
     \textrm{ISI violations} = \frac{ \#( ISI_s < ISI_t) T_r  }{ 2  N_s^2  (ISI_t - ISI_{min}) }
-
 
 Calculation from the Llobet_ paper
 ----------------------------------
@@ -91,7 +89,6 @@ References
     .. autofunction:: compute_isi_violations
 
 
-
 Links to source code
 --------------------
 
@@ -101,6 +98,56 @@ From `Lussac <https://github.com/BarbourLab/lussac/blob/main/postprocessing/util
 
 From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#ISI-violations>`_
 
+Examples with plots
+-------------------
+
+Here is shown the auto-correlogram of two units, with the dashed lines representing the refractory period.
+
+- On the left, we have a unit with no refractory period violations, meaning that this unit is probably not contaminated.
+- On the right, we have a unit with some refractory period violations. It means that it is contaminated, but probably not that much.
+
+.. image:: contamination.png
+    :width: 600
+
+This figure can be generated with the following code:
+
+.. code-block:: python
+
+    import plotly.graph_objects as go
+    import spikeinterface.toolkit as st
+
+    # Create your sorting object
+    unit_ids = ... # Units you are interested in vizulazing.
+    sorting = sorting.select_units(unit_ids)
+    t_r = 1.5   # Refractory period (in ms).
+
+    correlograms, bins = st.compute_correlograms(sorting, window_ms=50.0, bin_ms=0.2, symmetrize=True)
+
+    fig = go.Figure().set_subplots(rows=1, cols=2)
+
+    fig.add_trace(go.Bar(
+        x=bins[:-1] + (bins[1]-bins[0])/2,
+        y=correlograms[0, 0],
+        width=bins[1] - bins[0],
+        marker_color="CornflowerBlue",
+        name="Non-contaminated unit",
+        showlegend=False
+    ), row=1, col=1)
+    fig.add_trace(go.Bar(
+        x=bins[:-1] + (bins[1]-bins[0])/2,
+        y=correlograms[1, 1],
+        width=bins[1] - bins[0],
+        marker_color="CornflowerBlue",
+        name="Contaminated unit",
+        showlegend=False
+    ), row=1, col=2)
+
+    fig.add_vline(x=-t_r, row=1, col=1, line=dict(dash="dash", color="Crimson", width=1))
+    fig.add_vline(x=t_r, row=1, col=1, line=dict(dash="dash", color="Crimson", width=1))
+    fig.add_vline(x=-t_r, row=1, col=2, line=dict(dash="dash", color="Crimson", width=1))
+    fig.add_vline(x=t_r, row=1, col=2, line=dict(dash="dash", color="Crimson", width=1))
+
+    fig.show()
 
 Literature
 ----------
