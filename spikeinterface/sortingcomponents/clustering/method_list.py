@@ -4,7 +4,7 @@ from .sliding_hdbscan import SlidingHdbscanClustering
 from .sliding_nn import SlidingNNClustering
 from .position_and_pca import PositionAndPCAClustering
 from .position_ptp_scaled import PositionPTPScaledClustering
-
+from .twisted import TwistedClustering
 
 clustering_methods = {
     "dummy": DummyClustering,
@@ -13,4 +13,5 @@ clustering_methods = {
     "position_and_pca": PositionAndPCAClustering,
     "sliding_hdbscan": SlidingHdbscanClustering,
     "sliding_nn": SlidingNNClustering,
+    "twisted": TwistedClustering
 }

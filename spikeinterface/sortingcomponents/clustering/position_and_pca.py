@@ -15,7 +15,6 @@ from spikeinterface.core import get_global_tmp_folder
 from spikeinterface.toolkit import get_channel_distances, get_random_data_chunks
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import auto_clean_clustering, auto_split_clustering
-from .position import PositionClustering
 
 class PositionAndPCAClustering:
     """
@@ -36,7 +35,7 @@ class PositionAndPCAClustering:
         'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M', 'verbose' : True, 'progress_bar' : True},
         'hdbscan_global_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
         'hdbscan_local_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
-        'waveform_mode': 'shared_memory',
+        'waveform_mode': 'memmap',
         'radius_um' : 50.,
         'noise_size' : 300,
         'debug' : False,
