@@ -200,7 +200,7 @@ class ContainerClient:
             options=['--bind', singularity_bind]
 
             # gpu options
-            if container_requires_gpu == "nvidia":
+            if container_requires_gpu:
                 # only nvidia at the moment
                 options += ['--nv']
 
