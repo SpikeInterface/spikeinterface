@@ -56,6 +56,9 @@ from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtract
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 from .neuropixels_utils import get_neuropixels_channel_groups, get_neuropixels_sample_shifts
 
+#snippets 
+from .numpysnippetsextractor import NumpySnippetsExtractor
+
 ########################################
 
 recording_extractor_full_list = [
