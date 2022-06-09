@@ -1,15 +1,34 @@
-from copy import deepcopy
 import shutil
 import os
 from pathlib import Path
 import json
 import platform
 
-
+from ..core import BaseRecording
 from ..version import version as si_version
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError
+
+SORTER_DOCKER_MAP = {
+    name: f"spikeinterface/{name}-base" for name in [
+        "tridesclous",
+        "spyking-circus",
+        "mountainsort4",
+        "klusta",
+    ]
+}
+SORTER_DOCKER_MAP.update(
+    {
+        name: f"spikeinterface/{name}-compiled-base" for name in [
+            "ironclust",
+            "kilosort",
+            "kilosort2",
+            "kilosort2_5",
+            "kilosort3",
+        ]
+    }
+)
 
 
 _common_param_doc = """
@@ -229,12 +248,44 @@ class ContainerClient:
             return res
 
 
-def run_sorter_container(sorter_name, recording, mode, container_image, output_folder=None,
-                         remove_existing_folder=True, delete_output_folder=False,
-                         verbose=False, raise_error=True, with_output=True, **sorter_params):
+def run_sorter_container(
+    sorter_name: str,
+    recording: BaseRecording,
+    mode: str,
+    container_image: str = None,
+    output_folder: str = None,
+    remove_existing_folder: bool = True,
+    delete_output_folder: bool = False,
+    verbose: bool = False,
+    raise_error: bool = True,
+    with_output: bool = True,
+    **sorter_params,
+):
+    """
+
+    Parameters
+    ----------
+    sorter_name: str
+    recording: BaseRecording
+    mode: str
+    container_image: str, optional
+    output_folder: str, optional
+    remove_existing_folder: bool, optional
+    delete_output_folder: bool, optional
+    verbose: bool, optional
+    raise_error: bool, optional
+    with_output: bool, optional
+    sorter_params:
+
+    """
     # common code for docker and singularity
     if output_folder is None:
         output_folder = sorter_name + '_output'
+
+    if container_image is None and sorter_name in SORTER_DOCKER_MAP:
+        container_image = SORTER_DOCKER_MAP[sorter_name]
+    else:
+        ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
