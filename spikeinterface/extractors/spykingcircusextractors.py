@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
@@ -101,4 +102,4 @@ def _load_sample_rate(params_file):
     return sample_rate
 
 
-read_spykingcircus = SpykingCircusSortingExtractor.define_reader_function(name="read_spykingcircus")
+read_spykingcircus = define_function_from_class(source_class=SpykingCircusSortingExtractor, name="read_spykingcircus")

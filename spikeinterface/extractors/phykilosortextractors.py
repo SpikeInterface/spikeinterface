@@ -2,6 +2,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment, read_python)
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
@@ -191,5 +192,5 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
                         'keep_good_only': keep_good_only}
 
 
-read_phy = PhySortingExtractor.define_reader_function(name="read_phy")
-read_kilosort = KiloSortSortingExtractor.define_reader_function(name="read_kilosort")
+read_phy = define_function_from_class(source_class=PhySortingExtractor, name="read_phy")
+read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")
