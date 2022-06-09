@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import json
 import platform
+from typing import Optional, Union
 
 from ..core import BaseRecording
 from ..version import version as si_version
@@ -69,13 +70,13 @@ _common_param_doc = """
 def run_sorter(
     sorter_name: str,
     recording: BaseRecording,
-    output_folder: str = None,
+    output_folder: Optional[str] = None,
     remove_existing_folder: bool = True,
     delete_output_folder: bool = False,
     verbose: bool = False,
     raise_error: bool = True,
-    docker_image: bool = False,
-    singularity_image: bool = False,
+    docker_image: Optional[Union[bool, str]] = False,
+    singularity_image: Optional[Union[bool, str]] = False,
     with_output: bool = True,
     **sorter_params,
 ):
@@ -178,7 +179,6 @@ def find_recording_folder(d):
             return folder_to_mount
 
 
-
 def path_to_unix(path):
     path = Path(path)
     path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
@@ -272,8 +272,8 @@ def run_sorter_container(
     sorter_name: str,
     recording: BaseRecording,
     mode: str,
-    container_image: str = None,
-    output_folder: str = None,
+    container_image: Optional[str] = None,
+    output_folder: Optional[str] = None,
     remove_existing_folder: bool = True,
     delete_output_folder: bool = False,
     verbose: bool = False,
