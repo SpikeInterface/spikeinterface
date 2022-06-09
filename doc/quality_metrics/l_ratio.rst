@@ -31,7 +31,7 @@ This yields L-ratio, which can be expressed as:
 Expectation and use
 -------------------
 
-<<<<<<< HEAD
+
 References
 ----------
 
@@ -39,11 +39,11 @@ References
 
     .. autofunction:: l_ratio
 
-=======
+
 A well separated unit should have a low L-ratio \cite{Schmitzer-Torbert2004}.
 Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) \cite{Schmitzer-Torbert2004}.
 Jackson et al. suggests that this measure is also correlated with type II errors (although more strongly with type I errors) \cite{Jackson2005}.
->>>>>>> robyn
+
 
 Literature
 ----------
