@@ -220,7 +220,8 @@ class ZScoreRecording(BasePreprocessor):
         offset = offset[None, :]
         gain = 1/np.median(np.abs(random_data + offset), axis=0)/0.6745
         gain = gain[None, :]
-
+        offset = offset*gain
+        
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
