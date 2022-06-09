@@ -50,13 +50,15 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default).
         If False, the process continues and the error is logged in the log file.
-    docker_image: bool or str
+    docker_image: bool, str, or None
         If True, pull the default docker container for the sorter and run the sorter in that container using docker.
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
-    singularity_image: bool or str
+        If None, the sorter is run locally.
+    singularity_image: bool, str or None
         If True, pull the default docker container for the sorter and run the sorter in that container using 
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
         from Docker Hub.
+        If None, the sorter is run locally.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -82,7 +84,8 @@ def run_sorter(
 ):
     """
     Generic function to run a sorter via function approach.
-    """ + _common_param_doc + """
+
+    {}
     
     Examples
     --------
@@ -111,6 +114,8 @@ def run_sorter(
 
     return run_sorter_local(**common_kwargs)
 
+
+run_sorter.__doc__ = run_sorter.__doc__.format(_common_param_doc)
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
                      remove_existing_folder=True, delete_output_folder=False,
