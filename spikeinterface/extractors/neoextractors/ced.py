@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_reader_function
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -25,4 +27,4 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-read_ced = CedRecordingExtractor.define_reader_function(name="read_ced")
+read_ced = define_reader_function(source_class=CedRecordingExtractor, name="read_ced")

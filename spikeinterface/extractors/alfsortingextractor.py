@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_reader_function
 
 try:
     import pandas as pd
@@ -18,6 +19,21 @@ class ALFSortingExtractor(BaseSorting):
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
 
     def __init__(self, folder_path, sampling_frequency=30000):
+        """
+        Class for reading ALF format.
+
+        Parameters
+        ----------
+        folder_path : str or Path
+            Path to ALF folder
+        sampling_frequency : int, optional
+            The sampling frequency, by default 30000
+
+        Returns
+        -------
+        extractor
+            ALFSortingExtractor
+        """
         assert self.installed, self.installation_mesg
         # check correct parent folder:
         self._folder_path = Path(folder_path)
@@ -131,4 +147,4 @@ class ALFSortingSegment(BaseSortingSegment):
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
 
 
-read_alf_sorting = ALFSortingExtractor.define_reader_function(name="read_alf_sorting")
+read_alf_sorting = define_reader_function(source_class=ALFSortingExtractor, name="read_alf_sorting")

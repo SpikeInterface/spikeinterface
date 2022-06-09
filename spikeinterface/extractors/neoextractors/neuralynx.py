@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_reader_function
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -23,4 +25,4 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
-read_neuralynx = NeuralynxRecordingExtractor.define_reader_function(name="read_neuralynx")
+read_neuralynx = define_reader_function(source_class=NeuralynxRecordingExtractor, name="read_neuralynx")

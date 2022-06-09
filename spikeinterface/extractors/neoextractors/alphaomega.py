@@ -1,5 +1,5 @@
-"""
-"""
+from spikeinterface.core.core_tools import define_reader_function
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
@@ -42,5 +42,5 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
         NeoBaseEventExtractor.__init__(self, **neo_kwargs)
 
 
-read_alphaomega = AlphaOmegaRecordingExtractor.define_reader_function(name="read_alphaomega")
-read_alphaomega_event = AlphaOmegaEventExtractor.define_reader_function(name="read_alphaomega_event")
+read_alphaomega = define_reader_function(source_class=AlphaOmegaRecordingExtractor, name="read_alphaomega")
+read_alphaomega_event = define_reader_function(source_class=AlphaOmegaEventExtractor, name="read_alphaomega_event")
