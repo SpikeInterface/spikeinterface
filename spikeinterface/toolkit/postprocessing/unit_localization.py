@@ -8,6 +8,7 @@ from .template_tools import get_template_channel_sparsity, get_template_amplitud
 dtype_localize_by_method = {
     'center_of_mass':  [('x', 'float64'), ('y', 'float64')],
     'monopolar_triangulation': [('x', 'float64'),  ('y', 'float64'), ('z', 'float64'), ('alpha', 'float64')],
+    'main_channel' : [('x', 'float64'), ('y', 'float64')]
 }
 
 possible_localization_methods = list(dtype_localize_by_method.keys())
@@ -39,6 +40,8 @@ def localize_units(waveform_extractor, method='center_of_mass', output='numpy', 
         unit_location = compute_center_of_mass(waveform_extractor,  **method_kwargs)
     elif method == 'monopolar_triangulation':
         unit_location = compute_monopolar_triangulation(waveform_extractor,  **method_kwargs)
+    elif method == 'main_channel':
+        unit_location = compute_main_channel(waveform_extractor, **method_kwargs)
 
     # handle some outputs
     if output == 'numpy':
@@ -74,7 +77,7 @@ def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_
 
 
 # ---- 
-# optimizer "least_square"
+#optimizer "least_square"
 
 def estimate_distance_error(vec, wf_ptp, local_contact_locations):
     # vec dims ar (x, y, z amplitude_factor)
@@ -85,7 +88,7 @@ def estimate_distance_error(vec, wf_ptp, local_contact_locations):
     return err
 
 # ---- 
-# optimizer "minimize_with_log_penality"
+#optimizer "minimize_with_log_penality"
 def ptp_at(x, y, z, alpha, local_contact_locations):
     return alpha / np.sqrt(
         np.square(x - local_contact_locations[:, 0])
@@ -230,5 +233,28 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
         # center of mass
         com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
         unit_location[i, :] = com
+
+    return unit_location
+
+def compute_main_channel(waveform_extractor, peak_sign='neg'):
+    '''
+    Computes the position of a unit as the channel of where the peak is
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+
+    Returns
+    -------
+    unit_location: np.array
+    '''
+
+    recording = waveform_extractor.recording
+    contact_locations = recording.get_channel_locations()
+    channels = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, outputs='index')
+    unit_location = contact_locations[channels]
 
     return unit_location
