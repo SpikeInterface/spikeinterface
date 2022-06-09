@@ -175,6 +175,8 @@ class BenchmarkClustering:
 
         self.sliced_gt_peaks = self.gt_peaks[idx]
         self.sliced_gt_positions = self.gt_positions[idx]
+        self.sliced_gt_labels = self.sliced_gt_sorting.to_spike_vector()['unit_ind']
+        self.gt_labels = self.gt_sorting.to_spike_vector()['unit_ind']
 
 
     def plot_clusters(self, show_probe=True):
@@ -184,20 +186,21 @@ class BenchmarkClustering:
         ax.set_title('Full gt clusters')
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
-        real_labels = self.gt_sorting.to_spike_vector()['unit_ind']
-        ax.scatter(self.gt_positions['x'], self.gt_positions['y'], c=real_labels, s=1, alpha=0.5)
+        
+        ax.scatter(self.gt_positions['x'], self.gt_positions['y'], c=self.gt_labels, s=1, alpha=0.5)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
 
         ax = axs[1]
         ax.set_title('Sliced gt clusters')
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
-        real_labels = self.sliced_gt_sorting.to_spike_vector()['unit_ind']
-        ax.scatter(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], c=real_labels, s=1, alpha=0.5)
+        ax.scatter(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], c=self.sliced_gt_labels, s=1, alpha=0.5)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-        ax.set_xticks([], [])
+        ax.set_xlabel('x')
         ax.set_yticks([], [])
 
         ax = axs[2]
@@ -207,10 +210,8 @@ class BenchmarkClustering:
         ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
         ax.scatter(self.positions['x'][~self.noise], self.positions['y'][~self.noise], c=self.selected_peaks_labels[~self.noise], s=1, alpha=0.5)
         ax.set_xlabel('x')
-        ax.set_ylabel('y')
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-        ax.set_xticks([], [])
         ax.set_yticks([], [])
 
 
