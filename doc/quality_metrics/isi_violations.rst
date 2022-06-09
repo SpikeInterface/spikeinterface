@@ -20,7 +20,7 @@ The following quantities are required:
 
 - :math:`ISI_t` : biological threshold for ISI violation.
 - :math:`ISI_{min}`: minimum ISI threshold enforced by the data recording system used.
-- :math:`ISI_s$` : the array of ISI violations which are observed in the unit's spike train.
+- :math:`ISI_s` : the array of ISI violations which are observed in the unit's spike train.
 - :math:`\#`: denote count.
 
 The threshold for ISI violations is the biological ISI threshold, :math:`ISI_t`, minus the minimum ISI threshold, :math:`ISI_{min}` enforced by the data recording system used.
