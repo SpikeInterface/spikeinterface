@@ -1,5 +1,5 @@
 name: Full spikeinterface tests codecov
-
+on: workflow_dispatch
 jobs:
   build-and-test:
     name: Codecov
