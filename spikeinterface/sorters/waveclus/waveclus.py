@@ -10,7 +10,7 @@ import scipy.io
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
 
-from spikeinterface.core import load_extractor, write_to_h5_dataset_format
+from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.extractors import WaveClusSortingExtractor
 from spikeinterface.core.channelslicerecording import ChannelSliceRecording
 
@@ -43,6 +43,7 @@ class WaveClusSorter(BaseSorter):
     """WaveClus Sorter object."""
 
     sorter_name: str = 'waveclus'
+    compiled_name: str = 'waveclus_compiled'
     waveclus_path: Union[str, None] = os.getenv('WAVECLUS_PATH', None)
     requires_locations = False
 
@@ -120,10 +121,14 @@ class WaveClusSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if cls.check_compiled():
+            return True
         return check_if_installed(cls.waveclus_path)
 
     @classmethod
     def get_sorter_version(cls):
+        if cls.check_compiled():
+            return 'compiled'
         p = os.getenv('WAVECLUS_PATH', None)
         if p is None:
             return 'unknown'
@@ -172,28 +177,33 @@ class WaveClusSorter(BaseSorter):
         output_folder = output_folder.absolute()
 
         cls._generate_par_file(params, output_folder)
-        source_dir = Path(__file__).parent
-        shutil.copy(str(source_dir / f'waveclus_master.m'), str(output_folder))
-        shutil.copy(str(source_dir / f'h5_wc_reader.m'), str(output_folder))
-
         if verbose:
             print(f'Running waveclus in {output_folder}...')
 
-        sorter_path = cls.waveclus_path
-        sorter_path = Path(sorter_path).absolute()
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            disk_move = str(output_folder.absolute())[:2]
-            shell_cmd = f'''
-                {disk_move}
-                cd {output_folder}
-                matlab -nosplash -wait -log -r "waveclus_master('{output_folder}', '{sorter_path}')"
-            '''
-        else:
+        if cls.check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
-                cd "{output_folder}"
-                matlab -nosplash -nodisplay -log -r "waveclus_master('{output_folder}', '{sorter_path}')"
+                {cls.compiled_name} {output_folder}
             '''
+        else:
+            source_dir = Path(__file__).parent
+            shutil.copy(str(source_dir / f'waveclus_master.m'), str(output_folder))
+            shutil.copy(str(source_dir / f'h5_wc_reader.m'), str(output_folder))
+
+            sorter_path = Path(cls.waveclus_path).absolute()
+            if 'win' in sys.platform and sys.platform != 'darwin':
+                disk_move = str(output_folder.absolute())[:2]
+                shell_cmd = f'''
+                    {disk_move}
+                    cd {output_folder}
+                    matlab -nosplash -wait -log -r "waveclus_master('{output_folder}', '{sorter_path}')"
+                '''
+            else:
+                shell_cmd = f'''
+                    #!/bin/bash
+                    cd "{output_folder}"
+                    matlab -nosplash -nodisplay -log -r "waveclus_master('{output_folder}', '{sorter_path}')"
+                '''
         shell_cmd = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                 log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_cmd.start()
