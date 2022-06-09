@@ -290,8 +290,6 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     It means that the number of spike to estimate amplitude is low
     See: WaveformExtractor.set_params(max_spikes_per_unit=500)
 
-    @alessio @ cole @matthias
-    # TODO make a fast amplitude retriever ???
     """
 
     recording = waveform_extractor.recording
