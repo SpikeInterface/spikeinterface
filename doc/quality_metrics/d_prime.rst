@@ -25,17 +25,16 @@ D-prime is then calculated as follows:
 Expectation and use
 -------------------
 
-<<<<<<< HEAD
 Reference
 ---------
 
 .. automodule:: spikeinterface.toolkit.qualitymetrics.pca_metrics
 
     .. autofunction:: lda_metrics
-=======
+
 Used to measure cluster separation.
 The magnitude of D-prime will be higher in well separated clusters, and is therefore expected to be higher in true positive units.
->>>>>>> robyn
+
 
 Literature
 ----------
