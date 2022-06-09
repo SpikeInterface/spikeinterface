@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -6,7 +8,7 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading spike2 smr files.
     smrx are not supported with this, prefer CedRecordingExtractor instead.
     
-    Based on neo.rawio.Spike2RawIO
+    Based on :py:class:`neo.rawio.Spike2RawIO`
     
     Parameters
     ----------
@@ -24,4 +26,4 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = {'file_path': str(file_path), 'stream_id': stream_id}
 
 
-read_spike2 = Spike2RecordingExtractor.define_reader_function(name="read_spike2")
+read_spike2 = define_function_from_class(source_class=Spike2RecordingExtractor, name="read_spike2")

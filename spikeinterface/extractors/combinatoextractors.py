@@ -2,6 +2,8 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
+
 
 try:
     import h5py
@@ -81,4 +83,4 @@ class CombinatoSortingSegment(BaseSortingSegment):
         return times
 
 
-read_combinato = CombinatoSortingExtractor.define_reader_function(name="read_combinato")
+read_combinato = define_function_from_class(source_class=CombinatoSortingExtractor, name="read_combinato")

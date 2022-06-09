@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Union, Optional
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 try:
@@ -22,7 +24,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading data from neuroscope
     Ref: http://neuroscope.sourceforge.net
 
-    Based on neo.rawio.NeuroScopeRawIO
+    Based on :py:class:`neo.rawio.NeuroScopeRawIO`
 
     Parameters
     ----------
@@ -258,8 +260,10 @@ def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType
     return xml_file_path
 
 
-read_neuroscope_recording = NeuroScopeRecordingExtractor.define_reader_function(name="read_neuroscope_recording")
-read_neuroscope_sorting = NeuroScopeSortingExtractor.define_reader_function(name="read_neuroscope_sorting")
+read_neuroscope_recording = define_function_from_class(source_class=NeuroScopeRecordingExtractor, 
+                                                   name="read_neuroscope_recording")
+read_neuroscope_sorting = define_function_from_class(source_class=NeuroScopeSortingExtractor, 
+                                                 name="read_neuroscope_sorting")
 
 
 def read_neuroscope(file_path, stream_id=None, keep_mua_units=False,

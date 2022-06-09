@@ -1,5 +1,7 @@
 import numpy as np
 
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
@@ -24,8 +26,4 @@ class RectifyRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-def rectify(*args, **kwargs):
-    return RectifyRecording(*args, **kwargs)
-
-
-rectify.__doc__ = RectifyRecording.__doc__
+rectify = define_function_from_class(source_class=RectifyRecording, name="rectify")
