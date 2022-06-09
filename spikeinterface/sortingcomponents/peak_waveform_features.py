@@ -172,7 +172,6 @@ def compute_waveform_features(
     peak_waveform_features = np.empty(
         (local_peak.size, traces.shape[1], len(feature_list))
     )
-    peak_waveform_features[:] = np.nan
     do_amplitudes = False
     do_ptps = False
     idx = 0
