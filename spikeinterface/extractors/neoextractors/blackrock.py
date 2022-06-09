@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -23,4 +25,4 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-read_blackrock = BlackrockRecordingExtractor.define_reader_function(name="read_blackrock")
+read_blackrock = define_function_from_class(source_class=BlackrockRecordingExtractor, name="read_blackrock")

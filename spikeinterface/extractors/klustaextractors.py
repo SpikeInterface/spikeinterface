@@ -12,6 +12,8 @@ import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment,
                                  read_python)
+from spikeinterface.core.core_tools import define_function_from_class
+
 
 import numpy as np
 from pathlib import Path
@@ -138,4 +140,4 @@ class KlustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_klusta = KlustaSortingExtractor.define_reader_function(name="read_klusta")
+read_klusta = define_function_from_class(source_class=KlustaSortingExtractor, name="read_klusta")
