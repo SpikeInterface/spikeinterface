@@ -145,7 +145,10 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
             all_spikes = len(wfs_sliced)
             if all_spikes > 0:
                 b = wfs_sliced.reshape(all_spikes, -1)
-                distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
+                if metric == 'cosine':
+                    distances = sklearn.metrics.pairwise.cosine_similarity(a, b, metric).flatten()
+                else:
+                    distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
                 results[label]['mean'] += [np.nanmean(distances)]
                 results[label]['std'] += [np.nanstd(distances)]
             else:
