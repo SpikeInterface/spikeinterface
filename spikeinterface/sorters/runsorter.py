@@ -49,8 +49,13 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default).
         If False, the process continues and the error is logged in the log file.
-    docker_image: None or str
-        If str run the sorter inside a container (docker) using the docker package.
+    docker_image: bool or str
+        If True, pull the default docker container for the sorter and run the sorter in that container using docker.
+        Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
+    singularity_image: bool or str
+        If True, pull the default docker container for the sorter and run the sorter in that container using 
+        singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
+        from Docker Hub.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -61,34 +66,48 @@ _common_param_doc = """
     """
 
 
-def run_sorter(sorter_name, recording, output_folder=None,
-               remove_existing_folder=True, delete_output_folder=False,
-               verbose=False, raise_error=True,
-               docker_image=None, singularity_image=None,
-               with_output=True, **sorter_params):
+def run_sorter(
+    sorter_name: str,
+    recording: BaseRecording,
+    output_folder: str = None,
+    remove_existing_folder: bool = True,
+    delete_output_folder: bool = False,
+    verbose: bool = False,
+    raise_error: bool = True,
+    docker_image: bool = False,
+    singularity_image: bool = False,
+    with_output: bool = True,
+    **sorter_params,
+):
     """
     Generic function to run a sorter via function approach.
+    """ + _common_param_doc + """
+    
+    Examples
+    --------
+    >>> sorting = run_sorter("tridesclous", recording)
+    """
 
-    >>> sorting = run_sorter('tridesclous', recording)
-    """ + _common_param_doc
+    common_kwargs = dict(
+        sorter_name=sorter_name,
+        recording=recording,
+        output_folder=output_folder,
+        remove_existing_folder=remove_existing_folder,
+        delete_output_folder=delete_output_folder,
+        verbose=verbose,
+        raise_error=raise_error,
+        with_output=with_output,
+        **sorter_params,
+    )
 
-    if docker_image is not None:
-        return run_sorter_container(sorter_name, recording, 'docker', docker_image,
-                                    output_folder=output_folder,
-                                    remove_existing_folder=remove_existing_folder,
-                                    delete_output_folder=delete_output_folder, verbose=verbose,
-                                    raise_error=raise_error, with_output=with_output, **sorter_params)
-    if singularity_image is not None:
-        return run_sorter_container(sorter_name, recording, 'singularity', singularity_image,
-                                    output_folder=output_folder,
-                                    remove_existing_folder=remove_existing_folder,
-                                    delete_output_folder=delete_output_folder, verbose=verbose,
-                                    raise_error=raise_error, with_output=with_output, **sorter_params)
-    return run_sorter_local(sorter_name, recording, output_folder=output_folder,
-                            remove_existing_folder=remove_existing_folder,
-                            delete_output_folder=delete_output_folder,
-                            verbose=verbose, raise_error=raise_error, with_output=with_output,
-                            **sorter_params)
+    if docker_image or singularity_image:
+        return run_sorter_container(
+            docker_image=docker_image if isinstance(docker_image, str) else None,
+            mode="docker" if docker_image else "singularity",
+            **common_kwargs,
+        )
+
+    return run_sorter_local(**common_kwargs)
 
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
