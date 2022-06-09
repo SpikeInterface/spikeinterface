@@ -1,5 +1,6 @@
 from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording
+from spikeinterface.core.core_tools import write_binary_recording, define_reader_function
+
 from probeinterface import read_prb, write_prb
 
 import json
@@ -184,8 +185,8 @@ class SHYBRIDSortingSegment(BaseSortingSegment):
         return train[idxs]
 
 
-read_shybrid_recording = SHYBRIDRecordingExtractor.define_reader_function(name="read_shybrid_recording")
-read_shybrid_sorting = SHYBRIDSortingExtractor.define_reader_function(name="read_shybrid_sorting")
+read_shybrid_recording = define_reader_function(source_class=SHYBRIDRecordingExtractor, name="read_shybrid_recording")
+read_shybrid_sorting = define_reader_function(source_class=SHYBRIDSortingExtractor, name="read_shybrid_sorting")
 
 
 class GeometryNotLoadedError(Exception):

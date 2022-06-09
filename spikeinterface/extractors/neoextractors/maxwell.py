@@ -1,5 +1,7 @@
 from spikeinterface import BaseEvent, BaseEventSegment
 
+from spikeinterface.core.core_tools import define_reader_function
+
 from .neobaseextractor import NeoBaseRecordingExtractor
 import probeinterface as pi
 import numpy as np
@@ -38,14 +40,6 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_probe(probe, in_place=True)
         self.set_property("electrode", self.get_property("contact_vector")["electrode"])
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id, rec_name=rec_name)
-
-
-def read_maxwell(*args, **kwargs):
-    recording = MaxwellRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_maxwell.__doc__ = MaxwellRecordingExtractor.__doc__
 
 
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
@@ -109,4 +103,5 @@ class MaxwellEventSegment(BaseEventSegment):
         return event
 
 
-read_maxwell_event = MaxwellEventExtractor.define_reader_function(name="read_maxwell_event")
+read_maxwell = define_reader_function(source_class=MaxwellRecordingExtractor, name="read_maxwell")
+read_maxwell_event = define_reader_function(source_class=MaxwellEventExtractor, name="read_maxwell_event")

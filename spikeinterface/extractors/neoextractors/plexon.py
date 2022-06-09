@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_reader_function
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -23,4 +25,4 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = {'file_path': str(file_path), 'stream_id': stream_id}
 
 
-read_plexon = PlexonRecordingExtractor.define_reader_function(name="read_plexon")
+read_plexon = define_reader_function(source_class=PlexonRecordingExtractor, name="read_plexon")
