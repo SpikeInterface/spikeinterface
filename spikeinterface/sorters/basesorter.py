@@ -293,7 +293,7 @@ class BaseSorter:
     
     @classmethod
     def use_gpu(cls, params):
-        return cls.gpu_capability is not None
+        return cls.gpu_capability != 'not-supported'
 
     #############################################
 
