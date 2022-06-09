@@ -34,7 +34,7 @@ class IronClustSorter(BaseSorter):
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)
 
     requires_locations = True
-    requires_gpu = 'nvidia'
+    gpu_capability = 'nvidia-optional'
 
     _default_params = {
         'detect_sign': -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
@@ -145,10 +145,7 @@ class IronClustSorter(BaseSorter):
     
     @classmethod
     def use_gpu(cls, params):
-        if params["fGpu"]:
-            return 'nvidia'
-        else:
-            return None
+        return params["fGpu"]
 
     @staticmethod
     def set_ironclust_path(ironclust_path: PathType):
