@@ -24,6 +24,8 @@ def init_kwargs_dict(method, method_kwargs):
         method_kwargs_ = dict(local_radius_um=150)
     elif method == 'monopolar_triangulation':
         method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000, optimizer='minimize_with_log_penality')
+    elif method == 'main_channel':
+        method_kwargs_ = dict()
 
     method_kwargs_.update(method_kwargs)
 
@@ -61,6 +63,7 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
                     For channel sparsity.
                 * max_distance_um: float, default: 1000
                     Boundary for distance estimation.
+            'main_channel'
     {}
 
     Returns
@@ -140,10 +143,12 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     method = worker_ctx['method']
     nbefore = worker_ctx['nbefore']
     nafter = worker_ctx['nafter']
-    neighbours_mask = worker_ctx['neighbours_mask']
     contact_locations = worker_ctx['contact_locations']
     margin = worker_ctx['margin']
 
+    if method in ('center_of_mass', 'monopolar_triangulation'):
+        neighbours_mask = worker_ctx['neighbours_mask']
+    
     # load trace in memory
     # traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
     #                               segment_index=segment_index)
@@ -166,6 +171,8 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     if method == 'center_of_mass':
         peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations,
                                                        neighbours_mask, nbefore, nafter)
+    elif method == 'main_channel':
+        peak_locations = localize_peaks_main_channel(traces, local_peaks, contact_locations)
     elif method == 'monopolar_triangulation':
         max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
         optimizer = worker_ctx['method_kwargs']['optimizer']
@@ -193,6 +200,18 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
 
         peak_locations['x'][i] = com[0]
         peak_locations['y'][i] = com[1]
+
+    return peak_locations
+
+def localize_peaks_main_channel(traces, local_peak, contact_locations):
+    """Localize peaks using the center of mass method."""
+
+    peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['main_channel'])
+
+    for i, peak in enumerate(local_peak):
+        main = peak['channel_ind']
+        peak_locations['x'][i] = contact_locations[main, 0]
+        peak_locations['y'][i] = contact_locations[main, 1]
 
     return peak_locations
 
