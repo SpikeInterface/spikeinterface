@@ -11,7 +11,7 @@ from probeinterface import read_BIDS_probe
 import neo
 
 
-def read_bids_folder(folder_path):
+def read_bids(folder_path):
     """
     This read an entire BIDS folder and return a list of recording with
     there attached Probe.

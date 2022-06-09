@@ -17,7 +17,7 @@ def test_read_bids_folder():
     # ~ folder_path = '/home/samuel/Documents/BEP032-examples/ephys_nwb_petersen/sub-MS10/ses-PeterMS10170307154746concat/ephys/'
 
     folder_path = '/home/samuel/Documents/BEP032-examples/ephys_nix/sub-i/ses-140703/ephys/'
-    recordings = read_bids_folder(folder_path)
+    recordings = read_bids(folder_path)
     # ~ print(recordings)
 
     rec0 = recordings[0]

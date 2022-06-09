@@ -231,7 +231,8 @@ class ContainerClient:
 
 def run_sorter_container(sorter_name, recording, mode, container_image, output_folder=None,
                          remove_existing_folder=True, delete_output_folder=False,
-                         verbose=False, raise_error=True, with_output=True, **sorter_params):
+                         verbose=False, raise_error=True, with_output=True,
+                         extra_requirements=None, **sorter_params):
     # common code for docker and singularity
     if output_folder is None:
         output_folder = sorter_name + '_output'
@@ -322,6 +323,9 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         res_output += str(container_client.run_command(cmd))
     need_si_install = 'ModuleNotFoundError' in res_output
 
+    cmd = 'pip install --upgrade --no-input nixio'
+    res_output = container_client.run_command(cmd)
+
     if need_si_install:
         if 'dev' in si_version:
             if verbose:
@@ -352,6 +356,20 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         # TODO version checking
         if verbose:
             print(f'spikeinterface is already installed in {container_image}')
+
+    if hasattr(recording, 'extra_requirements'):
+        extra_requirements.extend(recording.extra_requirements)
+
+    # execute custom pre-run code from file or string, e.g. to install missing dependencies
+    if extra_requirements is None:
+        pass
+    elif Path(extra_requirements).exists():
+        with open(extra_requirements, 'r') as f:
+            cmd = f"pip install {' '.join(f.readlines())}"
+        res_output = container_client.run_command(cmd)
+    else:
+        cmd = f"pip install {' '.join(extra_requirements)}"
+        res_output = container_client.run_command(cmd)
 
     # run sorter on folder
     if verbose:

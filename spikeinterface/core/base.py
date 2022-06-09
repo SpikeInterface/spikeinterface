@@ -54,6 +54,9 @@ class BaseExtractor:
 
         self.is_dumpable = True
 
+        # Extractor specific list of pip extra requirements
+        self.extra_requirements = []
+
     def get_num_segments(self):
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
