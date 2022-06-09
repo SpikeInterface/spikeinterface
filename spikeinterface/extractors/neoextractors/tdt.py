@@ -5,7 +5,7 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading TDT folder
 
-    Based on neo.rawio.TdTRawIO
+    Based on :py:class:`neo.rawio.TdTRawIO`
 
     Parameters
     ----------

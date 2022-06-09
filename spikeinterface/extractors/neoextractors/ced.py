@@ -5,7 +5,7 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading smr/smrw CED file.
 
-    Based on neo.rawio.CedRawIO / sonpy
+    Based on :py:class:`neo.rawio.CedRawIO` / sonpy
     
     Alternative to read_spike2 which do not handle smrx
     
