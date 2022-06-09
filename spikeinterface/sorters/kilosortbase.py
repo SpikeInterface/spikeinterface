@@ -79,7 +79,7 @@ class KilosortBase:
         recording: BaseRecording
             The recording to generate the channel map file
         params: dict
-            Custom parameters dictionary for kilosort3
+            Custom parameters dictionary for kilosort
         output_folder: pathlib.Path
             Path object to save `ops.mat`
         """
