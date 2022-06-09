@@ -5,7 +5,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from a intan board support rhd and rhs format.
     
-    Based on neo.rawio.IntanRawIO
+    Based on :py:class:`neo.rawio.IntanRawIO`
     
     Parameters
     ----------
