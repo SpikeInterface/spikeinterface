@@ -40,11 +40,6 @@ def test_localize_peaks():
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('minimize_with_log_penality', peak_locations))
 
-    peak_locations = localize_peaks(recording, peaks, method='main_channel',
-                                    chunk_size=10000, verbose=True, progress_bar=False)
-    assert peaks.size == peak_locations.shape[0]
-    list_locations.append(('main_channel', peak_locations))
-
 
     # DEBUG
     # import MEArec
