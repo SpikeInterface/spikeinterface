@@ -19,11 +19,11 @@ def copy_signature(source_fct):
     return copy
 
 
-def define_reader_function(source_class, name):
+def define_function_from_class(source_class, name):
 
     @copy_signature(source_class)
     def reader_func(*args, **kwargs):
-        source_class(*args, **kwargs)
+        return source_class(*args, **kwargs)
 
     reader_func.__doc__ = source_class.__doc__
     reader_func.__name__ = name

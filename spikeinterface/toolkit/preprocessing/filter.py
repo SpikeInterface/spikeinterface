@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.signal
 
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from .tools import get_chunk_with_margin
@@ -202,9 +202,9 @@ class NotchFilterRecording(BasePreprocessor):
 
 
 # functions for API
-filter = define_reader_function(source_class=FilterRecording, name="filter")
-bandpass_filter = define_reader_function(source_class=BandpassFilterRecording, name="bandpass_filter")
-notch_filter = define_reader_function(source_class=NotchFilterRecording, name="notch_filter")
+filter = define_function_from_class(source_class=FilterRecording, name="filter")
+bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
+notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 
 
 def fix_dtype(recording, dtype):

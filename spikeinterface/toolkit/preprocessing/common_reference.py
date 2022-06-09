@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..utils import get_closest_channels
@@ -155,4 +155,4 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         return zip(selected_channels, selected_groups)
 
 
-common_reference = define_reader_function(source_class=CommonReferenceRecording, name="common_reference")
+common_reference = define_function_from_class(source_class=CommonReferenceRecording, name="common_reference")

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Union, Optional
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -260,9 +260,9 @@ def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType
     return xml_file_path
 
 
-read_neuroscope_recording = define_reader_function(source_class=NeuroScopeRecordingExtractor, 
+read_neuroscope_recording = define_function_from_class(source_class=NeuroScopeRecordingExtractor, 
                                                    name="read_neuroscope_recording")
-read_neuroscope_sorting = define_reader_function(source_class=NeuroScopeSortingExtractor, 
+read_neuroscope_sorting = define_function_from_class(source_class=NeuroScopeSortingExtractor, 
                                                  name="read_neuroscope_sorting")
 
 

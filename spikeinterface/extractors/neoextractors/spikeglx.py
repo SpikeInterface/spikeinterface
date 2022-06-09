@@ -1,4 +1,4 @@
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -64,7 +64,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
-read_spikeglx = define_reader_function(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
+read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
 
 
 # TODO check sample shifts for different configurations!!!

@@ -1,6 +1,6 @@
 from spikeinterface import BaseEvent, BaseEventSegment
 
-from spikeinterface.core.core_tools import define_reader_function
+from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
 import probeinterface as pi
@@ -103,5 +103,5 @@ class MaxwellEventSegment(BaseEventSegment):
         return event
 
 
-read_maxwell = define_reader_function(source_class=MaxwellRecordingExtractor, name="read_maxwell")
-read_maxwell_event = define_reader_function(source_class=MaxwellEventExtractor, name="read_maxwell_event")
+read_maxwell = define_function_from_class(source_class=MaxwellRecordingExtractor, name="read_maxwell")
+read_maxwell_event = define_function_from_class(source_class=MaxwellEventExtractor, name="read_maxwell_event")
