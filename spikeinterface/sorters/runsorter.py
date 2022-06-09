@@ -309,12 +309,19 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         
     extra_kwargs = {}
     use_gpu = SorterClass.use_gpu(sorter_params)
-    if use_gpu is not None:
-        if use_gpu == 'nvidia':
+    gpu_capability = SorterClass.gpu_capability
+    
+    if use_gpu:
+        if gpu_capability == 'nvidia-required':
+            assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
+            extra_kwargs['container_requires_gpu'] = True
+        elif gpu_capability == 'nvidia-optional':
             if has_nvidia():
                 extra_kwargs['container_requires_gpu'] = True
-            else:
-                raise Exception("The container requires a NVIDIA GPU capability, but it is not available")
+            else: 
+                if verbose:
+                    print(f"{SorterClass.sorter_name} supports GPU, but no GPU is available.\n"
+                          f"Running the sorter without GPU")
         else:
             # TODO: make opencl machanism
             raise NotImplementedError("Only nvidia support is available")
