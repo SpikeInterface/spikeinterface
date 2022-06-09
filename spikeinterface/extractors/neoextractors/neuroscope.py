@@ -24,7 +24,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading data from neuroscope
     Ref: http://neuroscope.sourceforge.net
 
-    Based on neo.rawio.NeuroScopeRawIO
+    Based on :py:class:`neo.rawio.NeuroScopeRawIO`
 
     Parameters
     ----------

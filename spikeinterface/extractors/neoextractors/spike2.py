@@ -8,7 +8,7 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading spike2 smr files.
     smrx are not supported with this, prefer CedRecordingExtractor instead.
     
-    Based on neo.rawio.Spike2RawIO
+    Based on :py:class:`neo.rawio.Spike2RawIO`
     
     Parameters
     ----------

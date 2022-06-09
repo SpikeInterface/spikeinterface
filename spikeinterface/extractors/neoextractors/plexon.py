@@ -7,7 +7,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading plexon plx files.
     
-    Based on neo.rawio.PlexonRawIO
+    Based on :py:class:`neo.rawio.PlexonRawIO`
     
     Parameters
     ----------
