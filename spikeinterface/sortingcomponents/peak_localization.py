@@ -9,10 +9,12 @@ from ..toolkit import get_chunk_with_margin
 
 from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method,
                                                         possible_localization_methods,
-                                                        solve_monopolar_triangulation)
+                                                        solve_monopolar_triangulation,
+                                                        make_radial_order_parents,
+                                                        enforce_decrease_shells_ptp)
 
 
-def init_kwargs_dict(method, method_kwargs):
+def init_kwargs_dict(method, method_kwargs, recording):
     """Initialize a dictionary of keyword arguments."""
 
     if method == 'center_of_mass':
@@ -21,6 +23,14 @@ def init_kwargs_dict(method, method_kwargs):
         method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000, optimizer='minimize_with_log_penality')
 
     method_kwargs_.update(method_kwargs)
+
+    if method_kwargs_.get("enforce_decrease", None) is not None:
+        contact_locations = recording.get_channel_locations()
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance < method_kwargs['local_radius_um']
+        method_kwargs_["enforce_decrease_radial_parents"] = make_radial_order_parents(
+            contact_locations, neighbours_mask
+        )
 
     return method_kwargs_
 
@@ -56,6 +66,8 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center
                     For channel sparsity.
                 * max_distance_um: float, default: 1000
                     Boundary for distance estimation.
+                * enforce_decrese : None or "radial"
+                    If+how to enforce spatial decreasingness for PTP vectors.
     {}
 
     Returns
@@ -64,16 +76,14 @@ def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center
         Array with estimated location for each spike.
         The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
     """
-
     assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
     # handle default method_kwargs
-    method_kwargs = init_kwargs_dict(method, method_kwargs)
+    contact_locations = recording.get_channel_locations()
+    method_kwargs = init_kwargs_dict(method, method_kwargs, contact_locations)
 
     nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
     nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
-
-    contact_locations = recording.get_channel_locations()
 
     # margin at border for get_trace
     margin = max(nbefore, nafter)
@@ -140,7 +150,7 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     margin = worker_ctx['margin']
 
     # load trace in memory
-    #traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
+    # traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
     #                               segment_index=segment_index)
     recording_segment = recording._recording_segments[segment_index]
     traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
@@ -164,8 +174,12 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     elif method == 'monopolar_triangulation':
         max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
         optimizer = worker_ctx['method_kwargs']['optimizer']
-        peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations,
-                                                                neighbours_mask, nbefore, nafter, max_distance_um, optimizer)
+        enforce_decrease_radial_parents = worker_ctx['method_kwargs']['enforce_decrease_radial_parents']
+        peak_locations = localize_peaks_monopolar_triangulation(
+            traces, local_peaks, contact_locations,
+            neighbours_mask, nbefore, nafter, max_distance_um, optimizer,
+            enforce_decrease_radial_parents=enforce_decrease_radial_parents,
+        )
 
     return peak_locations
 
@@ -193,7 +207,8 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
 
 
 def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations, neighbours_mask,
-                                           nbefore, nafter, max_distance_um, optimizer):
+                                           nbefore, nafter, max_distance_um, optimizer,
+                                           enforce_decrease_radial_parents=None):
     """Localize peaks using the monopolar triangulation method.
 
     Notes
@@ -205,13 +220,17 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
 
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
-        chan_inds, = np.nonzero(chan_mask)
+        chan_inds = np.flatnonzero(chan_mask)
 
         local_contact_locations = contact_locations[chan_inds, :]
 
         # wf is (nsample, nchan) - chan is only neighbor
         wf = traces[peak['sample_ind'] - nbefore:peak['sample_ind'] + nafter, :][:, chan_inds]
         wf_ptp = wf.ptp(axis=0)
+        if enforce_decrease_radial_parents is not None:
+            enforce_decrease_shells_ptp(
+                wf_ptp, peak['channel_ind'], enforce_decrease_radial_parents, in_place=True
+            )
         peak_locations[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
     return peak_locations
