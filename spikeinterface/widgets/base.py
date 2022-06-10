@@ -6,7 +6,6 @@ class BaseWidget:
     
     def __init__(self, plot_data=None, backend=None, **backend_kwargs):
         # every widgets must prepare a dict "plot_data" in the init
-        print('yep')
         self.plot_data = plot_data
         self.backend = backend
         
