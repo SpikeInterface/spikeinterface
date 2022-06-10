@@ -740,13 +740,10 @@ def get_diptest_value(
     mc,
     two_units_shift,
     unit_shifted,
-    denoiser,
-    device,
     tpca,
     n_channels=10,
     n_times=121,
     max_spikes=250,
-    nn_denoise = True
 ):
     # ALIGN BASED ON MAX PTP TEMPLATE MC
     n_channels_half = n_channels // 2
@@ -817,12 +814,6 @@ def get_diptest_value(
     # tpca = PCA(rank_pca)
     wfs_diptest = np.concatenate((wfs_a_bis, wfs_b_bis))
 
-    if nn_denoise:
-        #Import from spikeinterface
-        wfs_diptest = denoise_wf_nn_tmp_single_channel(
-            wfs_diptest, denoiser, device
-        )
-    # print(wfs_diptest.shape)
     N, T, C = wfs_diptest.shape
     wfs_diptest = wfs_diptest.transpose(0, 2, 1).reshape(N * C, T)
 
@@ -909,11 +900,8 @@ def merge_clusters(
                         mc,
                         two_units_shift,
                         unit_shifted,
-                        denoiser,
-                        device,
                         tpca,
                         n_channels,
-                        nn_denoise=nn_denoise,
                     )
                     if (
                         dpt_val < threshold_diptest

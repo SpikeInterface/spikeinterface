@@ -5,6 +5,7 @@ import scipy
 from scipy import signal
 import math
 from sklearn.decomposition import PCA
+from .waveform_noise import kill_signal, search_noise_snippets, noise_whitener
 try:
     import torch 
     from torch import nn, optim
@@ -15,196 +16,196 @@ try:
 except:
     HAVE_TORCH = False
 
-if HAVE_TORCH:
-    class SingleChanDenoiser(nn.Module):
-        def __init__(self, pretrained_path=None, n_filters=[16, 8], filter_sizes=[5, 11], spike_size=121):
+class SingleChanDenoiser(nn.Module):
+    def __init__(self, pretrained_path=None, n_filters=[16, 8], filter_sizes=[5, 11], spike_size=121):
 #             if torch.cuda.is_available():
 #                 device = 'cuda:0'
 #             else:
 #                 device = 'cpu'
 #             torch.cuda.set_device(device)
-            super(SingleChanDenoiser, self).__init__()
-            feat1, feat2 = n_filters
-            size1, size2 = filter_sizes
-            #TODO For Loop 
-            self.conv1 = nn.Sequential(nn.Conv1d(1, feat1, size1), nn.ReLU()).to()
-            self.conv2 = nn.Sequential(nn.Conv1d(feat1, feat2, size2), nn.ReLU())
-            n_input_feat = feat2 * (spike_size - size1 - size2 + 2)
-            self.out = nn.Linear(n_input_feat, spike_size)
-            self.pretrained_path = pretrained_path
+        assert(HAVE_TORCH)
+        super(SingleChanDenoiser, self).__init__()
+        feat1, feat2 = n_filters
+        size1, size2 = filter_sizes
+        #TODO For Loop 
+        self.conv1 = nn.Sequential(nn.Conv1d(1, feat1, size1), nn.ReLU()).to()
+        self.conv2 = nn.Sequential(nn.Conv1d(feat1, feat2, size2), nn.ReLU())
+        n_input_feat = feat2 * (spike_size - size1 - size2 + 2)
+        self.out = nn.Linear(n_input_feat, spike_size)
+        self.pretrained_path = pretrained_path
 
-        def forward(self, x):
-            x = x[:, None]
-            x = self.conv1(x)
-            x = self.conv2(x)
-            x = x.view(x.shape[0], -1)
-            return self.out(x)
+    def forward(self, x):
+        x = x[:, None]
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = x.view(x.shape[0], -1)
+        return self.out(x)
 
-        #TODO: Put it outside the class
-        def load(self):
-            checkpoint = torch.load(self.pretrained_path, map_location="cpu")
-            self.load_state_dict(checkpoint)
-            return self
+    #TODO: Put it outside the class
+    def load(self):
+        checkpoint = torch.load(self.pretrained_path, map_location="cpu")
+        self.load_state_dict(checkpoint)
+        return self
 
-        def train(self, fname_save, DenoTD, n_train=50000, n_test=500, EPOCH=2000, BATCH_SIZE=512, LR=0.0001):
-            """
-            DenoTD instance of Denoise Training Data class
-            """
-            print('Training NN denoiser')
-
-            if os.path.exists(fname_save):
-                return
-
-            optimizer = torch.optim.Adam(self.parameters(), lr=LR)   # optimize all cnn parameters
-            loss_func = nn.MSELoss()                       # the target label is not one-hotted
-
-            wf_col_train, wf_clean_train = DenoTD.make_training_data(n_train)
-            train = Data.TensorDataset(torch.FloatTensor(wf_col_train), torch.FloatTensor(wf_clean_train))
-            train_loader = Data.DataLoader(train, batch_size=BATCH_SIZE, shuffle=True)
-
-            wf_col_test, wf_clean_test = DenoTD.make_training_data(n_test)
-
-            # training and testing
-            for epoch in range(EPOCH):
-                for step, (b_x, b_y) in enumerate(train_loader):   # gives batch data, normalize x when iterate train_loader
-                    est = self(b_x.cuda())[0] 
-                    loss = loss_func(est, b_y.cuda())   # cross entropy loss b_y.cuda()
-                    optimizer.zero_grad()           # clear gradients for this training step
-                    loss.backward()                 # backpropagation, compute gradients
-                    optimizer.step()                # apply gradients
-
-                    if step % 100 == 0:
-                        est_test = self(torch.FloatTensor(wf_col_test).cuda())[0]
-                        l2_loss = np.mean(np.square(est_test.cpu().data.numpy() - wf_clean_test))
-                        print('Epoch: ', epoch, '| train loss: %.4f' % loss.cpu().data.numpy(), '| test accuracy: %.4f' % l2_loss)
-
-            # save model
-            torch.save(self.state_dict(), fname_save)
-        
-
-    class Denoising_Training_Data(object):
+    def train(self, fname_save, DenoTD, n_train=50000, n_test=500, EPOCH=2000, BATCH_SIZE=512, LR=0.0001):
         """
-        templates obtained by simple clustering + averaging waveforms + crop and align
-        spatial_sig, temporal_sig obtained from spikeinterface.sortingcomponents.waveform_tools.noise_whitener
+        DenoTD instance of Denoise Training Data class
         """
+        print('Training NN denoiser')
 
-        def __init__(self,
-                     templates, #Crop and denoise templates here
-                     channel_index,
-                     spatial_sig,
-                     temporal_sig,
-                     geom_array):
+        if os.path.exists(fname_save):
+            return
 
-            self.spatial_sig = spatial_sig
-            self.temporal_sig = temporal_sig
-            self.templates = templates
-            self.channel_index = channel_index
-            self.spike_size = self.temporal_sig.shape[0]
-            self.geom = geom_array
-            
-            self.templates, self.n_before, self.n_after = crop_and_align_templates(self.templates, self.spike_size, self.channel_index, self.geom)
-            self.templates = denoise_templates(self.templates)
-            
-            self.templates = self.templates.transpose(0,2,1).reshape(
-                -1, self.templates.shape[1])
-            self.remove_small_templates()
-            self.standardize_templates()
-            self.jitter_templates()
-            
-            
+        optimizer = torch.optim.Adam(self.parameters(), lr=LR)   # optimize all cnn parameters
+        loss_func = nn.MSELoss()                       # the target label is not one-hotted
 
-        def remove_small_templates(self):
+        wf_col_train, wf_clean_train = DenoTD.make_training_data(n_train)
+        train = Data.TensorDataset(torch.FloatTensor(wf_col_train), torch.FloatTensor(wf_clean_train))
+        train_loader = Data.DataLoader(train, batch_size=BATCH_SIZE, shuffle=True)
 
-            ptp = self.templates.ptp(1)
-            self.templates = self.templates[ptp > 3]
+        wf_col_test, wf_clean_test = DenoTD.make_training_data(n_test)
 
-        def standardize_templates(self):
+        # training and testing
+        for epoch in range(EPOCH):
+            for step, (b_x, b_y) in enumerate(train_loader):   # gives batch data, normalize x when iterate train_loader
+                est = self(b_x.cuda())[0] 
+                loss = loss_func(est, b_y.cuda())   # cross entropy loss b_y.cuda()
+                optimizer.zero_grad()           # clear gradients for this training step
+                loss.backward()                 # backpropagation, compute gradients
+                optimizer.step()                # apply gradients
 
-            # standardize templates
-            ptp = self.templates.ptp(1)
-            self.templates = self.templates/ptp[:, None]
+                if step % 100 == 0:
+                    est_test = self(torch.FloatTensor(wf_col_test).cuda())[0]
+                    l2_loss = np.mean(np.square(est_test.cpu().data.numpy() - wf_clean_test))
+                    print('Epoch: ', epoch, '| train loss: %.4f' % loss.cpu().data.numpy(), '| test accuracy: %.4f' % l2_loss)
 
-            ref = np.mean(self.templates, 0)
-            shifts = align_get_shifts_with_ref(
-                self.templates, ref)
-            self.templates = shift_chans(self.templates, shifts)
+        # save model
+        torch.save(self.state_dict(), fname_save)
 
-        def jitter_templates(self, up_factor=8):
 
-            n_templates, n_times = self.templates.shape
+class Denoising_Training_Data(object):
+    """
+    templates obtained by simple clustering + averaging waveforms + crop and align
+    spatial_sig, temporal_sig obtained from spikeinterface.sortingcomponents.waveform_tools.noise_whitener
+    """
 
-            # upsample best fit template
-            up_temp = scipy.signal.resample(
-                x=self.templates,
-                num=n_times*up_factor,
-                axis=1)
-            up_temp = up_temp.T
+    def __init__(self,
+                 templates, #Crop and denoise templates here
+                 channel_index,
+                 spatial_sig,
+                 temporal_sig,
+                 geom_array):
 
-            idx = (np.arange(0, n_times)[:,None]*up_factor + np.arange(up_factor))
-            up_shifted_temps = up_temp[idx].transpose(2,0,1)
-            up_shifted_temps = np.concatenate(
-                (up_shifted_temps,
-                 np.roll(up_shifted_temps, shift=1, axis=1)),
-                axis=2)
-            self.templates = up_shifted_temps.transpose(0,2,1).reshape(-1, n_times)
+        self.spatial_sig = spatial_sig
+        self.temporal_sig = temporal_sig
+        self.templates = templates
+        self.channel_index = channel_index
+        self.spike_size = self.temporal_sig.shape[0]
+        self.geom = geom_array
 
-            ref = np.mean(self.templates, 0)
-            shifts = align_get_shifts_with_ref(
-                self.templates, ref, upsample_factor=1)
-            self.templates = shift_chans(self.templates, shifts)
+        self.templates, self.n_before, self.n_after = crop_and_align_templates(self.templates, self.spike_size, self.channel_index, self.geom)
+        self.templates = denoise_templates(self.templates)
 
-        def make_training_data(self, n):
+        self.templates = self.templates.transpose(0,2,1).reshape(
+            -1, self.templates.shape[1])
+        self.remove_small_templates()
+        self.standardize_templates()
+        self.jitter_templates()
 
-            n_templates, n_times = self.templates.shape
 
-            center = n_times//2
-            t_idx_in = slice(center - self.spike_size//2,
-                             center + (self.spike_size//2) + 1)
 
-            # sample templates
-            idx1 = np.random.choice(n_templates, n)
-            idx2 = np.random.choice(n_templates, n)
-            wf1 = self.templates[idx1]
-            wf2 = self.templates[idx2]
+    def remove_small_templates(self):
 
-            # sample scale
-            s1 = np.exp(np.random.randn(n)*0.8 + 2)
-            s2 = np.exp(np.random.randn(n)*0.8 + 2)
+        ptp = self.templates.ptp(1)
+        self.templates = self.templates[ptp > 3]
 
-            # turn off some
-            c1 = np.random.binomial(1, 1-0.05, n)
-            c2 = np.random.binomial(1, 1-0.05, n)
+    def standardize_templates(self):
 
-            # multiply them
-            wf1 = wf1*s1[:, None]*c1[:, None]
-            wf2 = wf2*s2[:, None]*c2[:, None]
+        # standardize templates
+        ptp = self.templates.ptp(1)
+        self.templates = self.templates/ptp[:, None]
 
-            # choose shift amount
-            shift = np.random.randint(low=0, high=3, size=(n,))
+        ref = np.mean(self.templates, 0)
+        shifts = align_get_shifts_with_ref(
+            self.templates, ref)
+        self.templates = shift_chans(self.templates, shifts)
 
-            # choose shift amount
-            shift2 = np.random.randint(low=5, high=self.spike_size, size=(n,))
+    def jitter_templates(self, up_factor=8):
 
-            shift *= np.random.choice([-1, 1], size=n)
-            shift2 *= np.random.choice([-1, 1], size=n, p=[0.2, 0.8])
+        n_templates, n_times = self.templates.shape
 
-            # make colliding wf    
-            wf_clean = np.zeros(wf1.shape)
-            for j in range(n):
-                temp = np.roll(wf1[j], shift[j])
-                wf_clean[j] = temp
+        # upsample best fit template
+        up_temp = scipy.signal.resample(
+            x=self.templates,
+            num=n_times*up_factor,
+            axis=1)
+        up_temp = up_temp.T
 
-            # make colliding wf    
-            wf_col = np.zeros(wf2.shape)
-            for j in range(n):
-                temp = np.roll(wf2[j], shift2[j])
-                wf_col[j] = temp
+        idx = (np.arange(0, n_times)[:,None]*up_factor + np.arange(up_factor))
+        up_shifted_temps = up_temp[idx].transpose(2,0,1)
+        up_shifted_temps = np.concatenate(
+            (up_shifted_temps,
+             np.roll(up_shifted_temps, shift=1, axis=1)),
+            axis=2)
+        self.templates = up_shifted_temps.transpose(0,2,1).reshape(-1, n_times)
 
-            noise_wf = make_noise(n, self.spatial_sig, self.temporal_sig)[:, :, 0]
+        ref = np.mean(self.templates, 0)
+        shifts = align_get_shifts_with_ref(
+            self.templates, ref, upsample_factor=1)
+        self.templates = shift_chans(self.templates, shifts)
 
-            wf_clean = wf_clean[:, t_idx_in]
-            return (wf_clean + wf_col[:, t_idx_in] + noise_wf,
-                    wf_clean)
+    def make_training_data(self, n):
+
+        n_templates, n_times = self.templates.shape
+
+        center = n_times//2
+        t_idx_in = slice(center - self.spike_size//2,
+                         center + (self.spike_size//2) + 1)
+
+        # sample templates
+        idx1 = np.random.choice(n_templates, n)
+        idx2 = np.random.choice(n_templates, n)
+        wf1 = self.templates[idx1]
+        wf2 = self.templates[idx2]
+
+        # sample scale
+        s1 = np.exp(np.random.randn(n)*0.8 + 2)
+        s2 = np.exp(np.random.randn(n)*0.8 + 2)
+
+        # turn off some
+        c1 = np.random.binomial(1, 1-0.05, n)
+        c2 = np.random.binomial(1, 1-0.05, n)
+
+        # multiply them
+        wf1 = wf1*s1[:, None]*c1[:, None]
+        wf2 = wf2*s2[:, None]*c2[:, None]
+
+        # choose shift amount
+        shift = np.random.randint(low=0, high=3, size=(n,))
+
+        # choose shift amount
+        shift2 = np.random.randint(low=5, high=self.spike_size, size=(n,))
+
+        shift *= np.random.choice([-1, 1], size=n)
+        shift2 *= np.random.choice([-1, 1], size=n, p=[0.2, 0.8])
+
+        # make colliding wf    
+        wf_clean = np.zeros(wf1.shape)
+        for j in range(n):
+            temp = np.roll(wf1[j], shift[j])
+            wf_clean[j] = temp
+
+        # make colliding wf    
+        wf_col = np.zeros(wf2.shape)
+        for j in range(n):
+            temp = np.roll(wf2[j], shift2[j])
+            wf_col[j] = temp
+
+        noise_wf = make_noise(n, self.spatial_sig, self.temporal_sig)[:, :, 0]
+
+        wf_clean = wf_clean[:, t_idx_in]
+        return (wf_clean + wf_col[:, t_idx_in] + noise_wf,
+                wf_clean)
 
 
         
@@ -497,204 +498,3 @@ def denoise_templates(templates):
                 pca_neigh.transform(temp))*temp_ptp[idx, None]
 
     return denoised_templates
-
-
-def kill_signal(recordings, threshold, window_size):
-    """
-    Thresholds recordings, values above 'threshold' are considered signal
-    (set to 0), a window of size 'window_size' is drawn around the signal
-    points and those observations are also killed
-    Returns
-    -------
-    recordings: numpy.ndarray
-        The modified recordings with values above the threshold set to 0
-    is_noise_idx: numpy.ndarray
-        A boolean array with the same shap as 'recordings' indicating if the
-        observation is noise (1) or was killed (0).
-    """
-    recordings = np.copy(recordings)
-
-    T, C = recordings.shape
-    R = int((window_size-1)/2)
-
-    # this will hold a flag 1 (noise), 0 (signal) for every obseration in the
-    # recordings
-    is_noise_idx = np.zeros((T, C))
-
-    # go through every neighboring channel
-    for c in range(C):
-
-        # get obserations where observation is above threshold
-        idx_temp = np.where(np.abs(recordings[:, c]) > threshold)[0]
-
-        if len(idx_temp) == 0:
-            is_noise_idx[:, c] = 1
-            continue
-
-        # shift every index found
-        for j in range(-R, R+1):
-
-            # shift
-            idx_temp2 = idx_temp + j
-
-            # remove indexes outside range [0, T]
-            idx_temp2 = idx_temp2[np.logical_and(idx_temp2 >= 0,
-                                                 idx_temp2 < T)]
-
-            # set surviving indexes to nan
-            recordings[idx_temp2, c] = np.nan
-
-        # noise indexes are the ones that are not nan
-        # FIXME: compare to np.nan instead
-        is_noise_idx_temp = (recordings[:, c] == recordings[:, c])
-
-        # standarize data, ignoring nans
-        recordings[:, c] = recordings[:, c]/np.nanstd(recordings[:, c])
-
-        # set non noise indexes to 0 in the recordings
-        recordings[~is_noise_idx_temp, c] = 0
-
-        # save noise indexes
-        is_noise_idx[is_noise_idx_temp, c] = 1
-
-    return recordings, is_noise_idx
-
-
-def noise_whitener(recordings, temporal_size, window_size, sample_size=1000,
-                   threshold=3.0, max_trials_per_sample=1000,
-                   allow_smaller_sample_size=False):
-    """Compute noise temporal and spatial covariance
-    Parameters
-    ----------
-    recordings: numpy.ndarray
-        Recordings
-    temporal_size:
-        Waveform size
-    sample_size: int
-        Number of noise snippets of temporal_size to search
-    threshold: float
-        Observations below this number are considered noise
-    Returns
-    -------
-    spatial_SIG: numpy.ndarray
-    temporal_SIG: numpy.ndarray
-    """
-
-    # kill signal above threshold in recordings
-    rec, is_noise_idx = kill_signal(recordings, threshold, window_size)
-
-    # compute spatial covariance, output: (n_channels, n_channels)
-    spatial_cov = np.divide(np.matmul(rec.T, rec),
-                            np.matmul(is_noise_idx.T, is_noise_idx))
-
-    # compute spatial sig
-    w_spatial, v_spatial = np.linalg.eig(spatial_cov)
-    spatial_SIG = np.matmul(np.matmul(v_spatial,
-                                      np.diag(np.sqrt(w_spatial))),
-                            v_spatial.T)
-
-    # apply spatial whitening to recordings
-    spatial_whitener = np.matmul(np.matmul(v_spatial,
-                                           np.diag(1/np.sqrt(w_spatial))),
-                                 v_spatial.T)
-    #print ("rec: ", rec, ", spatial_whitener: ", spatial_whitener.shape)
-    rec = np.matmul(rec, spatial_whitener)
-
-    # search single noise channel snippets
-    noise_wf = search_noise_snippets(
-        rec, is_noise_idx, sample_size,
-        temporal_size,
-        channel_choices=None,
-        max_trials_per_sample=max_trials_per_sample,
-        allow_smaller_sample_size=allow_smaller_sample_size)
-
-    w, v = np.linalg.eig(np.cov(noise_wf.T))
-
-    temporal_SIG = np.matmul(np.matmul(v, np.diag(np.sqrt(w))), v.T)
-
-    return spatial_SIG, temporal_SIG
-
-
-def search_noise_snippets(recordings, is_noise_idx, sample_size,
-                          temporal_size, channel_choices=None,
-                          max_trials_per_sample=1000,
-                          allow_smaller_sample_size=False):
-    """
-    Randomly search noise snippets of 'temporal_size'
-    Parameters
-    ----------
-    channel_choices: list
-        List of sets of channels to select at random on each trial
-    max_trials_per_sample: int, optional
-        Maximum random trials per sample
-    allow_smaller_sample_size: bool, optional
-        If 'max_trials_per_sample' is reached and this is True, the noise
-        snippets found up to that time are returned
-    Raises
-    ------
-    ValueError
-        if after 'max_trials_per_sample' trials, no noise snippet has been
-        found this exception is raised
-    Notes
-    -----
-    Channels selected at random using the random module from the standard
-    library (not using np.random)
-    """
-    
-    T, C = recordings.shape
-
-    if channel_choices is None:
-        noise_wf = np.zeros((sample_size, temporal_size))
-    else:
-        lenghts = set([len(ch) for ch in channel_choices])
-
-        if len(lenghts) > 1:
-            raise ValueError('All elements in channel_choices must have '
-                             'the same length, got {}'.format(lenghts))
-
-        n_channels = len(channel_choices[0])
-        noise_wf = np.zeros((sample_size, temporal_size, n_channels))
-
-    count = 0
-
-    trial = 0
-
-    # repeat until you get sample_size noise snippets
-    while count < sample_size:
-
-        # random number for the start of the noise snippet
-        t_start = np.random.randint(T-temporal_size)
-
-        if channel_choices is None:
-            # random channel
-            ch = random.randint(0, C - 1)
-        else:
-            ch = random.choice(channel_choices)
-
-        t_slice = slice(t_start, t_start+temporal_size)
-
-        # get a snippet from the recordings and the noise flags for the same
-        # location
-        snippet = recordings[t_slice, ch]
-        snipped_idx_noise = is_noise_idx[t_slice, ch]
-
-        # check if all observations in snippet are noise
-        if snipped_idx_noise.all():
-            # add the snippet and increase count
-            noise_wf[count] = snippet
-            count += 1
-            trial = 0
-
-        trial += 1
-
-        if trial == max_trials_per_sample:
-            if allow_smaller_sample_size:
-                return noise_wf[:count]
-            else:
-                raise ValueError("Couldn't find snippet {} of size {} after "
-                                 "{} iterations (only {} found)"
-                                 .format(count + 1, temporal_size,
-                                         max_trials_per_sample,
-                                         count))
-
-    return noise_wf
