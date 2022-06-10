@@ -9,7 +9,7 @@ from ..core import BaseRecording
 from ..version import version as si_version
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
-from .utils import SpikeSortingError
+from .utils import SpikeSortingError, has_nvidia
 
 SORTER_DOCKER_MAP = {
     name: f"spikeinterface/{name}-base" for name in [
@@ -204,12 +204,14 @@ class ContainerClient:
     def __init__(self, mode, container_image, volumes, extra_kwargs):
         assert mode in ('docker', 'singularity')
         self.mode = mode
+        container_requires_gpu = extra_kwargs.get(
+            'container_requires_gpu', None)
 
         if mode == 'docker':
             import docker
             client = docker.from_env()
-            if extra_kwargs.get('requires_gpu', False):
-                extra_kwargs.pop('requires_gpu')
+            if container_requires_gpu is not None:
+                extra_kwargs.pop('container_requires_gpu')
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
 
@@ -242,7 +244,7 @@ class ContainerClient:
             options=['--bind', singularity_bind]
 
             # gpu options
-            if extra_kwargs.get('requires_gpu', False):
+            if container_requires_gpu:
                 # only nvidia at the moment
                 options += ['--nv']
 
@@ -382,8 +384,23 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         install_si_from_source = False
         
     extra_kwargs = {}
-    if SorterClass.docker_requires_gpu:
-        extra_kwargs['requires_gpu'] = True
+    use_gpu = SorterClass.use_gpu(sorter_params)
+    gpu_capability = SorterClass.gpu_capability
+    
+    if use_gpu:
+        if gpu_capability == 'nvidia-required':
+            assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
+            extra_kwargs['container_requires_gpu'] = True
+        elif gpu_capability == 'nvidia-optional':
+            if has_nvidia():
+                extra_kwargs['container_requires_gpu'] = True
+            else: 
+                if verbose:
+                    print(f"{SorterClass.sorter_name} supports GPU, but no GPU is available.\n"
+                          f"Running the sorter without GPU")
+        else:
+            # TODO: make opencl machanism
+            raise NotImplementedError("Only nvidia support is available")
     
     container_client = ContainerClient(mode, container_image, volumes, extra_kwargs)
     if verbose:
