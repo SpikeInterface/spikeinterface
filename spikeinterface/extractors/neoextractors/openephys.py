@@ -23,7 +23,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     This open the openephys "legacy" format: one file per channel.
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Open-Ephys-format.html
 
-    Based on neo.rawio.OpenEphysRawIO
+    Based on :py:class:`neo.rawio.OpenEphysRawIO`
 
     Parameters
     ----------
