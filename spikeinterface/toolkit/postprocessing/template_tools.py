@@ -285,6 +285,24 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg"):
     return unit_amplitudes
 
 
+def get_template_extremum_channel_peak_shift_from_templates(templates, nbefore, peak_sign='neg'):
+    
+    shifts = np.zeros(templates.shape[0])
+    for unit_id in range(templates.shape[0]):
+        mc = templates[unit_id].ptp(0).argmax()
+        template = templates[unit_id, :, mc]
+        if peak_sign == 'both':
+            peak_pos = np.argmax(np.abs(template))
+        elif peak_sign == 'neg':
+            peak_pos = np.argmin(template)
+        elif peak_sign == 'pos':
+            peak_pos = np.argmax(template)
+        shifts[unit_id] = peak_pos - nbefore
+
+    return shifts
+
+
+
 def get_peaks_from_templates(
     waveform_extractor,
     peak_sign="neg",
