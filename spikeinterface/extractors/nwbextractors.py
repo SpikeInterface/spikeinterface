@@ -3,6 +3,7 @@ import numpy as np
 from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import pandas as pd
@@ -380,20 +381,8 @@ class NwbSortingSegment(BaseSortingSegment):
         return frames[(frames > start_frame) & (frames < end_frame)]
 
 
-def read_nwb_recording(*args, **kwargs):
-    recording = NwbRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_nwb_recording.__doc__ = NwbRecordingExtractor.__doc__
-
-
-def read_nwb_sorting(*args, **kwargs):
-    sorting = NwbSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_nwb_sorting.__doc__ = NwbSortingExtractor.__doc__
+read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
+read_nwb_sorting = define_function_from_class(source_class=NwbSortingExtractor, name="read_nwb_sorting")
 
 
 def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None):

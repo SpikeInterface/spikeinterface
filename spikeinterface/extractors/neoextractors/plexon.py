@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -5,7 +7,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading plexon plx files.
     
-    Based on neo.rawio.PlexonRawIO
+    Based on :py:class:`neo.rawio.PlexonRawIO`
     
     Parameters
     ----------
@@ -23,9 +25,4 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = {'file_path': str(file_path), 'stream_id': stream_id}
 
 
-def read_plexon(*args, **kwargs):
-    recording = PlexonRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_plexon.__doc__ = PlexonRecordingExtractor.__doc__
+read_plexon = define_function_from_class(source_class=PlexonRecordingExtractor, name="read_plexon")
