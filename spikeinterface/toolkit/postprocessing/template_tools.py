@@ -226,8 +226,8 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign='neg'
         shifts[unit_id] = shift
 
     return shifts
-
-
+    
+    
 def get_template_extremum_amplitude(waveform_extractor, peak_sign='neg'):
     """
     Computes amplitudes on the best channel.
