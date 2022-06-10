@@ -67,6 +67,7 @@ class PyKilosortSorter(BaseSorter):
     def _run_from_folder(cls, output_folder, params, verbose):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
+        # TODO: save to binary if not
         assert isinstance(recording, BinaryRecordingExtractor)
         assert recording.get_num_segments() == 1
         dat_path = recording._kwargs['file_paths'][0]
@@ -74,8 +75,6 @@ class PyKilosortSorter(BaseSorter):
 
         num_chans = recording.get_num_channels()
         locations = recording.get_channel_locations()
-        print(locations)
-        print(type(locations))
 
         # ks_probe is not probeinterface Probe at all
         ks_probe = Bunch()
