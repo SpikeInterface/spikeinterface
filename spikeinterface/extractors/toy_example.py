@@ -335,17 +335,24 @@ def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampli
 
 
 def synthetize_spike_train(duration, baseline_rate, num_violations, violation_delta=1e-5):
-    """ Create a spike train
+    """Create a spike train
     Has uniform inter-spike intervals, except where isis violations occur
-    Input:
-    ------
-    duration : length of simulated recording (in seconds)
-    baseline_rate : firing rate for 'true' spikes
-    num_violations : number of contaminating spikes
-    violation_delta : temporal offset of contaminating spikes (in seconds)
-    Output:
+
+    Parameters
+    ----------
+    duration : float
+        Length of simulated recording (in seconds)
+    baseline_rate : float
+        Firing rate for 'true' spikes
+    num_violations : int
+        Number of contaminating spikes
+    violation_delta : float, optional
+        Temporal offset of contaminating spikes (in seconds), by default 1e-5
+
+    Returns
     -------
-    spike_train : array of monotonically increasing spike times
+    np.array
+        Array of monotonically increasing spike times
     """
 
     isis = np.ones((int(duration*baseline_rate),)) / baseline_rate
