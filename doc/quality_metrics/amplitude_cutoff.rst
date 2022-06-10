@@ -6,7 +6,7 @@ Amplitude cutoff (:code:`amplitude_cutoff`)
 Calculation
 -----------
 
-A histogram of spike amplitudes is created and deviations from the expected Gaussian distribution are identified.
+A histogram of spike amplitudes is created and deviations from the expected symmetrical distribution are identified.
 
 Expectation and use
 -------------------
