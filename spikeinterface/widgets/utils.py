@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+from scipy.ndimage import zoom
+
 import numpy as np
 
 import random
@@ -66,9 +68,6 @@ def array_to_image(data,
     output_image : 3D numpy array
     
     """
-
-    from scipy.ndimage import zoom
-    import matplotlib.pyplot as plt
 
     num_timepoints = data.shape[0]
     num_channels = data.shape[1]
