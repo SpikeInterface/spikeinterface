@@ -1,58 +1,37 @@
 API
 ===
 
-Module :mod:`spikeinterface.core`
----------------------------------
+spikeinterface.core
+-------------------
 .. automodule:: spikeinterface.core
 
     .. autofunction:: load_extractor
-
     .. autoclass:: BaseRecording
-
     .. autoclass:: BaseSorting
-
     .. autoclass:: BaseEvent
-
     .. autoclass:: BinaryRecordingExtractor
-
     .. autofunction:: read_binary
-
     .. autoclass:: NpzSortingExtractor
-
     .. autoclass:: NumpyRecording
-
     .. autoclass:: NumpySorting
-
     .. autoclass:: ChannelSliceRecording
-
     .. autoclass:: UnitsSelectionSorting
-
     .. autoclass:: FrameSliceRecording
-
     .. autofunction:: append_recordings
-
     .. autofunction:: concatenate_recordings
-
     .. autofunction:: append_sortings
-
     .. autofunction:: extract_waveforms
-
     .. autoclass:: WaveformExtractor
-
     .. autofunction:: download_dataset
-
     .. autofunction:: write_binary_recording
-
     .. autofunction:: set_global_tmp_folder
-
     .. autofunction:: set_global_dataset_folder
-
     .. autoclass:: ChunkRecordingExecutor
 
 
 
-Module :mod:`spikeinterface.extractors`
----------------------------------------
+spikeinterface.extractors
+-------------------------
 .. automodule:: spikeinterface.extractors
 
     .. autofunction:: toy_example
@@ -90,8 +69,8 @@ Module :mod:`spikeinterface.extractors`
     .. autofunction:: read_alphaomega_event
 
 
-Module :mod:`spikeinterface.toolkit`
-------------------------------------
+spikeinterface.toolkit
+----------------------
 
 toolkit.utils
 ~~~~~~~~~~~~~
@@ -150,8 +129,8 @@ Quality metrics
     .. autofunction:: get_quality_metric_list
 
 
-Module :mod:`spikeinterface.sorters`
-------------------------------------
+spikeinterface.sorters
+----------------------
 .. automodule:: spikeinterface.sorters
 
     .. autofunction:: available_sorters
@@ -162,9 +141,15 @@ Module :mod:`spikeinterface.sorters`
     .. autofunction:: run_sorter
     .. autofunction:: run_sorters
 
+Low level
+~~~~~~~~~
+.. automodule:: spikeinterface.sorters
 
-Module :mod:`spikeinterface.comparison`
----------------------------------------
+    .. autoclass:: BaseSorter
+
+
+spikeinterface.comparison
+-------------------------
 .. automodule:: spikeinterface.comparison
 
     .. autofunction:: compare_two_sorters
@@ -183,8 +168,8 @@ Module :mod:`spikeinterface.comparison`
         :undoc-members:
 
 
-Module :mod:`spikeinterface.widgets`
-------------------------------------
+spikeinterface.widgets
+----------------------
 .. automodule:: spikeinterface.widgets
 
     .. autofunction:: plot_timeseries
@@ -215,17 +200,38 @@ Module :mod:`spikeinterface.widgets`
     .. autofunction:: plot_unit_summary
 
 
-Module :mod:`spikeinterface.exporters`
---------------------------------------
+spikeinterface.exporters
+------------------------
 .. automodule:: spikeinterface.exporters
 
     .. autofunction:: export_to_phy
     .. autofunction:: export_report
 
 
-Module :mod:`spikeinterface.sortingcomponents`
-----------------------------------------------
-.. automodule:: spikeinterface.sortingcomponents
+spikeinterface.sortingcomponents
+-----------------
+
+Peak Localization
+~~~~~~~~~~~~~~~~~
+.. automodule:: spikeinterface.sortingcomponents.peak_localization
+
+    .. autofunction:: localize_peaks
+
+Peak Detection
+~~~~~~~~~~~~~~
+.. automodule:: spikeinterface.sortingcomponents.peak_detection
 
     .. autofunction:: detect_peaks
-    .. autofunction:: localize_peaks
+
+Motion Correction
+~~~~~~~~~~~~~~~~~
+.. automodule:: spikeinterface.sortingcomponents.motion_correction
+
+    .. autoclass:: CorrectMotionRecording
+
+Clustering
+~~~~~~~~~~
+.. automodule::
+
+    .. autofunction:: find_cluster_from_peaks
+
