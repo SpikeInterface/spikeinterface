@@ -19,7 +19,7 @@ class PyKilosortSorter(BaseSorter):
 
     sorter_name = 'pykilosort'
     requires_locations = False
-    docker_requires_gpu = True
+    gpu_capability = 'nvidia-required'
     compatible_with_parallel = {'loky': True, 'multiprocessing': False, 'threading': False}
 
     _default_params = {
