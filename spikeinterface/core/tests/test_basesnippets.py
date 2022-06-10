@@ -19,7 +19,7 @@ def test_BaseSnippets():
     nafter = 44
     recording, sort = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
     strains = sort.get_all_spike_trains()
-    peaks_times = np.sort(np.concatenate(strains[0]))
+    peaks_times = np.sort(strains[0][0])
     peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
     peaks2 = np.zeros(len(peaks_times), dtype=peak_dtype)
     peaks2['sample_ind'] = peaks_times
@@ -88,11 +88,15 @@ def test_BaseSnippets():
     assert wfs_int16.dtype == 'int16'
     # return_scaled raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        wfs_float32 = wfs_int16.get_snippets(return_scaled=True)
-    wfs_int16.set_property('gain_to_uV', [.195] * 5)
-    wfs_int16.set_property('offset_to_uV', [0.] * 5)
-    wfs_float32 = wfs_int16.get_snippets(return_scaled=True)
+        wfs_float32 = nse_int16.get_snippets(return_scaled=True)
+    nse_int16.set_property('gain_to_uV', [.195] * num_channels)
+    nse_int16.set_property('offset_to_uV', [0.] * num_channels)
+    wfs_float32 = nse_int16.get_snippets(return_scaled=True)
     assert wfs_float32.dtype == 'float32'
+
+    wfs_from_time = nse_int16.get_snippets_from_frames(start_frame=peaks2['sample_ind'][0], end_frame= peaks2['sample_ind'][5])
+    assert wfs_from_time.shape[0]==5
+    
 
 if __name__ == '__main__':
     test_BaseSnippets()

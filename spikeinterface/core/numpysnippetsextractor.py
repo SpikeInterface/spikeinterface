@@ -62,7 +62,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def __init__(self, snippets, spikesframes):
         BaseSnippetsSegment.__init__(self)
         self._snippets = snippets
-        self._spikestime = spikesframes
+        self._spikestimes = spikesframes
 
     def get_snippets(self,
                     indices,
@@ -88,7 +88,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         return self._snippets[indices,:,channel_indices]
 
     def get_num_snippets(self):
-        return self._spikestime.shape[0]
+        return self._spikestimes.shape[0]
 
     def frames_to_indices(self,
                         start_frame: Union[int, None] = None,
@@ -114,9 +114,9 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         else:
             init = np.searchsorted(self._spikestimes, start_frame, side='left')
         if end_frame is None:
-            endi = self._spikestime.shape[0]
+            endi = self._spikestimes.shape[0]
         else:
-            endi = np.searchsorted(self._spikestimes, end_frame, side='right')
+            endi = np.searchsorted(self._spikestimes, end_frame, side='left')
         return slice(init,endi,1)
 
     def get_frames(self, indeces=None):
@@ -126,5 +126,5 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
             SampleIndex: Number of samples in the segment
         """
         if indeces is None:
-            return self._spikestime
-        raise self._spikestime[indeces]
+            return self._spikestimes
+        raise self._spikestimes[indeces]
