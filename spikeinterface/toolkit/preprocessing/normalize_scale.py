@@ -192,47 +192,7 @@ class CenterRecording(BasePreprocessor):
         self._kwargs = dict(recording=recording.to_dict(), mode=mode, dtype=np.dtype(self._dtype).str)
         self._kwargs.update(random_chunk_kwargs)
 
-class ZScoreRecording(BasePreprocessor):
-    """
-    Centers traces from the given recording extractor by removing the median/mean of each channel.
-
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor to be centered
-    mode: str
-        'median' (default) | 'mean'
-    dtype: str or np.dtype
-        The dtype of the output traces. Default "float32"
-    **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
-    
-    Returns
-    -------
-    centered_traces: ScaleRecording
-        The centered traces recording extractor object
-    """
-    name = 'center'
-
-    def __init__(self, recording,
-                 dtype="float32", **random_chunk_kwargs):
-
-        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
-
-        offset = -np.median(random_data, axis=0)
-        offset = offset[None, :]
-        gain = 1/np.median(np.abs(random_data + offset), axis=0)/0.6745
-        gain = gain[None, :]
-        offset = offset*gain
         
-        BasePreprocessor.__init__(self, recording, dtype=dtype)
-
-        for parent_segment in recording._recording_segments:
-            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
-            self.add_recording_segment(rec_segment)
-
-        self._kwargs = dict(recording=recording.to_dict(), dtype=np.dtype(self._dtype).str)
-        self._kwargs.update(random_chunk_kwargs)
-
 class ZScoreRecording(BasePreprocessor):
     """
     Centers traces from the given recording extractor by removing the median of each channel
