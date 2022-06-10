@@ -251,6 +251,8 @@ class BaseExtractor:
                 other.set_property(k, values[inds])
         # TODO: copy features also
 
+        other.extra_requirements.extend(self.extra_requirements)
+
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
                 relative_to=None, folder_metadata=None):
         """
