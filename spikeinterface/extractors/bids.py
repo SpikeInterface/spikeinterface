@@ -34,6 +34,7 @@ def read_bids(folder_path):
         if file_path.suffix == '.nwb':
             rec, = read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None)
             rec.annotate(bids_name=bids_name)
+            rec.extra_requirements.extend('pandas')
             probegroup = _read_probe_group(file_path.parent, bids_name, rec.channel_ids)
             rec = rec.set_probegroup(probegroup)
             recordings.append(rec)
@@ -45,6 +46,7 @@ def read_bids(folder_path):
 
             for stream_id in stream_ids:
                 rec = read_nix(file_path, stream_id=stream_id)
+                rec.extra_requirements.extend('pandas')
                 probegroup = _read_probe_group(file_path.parent, bids_name, rec.channel_ids)
                 rec = rec.set_probegroup(probegroup)
                 recordings.append(rec)
