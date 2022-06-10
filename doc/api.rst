@@ -7,7 +7,11 @@ spikeinterface.core
 
     .. autofunction:: load_extractor
     .. autoclass:: BaseRecording
+        :members:
     .. autoclass:: BaseSorting
+        :members:
+    .. autoclass:: BaseSortingSegment
+        :members:
     .. autoclass:: BaseEvent
     .. autoclass:: BinaryRecordingExtractor
     .. autofunction:: read_binary
@@ -22,6 +26,8 @@ spikeinterface.core
     .. autofunction:: append_sortings
     .. autofunction:: extract_waveforms
     .. autoclass:: WaveformExtractor
+
+        .. automethod:: set_params
     .. autofunction:: download_dataset
     .. autofunction:: write_binary_recording
     .. autofunction:: set_global_tmp_folder
@@ -175,6 +181,7 @@ spikeinterface.comparison
     .. autofunction:: compare_two_sorters
     .. autofunction:: compare_multiple_sorters
     .. autofunction:: compare_sorter_to_ground_truth
+    .. autofunction:: aggregate_performances_table
 
     .. autoclass:: GroundTruthComparison
         :members:
@@ -186,6 +193,9 @@ spikeinterface.comparison
     .. autoclass:: GroundTruthStudy
         :members:
         :undoc-members:
+
+    .. autoclass:: MultiSortingComparison
+        :members:
 
 
 spikeinterface.widgets
