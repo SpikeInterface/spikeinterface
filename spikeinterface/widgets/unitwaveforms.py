@@ -3,6 +3,7 @@ import numpy as np
 from .base import BaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.baserecording import BaseRecording
+from ..core.basesorting import BaseSorting
 from .utils import get_unit_colors
 from ..toolkit import get_template_channel_sparsity
 
@@ -63,8 +64,8 @@ class UnitWaveformsWidget(BaseWidget):
         # self._sorting = we.sorting
 
         we = waveform_extractor
-        recording = we.recording
-        sorting = we.sorting
+        recording: BaseRecording = we.recording
+        sorting: BaseSorting = we.sorting
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
@@ -107,11 +108,10 @@ class UnitWaveformsWidget(BaseWidget):
             channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index', num_channels=max_channels)
         else:
             # all channels
-            channel_inds = {unit_id: slice(None) for unit_id in unit_ids}
+            channel_inds = {unit_id: np.arange(recording.get_num_channels()) for unit_id in unit_ids}
         
         wfs_by_ids = {unit_id: we.get_waveforms(unit_id) for unit_id in unit_ids}
 
-        recording: BaseRecording = waveform_extractor.recording
         plot_data = dict(
             sampling_frequency=recording.get_sampling_frequency(),
             unit_ids=unit_ids,
