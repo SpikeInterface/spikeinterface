@@ -1,11 +1,5 @@
-Toolkit module
-==============
-
-The :code:`toolkit` module includes tools to process SI objects throughout your analysis.
-
-
-Preprocessing
--------------
+Preprocessing module
+====================
 
 The :code:`toolkit.preprocessing` sub-module includes preprocessing steps to apply before spike sorting.
 Preprocessors are *lazy*, meaning that no computation is performed until it is required (usually at the spike sorting
@@ -37,8 +31,8 @@ CMR and save it to a binary file in the "preprocessed" folder. The :code:`record
 :code:`RecordignExtractor` which maps directly to the newly created binary file, for very quick access.
 
 
-Postprocessing
---------------
+Postprocessing module
+=====================
 
 After spike sorting, we can use the :code:`toolkit.postprocessing` sub-module to further post-process the spike sorting
 output. Most of the post-processing functions require a :code:`WaveformExtractor` as input. Available postprocessing
@@ -51,8 +45,8 @@ tools are:
 * compute auto- and cross-correlogram
 
 
-Quality Metrics
----------------
+Quality Metrics module
+======================
 
 Quality metrics allows to quantitatively assess to *goodness* of a spike sorting output. 
 The :code:`toolkit.qualitymetrics` sub-module includes functions to compute a large variety of available metrics.
