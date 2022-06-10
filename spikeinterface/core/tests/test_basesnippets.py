@@ -8,38 +8,23 @@ import numpy as np
 from numpy.testing import assert_raises
 
 from probeinterface import Probe
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor
-from spikeinterface.core.base import BaseExtractor
 from spikeinterface.extractors import toy_example
-from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
-from spikeinterface.core.testing_tools import generate_recording
 from spikeinterface.core.numpysnippetsextractor import NumpySnippetsExtractor
 
 def test_BaseSnippets():
-    num_seg = 2
-    num_chan = 3
-    sampling_frequency = 10000
-    dtype = 'int16'
-
     duration = 60
     num_channels = 3
     nbefore = 20
     nafter = 44
-    recording, _ = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
-    noise_levels = get_noise_levels(recording, return_scaled=False)
-
-    peaks = detect_peaks(recording, method='locally_exclusive',
-                            peak_sign='neg', detect_threshold=5, n_shifts=2,
-                            chunk_size=10000, verbose=False, progress_bar=False, noise_levels=noise_levels)
-
-    #overcomplicated way to extract spikes
+    recording, sort = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
+    strains = sort.get_all_spike_trains()
+    peaks_times = np.sort(np.concatenate(strains[0]))
     peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
-    peaks2 = np.zeros(len(peaks['sample_ind']), dtype=peak_dtype)
-    peaks2['sample_ind'] = peaks['sample_ind']
-    peaks2['segment_ind'] = peaks['segment_ind']
-    peaks2['unit_ind'] = 0 #all class 
+    peaks2 = np.zeros(len(peaks_times), dtype=peak_dtype)
+    peaks2['sample_ind'] = peaks_times
+    peaks2['segment_ind'] = 0
+    peaks2['unit_ind'] = 0
     wfs_arrays = extract_waveforms_to_buffers(recording, peaks2, [0], nbefore, nafter,
                                     mode='shared_memory', return_scaled=False, folder=None, dtype=recording.get_dtype(),
                                     sparsity_mask=None,n_jobs=1)
@@ -91,33 +76,11 @@ def test_BaseSnippets():
     # cache to binary
     #load from folder
     # cache to memory
-
-
     # cache joblib several jobs
-    # set/get Probe only 2 channels
-    probe = Probe(ndim=2)
-    positions = [[0., 0.], [0., 15.], [0, 30.]]
-    probe.set_contacts(positions=positions, shapes='circle',
-                       shape_params={'radius': 5})
-    probe.set_device_channel_indices([2, -1, 0])
-    probe.create_auto_shape()
+    # set/get Probe
 
-    nse_p = nse.set_probe(probe, group_mode='by_shank')
-    nse_p = nse.set_probe(probe, group_mode='by_probe')
-    positions2 = nse_p.get_channel_locations()
-    assert np.array_equal(positions2, [[0, 30.], [0., 0.]])
-
-    probe2 = nse_p.get_probe()
-    positions3 = probe2.contact_positions
-    assert np.array_equal(positions2, positions3)
-
-    assert np.array_equal(probe2.device_channel_indices, [0, 1])
 
     # test return_scale
-    sampling_frequency = 30000
-    traces = np.zeros((1000, 5), dtype='int16')
-
-
     nse_int16 = NumpySnippetsExtractor(wfs.astype('int16'), peaks2['sample_ind'], recording.get_sampling_frequency(), nafter=nbefore, channel_ids=None)
     assert nse_int16.get_dtype() == 'int16'
 
