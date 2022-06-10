@@ -714,6 +714,21 @@ def get_proposed_pairs(
     return dist_argsort, dist_template
 
 
+def compute_shifted_similarity(template1, template2, shifts=[0]):
+    curr_similarities = []
+    for shift in shifts:
+        if shift == 0:
+            similarity = np.max(np.abs(template1 - template2))
+        elif shift < 0:
+            template2_shifted_flattened = np.pad(template2.T.flatten(),((-shift,0)), mode='constant')[:shift]
+            similarity = np.max(np.abs(template1.T.flatten() - template2_shifted_flattened))
+        else:    
+            template2_shifted_flattened = np.pad(template2.T.flatten(),((0,shift)), mode='constant')[shift:]
+            similarity = np.max(np.abs(template1.T.flatten() - template2_shifted_flattened))
+        curr_similarities.append(similarity)
+    return np.min(curr_similarities), shifts[np.argmin(curr_similarities)]
+
+
 # %%
 def get_diptest_value(
     waveforms, #already aligned
