@@ -284,7 +284,7 @@ class BaseSnippets(BaseExtractor):
         return spts.get_frames(indeces)
 
     def get_snippets(self,
-                   indeces,
+                   indeces=None,
                    segment_index: Union[int, None] = None,
                    channel_ids: Union[List, None] = None,
                    return_scaled=False,
@@ -359,26 +359,11 @@ class BaseSnippets(BaseExtractor):
             probegroup = read_probeinterface(folder / 'probe.json')
             self.set_probegroup(probegroup, in_place=True)
 
-        # load time vector if any
-        for segment_index, rs in enumerate(self._snippets_segments):
-            time_file = folder / f'times_cached_seg{segment_index}.npy'
-            if time_file.is_file():
-                time_vector = np.load(time_file)
-                rs.time_vector = time_vector
-
     def _extra_metadata_to_folder(self, folder):
         # save probe
         if self.get_property('contact_vector') is not None:
             probegroup = self.get_probegroup()
             write_probeinterface(folder / 'probe.json', probegroup)
-
-        # save time vector if any
-        for segment_index, rs in enumerate(self._snippets_segments):
-            d = rs.get_times_kwargs()
-            time_vector = d['time_vector']
-            if time_vector is not None:
-                np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
-
 
 class BaseSnippetsSegment(BaseSegment):
     """

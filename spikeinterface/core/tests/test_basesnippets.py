@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 from numpy.testing import assert_raises
 
-from probeinterface import Probe
+#from probeinterface import Probe
 from spikeinterface.extractors import toy_example
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from spikeinterface.core.numpysnippetsextractor import NumpySnippetsExtractor
@@ -88,7 +88,7 @@ def test_BaseSnippets():
     assert wfs_int16.dtype == 'int16'
     # return_scaled raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        traces_float32 = wfs_int16.get_traces(return_scaled=True)
+        wfs_float32 = wfs_int16.get_snippets(return_scaled=True)
     wfs_int16.set_property('gain_to_uV', [.195] * 5)
     wfs_int16.set_property('offset_to_uV', [0.] * 5)
     wfs_float32 = wfs_int16.get_snippets(return_scaled=True)
