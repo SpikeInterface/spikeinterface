@@ -80,6 +80,21 @@ For more details about each metric and it's availability and use within SpikeInt
     quality_metrics/*
 
 
+.. code-block:: python
+
+    we = WaveformExtractor.load_from_folder(...) # start from a waveform extractor
+
+    # without PC
+    metrics = compute_quality_metrics(we, metric_names=['snr'])
+    assert 'snr' in metrics.columns
+
+    # with PCs
+    pca = WaveformPrincipalComponent(we)
+    pca.set_params(n_components=5, mode='by_channel_local')
+    pca.run()
+    metrics = compute_quality_metrics(we)
+    assert 'isolation_distance' in metrics.columns
+
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_
 from the Allen Institute.
