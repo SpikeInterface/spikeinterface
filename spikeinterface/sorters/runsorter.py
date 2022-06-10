@@ -1,15 +1,35 @@
-from copy import deepcopy
 import shutil
 import os
 from pathlib import Path
 import json
 import platform
+from typing import Optional, Union
 
-
+from ..core import BaseRecording
 from ..version import version as si_version
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
-from .utils import SpikeSortingError
+from .utils import SpikeSortingError, has_nvidia
+
+SORTER_DOCKER_MAP = {
+    name: f"spikeinterface/{name}-base" for name in [
+        "tridesclous",
+        "spyking-circus",
+        "mountainsort4",
+        "klusta",
+    ]
+}
+SORTER_DOCKER_MAP.update(
+    {
+        name: f"spikeinterface/{name}-compiled-base" for name in [
+            "ironclust",
+            "kilosort",
+            "kilosort2",
+            "kilosort2_5",
+            "kilosort3",
+        ]
+    }
+)
 
 
 _common_param_doc = """
@@ -30,8 +50,15 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default).
         If False, the process continues and the error is logged in the log file.
-    docker_image: None or str
-        If str run the sorter inside a container (docker) using the docker package.
+    docker_image: bool, str, or None
+        If True, pull the default docker container for the sorter and run the sorter in that container using docker.
+        Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
+        If None, the sorter is run locally.
+    singularity_image: bool, str or None
+        If True, pull the default docker container for the sorter and run the sorter in that container using 
+        singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
+        from Docker Hub.
+        If None, the sorter is run locally.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -42,35 +69,53 @@ _common_param_doc = """
     """
 
 
-def run_sorter(sorter_name, recording, output_folder=None,
-               remove_existing_folder=True, delete_output_folder=False,
-               verbose=False, raise_error=True,
-               docker_image=None, singularity_image=None,
-               with_output=True, **sorter_params):
+def run_sorter(
+    sorter_name: str,
+    recording: BaseRecording,
+    output_folder: Optional[str] = None,
+    remove_existing_folder: bool = True,
+    delete_output_folder: bool = False,
+    verbose: bool = False,
+    raise_error: bool = True,
+    docker_image: Optional[Union[bool, str]] = False,
+    singularity_image: Optional[Union[bool, str]] = False,
+    with_output: bool = True,
+    **sorter_params,
+):
     """
     Generic function to run a sorter via function approach.
 
-    >>> sorting = run_sorter('tridesclous', recording)
-    """ + _common_param_doc
+    {}
+    
+    Examples
+    --------
+    >>> sorting = run_sorter("tridesclous", recording)
+    """
 
-    if docker_image is not None:
-        return run_sorter_container(sorter_name, recording, 'docker', docker_image,
-                                    output_folder=output_folder,
-                                    remove_existing_folder=remove_existing_folder,
-                                    delete_output_folder=delete_output_folder, verbose=verbose,
-                                    raise_error=raise_error, with_output=with_output, **sorter_params)
-    if singularity_image is not None:
-        return run_sorter_container(sorter_name, recording, 'singularity', singularity_image,
-                                    output_folder=output_folder,
-                                    remove_existing_folder=remove_existing_folder,
-                                    delete_output_folder=delete_output_folder, verbose=verbose,
-                                    raise_error=raise_error, with_output=with_output, **sorter_params)
-    return run_sorter_local(sorter_name, recording, output_folder=output_folder,
-                            remove_existing_folder=remove_existing_folder,
-                            delete_output_folder=delete_output_folder,
-                            verbose=verbose, raise_error=raise_error, with_output=with_output,
-                            **sorter_params)
+    common_kwargs = dict(
+        sorter_name=sorter_name,
+        recording=recording,
+        output_folder=output_folder,
+        remove_existing_folder=remove_existing_folder,
+        delete_output_folder=delete_output_folder,
+        verbose=verbose,
+        raise_error=raise_error,
+        with_output=with_output,
+        **sorter_params,
+    )
 
+    if docker_image or singularity_image:
+        return run_sorter_container(
+            docker_image=docker_image if isinstance(docker_image, str) else None,
+            singularity_image=singularity_image if isinstance(docker_image, str) else None,
+            mode="docker" if docker_image else "singularity",
+            **common_kwargs,
+        )
+
+    return run_sorter_local(**common_kwargs)
+
+
+run_sorter.__doc__ = run_sorter.__doc__.format(_common_param_doc)
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
                      remove_existing_folder=True, delete_output_folder=False,
@@ -139,7 +184,6 @@ def find_recording_folder(d):
             return folder_to_mount
 
 
-
 def path_to_unix(path):
     path = Path(path)
     path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
@@ -160,12 +204,14 @@ class ContainerClient:
     def __init__(self, mode, container_image, volumes, extra_kwargs):
         assert mode in ('docker', 'singularity')
         self.mode = mode
+        container_requires_gpu = extra_kwargs.get(
+            'container_requires_gpu', None)
 
         if mode == 'docker':
             import docker
             client = docker.from_env()
-            if extra_kwargs.get('requires_gpu', False):
-                extra_kwargs.pop('requires_gpu')
+            if container_requires_gpu is not None:
+                extra_kwargs.pop('container_requires_gpu')
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
 
@@ -198,7 +244,7 @@ class ContainerClient:
             options=['--bind', singularity_bind]
 
             # gpu options
-            if extra_kwargs.get('requires_gpu', False):
+            if container_requires_gpu:
                 # only nvidia at the moment
                 options += ['--nv']
 
@@ -229,12 +275,44 @@ class ContainerClient:
             return res
 
 
-def run_sorter_container(sorter_name, recording, mode, container_image, output_folder=None,
-                         remove_existing_folder=True, delete_output_folder=False,
-                         verbose=False, raise_error=True, with_output=True, **sorter_params):
+def run_sorter_container(
+    sorter_name: str,
+    recording: BaseRecording,
+    mode: str,
+    container_image: Optional[str] = None,
+    output_folder: Optional[str] = None,
+    remove_existing_folder: bool = True,
+    delete_output_folder: bool = False,
+    verbose: bool = False,
+    raise_error: bool = True,
+    with_output: bool = True,
+    **sorter_params,
+):
+    """
+
+    Parameters
+    ----------
+    sorter_name: str
+    recording: BaseRecording
+    mode: str
+    container_image: str, optional
+    output_folder: str, optional
+    remove_existing_folder: bool, optional
+    delete_output_folder: bool, optional
+    verbose: bool, optional
+    raise_error: bool, optional
+    with_output: bool, optional
+    sorter_params:
+
+    """
     # common code for docker and singularity
     if output_folder is None:
         output_folder = sorter_name + '_output'
+
+    if container_image is None and sorter_name in SORTER_DOCKER_MAP:
+        container_image = SORTER_DOCKER_MAP[sorter_name]
+    else:
+        ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
@@ -306,8 +384,23 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         install_si_from_source = False
         
     extra_kwargs = {}
-    if SorterClass.docker_requires_gpu:
-        extra_kwargs['requires_gpu'] = True
+    use_gpu = SorterClass.use_gpu(sorter_params)
+    gpu_capability = SorterClass.gpu_capability
+    
+    if use_gpu:
+        if gpu_capability == 'nvidia-required':
+            assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
+            extra_kwargs['container_requires_gpu'] = True
+        elif gpu_capability == 'nvidia-optional':
+            if has_nvidia():
+                extra_kwargs['container_requires_gpu'] = True
+            else: 
+                if verbose:
+                    print(f"{SorterClass.sorter_name} supports GPU, but no GPU is available.\n"
+                          f"Running the sorter without GPU")
+        else:
+            # TODO: make opencl machanism
+            raise NotImplementedError("Only nvidia support is available")
     
     container_client = ContainerClient(mode, container_image, volumes, extra_kwargs)
     if verbose:
