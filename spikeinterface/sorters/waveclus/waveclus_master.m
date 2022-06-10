@@ -1,4 +1,4 @@
-function waveclust_master(outputFolder, waveclusPath)
+function waveclus_master(outputFolder, waveclusPath)
     addpath(genpath(waveclusPath));
 
     % par.mat file should contain a variable called par_input
