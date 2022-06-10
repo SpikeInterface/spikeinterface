@@ -28,7 +28,7 @@ def pytest_collection_modifyitems(config, items):
         rel_path = Path(item.fspath).relative_to(rootdir)
 
         for mark_name in mark_names:
-            if f"/{mark_name}/" in str(rel_path) and "s3" not in str(rel_path):
+            if f"/{mark_name}/" in str(rel_path):
                 mark = getattr(pytest.mark, mark_name)
                 item.add_marker(mark)
 
