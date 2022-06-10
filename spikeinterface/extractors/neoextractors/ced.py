@@ -24,6 +24,8 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
+        self.extra_requirements.append('sonpy')
+
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 

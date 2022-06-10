@@ -286,6 +286,7 @@ def run_sorter_container(
     verbose: bool = False,
     raise_error: bool = True,
     with_output: bool = True,
+    extra_requirements = None,
     **sorter_params,
 ):
     """
@@ -302,9 +303,14 @@ def run_sorter_container(
     verbose: bool, optional
     raise_error: bool, optional
     with_output: bool, optional
+    extra_requirements: list, optional
     sorter_params:
 
     """
+
+    if extra_requirements is None:
+        extra_requirements = []
+
     # common code for docker and singularity
     if output_folder is None:
         output_folder = sorter_name + '_output'
@@ -419,10 +425,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         if 'dev' in si_version:
             if verbose:
                 print(f"Installing spikeinterface from sources in {container_image}")
-            # TODO later check output
-            cmd = 'pip install --upgrade --no-input MEArec'
-            res_output = container_client.run_command(cmd)
 
+            # TODO later check output
             if install_si_from_source:
                 si_source = 'local machine'
                 res_output = container_client.run_command(f'cp -rf {si_dev_path_unix} /opt')
@@ -437,14 +441,24 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
-                print(
-                    f"Installing spikeinterface=={si_version} in {container_image}")
+                print(f"Installing spikeinterface=={si_version} in {container_image}")
             cmd = f'pip install --upgrade --no-input spikeinterface[full]=={si_version}'
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
         if verbose:
             print(f'spikeinterface is already installed in {container_image}')
+
+    if hasattr(recording, 'extra_requirements'):
+        extra_requirements.extend(recording.extra_requirements)
+
+    if verbose:
+        print(f'Installing extra requirements: {extra_requirements}')
+
+    # install additional required dependencies
+    if extra_requirements:
+        cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
+        res_output = container_client.run_command(cmd)
 
     # run sorter on folder
     if verbose:
