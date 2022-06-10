@@ -14,56 +14,11 @@ from spikeinterface.sortingcomponents.clustering.triage import nearest_neighor_t
 
 
 def test_triage():
-
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
-
-    peaks = detect_peaks(
-        recording,
-        method="locally_exclusive",
-        peak_sign="neg",
-        detect_threshold=5,
-        n_shifts=2,
-        chunk_size=10000,
-        verbose=False,
-        progress_bar=False,
-    )
-
-    list_locations = []
-
-    peak_locations = localize_peaks(
-        recording,
-        peaks,
-        method="center_of_mass",
-        chunk_size=10000,
-        verbose=True,
-        progress_bar=False,
-    )
-    assert peaks.size == peak_locations.shape[0]
-    list_locations.append(("com", peak_locations))
-
-    # global kwargs for parallel computing
-    job_kwargs = dict(
-        n_jobs=-1,
-        chunk_duration="1s",
-        progress_bar=True,
-    )
-
-    ptps = compute_waveform_features_peaks(
-        recording,
-        peaks,
-        time_range_list=[(1, 1.5)],
-        feature_list=["ptps"],
-        **job_kwargs
-    )
-
     scales = (1, 1, 10)
     threshold_quantile = 60
-    x = peak_locations["x"]
-    z = peak_locations["y"]
-    maxptps = np.max(ptps[:, :, 0], 1)
+    x = np.random.normal(loc=-10.0, scale=10.0, size=(1000))
+    z = np.random.normal(loc=20.0, scale=5.0, size=(1000))
+    maxptps = np.random.uniform(low=1.0, high=2.0, size=(1000))
 
     idx_keep = nearest_neighor_triage(
         x,
@@ -73,6 +28,22 @@ def test_triage():
         threshold=threshold_quantile,
         c=1,
         ptp_weighting=True,
+    )
+
+    tx, tz, tmaxptps = x[idx_keep], z[idx_keep], maxptps[idx_keep]
+
+    assert round(tmaxptps.size / maxptps.size, 2) == threshold_quantile / 100
+    assert round(tx.size / x.size, 2) == threshold_quantile / 100
+    assert round(tz.size / z.size, 2) == threshold_quantile / 100
+
+    idx_keep = nearest_neighor_triage(
+        x,
+        z,
+        maxptps,
+        scales=scales,
+        threshold=threshold_quantile,
+        c=1,
+        ptp_weighting=False,
     )
 
     tx, tz, tmaxptps = x[idx_keep], z[idx_keep], maxptps[idx_keep]
