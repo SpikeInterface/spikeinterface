@@ -901,7 +901,6 @@ def merge_clusters(
 
                     dpt_val = get_diptest_value(
                         waveforms,
-                        first_chans,
                         geom_array,
                         labels_updated,
                         unit_reference,
