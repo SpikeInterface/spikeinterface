@@ -35,6 +35,7 @@ class HDSortSorter(BaseSorter):
     """HDSort Sorter object."""
 
     sorter_name: str = 'hdsort'
+    compiled_name: str = 'hdsort_compiled'
     hdsort_path: Union[str, None] = os.getenv('HDSORT_PATH', None)
     requires_locations = False
     _default_params = {
@@ -88,10 +89,14 @@ class HDSortSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if cls.check_compiled():
+            return True
         return check_if_installed(cls.hdsort_path)
 
-    @staticmethod
-    def get_sorter_version():
+    @classmethod
+    def get_sorter_version(cls):
+        if cls.check_compiled():
+            return 'compiled'
         p = os.getenv('HDSORT_PATH', None)
         if p is None:
             return 'unknown'
@@ -223,27 +228,31 @@ class HDSortSorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        output_folder = output_folder.absolute()
-        hdsort_path = Path(cls.hdsort_path).absolute()
-
-        if "win" in sys.platform and sys.platform != 'darwin':
-            disk_move = str(output_folder)[:2]
+        if cls.check_compiled():
             shell_cmd = f'''
-                        {disk_move}
-                        cd {output_folder}
-                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
-                    '''
+                #!/bin/bash
+                {cls.compiled_name} {output_folder}
+            '''
         else:
-            shell_cmd = f'''
-                        #!/bin/bash
-                        cd "{output_folder}"
-                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
-                    '''
+            output_folder = output_folder.absolute()
+            hdsort_path = Path(cls.hdsort_path).absolute()
 
+            if "win" in sys.platform and sys.platform != 'darwin':
+                disk_move = str(output_folder)[:2]
+                shell_cmd = f'''
+                            {disk_move}
+                            cd {output_folder}
+                            matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                        '''
+            else:
+                shell_cmd = f'''
+                            #!/bin/bash
+                            cd "{output_folder}"
+                            matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                        '''
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
-
         retcode = shell_script.wait()
 
         if retcode != 0:
