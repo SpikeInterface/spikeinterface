@@ -5,7 +5,10 @@ from .base_sv import SortingviewPlotter
 
 class UnitWaveformPlotter(SortingviewPlotter):
     def do_plot(self, data_plot):
-        import figurl as fig
+        try:
+            import figurl as fig
+        except ModuleNotFoundError:
+            raise Exception('Figurl is not installed. See https://github.com/scratchrealm/figurl2')
 
         d = data_plot
         unit_ids = d['unit_ids']
