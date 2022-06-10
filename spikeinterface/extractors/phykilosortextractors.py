@@ -122,6 +122,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             unit_ids = cluster_info["cluster_id"].values
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        self.extra_requirements.append('pandas')
 
         del cluster_info["cluster_id"]
         for prop_name in cluster_info.columns:

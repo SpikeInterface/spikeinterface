@@ -82,6 +82,8 @@ class ALFSortingExtractor(BaseSorting):
         sorting_segment = ALFSortingSegment(spike_clusters, spike_times, sampling_frequency)
         self.add_sorting_segment(sorting_segment)
 
+        self.extra_requirements.append('pandas')
+
         # add properties
         for property_name, values in properties.items():
             self.set_property(property_name, values)

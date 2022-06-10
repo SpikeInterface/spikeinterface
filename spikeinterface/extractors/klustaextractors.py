@@ -114,6 +114,7 @@ class KlustaSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.is_dumpable = False
+        self.extra_requirements.append('h5py')
 
         self.add_sorting_segment(KlustSortingSegment(unit_ids, spiketrains))
 

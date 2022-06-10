@@ -42,6 +42,7 @@ class TridesclousSortingExtractor(BaseSorting):
             self.add_sorting_segment(TridesclousSortingSegment(all_spikes))
 
         self._kwargs = {'folder_path': str(Path(folder_path).absolute()), 'chan_grp': chan_grp}
+        self.extra_requirements.append('tridesclous')
 
 
 class TridesclousSortingSegment(BaseSortingSegment):
