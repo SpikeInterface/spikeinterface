@@ -20,7 +20,12 @@ def init_kwargs_dict(method, method_kwargs, recording):
     if method == 'center_of_mass':
         method_kwargs_ = dict(local_radius_um=150)
     elif method == 'monopolar_triangulation':
-        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000, optimizer='minimize_with_log_penality')
+        method_kwargs_ = dict(
+            local_radius_um=150,
+            max_distance_um=1000,
+            optimizer='minimize_with_log_penality',
+            enforce_decrease_radial_parents=None,
+        )
 
     method_kwargs_.update(method_kwargs)
 
@@ -80,7 +85,7 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
 
     # handle default method_kwargs
     contact_locations = recording.get_channel_locations()
-    method_kwargs = init_kwargs_dict(method, method_kwargs, contact_locations)
+    method_kwargs = init_kwargs_dict(method, method_kwargs, recording)
 
     nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
     nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
@@ -219,13 +224,13 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['monopolar_triangulation'])
 
     for i, peak in enumerate(local_peak):
+        sample_ind = peak['sample_ind']
         chan_mask = neighbours_mask[peak['channel_ind'], :]
         chan_inds = np.flatnonzero(chan_mask)
-
         local_contact_locations = contact_locations[chan_inds, :]
 
         # wf is (nsample, nchan) - chan is only neighbor
-        wf = traces[peak['sample_ind'] - nbefore:peak['sample_ind'] + nafter, :][:, chan_inds]
+        wf = traces[sample_ind - nbefore:sample_ind + nafter, chan_inds]
         wf_ptp = wf.ptp(axis=0)
         if enforce_decrease_radial_parents is not None:
             enforce_decrease_shells_ptp(
