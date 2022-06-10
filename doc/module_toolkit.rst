@@ -1,9 +1,16 @@
-Preprocessing module
-====================
+Toolkit module
+==============
 
-The :code:`toolkit.preprocessing` sub-module includes preprocessing steps to apply before spike sorting.
-Preprocessors are *lazy*, meaning that no computation is performed until it is required (usually at the spike sorting
-step). This enables one to build preprocessing chains to be applied in sequence to a :code:`RecordingExtractor` object.
+The :py:mod:`spiketinterface.toolkit` module includes tools to process SI objects throughout your analysis.
+
+
+Preprocessing
+-------------
+
+The :py:mod:`~spikeinterface.toolkit.preprocessing` sub-module includes preprocessing steps to apply before spike
+sorting. Preprocessors are *lazy*, meaning that no computation is performed until it is required (usually at the
+spike sorting step). This enables one to build preprocessing chains to be applied in sequence to a
+:code:`RecordingExtractor` object.
 This is possible because each preprocessing step returns a new :code:`RecordingExtractor` that can be input to the next
 step in the chain.
 
@@ -34,9 +41,9 @@ CMR and save it to a binary file in the "preprocessed" folder. The :code:`record
 Postprocessing module
 =====================
 
-After spike sorting, we can use the :code:`toolkit.postprocessing` sub-module to further post-process the spike sorting
-output. Most of the post-processing functions require a :code:`WaveformExtractor` as input. Available postprocessing
-tools are:
+After spike sorting, we can use the :py:mod:`~spikeinterface.toolkit.postprocessing` sub-module to further post-process
+the spike sorting output. Most of the post-processing functions require a
+:py:class:`~spikeinterface.core.WaveformExtractor` as input. Available postprocessing tools are:
 
 * compute principal component scores
 * compute template similarity
@@ -71,7 +78,9 @@ For more details about each metric and it's availability and use within SpikeInt
     :maxdepth: 1
     :glob:
 
-    quality_metrics/*
+Quality metrics allows to quantitatively assess to *goodness* of a spike sorting output. The
+:py:mod:`~spikeinterface.toolkit.qualitymetrics` sub-module includes functions to compute a large variety of available
+metrics ('sort' - spike times based; 'rec+sort' - based on waveforms; 'pc' - based on PC scores):
 
 
 .. code-block:: python

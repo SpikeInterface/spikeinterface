@@ -6,10 +6,11 @@ Sometimes a recording can be split in several subparts, for instance a baseline 
 
 Similarly to `NEO <https://github.com/NeuralEnsemble/python-neo>`_ we define each subpart as a "segment".
 
-:code:`spikeinterface` has tools to manipulate these segments. There are two ways:
+SpikeInterface has tools to manipulate these segments. There are two ways:
 
-  1. append_recordings()/append_sortings()/append_events()
-  2. concatenate_recordings()/ concatenate_sortings()/ concatenate_events()
+  1. :py:func:`~spikeinterface.core.append_recordings()` and :py:func:`~spikeinterface.core.append_sortings()`
+
+  2. :py:func:`~spikeinterface.core.concatenate_recordings()`
 
 Here is the difference. Imagine we have 2 recordings with 2 and 3 segments respectively:
 
@@ -45,7 +46,7 @@ print(rec1)
 
 
 ##############################################################################
-# Let's use the `append_recordings()`:
+# Let's use the :py:func:`~spikeinterface.core.append_recordings()`:
 
 recording_list = [rec0, rec1]
 rec = append_recordings(recording_list)
@@ -55,7 +56,7 @@ for i in range(rec.get_num_segments()):
     print(f'segment {i} num_samples {s}')
 
 ##############################################################################
-# Let's use the `concatenate_recordings()`:
+# Let's use the :py:func:`~spikeinterface.core.concatenate_recordings()`:
 
 recording_list = [rec0, rec1]
 rec = concatenate_recordings(recording_list)

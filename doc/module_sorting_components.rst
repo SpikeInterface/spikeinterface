@@ -1,8 +1,8 @@
 Sorting Components module
 =========================
 
-Spike sorting is comprised of several steps, or components. In the :code:`sortingcomponents` module we are building a
-library of methods and steps that can be assembled to build full spike sorting pipelines.
+Spike sorting is comprised of several steps, or components. In the :py:mod:`spikeinterface.sortingcomponents` module we
+are building a library of methods and steps that can be assembled to build full spike sorting pipelines.
 
 This effort goes in the direction of *modularization* of spike sorting algorithms. Currently, spike sorters are shipped
 as full packages with all the steps needed to perform end-to-end spike sorting.
@@ -37,7 +37,8 @@ Peak detection
 Peak detection is usually the first step of spike sorting and it consists of finding peaks in the traces that could
 be actual spikes.
 
-Peaks can be detected with the :code:`detect_peaks()` function as follows:
+Peaks can be detected with the :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` function as
+follows:
 
 .. code-block:: python
 
@@ -45,13 +46,17 @@ Peaks can be detected with the :code:`detect_peaks()` function as follows:
     
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
     
-    peaks = detect_peaks(recording, method='by_channel',
-                             peak_sign='neg', detect_threshold=5, n_shifts=2,
-                             local_radius_um=100,
-                             noise_levels=None,
-                             random_chunk_kwargs={},
-                             outputs='numpy_compact',
-                             **job_kwargs)
+    peaks = detect_peaks(
+        recording, method='by_channel',
+        peak_sign='neg',
+        detect_threshold=5,
+        n_shifts=2,
+        local_radius_um=100,
+        noise_levels=None,
+        random_chunk_kwargs={},
+        outputs='numpy_compact',
+        **job_kwargs,
+    )
 
 The output :code:`peaks` is a numpy array with a length of the number of peaks found and the following dtype:
 
@@ -76,7 +81,8 @@ Peak localization estimates the spike *location* on the probe. An estimate of lo
 drifts or cluster spikes into different units.
 
 
-Peak localization can be run as follows:
+Peak localization can be run using :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks()` as
+follows:
 
 .. code-block:: python
 
@@ -98,7 +104,7 @@ Currently, the following methods are implemented:
     see also [here](https://openreview.net/forum?id=ohfi44BZPC4)
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
-Theses methods are the same implemented in :code:`spieinterface.toolkit.postprocessing.unit_localization`
+Theses methods are the same implemented in :py:mod:`spikeinterface.toolkit.postprocessing.unit_localization`
 
 
 
@@ -199,9 +205,10 @@ Motion correction
 
 The estimated motion can be used to correct the motion, in other words, for drift correction.
 One possible way is to make an interpolation sample-by-sample to compensate for the motion.
-The :code:`CorrectMotionRecording` is a preprocessing step doing this.
-This preprocessing is *lazy*, so that inperpolation is done the on-the-fly. However, the class needs the "motion vector" 
-as input, which requires a relatively long computation (peak detection, localization and motion estimation).
+The :py:class:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording` is a preprocessing step doing
+this. This preprocessing is *lazy*, so that inperpolation is done the on-the-fly. However, the class needs the
+"motion vector" as input, which requires a relatively long computation (peak detection, localization and motion
+estimation).
 
 Here is a short example the depends on the output of "Motion estimation":
 

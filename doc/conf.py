@@ -75,6 +75,7 @@ extensions = [
     'sphinx_gallery.gen_gallery',
     'numpydoc',
     "sphinx.ext.intersphinx",
+    "sphinx.ext.extlinks",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -130,4 +131,11 @@ sphinx_gallery_conf = {
     'ignore_pattern': '/generate_',
 }
 
-intersphinx_mapping = {"neo": ("https://neo.readthedocs.io/en/stable/", None)}
+intersphinx_mapping = {
+    "neo": ("https://neo.readthedocs.io/en/stable/", None),
+    "probeinterface": ("https://probeinterface.readthedocs.io/en/stable/", None),
+}
+
+extlinks = {
+    "probeinterface": ("https://probeinterface.readthedocs.io/", "%s"),
+}
