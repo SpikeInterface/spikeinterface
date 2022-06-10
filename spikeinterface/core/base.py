@@ -54,6 +54,9 @@ class BaseExtractor:
 
         self.is_dumpable = True
 
+        # Extractor specific list of pip extra requirements
+        self.extra_requirements = []
+
     def get_num_segments(self):
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
@@ -247,6 +250,8 @@ class BaseExtractor:
             if values is not None:
                 other.set_property(k, values[inds])
         # TODO: copy features also
+
+        other.extra_requirements.extend(self.extra_requirements)
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
                 relative_to=None, folder_metadata=None):
