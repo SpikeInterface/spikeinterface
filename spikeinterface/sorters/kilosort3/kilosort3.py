@@ -31,7 +31,6 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     compiled_name: str = 'ks3_compiled'
     kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
-    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
