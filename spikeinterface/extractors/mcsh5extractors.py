@@ -1,4 +1,6 @@
-from spikeinterface import BaseRecording, BaseRecordingSegment
+from spikeinterface.core import BaseRecording, BaseRecordingSegment
+from spikeinterface.core.core_tools import define_function_from_class
+
 import numpy as np
 from pathlib import Path
 
@@ -137,7 +139,4 @@ def openMCSH5File(filename, stream_id):
     return mcs_info
 
 
-def read_mcsh5(*args, **kwargs):
-    return MCSH5RecordingExtractor(*args, **kwargs)
-
-read_mcsh5.__doc__ = MCSH5RecordingExtractor.__doc__
+read_mcsh5 = define_function_from_class(source_class=MCSH5RecordingExtractor, name="read_mcsh5")

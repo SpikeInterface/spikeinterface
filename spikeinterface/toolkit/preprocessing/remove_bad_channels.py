@@ -1,8 +1,9 @@
 import numpy as np
 
-from spikeinterface.core.channelslicerecording import (ChannelSliceRecording,
-                                                       ChannelSliceRecordingSegment)
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.core.channelslicerecording import ChannelSliceRecording
+from spikeinterface.core.core_tools import define_function_from_class
+
+from .basepreprocessor import BasePreprocessor
 
 from ..utils import get_random_data_chunks
 
@@ -46,8 +47,4 @@ class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
 
 
 # function for API
-def remove_bad_channels(*args, **kwargs):
-    return RemoveBadChannelsRecording(*args, **kwargs)
-
-
-remove_bad_channels.__doc__ = RemoveBadChannelsRecording.__doc__
+remove_bad_channels = define_function_from_class(source_class=RemoveBadChannelsRecording, name="remove_bad_channels")
