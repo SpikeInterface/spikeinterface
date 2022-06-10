@@ -44,7 +44,7 @@ class YassSortingExtractor(BaseSorting):
         self.add_sorting_segment(YassSortingSegment(spiketrains))
 
         self._kwargs = {'folder_path': str(folder_path)}
-        self.extra_requirements.append('yaml')
+        self.extra_requirements.append('pyyaml')
 
 
 class YassSortingSegment(BaseSortingSegment):

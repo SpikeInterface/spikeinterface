@@ -59,7 +59,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         probegroup = read_prb(params['probe'])
         self.set_probegroup(probegroup, in_place=True)
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
-        self.extra_requirements.extend(['hybridizer', 'yaml'])
+        self.extra_requirements.extend(['hybridizer', 'pyyaml'])
 
     @staticmethod
     def write_recording(recording, save_path, initial_sorting_fn, dtype='float32', verbose=True,
