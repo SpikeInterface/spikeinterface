@@ -1,5 +1,7 @@
-Inter-spike-interval (ISI) violations
-=====================================
+.. _ISI:
+
+Inter-spike-interval (ISI) violations (:code:`isi_violation`)
+=============================================================
 
 
 
@@ -7,7 +9,7 @@ Calculation
 -----------
 
 Neurons have a refractory period after a spiking event during which they cannot fire again.
-Inter-spike-interval (ISI) violations refers to the rate of refractory period violations Hill_.
+Inter-spike-interval (ISI) violations refers to the rate of refractory period violations (as described by Hill_).
 
 The calculation works under the assumption that the contaminant events happen randomly, or comes from another neuron that is not correlated with our unit. A correlation will lead to an over-estimation of the contamination, whereas an anti-correlation will lead to an under-estimation.
 
@@ -24,7 +26,7 @@ The following quantities are required:
 - :math:`\#`: denote count.
 
 The threshold for ISI violations is the biological ISI threshold, :math:`ISI_t`, minus the minimum ISI threshold, :math:`ISI_{min}` enforced by the data recording system used.
-The array of inter-spike-intervals observed in the unit's spike train, :math:`ISI_s$`, is used to identify the count (:math:`\#`) of observed ISI's below this threshold.
+The array of inter-spike-intervals observed in the unit's spike train, :math:`ISI_s`, is used to identify the count (:math:`\#`) of observed ISI's below this threshold.
 For a recording with a duration of :math:`T_r` seconds, and a unit with :math:`N_s` spikes, the rate of ISI violations is:
 
 .. math::

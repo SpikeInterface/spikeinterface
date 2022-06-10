@@ -1,5 +1,5 @@
-Signal-to-noise (SNR) ratio
-===========================
+Signal-to-noise (SNR) ratio (:code:`snr`)
+=========================================
 
 Calculation
 -----------
@@ -71,9 +71,6 @@ Presented by Lemon_ and useful initial discussion by Jackson_.
 Citations
 ---------
 
-.. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. Quanti-
-tative assessment of extracellular multichannel recording quality using measures
-of cluster separation. Soc Neurosci Abstr, 518, 01 2005
+.. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Soc Neurosci Abstr, 518, 01 2005.
 
-.. [Lemon] R. Lemon. Methods for neuronal recording in conscious animals. IBRO Hand-
-book Series, 4:56–60, 1984
+.. [Lemon] R. Lemon. Methods for neuronal recording in conscious animals. IBRO Handbook Series, 4:56–60, 1984.

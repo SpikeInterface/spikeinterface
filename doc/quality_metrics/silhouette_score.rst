@@ -1,5 +1,5 @@
-Silhouette score
-================
+Silhouette score (not currently implemented)
+============================================
 
 Calculation
 -----------

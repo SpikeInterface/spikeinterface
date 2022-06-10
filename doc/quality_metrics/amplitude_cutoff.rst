@@ -1,5 +1,7 @@
-Amplitude cutoff
-================
+.. _amp_cutoff:
+
+Amplitude cutoff (:code:`amplitude_cutoff`)
+===========================================
 
 Calculation
 -----------
@@ -9,8 +11,9 @@ A histogram of spike amplitudes is created and deviations from the expected Gaus
 Expectation and use
 -------------------
 
-Deviations from the expected Gaussian distributions are used to estimate the number of spikes missing from the unit (false negative rate).
+Deviations from the expected Gaussian distributions are used to estimate the number of spikes missing from the unit.
 This yields an estimate of the number of spikes missing from the unit (false negative rate).
+A smaller value for this metric is preferred, as this indicates few false negatives.
 The distributions can be computed on chunks for larger recording, as drift can impact the spike amplitudes (and thus not give a Gaussian distribution anymore).
 
 Example code
@@ -31,7 +34,7 @@ Reference
 
 .. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
 
-    .. autofunction:: compute_amplitudes_cutoff
+	.. autofunction:: compute_amplitudes_cutoff
 
 
 Links to source code
@@ -46,7 +49,7 @@ From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/n
 Literature
 ----------
 
-Introduced by [Hill]_ (2011).
+Introduced by [Hill]_.
 
 Citations
 ---------
