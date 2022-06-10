@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import KDTree
 
 
-def run_nearest_neighor_triage(
+def nearest_neighor_triage(
     x,
     y,
     maxptps,
