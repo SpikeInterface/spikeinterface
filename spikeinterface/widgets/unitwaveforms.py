@@ -1,6 +1,8 @@
 import numpy as np
 
 from .base import BaseWidget
+from ..core.waveform_extractor import WaveformExtractor
+from ..core.baserecording import BaseRecording
 from .utils import get_unit_colors
 from ..toolkit import get_template_channel_sparsity
 
@@ -8,7 +10,7 @@ from ..toolkit import get_template_channel_sparsity
 class UnitWaveformsWidget(BaseWidget):
     possible_backends = {}
     
-    def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
+    def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, max_channels=None, radius_um=None,
                  ncols=5, axes=None, lw=2, axis_equal=False, unit_selected_waveforms=None,
@@ -109,7 +111,9 @@ class UnitWaveformsWidget(BaseWidget):
         
         wfs_by_ids = {unit_id: we.get_waveforms(unit_id) for unit_id in unit_ids}
 
+        recording: BaseRecording = waveform_extractor.recording
         plot_data = dict(
+            sampling_frequency=recording.get_sampling_frequency(),
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             unit_colors=unit_colors,
