@@ -1,4 +1,5 @@
 pytest
+pytest-cov
 
 # some version are forced because of
 # numba and hdbscan and numpy internal API
@@ -68,3 +69,8 @@ mearec
 ## container packages for local testing
 #docker
 #spython
+
+## sliding_nn
+pymde
+torch
+pynndescent
