@@ -1,5 +1,5 @@
-D-prime
-=======
+D-prime (:code:`d_prime`)
+=========================
 
 Calculation
 -----------
@@ -25,8 +25,16 @@ D-prime is then calculated as follows:
 Expectation and use
 -------------------
 
+D-prime is a measure of cluster separation, and will be larger in well separated clusters.
+
 Example code
 ------------
+
+.. code-block:: python
+
+	import spikeinterface.toolkit as st
+
+    d_prime = st.lda_metrics(all_pcs, all_labels, 0)
 
 Links to source code
 --------------------

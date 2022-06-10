@@ -1,6 +1,5 @@
-Firing rate
-===========
-
+Firing rate (:code:`firing_rate`)
+=================================
 
 
 Calculation
@@ -11,8 +10,8 @@ Firing rate is simply the average number of spikes within the recording per seco
 .. math::
     \textrm{firing rate} = \frac{N_s}{T_r}
 
-- :math:`T_r` : duration of recording in seconds (:code:`total_duration` in SpikeInterface).
-- :math:`N_s` : number of spikes observed in full recording (:code:`n` in SpikeInterface).
+- :math:`N_s` : number of spikes observed in full recording.
+- :math:`T_r` : duration of recording in seconds.
 
 Expectation and use
 -------------------

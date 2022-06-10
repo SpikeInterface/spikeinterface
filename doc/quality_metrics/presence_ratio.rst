@@ -1,5 +1,5 @@
-Presence ratio
-==============
+Presence ratio (:code:`presence_ratio`)
+=======================================
 
 Calculation
 -----------
@@ -9,8 +9,8 @@ Presence ratio is the proportion of discrete time bins in which at least one spi
 .. math::
     \textrm{presence ratio} = \frac{B_s}{B_s + B_n}
 
-- :math:`B_s` : number of bins in which spikes occurred (in SpikeInterface).
-- :math:`B_n` : number of bins in which no spikes occurred (in SpikeInterface).
+- :math:`B_s` : number of bins in which spikes occurred.
+- :math:`B_n` : number of bins in which no spikes occurred.
 
 Expectation and use
 -------------------

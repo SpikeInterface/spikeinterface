@@ -1,5 +1,5 @@
-L-ratio
-=======
+L-ratio (:code:`l_ratio`)
+=========================
 
 Calculation
 -----------
@@ -20,7 +20,7 @@ Define for each cluster :math:`C`, the value :math:`L(C)`, representing the amou
 
 :math:`L` is then the sum of probabilities that each spike which is not a cluster member of :math:`C` should be included in the cluster.
 Therefore the inverse of this cumulative distribution yields the probability of cluster membership for each spike :math:`i`.
-:math:`L`` is then normalised by the number of spikes :math:`N_s` in :math:`C` to allow larger clusters to tolerate more contamination.
+:math:`L` is then normalised by the number of spikes :math:`N_s` in :math:`C` to allow larger clusters to tolerate more contamination.
 This yields L-ratio, which can be expressed as:
 
 .. math::
@@ -30,6 +30,9 @@ This yields L-ratio, which can be expressed as:
 
 Expectation and use
 -------------------
+
+Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) ([Schmitzer-Torbert]_ et al.).
+[Jackson]_ et al. suggests that this measure is also correlated with type II errors (although more strongly with type I errors).
 
 Example code
 ------------
@@ -48,20 +51,19 @@ References
     .. autofunction:: l_ratio
 
 
-A well separated unit should have a low L-ratio \cite{Schmitzer-Torbert2004}.
-Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) \cite{Schmitzer-Torbert2004}.
-Jackson et al. suggests that this measure is also correlated with type II errors (although more strongly with type I errors) \cite{Jackson2005}.
+A well separated unit should have a low L-ratio (Schmitzer-Torbert_ et al.).
+Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) (Schmitzer-Torbert_ et al.).
+Jackson et al. suggests that this measure is also correlated with type II errors (although more strongly with type I errors) (Jackson_ et al.).
 
 
 Literature
 ----------
 
-Introduced by [Schmitzer-Torbert]_.
-Early discussion and comparison with isolation distance by [Jackson]_.
+Introduced by Schmitzer-Torbert_ et al..
+Early discussion and comparison with isolation distance by Jackson_ et al..
 
 Citations
 ---------
 
 .. [Schmitzer-Torbert]  Schmitzer-Torbert, Neil, and A. David Redish. “Neuronal Activity in the Rodent Dorsal Striatum in Sequential Navigation: Separation of Spatial and Reward Responses on the Multiple T Task.” Journal of neurophysiology 91.5 (2004): 2259–2272. Web.
-.. [Jackson] Schmitzer-Torbert, N et al. “Quantitative Measures of Cluster Quality for Use in Extracellular Recordings.” Neuroscience 131.1 (2005): 1–11. Web.
-
+.. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. “Quantitative Measures of Cluster Quality for Use in Extracellular Recordings.” Neuroscience 131.1 (2005): 1–11. Web.
