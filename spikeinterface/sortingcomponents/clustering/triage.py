@@ -15,9 +15,9 @@ def nearest_neighor_triage(
     tree = KDTree(feats)
     dist, _ = tree.query(feats, k=6)
     dist = dist[:, 1:]
+    log_dist = c * np.log(dist)
     if ptp_weighting:
-        dist = np.sum(
-            c * np.log(dist) + np.log(1 / (scales[2] * np.log(maxptps)))[:, None], 1
-        )
+        log_dist += np.log(1 / (scales[2] * np.log(maxptps)))[:, None]
+    dist = np.sum(log_dist, 1)
     idx_keep = dist <= np.percentile(dist, threshold)
     return idx_keep
