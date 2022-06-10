@@ -1,6 +1,6 @@
 from typing import List, Union
 from pathlib import Path
-from ..core.base import BaseExtractor, BaseSegment
+from .base import BaseExtractor, BaseSegment
 import numpy as np
 from warnings import warn
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
@@ -356,6 +356,14 @@ class BaseSnippets(BaseExtractor):
         v = values[self.id_to_index(channel_id)]
         return v
 
+    def get_frames(self,
+                   indeces = None,
+                   segment_index: Union[int, None] = None
+                   ):
+        segment_index = self._check_segment_index(segment_index)
+        spts = self._snippets_segments[segment_index]
+        return spts.get_frames(indeces)
+
     def get_snippets(self,
                    indeces,
                    segment_index: Union[int, None] = None,
@@ -486,10 +494,18 @@ class BaseSnippetsSegment(BaseSegment):
         raise NotImplementedError
 
     def get_num_snippets(self):
-        """Returns the number of samples in this signal segment
+        """Returns the number of snippets in this segment
 
         Returns:
-            SampleIndex: Number of samples in the signal segment
+            SampleIndex: Number of snippets in the segment
+        """
+        raise NotImplementedError
+
+    def get_frames(self, indeces):
+        """Returns the frames of the snippets in this  segment
+
+        Returns:
+            SampleIndex: Number of samples in the  segment
         """
         raise NotImplementedError
 

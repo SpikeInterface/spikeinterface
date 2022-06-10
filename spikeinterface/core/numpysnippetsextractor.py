@@ -1,5 +1,5 @@
 import numpy as np
-from .snippets import (BaseSnippets, BaseSnippetsSegment)
+from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 from typing import List, Union
 
 
@@ -29,9 +29,14 @@ class NumpySnippetsExtractor(BaseSnippets):
         else:
             assert isinstance(snippets_list, np.ndarray), 'must give a list of numpy array'
             snippets_list = [snippets_list]
+        if isinstance(spikesframes_list, list):
+            assert all(isinstance(e, np.ndarray) for e in spikesframes_list), 'must give a list of numpy array'
+        else:
+            assert isinstance(spikesframes_list, np.ndarray), 'must give a list of numpy array'
+            spikesframes_list = [spikesframes_list]
 
-        dtype = snippets_list[0].dtype
-        assert all(dtype == ts.dtype for ts in snippets_list)
+        self._dtype = snippets_list[0].dtype
+        assert all(self._dtype == ts.dtype for ts in snippets_list)
 
         if channel_ids is None:
             channel_ids = np.arange(snippets_list[0].shape[2])
@@ -113,3 +118,13 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         else:
             endi = np.searchsorted(self._spikestimes, end_frame, side='right')
         return slice(init,endi,1)
+
+    def get_frames(self, indeces=None):
+        """Returns the frames of the snippets in this segment
+
+        Returns:
+            SampleIndex: Number of samples in the segment
+        """
+        if indeces is None:
+            return self._spikestime
+        raise self._spikestime[indeces]
