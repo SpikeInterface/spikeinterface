@@ -2,6 +2,7 @@
 from pathlib import Path
 import random
 import string
+import os
 
 import numpy as np
 try:
@@ -14,12 +15,14 @@ from spikeinterface.core import get_global_tmp_folder
 from spikeinterface.toolkit import get_channel_distances, get_random_data_chunks
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import auto_clean_clustering, auto_split_clustering
+from .position import PositionClustering
 
 class PositionAndPCAClustering:
     """
     Perform a hdbscan clustering on peak position then apply locals
     PCA on waveform + hdbscan on every spatial clustering to check
-    if there a need to oversplit.
+    if there a need to oversplit. Should be fairly close to spyking-circus
+    clustering
     
     """
     _default_params = {
@@ -30,10 +33,10 @@ class PositionAndPCAClustering:
         'ms_after': 2.5,
         'n_components_by_channel' : 3,
         'n_components': 5,
-        'job_kwargs' : {'n_jobs' : 1, 'chunk_memory' : '10M', 'progress_bar' : False},
-        'hdbscan_global_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True},
-        'hdbscan_local_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True},
-        'waveform_mode': 'memmap',
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M', 'verbose' : True, 'progress_bar' : True},
+        'hdbscan_global_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
+        'hdbscan_local_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
+        'waveform_mode': 'shared_memory',
         'radius_um' : 50.,
         'noise_size' : 300,
         'debug' : False,
@@ -41,7 +44,6 @@ class PositionAndPCAClustering:
         'auto_merge_num_shift': 3,
         'auto_merge_quantile_limit': 0.8, 
         'ratio_num_channel_intersect': 0.5,
-        'job_kwargs' : {}
     }
 
     @classmethod
@@ -53,7 +55,7 @@ class PositionAndPCAClustering:
         if params['waveform_mode'] == 'memmap':
             if tmp_folder is None:
                 name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                tmp_folder = get_global_tmp_folder() / f'PositionAndPcaClustering_{name}'
+                tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
             else:
                 tmp_folder = Path(tmp_folder)
             tmp_folder.mkdir()
@@ -67,6 +69,9 @@ class PositionAndPCAClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
+
+        #res = PositionClustering(recording, peaks, params)
+
         assert HAVE_HDBSCAN, 'position_and_pca clustering need hdbscan to be installed'
 
         params = cls._check_params(recording, peaks, params)
@@ -75,7 +80,7 @@ class PositionAndPCAClustering:
         # step1 : clustering on peak location
         if params['peak_locations'] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-            peak_locations = localize_peaks(recording, peaks, **params['peak_localization_kwargs'])
+            peak_locations = localize_peaks(recording, peaks, **params['peak_localization_kwargs'], **params['job_kwargs'])
         else:
             peak_locations = params['peak_locations']
         
@@ -92,24 +97,6 @@ class PositionAndPCAClustering:
         
         spatial_labels = np.unique(spatial_peak_labels)
         spatial_labels = spatial_labels[spatial_labels >= 0]
-
-        # if params['debug']:
-        #     import matplotlib.pyplot as plt
-        #     import spikeinterface.full as si
-        #     fig1, ax = plt.subplots()
-        #     kwargs = dict(probe_shape_kwargs=dict(facecolor='w', edgecolor='k', lw=0.5, alpha=0.3),
-        #                             contacts_kargs = dict(alpha=0.5, edgecolor='k', lw=0.5, facecolor='w'))
-        #     si.plot_probe_map(recording, ax=ax, **kwargs)
-        #     ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, color='k')
-
-        #     fig2, ax = plt.subplots()
-        #     si.plot_probe_map(recording, ax=ax, **kwargs)
-        #     ax.scatter(locations[:, 0], locations[:, 1], alpha=0.5, s=1, c=spatial_peak_labels)
-
-        #     if tmp_folder is not None:
-        #         fig1.savefig(tmp_folder / 'peak_locations.pdf')
-        #         fig2.savefig(tmp_folder / 'peak_locations_clustered.pdf')
-
 
         # step2 : extract waveform by cluster
         spatial_keep, = np.nonzero(spatial_peak_labels >= 0)
@@ -129,7 +116,7 @@ class PositionAndPCAClustering:
             mask = keep_peak_labels == label
             peaks2['unit_ind'][mask] = l
 
-            center = np.mean(locations[spatial_keep][mask], axis=0)
+            center = np.median(locations[spatial_keep][mask], axis=0)
             main_chan = np.argmin(np.linalg.norm(chan_locs - center[np.newaxis, :], axis=1))
             
             # TODO take a radius that depend on the cluster dispertion itself
@@ -140,7 +127,7 @@ class PositionAndPCAClustering:
             wf_folder = None
         else:
             assert params['tmp_folder'] is not None
-            wf_folder = params['tmp_folder'] / 'waveforms_pre_cluster'
+            wf_folder = params['tmp_folder'] / 'sparse_snippets'
             wf_folder.mkdir()
 
         fs = recording.get_sampling_frequency()
@@ -157,6 +144,7 @@ class PositionAndPCAClustering:
                         num_chunks_per_segment=params['noise_size'], chunk_size=nbefore+nafter, concatenated=False, seed=None)
         noise = np.stack(noise, axis=0)
 
+        print('Launching the local pca for splitting purposes')
         split_peak_labels, main_channels = auto_split_clustering(wfs_arrays, sparsity_mask, spatial_labels, keep_peak_labels, nbefore, nafter, noise, 
                 n_components_by_channel=params['n_components_by_channel'],
                 n_components=params['n_components'],

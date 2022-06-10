@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 class TridesclousSortingExtractor(BaseSorting):
@@ -59,9 +60,4 @@ class TridesclousSortingSegment(BaseSortingSegment):
         return spike_times.copy()
 
 
-def read_tridesclous(*args, **kwargs):
-    sorting = TridesclousSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_tridesclous.__doc__ = TridesclousSortingExtractor.__doc__
+read_tridesclous = define_function_from_class(source_class=TridesclousSortingExtractor, name="read_tridesclous")

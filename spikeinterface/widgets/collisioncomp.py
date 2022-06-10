@@ -238,7 +238,8 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
             if self.show_legend:
                 ax.legend()
             ax.set_ylim(self.ylim)
-            ax.set_xlabel('lags (ms)')        
+            ax.set_xlabel('lags (ms)')
+            ax.set_ylabel('collision accuracy')      
 
 
 
