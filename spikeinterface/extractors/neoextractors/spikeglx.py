@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 import numpy as np
@@ -15,7 +17,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading data from a SpikeGLX system  (NI-DAQ for neuropixel probe)
     See https://billkarsh.github.io/SpikeGLX/
 
-    Based on neo.rawio.SpikeGLXRawIO
+    Based on :py:class:`neo.rawio.SpikeGLXRawIO`
 
     Contrary to older verion this reader is folder based.
     So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
@@ -62,12 +64,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
 
 
-def read_spikeglx(*args, **kwargs):
-    recording = SpikeGLXRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_spikeglx.__doc__ = SpikeGLXRecordingExtractor.__doc__
+read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
 
 
 # TODO check sample shifts for different configurations!!!

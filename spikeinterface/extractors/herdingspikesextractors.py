@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
@@ -126,9 +127,4 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
     """
 
 
-def read_herdingspikes(*args, **kwargs):
-    sorting = HerdingspikesSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_herdingspikes.__doc__ = HerdingspikesSortingExtractor.__doc__
+read_herdingspikes = define_function_from_class(source_class=HerdingspikesSortingExtractor, name="read_herdingspikes")

@@ -4,7 +4,7 @@ from pathlib import Path
 from spikeinterface import set_global_tmp_folder
 from spikeinterface.core.testing_tools import generate_recording
 
-from spikeinterface.toolkit.preprocessing import normalize_by_quantile, scale, center
+from spikeinterface.toolkit.preprocessing import normalize_by_quantile, scale, center, zscore
 
 import numpy as np
 
@@ -58,9 +58,27 @@ def test_center():
 
     rec2 = center(rec, mode='median')
     rec2.get_traces(segment_index=0)
+    
+
+def test_zscore():
+    rec = generate_recording()
+    # print("original")
+    tr = rec.get_traces(segment_index=0)
+    # print("medians", np.median(tr, axis=0))
+    # print("stds", np.std(tr, axis=0))
+
+    # print("median+mad")
+    rec2 = zscore(rec)
+    tr = rec2.get_traces(segment_index=0)
+    # print("medians", np.median(tr, axis=0))
+    # print("stds", np.std(tr, axis=0))
+    
+    # print("mean+std")
+    rec3 = zscore(rec, mode="mean+std")
+    tr = rec3.get_traces(segment_index=0)
+    # print("medians", np.median(tr, axis=0))
+    # print("stds", np.std(tr, axis=0))
 
 
 if __name__ == '__main__':
-    test_normalize_by_quantile()
-    test_scale()
-    test_center()
+    test_zscore()
