@@ -14,6 +14,5 @@ with kcl.TemporaryDirectory() as tmpdir:
 
     sw.plot_unit_waveforms(
         waveform_extractor=W,
-        backend='sortingview',
-        max_channels=6
+        backend='sortingview'
     )
