@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -23,9 +25,4 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-def read_nix(*args, **kwargs):
-    recording = NixRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_nix.__doc__ = NixRecordingExtractor.__doc__
+read_nix = define_function_from_class(source_class=NixRecordingExtractor, name="read_nix")

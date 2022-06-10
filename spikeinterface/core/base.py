@@ -7,7 +7,6 @@ import pickle
 import os
 import random
 import string
-import warnings
 from packaging.version import parse
 
 import numpy as np
@@ -31,6 +30,7 @@ class BaseExtractor:
     _main_annotations = []
     _main_properties = []
     _main_features = []
+
 
     def __init__(self, main_ids):
         # store init kwargs for nested serialisation

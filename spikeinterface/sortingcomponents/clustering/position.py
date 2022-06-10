@@ -16,9 +16,10 @@ class PositionClustering:
         "peak_locations" : None,
         "use_amplitude" : True,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
-        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True},
+        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1},
         "debug" : False,
         "tmp_folder" : None,
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M'},
     }
 
     @classmethod
@@ -28,7 +29,7 @@ class PositionClustering:
 
         if d['peak_locations'] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-            peak_locations = localize_peaks(recording, peaks, **d['peak_localization_kwargs'])
+            peak_locations = localize_peaks(recording, peaks, **d['peak_localization_kwargs'], **d['job_kwargs'])
         else:
             peak_locations = d['peak_locations']
 

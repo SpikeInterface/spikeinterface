@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -8,7 +10,7 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
     This format is a raw format with an internal binary header exported by the
     "MC_DataTool binary conversion" with the option header selected.
     
-    Based on neo.rawio.NeuralynxRawIO
+    Based on :py:class:`neo.rawio.NeuralynxRawIO`
     
     Parameters
     ----------
@@ -26,9 +28,4 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-def read_mcsraw(*args, **kwargs):
-    recording = MCSRawRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_mcsraw.__doc__ = MCSRawRecordingExtractor.__doc__
+read_mcsraw = define_function_from_class(source_class=MCSRawRecordingExtractor, name="read_maxwell_event")

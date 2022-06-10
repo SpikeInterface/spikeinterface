@@ -1,5 +1,7 @@
 import numpy as np
 
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..utils import get_random_data_chunks
@@ -15,7 +17,7 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
+        scaled_traces = traces * self.gain[:, channel_indices] + self.offset[:, channel_indices] 
         return scaled_traces.astype(self._dtype)
 
 
@@ -191,23 +193,62 @@ class CenterRecording(BasePreprocessor):
         self._kwargs.update(random_chunk_kwargs)
 
 
-# function for API
-def normalize_by_quantile(*args, **kwargs):
-    return NormalizeByQuantileRecording(*args, **kwargs)
+class ZScoreRecording(BasePreprocessor):
+    """
+    Centers traces from the given recording extractor by removing the median of each channel
+    and dividing by the MAD.
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor to be centered
+    mode: str
+        "median+mad" (default) or "mean+std"
+    dtype: str or np.dtype
+        The dtype of the output traces. Default "float32"
+    **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
+    
+    Returns
+    -------
+    centered_traces: ScaleRecording
+        The centered traces recording extractor object
+    """
+    name = 'center'
+
+    def __init__(self, recording, mode="median+mad",
+                 dtype="float32", **random_chunk_kwargs):
+        
+        assert mode in ("median+mad", "mean+std")
+
+        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
+
+        if mode == "median+mad":
+            medians = np.median(random_data, axis=0)
+            medians = medians[None, :]
+            mads = np.median(np.abs(random_data - medians), axis=0) / 0.6745
+            mads = mads[None, :] 
+            gain = 1 / mads
+            offset = -medians / mads
+        else:
+            means = np.mean(random_data, axis=0)
+            means = means[None, :]
+            stds = np.std(random_data, axis=0)
+            stds = stds[None, :] 
+            gain = 1 / stds
+            offset = -means / stds
+        
+        BasePreprocessor.__init__(self, recording, dtype=dtype)
+
+        for parent_segment in recording._recording_segments:
+            rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = dict(recording=recording.to_dict(), dtype=np.dtype(self._dtype).str)
+        self._kwargs.update(random_chunk_kwargs)
 
 
-normalize_by_quantile.__doc__ = NormalizeByQuantileRecording.__doc__
-
-
-def scale(*args, **kwargs):
-    return ScaleRecording(*args, **kwargs)
-
-
-scale.__doc__ = ScaleRecording.__doc__
-
-
-def center(*args, **kwargs):
-    return CenterRecording(*args, **kwargs)
-
-
-center.__doc__ = CenterRecording.__doc__
+# functions for API
+normalize_by_quantile = define_function_from_class(source_class=NormalizeByQuantileRecording, name="normalize_by_quantile")
+scale = define_function_from_class(source_class=ScaleRecording, name="scale")
+center = define_function_from_class(source_class=CenterRecording, name="center")
+zscore = define_function_from_class(source_class=ZScoreRecording, name="zscore")
