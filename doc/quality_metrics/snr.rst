@@ -1,5 +1,5 @@
-Signal-to-noise (SNR) ratio (:code:`snr`)
-=========================================
+Signal-to-noise ratio (:code:`snr`)
+===================================
 
 Calculation
 -----------
