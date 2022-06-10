@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -24,4 +26,4 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs = {'file_path': str(file_path), 'stream_id': stream_id}
 
 
-read_spike2 = Spike2RecordingExtractor.define_reader_function(name="read_spike2")
+read_spike2 = define_function_from_class(source_class=Spike2RecordingExtractor, name="read_spike2")

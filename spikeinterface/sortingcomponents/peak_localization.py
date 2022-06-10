@@ -35,7 +35,7 @@ def init_kwargs_dict(method, method_kwargs, recording):
     return method_kwargs_
 
 
-def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center_of_mass',
+def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_mass',
                    method_kwargs={}, **job_kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 

@@ -17,7 +17,7 @@ class YassSorter(BaseSorter):
 
     sorter_name = 'yass'
     requires_locations = False
-    docker_requires_gpu = True
+    gpu_capability = 'nvidia-required'
 
     # #################################################
 
