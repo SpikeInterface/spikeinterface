@@ -160,6 +160,8 @@ class NwbRecordingExtractor(BaseRecording):
                                                 num_frames=num_frames, times_kwargs=times_kwargs)
         self.add_recording_segment(recording_segment)
 
+        self.extra_requirements.extend(['pandas', 'pynwb'])
+
         # If gains are not 1, set has_scaled to True
         if np.any(gains != 1):
             self.set_channel_gains(gains)
