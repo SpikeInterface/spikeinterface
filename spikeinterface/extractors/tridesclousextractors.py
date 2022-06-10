@@ -17,7 +17,7 @@ class TridesclousSortingExtractor(BaseSorting):
     installation_mesg = "To use the TridesclousSortingExtractor install tridesclous: \n\n pip install tridesclous\n\n"  # error message when not installed
 
     def __init__(self, folder_path, chan_grp=None):
-        assert HAVE_TDC, self.installation_mesg
+        assert self.installed, self.installation_mesg
         tdc_folder = Path(folder_path)
 
         dataio = tdc.DataIO(str(tdc_folder))
