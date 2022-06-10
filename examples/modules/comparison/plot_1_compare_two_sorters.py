@@ -38,15 +38,19 @@ sorting_TDC = ss.run_tridesclous(recording)
 
 
 #############################################################################
-# The :code:`compare_two_sorters` function allows us to compare the spike
-# sorting output. It returns a :code:`SortingComparison` object, with methods
-# to inspect the comparison output easily. The comparison matches the
-# units by comparing the agreement between unit spike trains.
-# 
-# Let’s see how to inspect and access this matching.
+# The :py:func:`~spikeinterface.comparison.compare_two_sorters` function allows us to compare the spike
+# sorting output. It returns a :py:class:`~spikeinterface.comparison.SymmetricSortingComparison` object, with methods
+# to inspect the comparison output easily. The comparison matches the
+# units by comparing the agreement between unit spike trains.
+#
+# Let’s see how to inspect and access this matching.
 
-cmp_HS_TDC = sc.compare_two_sorters(sorting1=sorting_HS, sorting2=sorting_TDC,
-                                               sorting1_name='HS', sorting2_name='TDC')
+cmp_HS_TDC = sc.compare_two_sorters(
+    sorting1=sorting_HS,
+    sorting2=sorting_TDC,
+    sorting1_name='HS',
+    sorting2_name='TDC',
+)
 
 #############################################################################
 # We can check the agreement matrix to inspect the matching.
@@ -73,8 +77,9 @@ print(tdc_to_sc)
 
 
 #############################################################################
-# The :code:get_unit_spike_train` returns the mapped spike train. We can use
-# it to check the spike times.
+# The :py:func:`~spikeinterface.core.BaseSortingSegment.get_unit_spike_train` returns the mapped spike train. We
+# can use
+# it to check the spike times.
 
 matched_ids = sc_to_tdc[sc_to_tdc != -1]
 
