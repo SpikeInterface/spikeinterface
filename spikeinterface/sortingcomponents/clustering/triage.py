@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.spatial import KDTree
-import sys
 
 
 def nearest_neighor_triage(
