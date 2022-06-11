@@ -29,7 +29,7 @@ class TwistedClustering:
         'ms_after': 1.5,
         'n_components': 5,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M', 'verbose' : True, 'progress_bar' : True},
-        'hdbscan_kwargs': {'min_cluster_size' : 20, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
+        'hdbscan_kwargs': {'min_cluster_size' : 100, 'allow_single_cluster' : True, "core_dist_n_jobs" : -1},
         'waveform_mode': 'memmap',
         'n_neighbors' : 8,
         'debug' : False,
@@ -103,18 +103,19 @@ class TwistedClustering:
         result = {}
         import sklearn.decomposition
         pca = sklearn.decomposition.IncrementalPCA(n_components=params['n_components'], whiten=True)
-
-
         hanning_winwdow = np.hanning(nbefore+nafter)[:, np.newaxis]
 
         for key, value in wfs_arrays.items():
-            data = (value*hanning_winwdow).reshape(len(value), -1)
+            
+            data = (value*hanning_winwdow)[:,::2,:]
+            data = data.reshape(len(data), -1)
             
             pca.partial_fit(data)
 
         features = np.zeros((0, params['n_components']), dtype=np.float32)
         for key, value in wfs_arrays.items():
-            data = (value*hanning_winwdow).reshape(len(value), -1)
+            data = (value*hanning_winwdow)[:,::2,:]
+            data = data.reshape(len(data), -1)
             features = np.vstack((features, pca.transform(data)))
 
         locations = chan_locs[peaks['channel_ind']]
