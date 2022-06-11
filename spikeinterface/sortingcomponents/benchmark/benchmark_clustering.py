@@ -179,14 +179,57 @@ class BenchmarkClustering:
         self.gt_labels = self.gt_sorting.to_spike_vector()['unit_ind']
 
 
+    def _scatter_clusters(self, xs, ys, ids, colors, ax=None, n_std=2.0, excluded_ids={-1}, s=1, alpha=0.5):
+
+        from matplotlib.patches import Ellipse
+        import matplotlib.transforms as transforms
+        ax = ax or plt.gca()
+        # scatter and collect gaussian info
+        means = {}
+        covs = {}
+        cols = {}
+        for k in np.unique(ids):
+            where = np.flatnonzero(ids == k)
+            xk = xs[where]
+            yk = ys[where]
+            ax.scatter(xk, yk, s=s, color=colors[where], alpha=alpha, marker=".")
+            if k not in excluded_ids:
+                x_mean, y_mean = xk.mean(), yk.mean()
+                xycov = np.cov(xk, yk)
+                means[k] = x_mean, y_mean
+                covs[k] = xycov
+                cols[k] = colors[where][0]
+                ax.annotate(str(k), (x_mean, y_mean))
+
+        for k in means.keys():
+            mean_x, mean_y = means[k]
+            cov = covs[k]
+
+            with np.errstate(invalid="ignore"):
+                vx, vy = cov[0, 0], cov[1, 1]
+                rho = cov[0, 1] / np.sqrt(vx * vy)
+            if not np.isfinite([vx, vy, rho]).all():
+                continue
+
+            ell = Ellipse(
+                (0, 0),
+                width=2 * np.sqrt(1 + rho),
+                height=2 * np.sqrt(1 - rho),
+                facecolor=(0, 0, 0, 0),
+                edgecolor=cols[k],
+                linewidth=1,
+            )
+            transform = (
+                transforms.Affine2D()
+                .rotate_deg(45)
+                .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
+                .translate(mean_x, mean_y)
+            )
+            ell.set_transform(transform + ax.transData)
+            ax.add_patch(ell)
+
+
     def plot_clusters(self, show_probe=True):
-        fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
-        fig.suptitle(f'Clustering results with {self.method}')
-        ax = axs[0]
-        ax.set_title('Full gt clusters')
-        if show_probe:
-            plot_probe_map(self.recording_f, ax=ax)
-        
 
         from spikeinterface.widgets import get_unit_colors
         
@@ -199,7 +242,16 @@ class BenchmarkClustering:
                 color_vec[mask] = colors[unit_id]
             return color_vec
 
-        ax.scatter(self.gt_positions['x'], self.gt_positions['y'], c=make_color_vec(self.gt_sorting, self.gt_labels), s=1, alpha=0.5)
+
+        fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
+        fig.suptitle(f'Clustering results with {self.method}')
+        ax = axs[0]
+        ax.set_title('Full gt clusters')
+        if show_probe:
+            plot_probe_map(self.recording_f, ax=ax)
+
+        colors = make_color_vec(self.gt_sorting, self.gt_labels)
+        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'], self.gt_labels, colors, s=1, alpha=0.5, ax=ax)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.set_xlabel('x')
@@ -209,7 +261,9 @@ class BenchmarkClustering:
         ax.set_title('Sliced gt clusters')
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
-        ax.scatter(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], c=make_color_vec(self.sliced_gt_sorting, self.sliced_gt_labels), s=1, alpha=0.5)
+
+        colors = make_color_vec(self.sliced_gt_sorting, self.sliced_gt_labels)
+        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], self.sliced_gt_labels, colors, s=1, alpha=0.5, ax=ax)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_xlabel('x')
@@ -219,14 +273,15 @@ class BenchmarkClustering:
         ax.set_title('Found clusters')
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
-        ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
-        ax.scatter(self.positions['x'][~self.noise], self.positions['y'][~self.noise], c=make_color_vec(self.clustering, self.selected_peaks_labels[~self.noise]), s=1, alpha=0.5)
+        colors = make_color_vec(self.clustering, self.selected_peaks_labels)
+        self._scatter_clusters(self.positions['x'], self.positions['y'], self.selected_peaks_labels, colors, s=1, alpha=0.5, ax=ax)
+        #ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
+        #ax.scatter(self.positions['x'][~self.noise], self.positions['y'][~self.noise], c=make_color_vec(self.clustering, self.selected_peaks_labels[~self.noise]), s=1, alpha=0.5)
+        
         ax.set_xlabel('x')
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_yticks([], [])
-
-
 
 
     def plot_statistics(self, metric='cosine'):
@@ -266,8 +321,6 @@ class BenchmarkClustering:
 
         ax = axs[0, 1]
         nb_peaks = np.array([len(self.sliced_gt_sorting.get_unit_spike_train(i)) for i in self.sliced_gt_sorting.unit_ids])
-
-        print(len(inds_1), len(inds_2))
 
         ax.plot(metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]], markersize=10, marker='.', ls='', c='k', label='Cluster Found')
         ax.plot(metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]], markersize=10, marker='.', ls='', c='r', label='Cluster missed')
