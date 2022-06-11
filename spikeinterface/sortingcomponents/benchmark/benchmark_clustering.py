@@ -181,13 +181,25 @@ class BenchmarkClustering:
 
     def plot_clusters(self, show_probe=True):
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
-
+        fig.suptitle(f'Clustering results with {self.method}')
         ax = axs[0]
         ax.set_title('Full gt clusters')
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
         
-        ax.scatter(self.gt_positions['x'], self.gt_positions['y'], c=self.gt_labels, s=1, alpha=0.5)
+
+        from spikeinterface.widgets import get_unit_colors
+        
+        def make_color_vec(sorting, labels):
+            colors = get_unit_colors(sorting)
+            
+            color_vec = np.zeros((len(labels), 4))
+            for unit_ind, unit_id in enumerate(sorting.unit_ids):
+                mask = labels == unit_ind
+                color_vec[mask] = colors[unit_id]
+            return color_vec
+
+        ax.scatter(self.gt_positions['x'], self.gt_positions['y'], c=make_color_vec(self.gt_sorting, self.gt_labels), s=1, alpha=0.5)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.set_xlabel('x')
@@ -197,7 +209,7 @@ class BenchmarkClustering:
         ax.set_title('Sliced gt clusters')
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
-        ax.scatter(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], c=self.sliced_gt_labels, s=1, alpha=0.5)
+        ax.scatter(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], c=make_color_vec(self.sliced_gt_sorting, self.sliced_gt_labels), s=1, alpha=0.5)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_xlabel('x')
@@ -208,27 +220,25 @@ class BenchmarkClustering:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
         ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
-        ax.scatter(self.positions['x'][~self.noise], self.positions['y'][~self.noise], c=self.selected_peaks_labels[~self.noise], s=1, alpha=0.5)
+        ax.scatter(self.positions['x'][~self.noise], self.positions['y'][~self.noise], c=make_color_vec(self.clustering, self.selected_peaks_labels[~self.noise]), s=1, alpha=0.5)
         ax.set_xlabel('x')
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_yticks([], [])
 
 
+
+
     def plot_statistics(self, metric='cosine'):
 
+
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
+        
+        fig.suptitle(f'Clustering results with {self.method}')
         metrics = compute_quality_metrics(self.waveforms['gt'], metric_names=['snr'], load_if_exists=False)
 
         ax = axs[0, 0]
         plot_agreement_matrix(self.comp, ax=ax)
-
-
-        ax = axs[0, 1]
-        nb_peaks = [len(self.sliced_gt_sorting.get_unit_spike_train(i)) for i in self.sliced_gt_sorting.unit_ids]
-        ax.plot(metrics['snr'], nb_peaks, '.')
-        ax.set_xlabel('snr')
-        ax.set_ylabel('# spikes')
 
         import MEArec as mr
         mearec_recording = mr.load_recordings(self.mearec_file)
@@ -241,11 +251,12 @@ class BenchmarkClustering:
 
         scores = self.comp.get_ordered_agreement_scores()
         unit_ids1 = scores.index.values
-        ids_2 = scores.columns.values
-        ids_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
+        unit_ids2 = scores.columns.values
+        inds_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
+        inds_2 = self.comp.sorting2.ids_to_indices(unit_ids2)
 
-        a = self.templates['gt'].reshape(len(self.templates['gt']), -1)[ids_1]
-        b = self.templates['clustering'].reshape(len(self.templates['clustering']), -1)[ids_2]
+        a = self.templates['gt'].reshape(len(self.templates['gt']), -1)[inds_1]
+        b = self.templates['clustering'].reshape(len(self.templates['clustering']), -1)[inds_2]
         
         import sklearn
         if metric == 'cosine':
@@ -253,48 +264,65 @@ class BenchmarkClustering:
         else:
             distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
+        ax = axs[0, 1]
+        nb_peaks = np.array([len(self.sliced_gt_sorting.get_unit_spike_train(i)) for i in self.sliced_gt_sorting.unit_ids])
+
+        print(len(inds_1), len(inds_2))
+
+        ax.plot(metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]], markersize=10, marker='.', ls='', c='k', label='Cluster Found')
+        ax.plot(metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]], markersize=10, marker='.', ls='', c='r', label='Cluster missed')
+
+        ax.legend()
+        ax.set_xlabel('snr')
+        ax.set_ylabel('# spikes')
+
+
+
         ax = axs[0, 2]
         im = ax.imshow(distances, aspect='auto')
         ax.set_title(metric)
         fig.colorbar(im, ax=ax)
 
         res = []
-        res_real = []
+        nb_spikes = {'gt' : [], 'clustering' : []}
 
-        for unit_id in ids_2:
-            wfs = self.waveforms['clustering'].get_waveforms(unit_id)
-            template = self.waveforms['clustering'].get_template(unit_id)
-
-            #wfs_real = self.waveforms['gt'].get_waveforms(unit_ids1[unit_id])
-            #template_real = self.waveforms['gt'].get_template(unit_ids1[unit_id])
-
-            #wfs_real = wfs_real.reshape(len(wfs_real), -1)
-            #template_real = template.reshape(template_real.size, 1).T
+        for found, real in zip(unit_ids2, unit_ids1):
+            wfs = self.waveforms['clustering'].get_waveforms(found)
+            wfs_real = self.waveforms['gt'].get_waveforms(real)
+            template = self.waveforms['clustering'].get_template(found)
+            template_real = self.waveforms['gt'].get_template(real)
 
             wfs = wfs.reshape(len(wfs), -1)
             template = template.reshape(template.size, 1).T
-
+            template_real = template_real.reshape(template_real.size, 1).T
 
             if metric == 'cosine':
-                dist = sklearn.metrics.pairwise.cosine_similarity(template, wfs, metric).flatten()
-                #dist_real = sklearn.metrics.pairwise.cosine_similarity(template_real, wfs_real, metric).flatten()
+                dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real, metric).flatten().tolist()
             else:
-                dist = sklearn.metrics.pairwise_distances(template, wfs, metric).flatten()
-                #dist_real = sklearn.metrics.pairwise.cosine_similarity(template_real, wfs_real, metric).flatten()
-            res += [dist.std()]
-            #res_real += [dist_real.std()]
+                dist = sklearn.metrics.pairwise_distances(template, wfs, metric).flatten().tolist()
+            res += dist
+            nb_spikes['gt'] += [self.sliced_gt_sorting.get_unit_spike_train(real).size]
 
         ax = axs[1, 0]
-        ydata = np.zeros(len(b))
-        ydata[:len(distances.diagonal())] = distances.diagonal()
-        
-        ax.errorbar(np.arange(len(b)), ydata, yerr=res)
-        #ax.errorbar(np.arange(len(b)), np.ones(len(b)), yerr=res_real)
+        res = np.array(res)
 
-        ax.set_xlabel('gt units')
-        ax.set_ylabel(metric)
+        nb_spikes = nb_spikes['gt']
+        snrs = metrics['snr'][unit_ids1][inds_1[:len(inds_2)]]
+        cm = ax.scatter(snrs, nb_spikes, c=res)
+        ax.set_xlabel('snr')
+        ax.set_ylabel('nb_spikes')
+        cb = fig.colorbar(cm, ax=ax)
+        cb.set_label(metric)
 
-        ax = axs[1, 1]
+        # ax = axs[1, 1]
+        # nb_spikes = np.array(nb_spikes['gt'])
+        # ax.plot(nb_spikes, res, markersize=10, marker='.', ls='')
+
+        # ax.set_xlabel('nb spikes')
+        # ax.set_ylabel(metric)
+
+
+        ax = axs[1, 2]
         for performance_name in ['accuracy', 'recall', 'precision']:
             perf = self.comp.get_performance()[performance_name]
             ax.plot(metrics['snr'], perf, markersize=10, marker='.', ls='', label=performance_name)
