@@ -134,7 +134,7 @@ class BenchmarkClustering:
         self.matches = matches
         idx = matches['index1']
         self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], times1[1][idx], self.sampling_rate)
-        
+
         self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering)
 
         for label, sorting in zip(['gt', 'clustering', 'full_gt'], [self.sliced_gt_sorting, self.clustering, self.gt_sorting]): 
@@ -179,7 +179,30 @@ class BenchmarkClustering:
         self.gt_labels = self.gt_sorting.to_spike_vector()['unit_ind']
 
 
-    def _scatter_clusters(self, xs, ys, ids, colors, ax=None, n_std=2.0, excluded_ids={-1}, s=1, alpha=0.5):
+    def _get_colors(self, sorting, excluded_ids=[-1]):
+        from spikeinterface.widgets import get_unit_colors
+        colors = get_unit_colors(sorting)
+        result = {}
+        for key, value in colors.items():
+            result[sorting.id_to_index(key)] = value
+        for key in excluded_ids:
+            result[key] = 'k'
+        return result
+
+    def _get_labels(self, sorting, excluded_ids={-1}):
+        result = {}
+        for unid_id in sorting.unit_ids:
+            result[sorting.id_to_index(unid_id)] = unid_id
+        for key in excluded_ids:
+            result[key] = 'noise'
+        return result
+
+    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, excluded_ids=[-1], s=1, alpha=0.5):
+
+        if colors is None:
+            colors = self._get_colors(sorting, excluded_ids)
+        if labels is None:
+            labels = self._get_labels(sorting, excluded_ids)
 
         from matplotlib.patches import Ellipse
         import matplotlib.transforms as transforms
@@ -187,19 +210,20 @@ class BenchmarkClustering:
         # scatter and collect gaussian info
         means = {}
         covs = {}
-        cols = {}
+        labels_ids = sorting.get_all_spike_trains()[0][1]
+        ids = sorting.ids_to_indices(labels_ids)
+
         for k in np.unique(ids):
             where = np.flatnonzero(ids == k)
             xk = xs[where]
             yk = ys[where]
-            ax.scatter(xk, yk, s=s, color=colors[where], alpha=alpha, marker=".")
+            ax.scatter(xk, yk, s=s, color=colors[k], alpha=alpha, marker=".")
             if k not in excluded_ids:
                 x_mean, y_mean = xk.mean(), yk.mean()
                 xycov = np.cov(xk, yk)
                 means[k] = x_mean, y_mean
                 covs[k] = xycov
-                cols[k] = colors[where][0]
-                ax.annotate(str(k), (x_mean, y_mean))
+                ax.annotate(labels[k], (x_mean, y_mean))
 
         for k in means.keys():
             mean_x, mean_y = means[k]
@@ -216,7 +240,7 @@ class BenchmarkClustering:
                 width=2 * np.sqrt(1 + rho),
                 height=2 * np.sqrt(1 - rho),
                 facecolor=(0, 0, 0, 0),
-                edgecolor=cols[k],
+                edgecolor=colors[k],
                 linewidth=1,
             )
             transform = (
@@ -231,18 +255,6 @@ class BenchmarkClustering:
 
     def plot_clusters(self, show_probe=True):
 
-        from spikeinterface.widgets import get_unit_colors
-        
-        def make_color_vec(sorting, labels):
-            colors = get_unit_colors(sorting)
-            
-            color_vec = np.zeros((len(labels), 4))
-            for unit_ind, unit_id in enumerate(sorting.unit_ids):
-                mask = labels == unit_ind
-                color_vec[mask] = colors[unit_id]
-            return color_vec
-
-
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
         fig.suptitle(f'Clustering results with {self.method}')
         ax = axs[0]
@@ -250,8 +262,7 @@ class BenchmarkClustering:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        colors = make_color_vec(self.gt_sorting, self.gt_labels)
-        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'], self.gt_labels, colors, s=1, alpha=0.5, ax=ax)
+        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'], self.gt_sorting, s=1, alpha=0.5, ax=ax)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.set_xlabel('x')
@@ -262,8 +273,7 @@ class BenchmarkClustering:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        colors = make_color_vec(self.sliced_gt_sorting, self.sliced_gt_labels)
-        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], self.sliced_gt_labels, colors, s=1, alpha=0.5, ax=ax)
+        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], self.sliced_gt_sorting, s=1, alpha=0.5, ax=ax)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_xlabel('x')
@@ -273,10 +283,8 @@ class BenchmarkClustering:
         ax.set_title('Found clusters')
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
-        colors = make_color_vec(self.clustering, self.selected_peaks_labels)
-        self._scatter_clusters(self.positions['x'], self.positions['y'], self.selected_peaks_labels, colors, s=1, alpha=0.5, ax=ax)
-        #ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
-        #ax.scatter(self.positions['x'][~self.noise], self.positions['y'][~self.noise], c=make_color_vec(self.clustering, self.selected_peaks_labels[~self.noise]), s=1, alpha=0.5)
+        ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
+        self._scatter_clusters(self.positions['x'][~self.noise], self.positions['y'][~self.noise], self.clustering, s=1, alpha=0.5, ax=ax)
         
         ax.set_xlabel('x')
         ax.set_xlim(xlim)
@@ -284,8 +292,7 @@ class BenchmarkClustering:
         ax.set_yticks([], [])
 
 
-    def plot_statistics(self, metric='cosine'):
-
+    def plot_statistics(self, metric='cosine', annotations=True):
 
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
         
@@ -325,25 +332,40 @@ class BenchmarkClustering:
         ax.plot(metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]], markersize=10, marker='.', ls='', c='k', label='Cluster Found')
         ax.plot(metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]], markersize=10, marker='.', ls='', c='r', label='Cluster missed')
 
+        for l,x,y in zip(unit_ids1[:len(inds_2)], metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]]):
+            ax.annotate(l, (x, y))
+
+        for l,x,y in zip(unit_ids1[len(inds_2):], metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]]):
+            ax.annotate(l, (x, y),c='r')
+
         ax.legend()
-        ax.set_xlabel('snr')
-        ax.set_ylabel('# spikes')
-
-
+        ax.set_xlabel('template snr')
+        ax.set_ylabel('nb spikes')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
 
         ax = axs[0, 2]
         im = ax.imshow(distances, aspect='auto')
         ax.set_title(metric)
         fig.colorbar(im, ax=ax)
 
+        ax.set_yticks(np.arange(0, len(scores.index)))
+        ax.set_yticklabels(scores.index, fontsize=8)
+
         res = []
-        nb_spikes = {'gt' : [], 'clustering' : []}
+        nb_spikes = []
+        energy = []
+        nb_channels = []
+
+        from spikeinterface.toolkit import get_noise_levels 
+        noise_levels = get_noise_levels(self.recording_f)
 
         for found, real in zip(unit_ids2, unit_ids1):
             wfs = self.waveforms['clustering'].get_waveforms(found)
             wfs_real = self.waveforms['gt'].get_waveforms(real)
             template = self.waveforms['clustering'].get_template(found)
             template_real = self.waveforms['gt'].get_template(real)
+            nb_channels += [np.sum(np.std(template_real, 0) < noise_levels)]
 
             wfs = wfs.reshape(len(wfs), -1)
             template = template.reshape(template.size, 1).T
@@ -354,32 +376,50 @@ class BenchmarkClustering:
             else:
                 dist = sklearn.metrics.pairwise_distances(template, wfs, metric).flatten().tolist()
             res += dist
-            nb_spikes['gt'] += [self.sliced_gt_sorting.get_unit_spike_train(real).size]
+            nb_spikes += [self.sliced_gt_sorting.get_unit_spike_train(real).size]
+            energy += [np.linalg.norm(template_real)]
+
 
         ax = axs[1, 0]
         res = np.array(res)
+        nb_spikes = np.array(nb_spikes)
+        nb_channels = np.array(nb_channels)
+        energy = np.array(energy)
 
-        nb_spikes = nb_spikes['gt']
         snrs = metrics['snr'][unit_ids1][inds_1[:len(inds_2)]]
         cm = ax.scatter(snrs, nb_spikes, c=res)
-        ax.set_xlabel('snr')
-        ax.set_ylabel('nb_spikes')
+        ax.set_xlabel('template snr')
+        ax.set_ylabel('nb spikes')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         cb = fig.colorbar(cm, ax=ax)
         cb.set_label(metric)
 
-        # ax = axs[1, 1]
-        # nb_spikes = np.array(nb_spikes['gt'])
-        # ax.plot(nb_spikes, res, markersize=10, marker='.', ls='')
+        for l,x,y in zip(unit_ids1[:len(inds_2)], snrs, nb_spikes):
+            ax.annotate(l, (x, y))
 
-        # ax.set_xlabel('nb spikes')
-        # ax.set_ylabel(metric)
+        ax = axs[1, 1]
+        xaxis = energy[inds_1[:len(inds_2)]]
+        yaxis = nb_channels[inds_1[:len(inds_2)]]
+        cm = ax.scatter(xaxis, yaxis, c=res)
+        ax.set_xlabel('template energy')
+        ax.set_ylabel('nb channels')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        cb = fig.colorbar(cm, ax=ax)
+        cb.set_label(metric)
+
+        for l,x,y in zip(unit_ids1[:len(inds_2)], xaxis, yaxis):
+            ax.annotate(l, (x, y))
 
 
         ax = axs[1, 2]
         for performance_name in ['accuracy', 'recall', 'precision']:
             perf = self.comp.get_performance()[performance_name]
             ax.plot(metrics['snr'], perf, markersize=10, marker='.', ls='', label=performance_name)
-        ax.set_xlabel('snr')
+        ax.set_xlabel('template snr')
         ax.set_ylabel('performance')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         ax.legend()
         plt.tight_layout()
