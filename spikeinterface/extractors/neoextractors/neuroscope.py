@@ -200,6 +200,8 @@ class NeuroScopeSortingExtractor(BaseSorting):
         self.add_sorting_segment(
             NeuroScopeSortingSegment(all_unit_ids, all_spiketrains))
 
+        self.extra_requirements.append('lxml')
+
         # set "group" property based on shank ids
         if len(all_unit_shank_ids) > 0:
             self.set_property("group", all_unit_shank_ids)
