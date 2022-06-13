@@ -1,4 +1,6 @@
 from .widget_list import *
+from .utils import get_unit_colors, array_to_image
+
 
 try:
     import matplotlib
