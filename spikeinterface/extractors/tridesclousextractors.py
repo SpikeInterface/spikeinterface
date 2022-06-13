@@ -1,22 +1,23 @@
 from pathlib import Path
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
 
+try:
+    import tridesclous as tdc
+    HAVE_TDC = True
+except ImportError:
+    HAVE_TDC = False
 
 class TridesclousSortingExtractor(BaseSorting):
     extractor_name = 'TridesclousSortingExtractor'
-    installed = False
+    installed = HAVE_TDC
     is_writable = False
     mode = 'folder'
     installation_mesg = "To use the TridesclousSortingExtractor install tridesclous: \n\n pip install tridesclous\n\n"  # error message when not installed
 
     def __init__(self, folder_path, chan_grp=None):
-        try:
-            import tridesclous as tdc
-            HAVE_TDC = True
-        except ImportError:
-            HAVE_TDC = False
-        assert HAVE_TDC, self.installation_mesg
+        assert self.installed, self.installation_mesg
         tdc_folder = Path(folder_path)
 
         dataio = tdc.DataIO(str(tdc_folder))
@@ -41,6 +42,7 @@ class TridesclousSortingExtractor(BaseSorting):
             self.add_sorting_segment(TridesclousSortingSegment(all_spikes))
 
         self._kwargs = {'folder_path': str(Path(folder_path).absolute()), 'chan_grp': chan_grp}
+        self.extra_requirements.append('tridesclous')
 
 
 class TridesclousSortingSegment(BaseSortingSegment):
@@ -59,9 +61,4 @@ class TridesclousSortingSegment(BaseSortingSegment):
         return spike_times.copy()
 
 
-def read_tridesclous(*args, **kwargs):
-    sorting = TridesclousSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_tridesclous.__doc__ = TridesclousSortingExtractor.__doc__
+read_tridesclous = define_function_from_class(source_class=TridesclousSortingExtractor, name="read_tridesclous")
