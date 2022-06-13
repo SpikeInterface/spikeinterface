@@ -1,6 +1,6 @@
 """
-Explore sorters weaknesses with with ground-truth comparison
-=============================================================
+Explore sorters weaknesses with ground-truth comparison
+=======================================================
 
 Here a synthetic dataset will demonstrate some weaknesses.
 

@@ -1,5 +1,12 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
+try:
+    import nixio
+    HAVE_NIX = True
+except ModuleNotFoundError:
+    HAVE_NIX = False
 
 class NixRecordingExtractor(NeoBaseRecordingExtractor):
     """
@@ -20,12 +27,9 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
 
+        self.extra_requirements.append('nixio')
+
         self._kwargs = dict(file_path=str(file_path), stream_id=stream_id)
 
 
-def read_nix(*args, **kwargs):
-    recording = NixRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_nix.__doc__ = NixRecordingExtractor.__doc__
+read_nix = define_function_from_class(source_class=NixRecordingExtractor, name="read_nix")

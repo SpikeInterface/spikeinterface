@@ -1,8 +1,9 @@
 import numpy as np
 from pathlib import Path
 
-from spikeinterface.core import (BaseRecording, BaseSorting,
-                                 BaseRecordingSegment, BaseSortingSegment)
+from spikeinterface.core import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
+
 
 try:
     import h5py
@@ -66,6 +67,8 @@ class CombinatoSortingExtractor(BaseSorting):
         self.set_property('artifact', np.array([metadata[u]['group_type'] == -1 for u in range(unit_counter)]))
         self._kwargs = {'folder_path': str(folder_path), 'user': user, 'det_sign': det_sign}
 
+        self.extra_requirements.append('h5py')
+
 
 class CombinatoSortingSegment(BaseSortingSegment):
     def __init__(self, spiketrains):
@@ -82,9 +85,4 @@ class CombinatoSortingSegment(BaseSortingSegment):
         return times
 
 
-def read_combinato(*args, **kwargs):
-    sorting = CombinatoSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_combinato.__doc__ = CombinatoSortingExtractor.__doc__
+read_combinato = define_function_from_class(source_class=CombinatoSortingExtractor, name="read_combinato")

@@ -5,6 +5,7 @@ from .filter import (FilterRecording, filter,
 from .normalize_scale import (
     NormalizeByQuantileRecording, normalize_by_quantile,
     ScaleRecording, scale,
+    ZScoreRecording, zscore,
     CenterRecording, center)
 from .whiten import WhitenRecording, whiten
 from .rectify import RectifyRecording, rectify
@@ -27,6 +28,7 @@ preprocessers_full_list = [
     NormalizeByQuantileRecording,
     ScaleRecording,
     CenterRecording,
+    ZScoreRecording,
 
     # decorrelation stuff
     WhitenRecording,

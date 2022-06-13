@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Union, Optional
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 try:
@@ -22,7 +24,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading data from neuroscope
     Ref: http://neuroscope.sourceforge.net
 
-    Based on neo.rawio.NeuroScopeRawIO
+    Based on :py:class:`neo.rawio.NeuroScopeRawIO`
 
     Parameters
     ----------
@@ -198,6 +200,8 @@ class NeuroScopeSortingExtractor(BaseSorting):
         self.add_sorting_segment(
             NeuroScopeSortingSegment(all_unit_ids, all_spiketrains))
 
+        self.extra_requirements.append('lxml')
+
         # set "group" property based on shank ids
         if len(all_unit_shank_ids) > 0:
             self.set_property("group", all_unit_shank_ids)
@@ -258,20 +262,10 @@ def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType
     return xml_file_path
 
 
-def read_neuroscope_recording(*args, **kwargs):
-    recording = NeuroScopeRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_neuroscope_recording.__doc__ = NeuroScopeRecordingExtractor.__doc__
-
-
-def read_neuroscope_sorting(*args, **kwargs):
-    sorting = NeuroScopeSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_neuroscope_sorting.__doc__ = NeuroScopeSortingExtractor.__doc__
+read_neuroscope_recording = define_function_from_class(source_class=NeuroScopeRecordingExtractor, 
+                                                   name="read_neuroscope_recording")
+read_neuroscope_sorting = define_function_from_class(source_class=NeuroScopeSortingExtractor, 
+                                                 name="read_neuroscope_sorting")
 
 
 def read_neuroscope(file_path, stream_id=None, keep_mua_units=False,
