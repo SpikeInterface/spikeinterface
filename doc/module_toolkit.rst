@@ -1,13 +1,7 @@
-Toolkit module
-==============
+Preprocessing module
+====================
 
-The :py:mod:`spiketinterface.toolkit` module includes tools to process SI objects throughout your analysis.
-
-
-Preprocessing
--------------
-
-The :py:mod:`~spikeinterface.toolkit.preprocessing` sub-module includes preprocessing steps to apply before spike
+The :py:mod:`~spikeinterface.toolkit.preprocessing` module includes preprocessing steps to apply before spike
 sorting. Preprocessors are *lazy*, meaning that no computation is performed until it is required (usually at the
 spike sorting step). This enables one to build preprocessing chains to be applied in sequence to a
 :code:`RecordingExtractor` object.
@@ -41,7 +35,7 @@ CMR and save it to a binary file in the "preprocessed" folder. The :code:`record
 Postprocessing module
 =====================
 
-After spike sorting, we can use the :py:mod:`~spikeinterface.toolkit.postprocessing` sub-module to further post-process
+After spike sorting, we can use the :py:mod:`~spikeinterface.toolkit.postprocessing` module to further post-process
 the spike sorting output. Most of the post-processing functions require a
 :py:class:`~spikeinterface.core.WaveformExtractor` as input. Available postprocessing tools are:
 
@@ -77,6 +71,7 @@ For more details about each metric and it's availability and use within SpikeInt
 .. toctree::
     :maxdepth: 1
     :glob:
+    quality_metrics/*
 
 Quality metrics allows to quantitatively assess to *goodness* of a spike sorting output. The
 :py:mod:`~spikeinterface.toolkit.qualitymetrics` sub-module includes functions to compute a large variety of available
