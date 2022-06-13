@@ -3,6 +3,7 @@ import numpy as np
 from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import pandas as pd
@@ -44,26 +45,7 @@ def get_electrical_series(nwbfile, electrical_series_name):
 
 
 class NwbRecordingExtractor(BaseRecording):
-    """
-    Load an NWBFile as a RecordingExtractor.
 
-    Parameters
-    ----------
-    file_path: str or Path
-        Path to NWB file
-    electrical_series_name: str, optional
-        The name of the ElectricalSeries (if multiple ElectricalSeries are present)
-    load_time_vector: bool
-        If True, the time vector is loaded to the recording object (default False)
-    samples_for_rate_estimation: int
-        If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
-        to estimate the rate (default 100000)
-
-    Returns
-    -------
-    recording: NwbRecordingExtractor
-        The recording extractor for the NWB file
-    """
     extractor_name = 'NwbRecording'
     has_default_locations = True
     has_unscaled = False
@@ -73,12 +55,55 @@ class NwbRecordingExtractor(BaseRecording):
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
     def __init__(self, file_path: PathType, electrical_series_name: str = None, load_time_vector: bool = False,
-                 samples_for_rate_estimation: int = 100000):
+                 samples_for_rate_estimation: int = 100000, driver=None):
+        """
+        Load an NWBFile as a RecordingExtractor.
+
+        Parameters
+        ----------
+        file_path: str or Path
+            Path to NWB file or s3 url
+        electrical_series_name: str, optional
+            The name of the ElectricalSeries (if multiple ElectricalSeries are present)
+        load_time_vector: bool, optional
+            If True, the time vector is loaded to the recording object (default False)
+        samples_for_rate_estimation: int, optional
+            If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
+            to estimate the rate (default 100000)
+        driver: str, optional
+            Specify the HDF5 driver. To read from an S3 url, set to "ros3".
+
+        Returns
+        -------
+        recording: NwbRecordingExtractor
+            The recording extractor for the NWB file
+
+        Examples
+        --------
+        run on local file
+
+        >>> from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
+        >>> rec = NwbRecordingExtractor(s3_url, driver="ros3")
+
+        run on s3 URL from the DANDI Archive
+
+        >>> from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
+        >>> from dandi.dandiapi import DandiAPIClient
+        >>>
+        >>> # get s3 path
+        >>> dandiset_id, filepath = "101116", "sub-001/sub-001_ecephys.nwb"
+        >>> with DandiAPIClient("https://api-staging.dandiarchive.org/api") as client:
+        >>>     asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
+        >>>     s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
+        >>>
+        >>> rec = NwbRecordingExtractor(s3_url, driver="ros3")
+        """
+        self.driver = driver
         check_nwb_install()
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
 
-        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
+        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver=driver)
         self._nwbfile = self.io.read()
         self._es = get_electrical_series(
             self._nwbfile, self._electrical_series_name)
@@ -134,6 +159,8 @@ class NwbRecordingExtractor(BaseRecording):
                                                 electrical_series_name=self._electrical_series_name,
                                                 num_frames=num_frames, times_kwargs=times_kwargs)
         self.add_recording_segment(recording_segment)
+
+        self.extra_requirements.extend(['pandas', 'pynwb', 'hdmf'])
 
         # If gains are not 1, set has_scaled to True
         if np.any(gains != 1):
@@ -193,8 +220,9 @@ class NwbRecordingExtractor(BaseRecording):
                 self.set_channel_groups(groups)
             else:
                 self.set_property(prop_name, values)
-
-        self._kwargs = {'file_path': str(Path(file_path).absolute()),
+        if driver != "ros3":
+            file_path = str(Path(file_path).absolute())
+        self._kwargs = {'file_path': file_path,
                         'electrical_series_name': self._electrical_series_name,
                         'load_time_vector': load_time_vector,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
@@ -255,6 +283,8 @@ class NwbSortingExtractor(BaseSorting):
     samples_for_rate_estimation: int, optional
         If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
         to estimate the rate (default 100000)
+    driver: str, optional
+        Specify the HDF5 driver. To read from an S3 url, set to "ros3".
 
     Returns
     -------
@@ -268,12 +298,13 @@ class NwbSortingExtractor(BaseSorting):
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
     def __init__(self, file_path: PathType, electrical_series_name: str = None, sampling_frequency: float = None,
-                 samples_for_rate_estimation: int = 100000):
+                 samples_for_rate_estimation: int = 100000, driver=None):
         check_nwb_install()
+        self.driver = driver
         self._file_path = str(file_path)
         self._electrical_series_name = electrical_series_name
 
-        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
+        self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver=driver)
         self._nwbfile = self.io.read()
         timestamps = None
         if sampling_frequency is None:
@@ -318,7 +349,9 @@ class NwbSortingExtractor(BaseSorting):
         for prop_name, values in properties.items():
             self.set_property(prop_name, np.array(values))
 
-        self._kwargs = {'file_path': str(Path(file_path).absolute()),
+        if self.driver != "ros3":
+            file_path = str(Path(file_path).absolute())
+        self._kwargs = {'file_path': file_path,
                         'electrical_series_name': self._electrical_series_name,
                         'sampling_frequency': sampling_frequency,
                         'samples_for_rate_estimation': samples_for_rate_estimation}
@@ -350,20 +383,8 @@ class NwbSortingSegment(BaseSortingSegment):
         return frames[(frames > start_frame) & (frames < end_frame)]
 
 
-def read_nwb_recording(*args, **kwargs):
-    recording = NwbRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_nwb_recording.__doc__ = NwbRecordingExtractor.__doc__
-
-
-def read_nwb_sorting(*args, **kwargs):
-    sorting = NwbSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_nwb_sorting.__doc__ = NwbSortingExtractor.__doc__
+read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
+read_nwb_sorting = define_function_from_class(source_class=NwbSortingExtractor, name="read_nwb_sorting")
 
 
 def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None):

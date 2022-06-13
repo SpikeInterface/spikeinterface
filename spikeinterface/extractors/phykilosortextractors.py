@@ -2,6 +2,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment, read_python)
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
@@ -121,6 +122,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             unit_ids = cluster_info["cluster_id"].values
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        self.extra_requirements.append('pandas')
 
         del cluster_info["cluster_id"]
         for prop_name in cluster_info.columns:
@@ -191,17 +193,5 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
                         'keep_good_only': keep_good_only}
 
 
-def read_phy(*args, **kwargs):
-    sorting = PhySortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_phy.__doc__ = PhySortingExtractor.__doc__
-
-
-def read_kilosort(*args, **kwargs):
-    sorting = KiloSortSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_kilosort.__doc__ = KiloSortSortingExtractor.__doc__
+read_phy = define_function_from_class(source_class=PhySortingExtractor, name="read_phy")
+read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")

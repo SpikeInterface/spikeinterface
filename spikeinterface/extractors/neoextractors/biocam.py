@@ -1,4 +1,7 @@
 import probeinterface as pi
+
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -44,9 +47,4 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update( {'file_path': str(file_path), 'mea_pitch':mea_pitch, 'electrode_width':electrode_width})
 
 
-def read_biocam(*args, **kwargs):
-    recording = BiocamRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_biocam.__doc__ = BiocamRecordingExtractor.__doc__
+read_biocam = define_function_from_class(source_class=BiocamRecordingExtractor, name="read_biocam")

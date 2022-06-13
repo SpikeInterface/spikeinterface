@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.interpolate
 
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
@@ -18,10 +20,12 @@ class RemoveArtifactsRecording(BasePreprocessor):
         The recording extractor to remove artifacts from
     list_triggers: list of list
         One list per segment of int with the stimulation trigger frames
-    ms_before: float
-        Time interval in ms to remove before the trigger events
-    ms_after: float
-        Time interval in ms to remove after the trigger events
+    ms_before: float or None
+        Time interval in ms to remove before the trigger events. 
+        If None, then also ms_after must be None and a single sample is removed
+    ms_after: float or None
+        Time interval in ms to remove after the trigger events.
+        If None, then also ms_before must be None and a single sample is removed
     mode: str
         Determines what artifacts are replaced by. Can be one of the following:
             
@@ -69,9 +73,17 @@ class RemoveArtifactsRecording(BasePreprocessor):
         assert len(list_triggers) == num_seg
         assert all(isinstance(list_triggers[i], list) for i in range(num_seg))
         assert mode in ('zeros', 'linear', 'cubic')
-
+        if ms_before is None:
+            assert ms_after is None, "To remove a single sample, set both ms_before and ms_after to None"
+        else:
+            ms_before = float(ms_before)
+            ms_after = float(ms_after)
+        
         sf = recording.get_sampling_frequency()
-        pad = [int(ms_before * sf / 1000), int(ms_after * sf / 1000)]
+        if ms_before is not None:
+            pad = [int(ms_before * sf / 1000), int(ms_after * sf / 1000)]
+        else:
+            pad = None
 
         fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
         fit_sample_range = fit_sample_interval * 2 + 1
@@ -85,7 +97,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
 
         list_triggers_int = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
         self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers_int,
-                            ms_before=float(ms_before), ms_after=float(ms_after), mode=mode,
+                            ms_before=ms_before, ms_after=ms_after, mode=mode,
                             fit_sample_spacing=fit_sample_spacing)
 
 
@@ -107,24 +119,31 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        triggers = self.triggers[(self.triggers > start_frame) & (self.triggers < end_frame)] - start_frame
+        triggers = self.triggers[(self.triggers >= start_frame) & (self.triggers < end_frame)] - start_frame
 
         pad = self.pad
 
         if self.mode == 'zeros':
             for trig in triggers:
-                if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
-                    traces[trig - pad[0]:trig + pad[1], :] = 0
-                elif trig - pad[0] <= 0 and trig + pad[1] >= end_frame - start_frame:
-                    traces[:] = 0
-                elif trig - pad[0] <= 0:
-                    traces[:trig + pad[1], :] = 0
-                elif trig + pad[1] >= end_frame - start_frame:
-                    traces[trig - pad[0]:, :] = 0
+                if pad is None:
+                    traces[trig, :] = 0
+                else:
+                    if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
+                        traces[trig - pad[0]:trig + pad[1] + 1, :] = 0
+                    elif trig - pad[0] <= 0 and trig + pad[1] >= end_frame - start_frame:
+                        traces[:] = 0
+                    elif trig - pad[0] <= 0:
+                        traces[:trig + pad[1], :] = 0
+                    elif trig + pad[1] >= end_frame - start_frame:
+                        traces[trig - pad[0]:, :] = 0
         else:
             for trig in triggers:
-                pre_data_end_idx = trig - pad[0] - 1
-                post_data_start_idx = trig + pad[1] + 1
+                if pad is None:
+                    pre_data_end_idx = trig - 1
+                    post_data_start_idx = trig + 1
+                else:
+                    pre_data_end_idx = trig - pad[0] - 1
+                    post_data_start_idx = trig + pad[1] + 1
 
                 # Generate fit points from the sample points determined
                 #  pre_idx = pre_data_end_idx - self.rev_fit_samples + 1
@@ -207,8 +226,4 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-def remove_artifacts(*args, **kwargs):
-    return RemoveArtifactsRecording(*args, **kwargs)
-
-
-remove_artifacts.__doc__ = RemoveArtifactsRecording.__doc__
+remove_artifacts = define_function_from_class(source_class=RemoveArtifactsRecording, name="remove_artifacts")

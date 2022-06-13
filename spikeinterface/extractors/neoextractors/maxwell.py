@@ -1,5 +1,7 @@
 from spikeinterface import BaseEvent, BaseEventSegment
 
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor
 import probeinterface as pi
 import numpy as np
@@ -10,7 +12,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading data from Maxwell device.
     It handle MaxOne (old and new format) and MaxTwo.
     
-    Based on neo.rawio.IntanRawIO
+    Based on :py:class:`neo.rawio.IntanRawIO`
     
     Parameters
     ----------
@@ -33,6 +35,8 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=False, **neo_kwargs)
 
+        self.extra_requirements.append('h5py')
+
         # well_name is stream_id
         well_name = self.stream_id
         # rec_name auto set by neo
@@ -41,14 +45,6 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_probe(probe, in_place=True)
         self.set_property("electrode", self.get_property("contact_vector")["electrode"])
         self._kwargs.update(dict(file_path=str(file_path), rec_name=rec_name))
-
-
-def read_maxwell(*args, **kwargs):
-    recording = MaxwellRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_maxwell.__doc__ = MaxwellRecordingExtractor.__doc__
 
 
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
@@ -112,9 +108,5 @@ class MaxwellEventSegment(BaseEventSegment):
         return event
 
 
-def read_maxwell_event(*args, **kwargs):
-    event = MaxwellEventExtractor(*args, **kwargs)
-    return event
-
-
-read_maxwell_event.__doc__ = MaxwellEventExtractor.__doc__
+read_maxwell = define_function_from_class(source_class=MaxwellRecordingExtractor, name="read_maxwell")
+read_maxwell_event = define_function_from_class(source_class=MaxwellEventExtractor, name="read_maxwell_event")

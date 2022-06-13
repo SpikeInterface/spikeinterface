@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -24,9 +26,4 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update(dict(file_path=str(file_path), stream_id=stream_id))
 
 
-def read_spikegadgets(*args, **kwargs):
-    recording = SpikeGadgetsRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_spikegadgets.__doc__ = SpikeGadgetsRecordingExtractor.__doc__
+read_spikegadgets = define_function_from_class(source_class=SpikeGadgetsRecordingExtractor, name="read_spikegadgets")

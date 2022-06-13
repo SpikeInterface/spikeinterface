@@ -3,6 +3,8 @@ import numpy as np
 
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .matlabhelpers import MatlabHelper
 
 
@@ -10,6 +12,21 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
     extractor_name = "HDSortSortingExtractor"
 
     def __init__(self, file_path, keep_good_only=True):
+        """
+        Class for reading HDSort format.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            Path to HDSort mat file
+        keep_good_only : bool, optional
+            Only keep good units (default True)
+
+        Returns
+        -------
+        extractor
+            HDSortSortingExtractor
+        """
         MatlabHelper.__init__(self, file_path)
 
         if not self._old_style_mat:
@@ -243,9 +260,4 @@ def _squeeze(arr):
     return arr
 
 
-def read_hdsort(*args, **kwargs):
-    sorting = HDSortSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_hdsort.__doc__ = HDSortSortingExtractor.__doc__
+read_hdsort = define_function_from_class(source_class=HDSortSortingExtractor, name="read_hdsort")

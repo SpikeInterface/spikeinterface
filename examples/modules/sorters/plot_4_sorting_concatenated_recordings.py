@@ -7,8 +7,9 @@ In these cases, since the underlying spiking activity can be assumed to be the s
 recordings can be concatenated. This notebook shows how to concatenate the recordings before spike sorting and how to
 split the sorted output based on the concatenation.
 
-Note that some sorters (tridesclous, ...) handle directly multi segment paradigm, in that case we will use the `append_recordings()` function.
-Many sorters do not handle multi segment, in that case we will use the `concatenate_recordings()` function.
+Note that some sorters (tridesclous, ...) handle directly multi segment paradigm, in that case we will use the
+:py:func:`~spikeinterface.core.append_recordings()` function. Many sorters do not handle multi segment, in that case
+we will use the :py:func:`~spikeinterface.core.concatenate_recordings()` function.
 
 
 See also "Append and/or concatenate segments" in core tutorials.
@@ -21,9 +22,6 @@ import spikeinterface.full as si
 #  When performing an experiment with multiple consecutive recordings, it can be a good idea to concatenate the single
 # recordings, as this can improve the spike sorting performance and it doesn't require to track the neurons over the
 # different recordings.
-#  
-# This can be done very easily in SpikeInterface using a combination of the :code:`MultiRecordingTimeExtractor` and the
-# :code:`SubSortingExtractor` objects.
 #
 # Let's create a toy example with 4 channels (the :code:`dumpable=True` dumps the extractors to a file, which is
 # required for parallel sorting):

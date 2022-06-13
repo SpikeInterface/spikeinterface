@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -5,7 +7,7 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading smr/smrw CED file.
 
-    Based on neo.rawio.CedRawIO / sonpy
+    Based on :py:class:`neo.rawio.CedRawIO` / sonpy
     
     Alternative to read_spike2 which do not handle smrx
     
@@ -25,11 +27,8 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
         self._kwargs.update(dict(file_path=str(file_path)))
+        self.extra_requirements.append('sonpy')
 
 
-def read_ced(*args, **kwargs):
-    recording = CedRecordingExtractor(*args, **kwargs)
-    return recording
 
-
-read_ced.__doc__ = CedRecordingExtractor.__doc__
+read_ced = define_function_from_class(source_class=CedRecordingExtractor, name="read_ced")

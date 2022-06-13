@@ -1,3 +1,4 @@
+from subprocess import check_output
 from typing import List, Union
 
 import numpy as np
@@ -19,3 +20,14 @@ def get_git_commit(git_folder, shorten=True):
     except:
         commit = None
     return commit
+
+
+def has_nvidia():
+    """
+    Checks if the machine has nvidia capability.
+    """
+    try:
+        check_output('nvidia-smi')
+        return True
+    except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
+        return False

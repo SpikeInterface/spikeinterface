@@ -1,6 +1,5 @@
-from typing import List, Union
+from typing import Iterable, List, Union
 from pathlib import Path
-import warnings
 
 import numpy as np
 
@@ -92,7 +91,7 @@ class BaseRecording(BaseExtractor):
                    segment_index: Union[int, None] = None,
                    start_frame: Union[int, None] = None,
                    end_frame: Union[int, None] = None,
-                   channel_ids: Union[List, None] = None,
+                   channel_ids: Union[Iterable, None] = None,
                    order: Union[str, None] = None,
                    return_scaled=False,
                    ):
@@ -162,7 +161,7 @@ class BaseRecording(BaseExtractor):
         rs.time_vector = times.astype('float64')
 
         if with_warning:
-            warnings.warn('Setting times with Recording.set_times() is not recommended because '
+            warn('Setting times with Recording.set_times() is not recommended because '
                           'times are not always propagated to across preprocessing'
                           'Use use this carefully!')
 
@@ -612,7 +611,7 @@ class BaseRecording(BaseExtractor):
     
     def remove_channels(self, remove_channel_ids):
         from spikeinterface import ChannelSliceRecording
-        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, removed_channel_ids)]
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
