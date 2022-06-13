@@ -4,10 +4,10 @@ Handling probe information
 
 In order to properly spike sort, you may need to load information related to the probe you are using.
 
-:code:`spikeinterface` internally uses `probeinterface <https://probeinterface.readthedocs.io/>`_ to handle
-probe or probe groups for recordings.
+SpikeInterface internally uses :probeinterface:`ProbeInterface <>` to handle probe or probe groups for recordings.
 
-Depending the dataset the `Probe` object can be already included or you needs to be set manually.
+Depending on the dataset, the :py:class:`~probeinterface.Probe` object can be already included or needs to be set
+manually.
 
 Here's how!
 '''

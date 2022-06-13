@@ -35,6 +35,8 @@ class RecordingCommonTestSuite(CommonTestSuite):
             rec = self.ExtractorClass(self.get_full_path(path), **kwargs)
             # print(rec)
 
+            assert hasattr(rec, 'extra_requirements')
+
             num_seg = rec.get_num_segments()
             num_chans = rec.get_num_channels()
             dtype = rec.get_dtype()

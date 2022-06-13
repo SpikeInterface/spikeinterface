@@ -23,5 +23,9 @@ from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculato
 
 from .correlograms import compute_correlograms
 
-
 from .unit_localization import localize_units, compute_center_of_mass
+
+# curation utilities
+from .mergeunitssorting import MergeUnitsSorting
+from .splitunitsorting import SplitUnitSorting
+from .curationsorting import CurationSorting

@@ -17,6 +17,9 @@ zarr
 # git+https://github.com/numba/numba.git
 # hdbscan
 
+# CurtationSorting
+networkx
+
 # neo is from master because of several IO (spikeglx, ...)
 git+https://github.com/NeuralEnsemble/python-neo.git
 

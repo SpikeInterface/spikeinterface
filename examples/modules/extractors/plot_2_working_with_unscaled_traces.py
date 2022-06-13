@@ -3,7 +3,7 @@ Working with unscaled traces
 ============================
 
 Some file formats store data in convenient types that require offsetting and scaling in order to convert the
-traces to uV. This example shows how to work with unscaled and scaled traces int :code:`spikeinterface.extractors`
+traces to uV. This example shows how to work with unscaled and scaled traces int :py:mod:`spikeinterface.extractors`
 module.
 
 '''
@@ -22,7 +22,7 @@ traces = 512 + 50 * np.random.randn(10 * sampling_frequency, 4)
 traces = traces.astype("uint16")
 
 ###############################################################################
-# Let's now instantiate a :code:`NumpyRecordingExtractor` with the traces we just created
+# Let's now instantiate a :py:class:`~spikeinterface.core.NumpyRecording` with the traces we just created
 
 recording = se.NumpyRecording([traces], sampling_frequency=sampling_frequency)
 print(f"Traces dtype: {recording.get_dtype()}")
