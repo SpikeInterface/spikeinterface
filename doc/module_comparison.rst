@@ -2,7 +2,7 @@ Comparison module
 =================
 
 
-SpikeInterface has a :comparison:`comparison` module that can be used for three distinct use cases:
+SpikeInterface has a :py:mod:`spikeinterface.comparison` module that can be used for three distinct use cases:
 
   1. compare a spike sorting output with a ground-truth dataset
   2. compare the output of two spike sorters (symmetric comparison)

@@ -22,12 +22,13 @@ from .utils import SpikeSortingError, ShellScript
 class BaseSorter:
     """Base Sorter object."""
 
-    sorter_name = ''  # convenience for reporting
+    sorter_name = ""  # convenience for reporting
     compiled_name = None
     SortingExtractor_Class = None  # convenience to get the extractor
     requires_locations = False
-    docker_requires_gpu = False
+    gpu_capability = 'not-supported'
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': True}
+    
     _default_params = {}
     _params_description = {}
     sorter_description = ""
@@ -289,6 +290,10 @@ class BaseSorter:
         if retcode != 0:
             return False
         return True
+    
+    @classmethod
+    def use_gpu(cls, params):
+        return cls.gpu_capability != 'not-supported'
 
     #############################################
 
