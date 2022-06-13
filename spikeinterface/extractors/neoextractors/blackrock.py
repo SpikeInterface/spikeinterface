@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
@@ -5,7 +7,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading neuralynx folder
     
-    Based on neo.rawio.NeuralynxRawIO
+    Based on :py:class:`neo.rawio.NeuralynxRawIO`
     
     Parameters
     ----------
@@ -25,9 +27,4 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update({'file_path': str(file_path)})
 
 
-def read_blackrock(*args, **kwargs):
-    recording = BlackrockRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_blackrock.__doc__ = BlackrockRecordingExtractor.__doc__
+read_blackrock = define_function_from_class(source_class=BlackrockRecordingExtractor, name="read_blackrock")

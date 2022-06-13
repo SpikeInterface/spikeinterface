@@ -24,6 +24,8 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
 
+        self.extra_requirements.append('mearec')
+
         probe = pi.read_mearec(file_path)
         self.set_probe(probe, in_place=True)
         self.annotate(is_filtered=True)

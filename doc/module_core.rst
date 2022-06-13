@@ -4,8 +4,7 @@ Core module
 Overview
 --------
 
-The :code:`core` module provides the basic classes and tools of the SpikeInterface ecosystem.
-
+The :py:mod:`spikeinterface.core` module provides the basic classes and tools of the SpikeInterface ecosystem.
 
 Several Base classes are implemented here and inherited throughout the SI code-base.
 
@@ -15,7 +14,8 @@ All classes support multiple segments. Each segment is a contiguous piece of dat
 Recording
 ---------
 
-The :code:`BaseRecording` class serves as basis for all :code:`RecordingExtractors`.
+The :py:class:`~spikeinterface.core.BaseRecording` class serves as basis for all
+:code:`RecordingExtractors`.
 It represents an extracellular recording and has the following features:
 
 * retrieve raw and scaled traces from each segment
@@ -31,7 +31,7 @@ It represents an extracellular recording and has the following features:
 Sorting
 -------
 
-The :code:`BaseSorting` class serves as basis for all :code:`SortingExtractors`.
+The :py:class:`~spikeinterface.core.BaseSorting` class serves as basis for all :code:`SortingExtractors`.
 It represents a spike sorted output and has the following features:
 
 * retrieve spike trains for different units
@@ -45,7 +45,7 @@ It represents a spike sorted output and has the following features:
 Event
 -----
 
-The :code:`BaseEvent` class serves as basis for all :code:`Event` classes.
+The :py:class:`~spikeinterface.core.BaseEvent` class serves as basis for all :code:`Event` classes.
 It represents a events during the recording (e.g. TTL pulses) and has the following features:
 
 * retrieve events and/or epochs from files
@@ -55,7 +55,7 @@ It represents a events during the recording (e.g. TTL pulses) and has the follow
 WaveformExtractor
 -----------------
 
-The :code:`WaveformExtractor` class is the core of postprocessing a spike sorting output.
+The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core of postprocessing a spike sorting output.
 It combines a paired recording-sorting objects to extract waveforms.
 It allows to:
 
@@ -71,8 +71,9 @@ Saving and loading
 All SI objects hold full information about their history to endure provenance. Each object is in fact internally
 represented as a dictionary (:code:`si_object.to_dict()`) which can be used to reload the object from scratch.
 
-The :code:`save()` function allows to easily store SI objects to a folder on disk. :code:`Recording` objects are stored
-in binary (.raw) format  and :code:`Sorting` object in numpy (.npz) format. With the actual data, the :code:`save()`
+The :code:`save()` function allows to easily store SI objects to a folder on disk.
+:py:class:`~spikeinterface.core.BaseRecording` objects are stored in binary (.raw) format  and
+:py:class:`~spikeinterface.core.BaseSorting` object in numpy (.npz) format. With the actual data, the :code:`save()`
 function also stores the provenance dictionary and all the properties and annotations associated to the object.
 
 From a saved SI folder, an SI object can be reloaded with the :code:`si.load_extractor()` function.
@@ -83,5 +84,5 @@ This saving/loading features enables to store SI objects efficiently and to dist
 Parallel processing
 -------------------
 
-The :code:`core` module also contains the basic tools used throughout SI for parallel processing. To discover more
-about it, checkout the :py:class:`spikeinterface.core.ChunkRecordingExecutor` class.
+The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SI for parallel processing.
+To discover more about it, checkout the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class.

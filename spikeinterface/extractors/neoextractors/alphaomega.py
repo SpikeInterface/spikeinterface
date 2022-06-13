@@ -1,5 +1,5 @@
-"""
-"""
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
@@ -47,42 +47,5 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
         NeoBaseEventExtractor.__init__(self, **neo_kwargs)
 
 
-def read_alphaomega(folder_path, **kwargs):
-    """
-    Read AlphaOmega MPX files from folder
-
-    Parameters
-    ----------
-    folder_path: str or Path-like
-        The folder containing AlphaOmega recordings.
-    stream_id: str, optional
-        The stream to load. Can be `RAW` (default), `LFP`, `SPK`, `ACC`, `AI` or
-        `UD`
-    lsx_files: list of strings or None, optional
-        A list of listings files that refers to mpx files to load
-
-    Returns
-    -------
-    recording: AlphaOmegaRecordingExtractor
-    """
-    recording = AlphaOmegaRecordingExtractor(folder_path, **kwargs)
-    return recording
-
-
-def read_alphaomega_event(folder_path, **kwargs):
-    """
-    Read AlphaOmega events from folder
-
-    Parameters
-    ----------
-    folder_path: str or Path
-        path to AlphaOmega folder recordings
-    lsx_files: list of strings or None, optional
-        A list of listings files that refers to mpx files to load
-
-    Returns
-    -------
-    event: AlphaOmegaEventExtractor
-    """
-    event = AlphaOmegaEventExtractor(folder_path, **kwargs)
-    return event
+read_alphaomega = define_function_from_class(source_class=AlphaOmegaRecordingExtractor, name="read_alphaomega")
+read_alphaomega_event = define_function_from_class(source_class=AlphaOmegaEventExtractor, name="read_alphaomega_event")

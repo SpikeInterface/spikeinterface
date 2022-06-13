@@ -1,0 +1,37 @@
+name: S3 NWB Test
+on:
+  pull_request:
+    branches: [ master ]
+    types: [ synchronize, opened, reopened, ready_for_review ]
+
+jobs:
+  build-and-test:
+    name: Testing using ${{ matrix.os }} with ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest",]
+        python-version: ["3.9",]
+    steps:
+      - uses: s-weigand/setup-conda@v1
+        with:
+          update-conda: true
+          python-version: ${{ matrix.python-version }}
+          conda-channels: conda-forge
+      - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow --tags
+      - name: Install pytest
+        run: |
+          pip install pytest
+          pip install pytest-cov
+      - name: Install package
+        run: |
+          pip install -e .
+          pip install pynwb
+      - name: Uninstall h5py
+        run: pip uninstall -y h5py
+      - name: Install ROS3
+        run: conda install -c conda-forge h5py
+      - name: run tests
+        run: pytest spikeinterface/extractors/tests/test_nwb_s3_extractor.py

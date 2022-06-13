@@ -16,17 +16,19 @@ from joblib import Parallel, delayed
 
 from spikeinterface.core import load_extractor, BaseRecording
 from spikeinterface.core.core_tools import check_json
-from .utils import SpikeSortingError
+from .utils import SpikeSortingError, ShellScript
 
 
 class BaseSorter:
     """Base Sorter object."""
 
-    sorter_name = ''  # convenience for reporting
+    sorter_name = ""  # convenience for reporting
+    compiled_name = None
     SortingExtractor_Class = None  # convenience to get the extractor
     requires_locations = False
-    docker_requires_gpu = False
+    gpu_capability = 'not-supported'
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': True}
+    
     _default_params = {}
     _params_description = {}
     sorter_description = ""
@@ -260,6 +262,38 @@ class BaseSorter:
             # can be None when not dumpable
             sorting.register_recording(recording)
         return sorting
+
+    @classmethod
+    def check_compiled(cls):
+        """
+        Checks if the sorter is running inside an image with matlab-compiled version
+
+        Returns
+        -------
+        is_compiled: bool
+            Boolean indicating if a bash command for cls.compiled_name exists or not
+        """
+        if cls.compiled_name is None:
+            return False
+
+        shell_cmd = f'''
+        #!/bin/bash
+        if ! [ -x "$(command -v {cls.compiled_name})" ]; then
+            echo 'Error: {cls.compiled_name} is not installed.' >&2
+            exit 1
+        fi
+        '''
+        shell_script = ShellScript(shell_cmd)
+        shell_script.start()
+        shell_script.wait()
+        retcode = shell_script.wait()
+        if retcode != 0:
+            return False
+        return True
+    
+    @classmethod
+    def use_gpu(cls, params):
+        return cls.gpu_capability != 'not-supported'
 
     #############################################
 

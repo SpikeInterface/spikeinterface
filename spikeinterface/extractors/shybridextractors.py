@@ -1,5 +1,6 @@
 from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording
+from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
+
 from probeinterface import read_prb, write_prb
 
 import json
@@ -58,6 +59,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         probegroup = read_prb(params['probe'])
         self.set_probegroup(probegroup, in_place=True)
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
+        self.extra_requirements.extend(['hybridizer', 'pyyaml'])
 
     @staticmethod
     def write_recording(recording, save_path, initial_sorting_fn, dtype='float32', verbose=True,
@@ -134,6 +136,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
 
         self._kwargs = {'file_path': str(Path(file_path).absolute()), 'sampling_frequency': sampling_frequency,
                         'delimiter': delimiter}
+        self.extra_requirements.append('hybridizer')
 
     @staticmethod
     def write_sorting(sorting, save_path):
@@ -184,14 +187,8 @@ class SHYBRIDSortingSegment(BaseSortingSegment):
         return train[idxs]
 
 
-def read_shybrid_recording(file_path):
-    recording = SHYBRIDRecordingExtractor(file_path)
-    return recording
-
-
-def read_shybrid_sorting(file_path, sampling_frequency, delimiter=','):
-    sorting = SHYBRIDSortingExtractor(file_path, sampling_frequency, delimiter=',')
-    return sorting
+read_shybrid_recording = define_function_from_class(source_class=SHYBRIDRecordingExtractor, name="read_shybrid_recording")
+read_shybrid_sorting = define_function_from_class(source_class=SHYBRIDSortingExtractor, name="read_shybrid_sorting")
 
 
 class GeometryNotLoadedError(Exception):

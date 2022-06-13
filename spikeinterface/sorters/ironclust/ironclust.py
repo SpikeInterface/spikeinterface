@@ -26,40 +26,15 @@ def check_if_installed(ironclust_path: Union[str, None]):
         return False
 
 
-def check_compiled():
-    """
-    Checks if the sorter is running inside an image with matlab-compiled ironclust
-
-    Returns
-    -------
-    is_compiled: bool
-        Boolean indicating if a bash command p_ironclust exists or not
-
-    """
-    shell_cmd = '''
-    #!/bin/bash
-    if ! [ -x "$(command -v p_ironclust)" ]; then
-        echo 'Error: p_ironclust is not installed.' >&2
-        exit 1
-    fi
-    '''
-    shell_script = ShellScript(shell_cmd)
-    shell_script.start()
-    shell_script.wait()
-    retcode = shell_script.wait()
-    if retcode != 0:
-        return False
-    return True
-
-
 class IronClustSorter(BaseSorter):
     """IronClust Sorter object."""
 
     sorter_name: str = 'ironclust'
+    compiled_name: str = 'p_ironclust'
     ironclust_path: Union[str, None] = os.getenv('IRONCLUST_PATH', None)
 
     requires_locations = True
-    docker_requires_gpu = True
+    gpu_capability = 'nvidia-optional'
 
     _default_params = {
         'detect_sign': -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
@@ -150,13 +125,13 @@ class IronClustSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        if check_compiled():
+        if cls.check_compiled():
             return True
         return check_if_installed(cls.ironclust_path)
 
-    @staticmethod
-    def get_sorter_version():
-        if check_compiled():
+    @classmethod
+    def get_sorter_version(cls):
+        if cls.check_compiled():
             return 'compiled'
         version_filename = Path(os.environ["IRONCLUST_PATH"]) / 'matlab' / 'version.txt'
         if version_filename.is_file():
@@ -167,6 +142,10 @@ class IronClustSorter(BaseSorter):
                 version = d['version']
                 return version
         return 'unknown'
+    
+    @classmethod
+    def use_gpu(cls, params):
+        return params["fGpu"]
 
     @staticmethod
     def set_ironclust_path(ironclust_path: PathType):
@@ -224,7 +203,7 @@ class IronClustSorter(BaseSorter):
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
 
-        if check_compiled():
+        if cls.check_compiled():
             shell_cmd = '''
                 #!/bin/bash
                 p_ironclust {tmpdir} {dataset_dir}/raw.mda {dataset_dir}/geom.csv '' '' {tmpdir}/firings.mda {dataset_dir}/argfile.txt

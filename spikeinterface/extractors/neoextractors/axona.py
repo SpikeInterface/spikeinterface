@@ -1,11 +1,13 @@
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from spikeinterface.core.core_tools import define_function_from_class
+
+from .neobaseextractor import NeoBaseRecordingExtractor
 
 
 class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading Axona RAW format
 
-    Based on neo.rawio.AxonaRawIO
+    Based on :py:class:`neo.rawio.AxonaRawIO`
 
     Parameters
     ----------
@@ -23,9 +25,4 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update({'file_path': file_path})
 
 
-def read_axona(*args, **kwargs):
-    recording = AxonaRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_axona.__doc__ = AxonaRecordingExtractor.__doc__
+read_axona = define_function_from_class(source_class=AxonaRecordingExtractor, name="read_axona")

@@ -1,10 +1,8 @@
-from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording
-from probeinterface import read_prb, write_prb
-
-import json
 import numpy as np
 from pathlib import Path
+
+from spikeinterface.core import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import pandas as pd
@@ -21,6 +19,21 @@ class ALFSortingExtractor(BaseSorting):
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
 
     def __init__(self, folder_path, sampling_frequency=30000):
+        """
+        Class for reading ALF format.
+
+        Parameters
+        ----------
+        folder_path : str or Path
+            Path to ALF folder
+        sampling_frequency : int, optional
+            The sampling frequency, by default 30000
+
+        Returns
+        -------
+        extractor
+            ALFSortingExtractor
+        """
         assert self.installed, self.installation_mesg
         # check correct parent folder:
         self._folder_path = Path(folder_path)
@@ -68,6 +81,8 @@ class ALFSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
         sorting_segment = ALFSortingSegment(spike_clusters, spike_times, sampling_frequency)
         self.add_sorting_segment(sorting_segment)
+
+        self.extra_requirements.append('pandas')
 
         # add properties
         for property_name, values in properties.items():
@@ -134,6 +149,4 @@ class ALFSortingSegment(BaseSortingSegment):
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
 
 
-def read_alf_sorting(folder_path, sampling_frequency=30000):
-    sorting = ALFSortingExtractor(folder_path, sampling_frequency=sampling_frequency)
-    return sorting
+read_alf_sorting = define_function_from_class(source_class=ALFSortingExtractor, name="read_alf_sorting")
