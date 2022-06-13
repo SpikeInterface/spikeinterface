@@ -31,7 +31,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     mode = 'file'
     NeoRawIOClass = 'MaxwellRawIO'
 
-    def __init__(self, file_path, stream_id=None, rec_name=None):
+    def __init__(self, file_path, stream_id=None, all_annotations=False, rec_name=None):
         neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=False, **neo_kwargs)
 
