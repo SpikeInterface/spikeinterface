@@ -59,7 +59,7 @@ def print_sorter_versions():
     print(txt)
 
 
-def get_default_params(sorter_name_or_class):
+def get_default_soter_params(sorter_name_or_class):
     """Returns default parameters for the specified sorter.
 
     Parameters
@@ -83,7 +83,7 @@ def get_default_params(sorter_name_or_class):
     return SorterClass.default_params()
 
 
-def get_params_description(sorter_name_or_class):
+def get_sorter_params_description(sorter_name_or_class):
     """Returns a description of the parameters for the specified sorter.
 
     Parameters
