@@ -8,7 +8,7 @@ import numpy as np
 class MplPlotter(BackendPlotter):
     backend = 'matplotlib'
     
-    def make_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
+    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
         """
         figure/ax/axes : only one of then can be not None
         """
@@ -55,3 +55,22 @@ class MplPlotter(BackendPlotter):
         self.ax = ax
         # axes is a 2D array of ax
         self.axes = axes
+
+
+
+class to_attr(object):
+    def __init__(self, d):
+        """
+        Helper function that transform a dict into
+        an object where attributes are the keys of the dict
+
+        d = {'a': 1, 'b': 'yep'}
+        o = to_attr(d)
+        print(o.a, o.b)
+        """
+        object.__init__(self)
+        object.__setattr__(self, '__d', d)
+
+    def __getattribute__(self, k):
+        d = object.__getattribute__(self, '__d')
+        return d[k]

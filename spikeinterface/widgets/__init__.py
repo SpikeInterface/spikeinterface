@@ -1,6 +1,6 @@
 from .widget_list import *
 from .utils import get_unit_colors, array_to_image
-
+from .base import set_default_plotter_backend, get_default_plotter_backend
 
 try:
     import matplotlib

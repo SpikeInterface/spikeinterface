@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import BaseWidget
+from .base import BaseWidget, define_widget_function_from_class
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.baserecording import BaseRecording
 from ..core.basesorting import BaseSorting
@@ -14,7 +14,7 @@ class UnitWaveformsWidget(BaseWidget):
     def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, max_channels=None, radius_um=None,
-                 ncols=5, axes=None, lw=2, axis_equal=False, unit_selected_waveforms=None,
+                 ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
                  set_title=True,
                  
                  backend=None, **backend_kwargs
@@ -54,9 +54,6 @@ class UnitWaveformsWidget(BaseWidget):
         show_all_channels: bool
             Show the whole probe if True, or only selected channels if False
             The axis to be used. If not given an axis is created
-        axes: list of matplotlib axes
-            The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
-            and figure parameters are ignored
         """
 
         # self.waveform_extractor = waveform_extractor
@@ -86,16 +83,7 @@ class UnitWaveformsWidget(BaseWidget):
         if max_channels is not None:
             assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
 
-        # # TODO
-        # self._lw = lw
-        # self._axis_equal = axis_equal
-
-        self._set_title = set_title
-
-        if axes is None:
-            num_axes = len(unit_ids)
-        else:
-            num_axes = None
+        num_axes = len(unit_ids)
         
         templates = we.get_all_templates(unit_ids=unit_ids)
         channel_locations = recording.get_channel_locations(channel_ids=channel_ids)
@@ -134,6 +122,7 @@ class UnitWaveformsWidget(BaseWidget):
             channel_inds=channel_inds,
             num_axes=num_axes,
             wfs_by_ids=wfs_by_ids,
+            set_title=set_title,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -175,19 +164,5 @@ def get_waveforms_scales(we, templates, channel_locations):
     return xvectors, y_scale, y_offset
 
 
-def plot_unit_waveforms(*args, **kwargs):
-    W = UnitWaveformsWidget(*args, **kwargs)
-    return W
+plot_unit_waveforms = define_widget_function_from_class(UnitWaveformsWidget, 'plot_unit_waveforms')
 
-
-plot_unit_waveforms.__doc__ = UnitWaveformsWidget.__doc__
-
-
-#~ def plot_unit_templates(*args, **kwargs):
-    #~ kwargs['plot_waveforms'] = False
-    #~ W = UnitWaveformsWidget(*args, **kwargs)
-    #~ W.plot()
-    #~ return W
-
-
-#~ plot_unit_templates.__doc__ = UnitWaveformsWidget.__doc__
