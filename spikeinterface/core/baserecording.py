@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Iterable, List, Union
 from pathlib import Path
 
 import numpy as np
@@ -91,7 +91,7 @@ class BaseRecording(BaseExtractor):
                    segment_index: Union[int, None] = None,
                    start_frame: Union[int, None] = None,
                    end_frame: Union[int, None] = None,
-                   channel_ids: Union[List, None] = None,
+                   channel_ids: Union[Iterable, None] = None,
                    order: Union[str, None] = None,
                    return_scaled=False,
                    ):

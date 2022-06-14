@@ -43,6 +43,8 @@ class MCSH5RecordingExtractor(BaseRecording):
 
         BaseRecording.__init__(self, sampling_frequency=mcs_info["sampling_frequency"], channel_ids=mcs_info["channel_ids"],
                                dtype=mcs_info["dtype"])
+
+        self.extra_requirements.append('h5py')
         
         recording_segment = MCSH5RecordingSegment(self._rf, stream_id, mcs_info["num_frames"], 
                                                   sampling_frequency=mcs_info["sampling_frequency"])

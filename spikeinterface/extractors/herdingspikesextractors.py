@@ -41,6 +41,8 @@ class HerdingspikesSortingExtractor(BaseSorting):
         self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))
         self._kwargs = {'file_path': str(Path(file_path).absolute()), 'load_unit_info': load_unit_info}
 
+        self.extra_requirements.append('h5py')
+
     def load_unit_info(self):
         # TODO
         """

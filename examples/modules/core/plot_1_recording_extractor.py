@@ -1,8 +1,8 @@
 '''
-RecordingExtractor objects
-==========================
+Recording objects
+=================
 
-The :code:`RecordingExtractor` is the basic class for handling recorded data.
+The :py:class:`~spikeinterface.core.BaseRecording` is the basic class for handling recorded data.
 Here is how it works.
 
 A RecordingExtractor handles:
@@ -20,7 +20,7 @@ import spikeinterface.extractors as se
 
 ##############################################################################
 # We will create a :code:`RecordingExtractor` object from scratch using :code:`numpy` and the
-# :code:`NumpyRecording`.
+# :py:class:`~spikeinterface.core.NumpyRecording`.
 #
 # Let's define the properties of the dataset:
 
@@ -38,7 +38,7 @@ traces0 = np.random.normal(0, 10, (num_timepoints[0], num_channels))
 traces1 = np.random.normal(0, 10, (num_timepoints[1], num_channels))
 
 ##############################################################################
-# And instantiate a :code:`NumpyRecording`. Each object has a pretty print to
+# And instantiate a :py:class:`~spikeinterface.core.NumpyRecording`. Each object has a pretty print to
 # summarize its content:
 
 recording = se.NumpyRecording(traces_list=[traces0, traces1], sampling_frequency=sampling_frequency)
@@ -54,7 +54,7 @@ print('Num. timepoints seg0= {}'.format(recording.get_num_frames(segment_index=0
 print('Num. timepoints seg1= {}'.format(recording.get_num_frames(segment_index=1)))
 
 ##############################################################################
-# The geometry of the Probe is handle with the :code:`probeinterface`.
+# The geometry of the Probe is handle with the :probeinterface:`ProbeInterface <>`.
 # Let's generate a linear probe:
 
 from probeinterface import generate_linear_probe
