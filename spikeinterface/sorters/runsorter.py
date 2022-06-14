@@ -451,11 +451,10 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     if hasattr(recording, 'extra_requirements'):
         extra_requirements.extend(recording.extra_requirements)
 
-    if verbose:
-        print(f'Installing extra requirements: {extra_requirements}')
-
     # install additional required dependencies
     if extra_requirements:
+        if verbose:
+            print(f'Installing extra requirements: {extra_requirements}')
         cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
         res_output = container_client.run_command(cmd)
 
