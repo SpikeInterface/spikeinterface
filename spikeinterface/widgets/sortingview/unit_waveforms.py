@@ -51,6 +51,6 @@ class UnitWaveformPlotter(SortingviewPlotter):
         return url
 
 
-from ..unitwaveforms import UnitWaveformsWidget
+from ..unit_waveforms import UnitWaveformsWidget
 UnitWaveformPlotter.register(UnitWaveformsWidget)
 
