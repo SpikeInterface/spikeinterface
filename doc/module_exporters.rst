@@ -1,16 +1,17 @@
 Exporter module
 ===============
 
-The :code:`exporter` module includes functions to export SI objects to other commonly used frameworks.
+The :py:mod:`spikeinterface.exporters` module includes functions to export SI objects to other commonly used frameworks.
 
 
 Exporting to Phy
 ----------------
 
-The :code:`export_to_phy()` function allows you to use the `Phy template GUI <https://github.com/cortex-lab/phy>`_ for
-visual inspection and manual curation of spike sorting results.
+The :py:func:`~spikeinterface.exporters.export_to_phy()` function allows you to use the
+`Phy template GUI <https://github.com/cortex-lab/phy>`_ for visual inspection and manual curation of spike sorting
+results.
 
-The input of the :code:`export_to_phy()` is a :code:`WaveformExtractor` object.
+The input of the :py:func:`~spikeinterface.exporters.export_to_phy()` is a :code:`WaveformExtractor` object.
 
 .. code-block:: python
 

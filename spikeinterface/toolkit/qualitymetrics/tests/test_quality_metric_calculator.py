@@ -23,7 +23,7 @@ def setup_module():
         if (cache_folder / folder_name).is_dir():
             shutil.rmtree(cache_folder / folder_name)
 
-    recording, sorting = toy_example(num_segments=2, num_units=10, duration=60)
+    recording, sorting = toy_example(num_segments=2, num_units=10, duration=300)
     recording = recording.save(folder=cache_folder / 'toy_rec')
     sorting = sorting.save(folder=cache_folder / 'toy_sorting')
 

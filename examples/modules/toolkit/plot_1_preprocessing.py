@@ -3,7 +3,7 @@ Preprocessing Tutorial
 ======================
 
 Before spike sorting, you may need to preproccess your signals in order to improve the spike sorting performance.
-You can do that in SpikeInterface using the :code:`toolkit.preprocessing` submodule.
+You can do that in SpikeInterface using the :py:mod:`spikeinterface.toolkit.preprocessing` submodule.
 
 """
 
@@ -24,8 +24,8 @@ recording, sorting = se.toy_example(num_channels=4, duration=10, seed=0)
 # -------------
 #  
 # Now apply a bandpass filter and a notch filter (separately) to the
-# recording extractor. Filters are also RecordingExtractor objects.
-# Note that theses operation are **lazy** the computation is done on the fly
+# recording extractor. Filters are also :py:class:`~spikeinterface.core.BaseRecording` objects.
+# Note that these operation are **lazy** the computation is done on the fly
 # with `rec.get_traces()`
 
 recording_bp = st.preprocessing.bandpass_filter(recording, freq_min=300, freq_max=6000)
@@ -54,14 +54,14 @@ ax.semilogy(f_raw, p_raw, f_bp, p_bp, f_notch, p_notch)
 # extracellular recordings. Multi-unit activity (MUA) are rectified and
 # low-pass filtered recordings showing the diffuse spiking activity.
 #  
-# In :code:`spiketoolkit`, LFP and MUA can be extracted combining the
-# :code:`bandpass_filter`, :code:`rectify` and :code:`resample` functions. In this
-# example LFP and MUA are resampled at 1000 Hz.
+# In :py:mod:`spikeinterface.toolkit`, LFP and MUA can be extracted combining the
+# :py:func:`~spikeinterface.toolkit.preprocessing.bandpass_filter` and
+# :py:func:`~spikeinterface.toolkit.preprocessing.rectify` functions. In
+# this example LFP and MUA are resampled at 1000 Hz.
 
 recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max=300)
 # TODO alessio, this is for you
 # recording_lfp = st.preprocessing.resample(recording_lfp, 1000)
-# recording_mua = st.preprocessing.resample(st.preprocessing.rectify(recording), 1000)
 
 
 ##############################################################################
@@ -76,7 +76,8 @@ recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max
 # In many cases, before spike sorting, it is wise to re-reference the
 # signals to reduce the common-mode noise from the recordings.
 #
-# To re-reference in :code:`spiketoolkit` you can use the :code:`common_reference`
+# To re-reference in :py:mod:`spikeinterface.toolkit` you can use the
+# :py:func:`~spikeinterface.toolkit.preprocessing.common_reference`
 # function. Both common average reference (CAR) and common median
 # reference (CMR) can be applied. Moreover, the average/median can be
 # computed on different groups. Single channels can also be used as
@@ -111,8 +112,8 @@ ax2.plot(trace0_groups)
 # ----------------------------
 #  
 # In some applications, electrodes are used to electrically stimulate the
-# tissue, generating a large artifact. In :code:`spiketoolkit`, the artifact
-# can be zeroed-out using the :code:`remove_artifact` function.
+# tissue, generating a large artifact. In :py:mod:`spikeinterface.toolkit`, the artifact
+# can be zeroed-out using the :py:func:`~spikeinterface.toolkit.preprocessing.remove_artifacts` function.
 
 
 # create dummy stimulation triggers per segment
