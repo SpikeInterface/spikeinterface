@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import BinaryRecordingExtractor
-from ..basesorter import BaseSorter
+from ..basesorter import BaseSorter, get_job_kwargs
 
 try:
     import pykilosort
@@ -20,12 +20,14 @@ class PyKilosortSorter(BaseSorter):
     sorter_name = 'pykilosort'
     requires_locations = False
     gpu_capability = 'nvidia-required'
+    requires_binary_data = True
     compatible_with_parallel = {'loky': True, 'multiprocessing': False, 'threading': False}
 
     _default_params = {
         "nfilt_factor": 8,
         "AUCsplit": 0.85,
-        "nskip": 5
+        "nskip": 5,
+
     }
 
     _params_description = {
@@ -68,10 +70,14 @@ class PyKilosortSorter(BaseSorter):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
 
         # TODO: save to binary if not
-        assert isinstance(recording, BinaryRecordingExtractor)
-        assert recording.get_num_segments() == 1
-        dat_path = recording._kwargs['file_paths'][0]
-        print('dat_path', dat_path)
+        assert recording.get_num_segments() == 1, ("pyKilosort only supports mono-segment recordings. "
+                                                   "You can use si.concatenate() to concatenate the segments.")
+        if not isinstance(recording, BinaryRecordingExtractor):
+            BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
+                                                     dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
+            dat_path = output_folder / 'recording.dat'
+        else:
+            dat_path = recording._kwargs['file_paths'][0]
 
         num_chans = recording.get_num_channels()
         locations = recording.get_channel_locations()
