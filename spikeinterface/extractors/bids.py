@@ -60,7 +60,7 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
     # make maps between : channel_id and contact_id using _channels.tsv
     for probe in probegroup.probes:
         channels_file = folder / bids_name.replace('_ephys', '_channels.tsv')
-        channels = pd.read_csv(channels_file, sep='\t')
+        channels = pd.read_csv(channels_file, sep='\t', dtype='str')
         # channel_ids are unique
         channel_ids = channels['channel_id'].values.astype('U')
         # contact ids are not unique
