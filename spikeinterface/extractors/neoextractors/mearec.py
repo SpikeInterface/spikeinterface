@@ -12,15 +12,17 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
 
-    locs_2d: bool
-
+    stream_id: str or None
+        If several stream, specify the one you want.
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
 
-    def __init__(self, file_path, locs_2d=True):
+    def __init__(self, file_path, all_annotations=False):
         neo_kwargs = {'filename': str(file_path)}
-        NeoBaseRecordingExtractor.__init__(self, **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
 
         self.extra_requirements.append('mearec')
 
@@ -28,7 +30,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_probe(probe, in_place=True)
         self.annotate(is_filtered=True)
 
-        self._kwargs = {'file_path': str(file_path), 'locs_2d': locs_2d}
+        self._kwargs.update({'file_path': str(file_path)})
 
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
