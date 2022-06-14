@@ -47,6 +47,13 @@ class BenchmarkClustering:
         import shutil
         shutil.rmtree(self.tmp_folder)
 
+
+    def set_peaks(self, peaks):
+        self._peaks = peaks
+
+    def set_positions(self, positions):
+        self._positions = positions
+
     @property
     def peaks(self):
         if self._peaks is None:
@@ -118,11 +125,15 @@ class BenchmarkClustering:
             self._positions = positions
 
         labels, peak_labels = find_cluster_from_peaks(self.recording_f, self.selected_peaks, method=self.method, method_kwargs=method_kwargs, **self.job_kwargs)
+        nb_clusters = len(labels)
+        if self.verbose:
+            print(f'{nb_clusters} clusters have been found')
         self.noise = peak_labels == -1
         self.run_time = time.time() - t_start
         self.selected_peaks_labels = peak_labels
         self.labels = labels
 
+        
         self.clustering = NumpySorting.from_times_labels(self.selected_peaks['sample_ind'][~self.noise], self.selected_peaks_labels[~self.noise], self.sampling_rate)
         if self.verbose:
             print("Performing the comparison with (sliced) ground truth")
@@ -133,7 +144,8 @@ class BenchmarkClustering:
 
         self.matches = matches
         idx = matches['index1']
-        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], times1[1][idx], self.sampling_rate)
+        sorting_key = lambda x: int(''.join(filter(str.isdigit, x)))
+        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], times1[1][idx], self.sampling_rate, sorting_key=sorting_key)
 
         self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering)
 
@@ -262,7 +274,8 @@ class BenchmarkClustering:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'], self.gt_sorting, s=1, alpha=0.5, ax=ax)
+        colors = self._get_colors(self.gt_sorting)
+        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'], self.gt_sorting, colors, s=1, alpha=0.5, ax=ax)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.set_xlabel('x')
@@ -273,7 +286,7 @@ class BenchmarkClustering:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], self.sliced_gt_sorting, s=1, alpha=0.5, ax=ax)
+        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_xlabel('x')
@@ -399,9 +412,7 @@ class BenchmarkClustering:
             ax.annotate(l, (x, y))
 
         ax = axs[1, 1]
-        xaxis = energy[inds_1[:len(inds_2)]]
-        yaxis = nb_channels[inds_1[:len(inds_2)]]
-        cm = ax.scatter(xaxis, yaxis, c=res)
+        cm = ax.scatter(energy, nb_channels, c=res)
         ax.set_xlabel('template energy')
         ax.set_ylabel('nb channels')
         ax.spines['top'].set_visible(False)
@@ -409,7 +420,7 @@ class BenchmarkClustering:
         cb = fig.colorbar(cm, ax=ax)
         cb.set_label(metric)
 
-        for l,x,y in zip(unit_ids1[:len(inds_2)], xaxis, yaxis):
+        for l,x,y in zip(unit_ids1[:len(inds_2)], energy, nb_channels):
             ax.annotate(l, (x, y))
 
 

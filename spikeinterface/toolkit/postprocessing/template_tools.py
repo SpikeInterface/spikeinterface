@@ -53,10 +53,9 @@ def get_template_amplitudes(waveform_extractor, peak_sign="neg", mode="extremum"
 
     return peak_values
 
-
-def get_template_extremum_channel(waveform_extractor, peak_sign="neg", outputs="id"):
+def get_template_extremum_channel(waveform_extractor, peak_sign="neg", mode="extremum", outputs="id"):
     """
-    Compute the channel with the extremum peak for each unit.
+    Compute the channel with the extremum peak for each unit. 
 
     Parameters
     ----------
@@ -64,6 +63,9 @@ def get_template_extremum_channel(waveform_extractor, peak_sign="neg", outputs="
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
+        'extremum':  max or min
+        'at_index': take value at spike index
     outputs: str
         * 'id': channel id
         * 'index': channel index
@@ -77,7 +79,7 @@ def get_template_extremum_channel(waveform_extractor, peak_sign="neg", outputs="
     unit_ids = waveform_extractor.sorting.unit_ids
     channel_ids = waveform_extractor.recording.channel_ids
 
-    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
+    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode=mode)
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
@@ -205,7 +207,7 @@ def get_template_channel_sparsity(
         return sparsity_with_index
 
 
-def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign="neg"):
+def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign="neg", mode='extremum'):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -217,6 +219,9 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign="neg"
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
+        'extremum':  max or min
+        'at_index': take value at spike index
 
     Returns
     -------
@@ -228,7 +233,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign="neg"
     unit_ids = sorting.unit_ids
 
     extremum_channels_ids = get_template_extremum_channel(
-        waveform_extractor, peak_sign=peak_sign
+        waveform_extractor, peak_sign=peak_sign, mode=mode
     )
 
     shifts = {}
@@ -250,7 +255,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign="neg"
     return shifts
 
 
-def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg"):
+def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg", mode='extremum'):
     """
     Computes amplitudes on the best channel.
 
@@ -260,6 +265,9 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg"):
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
+        'extremum':  max or min
+        'at_index': take value at spike index
 
     Returns
     -------
@@ -271,7 +279,7 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg"):
     before = waveform_extractor.nbefore
 
     extremum_channels_ids = get_template_extremum_channel(
-        waveform_extractor, peak_sign=peak_sign
+        waveform_extractor, peak_sign=peak_sign, mode=mode
     )
 
     unit_amplitudes = {}
