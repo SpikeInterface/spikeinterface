@@ -46,7 +46,7 @@ class PyKilosortSorter(BaseSorter):
         "minFR": 1.0/50,
         "momentum": [20,400],
         "sigmaMask": 30,
-        "spkTh": -6
+        "spkTh": -6,
         "reorder": 1,
         "nSkipCov": 25,
         "ntbuff": 64,
@@ -103,10 +103,10 @@ class PyKilosortSorter(BaseSorter):
         "nup": None,
         "sig": None,
         "gain": None,
-        "templateScaling": None
+        "templateScaling": None,
         "loc_range": None,
         "long_range": None,
-        "keep_good_only": "If True only 'good' units are returned",
+        "keep_good_only": "If True only 'good' units are returned"
     }
 
     sorter_description = """pykilosort is a port of kilosort to python"""
