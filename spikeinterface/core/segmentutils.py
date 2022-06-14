@@ -1,7 +1,7 @@
 """
 Implementation of utils class to manipulate segments with 2 different concept:
   * append_recordings / append_sortings / append_events
-  * concatenate_recordings / concatenate_sortings / concatenate_events
+  * concatenate_recordings
 
 
 Example:
