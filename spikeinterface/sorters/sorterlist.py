@@ -1,3 +1,5 @@
+import warnings
+
 from .combinato import CombinatoSorter
 from .hdsort import HDSortSorter
 from .herdingspikes import HerdingspikesSorter
@@ -83,6 +85,12 @@ def get_default_soter_params(sorter_name_or_class):
     return SorterClass.default_params()
 
 
+def get_default_params(sorter_name_or_class):
+    warnings.warn("Use get_sorter_default_params() function instead", 
+                  category=DeprecationWarning)
+    return get_default_soter_params(sorter_name_or_class)
+
+
 def get_sorter_params_description(sorter_name_or_class):
     """Returns a description of the parameters for the specified sorter.
 
@@ -105,6 +113,12 @@ def get_sorter_params_description(sorter_name_or_class):
         raise (ValueError('Unknown sorter'))
 
     return SorterClass.params_description()
+
+
+def get_params_description(sorter_name_or_class):
+    warnings.warn("Use get_sorter_params_description() function instead",
+                  category=DeprecationWarning)
+    return get_sorter_params_description(sorter_name_or_class)
 
 
 def get_sorter_description(sorter_name_or_class):
