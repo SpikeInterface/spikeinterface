@@ -32,6 +32,8 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, rec_name=rec_name, **neo_kwargs)
 
+        self.extra_requirements.append('h5py')
+
         # well_name is stream_id
         well_name = self.stream_id
         # rec_name auto set by neo
