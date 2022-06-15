@@ -3,6 +3,7 @@ import numpy as np
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
+import json
 from ..basesorter import BaseSorter, get_job_kwargs
 
 try:
@@ -156,11 +157,12 @@ class PyKilosortSorter(BaseSorter):
 
         # ks_probe is not probeinterface Probe at all
         ks_probe = Bunch()
-        ks_probe.NchanTOT = num_chans
-        ks_probe.chanMap = np.arange(num_chans)
-        ks_probe.kcoords = np.ones(num_chans)
-        ks_probe.xc = locations[:, 0]
-        ks_probe.yc = locations[:, 1]
+        ks_probe.n_channels_total = num_chans
+        ks_probe.channel_map = np.arange(num_chans)
+        ks_probe.channel_groups = np.ones(num_chans)
+        ks_probe.xcoords = locations[:, 0]
+        ks_probe.ycoords = locations[:, 1]
+
 
         run(
             dat_path,
@@ -178,6 +180,7 @@ class PyKilosortSorter(BaseSorter):
         with (output_folder / 'spikeinterface_params.json').open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', False)
-        sorting = KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=keep_good_only)
+        sorting = KiloSortSortingExtractor(folder_path=output_folder / "output", 
+                                           keep_good_only=keep_good_only)
         return sorting
     
