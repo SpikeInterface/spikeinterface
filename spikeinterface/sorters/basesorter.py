@@ -130,7 +130,7 @@ class BaseSorter:
         if recording.get_num_segments() > 1:
             if not cls.handle_multi_segment:
                 raise ValueError(
-                    f'This sorter {cls.sorter_name} do not handle multi segment, use concatenate_recordings(...)')
+                    f'This sorter {cls.sorter_name} do not handle multi segment, use si.concatenate_recordings(...)')
 
         rec_file = output_folder / 'spikeinterface_recording.json'
         if recording.is_dumpable:

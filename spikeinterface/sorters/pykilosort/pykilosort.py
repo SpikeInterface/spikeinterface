@@ -136,15 +136,14 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        probe = recording.get_probe()
-
-        # local copy
-        recording.save(format='binary', folder=output_folder / 'bin_folder')
+        # do it in run for simplicity
+        pass
+        
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
-
+        
         if not isinstance(recording, BinaryRecordingExtractor):
             BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
                                                      verbose=False, **get_job_kwargs(params, verbose))
