@@ -106,8 +106,7 @@ def run_sorter(
 
     if docker_image or singularity_image:
         return run_sorter_container(
-            docker_image=docker_image if isinstance(docker_image, str) else None,
-            singularity_image=singularity_image if isinstance(docker_image, str) else None,
+            container_image=docker_image if isinstance(docker_image, str) else singularity_image,
             mode="docker" if docker_image else "singularity",
             **common_kwargs,
         )
@@ -452,11 +451,10 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     if hasattr(recording, 'extra_requirements'):
         extra_requirements.extend(recording.extra_requirements)
 
-    if verbose:
-        print(f'Installing extra requirements: {extra_requirements}')
-
     # install additional required dependencies
     if extra_requirements:
+        if verbose:
+            print(f'Installing extra requirements: {extra_requirements}')
         cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
         res_output = container_client.run_command(cmd)
 

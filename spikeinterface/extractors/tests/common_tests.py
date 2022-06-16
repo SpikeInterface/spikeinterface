@@ -65,6 +65,10 @@ class RecordingCommonTestSuite(CommonTestSuite):
             if rec.get_property('gain_to_uV') is not None and rec.get_property('offset_to_uV') is not None:
                 trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
                 assert trace_scaled.dtype == 'float32'
+            
+            if isinstance(rec, NeoBaseRecordingExtractor):
+                # for neo based also test annotations propagation
+                rec = self.ExtractorClass(local_folder / path, all_annotations=True, **kwargs)
 
 
 class SortingCommonTestSuite(CommonTestSuite):
