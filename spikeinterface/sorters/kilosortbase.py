@@ -7,6 +7,7 @@ import numpy as np
 import scipy.io
 
 from .utils import ShellScript
+from .basesorter import get_job_kwargs
 from spikeinterface.extractors import KiloSortSortingExtractor, BinaryRecordingExtractor
 
 
@@ -19,6 +20,7 @@ class KilosortBase:
       * _get_result_from_folder
     """
     gpu_capability = 'nvidia-required'
+    requires_binary_data = True
 
     @staticmethod
     def _generate_channel_map_file(recording, output_folder):
@@ -64,8 +66,7 @@ class KilosortBase:
     def _write_recording(recording, output_folder, params, verbose):
         # save binary file
         BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
-                                                 dtype='int16', total_memory=params["total_memory"],
-                                                 n_jobs=params["n_jobs_bin"], verbose=False, progress_bar=verbose)
+                                                 dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
 
     @classmethod
     def _generate_ops_file(cls, recording, params, output_folder):

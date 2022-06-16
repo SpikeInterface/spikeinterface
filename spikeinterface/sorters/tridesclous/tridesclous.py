@@ -8,7 +8,7 @@ from pprint import pprint
 
 from spikeinterface.extractors import TridesclousSortingExtractor
 
-from ..basesorter import BaseSorter
+from ..basesorter import BaseSorter, get_job_kwargs
 from spikeinterface.core import BinaryRecordingExtractor
 
 from probeinterface import write_prb
@@ -20,6 +20,7 @@ class TridesclousSorter(BaseSorter):
     sorter_name = 'tridesclous'
     requires_locations = False
     compatible_with_parallel = {'loky': True, 'multiprocessing': False, 'threading': False}
+    requires_binary_data = True
 
     _default_params = {
         'freq_min': 400.,
@@ -28,8 +29,6 @@ class TridesclousSorter(BaseSorter):
         'detect_threshold': 5,
         'common_ref_removal': False,
         'nested_params': None,
-        'total_memory': '500M',
-        'n_jobs_bin': 1
     }
 
     _params_description = {
@@ -39,8 +38,6 @@ class TridesclousSorter(BaseSorter):
         'detect_sign': "Use -1 (negative) or 1 (positive) depending "
                        "on the sign of the spikes in the recording",
         'common_ref_removal': 'remove common reference with median',
-        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
     sorter_description = """Tridesclous is a template-matching spike sorter with a real-time engine.
@@ -106,9 +103,7 @@ class TridesclousSorter(BaseSorter):
             dtype = recording.get_dtype().str
             file_paths = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
             BinaryRecordingExtractor.write_recording(recording, file_paths=file_paths,
-                                                     dtype=dtype, total_memory=params["total_memory"],
-                                                     n_jobs=params["n_jobs_bin"],
-                                                     verbose=False, progress_bar=verbose)
+                                                     dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
             file_offset = 0
 
         # initialize source and probe file
