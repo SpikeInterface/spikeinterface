@@ -9,6 +9,7 @@ class CrossCorrelogramsWidget(BaseWidget):
     """
     Plots spike train cross-correlograms.
     The diagonal is auto-correlogram.
+    
     Parameters
     ----------
     sorting: SortingExtractor
