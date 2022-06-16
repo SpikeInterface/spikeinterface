@@ -317,7 +317,7 @@ def run_sorter_container(
     if container_image is None and sorter_name in SORTER_DOCKER_MAP:
         container_image = SORTER_DOCKER_MAP[sorter_name]
     else:
-        ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
+        raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
