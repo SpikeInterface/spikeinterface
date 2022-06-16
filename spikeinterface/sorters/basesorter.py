@@ -21,19 +21,20 @@ from .utils import SpikeSortingError, ShellScript
 
 
 default_job_kwargs = {"n_jobs": 1, 
-                      "total_memory": "500M",
+                      "total_memory": None,
                       "chunk_size": None,
                       "chunk_memory": None,
-                      "chunk_duration": None,
+                      "chunk_duration": "1s",
                       "progress_bar": True}
 
 default_job_kwargs_description = {
-    "n_jobs": "Number of jobs (when saving ti binary)", 
-    "chunk_size": "Number of samples per chunk (when saving ti binary)",
-    "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary)",
-    "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary)",
-    "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)",
-    "progress_bar": "If True, progress bar is shown (when saving to binary)"}
+    "n_jobs": "Number of jobs (when saving ti binary) - default 1", 
+    "chunk_size": "Number of samples per chunk (when saving ti binary) - default None",
+    "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default None",
+    "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default None",
+    "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)" \
+                      " - default '1s'",
+    "progress_bar": "If True, progress bar is shown (when saving to binary) - default True"}
 
 
 class BaseSorter:
