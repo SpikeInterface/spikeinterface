@@ -38,27 +38,22 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
     NeoRawIOClass = 'MEArecRawIO'
     handle_spike_frame_directly = False
 
-    def __init__(self, file_path, use_natural_unit_ids=True):
+    def __init__(self, file_path):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseSortingExtractor.__init__(self,
                                          sampling_frequency=None,  # auto guess is correct here
-                                         use_natural_unit_ids=use_natural_unit_ids,
+                                         use_natural_unit_ids=True,
                                          **neo_kwargs)
 
-        self._kwargs = {'file_path': str(file_path), 'use_natural_unit_ids': use_natural_unit_ids}
+        self._kwargs = {'file_path': str(file_path)}
 
 
-def read_mearec(file_path, locs_2d=True, use_natural_unit_ids=True):
+def read_mearec(file_path):
     """
-
     Parameters
     ----------
     file_path: str or Path
         Path to MEArec h5 file
-    locs_2d: bool
-        If True (default), locations are loaded in 2d. If False, 3d locations are loaded
-    use_natural_unit_ids: bool
-        If True, natural unit strings are loaded (e.g. #0. #1). If False, unit ids are in64
 
     Returns
     -------
@@ -67,6 +62,6 @@ def read_mearec(file_path, locs_2d=True, use_natural_unit_ids=True):
     sorting: MEArecSortingExtractor
         The sorting extractor object
     """
-    recording = MEArecRecordingExtractor(file_path, locs_2d=locs_2d)
-    sorting = MEArecSortingExtractor(file_path, use_natural_unit_ids=use_natural_unit_ids)
+    recording = MEArecRecordingExtractor(file_path)
+    sorting = MEArecSortingExtractor(file_path)
     return recording, sorting
