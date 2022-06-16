@@ -67,6 +67,8 @@ class CombinatoSortingExtractor(BaseSorting):
         self.set_property('artifact', np.array([metadata[u]['group_type'] == -1 for u in range(unit_counter)]))
         self._kwargs = {'folder_path': str(folder_path), 'user': user, 'det_sign': det_sign}
 
+        self.extra_requirements.append('h5py')
+
 
 class CombinatoSortingSegment(BaseSortingSegment):
     def __init__(self, spiketrains):

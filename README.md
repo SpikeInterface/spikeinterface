@@ -41,6 +41,15 @@
 	</a>
 	</td>
 </tr>
+<tr>
+	<td>Codecov</td>
+	<td>
+		<a href="https://codecov.io/github/spikeinterface/spikeinterface">
+		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/master/graphs/badge.svg" alt="codecov" />
+		</a>
+	</td>
+
+</tr>
 </table>
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.

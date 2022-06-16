@@ -35,6 +35,8 @@ class RecordingCommonTestSuite(CommonTestSuite):
             rec = self.ExtractorClass(self.get_full_path(path), **kwargs)
             # print(rec)
 
+            assert hasattr(rec, 'extra_requirements')
+
             num_seg = rec.get_num_segments()
             num_chans = rec.get_num_channels()
             dtype = rec.get_dtype()
@@ -63,6 +65,10 @@ class RecordingCommonTestSuite(CommonTestSuite):
             if rec.get_property('gain_to_uV') is not None and rec.get_property('offset_to_uV') is not None:
                 trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
                 assert trace_scaled.dtype == 'float32'
+            
+            if isinstance(rec, NeoBaseRecordingExtractor):
+                # for neo based also test annotations propagation
+                rec = self.ExtractorClass(local_folder / path, all_annotations=True, **kwargs)
 
 
 class SortingCommonTestSuite(CommonTestSuite):

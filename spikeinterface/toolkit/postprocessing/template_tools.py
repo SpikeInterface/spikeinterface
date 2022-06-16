@@ -287,8 +287,6 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg"):
 def get_peaks_from_templates(
     waveform_extractor,
     peak_sign="neg",
-    ms_before=1,
-    ms_after=1.5,
     radius_um=40,
     **job_kwargs,
 ):
@@ -301,10 +299,6 @@ def get_peaks_from_templates(
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
-    ms_before: float
-        The left window, before a peak, in milliseconds.
-    ms_after: float
-        The right window, after a peak, in milliseconds.
     radius_um: float
         Radius in um around the best channel for finding spike max amplitudes.
     Returns
@@ -332,8 +326,7 @@ def get_peaks_from_templates(
     peak_waveform_features = compute_waveform_features_peaks(
         recording,
         spikes,
-        ms_before=ms_before,
-        ms_after=ms_after,
+        time_range_list=[(0.2, 0.2)],
         feature_list=["amplitude"],
         **job_kwargs,
     )

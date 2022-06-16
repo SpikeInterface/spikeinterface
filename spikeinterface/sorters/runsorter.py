@@ -50,15 +50,15 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default).
         If False, the process continues and the error is logged in the log file.
-    docker_image: bool, str, or None
+    docker_image: bool or str
         If True, pull the default docker container for the sorter and run the sorter in that container using docker.
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
-        If None, the sorter is run locally.
-    singularity_image: bool, str or None
+        If False, the sorter is run locally.
+    singularity_image: bool or str 
         If True, pull the default docker container for the sorter and run the sorter in that container using 
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
         from Docker Hub.
-        If None, the sorter is run locally.
+        If False, the sorter is run locally.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -105,10 +105,23 @@ def run_sorter(
     )
 
     if docker_image or singularity_image:
+        if docker_image:
+            mode = "docker"
+            assert not singularity_image
+            if isinstance(docker_image, bool):
+                container_image = None
+            else:
+                container_image = docker_image
+        else:
+            mode = "singularity"
+            assert not docker_image
+            if isinstance(singularity_image, bool):
+                container_image = None
+            else:
+                container_image = singularity_image
         return run_sorter_container(
-            docker_image=docker_image if isinstance(docker_image, str) else None,
-            singularity_image=singularity_image if isinstance(docker_image, str) else None,
-            mode="docker" if docker_image else "singularity",
+            container_image=container_image,
+            mode=mode,
             **common_kwargs,
         )
 
@@ -286,6 +299,7 @@ def run_sorter_container(
     verbose: bool = False,
     raise_error: bool = True,
     with_output: bool = True,
+    extra_requirements = None,
     **sorter_params,
 ):
     """
@@ -302,9 +316,14 @@ def run_sorter_container(
     verbose: bool, optional
     raise_error: bool, optional
     with_output: bool, optional
+    extra_requirements: list, optional
     sorter_params:
 
     """
+
+    if extra_requirements is None:
+        extra_requirements = []
+
     # common code for docker and singularity
     if output_folder is None:
         output_folder = sorter_name + '_output'
@@ -312,7 +331,7 @@ def run_sorter_container(
     if container_image is None and sorter_name in SORTER_DOCKER_MAP:
         container_image = SORTER_DOCKER_MAP[sorter_name]
     else:
-        ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
+        raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
@@ -419,10 +438,8 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
         if 'dev' in si_version:
             if verbose:
                 print(f"Installing spikeinterface from sources in {container_image}")
-            # TODO later check output
-            cmd = 'pip install --upgrade --no-input MEArec'
-            res_output = container_client.run_command(cmd)
 
+            # TODO later check output
             if install_si_from_source:
                 si_source = 'local machine'
                 res_output = container_client.run_command(f'cp -rf {si_dev_path_unix} /opt')
@@ -437,14 +454,23 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
-                print(
-                    f"Installing spikeinterface=={si_version} in {container_image}")
+                print(f"Installing spikeinterface=={si_version} in {container_image}")
             cmd = f'pip install --upgrade --no-input spikeinterface[full]=={si_version}'
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
         if verbose:
             print(f'spikeinterface is already installed in {container_image}')
+
+    if hasattr(recording, 'extra_requirements'):
+        extra_requirements.extend(recording.extra_requirements)
+
+    # install additional required dependencies
+    if extra_requirements:
+        if verbose:
+            print(f'Installing extra requirements: {extra_requirements}')
+        cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
+        res_output = container_client.run_command(cmd)
 
     # run sorter on folder
     if verbose:

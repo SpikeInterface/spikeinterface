@@ -44,10 +44,8 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         'ntbuff': 64,
         'nfilt_factor': 4,
         'NT': None,
-        'keep_good_only': False,
-        'total_memory': '500M',
-        'n_jobs_bin': 1,
         'wave_length': 61,
+        'keep_good_only': False,
     }
 
     _params_description = {
@@ -63,10 +61,8 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
         'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
         'NT': "Batch size (if None it is automatically computed)",
-        'keep_good_only': "If True only 'good' units are returned",
-        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)",
         'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
+        'keep_good_only': "If True only 'good' units are returned",
     }
 
     sorter_description = """Kilosort2 is a GPU-accelerated and efficient template-matching spike sorter. On top of its

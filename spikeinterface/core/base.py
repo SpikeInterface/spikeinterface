@@ -54,6 +54,9 @@ class BaseExtractor:
 
         self.is_dumpable = True
 
+        # Extractor specific list of pip extra requirements
+        self.extra_requirements = []
+
     def get_num_segments(self):
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
@@ -87,7 +90,7 @@ class BaseExtractor:
                 indices = self._main_ids
         else:
             _main_ids = self._main_ids.tolist()
-            indices = np.array([_main_ids.index(id) for id in ids])
+            indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
             if prefer_slice:
                 if np.all(np.diff(indices) == 1):
                     indices = slice(indices[0], indices[-1] + 1)
@@ -198,6 +201,8 @@ class BaseExtractor:
                     empty_values = np.zeros(shape, dtype=dtype)
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
+                    if ids.size==0:
+                        return
                 else:
                     assert dtype_kind == self._properties[key].dtype.kind, ("Mismatch between existing property dtype "
                                                                             "values dtype.")
@@ -228,6 +233,8 @@ class BaseExtractor:
 
         if ids is None:
             inds = slice(None)
+        elif len(ids) == 0:
+            inds = slice(0, 0)
         else:
             inds = self.ids_to_indices(ids)
 
@@ -247,6 +254,8 @@ class BaseExtractor:
             if values is not None:
                 other.set_property(k, values[inds])
         # TODO: copy features also
+
+        other.extra_requirements.extend(self.extra_requirements)
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
                 relative_to=None, folder_metadata=None):
