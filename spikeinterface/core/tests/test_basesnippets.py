@@ -8,7 +8,7 @@ import numpy as np
 from numpy.testing import assert_raises
 
 #from probeinterface import Probe
-from spikeinterface.extractors import toy_example
+from spikeinterface.core.testing_tools import generate_recording, generate_sorting
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from spikeinterface.core.numpysnippetsextractor import NumpySnippetsExtractor
 
@@ -17,8 +17,9 @@ def test_BaseSnippets():
     num_channels = 3
     nbefore = 20
     nafter = 44
-    recording, sort = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
-    strains = sort.get_all_spike_trains()
+    recording = generate_recording(durations=[duration], num_channels=num_channels)
+    sorting = generate_sorting(durations=[duration], num_units=5)
+    strains = sorting.get_all_spike_trains()
     peaks_times = np.sort(strains[0][0])
     peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
     peaks2 = np.zeros(len(peaks_times), dtype=peak_dtype)
