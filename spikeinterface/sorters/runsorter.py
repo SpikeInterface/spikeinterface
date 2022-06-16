@@ -103,12 +103,17 @@ def run_sorter(
         with_output=with_output,
         **sorter_params,
     )
-
-    if docker_image or singularity_image:
+    if docker_image:
         return run_sorter_container(
-            container_image=docker_image if isinstance(docker_image, str) else singularity_image,
-            mode="docker" if docker_image else "singularity",
-            **common_kwargs,
+            container_image=docker_image if isinstance(docker_image, str) else None,
+            mode='docker',
+            **common_kwargs
+        )
+    if singularity_image:
+        return run_sorter_container(
+            container_image=singularity_image if isinstance(singularity_image, str) else None,
+            mode='singularity',
+            **common_kwargs
         )
 
     return run_sorter_local(**common_kwargs)
