@@ -117,30 +117,30 @@ Kilosort3
 pykilosort
 ----------
 
-* python, requires cuda
+* Python, requires cuda
 * Url: https://github.com/MouseLand/pykilosort
-* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyril Rossant
+* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant
 
 * Install the python cuda toolkit. In principle, this should work::
     
     pip install cupy  (or pip install cupy-cudaXXX)
 
-* However, I had to use conda to complete this installation successfully::
+* However, conda installation could be less painful::
     
     conda install cupy 
 
-* Next, install pykilosort::
+* Next, clone and install pykilosort. Note that we support the newer version on the `develop` branch::
 
     pip install phylib, pypandoc
     git clone https://github.com/MouseLand/pykilosort
+    git checkout develop
     cd pykilosort
+    pip install -r requirements.txt
     python setup.py install
     
-* Finally, a few package dependencies may be missing. I fixed this with::
+* Alternatively, you can use the `pyks2.yml` environment file in the pykilosort repo and update your favorite environment with::
 
-    pip install numba, pydantic
-    
-* Finally the pykilosort install may not copy the cuda files to the installed location. I had to copy these manually to my install location, e.g. ~/.conda/MY-ENV/lib/site-packages/pykilosort/pykilosort-ibl_1.3.0-py3.8.egg/pykilosort/cuda.
+    conda env update --name my-fav-env --file pyks2.yml --prune
 
 * See also https://github.com/MouseLand/pykilosort#installation
 
