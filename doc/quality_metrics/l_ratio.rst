@@ -48,7 +48,7 @@ References
 
 .. automodule:: spikeinterface.toolkit.qualitymetrics.pca_metrics
 
-    .. autofunction:: l_ratio
+    .. autofunction:: mahalanobis_metrics
 
 
 A well separated unit should have a low L-ratio (Schmitzer-Torbert_ et al.).
