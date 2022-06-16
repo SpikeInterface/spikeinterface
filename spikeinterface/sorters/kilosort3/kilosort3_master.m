@@ -18,7 +18,14 @@ function kilosort3_master(fpath, kilosortPath)
         rez = preprocessDataSub(ops);
 
         % run data registration
-        rez = datashift2(rez, 1); % last input is for shifting data
+        if isfield(ops, 'do_correction')
+            fprintf("Drift correction ENABLED")
+            do_correction = ops.do_correction;
+        else 
+            do_correction = 1;
+        end
+
+        rez = datashift2(rez, do_correction); % last input is for shifting data
 
         [rez, st3, tF] = extract_spikes(rez);
 
