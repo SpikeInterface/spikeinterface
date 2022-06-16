@@ -71,7 +71,7 @@ Non-NEO-based
 .. automodule:: spikeinterface.extractors
 
     .. autofunction:: read_alf_sorting
-    .. autofunction:: read_bids_folder
+    .. autofunction:: read_bids
     .. autofunction:: read_cbin_ibl
     .. autofunction:: read_combinato
     .. autofunction:: read_hdsort
@@ -139,11 +139,11 @@ Postprocessing
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
     .. autofunction:: get_template_channel_sparsity
-    .. autofunction:: compute_unit_centers_of_mass
-    .. autofunction:: calculate_template_metrics
+    .. autofunction:: localize_units
     .. autofunction:: get_template_metric_names
+    .. autofunction:: calculate_template_metrics
     .. autofunction:: compute_principal_components
-    .. autofunction:: get_spike_amplitudes
+    .. autofunction:: compute_spike_amplitudes
     .. autofunction:: compute_correlograms
 
 
@@ -261,7 +261,13 @@ Motion Correction
 
 Clustering
 ~~~~~~~~~~
-.. automodule::
+.. automodule:: spikeinterface.sortingcomponents.clustering
 
     .. autofunction:: find_cluster_from_peaks
+
+Template Matching
+~~~~~~~~~~~~~~~~~
+.. automodule:: spikeinterface.sortingcomponents.matching
+
+    .. autofunction:: find_spikes_from_templates
 

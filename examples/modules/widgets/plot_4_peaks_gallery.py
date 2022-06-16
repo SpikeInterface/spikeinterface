@@ -23,7 +23,7 @@ rec, sorting = si.read_mearec(local_path)
 ##############################################################################
 # Lets filter and detect peak on it
 
-from spikeinterface.sortingcomponents import detect_peaks
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 rec_filtred = si.bandpass_filter(rec, freq_min=300., freq_max=6000., margin_ms=5.0)
 print(rec_filtred)
