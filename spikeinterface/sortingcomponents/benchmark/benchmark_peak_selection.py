@@ -109,8 +109,10 @@ class BenchmarkPeakSelection:
         print("The gt recording has {} peaks and {} have been detected".format(len(times1[0]), len(times2)))
         
         matches = make_matching_events(times1[0], times2, int(delta*self.sampling_rate/1000))
-
         self.matches = matches
+
+        self.deltas = {'labels' : [], 'delta' : matches['delta_frame']}
+        self.deltas['labels'] = times1[1][matches['index1']]
 
         #print(len(times1[0]), len(matches['index1']))
         gt_matches = matches['index1']
@@ -121,6 +123,7 @@ class BenchmarkPeakSelection:
 
         matches = make_matching_events(times2, times1[0], int(delta*self.sampling_rate/1000))
         good_matches = matches['index1']
+
         garbage_matches = ~np.in1d(np.arange(len(times2)), good_matches)
         garbage_channels = self.peaks['channel_ind'][garbage_matches]
         garbage_peaks = times2[garbage_matches]
@@ -381,3 +384,89 @@ class BenchmarkPeakSelection:
         ax.set_xlabel('x')
         ax.set_yticks([], [])
         #ax.set_ylabel('y')
+
+    def plot_statistics(self, metric='cosine', annotations=True):
+
+        fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
+        
+        ax = axs[0, 0]
+        plot_agreement_matrix(self.comp, ax=ax)
+
+        scores = self.comp.get_ordered_agreement_scores()
+        unit_ids1 = scores.index.values
+        unit_ids2 = scores.columns.values
+        inds_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
+        inds_2 = self.comp.sorting2.ids_to_indices(unit_ids2)
+
+        a = self.templates['full_gt'].reshape(len(self.templates['full_gt']), -1)[inds_1]
+        b = self.templates['gt'].reshape(len(self.templates['gt']), -1)[inds_2]
+
+        import sklearn
+        if metric == 'cosine':
+            distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
+        else:
+            distances = sklearn.metrics.pairwise_distances(a, b, metric)
+
+        ax = axs[0, 1]
+        im = ax.imshow(distances, aspect='auto')
+        ax.set_title(metric)
+        fig.colorbar(im, ax=ax)
+
+        ax.set_yticks(np.arange(0, len(scores.index)))
+        ax.set_yticklabels(scores.index, fontsize=8)
+
+        ax.set_xticks(np.arange(0, len(scores.columns)))
+        ax.set_xticklabels(scores.columns, fontsize=8)
+
+        ax = axs[0, 2]
+
+        ax.set_ylabel("Time mismatch (time step)")
+        for unit_ind, unit_id in enumerate(self.gt_sorting.unit_ids):
+            mask = self.deltas['labels'] == unit_id
+            ax.violinplot(self.deltas['delta'][mask], [unit_ind], widths=2, showmeans=True, showmedians=False, showextrema=False)
+        ax.set_xticks(np.arange(len(self.gt_sorting.unit_ids)), self.gt_sorting.unit_ids)
+
+        ax = axs[1, 0]
+        dist = []
+        dist_real = []
+
+        for found, real in zip(unit_ids2, unit_ids1):
+            wfs = self.waveforms['gt'].get_waveforms(found)
+            wfs_real = self.waveforms['full_gt'].get_waveforms(real)
+            template = self.waveforms['gt'].get_template(found)
+            template_real = self.waveforms['full_gt'].get_template(real)
+
+            template = template.reshape(template.size, 1).T
+            template_real = template_real.reshape(template_real.size, 1).T
+
+            if metric == 'cosine':
+                dist += [sklearn.metrics.pairwise.cosine_similarity(template, wfs.reshape(len(wfs), -1), metric).flatten()]
+                dist_real += [sklearn.metrics.pairwise.cosine_similarity(template_real, wfs_real.reshape(len(wfs_real), -1), metric).flatten()]
+            else:
+                dist += [sklearn.metrics.pairwise_distances(template, wfs.reshape(len(wfs), -1), metric).flatten()]
+                dist_real += [sklearn.metrics.pairwise_distances(template_real, wfs_real.reshape(len(wfs_real), -1), metric).flatten()]
+
+        ax.errorbar([a.mean() for a in dist], [a.mean() for a in dist_real], [a.std() for a in dist], [a.std() for a in dist_real], capsize=0, ls='none', color='black', 
+            elinewidth=2)
+        ax.plot([0, 1], [0, 1], '--')
+        ax.set_xlabel('cosine dispersion tested')
+        ax.set_ylabel('cosine dispersion gt')
+        
+        ax = axs[1, 1]
+        nb_spikes_real = []
+        nb_spikes = []
+
+        for found, real in zip(unit_ids2, unit_ids1):
+            a = self.gt_sorting.get_unit_spike_train(real).size
+            b = self.sliced_gt_sorting.get_unit_spike_train(found).size
+            nb_spikes_real += [a]
+            nb_spikes += [b]
+
+        ax.plot(nb_spikes, nb_spikes_real, '.', markersize=10)
+        ax.set_xlabel("# spikes tested")
+        ax.set_ylabel("# spikes gt")
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        ax.plot([xmin, xmax], [ymin, ymin + (xmax - xmin)], 'k--')
+
+
