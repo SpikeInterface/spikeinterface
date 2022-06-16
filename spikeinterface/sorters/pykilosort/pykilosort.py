@@ -137,8 +137,9 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        # do it in run for simplicity
-        pass
+        if not isinstance(recording, BinaryRecordingExtractor):
+            BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
+                                                     verbose=False, **get_job_kwargs(params, verbose))
         
 
     @classmethod
@@ -146,8 +147,7 @@ class PyKilosortSorter(BaseSorter):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         
         if not isinstance(recording, BinaryRecordingExtractor):
-            BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
-                                                     verbose=False, **get_job_kwargs(params, verbose))
+            # saved by setup recording
             dat_path = output_folder / 'recording.dat'
         else:
             dat_path = recording._kwargs['file_paths'][0]
