@@ -105,8 +105,14 @@ def run_sorter(
     )
 
     if docker_image or singularity_image:
+        if isinstance(docker_image, str):
+            container_image = docker_image
+        elif isinstance(singularity_image, str):
+            container_image = singularity_image
+        else:
+            container_image = None
         return run_sorter_container(
-            container_image=docker_image if isinstance(docker_image, str) else singularity_image,
+            container_image=container_image,
             mode="docker" if docker_image else "singularity",
             **common_kwargs,
         )
@@ -200,7 +206,17 @@ class ContainerClient:
       * docker with "docker" python package
       * singularity with  "spython" python package
     """
-    def __init__(self, mode, container_image, volumes, extra_kwargs):
+    def __init__(self, mode: str, container_image: str, volumes, extra_kwargs):
+        """
+
+        Parameters
+        ----------
+        mode: str
+            "docker" or "singularity"
+        container_image
+        volumes
+        extra_kwargs
+        """
         assert mode in ('docker', 'singularity')
         self.mode = mode
         container_requires_gpu = extra_kwargs.get(
@@ -295,6 +311,7 @@ def run_sorter_container(
     sorter_name: str
     recording: BaseRecording
     mode: str
+        "docker" or "singularity"
     container_image: str, optional
     output_folder: str, optional
     remove_existing_folder: bool, optional
