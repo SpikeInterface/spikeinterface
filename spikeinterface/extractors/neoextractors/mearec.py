@@ -45,7 +45,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
                                          use_natural_unit_ids=True,
                                          **neo_kwargs)
 
-        self._kwargs = {'file_path': str(file_path), 'use_natural_unit_ids': use_natural_unit_ids}
+        self._kwargs = {'file_path': str(file_path)}
 
 
 def read_mearec(file_path):
@@ -62,6 +62,6 @@ def read_mearec(file_path):
     sorting: MEArecSortingExtractor
         The sorting extractor object
     """
-    recording = MEArecRecordingExtractor(file_path, locs_2d=locs_2d)
-    sorting = MEArecSortingExtractor(file_path, use_natural_unit_ids=use_natural_unit_ids)
+    recording = MEArecRecordingExtractor(file_path)
+    sorting = MEArecSortingExtractor(file_path)
     return recording, sorting
