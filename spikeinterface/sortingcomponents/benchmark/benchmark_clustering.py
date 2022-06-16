@@ -387,7 +387,7 @@ class BenchmarkClustering:
             if metric == 'cosine':
                 dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real, metric).flatten().tolist()
             else:
-                dist = sklearn.metrics.pairwise_distances(template, wfs, metric).flatten().tolist()
+                dist = sklearn.metrics.pairwise_distances(template, template_real, metric).flatten().tolist()
             res += dist
             nb_spikes += [self.sliced_gt_sorting.get_unit_spike_train(real).size]
             energy += [np.linalg.norm(template_real)]
