@@ -69,14 +69,13 @@ And amplitude cutoff and SNR are based on spike times as well as waveforms.
 For more details about each metric and it's availability and use within SpikeInterface, see the individual pages for each metrics.
 
 .. toctree::
-    :maxdepth: 1
-    :glob:
-    quality_metrics/*
+  :maxdepth: 1
+  :glob:
 
-Quality metrics allows to quantitatively assess to *goodness* of a spike sorting output. The
-:py:mod:`~spikeinterface.toolkit.qualitymetrics` sub-module includes functions to compute a large variety of available
-metrics ('sort' - spike times based; 'rec+sort' - based on waveforms; 'pc' - based on PC scores):
+  quality_metrics/*
 
+
+This code snippet shows how to compute quality metrics (with or without principal components) in SpikeInterface:
 
 .. code-block:: python
 

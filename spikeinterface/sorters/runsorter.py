@@ -50,15 +50,15 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default).
         If False, the process continues and the error is logged in the log file.
-    docker_image: bool, str, or None
+    docker_image: bool or str
         If True, pull the default docker container for the sorter and run the sorter in that container using docker.
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
-        If None, the sorter is run locally.
-    singularity_image: bool, str or None
+        If False, the sorter is run locally.
+    singularity_image: bool or str 
         If True, pull the default docker container for the sorter and run the sorter in that container using 
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
         from Docker Hub.
-        If None, the sorter is run locally.
+        If False, the sorter is run locally.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -105,9 +105,23 @@ def run_sorter(
     )
 
     if docker_image or singularity_image:
+        if docker_image:
+            mode = "docker"
+            assert not singularity_image
+            if isinstance(docker_image, bool):
+                container_image = None
+            else:
+                container_image = docker_image
+        else:
+            mode = "singularity"
+            assert not docker_image
+            if isinstance(singularity_image, bool):
+                container_image = None
+            else:
+                container_image = singularity_image
         return run_sorter_container(
-            container_image=docker_image if isinstance(docker_image, str) else singularity_image,
-            mode="docker" if docker_image else "singularity",
+            container_image=container_image,
+            mode=mode,
             **common_kwargs,
         )
 
@@ -317,7 +331,7 @@ def run_sorter_container(
     if container_image is None and sorter_name in SORTER_DOCKER_MAP:
         container_image = SORTER_DOCKER_MAP[sorter_name]
     else:
-        ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
+        raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
@@ -451,11 +465,10 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     if hasattr(recording, 'extra_requirements'):
         extra_requirements.extend(recording.extra_requirements)
 
-    if verbose:
-        print(f'Installing extra requirements: {extra_requirements}')
-
     # install additional required dependencies
     if extra_requirements:
+        if verbose:
+            print(f'Installing extra requirements: {extra_requirements}')
         cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
         res_output = container_client.run_command(cmd)
 
