@@ -144,8 +144,7 @@ class BenchmarkClustering:
 
         self.matches = matches
         idx = matches['index1']
-        sorting_key = lambda x: int(''.join(filter(str.isdigit, x)))
-        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], times1[1][idx], self.sampling_rate, sorting_key=sorting_key)
+        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], times1[1][idx], self.sampling_rate, unit_ids = self.gt_sorting.unit_ids)
 
         self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering)
 
@@ -197,7 +196,7 @@ class BenchmarkClustering:
         result = {}
         for key, value in colors.items():
             result[sorting.id_to_index(key)] = value
-        for key in force_black_for:
+        for unid_id in force_black_for:
             result[sorting.id_to_index(unid_id)] = 'k'
         return result
 
@@ -205,7 +204,7 @@ class BenchmarkClustering:
         result = {}
         for unid_id in sorting.unit_ids:
             result[sorting.id_to_index(unid_id)] = unid_id
-        for key in force_black_for:
+        for unid_id in force_black_for:
             result[sorting.id_to_index(unid_id)] = 'noise'
         return result
 

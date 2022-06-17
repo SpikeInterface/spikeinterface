@@ -117,8 +117,7 @@ class BenchmarkPeakSelection:
 
         #print(len(times1[0]), len(matches['index1']))
         gt_matches = matches['index1']
-        sorting_key = lambda x: int(''.join(filter(str.isdigit, x)))
-        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][gt_matches], times1[1][gt_matches], self.sampling_rate, sorting_key=sorting_key)
+        self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][gt_matches], times1[1][gt_matches], self.sampling_rate, unit_ids = self.gt_sorting.unit_ids)
         ratio = 100*len(gt_matches)/len(times1[0])
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
@@ -179,30 +178,30 @@ class BenchmarkPeakSelection:
         self.garbage_peaks = self.peaks[garbage_matches]
 
 
-    def _get_colors(self, sorting, excluded_ids=[-1]):
+    def _get_colors(self, sorting, unid_id=[]):
         from spikeinterface.widgets import get_unit_colors
         colors = get_unit_colors(sorting)
         result = {}
         for key, value in colors.items():
             result[sorting.id_to_index(key)] = value
-        for key in excluded_ids:
-            result[key] = 'k'
+        for unid_id in force_black_for:
+            result[sorting.id_to_index(unid_id)] = 'k'
         return result
 
-    def _get_labels(self, sorting, excluded_ids={-1}):
+    def _get_labels(self, sorting, force_black_for=[]):
         result = {}
         for unid_id in sorting.unit_ids:
             result[sorting.id_to_index(unid_id)] = unid_id
-        for key in excluded_ids:
-            result[key] = 'noise'
+        for unid_id in force_black_for:
+            result[sorting.id_to_index(unid_id)] = 'noise'
         return result
 
-    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, excluded_ids=[-1], s=1, alpha=0.5):
+    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5):
 
         if colors is None:
-            colors = self._get_colors(sorting, excluded_ids)
+            colors = self._get_colors(sorting, force_black_for)
         if labels is None:
-            labels = self._get_labels(sorting, excluded_ids)
+            labels = self._get_labels(sorting, force_black_for)
 
         from matplotlib.patches import Ellipse
         import matplotlib.transforms as transforms
@@ -218,7 +217,7 @@ class BenchmarkPeakSelection:
             xk = xs[where]
             yk = ys[where]
             ax.scatter(xk, yk, s=s, color=colors[k], alpha=alpha, marker=".")
-            if k not in excluded_ids:
+            if k not in force_black_for:
                 x_mean, y_mean = xk.mean(), yk.mean()
                 xycov = np.cov(xk, yk)
                 means[k] = x_mean, y_mean
