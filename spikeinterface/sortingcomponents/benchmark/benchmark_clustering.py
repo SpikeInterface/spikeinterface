@@ -304,7 +304,7 @@ class BenchmarkClustering:
         ax.set_yticks([], [])
 
 
-    def plot_statistics(self, metric='cosine', annotations=True):
+    def plot_statistics(self, metric='cosine', annotations=True, detect_threshold=5):
 
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
         
@@ -313,6 +313,23 @@ class BenchmarkClustering:
 
         ax = axs[0, 0]
         plot_agreement_matrix(self.comp, ax=ax)
+        scores = self.comp.get_ordered_agreement_scores()
+        ymin, ymax = ax.get_ylim()
+        xmin, xmax = ax.get_xlim()
+        unit_ids1 = scores.index.values
+        unit_ids2 = scores.columns.values
+        inds_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
+        snrs = metrics['snr'][inds_1]
+
+        nb_detectable = len(unit_ids1)
+
+        if detect_threshold is not None:
+            for count, snr in enumerate(snrs):
+                if snr < detect_threshold:
+                    ax.plot([xmin, xmax], [count, count], 'k')
+                    nb_detectable -= 1
+
+        ax.plot([nb_detectable+0.5, nb_detectable+0.5], [ymin, ymax], 'r')
 
         import MEArec as mr
         mearec_recording = mr.load_recordings(self.mearec_file)
@@ -323,7 +340,7 @@ class BenchmarkClustering:
             data = self.positions[self.selected_peaks_labels == self.labels[i]]
             self.found_positions[i] = np.median(data['x']), np.median(data['y'])
 
-        scores = self.comp.get_ordered_agreement_scores()
+        
         unit_ids1 = scores.index.values
         unit_ids2 = scores.columns.values
         inds_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
@@ -361,6 +378,15 @@ class BenchmarkClustering:
         im = ax.imshow(distances, aspect='auto')
         ax.set_title(metric)
         fig.colorbar(im, ax=ax)
+
+        if detect_threshold is not None:
+            for count, snr in enumerate(snrs):
+                if snr < detect_threshold:
+                    ax.plot([xmin, xmax], [count, count], 'w')
+
+        ymi, ymax = ax.get_ylim()
+        ax.plot([nb_detectable+0.5, nb_detectable+0.5], [ymin, ymax], 'r')
+
 
         ax.set_yticks(np.arange(0, len(scores.index)))
         ax.set_yticklabels(scores.index, fontsize=8)
@@ -407,6 +433,9 @@ class BenchmarkClustering:
         ax.spines['right'].set_visible(False)
         cb = fig.colorbar(cm, ax=ax)
         cb.set_label(metric)
+        if detect_threshold is not None:
+            ymin, ymax = ax.get_ylim()
+            ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
 
         if annotations:
             for l,x,y in zip(unit_ids1[:len(inds_2)], snrs, nb_spikes):
@@ -420,7 +449,7 @@ class BenchmarkClustering:
         ax.spines['right'].set_visible(False)
         cb = fig.colorbar(cm, ax=ax)
         cb.set_label(metric)
-
+        
         if annotations:
             for l,x,y in zip(unit_ids1[:len(inds_2)], energy, nb_channels):
                 ax.annotate(l, (x, y))
@@ -435,4 +464,8 @@ class BenchmarkClustering:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         ax.legend()
+        if detect_threshold is not None:
+            ymin, ymax = ax.get_ylim()
+            ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
+
         plt.tight_layout()
