@@ -35,15 +35,17 @@ class NumpySnippetsExtractor(BaseSnippets):
             assert isinstance(spikesframes_list, np.ndarray), 'must give a list of numpy array'
             spikesframes_list = [spikesframes_list]
 
-        self._dtype = snippets_list[0].dtype
-        assert all(self._dtype == ts.dtype for ts in snippets_list)
+        dtype = snippets_list[0].dtype
+        assert all(dtype == ts.dtype for ts in snippets_list)
 
         if channel_ids is None:
             channel_ids = np.arange(snippets_list[0].shape[2])
         else:
             channel_ids = np.asarray(channel_ids)
             assert channel_ids.size == snippets_list[0].shape[2]
-        BaseSnippets.__init__(self, sampling_frequency,  nafter=nafter, snippet_len=snippets_list[0].shape[1], channel_ids=channel_ids)
+        BaseSnippets.__init__(self, sampling_frequency,  nafter=nafter, 
+                              snippet_len=snippets_list[0].shape[1], channel_ids=channel_ids,
+                              dtype=dtype)
 
         self.is_dumpable = False
 
