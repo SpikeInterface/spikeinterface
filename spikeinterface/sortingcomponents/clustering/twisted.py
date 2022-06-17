@@ -134,27 +134,12 @@ class TwistedClustering:
 
                 ptp_channels = channels[np.argmax(np.ptp(waveforms, axis=1), axis=1)]
                 std_channels = channels[np.argmax(np.std(waveforms, axis=1), axis=1)]
-                #print(chan_locs[ptp_channels].shape, locations[idx].shape)
-                #print(np.linalg.norm(chan_locs[ptp_channels] - locations[idx]))
+
                 dist_ptps[idx, 0] = np.linalg.norm(chan_locs[ptp_channels] - locations[idx], axis=1)
-                
                 dist_stds[idx, 0] = np.linalg.norm(chan_locs[std_channels] - locations[idx], axis=1)
-                
+                energies[idx, 0] = np.linalg.norm(waveforms, axis=(1,2))/np.sqrt(len(channels))
 
-                #global_ptps[idx, 0] = np.ptp(waveforms, axis=(1,2))
-                #abs_peaks = np.max(np.abs(waveforms), axis=1)
-                #denominator = np.sum(abs_peaks, axis=1)
-                #denominator[denominator == 0] = 1
-                #abs_barycenters = np.dot(abs_peaks, chan_locs[channels])/denominator[:, np.newaxis]
-                #dist_abs_barycenters[idx, 0] = np.linalg.norm(locations[idx] - abs_barycenters, axis=1)
-                #ptps = np.ptp(waveforms, axis=1)
-                #several_ptps[idx, :len(closest_channels)] = ptps[:, closest_channels]
-                #data = waveforms.copy()
-                #empty_channels = np.std(waveforms, axis=1) < 0.25*params['noise_levels'][channels]
-
-                energies[idx, 0] = np.linalg.norm(waveforms, axis=(1,2))
-
-        to_cluster_from = np.hstack((locations, local_ptps, dist_ptps, dist_stds))
+        to_cluster_from = np.hstack((locations, local_ptps, dist_ptps, dist_stds, energies))
         preprocessing = QuantileTransformer(output_distribution='uniform')
         to_cluster_from = preprocessing.fit_transform(to_cluster_from)
 
