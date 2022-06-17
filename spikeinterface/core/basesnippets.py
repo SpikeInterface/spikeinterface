@@ -88,6 +88,12 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_num_segments(self):
         return len(self._snippets_segments)
 
+    def has_scaled_snippets(self):
+        if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
+            return False
+        else:
+            return True
+
     def get_frames(self,
                    indeces=None,
                    segment_index: Union[int, None] = None
@@ -165,10 +171,10 @@ class BaseSnippetsSegment(BaseSegment):
         BaseSegment.__init__(self)
 
     def get_snippets(self,
-                     indices = None,
-                    end_frame: Union[int, None] = None,
-                    channel_indices: Union[List, None] = None,
-                    ) -> np.ndarray:
+                     indices,
+                     end_frame: Union[int, None] = None,
+                     channel_indices: Union[List, None] = None,
+                     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
