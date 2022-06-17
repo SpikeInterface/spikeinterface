@@ -127,9 +127,9 @@ class CollisionGTComparison(GroundTruthComparison):
                 u1 = unit_ids[r]
                 u2 = unit_ids[c]
 
-                if good_only:
-                    if (performances[u1] < 0.9) or (performances[u2] < 0.9):
-                        continue
+                # if good_only:
+                #     if (performances[u1] < quality_level) or (performances[u2] < 0.9):
+                #         continue
 
                 ind1 = self.sorting1.id_to_index(u1)
                 ind2 = self.sorting1.id_to_index(u2)
