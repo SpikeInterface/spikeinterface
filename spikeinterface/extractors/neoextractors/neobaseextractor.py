@@ -2,6 +2,7 @@ import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
 from typing import Union, List
+from copy import copy
 import neo
 
 
@@ -25,8 +26,13 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         _NeoBaseExtractor.__init__(self, **neo_kwargs)
 
+        self._kwargs = dict(all_annotations=all_annotations)
+        if stream_id is not None:
+            self._kwargs['stream_id'] = stream_id
+
         stream_channels = self.neo_reader.header['signal_streams']
         stream_ids = stream_channels['id']
+
         if stream_id is None:
             if stream_channels.size > 1:
                 raise ValueError(f'This reader have several streams({stream_ids}), specify it with stream_id=')
@@ -94,10 +100,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         for segment_index in range(nseg):
             rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index)
             self.add_recording_segment(rec_segment)
-        
-        self._kwargs = dict(all_annotations=all_annotations)
-        if stream_id is not None:
-            self._kwargs['stream_id'] = stream_id
 
 
 class NeoRecordingSegment(BaseRecordingSegment):
