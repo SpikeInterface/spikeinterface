@@ -164,6 +164,17 @@ def test_BaseRecording():
     # plot_probe(probe2)
     # plt.show()
 
+    # set unconnected probe
+    probe = Probe(ndim=2)
+    positions = [[0., 0.], [0., 15.], [0, 30.]]
+    probe.set_contacts(positions=positions, shapes='circle',
+                       shape_params={'radius': 5})
+    probe.set_device_channel_indices([-1, -1, -1])
+    probe.create_auto_shape()
+
+    rec_empty_probe = rec.set_probe(probe, group_mode='by_shank')
+    assert rec_empty_probe.channel_ids.size == 0
+    
     # test return_scale
     sampling_frequency = 30000
     traces = np.zeros((1000, 5), dtype='int16')

@@ -7,6 +7,7 @@ import numpy as np
 import scipy.io
 
 from .utils import ShellScript
+from .basesorter import get_job_kwargs
 from spikeinterface.extractors import KiloSortSortingExtractor, BinaryRecordingExtractor
 
 
@@ -19,6 +20,7 @@ class KilosortBase:
       * _get_result_from_folder
     """
     gpu_capability = 'nvidia-required'
+    requires_binary_data = True
 
     @staticmethod
     def _generate_channel_map_file(recording, output_folder):
@@ -64,8 +66,7 @@ class KilosortBase:
     def _write_recording(recording, output_folder, params, verbose):
         # save binary file
         BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
-                                                 dtype='int16', total_memory=params["total_memory"],
-                                                 n_jobs=params["n_jobs_bin"], verbose=False, progress_bar=verbose)
+                                                 dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
 
     @classmethod
     def _generate_ops_file(cls, recording, params, output_folder):
@@ -80,7 +81,7 @@ class KilosortBase:
         recording: BaseRecording
             The recording to generate the channel map file
         params: dict
-            Custom parameters dictionary for kilosort3
+            Custom parameters dictionary for kilosort
         output_folder: pathlib.Path
             Path object to save `ops.mat`
         """
@@ -125,11 +126,6 @@ class KilosortBase:
 
         cls._generate_ops_file(recording, params, output_folder)
 
-        source_dir = Path(Path(__file__).parent)
-        shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(output_folder))
-        shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(output_folder))
-        shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(output_folder))
-
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         output_folder = output_folder.absolute()
@@ -139,6 +135,11 @@ class KilosortBase:
                 {cls.compiled_name} {output_folder}
             '''
         else:
+            source_dir = Path(Path(__file__).parent)
+            shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(output_folder))
+
             sorter_path = getattr(cls, f'{cls.sorter_name}_path')
             sorter_path = Path(sorter_path).absolute()
             if 'win' in sys.platform and sys.platform != 'darwin':
