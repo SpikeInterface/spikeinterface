@@ -16,15 +16,16 @@ REGISTRY = 'spikeinterface'
 SORTER_DOCKER_MAP = dict(
     klusta='klusta',
     mountainsort4='mountainsort4',
+    pykilosort='pykilosort',
     spykingcircus='spyking-circus',
     tridesclous='tridesclous',
     # Matlab compiled sorters:
+    hdsort='hdsort-compiled',
     ironclust='ironclust-compiled',
     kilosort='kilosort-compiled',
     kilosort2='kilosort2-compiled',
     kilosort3='kilosort3-compiled',
     waveclus='waveclus-compiled',
-    hdsort='hdsort-compiled'
 )
 
 SORTER_DOCKER_MAP = {
