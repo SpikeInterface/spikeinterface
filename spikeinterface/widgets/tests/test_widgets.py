@@ -28,16 +28,16 @@ else:
 class TestWidgets(unittest.TestCase):
     def setUp(self):
         local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
-        self._rec = se.MEArecRecordingExtractor(local_path)
+        self.recording = se.MEArecRecordingExtractor(local_path)
 
-        self._sorting = se.MEArecSortingExtractor(local_path)
+        self.sorting = se.MEArecSortingExtractor(local_path)
 
-        self.num_units = len(self._sorting.get_unit_ids())
-        #  self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
-        self._we = extract_waveforms(self._rec, self._sorting, cache_folder / 'mearec_test', load_if_exists=True)
+        self.num_units = len(self.sorting.get_unit_ids())
+        #  self.we = extract_waveforms(self.recording, self.sorting, './toy_example', load_if_exists=True)
+        self.we = extract_waveforms(self.recording, self.sorting, cache_folder / 'mearec_test', load_if_exists=True)
 
-        self._amplitudes = st.compute_spike_amplitudes(self._we, peak_sign='neg', outputs='by_unit')
-        self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
+        self.amplitudes = st.compute_spike_amplitudes(self.we, peak_sign='neg', outputs='by_unit')
+        self.gt_comp = sc.compare_sorter_to_ground_truth(self.sorting, self.sorting)
 
         # @jeremy : for testing sorting view we can find something here
         # at the moment only mpl will be tested on github actions
@@ -45,22 +45,29 @@ class TestWidgets(unittest.TestCase):
 
     def tearDown(self):
         pass
+    
+    def test_plot_timeseries(self):
+        sw.plot_timeseries(self.recording, mode='auto')
+        sw.plot_timeseries(self.recording, mode='line', show_channel_ids=True)
+        sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True)
+        sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True, order_channel_by_depth=True)
 
+    
     def test_plot_unit_waveforms(self):
-        w = sw.plot_unit_waveforms(self._we)
-        unit_ids = self._sorting.unit_ids[:6]
-        sw.plot_unit_waveforms(self._we, max_channels=5, unit_ids=unit_ids)
-        sw.plot_unit_waveforms(self._we, radius_um=60, unit_ids=unit_ids)
+        w = sw.plot_unit_waveforms(self.we)
+        unit_ids = self.sorting.unit_ids[:6]
+        sw.plot_unit_waveforms(self.we, max_channels=5, unit_ids=unit_ids)
+        sw.plot_unit_waveforms(self.we, radius_um=60, unit_ids=unit_ids)
 
     def test_plot_unit_templates(self):
-        w = sw.plot_unit_templates(self._we)
-        unit_ids = self._sorting.unit_ids[:6]
-        sw.plot_unit_templates(self._we, max_channels=5, unit_ids=unit_ids)
+        w = sw.plot_unit_templates(self.we)
+        unit_ids = self.sorting.unit_ids[:6]
+        sw.plot_unit_templates(self.we, max_channels=5, unit_ids=unit_ids)
 
     def test_plot_unit_waveforms_density_map(self):
-        unit_ids = self._sorting.unit_ids[:2]
-        sw.plot_unit_waveforms_density_map(self._we, max_channels=5, unit_ids=unit_ids)
-        sw.plot_unit_waveforms_density_map(self._we, max_channels=5, same_axis=True, unit_ids=unit_ids)
+        unit_ids = self.sorting.unit_ids[:2]
+        sw.plot_unit_waveforms_density_map(self.we, max_channels=5, unit_ids=unit_ids)
+        sw.plot_unit_waveforms_density_map(self.we, max_channels=5, same_axis=True, unit_ids=unit_ids)
 
 
 
@@ -69,9 +76,11 @@ if __name__ == '__main__':
 
     mytest = TestWidgets()
     mytest.setUp()
-
-    # mytest.test_plot_unit_waveforms()
-    # mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_waveforms_density_map()
+    
+    mytest.test_plot_timeseries()
+    
+    # mytest.test_plot_unit_waveforms()
+    # mytest.test_plot_unit_templates()
+    # mytest.test_plot_unit_waveforms_density_map()
 
     plt.show()

@@ -30,14 +30,13 @@ class BaseWidget:
         self.plot_data = plot_data
         self.backend = backend
         
-        print('backend_kwargs', backend_kwargs)
         # delegated to one of the plotter
         self.do_plot(backend, **backend_kwargs)
 
     def do_plot(self, backend, **backend_kwargs):
         if backend is None:
             backend = get_default_plotter_backend()
-
+    
         assert backend in self.possible_backends, f'Backend {backend} not supported for this widget'    
         plotter = self.possible_backends[backend]()
         plotter.do_plot(self.plot_data, **backend_kwargs)
