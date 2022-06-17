@@ -191,30 +191,30 @@ class BenchmarkClustering:
         self.gt_labels = self.gt_sorting.to_spike_vector()['unit_ind']
 
 
-    def _get_colors(self, sorting, excluded_ids=[-1]):
+    def _get_colors(self, sorting, force_black_for=[]):
         from spikeinterface.widgets import get_unit_colors
         colors = get_unit_colors(sorting)
         result = {}
         for key, value in colors.items():
             result[sorting.id_to_index(key)] = value
-        for key in excluded_ids:
-            result[key] = 'k'
+        for key in force_black_for:
+            result[sorting.id_to_index(unid_id)] = 'k'
         return result
 
-    def _get_labels(self, sorting, excluded_ids={-1}):
+    def _get_labels(self, sorting, force_black_for=[]):
         result = {}
         for unid_id in sorting.unit_ids:
             result[sorting.id_to_index(unid_id)] = unid_id
-        for key in excluded_ids:
-            result[key] = 'noise'
+        for key in force_black_for:
+            result[sorting.id_to_index(unid_id)] = 'noise'
         return result
 
-    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, excluded_ids=[-1], s=1, alpha=0.5):
+    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5):
 
         if colors is None:
-            colors = self._get_colors(sorting, excluded_ids)
+            colors = self._get_colors(sorting, force_black_for)
         if labels is None:
-            labels = self._get_labels(sorting, excluded_ids)
+            labels = self._get_labels(sorting, force_black_for)
 
         from matplotlib.patches import Ellipse
         import matplotlib.transforms as transforms
@@ -230,7 +230,7 @@ class BenchmarkClustering:
             xk = xs[where]
             yk = ys[where]
             ax.scatter(xk, yk, s=s, color=colors[k], alpha=alpha, marker=".")
-            if k not in excluded_ids:
+            if k not in force_black_for:
                 x_mean, y_mean = xk.mean(), yk.mean()
                 xycov = np.cov(xk, yk)
                 means[k] = x_mean, y_mean
@@ -345,11 +345,12 @@ class BenchmarkClustering:
         ax.plot(metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]], markersize=10, marker='.', ls='', c='k', label='Cluster Found')
         ax.plot(metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]], markersize=10, marker='.', ls='', c='r', label='Cluster missed')
 
-        for l,x,y in zip(unit_ids1[:len(inds_2)], metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]]):
-            ax.annotate(l, (x, y))
+        if annotations:
+            for l,x,y in zip(unit_ids1[:len(inds_2)], metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]]):
+                ax.annotate(l, (x, y))
 
-        for l,x,y in zip(unit_ids1[len(inds_2):], metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]]):
-            ax.annotate(l, (x, y),c='r')
+            for l,x,y in zip(unit_ids1[len(inds_2):], metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]]):
+                ax.annotate(l, (x, y),c='r')
 
         ax.legend()
         ax.set_xlabel('template snr')
@@ -408,8 +409,9 @@ class BenchmarkClustering:
         cb = fig.colorbar(cm, ax=ax)
         cb.set_label(metric)
 
-        for l,x,y in zip(unit_ids1[:len(inds_2)], snrs, nb_spikes):
-            ax.annotate(l, (x, y))
+        if annotations:
+            for l,x,y in zip(unit_ids1[:len(inds_2)], snrs, nb_spikes):
+                ax.annotate(l, (x, y))
 
         ax = axs[1, 1]
         cm = ax.scatter(energy, nb_channels, c=res)
@@ -420,8 +422,9 @@ class BenchmarkClustering:
         cb = fig.colorbar(cm, ax=ax)
         cb.set_label(metric)
 
-        for l,x,y in zip(unit_ids1[:len(inds_2)], energy, nb_channels):
-            ax.annotate(l, (x, y))
+        if annotations:
+            for l,x,y in zip(unit_ids1[:len(inds_2)], energy, nb_channels):
+                ax.annotate(l, (x, y))
 
 
         ax = axs[1, 2]

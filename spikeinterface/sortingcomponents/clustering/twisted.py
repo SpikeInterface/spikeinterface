@@ -20,7 +20,6 @@ class TwistedClustering:
     """
     _default_params = {
         "peak_locations" : None,
-        "noise_levels" : None,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1},
         "debug" : False,
@@ -60,9 +59,6 @@ class TwistedClustering:
 
         params = cls._check_params(recording, peaks, params)
         d = params
-
-        assert d['noise_levels'] is not None, "twisted clustering needs the noise levels"
-
 
         if d['peak_locations'] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
@@ -110,11 +106,10 @@ class TwistedClustering:
                                 **params['job_kwargs'])
 
         energies = np.zeros((len(locations), 1))
-        ptps = np.zeros((len(locations), 1))
+        local_ptps = np.zeros((len(locations), 1))
         dist_ptps = np.zeros((len(locations), 1))
-
-        #nb_ptps = 2
-        #several_ptps = np.zeros((len(locations), nb_ptps))
+        dist_stds = np.zeros((len(locations), 1))
+        #dist_abs_barycenters = np.zeros((len(locations), 1))
 
         import scipy
 
@@ -132,15 +127,26 @@ class TwistedClustering:
             #closest_channels = idx_sorted[:nb_ptps]
 
             if len(waveforms) > 0:
+                #waveforms = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
                 waveforms = waveforms*hanning_window
                 all_ptps = np.ptp(waveforms, axis=1)
-                ptps[idx, 0] = np.max(all_ptps, axis=1)
+                local_ptps[idx, 0] = np.max(all_ptps, axis=1)
 
                 ptp_channels = channels[np.argmax(np.ptp(waveforms, axis=1), axis=1)]
+                std_channels = channels[np.argmax(np.std(waveforms, axis=1), axis=1)]
                 #print(chan_locs[ptp_channels].shape, locations[idx].shape)
                 #print(np.linalg.norm(chan_locs[ptp_channels] - locations[idx]))
                 dist_ptps[idx, 0] = np.linalg.norm(chan_locs[ptp_channels] - locations[idx], axis=1)
+                
+                dist_stds[idx, 0] = np.linalg.norm(chan_locs[std_channels] - locations[idx], axis=1)
+                
 
+                #global_ptps[idx, 0] = np.ptp(waveforms, axis=(1,2))
+                #abs_peaks = np.max(np.abs(waveforms), axis=1)
+                #denominator = np.sum(abs_peaks, axis=1)
+                #denominator[denominator == 0] = 1
+                #abs_barycenters = np.dot(abs_peaks, chan_locs[channels])/denominator[:, np.newaxis]
+                #dist_abs_barycenters[idx, 0] = np.linalg.norm(locations[idx] - abs_barycenters, axis=1)
                 #ptps = np.ptp(waveforms, axis=1)
                 #several_ptps[idx, :len(closest_channels)] = ptps[:, closest_channels]
                 #data = waveforms.copy()
@@ -148,20 +154,7 @@ class TwistedClustering:
 
                 energies[idx, 0] = np.linalg.norm(waveforms, axis=(1,2))
 
-
-        #preprocessing = MaxAbsScaler()
-        #locations = preprocessing.fit_transform(locations)
-        #preprocessing = QuantileTransformer(output_distribution='uniform')
-        #several_ptps = preprocessing.fit_transform(several_ptps)
-        #preprocessing = QuantileTransformer(output_distribution='uniform')
-        #all_energies = preprocessing.fit_transform(all_energies)
-        # weights = np.zeros((locations.shape[1] + nb_ptps + 1))
-        # weights[:locations.shape[1]] = 1
-        # weights[locations.shape[1]:] = 1/nb_ptps
-        #to_cluster_from = np.hstack((locations, several_ptps, all_energies))
-        #to_cluster_from *= weights
-
-        to_cluster_from = np.hstack((locations, ptps, dist_ptps, energies))
+        to_cluster_from = np.hstack((locations, local_ptps, dist_ptps, dist_stds))
         preprocessing = QuantileTransformer(output_distribution='uniform')
         to_cluster_from = preprocessing.fit_transform(to_cluster_from)
 

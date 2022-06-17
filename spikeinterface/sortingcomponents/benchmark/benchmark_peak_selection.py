@@ -10,6 +10,7 @@ from spikeinterface.widgets import plot_probe_map, plot_agreement_matrix, plot_c
 from spikeinterface.toolkit.postprocessing import compute_principal_components
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.toolkit.postprocessing import get_template_extremum_channel, get_template_extremum_amplitude
+from spikeinterface.toolkit import get_noise_levels
 
 import time
 import string, random
@@ -425,6 +426,8 @@ class BenchmarkPeakSelection:
             mask = self.deltas['labels'] == unit_id
             ax.violinplot(self.deltas['delta'][mask], [unit_ind], widths=2, showmeans=True, showmedians=False, showextrema=False)
         ax.set_xticks(np.arange(len(self.gt_sorting.unit_ids)), self.gt_sorting.unit_ids)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
 
         ax = axs[1, 0]
         dist = []
@@ -451,6 +454,8 @@ class BenchmarkPeakSelection:
         ax.plot([0, 1], [0, 1], '--')
         ax.set_xlabel('cosine dispersion tested')
         ax.set_ylabel('cosine dispersion gt')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         
         ax = axs[1, 1]
         nb_spikes_real = []
@@ -465,8 +470,29 @@ class BenchmarkPeakSelection:
         ax.plot(nb_spikes, nb_spikes_real, '.', markersize=10)
         ax.set_xlabel("# spikes tested")
         ax.set_ylabel("# spikes gt")
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
-        ax.plot([xmin, xmax], [ymin, ymin + (xmax - xmin)], 'k--')
+        ax.plot([xmin, xmax], [xmin, xmin + (xmax - xmin)], 'k--')
+
+        if annotations:
+            for l,x,y in zip(unit_ids1, nb_spikes, nb_spikes_real):
+                ax.annotate(l, (x, y))
+
+
+        ax = axs[1, 2]
+        metrics = compute_quality_metrics(self.waveforms['full_gt'], metric_names=['snr'], load_if_exists=False)
+        ratios = np.array(nb_spikes)/np.array(nb_spikes_real)
+        plt.plot(metrics['snr'][inds_1], ratios, '.')
+        ax.set_xlabel('template snr')
+        ax.set_ylabel('% gt spikes detected')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        if annotations:
+            for l,x,y in zip(unit_ids1, metrics['snr'][inds_1], ratios):
+                ax.annotate(l, (x, y))
+
 
 
