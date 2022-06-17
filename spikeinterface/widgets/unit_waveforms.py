@@ -17,8 +17,7 @@ class UnitWaveformsWidget(BaseWidget):
                  ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
                  set_title=True,
                  
-                 backend=None, **backend_kwargs
-                 ):
+                 backend=None, **backend_kwargs):
         """
         Plots unit waveforms.
 
