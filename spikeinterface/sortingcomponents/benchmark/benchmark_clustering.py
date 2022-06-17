@@ -358,8 +358,10 @@ class BenchmarkClustering:
         ax = axs[0, 1]
         nb_peaks = np.array([len(self.sliced_gt_sorting.get_unit_spike_train(i)) for i in self.sliced_gt_sorting.unit_ids])
 
-        ax.plot(metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]], markersize=10, marker='.', ls='', c='k', label='Cluster Found')
-        ax.plot(metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]], markersize=10, marker='.', ls='', c='r', label='Cluster missed')
+        nb_potentials = np.sum(scores.max(1).values > 0.1)
+
+        ax.plot(metrics['snr'][unit_ids1][inds_1[:nb_potentials]], nb_peaks[inds_1[:nb_potentials]], markersize=10, marker='.', ls='', c='k', label='Cluster potentially found')
+        ax.plot(metrics['snr'][unit_ids1][inds_1[nb_potentials:]], nb_peaks[inds_1[nb_potentials:]], markersize=10, marker='.', ls='', c='r', label='Cluster clearly missed')
 
         if annotations:
             for l,x,y in zip(unit_ids1[:len(inds_2)], metrics['snr'][unit_ids1][inds_1[:len(inds_2)]], nb_peaks[inds_1[:len(inds_2)]]):
@@ -367,6 +369,10 @@ class BenchmarkClustering:
 
             for l,x,y in zip(unit_ids1[len(inds_2):], metrics['snr'][unit_ids1][inds_1[len(inds_2):]], nb_peaks[inds_1[len(inds_2):]]):
                 ax.annotate(l, (x, y),c='r')
+
+        if detect_threshold is not None:
+            ymin, ymax = ax.get_ylim()
+            ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
 
         ax.legend()
         ax.set_xlabel('template snr')
@@ -384,8 +390,8 @@ class BenchmarkClustering:
                 if snr < detect_threshold:
                     ax.plot([xmin, xmax], [count, count], 'w')
 
-        ymi, ymax = ax.get_ylim()
-        ax.plot([nb_detectable+0.5, nb_detectable+0.5], [ymin, ymax], 'r')
+            ymin, ymax = ax.get_ylim()
+            ax.plot([nb_detectable+0.5, nb_detectable+0.5], [ymin, ymax], 'r')
 
 
         ax.set_yticks(np.arange(0, len(scores.index)))
