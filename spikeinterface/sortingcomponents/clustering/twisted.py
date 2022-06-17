@@ -149,10 +149,4 @@ class TwistedClustering:
         labels = np.unique(peak_labels)
         labels = labels[labels>=0]
 
-        # print('Computing validation metrics...')
-        # from .dbcv import DBCV
-        # for i in labels:
-        #     mask = peak_labels == i
-        #     print(i, DBCV(to_cluster_from[mask], peak_labels[mask]))
-
         return labels, peak_labels
