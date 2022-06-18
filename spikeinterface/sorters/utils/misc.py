@@ -31,3 +31,26 @@ def has_nvidia():
         return True
     except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
         return False
+
+
+def resolve_sif_file(container_image):
+    """
+    Resolves container_image string for singularity image file
+
+    Converts image names from docker notation to .sif files
+    """
+    if '.sif' in container_image:
+        return container_image
+
+    # Resolve repo name
+    if '/' in container_image:
+        container_image = container_image.split('/')[-1]
+
+    # Resolve tag
+    if ':' in container_image:
+        container_image = container_image.replace(':', '_')
+    else:
+        container_image += '_latest'
+
+    container_image += '.sif'
+    return container_image
