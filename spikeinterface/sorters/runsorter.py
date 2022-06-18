@@ -270,7 +270,8 @@ class ContainerClient:
                         finally:
                             # Clean up
                             f.close()
-                            os.remove(tmp_file)
+                            if os.path.exists(tmp_file):
+                                os.remove(tmp_file)
                 if not singularity_image:
                     print(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f'docker://{container_image}')
