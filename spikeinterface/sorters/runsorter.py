@@ -9,7 +9,7 @@ from ..core import BaseRecording
 from ..version import version as si_version
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
-from .utils import SpikeSortingError, has_nvidia
+from .utils import SpikeSortingError, has_nvidia, resolve_sif_file
 
 REGISTRY = 'spikeinterface'
 
@@ -245,8 +245,11 @@ class ContainerClient:
         elif mode == 'singularity':
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
+            sif_file = resolve_sif_file(container_image)
             if Path(container_image).exists():
                 self.singularity_image = container_image
+            elif Path(sif_file).exists():
+                self.singularity_image = sif_file
             else:
                 print(f"Singularity: pulling image {container_image}")
                 self.singularity_image = Client.pull(f'docker://{container_image}')
