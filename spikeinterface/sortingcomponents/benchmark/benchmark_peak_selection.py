@@ -9,7 +9,7 @@ from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import plot_probe_map, plot_agreement_matrix, plot_comparison_collision_by_similarity, plot_unit_templates, plot_unit_waveforms
 from spikeinterface.toolkit.postprocessing import compute_principal_components
 from spikeinterface.comparison.comparisontools import make_matching_events
-from spikeinterface.toolkit.postprocessing import get_template_extremum_channel, get_template_extremum_amplitude
+from spikeinterface.toolkit.postprocessing import get_template_extremum_channel, get_template_extremum_amplitude, compute_center_of_mass
 from spikeinterface.toolkit import get_noise_levels
 
 import time
@@ -385,7 +385,7 @@ class BenchmarkPeakSelection:
         ax.set_yticks([], [])
         #ax.set_ylabel('y')
 
-    def plot_statistics(self, metric='cosine', annotations=True):
+    def plot_statistics(self, metric='cosine', annotations=True, detect_threshold=5):
 
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
         
@@ -429,33 +429,50 @@ class BenchmarkPeakSelection:
         ax.spines['right'].set_visible(False)
 
         ax = axs[1, 0]
-        dist = []
-        dist_real = []
 
-        for found, real in zip(unit_ids2, unit_ids1):
-            wfs = self.waveforms['gt'].get_waveforms(found)
-            wfs_real = self.waveforms['full_gt'].get_waveforms(real)
-            template = self.waveforms['gt'].get_template(found)
-            template_real = self.waveforms['full_gt'].get_template(real)
-
-            template = template.reshape(template.size, 1).T
-            template_real = template_real.reshape(template_real.size, 1).T
-
-            if metric == 'cosine':
-                dist += [sklearn.metrics.pairwise.cosine_similarity(template, wfs.reshape(len(wfs), -1), metric).flatten()]
-                dist_real += [sklearn.metrics.pairwise.cosine_similarity(template_real, wfs_real.reshape(len(wfs_real), -1), metric).flatten()]
-            else:
-                dist += [sklearn.metrics.pairwise_distances(template, wfs.reshape(len(wfs), -1), metric).flatten()]
-                dist_real += [sklearn.metrics.pairwise_distances(template_real, wfs_real.reshape(len(wfs_real), -1), metric).flatten()]
-
-        ax.errorbar([a.mean() for a in dist], [a.mean() for a in dist_real], [a.std() for a in dist], [a.std() for a in dist_real], capsize=0, ls='none', color='black', 
-            elinewidth=2)
-        ax.plot([0, 1], [0, 1], '--')
-        ax.set_xlabel('cosine dispersion tested')
-        ax.set_ylabel('cosine dispersion gt')
+        noise_levels = get_noise_levels(self.recording_f)
+        snrs = self.peaks['amplitude']/noise_levels[self.peaks['channel_ind']]
+        garbage_snrs = self.garbage_peaks['amplitude']/noise_levels[self.garbage_peaks['channel_ind']]
+        amin, amax = snrs.min(), snrs.max()
+        
+        ax.hist(snrs, np.linspace(amin, amax, 100), density=True, label='peaks')
+        #ax.hist(garbage_snrs, np.linspace(amin, amax, 100), density=True, label='garbage', alpha=0.5)
+        ax.hist(self.sliced_gt_peaks['amplitude']/noise_levels[self.sliced_gt_peaks['channel_ind']], np.linspace(amin, amax, 100), density=True, alpha=0.5, label='matched gt')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
+        ax.legend()
+        ax.set_xlabel('snrs')
+        ax.set_ylabel('density')
+
+        # dist = []
+        # dist_real = []
+
+        # for found, real in zip(unit_ids2, unit_ids1):
+        #     wfs = self.waveforms['gt'].get_waveforms(found)
+        #     wfs_real = self.waveforms['full_gt'].get_waveforms(real)
+        #     template = self.waveforms['gt'].get_template(found)
+        #     template_real = self.waveforms['full_gt'].get_template(real)
+
+        #     template = template.reshape(template.size, 1).T
+        #     template_real = template_real.reshape(template_real.size, 1).T
+
+        #     if metric == 'cosine':
+        #         dist += [sklearn.metrics.pairwise.cosine_similarity(template, wfs.reshape(len(wfs), -1), metric).flatten()]
+        #         dist_real += [sklearn.metrics.pairwise.cosine_similarity(template_real, wfs_real.reshape(len(wfs_real), -1), metric).flatten()]
+        #     else:
+        #         dist += [sklearn.metrics.pairwise_distances(template, wfs.reshape(len(wfs), -1), metric).flatten()]
+        #         dist_real += [sklearn.metrics.pairwise_distances(template_real, wfs_real.reshape(len(wfs_real), -1), metric).flatten()]
+
+        # ax.errorbar([a.mean() for a in dist], [a.mean() for a in dist_real], [a.std() for a in dist], [a.std() for a in dist_real], capsize=0, ls='none', color='black', 
+        #     elinewidth=2)
+        # ax.plot([0, 1], [0, 1], '--')
+        # ax.set_xlabel('cosine dispersion tested')
+        # ax.set_ylabel('cosine dispersion gt')
+        # ax.spines['top'].set_visible(False)
+        # ax.spines['right'].set_visible(False)
         
+
+
         ax = axs[1, 1]
         nb_spikes_real = []
         nb_spikes = []
@@ -466,18 +483,61 @@ class BenchmarkPeakSelection:
             nb_spikes_real += [a]
             nb_spikes += [b]
 
-        ax.plot(nb_spikes, nb_spikes_real, '.', markersize=10)
-        ax.set_xlabel("# spikes tested")
-        ax.set_ylabel("# spikes gt")
+
+        centers = compute_center_of_mass(self.waveforms['gt'])
+        times, labels = self.sliced_gt_sorting.get_all_spike_trains()[0]
+        stds = []
+        means = []
+        for found, real in zip(unit_ids2, inds_1):
+            mask = labels == found
+            center = np.array([self.sliced_gt_positions[mask]['x'], self.sliced_gt_positions[mask]['y']]).mean()
+            means += [np.mean(center - centers[real])]
+            stds += [np.std(center - centers[real])]
+
+        metrics = compute_quality_metrics(self.waveforms['full_gt'], metric_names=['snr'], load_if_exists=False)
+        ax.errorbar(metrics['snr'][inds_1], means, yerr=stds, ls='none')
+
+        ax.set_xlabel('template snr')
+        ax.set_ylabel('position error')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        ax.plot([xmin, xmax], [xmin, xmin + (xmax - xmin)], 'k--')
 
         if annotations:
-            for l,x,y in zip(unit_ids1, nb_spikes, nb_spikes_real):
+            for l,x,y in zip(unit_ids1, metrics['snr'][inds_1], means):
                 ax.annotate(l, (x, y))
+
+        if detect_threshold is not None:
+            ymin, ymax = ax.get_ylim()
+            ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
+
+        # ax.plot(nb_spikes, nb_spikes_real, '.', markersize=10)
+        # ax.set_xlabel("# spikes tested")
+        # ax.set_ylabel("# spikes gt")
+        # ax.spines['top'].set_visible(False)
+        # ax.spines['right'].set_visible(False)
+        # xmin, xmax = ax.get_xlim()
+        # ymin, ymax = ax.get_ylim()
+        # ax.plot([xmin, xmax], [xmin, xmin + (xmax - xmin)], 'k--')
+
+        # if annotations:
+        #     for l,x,y in zip(unit_ids1, nb_spikes, nb_spikes_real):
+        #         ax.annotate(l, (x, y))
+
+        # fs = self.recording_f.get_sampling_frequency()
+        # tmax = self.recording_f.get_total_duration()
+        # ax.hist(self.peaks['sample_ind']/fs, np.linspace(0, tmax, 100), density=True)
+        # ax.spines['top'].set_visible(False)
+        # ax.spines['right'].set_visible(False)
+        # ax.set_xlabel('time (s)')
+        # ax.set_ylabel('density')
+
+        # for channel_ind in       
+        #     ax.hist(snrs, np.linspace(amin, amax, 100), density=True, label='peaks')
+        # ax.spines['top'].set_visible(False)
+        # ax.spines['right'].set_visible(False)
+        # ax.legend()
+        # ax.set_xlabel('snrs')
+        # ax.set_ylabel('density')
 
 
         ax = axs[1, 2]
@@ -492,6 +552,10 @@ class BenchmarkPeakSelection:
         if annotations:
             for l,x,y in zip(unit_ids1, metrics['snr'][inds_1], ratios):
                 ax.annotate(l, (x, y))
+
+        if detect_threshold is not None:
+            ymin, ymax = ax.get_ylim()
+            ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
 
 
 
