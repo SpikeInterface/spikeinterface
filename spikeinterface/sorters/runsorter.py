@@ -9,7 +9,7 @@ from ..core import BaseRecording
 from ..version import version as si_version
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
-from .utils import SpikeSortingError, has_nvidia, resolve_sif_file
+from .utils import SpikeSortingError, has_nvidia
 
 try:
     HAS_DOCKER = True
@@ -237,12 +237,7 @@ class ContainerClient:
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
 
-            # check if the image is already present locally
-            repo_tags = []
-            for image in client.images.list():
-                repo_tags.extend(image.attrs['RepoTags'])
-
-            if container_image not in repo_tags:
+            if self._get_docker_image(container_image) is None:
                 print(f"Docker: pulling image {container_image}")
                 client.images.pull(container_image)
 
@@ -252,7 +247,7 @@ class ContainerClient:
         elif mode == 'singularity':
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
-            sif_file = resolve_sif_file(container_image)
+            sif_file = Client._get_filename(container_image)
             singularity_image = None
             if Path(container_image).exists():
                 singularity_image = container_image
@@ -260,8 +255,22 @@ class ContainerClient:
                 singularity_image = sif_file
             else:
                 if HAS_DOCKER:
-                    # Try to build sif file from local docker images
-                    singularity_image = self._singularity_from_docker_local(container_image)
+                    docker_image = self._get_docker_image(container_image)
+                    if docker_image:
+                        print('Building singularity image from local docker images')
+                        # Save docker image as tar and build singularity image
+                        tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
+                        f = open(tmp_file, 'wb')
+                        try:
+                            for chunk in docker_image.save():
+                                f.write(chunk)
+                            singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file, sudo=False)
+                        except:
+                            print('Failed to build singularity image from local')
+                        finally:
+                            # Clean up
+                            f.close()
+                            os.remove(tmp_file)
                 if not singularity_image:
                     print(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f'docker://{container_image}')
@@ -281,7 +290,17 @@ class ContainerClient:
             self.client_instance = Client.instance(singularity_image, start=False, options=options)
 
     @staticmethod
+    def _get_docker_image(container_image):
+        docker_client = docker.from_env()
+        try:
+            docker_image = docker_client.images.get(container_image)
+        except docker.errors.ImageNotFound:
+            docker_image = None
+        return docker_image
+
+    @staticmethod
     def _singularity_from_docker_local(container_image):
+        print('Building singularity image from local docker images')
         from spython.main import Client
 
         docker_client = docker.from_env()
@@ -290,19 +309,22 @@ class ContainerClient:
         except docker.errors.ImageNotFound:
             return
 
-        sif_file = resolve_sif_file(container_image)
+        sif_file = Client._get_filename(container_image)
 
-        # Save tar and load from singularity
-        tmp_file = sif_file.replace('sif', 'tar')
-        with open(tmp_file, 'wb') as f:
+        # Save tar and build singularity image
+        tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
+        f = open(tmp_file, 'wb')
+        try:
             for chunk in docker_image.save():
                 f.write(chunk)
+            singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file)
+        except:
+            print('Failed to build singularity image from local')
+        finally:
+            # Clean up
+            f.close()
+            os.remove(tmp_file)
 
-        singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file)
-
-        os.remove(tmp_file)
-
-        return singularity_image
 
     def start(self):
         if self.mode == 'docker':
