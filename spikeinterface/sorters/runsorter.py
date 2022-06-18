@@ -298,34 +298,6 @@ class ContainerClient:
             docker_image = None
         return docker_image
 
-    @staticmethod
-    def _singularity_from_docker_local(container_image):
-        print('Building singularity image from local docker images')
-        from spython.main import Client
-
-        docker_client = docker.from_env()
-        try:
-            docker_image = docker_client.images.get(container_image)
-        except docker.errors.ImageNotFound:
-            return
-
-        sif_file = Client._get_filename(container_image)
-
-        # Save tar and build singularity image
-        tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
-        f = open(tmp_file, 'wb')
-        try:
-            for chunk in docker_image.save():
-                f.write(chunk)
-            singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file)
-        except:
-            print('Failed to build singularity image from local')
-        finally:
-            # Clean up
-            f.close()
-            os.remove(tmp_file)
-
-
     def start(self):
         if self.mode == 'docker':
             self.docker_container.start()
