@@ -11,6 +11,12 @@ from spikeinterface.core.core_tools import check_json, recursive_path_modifier, 
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia, resolve_sif_file
 
+try:
+    HAS_DOCKER = True
+    import docker
+except ModuleNotFoundError:
+    HAS_DOCKER = False
+
 REGISTRY = 'spikeinterface'
 
 SORTER_DOCKER_MAP = dict(
@@ -223,7 +229,8 @@ class ContainerClient:
             'container_requires_gpu', None)
 
         if mode == 'docker':
-            import docker
+            if not HAS_DOCKER:
+                raise ModuleNotFoundError("No module named 'docker'")
             client = docker.from_env()
             if container_requires_gpu is not None:
                 extra_kwargs.pop('container_requires_gpu')
@@ -246,15 +253,20 @@ class ContainerClient:
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
             sif_file = resolve_sif_file(container_image)
+            singularity_image = None
             if Path(container_image).exists():
-                self.singularity_image = container_image
+                singularity_image = container_image
             elif Path(sif_file).exists():
-                self.singularity_image = sif_file
+                singularity_image = sif_file
             else:
-                print(f"Singularity: pulling image {container_image}")
-                self.singularity_image = Client.pull(f'docker://{container_image}')
+                if HAS_DOCKER:
+                    # Try to build sif file from local docker images
+                    singularity_image = self._singularity_from_docker_local(container_image)
+                if not singularity_image:
+                    print(f"Singularity: pulling image {container_image}")
+                    singularity_image = Client.pull(f'docker://{container_image}')
 
-            if not Path(self.singularity_image).exists():
+            if not Path(singularity_image).exists():
                 raise FileNotFoundError(f'Unable to locate container image {container_image}')
             
             # bin options
@@ -266,7 +278,31 @@ class ContainerClient:
                 # only nvidia at the moment
                 options += ['--nv']
 
-            self.client_instance = Client.instance(self.singularity_image, start=False, options=options)
+            self.client_instance = Client.instance(singularity_image, start=False, options=options)
+
+    @staticmethod
+    def _singularity_from_docker_local(container_image):
+        from spython.main import Client
+
+        docker_client = docker.from_env()
+        try:
+            docker_image = docker_client.images.get(container_image)
+        except docker.errors.ImageNotFound:
+            return
+
+        sif_file = resolve_sif_file(container_image)
+
+        # Save tar and load from singularity
+        tmp_file = sif_file.replace('sif', 'tar')
+        with open(tmp_file, 'wb') as f:
+            for chunk in docker_image.save():
+                f.write(chunk)
+
+        singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file)
+
+        os.remove(tmp_file)
+
+        return singularity_image
 
     def start(self):
         if self.mode == 'docker':
