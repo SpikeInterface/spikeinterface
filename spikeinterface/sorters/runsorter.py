@@ -265,8 +265,10 @@ class ContainerClient:
                             for chunk in docker_image.save():
                                 f.write(chunk)
                             singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file, sudo=False)
-                        except:
+                        except Exception as e:
                             print('Failed to build singularity image from local')
+                            import traceback
+                            print(traceback.format_exec())
                         finally:
                             # Clean up
                             f.close()
