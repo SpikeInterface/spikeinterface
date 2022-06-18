@@ -49,8 +49,6 @@ def resolve_sif_file(container_image):
     # Resolve tag
     if ':' in container_image:
         container_image = container_image.replace(':', '_')
-    else:
-        container_image += '_latest'
 
     container_image += '.sif'
     return container_image
