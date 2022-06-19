@@ -262,7 +262,7 @@ class ContainerClient:
                         tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
                         f = open(tmp_file, 'wb')
                         try:
-                            for chunk in docker_image.save():
+                            for chunk in docker_image.save(chunk_size=100*1024*1024):  # 100 MB
                                 f.write(chunk)
                             singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file, sudo=False)
                         except Exception as e:
