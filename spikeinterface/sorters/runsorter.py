@@ -268,7 +268,7 @@ class ContainerClient:
                         except Exception as e:
                             print('Failed to build singularity image from local')
                             import traceback
-                            print(traceback.format_exec())
+                            print(traceback.format_exc())
                         finally:
                             # Clean up
                             f.close()
