@@ -262,7 +262,7 @@ class ContainerClient:
                         tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
                         f = open(tmp_file, 'wb')
                         try:
-                            for chunk in docker_image.save():
+                            for chunk in docker_image.save(chunk_size=20971520):
                                 f.write(chunk)
                             singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file, sudo=False)
                         except Exception as e:
@@ -294,7 +294,7 @@ class ContainerClient:
 
     @staticmethod
     def _get_docker_image(container_image):
-        docker_client = docker.from_env()
+        docker_client = docker.from_env(timeout=600)
         try:
             docker_image = docker_client.images.get(container_image)
         except docker.errors.ImageNotFound:
