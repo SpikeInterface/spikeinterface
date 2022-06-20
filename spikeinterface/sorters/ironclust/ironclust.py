@@ -142,7 +142,9 @@ class IronClustSorter(BaseSorter):
     
     @classmethod
     def use_gpu(cls, params):
-        return params["fGpu"]
+        if 'fGpu' in params:
+            return params['fGpu']
+        return cls.default_params()['fGpu']
 
     @staticmethod
     def set_ironclust_path(ironclust_path: PathType):

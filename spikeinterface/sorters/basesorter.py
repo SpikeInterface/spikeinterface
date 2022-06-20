@@ -112,8 +112,6 @@ class BaseSorter:
                                    "Locations can be added to the RecordingExtractor by loading a probe file "
                                    "(.prb or .csv) or by setting them manually.")
 
-        params = cls.default_params()
-
         if output_folder is None:
             output_folder = cls.sorter_name + '_output'
 
