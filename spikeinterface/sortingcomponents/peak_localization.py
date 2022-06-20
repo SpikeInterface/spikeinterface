@@ -32,7 +32,7 @@ def init_kwargs_dict(method, method_kwargs, recording):
     if method_kwargs_.get("enforce_decrease", None) is not None:
         contact_locations = recording.get_channel_locations()
         channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < method_kwargs['local_radius_um']
+        neighbours_mask = channel_distance < method_kwargs.get('local_radius_um', 150)
         method_kwargs_["enforce_decrease_radial_parents"] = make_radial_order_parents(
             contact_locations, neighbours_mask
         )
