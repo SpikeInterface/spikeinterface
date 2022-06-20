@@ -119,7 +119,7 @@ class KilosortBase:
         if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['time_axis'] == 0 and \
                 recording._kwargs['dtype'] == np.dtype('int16') and len(recording._kwargs['file_paths']) == 1:
             # in this specific case no copy is needed !!
-            binary_file_path = recording._kwargs['file_paths'][0]
+            binary_file_path = Path(recording._kwargs['file_paths'][0])
         else:
             binary_file_path = output_folder / 'recording.dat'
             BinaryRecordingExtractor.write_recording(recording, file_paths=binary_file_path,
