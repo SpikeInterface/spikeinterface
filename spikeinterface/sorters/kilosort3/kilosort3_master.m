@@ -25,7 +25,9 @@ function kilosort3_master(fpath, kilosortPath)
         end
 
         if do_correction
-            fprintf("Drift correction ENABLED");
+            fprintf("Drift correction ENABLED\n");
+        else
+            fprintf("Drift correction DISABLED\n");
         end
 
         rez = datashift2(rez, do_correction); % last input is for shifting data
