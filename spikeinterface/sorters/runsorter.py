@@ -338,6 +338,7 @@ def run_sorter_container(
 
     SorterClass = sorter_dict[sorter_name]
     default_params = SorterClass.default_params()
+    # sorter_params is updating default_params to access GPU-related parameters
     sorter_params = {**default_params, **sorter_params}
     output_folder = Path(output_folder).absolute().resolve()
     parent_folder = output_folder.parent.absolute().resolve()
