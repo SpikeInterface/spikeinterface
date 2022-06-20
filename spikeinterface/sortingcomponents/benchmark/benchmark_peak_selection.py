@@ -178,7 +178,7 @@ class BenchmarkPeakSelection:
         self.garbage_peaks = self.peaks[garbage_matches]
 
 
-    def _get_colors(self, sorting, unid_id=[]):
+    def _get_colors(self, sorting, force_black_for=[]):
         from spikeinterface.widgets import get_unit_colors
         colors = get_unit_colors(sorting)
         result = {}
