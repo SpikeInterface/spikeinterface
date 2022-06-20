@@ -133,7 +133,7 @@ class KilosortBase:
         if cls.check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
-                {cls.compiled_name} {output_folder}
+                {cls.compiled_name} "{output_folder}"
             '''
         else:
             source_dir = Path(Path(__file__).parent)
