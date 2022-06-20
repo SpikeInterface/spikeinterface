@@ -11,25 +11,27 @@ from spikeinterface.core.core_tools import check_json, recursive_path_modifier, 
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
 
-SORTER_DOCKER_MAP = {
-    name: f"spikeinterface/{name}-base" for name in [
-        "tridesclous",
-        "spyking-circus",
-        "mountainsort4",
-        "klusta",
-    ]
-}
-SORTER_DOCKER_MAP.update(
-    {
-        name: f"spikeinterface/{name}-compiled-base" for name in [
-            "ironclust",
-            "kilosort",
-            "kilosort2",
-            "kilosort2_5",
-            "kilosort3",
-        ]
-    }
+REGISTRY = 'spikeinterface'
+
+SORTER_DOCKER_MAP = dict(
+    klusta='klusta',
+    mountainsort4='mountainsort4',
+    pykilosort='pykilosort',
+    spykingcircus='spyking-circus',
+    tridesclous='tridesclous',
+    # Matlab compiled sorters:
+    hdsort='hdsort-compiled',
+    ironclust='ironclust-compiled',
+    kilosort='kilosort-compiled',
+    kilosort2='kilosort2-compiled',
+    kilosort3='kilosort3-compiled',
+    waveclus='waveclus-compiled',
 )
+
+SORTER_DOCKER_MAP = {
+    k: f'{REGISTRY}/{v}-base'
+    for k, v in SORTER_DOCKER_MAP.items()
+}
 
 
 _common_param_doc = """
@@ -328,10 +330,11 @@ def run_sorter_container(
     if output_folder is None:
         output_folder = sorter_name + '_output'
 
-    if container_image is None and sorter_name in SORTER_DOCKER_MAP:
-        container_image = SORTER_DOCKER_MAP[sorter_name]
-    else:
-        raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
+    if container_image is None:
+        if sorter_name in SORTER_DOCKER_MAP:
+            container_image = SORTER_DOCKER_MAP[sorter_name]
+        else:
+            raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
