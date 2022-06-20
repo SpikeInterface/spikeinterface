@@ -32,9 +32,6 @@ class BaseSnippets(BaseRecordingSnippets):
         # initialize main annotation and properties
         self.annotate(is_filtered=True)
 
-    def get_sampling_frequency(self):
-        return self._sampling_frequency
-
     def __repr__(self):
         clsname = self.__class__.__name__
         nchan = self.get_num_channels()
@@ -42,6 +39,14 @@ class BaseSnippets(BaseRecordingSnippets):
         sf_khz = self.get_sampling_frequency() / 1000.
         txt = f'{clsname}: {nchan} channels - {nseg} segments -  {sf_khz:0.1f}kHz \n snippet_len:{self._snippet_len} after peak:{self._nbefore}'
         return txt
+    
+    @property
+    def nafter(self):
+        return self._nafter
+    
+    @property
+    def snippet_len(self):
+        return self._snippet_len
 
     def get_num_segments(self):
         return len(self._snippets_segments)
@@ -60,12 +65,9 @@ class BaseSnippets(BaseRecordingSnippets):
         for segment_index in range(self.get_num_segments()):
             s += self.get_num_snippets(segment_index)
         return s
-
-    def has_scaled_snippets(self):
-        if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
-            return False
-        else:
-            return True
+    
+    def get_num_segments(self):
+        return len(self._snippets_segments)
 
     def get_frames(self,
                    indeces=None,
@@ -88,7 +90,7 @@ class BaseSnippets(BaseRecordingSnippets):
         wfs = spts.get_snippets(indeces, channel_indices=channel_indices)
 
         if return_scaled:
-            if not self.has_scaled_snippets():
+            if not self.has_scaled():
                 raise ValueError('These snippets do not support return_scaled=True (need gain_to_uV and offset_'
                                  'to_uV properties)')
             else:
@@ -115,9 +117,24 @@ class BaseSnippets(BaseRecordingSnippets):
 
     def _save(self, format='binary', **save_kwargs):
         raise NotImplementedError
+    
+    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
+        from .channelslice import ChannelSliceSnippets
+        sub_recording = ChannelSliceSnippets(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
+        return sub_recording
+    
+    def _remove_channels(self, remove_channel_ids):
+        from .channelslice import ChannelSliceSnippets
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
+        sub_recording = ChannelSliceSnippets(self, new_channel_ids)
+        return sub_recording
 
-    def get_num_segments(self):
-        return len(self._snippets_segments)
+    def _frame_slice(self, start_frame, end_frame):
+        raise NotImplementedError
+    
+    def _select_segments(self, segment_indices):
+        from .segmentutils import SelectSegmentSnippets
+        return SelectSegmentSnippets(self, segment_indices=segment_indices)
 
 
 class BaseSnippetsSegment(BaseSegment):
@@ -160,7 +177,7 @@ class BaseSnippetsSegment(BaseSegment):
         """
         raise NotImplementedError
 
-    def get_frames(self, indeces):
+    def get_frames(self, indices):
         """Returns the frames of the snippets in this  segment
 
         Returns:

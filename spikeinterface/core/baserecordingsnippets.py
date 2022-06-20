@@ -46,7 +46,7 @@ class BaseRecordingSnippets(BaseExtractor):
     def get_dtype(self):
         return self._dtype
     
-    def has_scaled_traces(self):
+    def has_scaled(self):
         if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
             return False
         else:
@@ -55,6 +55,18 @@ class BaseRecordingSnippets(BaseExtractor):
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
+    
+    def has_scaled(self):
+        if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
+            return False
+        else:
+            return True
+    
+    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
+        raise NotImplementedError
+    
+    def _frame_slice(self, channel_ids, renamed_channel_ids=None):
+        raise NotImplementedError
     
     def set_probe(self, probe, group_mode='by_probe', in_place=False):
         """
@@ -92,10 +104,8 @@ class BaseRecordingSnippets(BaseExtractor):
         Returns
         -------
         sub_recording: BaseRecording
-            A view of the recording (ChannelSliceRecording or clone or itself)
+            A view of the recording (ChannelSlice or clone or itself)
         """
-        from spikeinterface import ChannelSliceRecording
-
         assert group_mode in (
             'by_probe', 'by_shank'), "'group_mode' can be 'by_probe' or 'by_shank'"
 
@@ -147,7 +157,7 @@ class BaseRecordingSnippets(BaseExtractor):
             if np.array_equal(new_channel_ids, self.get_channel_ids()):
                 sub_recording = self.clone()
             else:
-                sub_recording = ChannelSliceRecording(self, new_channel_ids)
+                sub_recording = self.channel_slice(new_channel_ids)
 
         # create a vector that handle all contacts in property
         sub_recording.set_property('contact_vector', arr, ids=None)
@@ -384,3 +394,113 @@ class BaseRecordingSnippets(BaseExtractor):
         recording2d.set_probe(probe2d, in_place=True)
 
         return recording2d
+
+    # utils
+    def channel_slice(self, channel_ids, renamed_channel_ids=None):
+        """
+        Returns a new object with sliced channels.
+
+        Parameters
+        ----------
+        channel_ids : np.array or list
+            The list of channels to keep
+        renamed_channel_ids : np.array or list, optional
+            A list of renamed channels, by default None
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The object with sliced channels
+        """
+        return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
+    
+    def remove_channels(self, remove_channel_ids):
+        """
+        Returns a new object with removed channels.
+
+
+        Parameters
+        ----------
+        remove_channel_ids : np.array or list
+            The list of channels to remove
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The object with removed channels
+        """
+        return self._remove_channels(remove_channel_ids)
+    
+    def frame_slice(self, start_frame, end_frame):
+        """
+        Returns a new object with sliced frames.
+
+        Parameters
+        ----------
+        start_frame : int
+            The start frame
+        end_frame : int
+            The end frame
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The object with sliced frames
+        """
+        return self._frame_slice(start_frame, end_frame)
+    
+    def select_segments(self, segment_indices):
+        """
+        Return a new object with the segments specified by 'segment_indices'.
+
+        Parameters
+        ----------
+        segment_indices : list of int
+            List of segment indices to keep in the returned recording
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The onject with the selected segments
+        """
+        return self._select_segments(segment_indices)
+        
+    def split_by(self, property='group', outputs='dict'):
+        """
+        Splits object based on a certain property (e.g. 'group')
+
+        Parameters
+        ----------
+        property : str, optional
+            The property to use to split the object, by default 'group'
+        outputs : str, optional
+            'dict' or 'list', by default 'dict'
+
+        Returns
+        -------
+        dict or list
+            A dict or list with grouped objects based on property
+
+        Raises
+        ------
+        ValueError
+            Raised when property is not present
+        """
+        assert outputs in ('list', 'dict')
+        values = self.get_property(property)
+        if values is None:
+            raise ValueError(f'property {property} is not set')
+
+        if outputs == 'list':
+            recordings = []
+        elif outputs == 'dict':
+            recordings = {}
+        for value in np.unique(values):
+            inds, = np.nonzero(values == value)
+            new_channel_ids = self.get_channel_ids()[inds]
+            subrec = self.channel_slice(new_channel_ids)
+            if outputs == 'list':
+                recordings.append(subrec)
+            elif outputs == 'dict':
+                recordings[value] = subrec
+        return recordings

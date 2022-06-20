@@ -12,12 +12,14 @@ from spikeinterface.core.testing_tools import generate_recording, generate_sorti
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from spikeinterface.core.numpysnippetsextractor import NumpySnippetsExtractor
 
+
 def test_BaseSnippets():
     duration = 60
     num_channels = 3
     nbefore = 20
     nafter = 44
     recording = generate_recording(durations=[duration], num_channels=num_channels)
+    probe = recording.get_probe()
     sorting = generate_sorting(durations=[duration], num_units=5)
     strains = sorting.get_all_spike_trains()
     peaks_times = np.sort(strains[0][0])
@@ -31,8 +33,11 @@ def test_BaseSnippets():
                                     sparsity_mask=None,n_jobs=1)
     wfs = wfs_arrays[0][0] #extract class zero
 
-    nse = NumpySnippetsExtractor(wfs, peaks2['sample_ind'], recording.get_sampling_frequency(), nafter=nbefore, channel_ids=None)
+    nse = NumpySnippetsExtractor(wfs, peaks2['sample_ind'], recording.get_sampling_frequency(), 
+                                 nafter=nbefore, channel_ids=None)
+    nse = nse.set_probe(probe)
 
+    assert nse.get_probe() is not None
     assert nse.get_num_segments() == 1
 
     assert np.all(nse.ids_to_indices([0, 1, 2]) == [0, 1, 2])

@@ -13,6 +13,9 @@ import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
+from .basesnippets import BaseSnippets, BaseSnippetsSegment
+
+from .core_tools import define_function_from_class
 
 from typing import List, Union
 
@@ -93,11 +96,7 @@ class ProxyAppendRecordingSegment(BaseRecordingSegment):
         return self.parent_segment.get_traces(*args, **kwargs)
 
 
-def append_recordings(*args, **kwargs):
-    return AppendSegmentRecording(*args, **kwargs)
-
-
-append_recordings.__doc__ == AppendSegmentRecording.__doc__
+append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name="append_recordings")
 
 
 class ConcatenateSegmentRecording(BaseRecording):
@@ -214,11 +213,8 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def concatenate_recordings(*args, **kwargs):
-    return ConcatenateSegmentRecording(*args, **kwargs)
-
-
-concatenate_recordings.__doc__ == ConcatenateSegmentRecording.__doc__
+concatenate_recordings = define_function_from_class(source_class=ConcatenateSegmentRecording, 
+                                                    name="concatenate_recordings")
 
 
 class SelectSegmentRecording(BaseRecording):
@@ -275,11 +271,8 @@ def split_recording(recording: BaseRecording):
     return recording_list
 
 
-def select_segment_recording(*args, **kwargs):
-    return SelectSegmentRecording(*args, **kwargs)
-
-
-select_segment_recording.__doc__ = SelectSegmentRecording.__doc__
+select_segment_recording = define_function_from_class(source_class=SelectSegmentRecording, 
+                                                      name="select_segment_recording")
 
 
 class AppendSegmentSorting(BaseSorting):
@@ -331,10 +324,7 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
         return self.parent_segment.get_unit_spike_train(*args, **kwargs)
 
 
-def append_sortings(*args, **kwargs):
-    return AppendSegmentSorting(*args, **kwargs)
-
-append_sortings.__doc__ == AppendSegmentSorting.__doc__
+append_sortings = define_function_from_class(source_class=AppendSegmentSorting, name="append_sortings")
 
 
 class SplitSegmentSorting(BaseSorting):
@@ -388,7 +378,63 @@ class SplitSegmentSorting(BaseSorting):
                         'recording_list': [recording.to_dict() for recording in recording_list]}
 
 
-def split_sorting(*args, **kwargs):
-    return SplitSegmentSorting(*args, **kwargs)
+split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name="split_sorting")
 
-split_sorting.__doc__ == SplitSegmentSorting.__doc__
+
+class SelectSegmentSnippets(BaseSnippets):
+    """
+    Return a new snippets with a single segment from a multi-segment snippets.
+
+    Parameters
+    ----------
+    snippets : BaseSnippets
+        The multi-segment snippets
+    segment_indices : list of int
+        The segment indices to select
+    """
+
+    def __init__(self, snippets: BaseSnippets, segment_indices: Union[int, List[int]]):
+        BaseSnippets.__init__(self, snippets.get_sampling_frequency(), 
+                              snippets.nafter, snippets.snippet_len,
+                              snippets.channel_ids, snippets.get_dtype())
+        snippets.copy_metadata(self)
+        
+        if isinstance(segment_indices, int):
+            segment_indices = [segment_indices]
+        
+        num_segments = snippets.get_num_segments()
+        assert all(0 <= s < num_segments for s in segment_indices), \
+            f"'segment_index' must be between 0 and {num_segments - 1}"
+
+        for segment_index in segment_indices:
+            snip_seg = snippets._snippets_segments[segment_index]
+            self.add_snippets_segment(snip_seg)
+
+        self._kwargs = {'snippets': snippets.to_dict(),
+                        'segment_indices': [int(s) for s in segment_indices]}
+        
+
+def split_snippets(snippets: BaseSnippets):
+    """
+    Return a list of mono-segment snippets from a multi-segment snippets.
+
+    Parameters
+    ----------
+    snippets : BaseSnippets
+        The multi-segment recording
+
+    Returns
+    -------
+    snippets_list
+        A list of mono-segment recordings
+    """
+    snippets_list = []
+    for segment_index in range(snippets.get_num_segments()):
+        snip_mono = SelectSegmentSnippets(
+            snippets=snippets, segment_indices=[segment_index])
+        snippets_list.append(snip_mono)
+    return snippets_list
+
+
+select_segment_snippets = define_function_from_class(source_class=SelectSegmentSnippets, 
+                                                     name="select_segment_snippets")

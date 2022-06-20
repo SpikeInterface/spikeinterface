@@ -25,14 +25,18 @@ class NumpySnippetsExtractor(BaseSnippets):
 
     def __init__(self, snippets_list, spikesframes_list, sampling_frequency, nafter=None, channel_ids=None):
         if isinstance(snippets_list, list):
-            assert all(isinstance(e, np.ndarray) for e in snippets_list), 'must give a list of numpy array'
+            assert all(isinstance(e, np.ndarray)
+                       for e in snippets_list), 'must give a list of numpy array'
         else:
-            assert isinstance(snippets_list, np.ndarray), 'must give a list of numpy array'
+            assert isinstance(
+                snippets_list, np.ndarray), 'must give a list of numpy array'
             snippets_list = [snippets_list]
         if isinstance(spikesframes_list, list):
-            assert all(isinstance(e, np.ndarray) for e in spikesframes_list), 'must give a list of numpy array'
+            assert all(isinstance(e, np.ndarray)
+                       for e in spikesframes_list), 'must give a list of numpy array'
         else:
-            assert isinstance(spikesframes_list, np.ndarray), 'must give a list of numpy array'
+            assert isinstance(spikesframes_list,
+                              np.ndarray), 'must give a list of numpy array'
             spikesframes_list = [spikesframes_list]
 
         dtype = snippets_list[0].dtype
@@ -43,22 +47,23 @@ class NumpySnippetsExtractor(BaseSnippets):
         else:
             channel_ids = np.asarray(channel_ids)
             assert channel_ids.size == snippets_list[0].shape[2]
-        BaseSnippets.__init__(self, sampling_frequency,  nafter=nafter, 
+        BaseSnippets.__init__(self, sampling_frequency,  nafter=nafter,
                               snippet_len=snippets_list[0].shape[1], channel_ids=channel_ids,
                               dtype=dtype)
 
         self.is_dumpable = False
 
-        for snippets,spikesframes in zip(snippets_list, spikesframes_list):
+        for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)
             self.add_snippets_segment(snp_segment)
 
-        self._kwargs = {'snippets_list': snippets_list, 
+        self._kwargs = {'snippets_list': snippets_list,
                         'spikesframes_list': spikesframes_list,
                         'nafter': nafter,
                         'sampling_frequency': sampling_frequency,
-                        'channel_ids':channel_ids
+                        'channel_ids': channel_ids
                         }
+
 
 class NumpySnippetsSegment(BaseSnippetsSegment):
     def __init__(self, snippets, spikesframes):
@@ -67,9 +72,9 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         self._spikestimes = spikesframes
 
     def get_snippets(self,
-                    indices,
-                    channel_indices: Union[List, None] = None,
-                    ) -> np.ndarray:
+                     indices,
+                     channel_indices: Union[List, None] = None,
+                     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
@@ -87,14 +92,14 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         snippets: np.ndarray
             Array of snippets, num_snippets x num_samples x num_channels
         """
-        return self._snippets[indices,:,channel_indices]
+        return self._snippets[indices, :, channel_indices]
 
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
     def frames_to_indices(self,
-                        start_frame: Union[int, None] = None,
-                        end_frame: Union[int, None] = None):
+                          start_frame: Union[int, None] = None,
+                          end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
 
@@ -119,14 +124,14 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
             endi = self._spikestimes.shape[0]
         else:
             endi = np.searchsorted(self._spikestimes, end_frame, side='left')
-        return slice(init,endi,1)
+        return slice(init, endi, 1)
 
-    def get_frames(self, indeces=None):
+    def get_frames(self, indices=None):
         """Returns the frames of the snippets in this segment
 
         Returns:
             SampleIndex: Number of samples in the segment
         """
-        if indeces is None:
+        if indices is None:
             return self._spikestimes
-        raise self._spikestimes[indeces]
+        raise self._spikestimes[indices]

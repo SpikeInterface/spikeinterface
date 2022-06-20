@@ -87,7 +87,7 @@ class BaseRecording(BaseRecordingSnippets):
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
-            if not self.has_scaled_traces():
+            if not self.has_scaled():
                 raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_'
                                  'to_uV properties)')
             else:
@@ -288,75 +288,23 @@ class BaseRecording(BaseRecordingSnippets):
             if time_vector is not None:
                 np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
 
-    # def _extra_metadata_to_zarr(self, zarr_root, compressor, filters):
-    #     # save probe
-    #     if self.get_property('contact_vector') is not None:
-    #         probegroup = self.get_probegroup()
-    #         zarr_root.attrs["probe"] = probegroup.to_dict()
-
-    #     # save time vector if any
-    #     for segment_index, rs in enumerate(self._recording_segments):
-    #         d = rs.get_times_kwargs()
-    #         time_vector = d['time_vector']
-    #         if time_vector is not None:
-    #             z = zarr_root.create_dataset(name=f'times_seg{segment_index}', data=time_vector,
-    #                                          chunks=(chunk_size, None), dtype=dtype,
-    #                                          filters=filters,
-    #                                          compressor=compressor)
-    #             np.save(folder / f'times_cached_seg{segment_index}.npy', time_vector)
-
-
-    def channel_slice(self, channel_ids, renamed_channel_ids=None):
-        from spikeinterface import ChannelSliceRecording
+    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
+        from .channelslice import ChannelSliceRecording
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
     
-    def remove_channels(self, remove_channel_ids):
-        from spikeinterface import ChannelSliceRecording
+    def _remove_channels(self, remove_channel_ids):
+        from .channelslice import ChannelSliceRecording
         new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
-    def frame_slice(self, start_frame, end_frame):
-        from spikeinterface import FrameSliceRecording
+    def _frame_slice(self, start_frame, end_frame):
+        from .frameslicerecording import FrameSliceRecording
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
-
-    def split_by(self, property='group', outputs='dict'):
-        assert outputs in ('list', 'dict')
-        from .channelslicerecording import ChannelSliceRecording
-        values = self.get_property(property)
-        if values is None:
-            raise ValueError(f'property {property} is not set')
-
-        if outputs == 'list':
-            recordings = []
-        elif outputs == 'dict':
-            recordings = {}
-        for value in np.unique(values):
-            inds, = np.nonzero(values == value)
-            new_channel_ids = self.get_channel_ids()[inds]
-            subrec = ChannelSliceRecording(self, new_channel_ids)
-            if outputs == 'list':
-                recordings.append(subrec)
-            elif outputs == 'dict':
-                recordings[value] = subrec
-        return recordings
     
-    def select_segments(self, segment_indices):
-        """
-        Return a recording with the segments specified by 'segment_indices'
-
-        Parameters
-        ----------
-        segment_indices : list of int
-            List of segment indices to keep in the returned recording
-
-        Returns
-        -------
-        SelectSegmentRecording
-            The recording with the selected segments
-        """
+    def _select_segments(self, segment_indices):
         from .segmentutils import SelectSegmentRecording
         return SelectSegmentRecording(self, segment_indices=segment_indices)
 

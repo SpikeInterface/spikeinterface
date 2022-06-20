@@ -106,7 +106,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
         if return_scaled:
             # check if has scaled values:
-            if not we.recording.has_scaled_traces():
+            if not we.recording.has_scaled():
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 

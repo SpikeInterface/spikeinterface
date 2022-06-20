@@ -24,7 +24,7 @@ from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .numpysnippetsextractor import NumpySnippetsExtractor
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
-from .channelslicerecording import ChannelSliceRecording
+from .channelslice import ChannelSliceRecording, ChannelSliceSnippets
 from .unitsselectionsorting import UnitsSelectionSorting
 from .frameslicerecording import FrameSliceRecording
 from .frameslicesorting import FrameSliceSorting
