@@ -29,7 +29,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         
         folder_path = Path(folder_path)
         
-        with open(folder_path / 'cached.json', 'r') as f:
+        with open(folder_path / 'binary.json', 'r') as f:
             d = json.load(f)
 
         if not d['class'].endswith('.BinaryRecordingExtractor'):

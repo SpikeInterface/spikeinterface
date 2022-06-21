@@ -184,7 +184,6 @@ class BaseRecording(BaseExtractor):
             t_starts = None
 
         if format == 'binary':
-            # TODO save properties as npz!!!!!
             folder = save_kwargs['folder']
             file_paths = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
             dtype = save_kwargs.get('dtype', None)
@@ -193,13 +192,18 @@ class BaseRecording(BaseExtractor):
 
             job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
-
+            
+            
             from .binaryrecordingextractor import BinaryRecordingExtractor
             cached = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
                                               num_chan=self.get_num_channels(), dtype=dtype,
                                               t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
                                               file_offset=0, gain_to_uV=self.get_channel_gains(),
                                               offset_to_uV=self.get_channel_offsets())
+            cached.dump(folder / 'binary.json', relative_to=folder)
+            
+            from .binaryfolder import BinaryFolderRecording
+            cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == 'memory':
             job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
