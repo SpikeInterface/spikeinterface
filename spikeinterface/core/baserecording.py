@@ -20,7 +20,7 @@ class BaseRecording(BaseExtractor):
     _main_annotations = ['is_filtered']
     _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []  # recording do not handle features
-
+    
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
 
@@ -680,6 +680,59 @@ class BaseRecording(BaseExtractor):
         recording2d.set_probe(probe2d, in_place=True)
 
         return recording2d
+    
+    def is_binary_compatible(self):
+        """
+        Inform is this recording is "binary" compatible.
+        To be used before calling `rec.get_binary_description()`
+        
+        Returns
+        -------
+        is_binary_compatible: bool
+        """
+        # have to changed in subclass is yes
+        return False
+        
+    def get_binary_description(self):
+        """
+        When `rec.is_binary_compatible()` is True
+        This must return describing the binary format.
+        """
+        if not self.is_binary_compatible:
+            raise NotImplementedError
+    
+    def binary_compatible_with(self, dtype=None, time_axis=None, file_paths_lenght=None, 
+            file_offset=None, file_suffix=None):
+        """
+        Check is the recording is binary compatible with some constrain on
+          * dtype
+          * tim_axis
+          * len(file_paths)
+          * file_offset
+          * file_suffix
+        """
+        if not self.is_binary_compatible():
+            return False
+        
+        d = self.get_binary_description()
+        
+        if dtype is not None and dtype != d['dtype']:
+            return False
+        
+        if time_axis is not None and time_axis != d['time_axis']:
+            return False
+        
+        if file_paths_lenght is not None and file_paths_lenght != len(d['file_paths']):
+            return False
+        
+        if file_offset is not None and file_offset != d['file_offset']:
+            return False
+        
+        if file_suffix is not None and not all(Path(e).suffix == file_suffix):
+            return False
+
+        # good job you pass all crucible
+        return True
 
 
 class BaseRecordingSegment(BaseSegment):

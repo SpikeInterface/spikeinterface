@@ -3,6 +3,7 @@ from .basesorting import BaseSorting, BaseSortingSegment
 from pathlib import Path
 import numpy as np
 
+from .core_tools import define_function_from_class
 
 class NpzSortingExtractor(BaseSorting):
     """
@@ -88,7 +89,4 @@ class NpzSortingSegment(BaseSortingSegment):
         return spike_times.astype('int64')
 
 
-def read_npz_sorting(*args, **kwargs):
-    sorting = NpzSortingExtractor(*args, **kwargs)
-    return sorting
-read_npz_sorting.__doc__ = NpzSortingExtractor.__doc__
+read_npz_sorting = define_function_from_class(source_class=NpzSortingExtractor, name="read_npz_sorting")
