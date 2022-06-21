@@ -171,10 +171,10 @@ class BaseSnippetsSegment(BaseSegment):
         BaseSegment.__init__(self)
 
     def get_snippets(self,
-                     indices,
-                     end_frame: Union[int, None] = None,
-                     channel_indices: Union[List, None] = None,
-                     ) -> np.ndarray:
+                     indices = None,
+                    end_frame: Union[int, None] = None,
+                    channel_indices: Union[List, None] = None,
+                    ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
