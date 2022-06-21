@@ -14,7 +14,7 @@ function waveclus_master(outputFolder, waveclusPath)
         cd(outputFolder);
 		vcFile_spikes = fullfile(outputFolder, 'results_spikes.mat');
 		vcFile_cluster = fullfile(outputFolder, 'times_results.mat');
-        Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false);
+        Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false,'par',S_par);
 
         if ~exist(vcFile_cluster,'file')
             load(vcFile_spikes,'par');
@@ -32,16 +32,6 @@ end
 
 
 function par = set_parameters_ss()
-
-    % PLOTTING PARAMETERS
-    par.cont_segment = true;
-    par.max_spikes_plot = 1000;          % max. number of spikes to be plotted
-    par.print2file = true;               % If is not true, print the figure (only for batch scripts).
-    par.cont_plot_samples = 100000;      % number of samples used in the one-minute (maximum) sample of continuous data to plot.
-    par.to_plot_std = 1;                 % # of std from mean to plot
-    par.all_classes_ax = 'mean';         % 'mean'/'all'. If it's 'mean' only the mean waveforms will be plotted in the axes with all the classes
-    par.plot_feature_stats = false;
-
 
     % SPC PARAMETERS
     par.mintemp = 0.00;                  % minimum temperature for SPC
@@ -83,8 +73,4 @@ function par = set_parameters_ss()
     par.max_spk = 40000;                % max. # of spikes before starting templ. match.
     par.permut = 'y';                   % for selection of random 'par.max_spk' spikes before starting templ. match.
     % par.permut = 'n';                 % for selection of the first 'par.max_spk' spikes before starting templ. match.
-
-    % HISTOGRAM PARAMETERS
-    par.nbins = 100;                    % # of bins for the ISI histograms
-    par.bin_step = 1;                   % percentage number of bins to plot
 end
