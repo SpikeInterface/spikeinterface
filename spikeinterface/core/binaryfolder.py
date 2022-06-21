@@ -33,13 +33,12 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             d = json.load(f)
 
         if not d['class'].endswith('.BinaryRecordingExtractor'):
-            raise ValueError('This folder is not a binary spikeinetrface folder')
-        
+            raise ValueError('This folder is not a binary spikeinterface folder')
+
         assert d['relative_paths']
 
         d = _make_paths_absolute(d, folder_path)
-        
-        
+
         BinaryRecordingExtractor.__init__(self, **d['kwargs'])
 
         folder_metadata = folder_path
