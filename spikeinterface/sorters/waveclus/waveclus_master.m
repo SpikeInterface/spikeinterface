@@ -26,27 +26,27 @@ function waveclus_master(outputFolder, waveclusPath)
             % Run waveclus batch mode.
             Get_spikes(vcFile_mat{1}, 'par', S_par);
             vcFile_spikes = strrep(vcFile_mat{1}, '.h5', '_spikes.mat');
-            Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false);
-            [vcDir_, vcFile_, ~] = fileparts(vcFile_mat{1});
-            vcFile_cluster = fullfile(vcDir_, ['times_', vcFile_, '.mat']);
+            Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false, 'par', S_par);
+            [~, vcFile_, ~] = fileparts(vcFile_mat{1});
+            vcFile_cluster = fullfile(outputFolder, ['times_', vcFile_, '.mat']);
         else
             % Run waveclus batch mode.
             pol_file = fopen('polytrode1.txt','w');
-            cellfun(@(x) fprintf(pol_file ,'%s\n',x),vcFile_mat);
+            cellfun(@(x) fprintf(pol_file ,'%s\n',x), vcFile_mat);
             fclose(pol_file);
             Get_spikes_pol(1, 'par', S_par);
             vcFile_spikes = 'polytrode1_spikes.mat';
-            Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false);
-            [vcDir_, ~, ~] = fileparts(vcFile_mat{1});
-            vcFile_cluster = fullfile(vcDir_, ['times_polytrode1', '.mat']);
+            Do_clustering(vcFile_spikes, 'make_plots', false,'save_spikes',false, 'par', S_par);
+            vcFile_cluster = fullfile(outputFolder, ['times_polytrode1', '.mat']);
         end
-        newfile = fullfile(vcDir_, 'times_results.mat');
+        newfile = fullfile(outputFolder, 'times_results.mat');
         if exist(vcFile_cluster,'file')
             movefile(vcFile_cluster,newfile,'f');
         else
-            load(vcFile_spikes,'par');
-            par = update_parameters(S_par, par, 'relevant');
-            cluster_class = zeros(0,2);
+            load(vcFile_spikes,'index');
+            par = S_par;
+            cluster_class = zeros(numel(index),2);
+            cluster_class(:,2) = index;
             save(newfile,'cluster_class','par');
         end
     catch
@@ -62,17 +62,6 @@ function par = set_parameters_ss()
 
     % LOAD PARAMS
     par.segments_length = 5;             % length (in minutes) of segments in which the data is cut (default 5min).
-
-
-    % PLOTTING PARAMETERS
-    par.cont_segment = true;
-    par.max_spikes_plot = 1000;          % max. number of spikes to be plotted
-    par.print2file = true;               % If is not true, print the figure (only for batch scripts).
-    par.cont_plot_samples = 100000;      % number of samples used in the one-minute (maximum) sample of continuous data to plot.
-    par.to_plot_std = 1;                 % # of std from mean to plot
-    par.all_classes_ax = 'mean';         % 'mean'/'all'. If it's 'mean' only the mean waveforms will be plotted in the axes with all the classes
-    par.plot_feature_stats = false;
-
 
     % SPC PARAMETERS
     par.mintemp = 0.00;                  % minimum temperature for SPC
@@ -140,15 +129,4 @@ function par = set_parameters_ss()
     par.max_spk = 40000;                % max. # of spikes before starting templ. match.
     par.permut = 'y';                   % for selection of random 'par.max_spk' spikes before starting templ. match.
     % par.permut = 'n';                 % for selection of the first 'par.max_spk' spikes before starting templ. match.
-
-    % HISTOGRAM PARAMETERS
-    par.nbins = 100;                    % # of bins for the ISI histograms
-    par.bin_step = 1;                   % percentage number of bins to plot
-end
-
-
-% Overwriting supported_wc_extensions function from waveclus source
-function formats = supported_wc_extensions()
-    % Return a cell of arrays with the formats supported/needed for spikeinterface.
-    formats = {'h5', 'mat'};
 end
