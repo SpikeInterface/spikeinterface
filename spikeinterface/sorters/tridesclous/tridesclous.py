@@ -91,7 +91,7 @@ class TridesclousSorter(BaseSorter):
             # no copy
             d = recording.get_binary_description()
             file_paths = d['file_paths']
-            dtype = d['dtype']
+            dtype = str(d['dtype'])
             num_chan = d['num_channels']
             file_offset = d['file_offset']
         else:
