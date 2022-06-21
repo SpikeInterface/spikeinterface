@@ -30,6 +30,7 @@ class BaseSnippets(BaseRecordingSnippets):
 
         self._snippets_segments: List[BaseSnippetsSegment] = []
         # initialize main annotation and properties
+        self.annotate(is_alinged=True)
         self.annotate(is_filtered=True)
 
     def __repr__(self):
@@ -37,7 +38,7 @@ class BaseSnippets(BaseRecordingSnippets):
         nchan = self.get_num_channels()
         nseg = self.get_num_segments()
         sf_khz = self.get_sampling_frequency() / 1000.
-        txt = f'{clsname}: {nchan} channels - {nseg} segments -  {sf_khz:0.1f}kHz \n snippet_len:{self._snippet_len} after peak:{self._nbefore}'
+        txt = f'{clsname}: {nchan} channels - {nseg} segments -  {sf_khz:0.1f}kHz \n snippet_len:{self._snippet_len} after peak:{self._nafter}'
         return txt
     
     @property
@@ -56,6 +57,20 @@ class BaseSnippets(BaseRecordingSnippets):
         self._snippets_segments.append(snippets_segment)
         snippets_segment.set_parent_extractor(self)
 
+    @property
+    def nafter(self):
+        return self._nafter
+
+    @property
+    def nbefore(self):
+        if self._nafter is None:
+            return None
+        return self._snippet_len - self._nafter
+
+    @property
+    def snippet_len(self):
+        return self._snippet_len
+
     def get_num_snippets(self, segment_index=None):
         segment_index = self._check_segment_index(segment_index)
         return self._snippets_segments[segment_index].get_num_snippets()
@@ -66,6 +81,10 @@ class BaseSnippets(BaseRecordingSnippets):
             s += self.get_num_snippets(segment_index)
         return s
     
+    def is_aligned(self):
+        # the is_filtered is handle with annotation
+        return self._annotations.get('is_aligned', False)
+
     def get_num_segments(self):
         return len(self._snippets_segments)
 
@@ -146,10 +165,10 @@ class BaseSnippetsSegment(BaseSegment):
         BaseSegment.__init__(self)
 
     def get_snippets(self,
-                     indices,
-                     end_frame: Union[int, None] = None,
-                     channel_indices: Union[List, None] = None,
-                     ) -> np.ndarray:
+                     indices = None,
+                    end_frame: Union[int, None] = None,
+                    channel_indices: Union[List, None] = None,
+                    ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 

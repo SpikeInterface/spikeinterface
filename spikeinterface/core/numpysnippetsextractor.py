@@ -92,7 +92,9 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         snippets: np.ndarray
             Array of snippets, num_snippets x num_samples x num_channels
         """
-        return self._snippets[indices, :, channel_indices]
+        if indices is None:
+            return self._snippets[:,:,channel_indices]
+        return self._snippets[indices,:,channel_indices]
 
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
