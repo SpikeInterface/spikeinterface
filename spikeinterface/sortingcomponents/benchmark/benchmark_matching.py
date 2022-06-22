@@ -50,9 +50,7 @@ class BenchmarkMatching:
         self.run_time = time.time() - t_start
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], self.sampling_rate)
         self.comp = CollisionGTComparison(self.gt_sorting, sorting)
-    
-    def compute_benchmark(self, metrics_names=['snr']):
-        self.metrics = compute_quality_metrics(self.we, metric_names=metrics_names, load_if_exists=True)
+        self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
 
     def plot(self, title=None):
         
@@ -60,7 +58,7 @@ class BenchmarkMatching:
             title = self.method
 
         if self.metrics is None:
-            self.compute_benchmark()
+            self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
 
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
         ax = axs[0, 0]
