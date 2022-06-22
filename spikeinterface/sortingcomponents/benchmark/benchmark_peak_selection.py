@@ -122,9 +122,9 @@ class BenchmarkPeakSelection:
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
         matches = make_matching_events(times2, times1[0], int(delta*self.sampling_rate/1000))
-        good_matches = matches['index1']
+        self.good_matches = matches['index1']
 
-        garbage_matches = ~np.in1d(np.arange(len(times2)), good_matches)
+        garbage_matches = ~np.in1d(np.arange(len(times2)), self.good_matches)
         garbage_channels = self.peaks['channel_ind'][garbage_matches]
         garbage_peaks = times2[garbage_matches]
         nb_garbage = len(garbage_peaks)
@@ -557,5 +557,24 @@ class BenchmarkPeakSelection:
             ymin, ymax = ax.get_ylim()
             ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
 
-
-
+    def explore_garbage(self, channel_ind, nb_bins=None, dt=None):
+        mask = self.garbage_peaks['channel_ind'] == channel_ind
+        times2 = self.garbage_peaks[mask]['sample_ind']
+        times1 = self.gt_sorting.get_all_spike_trains()[0]
+        from spikeinterface.comparison.comparisontools import make_matching_events
+        if dt is None:
+            delta = self.waveforms['garbage'].nafter
+        else:
+            delta = dt
+        matches = make_matching_events(times2, times1[0], delta)
+        units = times1[1][matches['index2']]
+        dt = matches['delta_frame']
+        res = {}
+        fig, ax = plt.subplots()
+        if nb_bins is None:
+            nb_bins = 2*delta
+        xaxis = np.linspace(-delta, delta, nb_bins)
+        for unit_id in np.unique(units):
+            mask = units == unit_id
+            res[unit_id] = dt[mask]
+            ax.hist(res[unit_id], bins=xaxis)

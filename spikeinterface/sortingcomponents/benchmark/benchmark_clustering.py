@@ -109,7 +109,7 @@ class BenchmarkClustering:
             print(f'Localizing gt peaks with method {method}')
         self._gt_positions = localize_peaks(self.recording_f, self.gt_peaks, **method_kwargs, **self.job_kwargs)
 
-    def run(self, peaks=None, positions=None, method=None, method_kwargs={}):
+    def run(self, peaks=None, positions=None, method=None, method_kwargs={}, delta=0.2):
         t_start = time.time()
         if method is not None:
             self.method = method
@@ -140,7 +140,7 @@ class BenchmarkClustering:
 
         times1 = self.gt_sorting.get_all_spike_trains()[0]
         times2 = self.clustering.get_all_spike_trains()[0]
-        matches = make_matching_events(times1[0], times2[0], int(0.1*self.sampling_rate/1000))
+        matches = make_matching_events(times1[0], times2[0], int(delta*self.sampling_rate/1000))
 
         self.matches = matches
         idx = matches['index1']
