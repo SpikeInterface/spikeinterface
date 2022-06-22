@@ -373,6 +373,7 @@ from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
 if __name__ == '__main__':
+    # this __name__ protection help in some case with multiprocessing (for instance HS2)
     # load recording in container
     recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
 
