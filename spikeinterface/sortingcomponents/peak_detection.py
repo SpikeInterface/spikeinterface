@@ -107,7 +107,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     # and run
     if exclude_sweep_ms is not None:
         assert n_shifts is None, "If exclude_sweep_ms is not None, n_shifts should be None"
-        n_shifts = int(time_radius_ms * recording.get_sampling_frequency() / 1000.)
+        n_shifts = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
     elif n_shifts is not None:
         assert exclude_sweep_ms is None, "If n_shifts is not None, exclude_sweep_ms should be None"
 
