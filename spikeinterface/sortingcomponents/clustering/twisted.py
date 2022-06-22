@@ -1,6 +1,7 @@
 # """Sorting components: clustering"""
 from pathlib import Path
 
+import shutil
 import numpy as np
 try:
     import hdbscan
@@ -13,6 +14,9 @@ from spikeinterface.core import get_global_tmp_folder
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.toolkit import get_channel_distances
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
+from .clustering_tools import remove_duplicates
+from spikeinterface.core import NumpySorting
+from spikeinterface.core import extract_waveforms
 
 class TwistedClustering:
     """
@@ -22,6 +26,7 @@ class TwistedClustering:
         "peak_locations" : None,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1},
+        "cleaning_kwargs" : {"similar_threshold" : 0.975, "sparsify_threshold" : 0.99, "verbose" : True},
         "debug" : False,
         "tmp_folder" : None,
         'radius_um' : 50,
@@ -148,5 +153,18 @@ class TwistedClustering:
         
         labels = np.unique(peak_labels)
         labels = labels[labels>=0]
+
+        sorting = NumpySorting.from_times_labels(peaks['sample_ind'], peak_labels, fs)
+
+        assert params['tmp_folder'] is not None
+        wf_folder = params['tmp_folder'] / 'waveforms'
+        wf_folder.mkdir(exist_ok=True)
+
+        waveforms = extract_waveforms(recording, sorting, wf_folder, overwrite=True,
+                                       ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=100,
+                                       **params['job_kwargs'])
+
+        labels, peak_labels = remove_duplicates(waveforms, **params['cleaning_kwargs'])
+
 
         return labels, peak_labels

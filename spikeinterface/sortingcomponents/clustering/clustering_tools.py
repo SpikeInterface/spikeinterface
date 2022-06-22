@@ -445,5 +445,52 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
     return clean_peak_labels, peak_sample_shifts
 
 
+def remove_duplicates(waveform_extractor, similar_threshold=0.975, sparsify_threshold=0.99, verbose=True):
+
+    from spikeinterface.toolkit import get_noise_levels 
+    import sklearn
+
+    noise_levels = get_noise_levels(waveform_extractor.recording)
+    templates = waveform_extractor.get_all_templates(mode='median')
+    norms = np.linalg.norm(templates, axis=(1, 2))
+    nb_templates = len(templates)
+    num_samples = waveform_extractor.nbefore + waveform_extractor.nafter
+
+    for t in range(nb_templates):
+        is_silent = templates[t].std(0) < 0.25*noise_levels
+        templates[t, :, is_silent] = 0
+
+        channel_norms = np.linalg.norm(templates[t], axis=0)**2
+        total_norm = np.linalg.norm(templates[t])**2
+
+        idx = np.argsort(channel_norms)[::-1]
+        explained_norms = np.cumsum(channel_norms[idx]/total_norm)
+        channel = np.searchsorted(explained_norms, sparsify_threshold)
+        active_channels = np.sort(idx[:channel])
+        templates[t, :, idx[channel:]] = 0
+
+    similarities = sklearn.metrics.pairwise.cosine_similarity(templates.reshape(nb_templates, -1))
+    for i in range(nb_templates):
+        similarities[i,i] = -1
+
+    similar_templates = np.where(similarities > similar_threshold)
+
+    old_sorting = waveform_extractor.sorting.get_all_spike_trains()[0]
+    new_labels = old_sorting[1].copy()
+
+    labels = np.unique(new_labels)
+    labels = labels[labels>=0]
     
+    for x, y in zip(similar_templates[0], similar_templates[1]):
+        mask = new_labels == y
+        new_labels[mask] = x
+
+    if verbose:
+        nb_merges = len(similar_templates[0]) // 2
+        print(f'{nb_merges} templates have been removed because of duplications')
+
+    labels = np.unique(new_labels)
+    labels = labels[labels>=0]
+
+    return labels, new_labels
     
