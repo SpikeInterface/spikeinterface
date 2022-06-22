@@ -6,7 +6,7 @@ Simulated recordings or paired pipette and extracellular recordings can
 be used to validate spike sorting algorithms.
 
 For comparing to ground-truth data, the
-:code:`compare_sorter_to_ground_truth(gt_sorting, tested_sorting)` function
+:py:func:`~spikeinterface.comparison.compare_sorter_to_ground_truth()` function
 can be used. In this recording, we have ground-truth information for all
 units, so we can set :code:`exhaustive_gt` to :code:`True`.
 

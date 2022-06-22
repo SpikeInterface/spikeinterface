@@ -7,13 +7,12 @@ import pickle
 import os
 import random
 import string
-import warnings
 from packaging.version import parse
 
 import numpy as np
 
 from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor
+from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -31,6 +30,7 @@ class BaseExtractor:
     _main_annotations = []
     _main_properties = []
     _main_features = []
+
 
     def __init__(self, main_ids):
         # store init kwargs for nested serialisation
@@ -53,6 +53,9 @@ class BaseExtractor:
         self._features = {}
 
         self.is_dumpable = True
+
+        # Extractor specific list of pip extra requirements
+        self.extra_requirements = []
 
     def get_num_segments(self):
         # This is implemented in BaseRecording or BaseSorting
@@ -87,7 +90,7 @@ class BaseExtractor:
                 indices = self._main_ids
         else:
             _main_ids = self._main_ids.tolist()
-            indices = np.array([_main_ids.index(id) for id in ids])
+            indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
             if prefer_slice:
                 if np.all(np.diff(indices) == 1):
                     indices = slice(indices[0], indices[-1] + 1)
@@ -198,6 +201,8 @@ class BaseExtractor:
                     empty_values = np.zeros(shape, dtype=dtype)
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
+                    if ids.size==0:
+                        return
                 else:
                     assert dtype_kind == self._properties[key].dtype.kind, ("Mismatch between existing property dtype "
                                                                             "values dtype.")
@@ -228,6 +233,8 @@ class BaseExtractor:
 
         if ids is None:
             inds = slice(None)
+        elif len(ids) == 0:
+            inds = slice(0, 0)
         else:
             inds = self.ids_to_indices(ids)
 
@@ -247,6 +254,8 @@ class BaseExtractor:
             if values is not None:
                 other.set_property(k, values[inds])
         # TODO: copy features also
+
+        other.extra_requirements.extend(self.extra_requirements)
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
                 relative_to=None, folder_metadata=None):
@@ -754,54 +763,15 @@ class BaseExtractor:
 
 
 def _make_paths_relative(d, relative):
-    dcopy = deepcopy(d)
-    if "kwargs" in dcopy.keys():
-        relative_kwargs = _make_paths_relative(dcopy["kwargs"], relative)
-        dcopy["kwargs"] = relative_kwargs
-        return dcopy
-    else:
-        for k in d.keys():
-            # in SI, all input paths have the "path" keyword
-            if "path" in k:
-                # paths can be str or list of str
-                if isinstance(d[k], str):
-                    # we use os.path.relpath here to allow for relative paths with respect to shared root
-                    d[k] = os.path.relpath(str(d[k]), start=str(relative.absolute()))
-                else:
-                    assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
-                    relative_paths = []
-                    for path in d[k]:
-                        # we use os.path.relpath here to allow for relative paths with respect to shared root
-                        relative_paths.append(os.path.relpath(str(path), start=str(relative.absolute())))
-                    d[k] = relative_paths
-        return d
+    relative = str(Path(relative).absolute())
+    func = lambda p: os.path.relpath(str(p), start=relative)
+    return recursive_path_modifier(d,  func, target='path', copy=True)
 
 
 def _make_paths_absolute(d, base):
     base = Path(base)
-    dcopy = deepcopy(d)
-    if "kwargs" in dcopy.keys():
-        base_kwargs = _make_paths_absolute(dcopy["kwargs"], base)
-        dcopy["kwargs"] = base_kwargs
-        return dcopy
-    else:
-        for k in d.keys():
-            # in SI, all input paths have the "path" keyword
-            if "path" in k:
-                # paths can be str or list of str
-                if isinstance(d[k], str):
-                    if not Path(d[k]).exists():
-                        d[k] = str(base / d[k])
-                else:
-                    assert isinstance(d[k], list), "Paths can be strings or lists in kwargs"
-                    absolute_paths = []
-                    for path in d[k]:
-
-                        if not Path(path).exists():
-                            absolute_paths.append(str(base / path))
-                    d[k] = absolute_paths
-        return d
-
+    func = lambda p: str((base / p).resolve().absolute())
+    return recursive_path_modifier(d,  func, target='path', copy=True)
 
 def _check_if_dumpable(d):
     kwargs = d['kwargs']

@@ -3,14 +3,10 @@ This gather some function usefull for some clusetring algos.
 """
 
 import numpy as np
+from spikeinterface.toolkit import check_equal_template_with_distribution_overlap
 
 
-
-from ..toolkit import check_equal_template_with_distribution_overlap
-
-
-
-def _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug):
+def _split_waveforms(wfs_and_noise, noise_size, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug):
 
     import sklearn.decomposition
     import hdbscan
@@ -188,7 +184,7 @@ def _split_waveforms_nested(wfs_and_noise, noise_size, nbefore, n_components_by_
     local_labels_with_noise[local_labels_with_noise>0] -= 1
     
     return local_labels_with_noise
-    
+
 
 
 def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefore, nafter, noise,
@@ -222,7 +218,7 @@ def auto_split_clustering(wfs_arrays, sparsity_mask, labels, peak_labels,  nbefo
         wfs_and_noise = np.concatenate([wfs, noise[:, :, chans]], axis=0)
         noise_size = noise.shape[0]
         
-        local_labels_with_noise = _split_waveforms(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug)
+        local_labels_with_noise = _split_waveforms(wfs_and_noise, noise_size, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug)
         # local_labels_with_noise = _split_waveforms_nested(wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug)
 
         local_labels = local_labels_with_noise[:valid_size]
@@ -447,5 +443,7 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
 
 
     return clean_peak_labels, peak_sample_shifts
+
+
     
     

@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal
 
+from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from .tools import get_chunk_with_margin
@@ -230,36 +231,10 @@ class NotchFilterRecording(BasePreprocessor):
 
 
 # functions for API
-
-def filter(recording, engine='scipy', **kwargs):
-    if engine == 'scipy':
-        return FilterRecording(recording, **kwargs)
-    elif engine == 'opencl':
-        from .filter_opencl import FilterOpenCLRecording
-        return FilterOpenCLRecording(recording, **kwargs)
-
-
-filter.__doc__ = FilterRecording.__doc__.format(_common_filter_docs)
-
-
-def bandpass_filter(*args, **kwargs):
-    return BandpassFilterRecording(*args, **kwargs)
-
-
-bandpass_filter.__doc__ = BandpassFilterRecording.__doc__.format(_common_filter_docs)
-
-
-def highpass_filter(*args, **kwargs):
-    return HighpassFilterRecording(*args, **kwargs)
-
-
-highpass_filter.__doc__ = HighpassFilterRecording.__doc__.format(_common_filter_docs)
-
-def notch_filter(*args, **kwargs):
-    return NotchFilterRecording(*args, **kwargs)
-
-
-notch_filter.__doc__ = NotchFilterRecording.__doc__.format(_common_filter_docs)
+filter = define_function_from_class(source_class=FilterRecording, name="filter")
+bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
+notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
+highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
 
 def fix_dtype(recording, dtype):

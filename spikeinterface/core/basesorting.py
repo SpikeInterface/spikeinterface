@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Optional
 import numpy as np
 import warnings
 
@@ -48,13 +48,14 @@ class BaseSorting(BaseExtractor):
     def get_num_segments(self):
         return len(self._sorting_segments)
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             segment_index: Union[int, None] = None,
-                             start_frame: Union[int, None] = None,
-                             end_frame: Union[int, None] = None,
-                             return_times: bool = False
-                             ):
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        segment_index: Union[int, None] = None,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+        return_times: bool = False,
+    ):
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
         spike_train = segment.get_unit_spike_train(
@@ -236,10 +237,24 @@ class BaseSortingSegment(BaseSegment):
     def __init__(self):
         BaseSegment.__init__(self)
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             start_frame: Union[int, None] = None,
-                             end_frame: Union[int, None] = None,
-                             ) -> np.ndarray:
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame: Optional[int] = None,
+        end_frame: Optional[int] = None,
+    ) -> np.ndarray:
+        """Get the spike train for a unit.
+
+        Parameters
+        ----------
+        unit_id
+        start_frame: int, optional
+        end_frame: int, optional
+
+        Returns
+        -------
+        np.ndarray
+
+        """
         # must be implemented in subclass
         raise NotImplementedError

@@ -1,5 +1,6 @@
 import numpy as np
 
+from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..utils import get_random_data_chunks
@@ -143,18 +144,6 @@ class ClipRecordingSegment(BasePreprocessorSegment):
 
         return traces
 
-    # function for API
 
-
-def clip(*args, **kwargs):
-    return ClipRecording(*args, **kwargs)
-
-
-clip.__doc__ = ClipRecording.__doc__
-
-
-def blank_staturation(*args, **kwargs):
-    return BlankSaturationRecording(*args, **kwargs)
-
-
-blank_staturation.__doc__ = BlankSaturationRecording.__doc__
+clip = define_function_from_class(source_class=ClipRecording, name="clip")
+blank_staturation = define_function_from_class(source_class=BlankSaturationRecording, name="blank_staturation")

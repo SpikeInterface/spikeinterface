@@ -6,9 +6,29 @@ from copy import deepcopy
 
 import numpy as np
 from tqdm import tqdm
+import inspect
 
 from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
     _shared_job_kwargs_doc
+    
+    
+def copy_signature(source_fct):
+    def copy(target_fct):
+        target_fct.__signature__ = inspect.signature(source_fct)
+        return target_fct
+    return copy
+
+
+def define_function_from_class(source_class, name):
+
+    @copy_signature(source_class)
+    def reader_func(*args, **kwargs):
+        return source_class(*args, **kwargs)
+
+    reader_func.__doc__ = source_class.__doc__
+    reader_func.__name__ = name
+
+    return reader_func
 
 
 def read_python(path):
@@ -670,7 +690,7 @@ def recursive_path_modifier(d, func, target='path', copy=True):
     target : str, optional
         String to match to dictionary key, by default 'path'
     copy : bool, optional
-        If True the original dictionary is deep copied, by default True
+        If True the original dictionary is deep copied, by default True (at first call)
 
     Returns
     -------
@@ -690,18 +710,18 @@ def recursive_path_modifier(d, func, target='path', copy=True):
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
         if nested_extractor_dict is None:
-            recursive_path_modifier(kwargs, func)
+            recursive_path_modifier(kwargs, func, copy=False)
         else:
-            recursive_path_modifier(nested_extractor_dict, func)
+            recursive_path_modifier(nested_extractor_dict, func, copy=False)
         return dc
     else:
         for k, v in d.items():
             if target in k:
                 # paths can be str or list of str
                 if isinstance(v, str):
-                    d[k] =func(v)
+                    dc[k] =func(v)
                 elif isinstance(v, list):
-                    d[k] = [func(e) for e in v]
+                    dc[k] = [func(e) for e in v]
                 else:
                     raise ValueError(
                         f'{k} key for path  must be str or list[str]')

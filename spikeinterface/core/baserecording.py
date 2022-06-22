@@ -1,6 +1,5 @@
-from typing import List, Union
+from typing import Iterable, List, Union
 from pathlib import Path
-import warnings
 
 import numpy as np
 
@@ -92,7 +91,7 @@ class BaseRecording(BaseExtractor):
                    segment_index: Union[int, None] = None,
                    start_frame: Union[int, None] = None,
                    end_frame: Union[int, None] = None,
-                   channel_ids: Union[List, None] = None,
+                   channel_ids: Union[Iterable, None] = None,
                    order: Union[str, None] = None,
                    return_scaled=False,
                    ):
@@ -162,7 +161,7 @@ class BaseRecording(BaseExtractor):
         rs.time_vector = times.astype('float64')
 
         if with_warning:
-            warnings.warn('Setting times with Recording.set_times() is not recommended because '
+            warn('Setting times with Recording.set_times() is not recommended because '
                           'times are not always propagated to across preprocessing'
                           'Use use this carefully!')
 
@@ -389,7 +388,7 @@ class BaseRecording(BaseExtractor):
         assert all(probe.device_channel_indices is not None for probe in probegroup.probes), \
             'Probe must have device_channel_indices'
 
-        # this is a vector with complex fileds (dataframe like) that handle all contact attr
+        # this is a vector with complex fields (dataframe like) that handle all contact attr
         arr = probegroup.to_numpy(complete=True)
 
         # keep only connected contact ( != -1)
@@ -402,7 +401,7 @@ class BaseRecording(BaseExtractor):
         order = np.argsort(inds)
         inds = inds[order]
         # check
-        if np.max(inds) >= self.get_num_channels():
+        if np.max(list(inds) + [0]) >= self.get_num_channels():
             raise ValueError('The given Probe have "device_channel_indices" that do not match channel count')
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
@@ -612,7 +611,7 @@ class BaseRecording(BaseExtractor):
     
     def remove_channels(self, remove_channel_ids):
         from spikeinterface import ChannelSliceRecording
-        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, removed_channel_ids)]
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 

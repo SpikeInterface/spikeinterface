@@ -1,13 +1,11 @@
 from pathlib import Path
-import numpy as np
-from typing import Union, List
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
+
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+from spikeinterface.core.core_tools import define_function_from_class
 
 import probeinterface as pi 
-
-
 
 try:
     import mtscomp
@@ -81,6 +79,8 @@ class CompressedBinaryIblExtractor(BaseRecording):
         recording_segment = CBinIblRecordingSegment(cbuffer, sampling_frequency, load_sync_channel)
         self.add_recording_segment(recording_segment)
 
+        self.extra_requirements.append('mtscomp')
+
         # set inplace meta data
         self.set_channel_gains(gains)
         self.set_channel_offsets(offsets)
@@ -89,7 +89,13 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
         # load sample shifts
         imDatPrb_type = probe.annotations["imDatPrb_type"]
-        sample_shifts = _get_sample_shifts(self.get_num_channels(), imDatPrb_type)
+        
+        if imDatPrb_type < 2:
+            num_adcs = 12
+        else:
+            num_adcs = 16
+
+        sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
         self.set_property("inter_sample_shift", sample_shifts)
         
 
@@ -118,8 +124,4 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def read_cbin_ibl(*args, **kwargs):
-    recording = CompressedBinaryIblExtractor(*args, **kwargs)
-    return recording
-
-read_cbin_ibl.__doc__ = CompressedBinaryIblExtractor.__doc__
+read_cbin_ibl = define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")

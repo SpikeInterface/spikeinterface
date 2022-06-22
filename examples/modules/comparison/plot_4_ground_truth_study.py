@@ -19,7 +19,7 @@ into a "study_folder" with several subfolder:
 * sortings: contains light copy of all sorting in npz format
 * tables: some table in cvs format
 
-In order to run and re run the computation all gt_sorting and
+In order to run and rerun the computation all gt_sorting and
 recordings are copied to a fast and universal format :
 binary (for recordings) and npz (for sortings).
 """
@@ -98,7 +98,7 @@ for (rec_name, sorter_name), comp in study.comparisons.items():
 # ----------------------------------------
 #
 # As shown previously, the performance is returned as a pandas dataframe.
-# The :code:`aggregate_performances_table` function, gathers all the outputs in
+# The :py:func:`~spikeinterface.comparison.aggregate_performances_table()` function, gathers all the outputs in
 # the study folder and merges them in a single dataframe.
 
 dataframes = study.aggregate_dataframes()

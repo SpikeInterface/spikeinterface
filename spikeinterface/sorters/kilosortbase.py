@@ -1,11 +1,13 @@
 from pathlib import Path
 import json
+import shutil
 import sys
 
 import numpy as np
 import scipy.io
 
 from .utils import ShellScript
+from .basesorter import get_job_kwargs
 from spikeinterface.extractors import KiloSortSortingExtractor, BinaryRecordingExtractor
 
 
@@ -17,6 +19,8 @@ class KilosortBase:
       * _run_from_folder
       * _get_result_from_folder
     """
+    gpu_capability = 'nvidia-required'
+    requires_binary_data = True
 
     @staticmethod
     def _generate_channel_map_file(recording, output_folder):
@@ -45,6 +49,7 @@ class KilosortBase:
         kcoords = groups,
 
         channel_map = {}
+        channel_map['Nchannels'] = nchan
         channel_map['connected'] = np.full((nchan, 1), True)
         channel_map['chanMap0ind'] = np.arange(nchan)
         channel_map['chanMap'] = channel_map['chanMap0ind'] + 1
@@ -57,45 +62,38 @@ class KilosortBase:
         channel_map['fs'] = float(sample_rate)
         scipy.io.savemat(str(output_folder / 'chanMap.mat'), channel_map)
 
-    @staticmethod
-    def _write_recording(recording, output_folder, params, verbose):
-        # save binary file
-        BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
-                                                 dtype='int16', total_memory=params["total_memory"],
-                                                 n_jobs=params["n_jobs_bin"], verbose=False, progress_bar=verbose)
-
     @classmethod
-    def _generate_ops_file(cls, recording, params, output_folder):
+    def _generate_ops_file(cls, recording, params, output_folder, binary_file_path):
         """
         This function generates ops (configs) data for kilosort and saves as `ops.mat`
 
-        Loading example in Matlab (should be assigned to a variable called `ops`):
-        >> ops = load('/output_folder/ops.mat');
+        Loading example in Matlab (shouldn't be assigned to a variable):
+        >> load('/output_folder/ops.mat');
 
         Parameters
         ----------
         recording: BaseRecording
             The recording to generate the channel map file
         params: dict
-            Custom parameters dictionary for kilosort3
+            Custom parameters dictionary for kilosort
         output_folder: pathlib.Path
             Path object to save `ops.mat`
         """
         ops = {}
 
-        nchan = recording.get_num_channels()
+        nchan = float(recording.get_num_channels())
         ops['NchanTOT'] = nchan  # total number of channels (omit if already in chanMap file)
         ops['Nchan'] = nchan  # number of active channels (omit if already in chanMap file)
 
         ops['datatype'] = 'dat'  # binary ('dat', 'bin') or 'openEphys'
-        ops['fbinary'] = str((output_folder / 'recording.dat').absolute())  # will be created for 'openEphys'
+        ops['fbinary'] = str(binary_file_path.absolute())  # will be created for 'openEphys'
         ops['fproc'] = str((output_folder / 'temp_wh.dat').absolute())  # residual from RAM of preprocessed data
         ops['root'] = str(output_folder.absolute())  # 'openEphys' only: where raw files are
         ops['trange'] = [0, np.Inf] #  time range to sort
         ops['chanMap'] = str((output_folder / 'chanMap.mat').absolute())
 
-        # sample rate
-        ops['fs'] = recording.get_sampling_frequency()
+        ops['fs'] = recording.get_sampling_frequency() # sample rate
+        ops['CAR'] = 1.0 if params['car'] else 0.0
 
         ops = cls._get_specific_options(ops, params)
 
@@ -105,23 +103,59 @@ class KilosortBase:
             if isinstance(v, int):
                 ops[k] = float(v)
 
+        ops = {'ops': ops}
         scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-        if 'win' in sys.platform and sys.platform != 'darwin':
-            disk_move = str(output_folder)[:2]
-            shell_cmd = f'''
-                        {disk_move}
-                        cd {output_folder}
-                        matlab -nosplash -wait -log -r {cls.sorter_name}_master
-                    '''
+    def _get_specific_options(cls, ops, params):
+        """Specific options should be implemented in subclass"""
+        return ops
+
+    @classmethod
+    def _setup_recording(cls, recording, output_folder, params, verbose):
+
+        cls._generate_channel_map_file(recording, output_folder)
+        
+        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['time_axis'] == 0 and \
+                recording._kwargs['dtype'] == np.dtype('int16') and len(recording._kwargs['file_paths']) == 1:
+            # in this specific case no copy is needed !!
+            binary_file_path = Path(recording._kwargs['file_paths'][0])
         else:
+            binary_file_path = output_folder / 'recording.dat'
+            BinaryRecordingExtractor.write_recording(recording, file_paths=binary_file_path,
+                                                     dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
+
+        cls._generate_ops_file(recording, params, output_folder, binary_file_path)
+
+    @classmethod
+    def _run_from_folder(cls, output_folder, params, verbose):
+        output_folder = output_folder.absolute()
+        if cls.check_compiled():
             shell_cmd = f'''
-                        #!/bin/bash
-                        cd "{output_folder}"
-                        matlab -nosplash -nodisplay -log -r {cls.sorter_name}_master
-                    '''
+                #!/bin/bash
+                {cls.compiled_name} "{output_folder}"
+            '''
+        else:
+            source_dir = Path(Path(__file__).parent)
+            shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(output_folder))
+
+            sorter_path = getattr(cls, f'{cls.sorter_name}_path')
+            sorter_path = Path(sorter_path).absolute()
+            if 'win' in sys.platform and sys.platform != 'darwin':
+                disk_move = str(output_folder)[:2]
+                shell_cmd = f'''
+                    {disk_move}
+                    cd {output_folder}
+                    matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
+                '''
+            else:
+                shell_cmd = f'''
+                    #!/bin/bash
+                    cd "{output_folder}"
+                    matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
+                '''
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
@@ -138,7 +172,3 @@ class KilosortBase:
         keep_good_only = sorter_params.get('keep_good_only', False)
         sorting = KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=keep_good_only)
         return sorting
-
-    @classmethod
-    def _get_specific_options(cls, ops, params):
-        return ops

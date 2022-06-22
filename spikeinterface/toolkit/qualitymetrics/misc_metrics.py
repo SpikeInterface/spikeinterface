@@ -70,17 +70,12 @@ def compute_firing_rate(waveform_extractor, **kwargs):
     fs = recording.get_sampling_frequency()
 
     seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duraion = np.sum(seg_durations)
+    total_duration = np.sum(seg_durations)
 
     firing_rates = {}
+    num_spikes = compute_num_spikes(waveform_extractor, **kwargs)
     for unit_id in unit_ids:
-        n = 0
-        for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            n += st.size
-
-        firing_rates[unit_id] = n / total_duraion
-
+        firing_rates[unit_id] = num_spikes[unit_id]/total_duration
     return firing_rates
 
 
@@ -290,8 +285,6 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     It means that the number of spike to estimate amplitude is low
     See: WaveformExtractor.set_params(max_spikes_per_unit=500)
 
-    @alessio @ cole @matthias
-    # TODO make a fast amplitude retriever ???
     """
 
     recording = waveform_extractor.recording

@@ -1,8 +1,8 @@
 Core tutorials
---------------------
+---------------
 
-The :code:`core` module
+The :py:mod:`spikeinterface.core` module
 
-- RecordingExtractor
-- SortingExtractor
+- RecordingExtractors
+- SortingExtractors
 - Handling probe information
