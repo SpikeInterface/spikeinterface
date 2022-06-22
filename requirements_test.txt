@@ -6,7 +6,7 @@ pytest-cov
 
 # tridesclous
 numpy==1.22
-numba==0.54.1
+numba==0.55.2
 hdbscan
 
 # zarr is needed for testing
