@@ -122,16 +122,16 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         _channel_indices = np.arange(all_traces.shape[1])[channel_indices]
         if self.reference == 'global':
             out_traces = np.zeros((all_traces.shape[0], _channel_indices.size))
-
             for chan_inds, chan_group_inds in self._groups(_channel_indices):
-                out_traces[:, chan_inds] = all_traces[:, chan_inds] \
+                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
+                out_traces[:, out_inds] = all_traces[:, chan_inds] \
                     - self.operator_func(all_traces[:, chan_group_inds])
 
         elif self.reference == 'single':
             out_traces = np.zeros((all_traces.shape[0], _channel_indices.size))
-
             for i, (chan_inds, _) in enumerate(self._groups(_channel_indices)):
-                out_traces[:, chan_inds] = all_traces[:, chan_inds] \
+                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
+                out_traces[:, out_inds] = all_traces[:, chan_inds] \
                     - self.operator_func(all_traces[:, [self.ref_channel_inds[i]]])
         elif self.reference == 'local':
             out_traces = np.hstack([
