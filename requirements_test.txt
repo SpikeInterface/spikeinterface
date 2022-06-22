@@ -5,9 +5,8 @@ pytest-cov
 # numba and hdbscan and numpy internal API
 
 # tridesclous
-numpy==1.22
-Cython
-numba==0.55.2
+numpy==1.21
+numba
 hdbscan
 
 # zarr is needed for testing
