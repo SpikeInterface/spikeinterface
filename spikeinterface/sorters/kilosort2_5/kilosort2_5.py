@@ -49,6 +49,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'ntbuff': 64,
         'nfilt_factor': 4,
         'NT': None,
+        'do_correction': True,
         'wave_length': 61,
         'keep_good_only': False,
     }
@@ -67,6 +68,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'nPCs': "Number of PCA dimensions",
         'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
         'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
+        "do_correction": "If True drift registration is applied",
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
         'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
@@ -199,6 +201,9 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops['scaleproc'] = 200.0  # int16 scaling of whitened data
         ops['nPCs'] = params['nPCs']  # how many PCs to project the spikes into
         ops['useRAM'] = 0.0  # not yet available
+        
+        # drift correction
+        ops['do_correction'] = params['do_correction']
 
         ## option for wavelength
         ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
