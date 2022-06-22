@@ -22,8 +22,8 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, time_radius_ms=0.2,
-                 local_radius_um=50, noise_levels=None, random_chunk_kwargs={},
+def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                 local_radius_um=50, noise_levels=None, n_shifts=None, random_chunk_kwargs={},
                  outputs='numpy_compact', localization_dict=None, **job_kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
@@ -39,12 +39,16 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         Sign of the peak.
     detect_threshold: float
         Threshold, in median absolute deviations (MAD), to use to detect peaks.
-    time_radius_ms: float
-        Time, in ms, during which the peak is isolated
-        For example, if `time_radius_ms` is 0.1, a peak is detected if a sample crosses the threshold,
+    exclude_sweep_ms: float or None
+        Time, in ms, during which the peak is isolated. Exclusive param with n_shifts
+        For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
         and no larger peaks are located during the 0.1ms preceding and following the peak.
     local_radius_um: float
         The radius to use for detection across local channels.
+    n_shifts: int  or None
+        Number of shifts to find peak. Exclusive with exclude_sweep_ms
+        For example, if `n_shift` is 2, a peak is detected if a sample crosses the threshold,
+        and the two samples before and after are above the sample. 
     noise_levels: array, optional
         Estimated noise levels to use, if already computed.
         If not provide then it is estimated from a random snippet of the data.
@@ -101,7 +105,12 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         extra_margin = max(nbefore, nafter)
 
     # and run
-    n_shifts = int(time_radius_ms * recording.get_sampling_frequency() / 1000.)
+    if exclude_sweep_ms is not None:
+        assert n_shifts is None, "If exclude_sweep_ms is not None, n_shifts should be None"
+        n_shifts = int(time_radius_ms * recording.get_sampling_frequency() / 1000.)
+    elif n_shifts is not None:
+        assert exclude_sweep_ms is None, "If n_shifts is not None, exclude_sweep_ms should be None"
+
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
     init_args = (recording.to_dict(), method, peak_sign, abs_threholds, n_shifts,
