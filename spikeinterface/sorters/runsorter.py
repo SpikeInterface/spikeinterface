@@ -406,18 +406,19 @@ import json
 from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
-# load recording in docker
-recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
+if __name__ == '__main__':
+    # load recording in container
+    recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
 
-# load params in docker
-with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
-    sorter_params = json.load(f)
+    # load params in container
+    with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
+        sorter_params = json.load(f)
 
-# run in docker
-output_folder = '{output_folder_unix}'
-run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
-            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-            verbose={verbose}, raise_error={raise_error}, **sorter_params)
+    # run in container
+    output_folder = '{output_folder_unix}'
+    run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
+                remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+                verbose={verbose}, raise_error={raise_error}, **sorter_params)
 """
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
