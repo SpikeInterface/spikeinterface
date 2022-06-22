@@ -17,24 +17,24 @@ def test_detect_peaks():
 
     # by_channel
     peaks = detect_peaks(recording, method='by_channel',
-                         peak_sign='neg', detect_threshold=5, time_radius_ms=0.1,
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=1, progress_bar=False)
 
     # by_channel
     sorting = detect_peaks(recording, method='by_channel',
-                           peak_sign='neg', detect_threshold=5, time_radius_ms=0.1,
+                           peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                            chunk_size=10000, verbose=1, progress_bar=False,
                            outputs="sorting")
     assert isinstance(sorting, BaseSorting)
 
     # locally_exclusive
     peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, time_radius_ms=0.1,
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=1, progress_bar=False)
 
     # locally_exclusive + localization
     peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, time_radius_ms=0.1,
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=1, progress_bar=True,
                          localization_dict=dict(method='center_of_mass', local_radius_um=150,
                                                 ms_before=0.1, ms_after=0.3),
