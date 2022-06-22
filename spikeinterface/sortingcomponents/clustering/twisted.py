@@ -161,7 +161,7 @@ class TwistedClustering:
         wf_folder.mkdir(exist_ok=True)
 
         waveforms = extract_waveforms(recording, sorting, wf_folder, overwrite=True,
-                                       ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=100,
+                                       ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=200,
                                        **params['job_kwargs'])
 
         labels, peak_labels = remove_duplicates(waveforms, **params['cleaning_kwargs'])

@@ -471,7 +471,7 @@ def remove_duplicates(waveform_extractor, similar_threshold=0.975, sparsify_thre
 
     similarities = sklearn.metrics.pairwise.cosine_similarity(templates.reshape(nb_templates, -1))
     for i in range(nb_templates):
-        similarities[i,i] = -1
+        similarities[i, i] = -1
 
     similar_templates = np.where(similarities > similar_threshold)
 
