@@ -53,6 +53,17 @@ class BaseWidget:
         # axes is a 2D array of ax
         self.axes = axes
         # self.figure.axes is the flatten of all axes
+        
+        
+        
+class DataWidget:
+    
+    def __init__(self) -> None:
+        self.plotter = None
+        pass
+    
+    def _prepare_data(self):
+        raise NotImplementedError
 
 # keep here just in case it is needed
 

@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.interpolate
 
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
@@ -224,8 +226,4 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-def remove_artifacts(*args, **kwargs):
-    return RemoveArtifactsRecording(*args, **kwargs)
-
-
-remove_artifacts.__doc__ = RemoveArtifactsRecording.__doc__
+remove_artifacts = define_function_from_class(source_class=RemoveArtifactsRecording, name="remove_artifacts")

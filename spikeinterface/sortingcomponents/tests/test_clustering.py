@@ -30,11 +30,11 @@ def test_find_cluster_from_peaks():
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
                                     chunk_size=10000, verbose=True, progress_bar=False)
     
-    for method in clustering_methods:
+    for method in clustering_methods.keys():
         method_kwargs = {}
-        if method in ('position_clustering', 'position_pca_clustering'):
+        if method in ('position', 'position_and_pca'):
             method_kwargs['peak_locations'] = peak_locations
-        if method in  ('sliding_hdbscan', 'position_pca_clustering'):
+        if method in  ('sliding_hdbscan', 'position_and_pca'):
             method_kwargs['waveform_mode'] = 'shared_memory'
         
         t0 = time.perf_counter()

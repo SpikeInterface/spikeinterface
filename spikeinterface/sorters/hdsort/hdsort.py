@@ -1,8 +1,11 @@
 from pathlib import Path
 import os
 from typing import Union
-import numpy as np
+import shutil
 import sys
+
+import numpy as np
+import scipy.io
 
 from spikeinterface.core.core_tools import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
@@ -32,6 +35,7 @@ class HDSortSorter(BaseSorter):
     """HDSort Sorter object."""
 
     sorter_name: str = 'hdsort'
+    compiled_name: str = 'hdsort_compiled'
     hdsort_path: Union[str, None] = os.getenv('HDSORT_PATH', None)
     requires_locations = False
     _default_params = {
@@ -85,10 +89,14 @@ class HDSortSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if cls.check_compiled():
+            return True
         return check_if_installed(cls.hdsort_path)
 
-    @staticmethod
-    def get_sorter_version():
+    @classmethod
+    def get_sorter_version(cls):
+        if cls.check_compiled():
+            return 'compiled'
         p = os.getenv('HDSORT_PATH', None)
         if p is None:
             return 'unknown'
@@ -110,11 +118,87 @@ class HDSortSorter(BaseSorter):
     def _check_apply_filter_in_params(cls, params):
         return params['filter']
 
+    @staticmethod
+    def _generate_configs_file(output_folder, params, file_name, file_format):
+        P = {}
+
+        # preprocess
+        P['filter'] = 1.0 if params['filter'] else 0.0
+        P['parfor'] = True if params['parfor'] else False
+        P['hpf'] = float(params['freq_min'])
+        P['lpf'] = float(params['freq_max'])
+
+        # leg creationg
+        P['legs'] = {
+            'maxElPerGroup': float(params['max_el_per_group']),
+            'minElPerGroup': float(params['min_el_per_group']),
+            'addIfNearerThan': float(params['add_if_nearer_than']),  # always add direct neighbors
+            'maxDistanceWithinGroup': float(params['max_distance_within_group'])
+        }
+
+        # spike detection
+        P['spikeDetection'] = {
+            'method': '-',
+            'thr': float(params['detect_threshold'])
+        }
+        P['artefactDetection'] = {'use': 0.0}
+
+        # pre-clustering
+        P['noiseEstimation'] = {'minDistFromSpikes': 80.0}
+        P['spikeAlignment'] = {
+            'initAlignment': '-',
+            'maxSpikes': 50000.0  # so many spikes will be clustered
+        }
+        P['featureExtraction'] = {'nDims': float(params['n_pc_dims'])}  # 6
+        P['clustering'] = {
+            'maxSpikes': 50000.0,  # dont align spikes you dont cluster...
+            'meanShiftBandWidthFactor': 1.8
+            # 'meanShiftBandWidth': sqrt(1.8*6)  # todo: check this!
+        }
+
+        # template matching
+        P['botm'] = {
+            'run': 0.0,
+            'Tf': 75.0,
+            'cutLeft': 20.0
+        }
+        P['spikeCutting'] = {
+            'maxSpikes': 200000000000.0,  # Set this to basically inf
+            'blockwise': False
+        }
+        P['templateEstimation'] = {
+            'cutLeft': 10.0,
+            'Tf': 55.0,
+            'maxSpikes': 100.0
+        }
+
+        # merging
+        P['mergeTemplates'] = {
+            'merge': 1.0,
+            'upsampleFactor': 3.0,
+            'atCorrelation': .93,  # DONT SET THIS TOO LOW! USE OTHER ELECTRODES ON FULL FOOTPRINT TO MERGE
+            'ifMaxRelDistSmallerPercent': 30.0
+
+        }
+
+        # configs
+        sort_name = 'hdsort_output'
+        cfgs = {}
+        cfgs['rawFile'] = file_name
+        cfgs['sortingName'] = sort_name
+        cfgs['fileFormat'] = file_format
+        cfgs['chunkSize'] = float(params['chunk_size'])
+        cfgs['loopMode'] = params['loop_mode']
+
+        data = {
+            'P': P,
+            **cfgs
+        }
+
+        scipy.io.savemat(str(output_folder / 'configsParams.mat'), data)
+
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        source_dir = Path(__file__).parent
-        utils_path = source_dir.parent / 'utils'
-
         #  if isinstance(recording, MaxOneRecordingExtractor):
         if False:  # TODO
             # ~ self.params['file_name'] = str(Path(recording._file_path).absolute())
@@ -131,59 +215,7 @@ class HDSortSorter(BaseSorter):
             # ~ self.params['file_format'] = 'mea1k'
             file_format = 'mea1k'
 
-        p = params
-        # ~ p['sort_name'] = 'hdsort_output'
-        sort_name = 'hdsort_output'
-
-        # read the template txt files
-        with (source_dir / 'hdsort_master.m').open('r') as f:
-            hdsort_master_txt = f.read()
-        with (source_dir / 'hdsort_config.m').open('r') as f:
-            hdsort_config_txt = f.read()
-
-        # make substitutions in txt files
-        hdsort_master_txt = hdsort_master_txt.format(
-            hdsort_path=str(
-                Path(HDSortSorter.hdsort_path).absolute()),
-            utils_path=str(utils_path.absolute()),
-            config_path=str((output_folder / 'hdsort_config.m').absolute()),
-            # ~ file_name=p['file_name'],
-            file_name=trace_file_name,
-            # ~ file_format=p['file_format'],
-            file_format=file_format,
-            # ~ sort_name=p['sort_name'],
-            sort_name=sort_name,
-            chunk_size=p['chunk_size'],
-            loop_mode=p['loop_mode']
-        )
-
-        if p['filter']:
-            filter = 1
-        else:
-            filter = 0
-
-        if p['parfor']:
-            parfor = 'true'
-        else:
-            parfor = 'false'
-
-        hdsort_config_txt = hdsort_config_txt.format(
-            filter=filter,
-            parfor=parfor,
-            hpf=p['freq_min'],
-            lpf=p['freq_max'],
-            max_el_per_group=p['max_el_per_group'],
-            min_el_per_group=p['min_el_per_group'],
-            add_if_nearer_than=p['add_if_nearer_than'],
-            max_distance_within_group=p['max_distance_within_group'],
-            detect_threshold=p['detect_threshold'],
-            n_pc_dims=p['n_pc_dims'],
-        )
-
-        for fname, txt in zip(['hdsort_master.m', 'hdsort_config.m'],
-                              [hdsort_master_txt, hdsort_config_txt]):
-            with (output_folder / fname).open('w') as f:
-                f.write(txt)
+        cls._generate_configs_file(output_folder, params, trace_file_name, file_format)
 
         # store sample rate in a file
         samplerate = recording.get_sampling_frequency()
@@ -191,27 +223,36 @@ class HDSortSorter(BaseSorter):
         with open(samplerate_fname, 'w') as f:
             f.write('{}'.format(samplerate))
 
+        source_dir = Path(Path(__file__).parent)
+        shutil.copy(str(source_dir / 'hdsort_master.m'), str(output_folder))
+
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
-        tmpdir = output_folder
-
-        if "win" in sys.platform and sys.platform != 'darwin':
-            shell_cmd = '''
-                        {disk_move}
-                        cd {tmpdir}
-                        matlab -nosplash -wait -r hdsort_master
-                    '''.format(disk_move=str(output_folder)[:2], tmpdir=output_folder)
+        if cls.check_compiled():
+            shell_cmd = f'''
+                #!/bin/bash
+                {cls.compiled_name} {output_folder}
+            '''
         else:
-            shell_cmd = '''
-                        #!/bin/bash
-                        cd "{tmpdir}"
-                        matlab -nosplash -nodisplay -r hdsort_master
-                    '''.format(tmpdir=output_folder)
+            output_folder = output_folder.absolute()
+            hdsort_path = Path(cls.hdsort_path).absolute()
 
+            if "win" in sys.platform and sys.platform != 'darwin':
+                disk_move = str(output_folder)[:2]
+                shell_cmd = f'''
+                            {disk_move}
+                            cd {output_folder}
+                            matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                        '''
+            else:
+                shell_cmd = f'''
+                            #!/bin/bash
+                            cd "{output_folder}"
+                            matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                        '''
         shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                    log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
-
         retcode = shell_script.wait()
 
         if retcode != 0:

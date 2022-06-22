@@ -1,10 +1,11 @@
 Sorters module
 ==============
 
-The :code:`sorters` module is where spike sorting happens!
+The :py:mod:`spikeinterface.sorters` module is where spike sorting happens!
 
-SI provides wrapper classes to many commonly used spike sorters (see :ref:`compatible-tech`).
-All sorter classes inherit from the :code:`BaseSorter` class, which provides the common tools to run spike sorters.
+SpikeInterface provides wrapper classes to many commonly used spike sorters (see :ref:`compatible-tech`).
+All sorter classes inherit from the :py:class:`~spikeinterface.sorters.BaseSorter` class, which provides the
+common tools to run spike sorters.
 
 
 Sorter wrappers concept
@@ -65,9 +66,11 @@ When docker is installed, you can simply run the sorter in a specified docker im
     import spikeinterface.sorters as ss
 
     # recording is a RecordingExtractor object
-    sorting_TDC = ss.run_tridesclous(recording,
-                                     output_folder="tridesclous_output",
-                                     docker_image="spikeinterface/tridesclous-base:1.6.4")
+    sorting_TDC = ss.run_tridesclous(
+        recording,
+        output_folder="tridesclous_output",
+        docker_image="spikeinterface/tridesclous-base:1.6.4",
+    )
 
 And the same goes for singularity:
 
@@ -76,18 +79,20 @@ And the same goes for singularity:
     import spikeinterface.sorters as ss
 
     # recording is a RecordingExtractor object
-    sorting_TDC = ss.run_tridesclous(recording,
-                                     output_folder="tridesclous_output",
-                                     singularity_image="spikeinterface/tridesclous-base:1.6.4")
+    sorting_TDC = ss.run_tridesclous(
+        recording,
+        output_folder="tridesclous_output",
+        singularity_image="spikeinterface/tridesclous-base:1.6.4",
+    )
 
 
 
 Run several sorting jobs in parallel
 ------------------------------------
 
-The :code:`sorters` includes also includes tools to run several spike sorting jobs in parallel. This can be done with
-the :code:`run_sorters()` function by specifying an :code:`engine` that supports parallel processing (e.g. joblib or
-dask).
+The :py:mod:`spikeinterface.sorters` includes also includes tools to run several spike sorting jobs in parallel. This
+can be done with the :py:func:`spikeinterface.sorters.run_sorters()` function by specifying an :code:`engine` that
+supports parallel processing (e.g. joblib or dask).
 
 In this code example, 3 sorters are run on 2 recordings using 6 jobs:
 
@@ -98,12 +103,14 @@ In this code example, 3 sorters are run on 2 recordings using 6 jobs:
     # recording1 and recording2 are RecordingExtractor objects
     recording_dict = {"rec1": recording1, "rec2": recording2}
 
-    sorting_outputs = ss.run_sorters(sorter_list=["tridesclous", "herdingspikes", "ironclust"],
-                                     recording_dict_or_list=recording_dict,
-                                     working_folder="all_sorters",
-                                     verbose=False,
-                                     engine="joblib",
-                                     engine_kwargs={'n_jobs': 6})
+    sorting_outputs = ss.run_sorters(
+        sorter_list=["tridesclous", "herdingspikes", "ironclust"],
+        recording_dict_or_list=recording_dict,
+        working_folder="all_sorters",
+        verbose=False,
+        engine="joblib",
+        engine_kwargs={'n_jobs': 6},
+    )
 
 After the jobs are run, the :code:`sorting_outputs` is a dictionary with :code:`(rec_name, sorter_name)` as key (e.g.
 :code:`('rec1', 'tridesclous')` in this example), and the corresponding :code:`SortingExtractor` as value.

@@ -52,10 +52,9 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
         corrected_peak_locations[direction] -= shift
     else:
         # non rigid motion = interpolation 2D
-        sample_bins = np.searchsorted(times, temporal_bins)
-        f = scipy.interpolate.RegularGridInterpolator((sample_bins, spatial_bins), motion,
+        f = scipy.interpolate.RegularGridInterpolator((temporal_bins, spatial_bins), motion,
                                                       method='linear', bounds_error=False, fill_value=None)
-        shift = f(list(zip(peaks['sample_ind'], peak_locations[direction])))
+        shift = f(np.c_[times, peak_locations[direction]])
         corrected_peak_locations[direction] -= shift
 
     return corrected_peak_locations
@@ -118,7 +117,7 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
             # interpolation is done with Inverse Distance Weighted
             # because it is simple to implement
             # Instead vwe should use use the convex hull, Delaunay triangulation http://www.qhull.org/
-            # scipy.interpolate.LinearNDInterpolator and qhull.Delaunay should help for this
+            # scipy.interpolate.LinearNDInterpolator and qhull.Delaunay should help for this
             distances = sklearn.metrics.pairwise_distances(channel_locations_moved, channel_locations,
                                                            metric='euclidean')
             num_chans = channel_locations.shape[0]
@@ -177,13 +176,9 @@ class CorrectMotionRecording(BasePreprocessor):
     """
     Recording that corrects motion on-the-fly given a rigid or non-rigid
     motion vector estimation.
-
     This internally applies for every time bin an inverse weighted distance interpolation
     on the original after reverse the motion.
-
-    This is still experimental at the moment.
-
-    estimate_motion() must be call before this to get the motion vector.
+    `estimate_motion()` must be call before this to get the motion vector.
 
     Parameters
     ----------

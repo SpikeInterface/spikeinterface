@@ -8,7 +8,6 @@ import scipy
 def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
     """Method to subsample all the found peaks before clustering
-
     Parameters
     ----------
     peaks: the peaks that have been found
@@ -72,7 +71,6 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
                     The locations of all the peaks, computed via localize_peaks
     
     {}
-
     Returns
     -------
     peaks: array

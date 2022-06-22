@@ -1,3 +1,5 @@
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 import numpy as np
@@ -17,7 +19,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     Class for reading data saved by SpikeGLX software.
     See https://billkarsh.github.io/SpikeGLX/
 
-    Based on neo.rawio.SpikeGLXRawIO
+    Based on :py:class:`neo.rawio.SpikeGLXRawIO`
 
     Contrary to older verion this reader is folder based.
     So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
@@ -29,16 +31,23 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     stream_id: str or None
         stream for instance : 'imec0.ap' 'nidq' or 'imec0.lf'
+    stream_id: str or None
+        If several stream, specify the one you want.
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
+
+        
     """
 
     mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
 
-    def __init__(self, folder_path, stream_id=None):
-        neo_kwargs = {"dirname": str(folder_path)}
+
+    def __init__(self, folder_path, stream_id=None, all_annotations=False):
+        neo_kwargs = {'dirname': str(folder_path)}
         if HAS_NEO_10_2:
-            neo_kwargs["load_sync_channel"] = False
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, **neo_kwargs)
+            neo_kwargs['load_sync_channel'] = False
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
 
         # ~ # open the corresponding stream probe
         if HAS_NEO_10_2 and "nidq" not in self.stream_id:
@@ -68,12 +77,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
             self.set_property("inter_sample_shift", sample_shifts)
 
-        self._kwargs = dict(folder_path=str(folder_path), stream_id=stream_id)
+        self._kwargs.update(dict(folder_path=str(folder_path)))
 
 
-def read_spikeglx(*args, **kwargs):
-    recording = SpikeGLXRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_spikeglx.__doc__ = SpikeGLXRecordingExtractor.__doc__
+read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")

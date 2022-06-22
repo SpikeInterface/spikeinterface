@@ -2,10 +2,10 @@
 Handle time information
 =======================
 
-By default, :code:`spikeinterface` assumes that a recording is uniformly sampled and it starts at 0 seconds.
+By default, SpikeInterface assumes that a recording is uniformly sampled and it starts at 0 seconds.
 However, in some cases there could be a different start time or even some missing frames in the recording.
 
-This notebook shows how to handle time informaiton in :code:`spikeinterface` recording and sorting objects.
+This notebook shows how to handle time information in SpikeInterface recording and sorting objects.
 """
 from spikeinterface.extractors import toy_example
 

@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.fft import rfft, irfft
 
+from spikeinterface.core.core_tools import define_function_from_class
+
 from .tools import get_chunk_with_margin
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -95,11 +97,8 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-def phase_shift(*args, **kwargs):
-    return PhaseShiftRecording(*args, **kwargs)
+phase_shift = define_function_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
-
-phase_shift.__doc__ = PhaseShiftRecording.__doc__
 
 
 def apply_fshift_sam(sig, sample_shifts, axis=0):

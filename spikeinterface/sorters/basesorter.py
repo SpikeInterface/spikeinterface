@@ -16,18 +16,38 @@ from joblib import Parallel, delayed
 
 from spikeinterface.core import load_extractor, BaseRecording
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.job_tools import job_keys
 from .utils import SpikeSortingError, ShellScript
+
+
+default_job_kwargs = {"n_jobs": 1, 
+                      "total_memory": None,
+                      "chunk_size": None,
+                      "chunk_memory": None,
+                      "chunk_duration": "1s",
+                      "progress_bar": True}
+
+default_job_kwargs_description = {
+    "n_jobs": "Number of jobs (when saving ti binary) - default 1", 
+    "chunk_size": "Number of samples per chunk (when saving ti binary) - default None",
+    "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default None",
+    "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default None",
+    "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)" \
+                      " - default '1s'",
+    "progress_bar": "If True, progress bar is shown (when saving to binary) - default True"}
 
 
 class BaseSorter:
     """Base Sorter object."""
 
-    sorter_name = ''  # convenience for reporting
+    sorter_name = ""  # convenience for reporting
     compiled_name = None
     SortingExtractor_Class = None  # convenience to get the extractor
     requires_locations = False
-    docker_requires_gpu = False
+    gpu_capability = 'not-supported'
+    requires_binary_data = False
     compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': True}
+    
     _default_params = {}
     _params_description = {}
     sorter_description = ""
@@ -92,8 +112,6 @@ class BaseSorter:
                                    "Locations can be added to the RecordingExtractor by loading a probe file "
                                    "(.prb or .csv) or by setting them manually.")
 
-        params = cls.default_params()
-
         if output_folder is None:
             output_folder = cls.sorter_name + '_output'
 
@@ -111,7 +129,7 @@ class BaseSorter:
         if recording.get_num_segments() > 1:
             if not cls.handle_multi_segment:
                 raise ValueError(
-                    f'This sorter {cls.sorter_name} do not handle multi segment, use concatenate_recordings(...)')
+                    f'This sorter {cls.sorter_name} do not handle multi segment, use si.concatenate_recordings(...)')
 
         rec_file = output_folder / 'spikeinterface_recording.json'
         if recording.is_dumpable:
@@ -124,11 +142,17 @@ class BaseSorter:
 
     @classmethod
     def default_params(cls):
-        return copy.deepcopy(cls._default_params)
+        p = copy.deepcopy(cls._default_params)
+        if cls.requires_binary_data:
+            p.update(default_job_kwargs)
+        return p
 
     @classmethod
     def params_description(cls):
-        return copy.deepcopy(cls._params_description)
+        p = copy.deepcopy(cls._params_description)
+        if cls.requires_binary_data:
+            p.update(default_job_kwargs_description)
+        return p
 
     @classmethod
     def set_params_to_folder(cls, recording, output_folder, new_params, verbose):
@@ -178,7 +202,7 @@ class BaseSorter:
 
         # retrieve sorter_name and params
         with (output_folder / 'spikeinterface_params.json').open(mode='r') as f:
-            params = json.load(f)
+              params = json.load(f)
         sorter_params = params['sorter_params']
         sorter_name = params['sorter_name']
 
@@ -289,6 +313,10 @@ class BaseSorter:
         if retcode != 0:
             return False
         return True
+    
+    @classmethod
+    def use_gpu(cls, params):
+        return cls.gpu_capability != 'not-supported'
 
     #############################################
 
@@ -340,3 +368,10 @@ class BaseSorter:
     def _get_result_from_folder(cls, output_folder):
         # need be implemented in subclass
         raise NotImplementedError
+
+
+def get_job_kwargs(params, verbose):
+    job_kwargs = {p: v for p, v in params.items() if p in job_keys}
+    if not verbose:
+        job_kwargs["progress_bar"] = False
+    return job_kwargs

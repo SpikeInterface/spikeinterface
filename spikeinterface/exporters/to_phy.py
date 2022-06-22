@@ -55,6 +55,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     verbose: bool
         If True, output is verbose
     {}
+    
     """
     assert isinstance(waveform_extractor, spikeinterface.core.waveform_extractor.WaveformExtractor), \
         'waveform_extractor must be a WaveformExtractor object'

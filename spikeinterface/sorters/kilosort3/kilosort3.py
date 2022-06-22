@@ -1,12 +1,10 @@
 from pathlib import Path
 import os
 from typing import Union
-import sys
-import shutil
 
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import get_git_commit, ShellScript
+from ..utils import get_git_commit
 
 PathType = Union[str, Path]
 
@@ -33,7 +31,6 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     compiled_name: str = 'ks3_compiled'
     kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
-    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
@@ -49,10 +46,10 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         'nPCs': 3,
         'ntbuff': 64,
         'nfilt_factor': 4,
+        'do_correction': True,
         'NT': None,
+        'wave_length': 61,
         'keep_good_only': False,
-        'total_memory': '500M',
-        'n_jobs_bin': 1
     }
 
     _params_description = {
@@ -69,10 +66,10 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         'nPCs': "Number of PCA dimensions",
         'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
         'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
+        "do_correction": "If True drift registration is applied",
         'NT': "Batch size (if None it is automatically computed)",
+        'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         'keep_good_only': "If True only 'good' units are returned",
-        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
     sorter_description = """Kilosort3 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
@@ -129,56 +126,12 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
             p['NT'] = 64 * 1024 + p['ntbuff']
         else:
             p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
+        if p['wave_length'] % 2 != 1:
+            p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
+        if p['wave_length'] > 81:
+            p['wave_length'] = 81 # The wave_length must be less than 81.
+
         return p
-
-    @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
-
-        cls._generate_channel_map_file(recording, output_folder)
-
-        cls._write_recording(recording, output_folder, params, verbose)
-
-        cls._generate_ops_file(recording, params, output_folder)
-
-        source_dir = Path(Path(__file__).parent)
-        shutil.copy(str(source_dir / 'kilosort3_master.m'), str(output_folder))
-        shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
-        shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
-
-    # TODO: This is a copy/adaptation from KilosortBase
-    # If all versions of kilosort are changed according to this approach,
-    # _run_from_folder should be moved to KilosortBase again
-    @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-
-        output_folder = output_folder.absolute()
-        if cls.check_compiled():
-            shell_cmd = f'''
-                #!/bin/bash
-                ks3_compiled {output_folder}
-            '''
-        elif 'win' in sys.platform and sys.platform != 'darwin':
-            kilosort3_path = Path(Kilosort3Sorter.kilosort3_path).absolute()
-            disk_move = str(output_folder)[:2]
-            shell_cmd = f'''
-                        {disk_move}
-                        cd {output_folder}
-                        matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{kilosort3_path}')"
-                    '''
-        else:
-            kilosort3_path = Path(Kilosort3Sorter.kilosort3_path).absolute()
-            shell_cmd = f'''
-                        #!/bin/bash
-                        cd "{output_folder}"
-                        matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{kilosort3_path}')"
-                    '''
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
-        shell_script.start()
-        retcode = shell_script.wait()
-
-        if retcode != 0:
-            raise Exception(f'{cls.sorter_name} returned a non-zero exit code')
 
     @classmethod
     def _get_specific_options(cls, ops, params):
@@ -228,23 +181,26 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         # type of data shifting (0 = none, 1 = rigid, 2 = nonrigid)
         ops['nblocks'] = params['nblocks']
 
-        ops['CAR'] = 1 if params['car'] else 0
-
         ## danger, changing these settings can lead to fatal errors
         # options for determining PCs
         ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)
-        ops['reorder'] = 1.0  # whether to reorder batches for drift correction. 
+        ops['reorder'] = 1.0  # whether to reorder batches for drift correction.
         ops['nskip'] = 25.0  # how many batches to skip for determining spike PCs
 
         ops['GPU'] = 1.0  # has to be 1, no CPU version yet, sorry
         # ops['Nfilt'] = 1024 # max number of clusters
         ops['nfilt_factor'] = params['nfilt_factor']  # max number of clusters per good channel (even temporary ones)
         ops['ntbuff'] = params['ntbuff']  # samples of symmetrical buffer for whitening and spike detection
-        ops['NT'] = params['NT']  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory). 
+        ops['NT'] = params['NT']  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
         ops['whiteningRange'] = 32.0  # number of channels to use for whitening each channel
         ops['nSkipCov'] = 25.0  # compute whitening matrix from every N-th batch
         ops['scaleproc'] = 200.0  # int16 scaling of whitened data
         ops['nPCs'] = params['nPCs']  # how many PCs to project the spikes into
         ops['useRAM'] = 0.0  # not yet available
+        
+        # drift correction
+        ops['do_correction'] = params['do_correction']
 
+        ## option for wavelength
+        ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
         return ops
