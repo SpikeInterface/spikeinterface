@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 
 from spikeinterface.core import load_extractor, BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BaseMultiComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .paircomparisons import SymmetricSortingComparison, TemplateComparison
 from .comparisontools import compare_spike_trains
@@ -239,11 +240,8 @@ class AgreementSortingSegment(BaseSortingSegment):
         return spiketrain
 
 
-def compare_multiple_sorters(*args, **kwargs):
-    return MultiSortingComparison(*args, **kwargs)
-
-
-compare_multiple_sorters.__doc__ = MultiSortingComparison.__doc__
+compare_multiple_sorters = define_function_from_class(source_class=MultiSortingComparison, 
+                                                      name="compare_multiple_sorters")
 
 
 class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
@@ -302,8 +300,5 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
                 self.graph.add_node(node)
 
 
-def compare_multiple_templates(*args, **kwargs):
-    return MultiTemplateComparison(*args, **kwargs)
-
-
-compare_multiple_templates.__doc__ = MultiTemplateComparison.__doc__
+compare_multiple_templates = define_function_from_class(source_class=MultiTemplateComparison, 
+                                                        name="compare_multiple_templates")
