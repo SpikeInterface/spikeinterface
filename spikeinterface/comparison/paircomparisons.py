@@ -3,6 +3,7 @@ import pandas as pd
 
 from ..toolkit.postprocessing import compute_template_similarity
 
+from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BasePairComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .comparisontools import (do_count_event, make_match_count_matrix, 
                               make_agreement_scores_from_count, do_score_labels, do_confusion_matrix, 
@@ -146,11 +147,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             return self.agreement_scores.at[unit1, unit2]
 
 
-def compare_two_sorters(*args, **kwargs):
-    return SymmetricSortingComparison(*args, **kwargs)
-
-
-compare_two_sorters.__doc__ = SymmetricSortingComparison.__doc__
+compare_two_sorters = define_function_from_class(source_class=SymmetricSortingComparison, name="compare_two_sorters")
 
 
 class GroundTruthComparison(BasePairSorterComparison):
@@ -597,11 +594,8 @@ num_bad: {num_bad}
 """
 
 
-def compare_sorter_to_ground_truth(*args, **kwargs):
-    return GroundTruthComparison(*args, **kwargs)
-
-
-compare_sorter_to_ground_truth.__doc__ = GroundTruthComparison.__doc__
+compare_sorter_to_ground_truth = define_function_from_class(source_class=GroundTruthComparison, 
+                                                            name="compare_sorter_to_ground_truth")
 
 
 class TemplateComparison(BasePairComparison, MixinTemplateComparison):
@@ -685,8 +679,4 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
                                              columns=self.unit_ids[1])
 
 
-def compare_templates(*args, **kwargs):
-    return TemplateComparison(*args, **kwargs)
-
-
-compare_templates.__doc__ = TemplateComparison.__doc__
+compare_templates = define_function_from_class(source_class=TemplateComparison, name="compare_templates")
