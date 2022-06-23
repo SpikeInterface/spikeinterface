@@ -2,6 +2,7 @@
 
 from cmath import nan
 import numpy as np
+from tqdm import tqdm
 import scipy.stats
 import scipy.spatial.distance
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -9,7 +10,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import IncrementalPCA
 
 import spikeinterface as si
-from ..utils import get_random_data_chunks
+from ..utils import get_random_data_chunks, tqdm_joblib
 from ..postprocessing import get_template_channel_sparsity
 
 from ..postprocessing import WaveformPrincipalComponent
@@ -22,7 +23,7 @@ _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
 
 def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
                          min_spikes_for_nn=10, n_neighbors=4, n_components=10,
-                         radius_um=100, seed=0):
+                         radius_um=100, seed=0, n_jobs=1, verbose=False):
     """Calculate principal component derived metrics.
 
     Parameters
@@ -49,6 +50,8 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
         This is used for the nearest neighbor noise overlap measure.
     seed : int, optional, default: 0
         Random seed value.
+    verbose : bool
+        If True, output is verbose
 
     Returns
     -------
@@ -72,52 +75,87 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
         pc_metrics.pop('nearest_neighbor')
         pc_metrics['nn_hit_rate'] = {}
         pc_metrics['nn_miss_rate'] = {}
+        
+    if verbose:
+        units_loop = tqdm(np.arange(len(unit_ids)), desc="Computing PCA metrics")
+    else:
+        units_loop = np.arange(len(unit_ids))
 
-    for unit_id in unit_ids:
-        # @alessio @ cole: please propose something here
-        # TODO : make clear neighborhood for channel_ids and unit_ids
-        # DEBUG : for debug we take all other channels and units
-        neighbor_unit_ids = unit_ids
-        neighbor_channel_ids = channel_ids
-        # END DEBUG
+    # TODO: parallelize this!
+    # TODO: handle sparsity (external)
+    neighbor_unit_ids = unit_ids
+    neighbor_channel_ids = channel_ids
+    if n_jobs in (0, 1):
+        for ui in units_loop:
+            unit_id = unit_ids[ui]
+            # @alessio @ cole: please propose something here
+            # TODO : make clear neighborhood for channel_ids and unit_ids
+            # DEBUG : for debug we take all other channels and units
+            # neighbor_unit_ids = unit_ids
+            # neighbor_channel_ids = channel_ids
+            # END DEBUG
 
-        labels, pcs = pca.get_all_projections(
-            channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
+            pca_metrics_unit = pca_metrics_one_unit(we_folder=we.folder, metric_names=metric_names, 
+                                                    unit_id=unit_id, neighbor_channel_ids=neighbor_channel_ids, 
+                                                    neighbor_unit_ids=neighbor_unit_ids, 
+                                                    unit_ids=unit_ids,
+                                                    max_spikes_for_nn=max_spikes_for_nn,
+                                                    min_spikes_for_nn=min_spikes_for_nn, 
+                                                    n_neighbors=n_neighbors, n_components=n_components,
+                                                    radius_um=radius_um, seed=seed)
+            for metric_name, metric in pca_metrics_unit.items():
+                pc_metrics[metric_name][unit_id] = metric
+    else:
+        from joblib import delayed, Parallel
 
-        pcs_flat = pcs.reshape(pcs.shape[0], -1)
+        # print(f"Running in parallel with {n_jobs} jobs")
+        with tqdm_joblib(tqdm(desc="Computing PCA metrics", total=len(unit_ids))) as progress_bar:
+            pc_metrics_units = Parallel(n_jobs=n_jobs)(delayed(pca_metrics_one_unit)(we.folder, metric_names, 
+                                                               unit_ids[ui], neighbor_channel_ids, neighbor_unit_ids,
+                                                               unit_ids, max_spikes_for_nn, min_spikes_for_nn, 
+                                                               n_neighbors, n_components, radius_um, seed) 
+                                                       for ui in np.arange(len(unit_ids)))
+        for ui, pca_metrics_unit in enumerate(pc_metrics_units):
+            unit_id = unit_ids[ui]
+            for metric_name, metric in pca_metrics_unit.items():
+                pc_metrics[metric_name][unit_id] = metric
+        # labels, pcs = pca.get_all_projections(
+        #     channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
 
-        # metrics
-        if 'isolation_distance' in metric_names or 'l_ratio' in metric_names:
-            isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
-            if 'isolation_distance' in metric_names:
-                pc_metrics['isolation_distance'][unit_id] = isolation_distance
-            if 'l_ratio' in metric_names:
-                pc_metrics['l_ratio'][unit_id] = l_ratio
+        # pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
-        if 'd_prime' in metric_names:
-            if len(unit_ids) == 1:
-                d_prime = np.nan
-            else:
-                d_prime = lda_metrics(pcs_flat, labels, unit_id)
-            pc_metrics['d_prime'][unit_id] = d_prime
+        # # metrics
+        # if 'isolation_distance' in metric_names or 'l_ratio' in metric_names:
+        #     isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
+        #     if 'isolation_distance' in metric_names:
+        #         pc_metrics['isolation_distance'][unit_id] = isolation_distance
+        #     if 'l_ratio' in metric_names:
+        #         pc_metrics['l_ratio'][unit_id] = l_ratio
 
-        if 'nearest_neighbor' in metric_names:
-            nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id,
-                                                                  max_spikes_for_nn, n_neighbors)
-            pc_metrics['nn_hit_rate'][unit_id] = nn_hit_rate
-            pc_metrics['nn_miss_rate'][unit_id] = nn_miss_rate
+        # if 'd_prime' in metric_names:
+        #     if len(unit_ids) == 1:
+        #         d_prime = np.nan
+        #     else:
+        #         d_prime = lda_metrics(pcs_flat, labels, unit_id)
+        #     pc_metrics['d_prime'][unit_id] = d_prime
 
-        if 'nn_isolation' in metric_names:
-            nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
-                                                       min_spikes_for_nn, n_neighbors,
-                                                       n_components,radius_um, seed)
-            pc_metrics['nn_isolation'][unit_id] = nn_isolation
+        # if 'nearest_neighbor' in metric_names:
+        #     nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id,
+        #                                                           max_spikes_for_nn, n_neighbors)
+        #     pc_metrics['nn_hit_rate'][unit_id] = nn_hit_rate
+        #     pc_metrics['nn_miss_rate'][unit_id] = nn_miss_rate
 
-        if 'nn_noise_overlap' in metric_names:
-            nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
-                                                               min_spikes_for_nn, n_neighbors,
-                                                               n_components, radius_um, seed)
-            pc_metrics['nn_noise_overlap'][unit_id] = nn_noise_overlap
+        # if 'nn_isolation' in metric_names:
+        #     nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
+        #                                                min_spikes_for_nn, n_neighbors,
+        #                                                n_components,radius_um, seed)
+        #     pc_metrics['nn_isolation'][unit_id] = nn_isolation
+
+        # if 'nn_noise_overlap' in metric_names:
+        #     nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
+        #                                                        min_spikes_for_nn, n_neighbors,
+        #                                                        n_components, radius_um, seed)
+        #     pc_metrics['nn_noise_overlap'][unit_id] = nn_noise_overlap
 
     return pc_metrics
 
@@ -599,3 +637,51 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     isolation = (target_nn_in_target + other_nn_in_other) / (n_spikes_target+n_spikes_other) / n_neighbors_adjusted
 
     return isolation
+
+
+def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids, neighbor_unit_ids,
+                         unit_ids, max_spikes_for_nn, min_spikes_for_nn, n_neighbors, n_components,
+                         radius_um, seed):
+    pca = WaveformPrincipalComponent.load_from_folder(we_folder)
+
+    labels, pcs = pca.get_all_projections(
+            channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
+
+    pcs_flat = pcs.reshape(pcs.shape[0], -1)
+
+    pc_metrics = {}
+
+    # metrics
+    if 'isolation_distance' in metric_names or 'l_ratio' in metric_names:
+        isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
+        if 'isolation_distance' in metric_names:
+            pc_metrics['isolation_distance'] = isolation_distance
+        if 'l_ratio' in metric_names:
+            pc_metrics['l_ratio'] = l_ratio
+
+    if 'd_prime' in metric_names:
+        if len(unit_ids) == 1:
+            d_prime = np.nan
+        else:
+            d_prime = lda_metrics(pcs_flat, labels, unit_id)
+        pc_metrics['d_prime'] = d_prime
+
+    if 'nearest_neighbor' in metric_names:
+        nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id,
+                                                              max_spikes_for_nn, n_neighbors)
+        pc_metrics['nn_hit_rate'] = nn_hit_rate
+        pc_metrics['nn_miss_rate'] = nn_miss_rate
+
+    if 'nn_isolation' in metric_names:
+        nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
+                                                   min_spikes_for_nn, n_neighbors,
+                                                   n_components,radius_um, seed)
+        pc_metrics['nn_isolation'] = nn_isolation
+
+    if 'nn_noise_overlap' in metric_names:
+        nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
+                                                           min_spikes_for_nn, n_neighbors,
+                                                           n_components, radius_um, seed)
+        pc_metrics['nn_noise_overlap'] = nn_noise_overlap
+
+    return pc_metrics
