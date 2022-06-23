@@ -111,16 +111,19 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.ref_channel_inds = ref_channel_inds
         self.local_radius = local_radius
         self.neighbors = neighbors
+        self.temp = None
 
         if self.operator == 'median':
-            self.operator_func = lambda x: np.median(x, axis=1)[:, None]
+            self.operator_func = lambda x: np.median(x, axis=1, out=self.temp)[:, None]
         elif self.operator == 'average':
-            self.operator_func = lambda x: np.average(x, axis=1)[:, None]
+            self.operator_func = lambda x: np.mean(x, axis=1, out=self.temp)[:, None]
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         # need input trace
         all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+        self.temp = np.zeros((all_traces.shape[0],),dtype=all_traces.dtype)
         _channel_indices = np.arange(all_traces.shape[1])[channel_indices]
+        
         if self.reference == 'global':
             out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=all_traces.dtype)
             for chan_inds, chan_group_inds in self._groups(_channel_indices):
@@ -134,6 +137,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                 out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
                 out_traces[:, out_inds] = all_traces[:, chan_inds] \
                     - self.operator_func(all_traces[:, [self.ref_channel_inds[i]]])
+        
         elif self.reference == 'local':
             out_traces = np.hstack([
                 all_traces[:, [chan_ind]] - self.operator_func(all_traces[:, self.neighbors[chan_ind]])
