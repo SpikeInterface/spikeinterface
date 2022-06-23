@@ -109,7 +109,7 @@ class CollisionGTComparison(GroundTruthComparison):
                 self.all_fn[i, j, :] = fn_count1
                 self.all_fn[j, i, :] = fn_count2
 
-    def compute_collision_by_similarity(self, similarity_matrix, unit_ids=None, good_only=False):
+    def compute_collision_by_similarity(self, similarity_matrix, unit_ids=None, good_only=False, min_accuracy=0.9):
         if unit_ids is None:
             unit_ids = self.sorting1.unit_ids
 
@@ -123,6 +123,11 @@ class CollisionGTComparison(GroundTruthComparison):
 
                 u1 = unit_ids[r]
                 u2 = unit_ids[c]
+
+                if good_only:
+                    if (performances[u1] < min_accuracy) or (performances[u2] < min_accuracy):
+                        continue
+
                 ind1 = self.sorting1.id_to_index(u1)
                 ind2 = self.sorting1.id_to_index(u2)
 
@@ -148,11 +153,5 @@ class CollisionGTComparison(GroundTruthComparison):
         similarities = similarities[order]
         recall_scores = recall_scores[order, :]
         pair_names = pair_names[order]
-
-        if good_only:
-            valid_indices, = np.nonzero(recall_scores.sum(axis=1) > 0)
-            similarities = similarities[valid_indices]
-            recall_scores = recall_scores[valid_indices]
-            pair_names = pair_names[valid_indices]
 
         return similarities, recall_scores, pair_names
