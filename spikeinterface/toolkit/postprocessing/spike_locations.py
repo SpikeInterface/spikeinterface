@@ -167,13 +167,13 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     ext_folder = folder / SpikeLocationsCalculator.extension_name
 
     if load_if_exists and ext_folder.is_dir():
-        sac = SpikeLocationsCalculator.load_from_folder(folder)
+        slc = SpikeLocationsCalculator.load_from_folder(folder)
     else:
-        sac = SpikeLocationsCalculator(waveform_extractor)
-        sac.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs)
-        sac.compute_locations(**job_kwargs)
+        slc = SpikeLocationsCalculator(waveform_extractor)
+        slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs)
+        slc.compute_locations(**job_kwargs)
     
-    locs = sac.get_locations(outputs=outputs)
+    locs = slc.get_locations(outputs=outputs)
     return locs
 
 
