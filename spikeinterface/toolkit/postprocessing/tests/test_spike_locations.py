@@ -22,7 +22,7 @@ def test_compute_spike_locations():
     recording = se.MEArecRecordingExtractor(local_path)
     sorting = se.MEArecSortingExtractor(local_path)
 
-    folder = cache_folder / 'mearec_waveforms'
+    folder = cache_folder / 'mearec_waveforms_locs'
 
     we = extract_waveforms(recording, sorting, folder,
                            ms_before=1., ms_after=2., max_spikes_per_unit=500,
@@ -58,7 +58,7 @@ def test_compute_spike_locations_parallel():
     recording = se.MEArecRecordingExtractor(local_path)
     sorting = se.MEArecSortingExtractor(local_path)
 
-    folder = cache_folder / 'mearec_waveforms_all'
+    folder = cache_folder / 'mearec_waveforms_all_locs'
 
     we = extract_waveforms(recording, sorting, folder,
                            ms_before=1., ms_after=2., max_spikes_per_unit=None,
@@ -74,12 +74,13 @@ def test_compute_spike_locations_parallel():
 
 
 def test_select_units():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'mearec_waveforms')
+    we = WaveformExtractor.load_from_folder(
+        cache_folder / 'mearec_waveforms_locs')
     locs = compute_spike_locations(we, load_if_exists=True)
 
     keep_units = we.sorting.get_unit_ids()[::2]
     we_filt = we.select_units(
-        keep_units, cache_folder / 'mearec_waveforms_filt')
+        keep_units, cache_folder / 'mearec_waveforms_filt_locs')
     assert "spike_locations" in we_filt.get_available_extension_names()
 
 
