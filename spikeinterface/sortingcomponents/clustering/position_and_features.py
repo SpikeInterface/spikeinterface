@@ -122,7 +122,8 @@ class PositionAndFeaturesClustering:
         hanning_window[:nbefore] = np.hanning(2*nbefore)[:nbefore]
         hanning_window[nbefore:] = np.hanning(2*nafter)[nafter:]
 
-        hanning_window = hanning_window[:, np.newaxis]
+        step_window = hanning_window[:, np.newaxis]
+        #step_window = step_window[:, np.newaxis]
 
         for main_chan, waveforms in wfs_arrays.items():
             idx = np.where(spikes['unit_ind'] == main_chan)[0]
@@ -132,8 +133,9 @@ class PositionAndFeaturesClustering:
             #closest_channels = idx_sorted[:nb_ptps]
 
             if len(waveforms) > 0:
-                #waveforms = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
-                waveforms = waveforms*hanning_window
+                waveforms_filtered = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
+                waveforms = waveforms_filtered*(1 - step_window) + step_window*waveforms
+
                 all_ptps = np.ptp(waveforms, axis=1)
                 local_ptps[idx, 0] = np.max(all_ptps, axis=1)
 
@@ -160,11 +162,11 @@ class PositionAndFeaturesClustering:
         # wf_folder = params['tmp_folder'] / 'waveforms'
         # wf_folder.mkdir(exist_ok=True)
         # waveforms = extract_waveforms(recording, sorting, wf_folder, overwrite=True,
-        #                                ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=200,
-        #                                **params['job_kwargs'])
+        #                             ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=200,
+        #                             **params['job_kwargs'])
 
         # print("We found %d raw clusters, starting to clean..." %len(labels))
-        # labels, peak_labels = clean_clusters_via_matching(waveforms)
+        # labels, peak_labels = clean_clusters_via_matching(waveforms, remove_duplicates=False)
 
 
         return labels, peak_labels
