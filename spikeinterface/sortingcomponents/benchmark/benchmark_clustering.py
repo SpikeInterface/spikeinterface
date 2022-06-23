@@ -1,7 +1,7 @@
 
 from spikeinterface.core import extract_waveforms
 from spikeinterface.toolkit import bandpass_filter, common_reference
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
 from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
 from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics
@@ -22,6 +22,9 @@ class BenchmarkClustering:
     def __init__(self, mearec_file, method, tmp_folder=None, job_kwargs={}, verbose=True):
         self.mearec_file = mearec_file
         self.method = method
+
+        assert method in clustering_methods, "Clustering method should be in %s" %clustering_methods.keys()
+
         self.verbose = verbose
         self.recording, self.gt_sorting = read_mearec(mearec_file)
         self.recording_f = bandpass_filter(self.recording, dtype='float32')
@@ -46,7 +49,6 @@ class BenchmarkClustering:
     def __del__(self):
         import shutil
         shutil.rmtree(self.tmp_folder)
-
 
     def set_peaks(self, peaks):
         self._peaks = peaks

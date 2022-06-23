@@ -32,7 +32,7 @@ class PositionAndFeaturesClustering:
         'radius_um' : 50,
         'ms_before': 1.5,
         'ms_after': 2.5,
-        'waveform_mode' : 'memmap',
+        'waveform_mode' : 'shared_memory',
         'tmp_folder' : None,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M'},
     }
@@ -156,10 +156,9 @@ class PositionAndFeaturesClustering:
 
         sorting = NumpySorting.from_times_labels(peaks['sample_ind'], peak_labels, fs)
 
-        assert params['tmp_folder'] is not None
-        wf_folder = params['tmp_folder'] / 'waveforms'
-        wf_folder.mkdir(exist_ok=True)
-
+        # assert params['tmp_folder'] is not None
+        # wf_folder = params['tmp_folder'] / 'waveforms'
+        # wf_folder.mkdir(exist_ok=True)
         # waveforms = extract_waveforms(recording, sorting, wf_folder, overwrite=True,
         #                                ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=200,
         #                                **params['job_kwargs'])
