@@ -138,7 +138,7 @@ def test_calculate_snrs(simulated_data):
 
     we = setup_dataset(simulated_data, score_detection=0.5)
     snr = compute_snrs(we)
-    assert snr == {0: 12.921033123982426, 1: 12.992882660926739, 2: 12.992882660926739}
+    assert snr == {0: 12.92083677401068, 1: 12.992685219118576, 2: 12.992685219118576}
 
 
 def test_calculate_presence_ratio(simulated_data):
