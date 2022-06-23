@@ -493,4 +493,101 @@ def remove_duplicates(waveform_extractor, similar_threshold=0.975, sparsify_thre
     labels = labels[labels>=0]
 
     return labels, new_labels
+
+
+
+def clean_clusters_via_matching(waveform_extractor, sparsify_threshold=0.95, method_kwargs={}, job_kwargs={}):
+
+    from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+    from spikeinterface.toolkit import get_noise_levels 
+    from spikeinterface.core import BinaryRecordingExtractor
+    from spikeinterface.core import NumpySorting
+    from spikeinterface.core import extract_waveforms
+    from spikeinterface.core import get_global_tmp_folder
+    import string, random, shutil, os
+    from pathlib import Path
+
+    noise_levels = get_noise_levels(waveform_extractor.recording)
+    templates = waveform_extractor.get_all_templates(mode='median').copy()
+    nb_templates = len(templates)
+    duration = waveform_extractor.nbefore + waveform_extractor.nafter
     
+    fs = waveform_extractor.recording.get_sampling_frequency()
+    num_chans = waveform_extractor.recording.get_num_channels()
+
+    for t in range(len(templates)):
+        channel_norms = np.linalg.norm(templates[t], axis=0)**2
+        total_norm = np.linalg.norm(templates[t])**2
+
+        idx = np.argsort(channel_norms)[::-1]
+        explained_norms = np.cumsum(channel_norms[idx]/total_norm)
+        channel = np.searchsorted(explained_norms, sparsify_threshold)
+        active_channels = np.sort(idx[:channel])
+        templates[t, :, idx[channel:]] = 0
+
+    zdata = templates.reshape(nb_templates, -1)
+
+    padding = 10
+    blanck = np.zeros(int(padding*fs/1000)*num_chans, dtype=np.float32)
+
+    name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
+    tmp_folder.mkdir()
+
+    tmp_filename = os.path.join(tmp_folder, 'tmp.raw')
+
+    f = open(tmp_filename, 'wb')
+    f.write(blanck)
+    f.write(zdata.flatten())
+    f.write(blanck)
+    f.close()
+
+    recording = BinaryRecordingExtractor(tmp_filename, num_chan=num_chans, sampling_frequency=fs, dtype='float32')
+    recording.annotate(is_filtered=True)
+
+    method_kwargs.update({'waveform_extractor' : waveform_extractor, 
+                          'noise_levels' : np.zeros(num_chans),
+                          'amplitudes' : [0.99, 1.01],
+                          'sparsify_threshold' : sparsify_threshold, 
+                          'omp_min_sps' : 0.9})
+
+    ignore_ids = []
+    similar_templates = [[], []]
+
+    for i in range(nb_templates):
+        method_kwargs.update({'ignore_ids' : ignore_ids + [i]})
+        spikes, computed = find_spikes_from_templates(recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True)
+        method_kwargs.update({'overlaps' : computed['overlaps'],
+                              'templates' : computed['templates'],
+                              'norms' : computed['norms'],
+                              'sparsities' : computed['sparsities']})
+        valid = (spikes['sample_ind'] > padding + i*duration) * (spikes['sample_ind'] < padding + (i+1)*duration)
+        print(spikes[valid])
+        if np.sum(valid) > 0:
+            ignore_ids += [i]
+            similar_templates[1] += [i]
+            if np.sum(valid) == 1:
+                similar_templates[0] += [spikes[valid]['cluster_ind'][0]]
+            elif np.sum(valid) > 1:
+                similar_templates[0] += [-1]
+
+    old_sorting = waveform_extractor.sorting.get_all_spike_trains()[0]
+    new_labels = old_sorting[1].copy()
+
+    labels = np.unique(new_labels)
+    labels = labels[labels>=0]
+    
+    for x, y in zip(similar_templates[0], similar_templates[1]):
+        mask = new_labels == y
+        new_labels[mask] = x
+
+    if True:
+        nb_merges = len(similar_templates[0])
+        print(f'{nb_merges} redundant templates have been removed')
+
+    labels = np.unique(new_labels)
+    labels = labels[labels>=0]
+
+    shutil.rmtree(tmp_folder)
+
+    return labels, new_labels

@@ -14,11 +14,11 @@ from spikeinterface.core import get_global_tmp_folder
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.toolkit import get_channel_distances
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
-from .clustering_tools import remove_duplicates
+from .clustering_tools import remove_duplicates, clean_clusters_via_matching
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 
-class TwistedClustering:
+class PositionAndFeaturesClustering:
     """
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
@@ -160,11 +160,12 @@ class TwistedClustering:
         wf_folder = params['tmp_folder'] / 'waveforms'
         wf_folder.mkdir(exist_ok=True)
 
-        waveforms = extract_waveforms(recording, sorting, wf_folder, overwrite=True,
-                                       ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=200,
-                                       **params['job_kwargs'])
+        # waveforms = extract_waveforms(recording, sorting, wf_folder, overwrite=True,
+        #                                ms_before=params['ms_before'], ms_after=params['ms_after'], max_spikes_per_unit=200,
+        #                                **params['job_kwargs'])
 
-        labels, peak_labels = remove_duplicates(waveforms, **params['cleaning_kwargs'])
+        # print("We found %d raw clusters, starting to clean..." %len(labels))
+        # labels, peak_labels = clean_clusters_via_matching(waveforms)
 
 
         return labels, peak_labels
