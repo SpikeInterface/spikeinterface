@@ -3,6 +3,7 @@ import json
 import pickle
 import warnings
 from pathlib import Path
+from tqdm import tqdm
 
 import numpy as np
 
@@ -244,7 +245,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return projections
 
-    def run(self):
+    def run(self, n_jobs=1, verbose=False):
         """
         Compute the PCs on waveforms extacted within the WaveformExtarctor.
         Projections are computed only on the waveforms sampled by the WaveformExtractor.
@@ -260,6 +261,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # prepare memmap files with npy
         projection_memmap = {}
         unit_ids = we.sorting.unit_ids
+
         for unit_id in unit_ids:
             n_spike = we.get_waveforms(unit_id).shape[0]
             projection_file = self.extension_folder / f'pca_{unit_id}.npy'
@@ -274,11 +276,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # run ...
         if p['mode'] == 'by_channel_local':
-            self._run_by_channel_local(projection_memmap)
+            self._run_by_channel_local(projection_memmap, n_jobs, verbose)
         elif p['mode'] == 'by_channel_global':
-            self._run_by_channel_global(projection_memmap)
+            self._run_by_channel_global(projection_memmap, n_jobs, verbose)
         elif p['mode'] == 'concatenated':
-            self._run_concatenated(projection_memmap)
+            self._run_concatenated(projection_memmap, n_jobs, verbose)
 
     def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg',
                            **job_kwargs):
@@ -344,7 +346,9 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name='extract PCs', **job_kwargs)
         processor.run()
 
-    def _fit_by_channel_local(self):
+    def _fit_by_channel_local(self, n_jobs, verbose):
+        from joblib import delayed, Parallel
+        
         we = self.waveform_extractor
         p = self._params
 
@@ -353,26 +357,53 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # there is one PCA per channel for independent fit per channel
         pca_model = [IncrementalPCA(n_components=p['n_components'], whiten=p['whiten']) for _ in channel_ids]
-
+        
+        mode = p["mode"]
+        pca_model_files = []
+        for chan_ind, chan_id in enumerate(channel_ids):
+            pca = pca_model[chan_ind]
+            pca_model_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
+            with pca_model_file.open("wb") as f:
+                pickle.dump(pca, f)
+            pca_model_files.append(pca_model_file)
+        
         # fit
-        for unit_id in unit_ids:
+        if verbose:
+            units_loop = tqdm(np.arange(len(unit_ids)), desc="Fitting PCA")
+        else:
+            units_loop = np.arange(len(unit_ids))
+
+        for ui in units_loop:
+            unit_id = unit_ids[ui]
             wfs = we.get_waveforms(unit_id)
             if len(wfs) < p['n_components']:
                 continue
+            # try to paralleliza this
+            if n_jobs in (0, 1):
+                for chan_ind, chan_id in enumerate(channel_ids):
+                    pca = pca_model[chan_ind]
+                    pca.partial_fit(wfs[:, :, chan_ind])
+            else:
+                Parallel(n_jobs=n_jobs)(delayed(partial_fit_one_channel)(pca_model_files[chan_ind], wfs[:, :, chan_ind])
+                                                        for chan_ind in np.arange(len(channel_ids)))
+
+        # reload the models (if n_jobs > 1)
+        if n_jobs not in (0, 1):
+            pca_model = []
             for chan_ind, chan_id in enumerate(channel_ids):
-                pca = pca_model[chan_ind]
-                pca.partial_fit(wfs[:, :, chan_ind])
+                pca_model_file = pca_model_files[chan_ind]
+                with open(pca_model_file, 'rb') as fid:
+                    pca_model.append(pickle.load(fid))
 
         # save
-        mode = p["mode"]
         for chan_ind, chan_id in enumerate(channel_ids):
             pca = pca_model[chan_ind]
             with (self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl").open("wb") as f:
                 pickle.dump(pca, f)
-
+            
         return pca_model
 
-    def _run_by_channel_local(self, projection_memmap):
+    def _run_by_channel_local(self, projection_memmap, n_jobs, verbose):
         """
         In this mode each PCA is "fit" and "transform" by channel.
         The output is then (n_spike, n_components, n_channels)
@@ -383,10 +414,15 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         unit_ids = we.sorting.unit_ids
         channel_ids = we.recording.channel_ids
 
-        pca_model = self._fit_by_channel_local()
+        pca_model = self._fit_by_channel_local(n_jobs, verbose)
 
         # transform
-        for unit_id in unit_ids:
+        if verbose:
+            units_loop = tqdm(np.arange(len(unit_ids)), desc="Projecting waveforms")
+        else:
+            units_loop = np.arange(len(unit_ids))
+        for ui in units_loop:
+            unit_id = unit_ids[ui]
             wfs = we.get_waveforms(unit_id)
             if wfs.size == 0:
                 continue
@@ -395,7 +431,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 proj = pca.transform(wfs[:, :, chan_ind])
                 projection_memmap[unit_id][:, :, chan_ind] = proj
 
-    def _fit_by_channel_global(self):
+    def _fit_by_channel_global(self, verbose):
         we = self.waveform_extractor
         p = self._params
 
@@ -406,12 +442,24 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         pca_model = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
 
         # fit
-        for unit_id in unit_ids:
+        if verbose:
+            units_loop = tqdm(np.arange(len(unit_ids)), desc="Fitting PCA")
+        else:
+            units_loop = np.arange(len(unit_ids))
+
+        # with 'by_channel_global' we can't parallelize over channels
+        for ui in units_loop:
+            unit_id = unit_ids[ui]
             wfs = we.get_waveforms(unit_id)
             if wfs.size == 0:
                 continue
-            for chan_ind, chan_id in enumerate(channel_ids):
-                pca_model.partial_fit(wfs[:, :, chan_ind])
+            # avoid loop with reshape
+            shape = wfs.shape
+            wfs_concat = wfs.transpose(0, 2, 1).reshape(shape[0] * shape[2], shape[1])
+            pca_model.partial_fit(wfs_concat)
+            
+            # for chan_ind, chan_id in enumerate(channel_ids):
+            #     pca_model.partial_fit(wfs[:, :, chan_ind])
 
         # save
         mode = p["mode"]
@@ -420,7 +468,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return pca_model
 
-    def _run_by_channel_global(self, projection_memmap):
+    def _run_by_channel_global(self, projection_memmap, n_jobs, verbose):
         """
         In this mode there is one "fit" for all channels.
         The transform is applied by channel.
@@ -432,10 +480,16 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         unit_ids = we.sorting.unit_ids
         channel_ids = we.recording.channel_ids
 
-        pca_model = self._fit_by_channel_global()
+        pca_model = self._fit_by_channel_global(verbose)
 
         # transform
-        for unit_id in unit_ids:
+        if verbose:
+            units_loop = tqdm(np.arange(len(unit_ids)), desc="Projecting waveforms")
+        else:
+            units_loop = np.arange(len(unit_ids))
+
+        for ui in units_loop:
+            unit_id = unit_ids[ui]
             wfs = we.get_waveforms(unit_id)
             if wfs.size == 0:
                 continue
@@ -443,7 +497,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 proj = pca_model.transform(wfs[:, :, chan_ind])
                 projection_memmap[unit_id][:, :, chan_ind] = proj
                 
-    def _fit_concatenated(self):
+    def _fit_concatenated(self, verbose):
         we = self.waveform_extractor
         p = self._params
 
@@ -453,7 +507,13 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         pca_model = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
 
         # fit
-        for unit_id in unit_ids:
+        if verbose:
+            units_loop = tqdm(np.arange(len(unit_ids)), desc="Fitting PCA")
+        else:
+            units_loop = np.arange(len(unit_ids))
+
+        for ui in units_loop:
+            unit_id = unit_ids[ui]
             wfs = we.get_waveforms(unit_id)
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
             pca_model.partial_fit(wfs_flat)
@@ -465,7 +525,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return pca_model
 
-    def _run_concatenated(self, projection_memmap):
+    def _run_concatenated(self, projection_memmap, n_jobs, verbose):
         """
         In this mode the waveforms are concatenated and there is
         a global fit_transform at once.
@@ -476,10 +536,16 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         unit_ids = we.sorting.unit_ids
 
         # there is one unique PCA accross channels
-        pca_model = self._fit_concatenated()
+        pca_model = self._fit_concatenated(verbose)
 
         # transform
-        for unit_id in unit_ids:
+        if verbose:
+            units_loop = tqdm(np.arange(len(unit_ids)), desc="Projecting waveforms")
+        else:
+            units_loop = np.arange(len(unit_ids))
+
+        for ui in units_loop:
+            unit_id = unit_ids[ui]
             wfs = we.get_waveforms(unit_id)
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
             proj = pca_model.transform(wfs_flat)
@@ -562,7 +628,8 @@ WaveformExtractor.register_extension(WaveformPrincipalComponent)
 
 def compute_principal_components(waveform_extractor, load_if_exists=False,
                                  n_components=5, mode='by_channel_local',
-                                 whiten=True, dtype='float32'):
+                                 whiten=True, dtype='float32', n_jobs=1,
+                                 verbose=False):
     """
     Compute PC scores from waveform extractor. The PCA projections are pre-computed only
     on the sampled waveforms available from the WaveformExtractor.
@@ -574,7 +641,7 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
     load_if_exists: bool
         If True and pc scores are already in the waveform extractor folders, pc scores are loaded and not recomputed.
     n_components: int
-        Number of components fo PCA
+        Number of components fo PCA - default 5
     mode: str
         - 'by_channel_local': a local PCA is fitted for each channel (projection by channel)
         - 'by_channel_global': a global PCA is fitted for all channels (projection by channel)
@@ -583,6 +650,10 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
         If True, waveforms are pre-whitened
     dtype: dtype
         Dtype of the pc scores (default float32)
+    n_jobs: int
+        Number of jobs used to fit the PCA model (if mode is 'by_channel_local') - default 1
+    verbose: bool
+        If True, output is verbose - default False
 
     Returns
     -------
@@ -612,6 +683,14 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)
         pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype)
-        pc.run()
+        pc.run(n_jobs=n_jobs, verbose=verbose)
 
     return pc
+
+
+def partial_fit_one_channel(pca_file, wf_chan):
+    with open(pca_file, 'rb') as fid:
+        pca_model = pickle.load(fid)
+    pca_model.partial_fit(wf_chan)
+    with pca_file.open("wb") as f:
+        pickle.dump(pca_model, f)

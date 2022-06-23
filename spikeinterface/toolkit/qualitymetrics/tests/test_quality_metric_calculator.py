@@ -49,6 +49,11 @@ def test_compute_quality_metrics():
     pca.run()
     metrics = compute_quality_metrics(we)
     assert 'isolation_distance' in metrics.columns
+
+    # test parallel
+    metrics_par = compute_quality_metrics(we, n_jobs=2)
+    for metric_name in metrics.columns:
+        assert np.allclose(metrics[metric_name], metrics_par[metric_name])
     print(metrics)
 
     # reload as an extension from we
@@ -102,4 +107,5 @@ def test_select_units():
 
 if __name__ == '__main__':
     setup_module()
+    test_compute_quality_metrics()
     test_compute_quality_metrics_peak_sign()
