@@ -138,7 +138,7 @@ def test_calculate_snrs(simulated_data):
 
     we = setup_dataset(simulated_data, score_detection=0.5)
     snr = compute_snrs(we)
-    assert np.allclose(snr.values(), np.array([12.92, 12.99, 12.99]), atol=0.01}
+    assert np.allclose(snr.values(), np.array([12.92, 12.99, 12.99]), atol=0.05)
 
 
 def test_calculate_presence_ratio(simulated_data):
