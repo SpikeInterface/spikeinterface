@@ -178,30 +178,11 @@ class BenchmarkPeakSelection:
         self.garbage_peaks = self.peaks[garbage_matches]
 
 
-    def _get_colors(self, sorting, force_black_for=[]):
-        from spikeinterface.widgets import get_unit_colors
-        colors = get_unit_colors(sorting)
-        result = {}
-        for key, value in colors.items():
-            result[sorting.id_to_index(key)] = value
-        for unid_id in force_black_for:
-            result[sorting.id_to_index(unid_id)] = 'k'
-        return result
-
-    def _get_labels(self, sorting, force_black_for=[]):
-        result = {}
-        for unid_id in sorting.unit_ids:
-            result[sorting.id_to_index(unid_id)] = unid_id
-        for unid_id in force_black_for:
-            result[sorting.id_to_index(unid_id)] = 'noise'
-        return result
-
     def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5):
 
         if colors is None:
-            colors = self._get_colors(sorting, force_black_for)
-        if labels is None:
-            labels = self._get_labels(sorting, force_black_for)
+            from spikeinterface.widgets import get_unit_colors
+            colors = get_unit_colors(sorting)
 
         from matplotlib.patches import Ellipse
         import matplotlib.transforms as transforms
@@ -210,23 +191,25 @@ class BenchmarkPeakSelection:
         means = {}
         covs = {}
         labels_ids = sorting.get_all_spike_trains()[0][1]
-        ids = sorting.ids_to_indices(labels_ids)
 
-        for k in np.unique(ids):
-            where = np.flatnonzero(ids == k)
+        for unit_ind, unit_id in enumerate(sorting.unit_ids):
+            where = np.flatnonzero(labels_ids == unit_id)
             xk = xs[where]
             yk = ys[where]
-            ax.scatter(xk, yk, s=s, color=colors[k], alpha=alpha, marker=".")
-            if k not in force_black_for:
+
+            if unit_id not in force_black_for:
+                ax.scatter(xk, yk, s=s, color=colors[unit_id], alpha=alpha, marker=".")
                 x_mean, y_mean = xk.mean(), yk.mean()
                 xycov = np.cov(xk, yk)
-                means[k] = x_mean, y_mean
-                covs[k] = xycov
-                ax.annotate(labels[k], (x_mean, y_mean))
+                means[unit_id] = x_mean, y_mean
+                covs[unit_id] = xycov
+                ax.annotate(unit_id, (x_mean, y_mean))
+            else:
+                ax.scatter(xk, yk, s=s, colorun='k', alpha=alpha, marker=".")
 
-        for k in means.keys():
-            mean_x, mean_y = means[k]
-            cov = covs[k]
+        for unit_id in means.keys():
+            mean_x, mean_y = means[unit_id]
+            cov = covs[unit_id]
 
             with np.errstate(invalid="ignore"):
                 vx, vy = cov[0, 0], cov[1, 1]
@@ -239,7 +222,7 @@ class BenchmarkPeakSelection:
                 width=2 * np.sqrt(1 + rho),
                 height=2 * np.sqrt(1 - rho),
                 facecolor=(0, 0, 0, 0),
-                edgecolor=colors[k],
+                edgecolor=colors[unit_id],
                 linewidth=1,
             )
             transform = (
@@ -261,7 +244,8 @@ class BenchmarkPeakSelection:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        colors = self._get_colors(self.gt_sorting)
+        from spikeinterface.widgets import get_unit_colors
+        colors = get_unit_colors(self.gt_sorting)
         self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'],  self.gt_sorting, colors, s=1, alpha=0.5, ax=ax)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
