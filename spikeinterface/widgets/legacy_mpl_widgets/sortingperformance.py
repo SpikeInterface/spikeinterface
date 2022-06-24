@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
-from ..comparison import GroundTruthComparison
+from ...comparison import GroundTruthComparison
 
 
 class SortingPerformanceWidget(BaseWidget):
