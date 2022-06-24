@@ -39,11 +39,11 @@ class TestWidgets(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_timeseries(self):
-        sw.plot_timeseries(self._rec, mode='auto')
-        sw.plot_timeseries(self._rec, mode='line', show_channel_ids=True)
-        sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True)
-        sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True, order_channel_by_depth=True)
+    # def test_timeseries(self):
+    #     sw.plot_timeseries(self._rec, mode='auto')
+    #     sw.plot_timeseries(self._rec, mode='line', show_channel_ids=True)
+    #     sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True)
+    #     sw.plot_timeseries(self._rec, mode='map', show_channel_ids=True, order_channel_by_depth=True)
 
     def test_rasters(self):
         sw.plot_rasters(self._sorting)
@@ -61,22 +61,22 @@ class TestWidgets(unittest.TestCase):
     # def test_spectrogram(self):
     # sw.plot_spectrogram(self._rec, channel=0)
 
-    def test_unitwaveforms(self):
-        w = sw.plot_unit_waveforms(self._we)
-        unit_ids = self._sorting.unit_ids[:6]
-        sw.plot_unit_waveforms(self._we, max_channels=5, unit_ids=unit_ids)
-        sw.plot_unit_waveforms(self._we, radius_um=60, unit_ids=unit_ids)
+    # def test_unitwaveforms(self):
+    #     w = sw.plot_unit_waveforms(self._we)
+    #     unit_ids = self._sorting.unit_ids[:6]
+    #     sw.plot_unit_waveforms(self._we, max_channels=5, unit_ids=unit_ids)
+    #     sw.plot_unit_waveforms(self._we, radius_um=60, unit_ids=unit_ids)
 
-    def test_plot_unit_waveform_density_map(self):
-        unit_ids = self._sorting.unit_ids[:3]
-        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, max_channels=4)
-        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, radius_um=50)
+    # def test_plot_unit_waveform_density_map(self):
+    #    unit_ids = self._sorting.unit_ids[:3]
+    #    sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, max_channels=4)
+    #    sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, radius_um=50)
+    #
+    #    sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, radius_um=25, same_axis=True)
+    #    sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, max_channels=2, same_axis=True)
 
-        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, radius_um=25, same_axis=True)
-        sw.plot_unit_waveform_density_map(self._we, unit_ids=unit_ids, max_channels=2, same_axis=True)
-
-    def test_unittemplates(self):
-        sw.plot_unit_templates(self._we)
+    # def test_unittemplates(self):
+    #     sw.plot_unit_templates(self._we)
 
     def test_plot_unit_probe_map(self):
         sw.plot_unit_probe_map(self._we, with_channel_ids=True)
