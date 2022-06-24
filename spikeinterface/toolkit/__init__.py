@@ -10,3 +10,4 @@ from .utils import (get_random_data_chunks, get_channel_distances,
 from .preprocessing import *
 from .postprocessing import *
 from .qualitymetrics import *
+from .cleaning import *

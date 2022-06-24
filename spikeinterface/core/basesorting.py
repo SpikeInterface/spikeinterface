@@ -150,6 +150,25 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(
             self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
+    
+    def remove_units(self, remove_unit_ids):
+        """
+        Removes a subset of units
+
+        Parameters
+        ----------
+        remove_unit_ids :  numpy.array or list
+            List of unit ids to remove
+
+        Returns
+        -------
+        BaseSorting
+            Sorting object without removed units
+        """
+        from spikeinterface import UnitsSelectionSorting
+        new_unit_ids = self.unit_ids[~np.in1d(self.unit_ids, remove_unit_ids)]
+        new_sorting = UnitsSelectionSorting(self, new_unit_ids)
+        return new_sorting
 
     def remove_empty_units(self):
         """
