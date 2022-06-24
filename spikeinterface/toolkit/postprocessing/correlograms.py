@@ -253,7 +253,7 @@ def compute_correlograms_numba(sorting,
 
     window_size = int(round(fs * window_ms/2 * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))
-    windows_size -= window_size % bin_size
+    window_size -= window_size % bin_size
     real_bin_duration_ms = bin_size / fs * 1e3
     num_bins = 2 * int(window_size / bin_size)
 
