@@ -388,7 +388,7 @@ class BaseRecording(BaseExtractor):
         assert all(probe.device_channel_indices is not None for probe in probegroup.probes), \
             'Probe must have device_channel_indices'
 
-        # this is a vector with complex fileds (dataframe like) that handle all contact attr
+        # this is a vector with complex fields (dataframe like) that handle all contact attr
         arr = probegroup.to_numpy(complete=True)
 
         # keep only connected contact ( != -1)
