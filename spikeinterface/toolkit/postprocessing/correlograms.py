@@ -162,14 +162,16 @@ def compute_correlograms_numpy(sorting,
 
     fs = sorting.get_sampling_frequency()
 
-    window_size = int(fs * window_ms / 1000.)
-    bin_size = int(fs * bin_ms / 1000.)
+    window_size = int(round(fs * window_ms / 2000.))
+    bin_size = int(round(fs * bin_ms / 1000.))
+    window_size -= window_size % bin_size
+    window_size *= 2
     real_bin_duration_ms = bin_size / fs * 1000.
 
     # force odd
-    num_total_bins = 2 * int(.5 * window_size / bin_size) + 1
+    num_total_bins = window_size // bin_size
     assert num_total_bins >= 1
-    num_half_bins = num_total_bins // 2 + 1
+    num_half_bins = num_total_bins // 2
 
     correlograms = np.zeros((num_units, num_units, num_half_bins), dtype='int64')
 
@@ -231,7 +233,7 @@ def compute_correlograms_numpy(sorting,
     else:
         bins = np.arange(correlograms.shape[2] + 1) * real_bin_duration_ms
 
-    return correlograms, bins
+    return np.transpose(correlograms, (1, 0, 2)), bins
 
 
 def compute_correlograms_numba(sorting,
@@ -254,7 +256,6 @@ def compute_correlograms_numba(sorting,
     window_size = int(round(fs * window_ms/2 * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
-    real_bin_duration_ms = bin_size / fs * 1e3
     num_bins = 2 * int(window_size / bin_size)
 
     bins = np.arange(-window_size, window_size+bin_size, bin_size) * 1e3 / fs
