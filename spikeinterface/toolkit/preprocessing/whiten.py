@@ -1,9 +1,11 @@
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.core.core_tools import define_function_from_class
 
 from ..utils import get_random_data_chunks
 from spikeinterface import ChannelsAggregationRecording
+
 
 class WhitenRecording(BasePreprocessor):
     """
@@ -56,27 +58,31 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
         return whiten_traces
 
 
-# function for API
-def whiten(recording, by_property=None, **kwargs):
-    """
-    Whitens the recording extractor traces.
+# The by property should be handled externally
+# def whiten(recording, by_property=None, **kwargs):
+#     """
+#     Whitens the recording extractor traces.
 
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor to be whitened.
-    by_property: None or str
-        This parameter is used to split the recording in groups for whitening. If None, all the channels are whiten together.
-    **random_chunk_kwargs
-    Returns
-    -------
-    whitened_recording: WhitenRecording
-        The whitened recording extractor
-    """
-    if by_property is None:
-        rec = WhitenRecording(recording, **kwargs)
-    else:
-        rec_list = [WhitenRecording(r, **kwargs) for r in recording.split_by(property=by_property, outputs='list')]
-        rec_list_ids = np.concatenate([r.get_channel_ids() for r in rec_list])
-        rec = ChannelsAggregationRecording(rec_list, rec_list_ids) 
-    return rec
+#     Parameters
+#     ----------
+#     recording: RecordingExtractor
+#         The recording extractor to be whitened.
+#     by_property: None or str
+#         This parameter is used to split the recording in groups for whitening. If None, all the channels are whiten together.
+#     **random_chunk_kwargs
+#     Returns
+#     -------
+#     whitened_recording: WhitenRecording
+#         The whitened recording extractor
+#     """
+#     if by_property is None:
+#         rec = WhitenRecording(recording, **kwargs)
+#     else:
+#         rec_list = [WhitenRecording(r, **kwargs) for r in recording.split_by(property=by_property, outputs='list')]
+#         rec_list_ids = np.concatenate([r.get_channel_ids() for r in rec_list])
+#         rec = ChannelsAggregationRecording(rec_list, rec_list_ids) 
+#     return rec
+
+
+# function for API
+whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")

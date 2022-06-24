@@ -1,27 +1,27 @@
 pytest
+pytest-cov
 
 # some version are forced because of
 # numba and hdbscan and numpy internal API
 
-numpy==1.20
-git+https://github.com/scikit-learn-contrib/hdbscan.git
-numba==0.54.1
+# tridesclous
+numpy==1.21
+numba
+hdbscan
+
 # zarr is needed for testing
 zarr
 
-# this also work but pynwb don't want numpy==1.22
-# numpy==1.22
-# git+https://github.com/numba/numba.git
-# hdbscan
-
-
+# CurtationSorting
+networkx
 
 # neo is from master because of several IO (spikeglx, ...)
 git+https://github.com/NeuralEnsemble/python-neo.git
 
 # recent datalad need a too recent version for git-annex
 # so we use an old one here
-datalad==0.14.4
+# datalad ==0.14.4
+datalad==0.16.2
 
 # lxml for neuroscope
 lxml
@@ -59,7 +59,7 @@ tridesclous>=1.6.4
 spyking-circus
 
 ## herdingspikes
-herdingspikes
+herdingspikes<=0.3.99
 
 ## mearec
 mearec
@@ -67,3 +67,8 @@ mearec
 ## container packages for local testing
 #docker
 #spython
+
+## sliding_nn
+pymde
+torch
+pynndescent

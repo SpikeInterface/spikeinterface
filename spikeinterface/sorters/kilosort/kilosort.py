@@ -1,16 +1,11 @@
-import copy
 from pathlib import Path
 import os
-import sys
 from typing import Union
-import shutil
 import numpy as np
 
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import ShellScript, get_git_commit
-
-from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
+from ..utils import get_git_commit
 
 
 def check_if_installed(kilosort_path: Union[str, None]):
@@ -32,10 +27,10 @@ class KilosortSorter(KilosortBase, BaseSorter):
     """Kilosort Sorter object."""
 
     sorter_name: str = 'kilosort'
+    compiled_name: str = 'ks_compiled'
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
-
     requires_locations = False
-    docker_requires_gpu = True
+    requires_gpu = 'nvidia-optional'
 
     _default_params = {
         'detect_threshold': 6,
@@ -46,8 +41,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'ntbuff': 64,
         'Nfilt': None,
         'NT': None,
-        'total_memory': '500M',
-        'n_jobs_bin': 1
+        'wave_length': 61,
     }
 
     _params_description = {
@@ -59,8 +53,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
         'Nfilt': "Number of clusters to use (if None it is automatically computed)",
         'NT': "Batch size (if None it is automatically computed)",
-        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
+        'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
     }
 
     sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter.
@@ -79,15 +72,25 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if cls.check_compiled():
+            return True
         return check_if_installed(cls.kilosort_path)
 
     @classmethod
     def get_sorter_version(cls):
+        if cls.check_compiled():
+            return 'compiled'
         commit = get_git_commit(os.getenv('KILOSORT_PATH', None))
         if commit is None:
             return 'unknown'
         else:
             return 'git-' + commit
+        
+    @classmethod
+    def use_gpu(cls, params):
+        if 'useGPU' in params:
+            return params['useGPU']
+        return cls.default_params()['useGPU']
 
     @classmethod
     def set_kilosort_path(cls, kilosort_path: str):
@@ -113,83 +116,84 @@ class KilosortSorter(KilosortBase, BaseSorter):
             p['NT'] = 64 * 1024 + p['ntbuff']
         else:
             p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
+        if p['wave_length'] % 2 != 1:
+            p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
+        if p['wave_length'] > 81:
+            p['wave_length'] = 81 # The wave_length must be less than 81.
         return p
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
-        p = params
+    def _get_specific_options(cls, ops, params):
+        """
+        Adds specific options for Kilosort in the ops dict and returns the final dict
 
-        source_dir = Path(__file__).parent
+        Parameters
+        ----------
+        ops: dict
+            options data
+        params: dict
+            Custom parameters dictionary for kilosort3
 
-        # prepare electrode positions for this group (only one group, the split is done in basesorter)
-        groups = [1] * recording.get_num_channels()
-        positions = np.array(recording.get_channel_locations())
-        if positions.shape[1] != 2:
-            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
+        Returns
+        ----------
+        ops: dict
+            Final ops data
+        """
 
-        # save binary file : handle only one segment
-        input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
-                                                 dtype='int16', total_memory=p["total_memory"],
-                                                 n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
+        # TODO: Check GPU option!
+        ops['GPU'] = params['useGPU']  # whether to run this code on an Nvidia GPU (much faster, mexGPUall first)
+        ops['parfor'] = 0.0  # whether to use parfor to accelerate some parts of the algorithm
+        ops['verbose'] = 1.0  # whether to print command line progress
+        ops['showfigures'] = 0.0  # whether to plot figures during optimization
 
-        # set up kilosort config files and run kilosort on data
-        with (source_dir / 'kilosort_master.m').open('r') as f:
-            kilosort_master_txt = f.read()
-        with (source_dir / 'kilosort_config.m').open('r') as f:
-            kilosort_config_txt = f.read()
-        with (source_dir / 'kilosort_channelmap.m').open('r') as f:
-            kilosort_channelmap_txt = f.read()
+        ops['Nfilt'] = params['Nfilt']  # number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)
+        ops['nNeighPC'] = min(12.0, ops['Nchan'])  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
+        ops['nNeigh'] = 16.0  # visualization only (Phy): number of neighboring templates to retain projections of (16)
 
-        nchan = recording.get_num_channels()
+        # options for channel whitening
+        ops['whitening'] = 'full'  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
+        ops['nSkipCov'] = 1.0  # compute whitening matrix from every N-th batch (1)
+        ops['whiteningRange'] = 32.0  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
 
-        if p['useGPU']:
-            useGPU = 1
-        else:
-            useGPU = 0
+        # ops['criterionNoiseChannels'] = 0.2  # fraction of "noise" templates allowed to span all channel groups (see createChannelMapFile for more info).
 
-        if p['car']:
-            use_car = 1
-        else:
-            use_car = 0
+        # other options for controlling the model and optimization
+        ops['Nrank'] = 3.0  # matrix rank of spike template model (3)
+        ops['nfullpasses'] = 6.0  # number of complete passes through data during optimization (6)
+        ops['maxFR'] = 20000  # maximum number of spikes to extract per batch (20000)
+        ops['fshigh'] = params['freq_min']  # frequency for high pass filtering
+        ops['fslow'] =  params['freq_max']  # frequency for low pass filtering (optional)
+        ops['ntbuff'] = params['ntbuff']  # samples of symmetrical buffer for whitening and spike detection
+        ops['scaleproc'] = 200.0  # int16 scaling of whitened data
+        ops['NT'] = params['NT']  # 32*1024+ ops.ntbuff;
+        # this is the batch size (try decreasing if out of memory)
+        # for GPU should be multiple of 32 + ntbuff
 
-        # make substitutions in txt files
-        kilosort_master_txt = kilosort_master_txt.format(
-            kilosort_path=str(Path(KilosortSorter.kilosort_path).absolute()),
-            output_folder=str(output_folder.absolute()),
-            channel_path=str((output_folder / 'kilosort_channelmap.m').absolute()),
-            config_path=str((output_folder / 'kilosort_config.m').absolute()),
-            useGPU=useGPU,
-        )
+        # the following options can improve/deteriorate results.
+        # when multiple values are provided for an option, the first two are beginning and ending anneal values,
+        # the third is the value used in the final pass.
+        ops['Th'] = [4.0, 10.0, 10.0]  # threshold for detecting spikes on template-filtered data ([6 12 12])
+        ops['lam'] = [5.0, 5.0, 5.0]  # large means amplitudes are forced around the mean ([10 30 30])
+        ops['nannealpasses'] = 4.0  # should be less than nfullpasses (4)
+        ops['momentum'] = [1/20, 1/400]  # start with high momentum and anneal (1./[20 1000])
+        ops['shuffle_clusters'] = 1.0  # allow merges and splits during optimization (1)
+        ops['mergeT'] = 0.1  # upper threshold for merging (.1)
+        ops['splitT'] = 0.1  # lower threshold for splitting (.1)
 
-        kilosort_config_txt = kilosort_config_txt.format(
-            nchanTOT=recording.get_num_channels(),
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            dat_file=str((output_folder / 'recording.dat').absolute()),
-            Nfilt=int(p['Nfilt']),
-            ntbuff=int(p['ntbuff']),
-            NT=int(p['NT']),
-            kilo_thresh=p['detect_threshold'],
-            use_car=use_car,
-            freq_min=p['freq_min'],
-            freq_max=p['freq_max']
-        )
+        ops['initialize'] = 'fromData'  # 'fromData' or 'no'
+        ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)
+        ops['loc_range'] = [3.0, 1.0]  # ranges to detect peaks; plus/minus in time and channel ([3 1])
+        ops['long_range'] = [30.0, 6.0]  # ranges to detect isolated peaks ([30 6])
+        ops['maskMaxChannels'] = 5.0  # how many channels to mask up/down ([5])
+        ops['crit'] = 0.65  # upper criterion for discarding spike repeates (0.65)
+        ops['nFiltMax'] = 10000.0  # maximum "unique" spikes to consider (10000)
 
-        kilosort_channelmap_txt = kilosort_channelmap_txt.format(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            xcoords=[p[0] for p in positions],
-            ycoords=[p[1] for p in positions],
-            kcoords=groups
-        )
+        # options for posthoc merges (under construction)
+        ops['fracse'] = 0.1  # binning step along discriminant axis for posthoc merges (in units of sd)
+        ops['epu'] = np.Inf
 
-        for fname, value in zip(['kilosort_master.m', 'kilosort_config.m',
-                                 'kilosort_channelmap.m'],
-                                [kilosort_master_txt, kilosort_config_txt,
-                                 kilosort_channelmap_txt]):
-            with (output_folder / fname).open('w') as f:
-                f.writelines(value)
+        ops['ForceMaxRAMforDat'] = 20e9  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
 
-        shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
-        shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
+        ## option for wavelength
+        ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
+        return ops

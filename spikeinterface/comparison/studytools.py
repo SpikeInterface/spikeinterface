@@ -22,7 +22,7 @@ import pandas as pd
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict
-from spikeinterface.sorters.launcher import iter_output_folders, iter_sorting_output
+from spikeinterface.sorters.launcher import iter_working_folder, iter_sorting_output
 
 from .comparisontools import _perf_keys
 from .paircomparisons import compare_sorter_to_ground_truth

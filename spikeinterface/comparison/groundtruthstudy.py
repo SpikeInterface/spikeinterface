@@ -15,7 +15,7 @@ from .comparisontools import _perf_keys
 from .paircomparisons import compare_sorter_to_ground_truth
 
 from .studytools import (setup_comparison_study, get_rec_names, get_recordings,
-                         iter_output_folders, iter_computed_names, iter_computed_sorting, collect_run_times)
+                         iter_working_folder, iter_computed_names, iter_computed_sorting, collect_run_times)
 
 
 class GroundTruthStudy:
@@ -52,7 +52,7 @@ class GroundTruthStudy:
         setup_comparison_study(study_folder, gt_dict, **job_kwargs)
         return cls(study_folder)
 
-    def run_sorters(self, sorter_list, mode_if_folder_exists='keep', **kwargs):
+    def run_sorters(self, sorter_list, mode_if_folder_exists='keep', remove_sorter_folders=False, **kwargs):
 
         sorter_folders = self.study_folder / 'sorter_folders'
         recording_dict = get_recordings(self.study_folder)
@@ -62,6 +62,9 @@ class GroundTruthStudy:
 
         # results are copied so the heavy sorter_folders can be removed
         self.copy_sortings()
+
+        if remove_sorter_folders:
+            shutil.rmtree(self.study_folder / 'sorter_folders')
 
     def _check_rec_name(self, rec_name):
         if not self._is_scanned:
@@ -102,7 +105,7 @@ class GroundTruthStudy:
 
         log_olders.mkdir(parents=True, exist_ok=True)
 
-        for rec_name, sorter_name, output_folder in iter_output_folders(sorter_folders):
+        for rec_name, sorter_name, output_folder in iter_working_folder(sorter_folders):
             SorterClass = sorter_dict[sorter_name]
             fname = rec_name + '[#]' + sorter_name
             npz_filename = sorting_folders / (fname + '.npz')

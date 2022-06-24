@@ -75,7 +75,7 @@ def test_WaveformPrincipalComponent():
             assert proj.shape[1] == 5
             # print(comp.shape)
 
-    all_labels, all_components = pc.get_all_components()
+    all_labels, all_components = pc.get_all_projections()
 
     # relod as an extension from we
     assert WaveformPrincipalComponent in we.get_available_extensions()

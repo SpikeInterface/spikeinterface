@@ -10,8 +10,11 @@ import scipy.optimize
 from ..toolkit import get_chunk_with_margin
 
 from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method, 
-                                                        possible_localization_methods,  estimate_distance_error, 
-                                                        make_initial_guess_and_bounds)
+                                                        possible_localization_methods,  
+                                                        make_initial_guess_and_bounds,
+                                                        estimate_distance_error, 
+                                                        ptp_at,
+                                                        estimate_distance_error_with_log)
 
 
 def init_kwargs_dict(method, method_kwargs):
@@ -20,14 +23,14 @@ def init_kwargs_dict(method, method_kwargs):
     if method == 'center_of_mass':
         method_kwargs_ = dict(local_radius_um=150)
     elif method == 'monopolar_triangulation':
-        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000)
+        method_kwargs_ = dict(local_radius_um=150, max_distance_um=1000, optimizer='minimize_with_log_penality')
 
     method_kwargs_.update(method_kwargs)
 
     return method_kwargs_
 
 
-def localize_peaks(recording, peaks, ms_before=0.1, ms_after=0.3, method='center_of_mass',
+def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_mass',
                    method_kwargs={}, **job_kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 
@@ -165,8 +168,9 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
                                                        neighbours_mask, nbefore, nafter)
     elif method == 'monopolar_triangulation':
         max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
+        optimizer = worker_ctx['method_kwargs']['optimizer']
         peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations,
-                                                                neighbours_mask, nbefore, nafter, max_distance_um)
+                                                                neighbours_mask, nbefore, nafter, max_distance_um, optimizer)
 
     return peak_locations
 
@@ -194,12 +198,13 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
 
 
 def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations, neighbours_mask,
-                                           nbefore, nafter, max_distance_um):
+                                           nbefore, nafter, max_distance_um, optimizer):
     """Localize peaks using the monopolar triangulation method.
 
     Notes
     -----
-    This method is from Julien Boussard - see spikeinterface.toolkit.postprocessing.unit_localization.
+    This method is from  Julien Boussard, Erdem Varol and Charlie Windolf
+    See spikeinterface.toolkit.postprocessing.unit_localization.
     """
 
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['monopolar_triangulation'])
@@ -215,10 +220,20 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
         wf_ptp = wf.ptp(axis=0)
 
         x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
-
-        args = (wf_ptp, local_contact_locations)
-        output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
-
-        peak_locations[i] = tuple(output['x'])
+        
+        if optimizer == 'least_square':
+            args = (wf_ptp, local_contact_locations)
+            output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
+            peak_locations[i] = tuple(output['x'])
+        elif optimizer == 'minimize_with_log_penality':
+            x0 = x0[:3]
+            bounds = [(bounds[0][i], bounds[1][i]) for i in range(3)]
+            maxptp = wf_ptp.max()
+            args = (wf_ptp, local_contact_locations, maxptp)
+            output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
+            # final alpha
+            q = ptp_at(*output['x'], 1.0, local_contact_locations)
+            alpha = (wf_ptp * q).sum() / np.square(q).sum()
+            peak_locations[i] = tuple(output['x']) + (alpha, )
 
     return peak_locations

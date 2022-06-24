@@ -164,6 +164,17 @@ def test_BaseRecording():
     # plot_probe(probe2)
     # plt.show()
 
+    # set unconnected probe
+    probe = Probe(ndim=2)
+    positions = [[0., 0.], [0., 15.], [0, 30.]]
+    probe.set_contacts(positions=positions, shapes='circle',
+                       shape_params={'radius': 5})
+    probe.set_device_channel_indices([-1, -1, -1])
+    probe.create_auto_shape()
+
+    rec_empty_probe = rec.set_probe(probe, group_mode='by_shank')
+    assert rec_empty_probe.channel_ids.size == 0
+    
     # test return_scale
     sampling_frequency = 30000
     traces = np.zeros((1000, 5), dtype='int16')
@@ -227,6 +238,10 @@ def test_BaseRecording():
     rec_zarr = rec2.save(format="zarr", zarr_path=cache_folder / "recording.zarr",
                          compressor=compressor)
     check_recordings_equal(rec2, rec_zarr, return_scaled=False)
+
+    rec_zarr2 = rec2.save(format="zarr", zarr_path=cache_folder / "recording_channel_chunk.zarr",
+                          compressor=compressor, channel_chunk_size=2)
+    check_recordings_equal(rec2, rec_zarr2, return_scaled=False)
 
 
 

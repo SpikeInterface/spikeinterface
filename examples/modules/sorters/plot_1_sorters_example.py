@@ -2,7 +2,7 @@
 Run spike sorting algorithms
 ============================
 
-This example shows the basic usage of the :code:`sorters` module of :code:`spikeinterface`
+This example shows the basic usage of the :py:mod:`spikeinterface.sorters` module of SpikeInterface
 """
 
 import spikeinterface.extractors as se

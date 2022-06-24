@@ -6,9 +6,11 @@ from spikeinterface.core import (BinaryRecordingExtractor,
 from .neoextractors import (
     MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec,
     SpikeGLXRecordingExtractor, read_spikeglx,
-    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys,
+    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, 
+    read_openephys, read_openephys_event,
     IntanRecordingExtractor, read_intan,
-    NeuroScopeRecordingExtractor, read_neuroscope_recording, NeuroScopeSortingExtractor, read_neuroscope_sorting,
+    NeuroScopeRecordingExtractor, read_neuroscope_recording, 
+    NeuroScopeSortingExtractor, read_neuroscope_sorting,
     read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
     NeuralynxRecordingExtractor, read_neuralynx,
@@ -21,12 +23,17 @@ from .neoextractors import (
     SpikeGadgetsRecordingExtractor, read_spikegadgets,
     BiocamRecordingExtractor, read_biocam,
     AxonaRecordingExtractor, read_axona,
-    TdtRecordingExtractor, read_tdt
+    TdtRecordingExtractor, read_tdt,
+    AlphaOmegaRecordingExtractor, read_alphaomega,
+    AlphaOmegaEventExtractor, read_alphaomega_event,
 )
 
 # NWB sorting/recording/event
 from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
                             read_nwb, read_nwb_recording, read_nwb_sorting)
+
+from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
+from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor, read_klusta
@@ -76,7 +83,12 @@ recording_extractor_full_list = [
     SpikeGadgetsRecordingExtractor,
     BiocamRecordingExtractor,
     AxonaRecordingExtractor,
-    TdtRecordingExtractor
+    TdtRecordingExtractor,
+    AlphaOmegaRecordingExtractor,
+
+    # others
+    CompressedBinaryIblExtractor,
+    MCSH5RecordingExtractor
 ]
 
 sorting_extractor_full_list = [
@@ -107,5 +119,6 @@ sorting_extractor_full_list = [
 
 event_extractor_full_list = [
     OpenEphysBinaryEventExtractor,
-    MaxwellEventExtractor
+    MaxwellEventExtractor,
+    AlphaOmegaEventExtractor
 ]

@@ -41,8 +41,11 @@ sorting_TDC = ss.run_tridesclous(recording)
 # Compare multiple spike sorter outputs
 # -------------------------------------
 
-mcmp = sc.compare_multiple_sorters(sorting_list=[sorting_MS4, sorting_HS, sorting_TDC],
-                                   name_list=['MS4', 'HS', 'TDC'], verbose=True)
+mcmp = sc.compare_multiple_sorters(
+    sorting_list=[sorting_MS4, sorting_HS, sorting_TDC],
+    name_list=['MS4', 'HS', 'TDC'],
+    verbose=True,
+)
 
 #############################################################################
 # The multiple sorters comparison internally computes pairwise comparison,
@@ -73,8 +76,8 @@ sw.plot_multicomp_graph(mcmp)
 # ----------------------
 #  
 # We can pull the units in agreement with different sorters using the
-# :code:`get_agreement_sorting` method. This allows to make spike sorting more
-# robust by integrating the output of several algorithms. On the other
+# :py:func:`~spikeinterface.comparison.MultiSortingComparison.get_agreement_sorting` method. This allows to make
+# spike sorting more robust by integrating the output of several algorithms. On the other
 # hand, it might suffer from weak performance of single algorithms.
 #  
 # When extracting the units in agreement, the spike trains are modified so

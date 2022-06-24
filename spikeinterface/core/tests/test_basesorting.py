@@ -59,11 +59,16 @@ def test_BaseSorting():
     sorting2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     sorting3 = BaseExtractor.load(folder)
+    
+    # save to memory
+    sorting4 = sorting.save(format="memory")
 
     spikes = sorting.get_all_spike_trains()
     # print(spikes)
 
     spikes = sorting.to_spike_vector()
+    # print(spikes)
+    spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1:5, 2:18})
     # print(spikes)
     
     # select units

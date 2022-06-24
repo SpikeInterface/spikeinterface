@@ -4,10 +4,10 @@ channels:
 dependencies:
   - python=3.8
   - pip<21
-  - git-annex
+  #- git-annex
   - datalad
   - pyqt=5
-  - numpy=1.20
+  - numpy=1.21
   - pip:
     - joblib
     - tqdm
@@ -25,10 +25,13 @@ dependencies:
     - isosplit5
     - mountainsort4>=1.0.0    
     - tridesclous>=1.6.4
-    - herdingspikes
+    - herdingspikes<=0.3.99
     - sphinx-gallery
     - numpydoc
-    - numpy<1.21
-    - git+https://github.com/scikit-learn-contrib/hdbscan.git
-    - numba==0.54.1
+    - numpy<1.22
+    - hdbscan
+    - numba
     - git+https://github.com/SpikeInterface/spikeinterface.git
+    - sphinx_rtd_theme
+    - sphinx_gallery
+    - numpydoc

@@ -49,7 +49,9 @@ class TestWidgets(unittest.TestCase):
         sw.plot_rasters(self._sorting)
 
     def test_plot_probe_map(self):
+        
         sw.plot_probe_map(self._rec)
+        sw.plot_probe_map(self._rec, with_channel_ids=True)
 
     # TODO
     # def test_spectrum(self):
@@ -77,7 +79,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_templates(self._we)
 
     def test_plot_unit_probe_map(self):
-        sw.plot_unit_probe_map(self._we)
+        sw.plot_unit_probe_map(self._we, with_channel_ids=True)
         sw.plot_unit_probe_map(self._we, animated=True)
 
     def test_plot_units_depth_vs_amplitude(self):
@@ -95,7 +97,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_principal_component(self._we)
 
     def test_plot_unit_localization(self):
-        sw.plot_unit_localization(self._we)
+        sw.plot_unit_localization(self._we, with_channel_ids=True)
         sw.plot_unit_localization(self._we, method='monopolar_triangulation')
 
     def test_autocorrelograms(self):
@@ -112,7 +114,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_isi_distribution(self._sorting, axes=axes)
 
     def test_plot_drift_over_time(self):
-        from spikeinterface.sortingcomponents import detect_peaks
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         peaks = detect_peaks(self._rec, method='locally_exclusive')
         sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.,
                                 weight_with_amplitudes=True, mode='heatmap')
@@ -122,7 +124,7 @@ class TestWidgets(unittest.TestCase):
                                 scatter_plot_kwargs={'color': 'r'})
 
     def test_plot_peak_activity_map(self):
-        sw.plot_peak_activity_map(self._rec)
+        sw.plot_peak_activity_map(self._rec, with_channel_ids=True)
         sw.plot_peak_activity_map(self._rec, bin_duration_s=1.)
 
     def test_confusion(self):
@@ -156,7 +158,7 @@ if __name__ == '__main__':
 
     #~ mytest.test_timeseries()
     #~ mytest.test_rasters()
-    #~ mytest.test_plot_probe_map()
+    mytest.test_plot_probe_map()
     #~ mytest.test_unitwaveforms()
     #~ mytest.test_plot_unit_waveform_density_map()
     # mytest.test_unittemplates()
@@ -172,13 +174,13 @@ if __name__ == '__main__':
     #~ mytest.test_isi_distribution()
 
     #~ mytest.test_plot_drift_over_time()
-    #  mytest.test_plot_peak_activity_map()
+    #~ mytest.test_plot_peak_activity_map()
 
     # mytest.test_confusion()
     # mytest.test_agreement()
     #~ mytest.test_multicomp_graph()
     #  mytest.test_sorting_performance()
 
-    mytest.test_plot_unit_summary()
+    #~ mytest.test_plot_unit_summary()
 
     plt.show()

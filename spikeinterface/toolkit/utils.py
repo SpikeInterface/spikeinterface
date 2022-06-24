@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.spatial
+from scipy.stats import norm, multivariate_normal, median_abs_deviation
 
 
 def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, 
@@ -57,6 +58,7 @@ def get_channel_distances(recording):
     channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
     return channel_distances
 
+
 def get_closest_channels(recording, channel_ids=None, num_channels=None):
     """Get closest channels + distances
 
@@ -93,6 +95,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
 
     return np.array(closest_channels_inds), np.array(dists)
 
+
 def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     """
     Estimate noise for each channel using MAD methods.
@@ -102,6 +105,45 @@ def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     
     """
     random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
-    med = np.median(random_chunks, axis=0, keepdims=True)
-    noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6745
-    return noise_levels
+    return median_abs_deviation(random_chunks, axis=0, scale="normal")
+
+
+def create_ground_truth_pc_distributions(center_locations, total_points):
+    """Simulate PCs as multivariate Gaussians, for testing PC-based quality metrics
+    Values are created for only one channel and vary along one dimension
+
+    Parameters
+    ----------
+    center_locations : array-like (units, ) or (channels, units)
+        Mean of the multivariate gaussian at each channel for each unit
+    total_points : array-like
+        Number of points in each unit distribution
+
+    Returns
+    -------
+    numpy.ndarray
+        PC scores for each point
+    numpy.array
+        Labels for each point
+    """
+    np.random.seed(0)
+
+    if len(np.array(center_locations).shape)==1:
+        distributions = [multivariate_normal.rvs(mean=[center, 0.0, 0.0],
+                                                 cov=[1.0, 1.0, 1.0],
+                                                 size=size)
+                        for center, size in zip(center_locations, total_points)]
+        all_pcs = np.concatenate(distributions, axis=0)
+
+    else:
+        all_pcs = np.empty((np.sum(total_points),3,center_locations.shape[0]))
+        for channel in range(center_locations.shape[0]):
+            distributions = [multivariate_normal.rvs(mean=[center, 0.0, 0.0],
+                                                         cov=[1.0, 1.0, 1.0],
+                                                         size=size)
+                        for center, size in zip(center_locations[channel], total_points)]
+            all_pcs[:,:,channel] = np.concatenate(distributions, axis=0)
+
+    all_labels = np.concatenate([np.ones((total_points[i],),dtype='int')*i  for i in range(len(total_points))])
+
+    return all_pcs, all_labels

@@ -1,7 +1,8 @@
 import numpy as np
 
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.core.core_tools import define_function_from_class
 
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..utils import get_closest_channels
 
 
@@ -96,7 +97,7 @@ class CommonReferenceRecording(BasePreprocessor):
                                                           neighbors)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups,
+        self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups, operator=operator,
                             ref_channel_ids=ref_channel_ids, local_radius=local_radius)
 
 
@@ -154,9 +155,4 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         return zip(selected_channels, selected_groups)
 
 
-# function for API
-def common_reference(*args, **kwargs):
-    return CommonReferenceRecording(*args, **kwargs)
-
-
-common_reference.__doc__ = CommonReferenceRecording.__doc__
+common_reference = define_function_from_class(source_class=CommonReferenceRecording, name="common_reference")

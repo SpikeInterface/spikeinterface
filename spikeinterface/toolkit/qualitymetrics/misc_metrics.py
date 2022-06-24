@@ -10,6 +10,7 @@ Implementations here have been refactored to support the multi-segment API of sp
 from collections import namedtuple
 
 import numpy as np
+import warnings
 import scipy.ndimage
 
 from ..utils import get_noise_levels
@@ -69,17 +70,12 @@ def compute_firing_rate(waveform_extractor, **kwargs):
     fs = recording.get_sampling_frequency()
 
     seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duraion = np.sum(seg_durations)
+    total_duration = np.sum(seg_durations)
 
     firing_rates = {}
+    num_spikes = compute_num_spikes(waveform_extractor, **kwargs)
     for unit_id in unit_ids:
-        n = 0
-        for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            n += st.size
-
-        firing_rates[unit_id] = n / total_duraion
-
+        firing_rates[unit_id] = num_spikes[unit_id]/total_duration
     return firing_rates
 
 
@@ -237,12 +233,17 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             num_spikes += len(spike_train)
             num_violations += np.sum(isis < isi_threshold_samples)
         violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
-        total_rate = num_spikes / total_duration
-        violation_rate = num_violations / violation_time
-
-        isi_violations_ratio[unit_id] = violation_rate / total_rate
-        isi_violations_rate[unit_id] = num_violations / total_duration
-        isi_violations_count[unit_id] = num_violations
+        
+        if num_spikes > 0:
+            total_rate = num_spikes / total_duration
+            violation_rate = num_violations / violation_time
+            isi_violations_ratio[unit_id] = violation_rate / total_rate
+            isi_violations_rate[unit_id] = num_violations / total_duration
+            isi_violations_count[unit_id] = num_violations      
+        else:
+            isi_violations_ratio[unit_id] = np.nan
+            isi_violations_rate[unit_id] = np.nan
+            isi_violations_count[unit_id] = np.nan
 
     res = namedtuple('isi_violation',
                      ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
@@ -284,8 +285,6 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     It means that the number of spike to estimate amplitude is low
     See: WaveformExtractor.set_params(max_spikes_per_unit=500)
 
-    @alessio @ cole @matthias
-    # TODO make a fast amplitude retriever ???
     """
 
     recording = waveform_extractor.recording
@@ -314,8 +313,14 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         support = b[:-1]
         bin_size = np.mean(np.diff(support))
         peak_index = np.argmax(pdf)
+        
+        pdf_above = np.abs(pdf[peak_index:] - pdf[0])
 
-        G = np.argmin(np.abs(pdf[peak_index:] - pdf[0])) + peak_index
+        if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
+            warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
+                          "amplitude_cutoff computation!")
+        
+        G = np.argmin(pdf_above) + peak_index
         fraction_missing = np.sum(pdf[G:]) * bin_size
         fraction_missing = np.min([fraction_missing, 0.5])
         all_fraction_missing[unit_id] = fraction_missing

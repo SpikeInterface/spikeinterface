@@ -3,13 +3,36 @@ import os
 from pathlib import Path
 import json
 import platform
+from typing import Optional, Union
 
-
+from ..core import BaseRecording
 from ..version import version as si_version
-from spikeinterface.core.base import is_dict_extractor
-from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
 from .sorterlist import sorter_dict
-from .utils import SpikeSortingError
+from .utils import SpikeSortingError, has_nvidia
+
+REGISTRY = 'spikeinterface'
+
+SORTER_DOCKER_MAP = dict(
+    klusta='klusta',
+    mountainsort4='mountainsort4',
+    pykilosort='pykilosort',
+    spykingcircus='spyking-circus',
+    tridesclous='tridesclous',
+    # Matlab compiled sorters:
+    hdsort='hdsort-compiled',
+    ironclust='ironclust-compiled',
+    kilosort='kilosort-compiled',
+    kilosort2='kilosort2-compiled',
+    kilosort3='kilosort3-compiled',
+    waveclus='waveclus-compiled',
+)
+
+SORTER_DOCKER_MAP = {
+    k: f'{REGISTRY}/{v}-base'
+    for k, v in SORTER_DOCKER_MAP.items()
+}
+
 
 _common_param_doc = """
     Parameters
@@ -29,8 +52,15 @@ _common_param_doc = """
     raise_error: bool
         If True, an error is raised if spike sorting fails (default).
         If False, the process continues and the error is logged in the log file.
-    docker_image: None or str
-        If str run the sorter inside a container (docker) using the docker package.
+    docker_image: bool or str
+        If True, pull the default docker container for the sorter and run the sorter in that container using docker.
+        Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
+        If False, the sorter is run locally.
+    singularity_image: bool or str 
+        If True, pull the default docker container for the sorter and run the sorter in that container using 
+        singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
+        from Docker Hub.
+        If False, the sorter is run locally.
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -41,35 +71,66 @@ _common_param_doc = """
     """
 
 
-def run_sorter(sorter_name, recording, output_folder=None,
-               remove_existing_folder=True, delete_output_folder=False,
-               verbose=False, raise_error=True,
-               docker_image=None, singularity_image=None,
-               with_output=True, **sorter_params):
+def run_sorter(
+    sorter_name: str,
+    recording: BaseRecording,
+    output_folder: Optional[str] = None,
+    remove_existing_folder: bool = True,
+    delete_output_folder: bool = False,
+    verbose: bool = False,
+    raise_error: bool = True,
+    docker_image: Optional[Union[bool, str]] = False,
+    singularity_image: Optional[Union[bool, str]] = False,
+    with_output: bool = True,
+    **sorter_params,
+):
     """
     Generic function to run a sorter via function approach.
 
-    >>> sorting = run_sorter('tridesclous', recording)
-    """ + _common_param_doc
+    {}
+    
+    Examples
+    --------
+    >>> sorting = run_sorter("tridesclous", recording)
+    """
 
-    if docker_image is not None:
-        return run_sorter_container(sorter_name, recording, 'docker', docker_image,
-                                    output_folder=output_folder,
-                                    remove_existing_folder=remove_existing_folder,
-                                    delete_output_folder=delete_output_folder, verbose=verbose,
-                                    raise_error=raise_error, with_output=with_output, **sorter_params)
-    if singularity_image is not None:
-        return run_sorter_container(sorter_name, recording, 'singularity', singularity_image,
-                                    output_folder=output_folder,
-                                    remove_existing_folder=remove_existing_folder,
-                                    delete_output_folder=delete_output_folder, verbose=verbose,
-                                    raise_error=raise_error, with_output=with_output, **sorter_params)
-    return run_sorter_local(sorter_name, recording, output_folder=output_folder,
-                            remove_existing_folder=remove_existing_folder,
-                            delete_output_folder=delete_output_folder,
-                            verbose=verbose, raise_error=raise_error, with_output=with_output,
-                            **sorter_params)
+    common_kwargs = dict(
+        sorter_name=sorter_name,
+        recording=recording,
+        output_folder=output_folder,
+        remove_existing_folder=remove_existing_folder,
+        delete_output_folder=delete_output_folder,
+        verbose=verbose,
+        raise_error=raise_error,
+        with_output=with_output,
+        **sorter_params,
+    )
 
+    if docker_image or singularity_image:
+        if docker_image:
+            mode = "docker"
+            assert not singularity_image
+            if isinstance(docker_image, bool):
+                container_image = None
+            else:
+                container_image = docker_image
+        else:
+            mode = "singularity"
+            assert not docker_image
+            if isinstance(singularity_image, bool):
+                container_image = None
+            else:
+                container_image = singularity_image
+        return run_sorter_container(
+            container_image=container_image,
+            mode=mode,
+            **common_kwargs,
+        )
+
+    return run_sorter_local(**common_kwargs)
+
+
+run_sorter.__doc__ = run_sorter.__doc__.format(_common_param_doc)
 
 def run_sorter_local(sorter_name, recording, output_folder=None,
                      remove_existing_folder=True, delete_output_folder=False,
@@ -138,6 +199,17 @@ def find_recording_folder(d):
             return folder_to_mount
 
 
+def path_to_unix(path):
+    path = Path(path)
+    path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
+    return path_unix
+
+
+def windows_extractor_dict_to_unix(d):
+    d = recursive_path_modifier(d, path_to_unix, target='path', copy=True)
+    return d
+
+
 class ContainerClient:
     """
     Small abstraction class to run commands in:
@@ -147,12 +219,14 @@ class ContainerClient:
     def __init__(self, mode, container_image, volumes, extra_kwargs):
         assert mode in ('docker', 'singularity')
         self.mode = mode
+        container_requires_gpu = extra_kwargs.get(
+            'container_requires_gpu', None)
 
         if mode == 'docker':
             import docker
             client = docker.from_env()
-            if extra_kwargs.get('requires_gpu', False):
-                extra_kwargs.pop('requires_gpu')
+            if container_requires_gpu is not None:
+                extra_kwargs.pop('container_requires_gpu')
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
 
@@ -162,6 +236,7 @@ class ContainerClient:
                 repo_tags.extend(image.attrs['RepoTags'])
 
             if container_image not in repo_tags:
+                print(f"Docker: pulling image {container_image}")
                 client.images.pull(container_image)
 
             self.docker_container = client.containers.create(
@@ -173,6 +248,7 @@ class ContainerClient:
             if Path(container_image).exists():
                 self.singularity_image = container_image
             else:
+                print(f"Singularity: pulling image {container_image}")
                 self.singularity_image = Client.pull(f'docker://{container_image}')
 
             if not Path(self.singularity_image).exists():
@@ -183,7 +259,7 @@ class ContainerClient:
             options=['--bind', singularity_bind]
 
             # gpu options
-            if extra_kwargs.get('requires_gpu', False):
+            if container_requires_gpu:
                 # only nvidia at the moment
                 options += ['--nv']
 
@@ -214,24 +290,64 @@ class ContainerClient:
             return res
 
 
-def run_sorter_container(sorter_name, recording, mode, container_image, output_folder=None,
-                         remove_existing_folder=True, delete_output_folder=False,
-                         verbose=False, raise_error=True, with_output=True, **sorter_params):
+def run_sorter_container(
+    sorter_name: str,
+    recording: BaseRecording,
+    mode: str,
+    container_image: Optional[str] = None,
+    output_folder: Optional[str] = None,
+    remove_existing_folder: bool = True,
+    delete_output_folder: bool = False,
+    verbose: bool = False,
+    raise_error: bool = True,
+    with_output: bool = True,
+    extra_requirements = None,
+    **sorter_params,
+):
+    """
+
+    Parameters
+    ----------
+    sorter_name: str
+    recording: BaseRecording
+    mode: str
+    container_image: str, optional
+    output_folder: str, optional
+    remove_existing_folder: bool, optional
+    delete_output_folder: bool, optional
+    verbose: bool, optional
+    raise_error: bool, optional
+    with_output: bool, optional
+    extra_requirements: list, optional
+    sorter_params:
+
+    """
+
+    if extra_requirements is None:
+        extra_requirements = []
+
     # common code for docker and singularity
-
-    assert platform.system() in ('Linux', 'Darwin'), \
-        'run_sorter() with docker is supported only on linux/macos platform '
-
     if output_folder is None:
         output_folder = sorter_name + '_output'
 
+    if container_image is None:
+        if sorter_name in SORTER_DOCKER_MAP:
+            container_image = SORTER_DOCKER_MAP[sorter_name]
+        else:
+            raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
+
     SorterClass = sorter_dict[sorter_name]
-    output_folder = Path(output_folder).absolute()
-    parent_folder = output_folder.parent
+    output_folder = Path(output_folder).absolute().resolve()
+    parent_folder = output_folder.parent.absolute().resolve()
+    if not output_folder.is_dir():
+        output_folder.mkdir(parents=True)
 
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
-    recording_input_folder = find_recording_folder(rec_dict)
+    recording_input_folder = find_recording_folder(rec_dict).absolute().resolve()
+
+    if platform.system() == 'Windows':
+        rec_dict = windows_extractor_dict_to_unix(rec_dict)
 
     # create 3 files for communication with container
     # recording dict inside
@@ -240,36 +356,75 @@ def run_sorter_container(sorter_name, recording, mode, container_image, output_f
     # need to share specific parameters
     (parent_folder / 'in_container_params.json').write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
-    # the py script
 
+    # the py script
+    if platform.system() == 'Windows':
+        # skip C:
+        parent_folder_unix = path_to_unix(parent_folder)
+        output_folder_unix = path_to_unix(output_folder)
+        recording_input_folder_unix = path_to_unix(recording_input_folder)
+    else:
+        parent_folder_unix = parent_folder
+        output_folder_unix = output_folder
+        recording_input_folder_unix = recording_input_folder
     py_script = f"""
 import json
 from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
-# load recording in docker
-recording = load_extractor('{parent_folder}/in_container_recording.json')
+if __name__ == '__main__':
+    # this __name__ protection help in some case with multiprocessing (for instance HS2)
+    # load recording in container
+    recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
 
-# load params in docker
-with open('{parent_folder}/in_container_params.json', encoding='utf8', mode='r') as f:
-    sorter_params = json.load(f)
+    # load params in container
+    with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
+        sorter_params = json.load(f)
 
-# run in docker
-output_folder = '{output_folder}'
-run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
-            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-            verbose={verbose}, raise_error={raise_error}, **sorter_params)
+    # run in container
+    output_folder = '{output_folder_unix}'
+    run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
+                remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+                verbose={verbose}, raise_error={raise_error}, **sorter_params)
 """
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
     volumes = {}
     volumes[str(recording_input_folder)] = {
-        'bind': str(recording_input_folder), 'mode': 'ro'}
-    volumes[str(parent_folder)] = {'bind': str(parent_folder), 'mode': 'rw'}
+        'bind': str(recording_input_folder_unix), 'mode': 'ro'}
+    volumes[str(parent_folder)] = {'bind': str(parent_folder_unix), 'mode': 'rw'}
+    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
 
+    if 'dev' in si_version and si_dev_path is not None:
+        install_si_from_source = True
+        # Making sure to get rid of last / or \
+        si_dev_path = str(Path(si_dev_path).absolute().resolve())
+        if platform.system() == 'Windows':
+            si_dev_path_unix = path_to_unix(si_dev_path)
+        else:
+            si_dev_path_unix = si_dev_path
+        volumes[si_dev_path] = {'bind': si_dev_path_unix, 'mode': 'ro'}
+    else:
+        install_si_from_source = False
+        
     extra_kwargs = {}
-    if SorterClass.docker_requires_gpu:
-        extra_kwargs['requires_gpu'] = True
+    use_gpu = SorterClass.use_gpu(sorter_params)
+    gpu_capability = SorterClass.gpu_capability
+    
+    if use_gpu:
+        if gpu_capability == 'nvidia-required':
+            assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
+            extra_kwargs['container_requires_gpu'] = True
+        elif gpu_capability == 'nvidia-optional':
+            if has_nvidia():
+                extra_kwargs['container_requires_gpu'] = True
+            else: 
+                if verbose:
+                    print(f"{SorterClass.sorter_name} supports GPU, but no GPU is available.\n"
+                          f"Running the sorter without GPU")
+        else:
+            # TODO: make opencl machanism
+            raise NotImplementedError("Only nvidia support is available")
     
     container_client = ContainerClient(mode, container_image, volumes, extra_kwargs)
     if verbose:
@@ -287,25 +442,40 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     if need_si_install:
         if 'dev' in si_version:
             if verbose:
-                print(
-                    f"Installing spikeinterface from sources in {container_image}")
+                print(f"Installing spikeinterface from sources in {container_image}")
+
             # TODO later check output
-            cmd = 'pip install --upgrade --no-input MEArec'
-            res_output = container_client.run_command(cmd)
-            cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
+            if install_si_from_source:
+                si_source = 'local machine'
+                res_output = container_client.run_command(f'cp -rf {si_dev_path_unix} /opt')
+                cmd = f'pip install /opt/spikeinterface[full]'
+            else:
+                si_source = 'remote repository'
+                cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
+            if verbose:
+                print(f'Installing dev spikeinterface from {si_source}')
             res_output = container_client.run_command(cmd)
             cmd = 'pip install --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip'
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
-                print(
-                    f"Installing spikeinterface=={si_version} in {container_image}")
+                print(f"Installing spikeinterface=={si_version} in {container_image}")
             cmd = f'pip install --upgrade --no-input spikeinterface[full]=={si_version}'
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
         if verbose:
             print(f'spikeinterface is already installed in {container_image}')
+
+    if hasattr(recording, 'extra_requirements'):
+        extra_requirements.extend(recording.extra_requirements)
+
+    # install additional required dependencies
+    if extra_requirements:
+        if verbose:
+            print(f'Installing extra requirements: {extra_requirements}')
+        cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
+        res_output = container_client.run_command(cmd)
 
     # run sorter on folder
     if verbose:
@@ -314,17 +484,22 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
     # this do not work with singularity:
     # cmd = 'python "{}"'.format(parent_folder/'in_container_sorter_script.py')
     # this approach is better
-    cmd = ['python', '{}'.format(parent_folder/'in_container_sorter_script.py')]
+    in_container_script_path_unix = (Path(parent_folder_unix) / 'in_container_sorter_script.py').as_posix()
+    cmd = ['python', f'{in_container_script_path_unix}']
     res_output = container_client.run_command(cmd)
     run_sorter_output = res_output
 
     # chown folder to user uid
-    uid = os.getuid()
-    # this do not work with singularity:
-    # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
-    # this approach is better
-    cmd = ['chown', f'{uid}:{uid}', '-R', '{output_folder}']
-    res_output = container_client.run_command(cmd)
+    if platform.system() != "Windows":
+        uid = os.getuid()
+        # this do not work with singularity:
+        # cmd = f'chown {uid}:{uid} -R "{output_folder}"'
+        # this approach is better
+        cmd = ['chown', f'{uid}:{uid}', '-R', f'{output_folder}']
+        res_output = container_client.run_command(cmd)
+    else:
+        # not needed for Windows
+        pass
 
     if verbose:
         print('Stopping container')

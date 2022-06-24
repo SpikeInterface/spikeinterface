@@ -78,6 +78,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         ----------
         metric_names: list or None
             List of quality metrics to compute. If None, all metrics are computed
+            [ "num_spikes", "firing_rate", "presence_ratio",  "snr", "isi_violation", "amplitude_cutoff",
+            'isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
         **kwargs: keyword arguments for quality metrics (TODO)
             max_spikes_for_nn: int
                 maximum number of spikes to use per cluster in PCA metrics

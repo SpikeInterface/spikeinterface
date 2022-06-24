@@ -30,10 +30,18 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
 from .segmentutils import (
-    append_recordings, AppendSegmentRecording,
-    concatenate_recordings, ConcatenateSegmentRecording,
-    append_sortings, AppendSegmentSorting, 
-    split_sorting, SplitSegmentSorting)
+    append_recordings,
+    AppendSegmentRecording,
+    concatenate_recordings,
+    ConcatenateSegmentRecording,
+    split_recording,
+    select_segment_recording,
+    SelectSegmentRecording,
+    append_sortings,
+    AppendSegmentSorting,
+    split_sorting,
+    SplitSegmentSorting,
+)
 
 # default folder
 from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,

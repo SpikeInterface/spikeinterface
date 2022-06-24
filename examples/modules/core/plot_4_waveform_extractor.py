@@ -2,9 +2,9 @@
 Waveform Extractor
 ==================
 
-:code:`spikeinterface` provides an efficient mechanism to extract waveform snippets.
+SpikeInterface provides an efficient mechanism to extract waveform snippets.
 
-The `WaveformExtractor` class:
+The :py:class:`~spikeinterface.core.WaveformExtractor` class:
 
   * randomly samples a subset spikes with max_spikes_per_unit
   * extracts all waveforms snippets for each unit
@@ -15,7 +15,6 @@ The `WaveformExtractor` class:
 Here the how!
 '''
 import matplotlib.pyplot as plt
-import numpy as np
 
 from spikeinterface import download_dataset
 from spikeinterface import WaveformExtractor, extract_waveforms
@@ -49,18 +48,24 @@ from probeinterface.plotting import plot_probe
 plot_probe(probe)
 
 ###############################################################################
-# A :code:`WaveformExtractor` object can be created with the :code:`extract_waveforms`
-# function:
+# A :py:class:`~spikeinterface.core.WaveformExtractor` object can be created with the
+# :py:func:`~spikeinterface.core.extract_waveforms` function:
 
 folder = 'waveform_folder'
-we = extract_waveforms(recording, sorting, folder,
-                       ms_before=1.5, ms_after=2., max_spikes_per_unit=500,
-                       load_if_exists=True)
+we = extract_waveforms(
+    recording,
+    sorting,
+    folder,
+    ms_before=1.5,
+    ms_after=2.,
+    max_spikes_per_unit=500,
+    load_if_exists=True,
+)
 print(we)
 
 ###############################################################################
-# Alternatively, the :code:`WaveformExtractor` object can be instantiated
-# directly. In this case, we need to :code:`set_params()` to set the desired
+# Alternatively, the :py:class:`~spikeinterface.core.WaveformExtractor` object can be instantiated
+# directly. In this case, we need to :py:func:`~spikeinterface.core.WaveformExtractor.set_params` to set the desired
 # parameters:
 
 folder = 'waveform_folder2'

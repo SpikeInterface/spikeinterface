@@ -19,6 +19,10 @@ class CommonTestSuite:
 
 class RecordingCommonTestSuite(CommonTestSuite):
 
+    @staticmethod
+    def get_full_path(path):
+        return local_folder / path
+
     def test_open(self):
         for entity in self.entities:
 
@@ -28,8 +32,10 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 path = entity
                 kwargs = {}
 
-            rec = self.ExtractorClass(local_folder / path, **kwargs)
+            rec = self.ExtractorClass(self.get_full_path(path), **kwargs)
             # print(rec)
+
+            assert hasattr(rec, 'extra_requirements')
 
             num_seg = rec.get_num_segments()
             num_chans = rec.get_num_channels()
@@ -57,8 +63,12 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 assert rec.get_property('offset_to_uV') is not None
 
             if rec.get_property('gain_to_uV') is not None and rec.get_property('offset_to_uV') is not None:
-                trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True)
+                trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
                 assert trace_scaled.dtype == 'float32'
+            
+            if isinstance(rec, NeoBaseRecordingExtractor):
+                # for neo based also test annotations propagation
+                rec = self.ExtractorClass(local_folder / path, all_annotations=True, **kwargs)
 
 
 class SortingCommonTestSuite(CommonTestSuite):
