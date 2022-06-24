@@ -102,8 +102,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='least_square', radius_um=50, max_distance_um=1000,
-        
-        return_alpha=False):
+                                    return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -128,7 +127,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='least_square'
     method: str  ('least_square', 'minimize_with_log_penality')
        2 variants of the method
     radius_um: float
-        For channel sparsiry
+        For channel sparsity
     max_distance_um: float
         to make bounddary in x, y, z and also for alpha
     return_alpha: bool default False
