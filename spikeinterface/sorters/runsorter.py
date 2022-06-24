@@ -257,7 +257,7 @@ class ContainerClient:
                 if HAS_DOCKER:
                     docker_image = self._get_docker_image(container_image)
                     if docker_image:
-                        print('Building singularity image from local docker images')
+                        print('Building singularity image from local docker image')
                         # Save docker image as tar and build singularity image
                         tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
                         f = open(tmp_file, 'wb')
