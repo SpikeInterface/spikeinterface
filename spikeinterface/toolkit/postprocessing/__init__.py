@@ -23,6 +23,7 @@ from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculato
 
 from .correlograms import (compute_autocorrelogram_from_spiketrain, compute_crosscorrelogram_from_spiketrain, compute_correlograms,
                           compute_correlograms_numba, compute_correlograms_numpy)
+from .spike_locations import compute_spike_locations, SpikeLocationsCalculator
 
 from .unit_localization import localize_units, compute_center_of_mass
 
