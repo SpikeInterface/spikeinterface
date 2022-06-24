@@ -28,6 +28,7 @@ SORTER_DOCKER_MAP = dict(
     # Matlab compiled sorters:
     hdsort='hdsort-compiled',
     ironclust='ironclust-compiled',
+    kilosort='kilosort-compiled',
     kilosort2='kilosort2-compiled',
     kilosort2_5='kilosort2_5-compiled',
     kilosort3='kilosort3-compiled',
