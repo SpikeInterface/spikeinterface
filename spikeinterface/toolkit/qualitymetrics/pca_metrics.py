@@ -3,6 +3,7 @@
 from cmath import nan
 import numpy as np
 from spikeinterface.core.waveform_extractor import WaveformExtractor
+from spikeinterface.toolkit.postprocessing.template_tools import get_template_extremum_channel
 from tqdm import tqdm
 import scipy.stats
 import scipy.spatial.distance
@@ -10,6 +11,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import IncrementalPCA
 from joblib import delayed, Parallel
+from copy import deepcopy
 
 
 import spikeinterface as si
@@ -24,7 +26,13 @@ _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
                              'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
 
 
-def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
+def get_quality_pca_metric_list():
+    """Get a list of the available PCA-based quality metrics."""
+
+    return deepcopy(_possible_pc_metric_names)
+
+
+def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_nn=10000,
                          min_spikes_for_nn=10, n_neighbors=4, n_components=10,
                          radius_um=100, seed=0, n_jobs=1, verbose=False):
     """Calculate principal component derived metrics.
@@ -36,6 +44,10 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
     metric_names : list of str, optional
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
+    sparsity: dict or None
+        If given, the sparse channel_ids for each unit. This is used also to identify neighbor
+        units and speed up computations. If None (default) all channels and all units are used
+        for each unit.
     max_spikes_for_nn : int, optional, default: 10000
         The maximum number of spikes to use per cluster.
         This is used for the nearest neighbors isolation and noise overlap measures.
@@ -53,8 +65,10 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
         This is used for the nearest neighbor noise overlap measure.
     seed : int, optional, default: 0
         Random seed value.
+    n_jobs : int
+        Number of jobs to parallelize metric computations.
     verbose : bool
-        If True, output is verbose
+        If True, output is verbose.
 
     Returns
     -------
@@ -68,6 +82,7 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
 
     assert isinstance(pca, WaveformPrincipalComponent)
     we = pca.waveform_extractor
+    extremum_channels = get_template_extremum_channel(we)
 
     unit_ids = we.sorting.unit_ids
     channel_ids = we.recording.channel_ids
@@ -88,11 +103,19 @@ def calculate_pc_metrics(pca, metric_names=None, max_spikes_for_nn=10000,
         units_loop = np.arange(len(unit_ids))
         parallel_functions = []
 
-    # TODO: handle sparsity (external)
     neighbor_unit_ids = unit_ids
     neighbor_channel_ids = channel_ids
     for ui in units_loop:
         unit_id = unit_ids[ui]
+        
+        if sparsity is None:
+            neighbor_channel_ids = channel_ids
+            neighbor_unit_ids = unit_ids
+        else:
+            neighbor_channel_ids = sparsity[unit_id]
+            neighbor_unit_ids = [other_unit for other_unit in unit_ids 
+                                 if extremum_channels[other_unit] in neighbor_channel_ids]
+        
         if not run_in_parallel:
             pca_metrics_unit = pca_metrics_one_unit(we_folder=we.folder, metric_names=metric_names,
                                                     unit_id=unit_id, neighbor_channel_ids=neighbor_channel_ids,

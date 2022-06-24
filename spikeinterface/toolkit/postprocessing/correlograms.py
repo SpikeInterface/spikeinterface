@@ -8,7 +8,7 @@ def compute_correlograms(sorting,
     Compute several cross-correlogram in one course
     from sevral cluster.
     
-    This very elegant implementation is copy from phy package written by Cyril Rossant.
+    This very elegant implementation is copy from phy package written by Cyrille Rossant.
     https://github.com/cortex-lab/phylib/blob/master/phylib/stats/ccg.py
     
     Some sligh modification have been made to fit spikeinterface

@@ -72,7 +72,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         new_metrics = self._metrics.loc[np.array(unit_ids)]
         new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
 
-    def compute_metrics(self, n_jobs, verbose):
+    def compute_metrics(self, n_jobs, verbose, sparsity=None):
         """
         Compute quality metrics.
         """
@@ -111,7 +111,9 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
                 raise ValueError('waveform_principal_component must be provied')
             kwargs = {k: self._params[k] for k in ('max_spikes_for_nn', 'n_neighbors', 'seed')}
             pc_metrics = calculate_pc_metrics(self.principal_component,
-                                              metric_names=pc_metric_names, verbose=verbose, 
+                                              metric_names=pc_metric_names, 
+                                              sparsity=sparsity,
+                                              verbose=verbose, 
                                               n_jobs=n_jobs, **kwargs)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
@@ -134,7 +136,7 @@ WaveformExtractor.register_extension(QualityMetricCalculator)
 
 
 def compute_quality_metrics(waveform_extractor, load_if_exists=False,
-                            metric_names=None, skip_pc_metrics=False, 
+                            metric_names=None, sparsity=None, skip_pc_metrics=False, 
                             n_jobs=1, verbose=False, **params):
     """Compute quality metrics on waveform extractor.
 
@@ -146,6 +148,10 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         Whether to load precomputed quality metrics, if they already exist.
     metric_names : list or None
         List of quality metrics to compute.
+    sparsity : dict or None
+        If given, the sparse channel_ids for each unit in PCA metrics computation. 
+        This is used also to identify neighbor units and speed up computations. 
+        If None (default) all channels and all units are used for each unit.
     skip_pc_metrics : bool
         If True, PC metrics computation is skipped.
     n_jobs : int
@@ -168,7 +174,7 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
     else:
         qmc = QualityMetricCalculator(waveform_extractor, skip_pc_metrics)
         qmc.set_params(metric_names=metric_names, **params)
-        qmc.compute_metrics(n_jobs, verbose)
+        qmc.compute_metrics(n_jobs, verbose, sparsity=sparsity)
 
     metrics = qmc.get_metrics()
 
