@@ -1,16 +1,11 @@
 from pathlib import Path
 import os
-import sys
-import numpy as np
 from typing import Union
-import shutil
-import json
 
 from ..basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import get_git_commit, ShellScript
+from ..utils import get_git_commit
 
-from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
 
 PathType = Union[str, Path]
 
@@ -35,9 +30,9 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     """Kilosort2.5 Sorter object."""
 
     sorter_name: str = 'kilosort2_5'
+    compiled_name: str = 'ks2_5_compiled'
     kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
     requires_locations = False
-    docker_requires_gpu = True
 
     _default_params = {
         'detect_threshold': 6,
@@ -54,9 +49,9 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'ntbuff': 64,
         'nfilt_factor': 4,
         'NT': None,
+        'do_correction': True,
+        'wave_length': 61,
         'keep_good_only': False,
-        'total_memory': '500M',
-        'n_jobs_bin': 1
     }
 
     _params_description = {
@@ -73,10 +68,10 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'nPCs': "Number of PCA dimensions",
         'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
         'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
+        "do_correction": "If True drift registration is applied",
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
-        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
+        'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
     }
 
     sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
@@ -102,10 +97,14 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        if cls.check_compiled():
+            return True
         return check_if_installed(cls.kilosort2_5_path)
 
-    @staticmethod
-    def get_sorter_version():
+    @classmethod
+    def get_sorter_version(cls):
+        if cls.check_compiled():
+            return 'compiled'
         commit = get_git_commit(os.getenv('KILOSORT2_5_PATH', None))
         if commit is None:
             return 'unknown'
@@ -129,81 +128,83 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             p['NT'] = 64 * 1024 + p['ntbuff']
         else:
             p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
+        if p['wave_length'] % 2 != 1:
+            p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
+        if p['wave_length'] > 81:
+            p['wave_length'] = 81 # The wave_length must be less than 81.
         return p
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
-        p = params
+    def _get_specific_options(cls, ops, params):
+        """
+        Adds specific options for Kilosort2_5 in the ops dict and returns the final dict
 
-        source_dir = Path(Path(__file__).parent)
+        Parameters
+        ----------
+        ops: dict
+            options data
+        params: dict
+            Custom parameters dictionary for kilosort3
 
-        # prepare electrode positions for this group (only one group, the split is done in basesorter)
-        groups = [1] * recording.get_num_channels()
-        positions = np.array(recording.get_channel_locations())
-        if positions.shape[1] != 2:
-            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
+        Returns
+        ----------
+        ops: dict
+            Final ops data
+        """
+        # frequency for high pass filtering (300)
+        ops['fshigh'] = params['freq_min']
 
-        # save binary file
-        input_file_path = output_folder / 'recording.dat'
-        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
-                                                 dtype='int16', total_memory=p["total_memory"],
-                                                 n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
+        # minimum firing rate on a "good" channel (0 to skip)
+        ops['minfr_goodchannels'] = params['minfr_goodchannels']
 
-        if p['car']:
-            use_car = 1
-        else:
-            use_car = 0
+        # number of blocks to use for nonrigid registration
+        ops['nblocks'] = params['nblocks']
 
-        # read the template txt files
-        with (source_dir / 'kilosort2_5_master.m').open('r') as f:
-            kilosort2_5_master_txt = f.read()
-        with (source_dir / 'kilosort2_5_config.m').open('r') as f:
-            kilosort2_5_config_txt = f.read()
-        with (source_dir / 'kilosort2_5_channelmap.m').open('r') as f:
-            kilosort2_5_channelmap_txt = f.read()
+        # spatial smoothness constant for registration
+        ops['sig'] = params['sig']
 
-        # make substitutions in txt files
-        kilosort2_5_master_txt = kilosort2_5_master_txt.format(
-            kilosort2_5_path=str(Path(Kilosort2_5Sorter.kilosort2_5_path).absolute()),
-            output_folder=str(output_folder.absolute()),
-            channel_path=str((output_folder / 'kilosort2_5_channelmap.m').absolute()),
-            config_path=str((output_folder / 'kilosort2_5_config.m').absolute()),
-        )
+        projection_threshold = [float(pt) for pt in params['projection_threshold']]
+        # threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
+        ops['Th'] = projection_threshold
 
-        kilosort2_5_config_txt = kilosort2_5_config_txt.format(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            dat_file=str((output_folder / 'recording.dat').absolute()),
-            nblocks=p['nblocks'],
-            sig=p['sig'],
-            projection_threshold=p['projection_threshold'],
-            preclust_threshold=p['preclust_threshold'],
-            minfr_goodchannels=p['minfr_goodchannels'],
-            minFR=p['minFR'],
-            freq_min=p['freq_min'],
-            sigmaMask=p['sigmaMask'],
-            kilo_thresh=p['detect_threshold'],
-            use_car=use_car,
-            nPCs=int(p['nPCs']),
-            ntbuff=int(p['ntbuff']),
-            nfilt_factor=int(p['nfilt_factor']),
-            NT=int(p['NT'])
-        )
+        # how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
+        ops['lam'] = 10.0
 
-        kilosort2_5_channelmap_txt = kilosort2_5_channelmap_txt.format(
-            nchan=recording.get_num_channels(),
-            sample_rate=recording.get_sampling_frequency(),
-            xcoords=[p[0] for p in positions],
-            ycoords=[p[1] for p in positions],
-            kcoords=groups
-        )
+        # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
+        ops['AUCsplit'] = 0.9
 
-        for fname, txt in zip(['kilosort2_5_master.m', 'kilosort2_5_config.m',
-                               'kilosort2_5_channelmap.m'],
-                              [kilosort2_5_master_txt, kilosort2_5_config_txt,
-                               kilosort2_5_channelmap_txt]):
-            with (output_folder / fname).open('w') as f:
-                f.write(txt)
+        # minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
+        ops['minFR'] = params['minFR']
 
-        shutil.copy(str(source_dir.parent / 'utils' / 'writeNPY.m'), str(output_folder))
-        shutil.copy(str(source_dir.parent / 'utils' / 'constructNPYheader.m'), str(output_folder))
+        # number of samples to average over (annealed from first to second value)
+        ops['momentum'] = [20.0, 400.0]
+
+        # spatial constant in um for computing residual variance of spike
+        ops['sigmaMask'] = params['sigmaMask']
+
+        # threshold crossings for pre-clustering (in PCA projection space)
+        ops['ThPre'] = params['preclust_threshold']
+
+        ## danger, changing these settings can lead to fatal errors
+        # options for determining PCs
+        ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)
+        ops['reorder'] = 1.0  # whether to reorder batches for drift correction.
+        ops['nskip'] = 25.0  # how many batches to skip for determining spike PCs
+
+        ops['GPU'] = 1.0  # has to be 1, no CPU version yet, sorry
+        # ops['Nfilt'] = 1024 # max number of clusters
+        ops['nfilt_factor'] = params['nfilt_factor']  # max number of clusters per good channel (even temporary ones)
+        ops['ntbuff'] = params['ntbuff']  # samples of symmetrical buffer for whitening and spike detection
+        ops['NT'] = params['NT']  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
+        ops['whiteningRange'] = 32.0  # number of channels to use for whitening each channel
+        ops['nSkipCov'] = 25.0  # compute whitening matrix from every N-th batch
+        ops['scaleproc'] = 200.0  # int16 scaling of whitened data
+        ops['nPCs'] = params['nPCs']  # how many PCs to project the spikes into
+        ops['useRAM'] = 0.0  # not yet available
+        
+        # drift correction
+        ops['do_correction'] = params['do_correction']
+
+        ## option for wavelength
+        ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
+        return ops

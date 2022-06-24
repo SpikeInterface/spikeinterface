@@ -1,7 +1,7 @@
 """
 Implementation of utils class to manipulate segments with 2 different concept:
   * append_recordings / append_sortings / append_events
-  * concatenate_recordings / concatenate_sortings / concatenate_events
+  * concatenate_recordings
 
 
 Example:
@@ -14,14 +14,16 @@ import numpy as np
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
-from typing import List
+from typing import List, Union
+
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
     assert sampling_frequency_max_diff >= 0
     freq_0 = sampling_frequency_list[0]
     max_diff = max( abs(freq - freq_0) for freq in sampling_frequency_list)
     if max_diff > sampling_frequency_max_diff:
-        raise ValueError(f"Sampling frequencies across datasets differ by `{max_diff}`Hz which is more than `sampling_frequency_max_diff`={sampling_frequency_max_diff}Hz")
+        raise ValueError(f"Sampling frequencies across datasets differ by `{max_diff}`Hz which is more than "
+                         f"`sampling_frequency_max_diff`={sampling_frequency_max_diff}Hz")
     elif max_diff > 0:
         diff_sec = 24 * 3600 * max_diff / freq_0 
         import warnings
@@ -140,7 +142,8 @@ class ConcatenateSegmentRecording(BaseRecording):
                     assert d['t_start'] is None, ("ConcatenateSegmentRecording does not handle t_start. "
                                                   "Use ignore_times=True to ignore time information.")
                 parent_segments.append(parent_segment)
-        rec_seg = ProxyConcatenateRecordingSegment(parent_segments, one_rec.get_sampling_frequency(), ignore_times=ignore_times)
+        rec_seg = ProxyConcatenateRecordingSegment(parent_segments, one_rec.get_sampling_frequency(), 
+                                                   ignore_times=ignore_times)
         self.add_recording_segment(rec_seg)
 
         self._kwargs = {'recording_list': [rec.to_dict() for rec in recording_list],
@@ -216,6 +219,67 @@ def concatenate_recordings(*args, **kwargs):
 
 
 concatenate_recordings.__doc__ == ConcatenateSegmentRecording.__doc__
+
+
+class SelectSegmentRecording(BaseRecording):
+    """
+    Return a new recording with a single segment from a multi-segment recording.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The multi-segment recording
+    segment_indices : list of int
+        The segment indices to select
+    """
+
+    def __init__(self, recording: BaseRecording, segment_indices: Union[int, List[int]]):
+        BaseRecording.__init__(self, recording.get_sampling_frequency(), 
+                               recording.channel_ids, recording.get_dtype())
+        recording.copy_metadata(self)
+        
+        if isinstance(segment_indices, int):
+            segment_indices = [segment_indices]
+        
+        num_segments = recording.get_num_segments()
+        assert all(0 <= s < num_segments for s in segment_indices), \
+            f"'segment_index' must be between 0 and {num_segments - 1}"
+
+        for segment_index in segment_indices:
+            rec_seg = recording._recording_segments[segment_index]
+            self.add_recording_segment(rec_seg)
+
+        self._kwargs = {'recording': recording.to_dict(),
+                        'segment_indices': [int(s) for s in segment_indices]}
+        
+
+def split_recording(recording: BaseRecording):
+    """
+    Return a list of mono-segment recordings from a multi-segment recording.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The multi-segment recording
+
+    Returns
+    -------
+    recording_list
+        A list of mono-segment recordings
+    """
+    recording_list = []
+    for segment_index in range(recording.get_num_segments()):
+        rec_mono = SelectSegmentRecording(
+            recording=recording, segment_indices=[segment_index])
+        recording_list.append(rec_mono)
+    return recording_list
+
+
+def select_segment_recording(*args, **kwargs):
+    return SelectSegmentRecording(*args, **kwargs)
+
+
+select_segment_recording.__doc__ = SelectSegmentRecording.__doc__
 
 
 class AppendSegmentSorting(BaseSorting):

@@ -49,18 +49,10 @@ def localize_units(waveform_extractor, method='center_of_mass', output='numpy', 
         raise NotImplementedError
 
 
-def estimate_distance_error(vec, wf_ptp, local_contact_locations):
-    # vec dims ar (x, y, z amplitude_factor)
-    # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
-    dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2])**2).sum(axis=1) + vec[2]**2)
-    ptp_estimated = vec[3] / dist
-    err = wf_ptp - ptp_estimated
-    return err
 
 
-def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um):
+def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um, initial_z = 20):
     # constant for initial guess and bounds
-    initial_z = 20
 
     ind_max = np.argmax(wf_ptp)
     max_ptp = wf_ptp[ind_max]
@@ -81,34 +73,75 @@ def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_
     return x0, bounds
 
 
-def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distance_um=1000, return_alpha=False):
+# ---- 
+# optimizer "least_square"
+
+def estimate_distance_error(vec, wf_ptp, local_contact_locations):
+    # vec dims ar (x, y, z amplitude_factor)
+    # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
+    dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2])**2).sum(axis=1) + vec[2]**2)
+    ptp_estimated = vec[3] / dist
+    err = wf_ptp - ptp_estimated
+    return err
+
+# ---- 
+# optimizer "minimize_with_log_penality"
+def ptp_at(x, y, z, alpha, local_contact_locations):
+    return alpha / np.sqrt(
+        np.square(x - local_contact_locations[:, 0])
+        + np.square(y - local_contact_locations[:, 1])
+        + np.square(z)
+    )
+
+def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxptp):
+    x, y, z = vec
+    q = ptp_at(x, y, z, 1.0, local_contact_locations)
+    alpha = (q * wf_ptp / maxptp).sum() / (q * q).sum()
+    err = np.square(wf_ptp / maxptp - ptp_at(x, y, z, alpha, local_contact_locations)).mean() - np.log1p(10.0 * z) / 10000.0
+    return err
+
+
+def compute_monopolar_triangulation(waveform_extractor, optimizer='least_square', radius_um=50, max_distance_um=1000,
+        
+        return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
-    This method is from Julien Boussard
+    This method is from Julien Boussard, Erdem Varol and Charlie Windolf
     https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1
+    
+    There are 2 implementations of the 2 optimizer variants:
+      * https://github.com/int-brain-lab/spikes_localization_registration/blob/main/localization_pipeline/localizer.py
+      * https://github.com/cwindolf/spike-psvae/blob/main/spike_psvae/localization.py
 
     Important note about axis:
       * x/y are dimmension on the probe plane (dim0, dim1)
       * y is the depth by convention
-      * z it the orthogonal axis to the probe plan
+      * z it the orthogonal axis to the probe plan (dim2)
+    
+    Code from Erdem, Julien and Charlie do not use the same convention!!!
 
 
     Parameters
     ----------
     waveform_extractor:WaveformExtractor
         A waveform extractor object
+    method: str  ('least_square', 'minimize_with_log_penality')
+       2 variants of the method
     radius_um: float
         For channel sparsiry
     max_distance_um: float
         to make bounddary in x, y, z and also for alpha
-
+    return_alpha: bool default False
+        Return or not the alpha value
+    
     Returns
     -------
     unit_location: np.array
         3d or 4d, x, y, z, alpha
         alpha is the amplitude at source estimation
     '''
-
+    assert optimizer in ('least_square', 'minimize_with_log_penality')
+    
     unit_ids = waveform_extractor.sorting.unit_ids
 
     recording = waveform_extractor.recording
@@ -132,13 +165,25 @@ def compute_monopolar_triangulation(waveform_extractor, radius_um=50, max_distan
 
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
-        x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
-
         # run optimization
-        args = (wf_ptp, local_contact_locations)
-        output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
-
-        unit_location[i] = tuple(output['x'])
+        if optimizer == 'least_square':
+            x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
+            args = (wf_ptp, local_contact_locations)
+            output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args = args)
+            unit_location[i] = tuple(output['x'])
+        elif optimizer == 'minimize_with_log_penality':
+            x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
+            x0 = x0[:3]
+            bounds = [(bounds[0][i], bounds[1][i]) for i in range(3)]
+            maxptp = wf_ptp.max()
+            args = (wf_ptp, local_contact_locations, maxptp)
+            output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
+            unit_location[i][:3] = tuple(output['x'])
+            # final alpha
+            q = ptp_at(*output['x'], 1.0, local_contact_locations)
+            unit_location[i][3] = (wf_ptp * q).sum() / np.square(q).sum()            
+        
+        
 
     if not return_alpha:
         unit_location = unit_location[:, :3]

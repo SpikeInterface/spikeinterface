@@ -1,8 +1,8 @@
 '''
-SortingExtractor objects
-========================
+Sorting objects
+===============
 
-The :code:`SortingExtractor` is the basic class for handling spike sorted data.
+The :py:class:`~spikeinterface.core.BaseSorting` is the basic class for handling spike sorted data.
 Here is how it works.
 
 A SortingExtractor handles:
@@ -18,7 +18,7 @@ import spikeinterface.extractors as se
 
 ##############################################################################
 # We will create a :code:`SortingExtractor` object from scratch using :code:`numpy` and the
-# :code:`NumpySorting`
+# :py:class:`~spikeinterface.core.NumpySorting`
 #
 # Let's define the properties of the dataset:
 
@@ -38,7 +38,7 @@ times1 = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
 labels1 = np.random.randint(1, num_units + 1, size=num_spikes)
 
 ##############################################################################
-# And instantiate a :code:`NumpySorting` object:
+# And instantiate a :py:class:`~spikeinterface.core.NumpySorting` object:
 
 sorting = se.NumpySorting.from_times_labels([times0, times1], [labels0, labels1], sampling_frequency)
 print(sorting)

@@ -82,7 +82,7 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'neuroscope/test1/test1.xml',
     ]
-    
+
 
 class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeSortingExtractor
@@ -209,25 +209,41 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class AlphaOmegaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AlphaOmegaRecordingExtractor
+    downloads = ["alphaomega"]
+    entities = [
+        "alphaomega/mpx_map_version4",
+    ]
+
+
+class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AlphaOmegaEventExtractor
+    downloads = ["alphaomega"]
+    entities = [
+        "alphaomega/mpx_map_version4",
+    ]
+
+
 if __name__ == '__main__':
     pass
-    # test = MearecRecordingTest()
+    # test = MearecRecordingTest()
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
-    # test = OpenEphysBinaryRecordingTest()
+    # test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
     # test = NeuralynxRecordingTest()
-    # test = BlackrockRecordingTest()
-    # test = MCSRawRecordingTest()
+    # test = BlackrockRecordingTest()
+    test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
     # test = CedRecordingTest()
     # test = MaxwellRecordingTest()
     # test = SpikeGadgetsRecordingTest()
 
-    # test.setUp()
-    # test.test_open()
+    test.setUp()
+    test.test_open()

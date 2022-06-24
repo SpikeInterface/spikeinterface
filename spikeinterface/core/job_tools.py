@@ -13,11 +13,11 @@ from concurrent.futures import ProcessPoolExecutor
 
 _shared_job_kwargs_doc = \
     """**job_kwargs: keyword arguments for parallel processing:
-            * chunk_size or chunk_memory, or total_memory
+            * chunk_duration or chunk_size or chunk_memory or total_memory
                 - chunk_size: int
-                    number of samples per chunk
+                    Number of samples per chunk
                 - chunk_memory: str
-                    Memory usage for each job (e.g. '100M', '1G'
+                    Memory usage for each job (e.g. '100M', '1G')
                 - total_memory: str
                     Total memory usage (e.g. '500M', '2G')
                 - chunk_duration : str or float or None
@@ -27,6 +27,9 @@ _shared_job_kwargs_doc = \
             * progress_bar: bool
                 If True, a progress bar is printed
     """
+    
+job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 'verbose']
+
 
 
 def divide_segment_into_chunks(num_frames, chunk_size):

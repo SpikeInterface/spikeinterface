@@ -2,12 +2,33 @@ from pathlib import Path
 import os
 import sys
 import datetime
+from copy import deepcopy
 
 import numpy as np
 from tqdm import tqdm
+import inspect
 
 from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
     _shared_job_kwargs_doc
+    
+    
+def copy_signature(source_fct):
+    def copy(target_fct):
+        target_fct.__signature__ = inspect.signature(source_fct)
+        return target_fct
+    return copy
+
+
+def define_function_from_class(source_class, name):
+
+    @copy_signature(source_class)
+    def reader_func(*args, **kwargs):
+        return source_class(*args, **kwargs)
+
+    reader_func.__doc__ = source_class.__doc__
+    reader_func.__name__ = name
+
+    return reader_func
 
 
 def read_python(path):
@@ -395,7 +416,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, **job_kwargs):
     if n_jobs > 1:
         init_args = (recording.to_dict(), None, shm_names, shapes, dtype)
     else:
-        init_args = (recording.to_dict(), arrays, None, None, dtype)
+        init_args = (recording, arrays, None, None, dtype)
 
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_memory_recording', **job_kwargs)
@@ -518,9 +539,10 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     return save_path
 
 
-def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=None,
-                         verbose=False, compressor=None,
-                         filters=None, **job_kwargs):
+def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options, 
+                         dataset_paths, channel_chunk_size=None, dtype=None,
+                         compressor=None, filters=None, 
+                         verbose=False, **job_kwargs):
     '''
     Save the trace of a recording extractor in several zarr format.
 
@@ -532,16 +554,24 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=N
     ----------
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
-    file_path: str
-        The path to the file.
+    zarr_root: zarr.Group
+        The zarr root
+    zarr_path: str or Path
+        The path to the zarr file
+    storage_options: dict or None
+        Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+    dataset_paths: list
+        List of paths to traces datasets in the zarr group
+    channel_chunk_size: int or None
+        Channels per chunk. Default None (chunking in time only)
     dtype: dtype
         Type of the saved data. Default float32.
-    add_file_extension: bool
-        If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
+    compressor: zarr compressor or None
+        Zarr compressor
+    filters: list
+        List of zarr filters
     verbose: bool
         If True, output is verbose (when chunks are used)
-    byte_offset: int
-        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     {}
     '''
     assert dataset_paths is not None, "Provide 'file_path'"
@@ -563,7 +593,8 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=N
         dset_name = dataset_paths[segment_index]
         shape = (num_frames, num_channels)
         _ = zarr_root.create_dataset(name=dset_name, shape=shape,
-                                     chunks=(chunk_size, None), dtype=dtype,
+                                     chunks=(chunk_size, channel_chunk_size), 
+                                     dtype=dtype,
                                      filters=filters,
                                      compressor=compressor,)
                                 # synchronizer=zarr.ThreadSynchronizer())
@@ -572,16 +603,16 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, dataset_paths, dtype=N
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     if n_jobs == 1:
-        init_args = (recording, zarr_path, dataset_paths, dtype)
+        init_args = (recording, zarr_path, storage_options, dataset_paths, dtype)
     else:
-        init_args = (recording.to_dict(), zarr_path, dataset_paths, dtype)
+        init_args = (recording.to_dict(), zarr_path, storage_options, dataset_paths, dtype)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_zarr_recording', **job_kwargs)
     executor.run()
 
 
 # used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
+def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtype):
     import zarr
 
     # create a local dict per worker
@@ -593,7 +624,16 @@ def _init_zarr_worker(recording, zarr_path, dataset_paths, dtype):
         worker_ctx['recording'] = recording
 
     # reload root and datasets
-    root = zarr.open(str(zarr_path), mode="r+")
+    if storage_options is None:
+        if isinstance(zarr_path, str):
+            zarr_path_init = zarr_path
+            zarr_path = Path(zarr_path)
+        else:
+            zarr_path_init = str(zarr_path)
+    else:
+        zarr_path_init = zarr_path
+
+    root = zarr.open(zarr_path_init, mode="r+", storage_options=storage_options)
     zarr_datasets = []
     for dset_name in dataset_paths:
         z = root[dset_name]
@@ -616,3 +656,72 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
+
+
+
+def is_dict_extractor(d):
+    """
+    Check if a dict describe an extractor.
+    """
+    if not isinstance(d, dict):
+        return False
+    is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
+    return is_extractor
+
+
+def recursive_path_modifier(d, func, target='path', copy=True):
+    """
+    Generic function for recursive modification of paths in an extractor dict.
+    A recording can be nested and this function explores the dictionary recursively
+    to find the parent file or folder paths.
+
+    Useful for :
+      * relative/absolute path change
+      * docker rebase path change
+
+    Modification is inplace with an optional copy.
+
+    Parameters
+    ----------
+    d : dict
+        Extractor dictionary
+    func : function
+        Function to apply to the path. It must take a path as input and return a path
+    target : str, optional
+        String to match to dictionary key, by default 'path'
+    copy : bool, optional
+        If True the original dictionary is deep copied, by default True (at first call)
+
+    Returns
+    -------
+    dict
+        Modified dictionary
+    """
+    if copy:
+        dc = deepcopy(d)
+    else:
+        dc = d
+    
+    if "kwargs" in dc.keys():
+        # handle nested
+        kwargs = dc["kwargs"]
+        nested_extractor_dict = None
+        for k, v in kwargs.items():
+            if isinstance(v, dict) and is_dict_extractor(v):
+                nested_extractor_dict = v
+        if nested_extractor_dict is None:
+            recursive_path_modifier(kwargs, func, copy=False)
+        else:
+            recursive_path_modifier(nested_extractor_dict, func, copy=False)
+        return dc
+    else:
+        for k, v in d.items():
+            if target in k:
+                # paths can be str or list of str
+                if isinstance(v, str):
+                    dc[k] =func(v)
+                elif isinstance(v, list):
+                    dc[k] = [func(e) for e in v]
+                else:
+                    raise ValueError(
+                        f'{k} key for path  must be str or list[str]')

@@ -1,6 +1,5 @@
-from typing import List, Union
+from typing import Iterable, List, Union
 from pathlib import Path
-import warnings
 
 import numpy as np
 
@@ -8,6 +7,7 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 
 from .base import BaseExtractor, BaseSegment
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
+from .job_tools import job_keys
 
 from warnings import warn
 
@@ -91,7 +91,7 @@ class BaseRecording(BaseExtractor):
                    segment_index: Union[int, None] = None,
                    start_frame: Union[int, None] = None,
                    end_frame: Union[int, None] = None,
-                   channel_ids: Union[List, None] = None,
+                   channel_ids: Union[Iterable, None] = None,
                    order: Union[str, None] = None,
                    return_scaled=False,
                    ):
@@ -161,11 +161,9 @@ class BaseRecording(BaseExtractor):
         rs.time_vector = times.astype('float64')
 
         if with_warning:
-            warnings.warn('Setting times with Recording.set_times() is not recommended because '
+            warn('Setting times with Recording.set_times() is not recommended because '
                           'times are not always propagated to across preprocessing'
                           'Use use this carefully!')
-
-    _job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'progress_bar', 'verbose']
 
     def _save(self, format='binary', **save_kwargs):
         """
@@ -193,7 +191,7 @@ class BaseRecording(BaseExtractor):
             if dtype is None:
                 dtype = self.get_dtype()
 
-            job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
+            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
@@ -204,7 +202,7 @@ class BaseRecording(BaseExtractor):
                                               offset_to_uV=self.get_channel_offsets())
 
         elif format == 'memory':
-            job_kwargs = {k: save_kwargs[k] for k in self._job_keys if k in save_kwargs}
+            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
             from .numpyextractors import NumpyRecording
 
@@ -212,8 +210,12 @@ class BaseRecording(BaseExtractor):
                                     channel_ids=self.channel_ids)
 
         elif format == 'zarr':
+            from .zarrrecordingextractor import get_default_zarr_compressor, ZarrRecordingExtractor
+            
             zarr_root = save_kwargs.get('zarr_root', None)
             zarr_path = save_kwargs.get('zarr_path', None)
+            storage_options = save_kwargs.get('storage_options', None)
+            channel_chunk_size = save_kwargs.get('channel_chunk_size', None)
 
             zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
             zarr_root.attrs["num_segments"] = int(self.get_num_segments())
@@ -224,13 +226,21 @@ class BaseRecording(BaseExtractor):
             dtype = save_kwargs.get('dtype', None)
             if dtype is None:
                 dtype = self.get_dtype()
+            
             compressor = save_kwargs.get('compressor', None)
             filters = save_kwargs.get('filters', None)
-
+            
+            if compressor is None:
+                compressor = get_default_zarr_compressor()
+                print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
+                      f"'compressor' argument")
+            
             job_kwargs = {k: save_kwargs[k]
-                          for k in self._job_keys if k in save_kwargs}
-            write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, dataset_paths=dataset_paths,
-                                 dtype=dtype, compressor=compressor, filters=filters, **job_kwargs)
+                          for k in job_keys if k in save_kwargs}
+            write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, storage_options=storage_options,
+                                 channel_chunk_size=channel_chunk_size, dataset_paths=dataset_paths, dtype=dtype, 
+                                 compressor=compressor, filters=filters,
+                                 **job_kwargs)
 
             # save probe
             if self.get_property('contact_vector') is not None:
@@ -253,8 +263,7 @@ class BaseRecording(BaseExtractor):
                 zarr_root.create_dataset(name="t_starts", data=t_starts,
                                          compressor=None)
 
-            from .zarrrecordingextractor import ZarrRecordingExtractor
-            cached = ZarrRecordingExtractor(zarr_path)
+            cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
@@ -379,7 +388,7 @@ class BaseRecording(BaseExtractor):
         assert all(probe.device_channel_indices is not None for probe in probegroup.probes), \
             'Probe must have device_channel_indices'
 
-        # this is a vector with complex fileds (dataframe like) that handle all contact attr
+        # this is a vector with complex fields (dataframe like) that handle all contact attr
         arr = probegroup.to_numpy(complete=True)
 
         # keep only connected contact ( != -1)
@@ -392,7 +401,7 @@ class BaseRecording(BaseExtractor):
         order = np.argsort(inds)
         inds = inds[order]
         # check
-        if np.max(inds) >= self.get_num_channels():
+        if np.max(list(inds) + [0]) >= self.get_num_channels():
             raise ValueError('The given Probe have "device_channel_indices" that do not match channel count')
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
@@ -490,8 +499,12 @@ class BaseRecording(BaseExtractor):
             If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
         """
         ndim = locations.shape[1]
-        probe = Probe(ndim=ndim)
-        probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
+        probe = Probe(ndim=2)
+        if ndim == 3:
+            locations_2d = select_axes(locations, axes)
+        else:
+            locations_2d = locations
+        probe.set_contacts(locations_2d, shapes=shape, shape_params=shape_params)
         probe.set_device_channel_indices(np.arange(self.get_num_channels()))
 
         if ndim == 3:
@@ -595,6 +608,12 @@ class BaseRecording(BaseExtractor):
         from spikeinterface import ChannelSliceRecording
         sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
+    
+    def remove_channels(self, remove_channel_ids):
+        from spikeinterface import ChannelSliceRecording
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
+        sub_recording = ChannelSliceRecording(self, new_channel_ids)
+        return sub_recording
 
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceRecording
@@ -621,6 +640,23 @@ class BaseRecording(BaseExtractor):
             elif outputs == 'dict':
                 recordings[value] = subrec
         return recordings
+    
+    def select_segments(self, segment_indices):
+        """
+        Return a recording with the segments specified by 'segment_indices'
+
+        Parameters
+        ----------
+        segment_indices : list of int
+            List of segment indices to keep in the returned recording
+
+        Returns
+        -------
+        SelectSegmentRecording
+            The recording with the selected segments
+        """
+        from .segmentutils import SelectSegmentRecording
+        return SelectSegmentRecording(self, segment_indices=segment_indices)
 
     def planarize(self, axes: str = "xy"):
         """

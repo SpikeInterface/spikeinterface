@@ -36,6 +36,9 @@ class UnitWaveformsWidget(BaseWidget):
     unit_colors: None or dict
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used.
+    unit_selected_waveforms: None or dict
+        A dict key is unit_id and value is the subset of waveforms indices that should be 
+        be displayed
     show_all_channels: bool
         Show the whole probe if True, or only selected channels if False
         The axis to be used. If not given an axis is created
@@ -47,7 +50,7 @@ class UnitWaveformsWidget(BaseWidget):
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, max_channels=None, radius_um=None,
-                 ncols=5, axes=None, lw=2, axis_equal=False,
+                 ncols=5, axes=None, lw=2, axis_equal=False, unit_selected_waveforms=None,
                  set_title=True
                  ):
 
@@ -79,6 +82,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         self.radius_um = radius_um
         self.max_channels = max_channels
+        self.unit_selected_waveforms = unit_selected_waveforms
 
         # TODO
         self._lw = lw
@@ -130,7 +134,10 @@ class UnitWaveformsWidget(BaseWidget):
             # plot waveforms
             if self._plot_waveforms:
                 wfs = we.get_waveforms(unit_id)
-                wfs = wfs[:, :, chan_inds]
+                if self.unit_selected_waveforms is not None:
+                    wfs = wfs[self.unit_selected_waveforms[unit_id], :, chan_inds]
+                else:
+                    wfs = wfs[:, :, chan_inds]
                 wfs = wfs * y_scale + y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
                 ax.plot(xvectors_flat, wfs_flat, lw=1, alpha=0.3, color=color)

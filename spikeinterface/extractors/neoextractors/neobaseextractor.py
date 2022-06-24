@@ -2,6 +2,7 @@ import numpy as np
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
 from typing import Union, List
+from copy import copy
 import neo
 
 
@@ -21,16 +22,17 @@ class _NeoBaseExtractor:
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
-    def __init__(self, stream_id=None, **neo_kwargs):
+    def __init__(self, stream_id=None, all_annotations=False, **neo_kwargs):
 
         _NeoBaseExtractor.__init__(self, **neo_kwargs)
 
-        # check channel
-        # TODO propose a meachanisim to select the appropriate channel groups
-        # in neo one channel group have the same dtype/sampling_rate/group_id
-        # ~ channel_indexes_list = self.neo_reader.get_group_signal_channel_indexes()
+        kwargs = dict(all_annotations=all_annotations)
+        if stream_id is not None:
+            kwargs['stream_id'] = stream_id
+
         stream_channels = self.neo_reader.header['signal_streams']
         stream_ids = stream_channels['id']
+
         if stream_id is None:
             if stream_channels.size > 1:
                 raise ValueError(f'This reader have several streams({stream_ids}), specify it with stream_id=')
@@ -53,6 +55,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
         dtype = signal_channels['dtype'][0]
         BaseRecording.__init__(self, sampling_frequency, chan_ids, dtype)
+        self.extra_requirements.append('neo')
 
         # find the gain to uV
         gains = signal_channels['gain']
@@ -76,12 +79,29 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property('gain_to_uV', final_gains)
         self.set_property('offset_to_uV', final_offsets)
         self.set_property('channel_name', signal_channels["name"])
-
+        
+        if all_annotations:
+            block_ann = self.neo_reader.raw_annotations['blocks'][0]
+            # in neo annotation are for every segment!
+            # Here we take only the first segment to annotate the object
+            # Generally annotation for multi segment are duplicated
+            seg_ann = block_ann['segments'][0]
+            sig_ann = seg_ann['signals'][self.stream_index]
+            
+            # scalar annotations
+            for k, v in sig_ann.items():
+                if not k.startswith('__'):
+                    self.annotate(k=v)
+            # vector array_annotations are channel properties
+            for k, values in sig_ann['__array_annotations__'].items():
+                self.set_property(k, values)
+            
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
             rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index)
             self.add_recording_segment(rec_segment)
-
+        
+        self._kwargs.update(kwargs)
 
 class NeoRecordingSegment(BaseRecordingSegment):
     def __init__(self, neo_reader, segment_index, stream_index):

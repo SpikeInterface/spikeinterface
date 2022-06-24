@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
@@ -39,6 +40,8 @@ class HerdingspikesSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))
         self._kwargs = {'file_path': str(Path(file_path).absolute()), 'load_unit_info': load_unit_info}
+
+        self.extra_requirements.append('h5py')
 
     def load_unit_info(self):
         # TODO
@@ -126,9 +129,4 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
     """
 
 
-def read_herdingspikes(*args, **kwargs):
-    sorting = HerdingspikesSortingExtractor(*args, **kwargs)
-    return sorting
-
-
-read_herdingspikes.__doc__ = HerdingspikesSortingExtractor.__doc__
+read_herdingspikes = define_function_from_class(source_class=HerdingspikesSortingExtractor, name="read_herdingspikes")

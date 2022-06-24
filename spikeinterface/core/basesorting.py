@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Optional
 import numpy as np
 import warnings
 
@@ -48,13 +48,14 @@ class BaseSorting(BaseExtractor):
     def get_num_segments(self):
         return len(self._sorting_segments)
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             segment_index: Union[int, None] = None,
-                             start_frame: Union[int, None] = None,
-                             end_frame: Union[int, None] = None,
-                             return_times: bool = False
-                             ):
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        segment_index: Union[int, None] = None,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+        return_times: bool = False,
+    ):
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
         spike_train = segment.get_unit_spike_train(
@@ -119,8 +120,9 @@ class BaseSorting(BaseExtractor):
                     "The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
         else:
-            raise ValueError(f'format {format} not supported')
-
+            from .numpyextractors import NumpySorting
+            cached = NumpySorting.from_extractor(self)
+            
         return cached
 
     def get_unit_property(self, unit_id, key):
@@ -197,23 +199,39 @@ class BaseSorting(BaseExtractor):
             spikes.append((spike_times, spike_labels))
         return spikes
 
-    def to_spike_vector(self):
+    def to_spike_vector(self, extremum_channel_inds=None):
         """
         Construct a unique structured numpy vector concatenating all spikes 
         with several fields: sample_ind, unit_index, segment_index.
 
         See also `get_all_spike_trains()`
+
+        Parameters
+        ----------
+        extremum_channel_inds: None or dict
+            If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_ind'.
+            This can be convinient for computing spikes postion after sorter.
+            
+            This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
         
         Returns
         -------
         spikes: np.array
             Structured numpy array ('sample_ind', 'unit_index', 'segment_index') with all spikes
+            Or ('sample_ind', 'unit_index', 'segment_index', 'channel_ind') if extremum_channel_inds
+            is given
+            
         """
         spikes_ = self.get_all_spike_trains(outputs='unit_index')
 
         n = np.sum([e[0].size for e in spikes_])
         spike_dtype = [('sample_ind', 'int64'), ('unit_ind',
                                                  'int64'), ('segment_ind', 'int64')]
+        
+        if extremum_channel_inds is not None:
+            spike_dtype += [('channel_ind', 'int64')]
+        
+        
         spikes = np.zeros(n, dtype=spike_dtype)
 
         pos = 0
@@ -223,6 +241,13 @@ class BaseSorting(BaseExtractor):
             spikes[pos:pos+n]['unit_ind'] = spike_labels
             spikes[pos:pos+n]['segment_ind'] = segment_index
             pos += n
+        
+
+        if extremum_channel_inds is not None:
+            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+            # vector way
+            spikes['channel_ind'] = ext_channel_inds[spikes['unit_ind']]
+
 
         return spikes
 
@@ -235,10 +260,24 @@ class BaseSortingSegment(BaseSegment):
     def __init__(self):
         BaseSegment.__init__(self)
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             start_frame: Union[int, None] = None,
-                             end_frame: Union[int, None] = None,
-                             ) -> np.ndarray:
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame: Optional[int] = None,
+        end_frame: Optional[int] = None,
+    ) -> np.ndarray:
+        """Get the spike train for a unit.
+
+        Parameters
+        ----------
+        unit_id
+        start_frame: int, optional
+        end_frame: int, optional
+
+        Returns
+        -------
+        np.ndarray
+
+        """
         # must be implemented in subclass
         raise NotImplementedError

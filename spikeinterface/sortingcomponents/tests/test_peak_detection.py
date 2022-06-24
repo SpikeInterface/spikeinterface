@@ -2,9 +2,9 @@ import pytest
 import numpy as np
 
 from spikeinterface import download_dataset, BaseSorting
-from spikeinterface.sortingcomponents import detect_peaks
-
 from spikeinterface.extractors import MEArecRecordingExtractor
+
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 
 def test_detect_peaks():

@@ -23,18 +23,8 @@ class ZarrRecordingExtractor(BaseRecording):
     ----------
     root_path: str or Path
         Path to the zarr root file
-    sampling_frequency: float
-        The sampling frequency
-    t_starts: None or list of float
-        Times in seconds of the first sample for each segment
-    channel_ids: list (optional)
-        A list of channel ids
-    gain_to_uV: float or array-like (optional)
-        The gain to apply to the traces
-    offset_to_uV: float or array-like
-        The offset to apply to the traces
-    is_filtered: bool or None
-        If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+    storage_options: dict or None
+        Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
 
     Returns
     -------
@@ -48,10 +38,22 @@ class ZarrRecordingExtractor(BaseRecording):
     # error message when not installed
     installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
 
-    def __init__(self, root_path: Union[Path, str]):
+    def __init__(self, root_path: Union[Path, str], storage_options=None):
         assert self.installed, self.installation_mesg
-        root_path = Path(root_path)
-        self._root = zarr.open(str(root_path), mode="r")
+        
+        if storage_options is None:
+            if isinstance(root_path, str):
+                root_path_init = root_path
+                root_path = Path(root_path)
+            else:
+                root_path_init = str(root_path)
+            root_path_kwarg = str(root_path.absolute())
+        else:
+            root_path_init = root_path
+            root_path_kwarg = root_path_init
+        
+        self._root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
+
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
         assert "channel_ids" in self._root.keys(), "'channel_ids' dataset not found!"
@@ -69,6 +71,9 @@ class ZarrRecordingExtractor(BaseRecording):
         dtype = np.dtype(dtype)
         t_starts = self._root.get("t_starts", None)
 
+        total_nbytes = 0
+        total_nbytes_stored = 0
+        cr_by_segment = {}
         for segment_index in range(num_segments):
             trace_name = f"traces_seg{segment_index}"
             assert len(channel_ids) == self._root[trace_name].shape[1], \
@@ -89,6 +94,13 @@ class ZarrRecordingExtractor(BaseRecording):
                 time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
+            
+            nbytes_segment = self._root[trace_name].nbytes
+            nbytes_stored_segment = self._root[trace_name].nbytes_stored
+            cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
+            
+            total_nbytes += nbytes_segment
+            total_nbytes_stored += nbytes_stored_segment
             self.add_recording_segment(rec_segment)
 
         # load probe
@@ -108,8 +120,12 @@ class ZarrRecordingExtractor(BaseRecording):
         annotations = self._root.attrs.get("annotations", None)
         if annotations is not None:
             self.annotate(**annotations)
+        # annotate compression ratios
+        cr = total_nbytes / total_nbytes_stored
+        self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
         
-        self._kwargs = {'root_path': str(root_path.absolute())}
+        self._kwargs = {'root_path': root_path_kwarg,
+                        'storage_options': storage_options}
 
 
 class ZarrRecordingSegment(BaseRecordingSegment):

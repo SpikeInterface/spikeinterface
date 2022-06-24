@@ -3,7 +3,7 @@ import os
 import numpy as np
 import sys
 
-from ..basesorter import BaseSorter
+from ..basesorter import BaseSorter, get_job_kwargs
 from ..utils import ShellScript
 
 from spikeinterface.core import load_extractor
@@ -17,7 +17,8 @@ class YassSorter(BaseSorter):
 
     sorter_name = 'yass'
     requires_locations = False
-    docker_requires_gpu = True
+    gpu_capability = 'nvidia-required'
+    requires_binary_data = True
 
     # #################################################
 
@@ -57,10 +58,6 @@ class YassSorter(BaseSorter):
         'neuron_discover': 0,  # recluster during deconvolution and search for new stable neurons;
         'template_update_time': 300,  # if templates being updated, time (in sec) of segment in which to search for
         # new clusters
-
-        # Defatul params for converting raw data to required formats.
-        'total_memory': '500M',  #
-        'n_jobs_bin': 1  # number of cores?
     }
 
     _params_description = {
@@ -91,11 +88,6 @@ class YassSorter(BaseSorter):
         'update_templates': '0; update templates during deconvolution step 1; do not update 0',
         'neuron_discover': '0, recluster during deconvolution and search for new stable neurons: 1; do not recluster 0',
         'template_update_time': '300; if reculstiner on, time (in sec) of segment in which to search for new clusters ',
-
-        # Default params for converting raw data to required formats.
-        'total_memory': '500M; chunk of data to be processed by a single core',
-        'n_jobs_bin': '1; number of cores to do data conversion',
-
     }
 
     # #################################################
@@ -168,8 +160,7 @@ class YassSorter(BaseSorter):
         dtype = 'int16'  # HARD CODE THIS FOR YASS
         input_file_path = output_folder / 'data.bin'
         BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
-                                                 dtype=dtype, verbose=False,
-                                                 total_memory=p["total_memory"], n_jobs=p["n_jobs_bin"])
+                                                 dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
 
         retrain = False
         if params['neural_nets_path'] is None:

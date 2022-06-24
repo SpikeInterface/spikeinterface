@@ -13,14 +13,12 @@ class ISIDistributionWidget(BaseWidget):
         The sorting extractor object
     unit_ids: list
         List of unit ids
-    bins: int
-        Number of bins
-    window: float
-        Window size in s
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
+    bins_ms: int
+        Bin size in ms
+    window_ms: float
+        Window size in ms
+    ncols: int
+        Number of maximum columns (default 5)
     axes: list of matplotlib axes
         The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
         and figure parameters are ignored

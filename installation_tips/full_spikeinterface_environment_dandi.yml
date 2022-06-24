@@ -1,0 +1,39 @@
+name: si_env_py39
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip>=21.0
+  - mamba
+  # numpy 1.22 break numba which break tridesclous
+  - numpy==1.21
+  - joblib
+  - tqdm
+  - matplotlib
+  - h5py
+  - pandas
+  - scikit-learn
+  - networkx
+  - pybind11
+  - loky
+  - hdbscan
+  - numba
+  - jupyter
+  - mpi4py
+  - cxx-compiler
+  - libxcb
+  - pyqt=5
+  - pyqtgraph
+  - htop
+  - pip:
+    - ephyviewer
+    - neo>=0.10.2
+    - elephant>=0.10.0
+    - probeinterface
+    - MEArec>=1.7.1
+    - spikeinterface[full]
+    - spikeinterface-gui
+    - tridesclous>=1.6.5
+    - spyking-circus>=1.1.0
+    - phy==2.0b5

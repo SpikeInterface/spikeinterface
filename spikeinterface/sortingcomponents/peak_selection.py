@@ -8,11 +8,11 @@ import scipy
 def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
     """Method to subsample all the found peaks before clustering
-
     Parameters
     ----------
     peaks: the peaks that have been found
-    method: 'uniform', 'smart_sampling_amplitudes', 'smart_sampling_locations'
+    method: 'uniform', 'uniform_locations', 'smart_sampling_amplitudes', 'smart_sampling_locations', 
+    'smart_sampling_locations_and_time'
         Method to use. Options:
             * 'uniform': a random subset is selected from all the peaks, on a per channel basis by default
             * 'uniform_locations': a random subset is selected from all the peaks, to cover uniformly the space
@@ -20,6 +20,8 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
                 based on peak amplitudes, on a per channel basis
             * 'smart_sampling_locations': peaks are selection via monte-carlo rejections probabilities 
                 based on peak locations, on a per area region basis
+            * 'smart_sampling_locations_and_time': peaks are selection via monte-carlo rejections probabilities 
+                based on peak locations and time positions, assuming everything is independent
     
     seed: int
         The seed for random generations
@@ -53,9 +55,22 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
                     otherwise this is the total number of peaks
                 * select_per_channel: bool
                     If True, the selection is done on a per channel basis (default)
+            'smart_sampling_locations':
+                * n_bins: int
+                    The number of bins used to estimate the distributions on each dimensions
+                * n_peaks: int
+                    Total number of peaks to select
+                * peaks_locations: array
+                    The locations of all the peaks, computed via localize_peaks
+            'smart_sampling_locations_and_time':
+                * n_bins: int
+                    The number of bins used to estimate the distributions on each dimensions
+                * n_peaks: int
+                    Total number of peaks to select
+                * peaks_locations: array
+                    The locations of all the peaks, computed via localize_peaks
     
     {}
-
     Returns
     -------
     peaks: array
@@ -114,22 +129,15 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
                 selected_peaks += [np.random.choice(peaks_indices, size=max_peaks, replace=False)]
 
 
-    elif method == 'smart_sampling_amplitudes':
+    elif method in ['smart_sampling_amplitudes', 'smart_sampling_locations', 'smart_sampling_locations_and_time']:
 
-        ## This method will try to select around n_peaks per channel but in a non uniform manner
-        ## First, it will look at the distribution of the peaks amplitudes, per channel. 
-        ## Once this distribution is known, it will sample from the peaks with a rejection probability
-        ## such that the final distribution of the amplitudes, for the selected peaks, will be as
-        ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
-        ## from the space of all the peaks, using the amplitude as a discriminative criteria
-        ## To do so, one must provide the noise_levels, detect_threshold used to detect the peaks, the 
-        ## sign of the peaks, and the number of bins for the probability density histogram
-        
         def reject_rate(x, d, a, target, n_bins):
             return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
-        def get_valid_indices(params, snrs):
-            bins = np.linspace(snrs.min(), snrs.max(), params['n_bins'])
+        def get_valid_indices(params, snrs, exponent=1, n_bins=None):
+            if n_bins is None:
+                n_bins = params['n_bins']
+            bins = np.linspace(snrs.min(), snrs.max(), n_bins)
             x, y = np.histogram(snrs, bins=bins)
             histograms = {'probability' : x/x.sum(), 'snrs' : y[1:]}
             indices = np.searchsorted(histograms['snrs'], snrs)
@@ -144,8 +152,8 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             twist = np.sum(probabilities * d)
             factor = twist * c
 
-            target_rejection = 1 - params['n_peaks']/len(indices)
-            res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, params['n_bins']), disp=False)
+            target_rejection = (1 - max(0, params['n_peaks']/len(indices)))**exponent
+            res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, n_bins), disp=False)
             rejection_curve = np.clip(1 - d*res[0], 0, 1)
 
             acceptation_threshold = rejection_curve[indices]
@@ -153,88 +161,119 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
             return valid_indices
 
-        params = {'detect_threshold' : 5, 
-                  'peak_sign' : 'neg',
-                  'n_bins' : 50, 
-                  'n_peaks' : None, 
-                  'noise_levels' : None,
-                  'select_per_channel' : True}
+        if method == 'smart_sampling_amplitudes':
 
-        params.update(method_kwargs)
+            ## This method will try to select around n_peaks per channel but in a non uniform manner
+            ## First, it will look at the distribution of the peaks amplitudes, per channel. 
+            ## Once this distribution is known, it will sample from the peaks with a rejection probability
+            ## such that the final distribution of the amplitudes, for the selected peaks, will be as
+            ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
+            ## from the space of all the peaks, using the amplitude as a discriminative criteria
+            ## To do so, one must provide the noise_levels, detect_threshold used to detect the peaks, the 
+            ## sign of the peaks, and the number of bins for the probability density histogram
 
-        assert params['n_peaks'] is not None, "n_peaks should be defined!"
-        assert params['noise_levels'] is not None, "Noise levels should be provided"
+            params = {'detect_threshold' : 5, 
+                      'peak_sign' : 'neg',
+                      'n_bins' : 50, 
+                      'n_peaks' : None, 
+                      'noise_levels' : None,
+                      'select_per_channel' : True}
 
-        histograms = {}
+            params.update(method_kwargs)
 
-        if params['select_per_channel']:
-            for channel in np.unique(peaks['channel_ind']):
+            assert params['n_peaks'] is not None, "n_peaks should be defined!"
+            assert params['noise_levels'] is not None, "Noise levels should be provided"
 
-                peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
-                sub_peaks = peaks[peaks_indices]
-                snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
+            histograms = {}
+
+            if params['select_per_channel']:
+                for channel in np.unique(peaks['channel_ind']):
+
+                    peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
+                    sub_peaks = peaks[peaks_indices]
+                    snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
+                    valid_indices = get_valid_indices(params, snrs)
+                    selected_peaks += [peaks_indices[valid_indices]]
+            else:
+
+                snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
                 valid_indices = get_valid_indices(params, snrs)
-                selected_peaks += [peaks_indices[valid_indices]]
-        else:
+                valid_indices,  = np.where(valid_indices)
+                selected_peaks = [valid_indices]
 
-            snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
-            valid_indices = get_valid_indices(params, snrs)
-            valid_indices,  = np.where(valid_indices)
+        elif method == 'smart_sampling_locations':
+
+            ## This method will try to select around n_peaksbut in a non uniform manner
+            ## First, it will look at the distribution of the positions. 
+            ## Once this distribution is known, it will sample from the peaks with a rejection probability
+            ## such that the final distribution of the amplitudes, for the selected peaks, will be as
+            ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
+            ## from the space of all the peaks, using the locations as a discriminative criteria
+            ## To do so, one must provide the peaks locations, and the number of bins for the 
+            ## probability density histogram
+
+            params = {'peaks_locations' : None, 
+                      'n_bins' : (50, 50),
+                      'n_peaks' : None}
+
+            params.update(method_kwargs)
+
+            assert params['n_peaks'] is not None, "n_peaks should be defined!"
+            assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
+
+            def f(x):
+                valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=x)
+                valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=x)
+                valid_indices,  = np.where(valid_indices_x*valid_indices_y)
+                return np.abs(1-len(valid_indices)/params['n_peaks'])**2
+
+            exponents = np.arange(1, 100)
+            data = [f(exponent) for exponent in exponents]
+            best_exponent = exponents[np.argmin(data)]
+
+            valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=best_exponent)
+            valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=best_exponent)
+
+            valid_indices,  = np.where(valid_indices_x*valid_indices_y)
             selected_peaks = [valid_indices]
 
-    elif method == 'smart_sampling_locations':
+        elif method == 'smart_sampling_locations_and_time':
 
-        ## This method will try to select around n_peaksbut in a non uniform manner
-        ## First, it will look at the distribution of the positions. 
-        ## Once this distribution is known, it will sample from the peaks with a rejection probability
-        ## such that the final distribution of the amplitudes, for the selected peaks, will be as
-        ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
-        ## from the space of all the peaks, using the locations as a discriminative criteria
-        ## To do so, one must provide the peaks locations, and the number of bins for the 
-        ## probability density histogram
-        
-        def reject_rate(x, d, a, target, n_bins):
-            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
+            ## This method will try to select around n_peaksbut in a non uniform manner
+            ## First, it will look at the distribution of the positions. 
+            ## Once this distribution is known, it will sample from the peaks with a rejection probability
+            ## such that the final distribution of the amplitudes, for the selected peaks, will be as
+            ## uniform as possible. In a nutshell, the method will try to sample as homogenously as possible 
+            ## from the space of all the peaks, using the locations as a discriminative criteria
+            ## To do so, one must provide the peaks locations, and the number of bins for the 
+            ## probability density histogram
 
-        def get_valid_indices(params, positions, nbins):
-            bins = np.linspace(positions.min(), positions.max(), nbins)
-            x, y = np.histogram(positions, bins=bins)
-            histograms = {'probability' : x/x.sum(), 'positions' : y[1:]}
-            indices = np.searchsorted(histograms['positions'], positions)
+            params = {'peaks_locations' : None, 
+                      'n_bins' : (50, 50, 50),
+                      'n_peaks' : None}
 
-            probabilities = histograms['probability']
-            z = probabilities[probabilities > 0]
-            c = 1.0 / np.min(z)
-            d = np.ones(len(probabilities))
-            d[probabilities > 0] = 1. / (c * z)
-            d = np.minimum(1, d)
-            d /= np.sum(d)
-            twist = np.sum(probabilities * d)
-            factor = twist * c
+            params.update(method_kwargs)
 
-            target_rejection = (1 - params['n_peaks']/len(indices))**2
-            res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, nbins), disp=False)
-            rejection_curve = np.clip(1 - d*res[0], 0, 1)
+            assert params['n_peaks'] is not None, "n_peaks should be defined!"
+            assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
 
-            acceptation_threshold = rejection_curve[indices]
-            valid_indices = acceptation_threshold < np.random.rand(len(indices))
+            def f(x):
+                valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=x)
+                valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=x)
+                valid_indices_time = get_valid_indices(params, peaks['sample_ind'], n_bins=params['n_bins'][2], exponent=x)
+                valid_indices,  = np.where(valid_indices_x*valid_indices_y*valid_indices_time)
+                return np.abs(1-len(valid_indices)/params['n_peaks'])**2
 
-            return valid_indices
+            exponents = np.arange(1, 100)
+            data = [f(exponent) for exponent in exponents]
+            best_exponent = exponents[np.argmin(data)]
 
-        params = {'peaks_locations' : None, 
-                  'n_bins' : (50, 50),
-                  'n_peaks' : None}
+            valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=best_exponent)
+            valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=best_exponent)
+            valid_indices_time = get_valid_indices(params, peaks['sample_ind'], n_bins=params['n_bins'][2], exponent=best_exponent)
 
-        params.update(method_kwargs)
-
-        assert params['n_peaks'] is not None, "n_peaks should be defined!"
-        assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
-
-        valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], params['n_bins'][0])
-        valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], params['n_bins'][1])
-
-        valid_indices,  = np.where(valid_indices_x*valid_indices_y)
-        selected_peaks = [valid_indices]
+            valid_indices,  = np.where(valid_indices_x*valid_indices_y*valid_indices_time)
+            selected_peaks = [valid_indices]
 
     else:
 

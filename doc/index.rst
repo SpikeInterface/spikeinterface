@@ -7,7 +7,7 @@ Welcome to SpikeInterface's documentation!
   :align: center
 
 
-Spikeinterface is a collection of Python modules designed to improve the accessibility, reliability, and reproducibility
+Spikeinterface is a Python module designed to improve the accessibility, reliability, and reproducibility
 of spike sorting and all its associated computations.
 
 

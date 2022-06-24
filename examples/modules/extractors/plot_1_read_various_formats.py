@@ -1,10 +1,10 @@
 '''
-Read various format into SI
-============================
+Read various format into SpikeInterface
+=======================================
 
-:code:`spikeinterface` can read various format of "recording" (traces) and "sorting" (spike train) data.
+SpikeInterface can read various format of "recording" (traces) and "sorting" (spike train) data.
 
-Internally, to read different formats, :code:`spikeinterface` either uses:
+Internally, to read different formats, SpikeInterface either uses:
   * a wrapper to the `neo <https://github.com/NeuralEnsemble/python-neo>`_ rawio classes
   * or a direct implementation
 
@@ -37,7 +37,8 @@ print(mearec_folder_path)
 ##############################################################################
 # Now that we have downloaded the files let's load them into SI.
 #
-# The :code:`read_spike2` function returns one object, a :code:`RecordingExtractor`.
+# The :py:func:`~spikeinterface.extractors.read_spike2` function returns one object,
+# a :py:class:`~spikeinterface.core.BaseRecording`.
 #
 # Note that internally this file contains 2 data streams ('0' and '1'), so we need to specify which one we
 # want to retrieve ('0' in our case):
@@ -48,16 +49,16 @@ print(type(recording))
 print(isinstance(recording, si.BaseRecording))
 
 ##############################################################################
-# The :code:`read_spike2` function is equivalent to instantiating a
-# :code:`Spike2RecordingExtractor` object:
+# The :py:func:`~spikeinterface.extractors.read_spike2`` function is equivalent to instantiating a
+# :py:class:`~spikeinterface.extractors.Spike2RecordingExtractor` object:
 #
 
 recording = se.Spike2RecordingExtractor(spike2_file_path, stream_id='0')
 print(recording)
 
 ##############################################################################
-# The :code:`read_mearec` function returns two objects,
-# a :code:`RecordingExtractor` and a :code:`SortingExtractor`:
+# The :py:func:`~spikeinterface.extractors.read_mearec` function returns two objects,
+# a :py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting`:
 
 recording, sorting = se.read_mearec(mearec_folder_path)
 print(recording)
@@ -67,14 +68,14 @@ print(sorting)
 print(type(sorting))
 
 ##############################################################################
-#  The :code:`read_mearec` function is equivalent to:
+#  The :py:func:`~spikeinterface.extractors.read_mearec` function is equivalent to:
 
 recording = se.MEArecRecordingExtractor(mearec_folder_path)
 sorting = se.MEArecSortingExtractor(mearec_folder_path)
 
 ##############################################################################
-# SI objects (:code:`RecordingExtractor` and :code:`SortingExtractor`) object
-# can be plotted quickly with the :code:`widgets` submodule:
+# SI objects (:py:class:`~spikeinterface.core.BaseRecording` and :py:class:`~spikeinterface.core.BaseSorting`) object
+# can be plotted quickly with the :py:mod:`spikeinterface.widgets` submodule:
 
 import spikeinterface.widgets as sw
 
