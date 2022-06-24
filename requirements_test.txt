@@ -5,17 +5,12 @@ pytest-cov
 # numba and hdbscan and numpy internal API
 
 # tridesclous
-numpy==1.20
-git+https://github.com/scikit-learn-contrib/hdbscan.git
-numba==0.54.1
+numpy==1.21
+numba
+hdbscan
 
 # zarr is needed for testing
 zarr
-
-# this also work but pynwb don't want numpy==1.22
-# numpy==1.22
-# git+https://github.com/numba/numba.git
-# hdbscan
 
 # CurtationSorting
 networkx
