@@ -223,7 +223,7 @@ def compute_correlograms_numpy(sorting,
         # is sensitive to the order of identical spikes.
         correlograms[..., 0] = np.maximum(correlograms[..., 0],
                                           correlograms[..., 0].T)
-        sym = correlograms[..., 1:][..., ::-1]
+        sym = correlograms[..., :][..., ::-1]
         sym = np.transpose(sym, (1, 0, 2))
         correlograms = np.dstack((sym, correlograms))
         bins = np.arange(correlograms.shape[2] + 1) * real_bin_duration_ms - real_bin_duration_ms * num_half_bins
