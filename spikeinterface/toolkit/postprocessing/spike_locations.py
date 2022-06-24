@@ -63,21 +63,11 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         return params        
         
     def _specific_load_from_folder(self):
-        #~ recording = self.waveform_extractor.recording
-        #~ sorting = self.waveform_extractor.sorting
         we = self.waveform_extractor
-        #~ all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
-        #~ self._all_spikes = all_spikes
 
         extremum_channel_inds = get_template_extremum_channel(we, outputs="index")
         self.spikes = we.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         self.locations =np.load( self.extension_folder / 'spike_locations.npy')
-
-        #~ self._locations = []
-        #~ for segment_index in range(recording.get_num_segments()):
-            #~ file_locs = self.extension_folder / f'locations_segment_{segment_index}.npy'
-            #~ locs_seg = np.load(file_locs)
-            #~ self._locations.append(locs_seg)
 
     def _reset(self):
         self.locations = None
@@ -90,16 +80,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         new_location = self.locations[spike_mask]
         np.save(new_waveforms_folder / 'spike_locations.npy', new_location)
         
-        # load filter and save amplitude files
-        #~ for seg_index in range(self.waveform_extractor.recording.get_num_segments()):
-            #~ loc_file_name = f"locations_segment_{seg_index}.npy"
-            #~ locs = np.load(self.extension_folder / loc_file_name)
-            #~ _, all_labels = self.waveform_extractor.sorting.get_all_spike_trains()[seg_index]
-            #~ filtered_idxs = np.in1d(all_labels, np.array(unit_ids)).nonzero()
-            #~ np.save(new_waveforms_folder / self.extension_name /
-                    #~ loc_file_name, locs[filtered_idxs])
-    
-        
     def compute_locations(self, **job_kwargs):
         """
         This function first transforms the sorting object into a `peaks` numpy array and then
@@ -109,38 +89,9 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
         
         we = self.waveform_extractor
-        #~ recording = we.recording
-        #~ sorting = we.sorting
-
-        #~ all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
-        #~ self._all_spikes = all_spikes
         
         extremum_channel_inds = get_template_extremum_channel(we, outputs="index")
         self.spikes = we.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-        
-        
-        #~ extremum_channel_inds = get_template_extremum_channel(we, outputs="index")
-        #~ sorting_peaks = we.sorting.to_spike_vector()
-        #~ unit_inds = sorting_peaks['unit_ind']
-        #~ channel_inds = [extremum_channel_inds[u_id] for u_id in we.sorting.unit_ids[unit_inds]] 
-        #~ sorting_peaks['unit_ind'] = channel_inds
-        #~ dtype_names = list(sorting_peaks.dtype.names)
-        #~ unit_ind_index = dtype_names.index("unit_ind")
-        #~ dtype_names[unit_ind_index] = "channel_ind"
-        #~ sorting_peaks.dtype.names = tuple(dtype_names)
-        
-        #~ localization_params = {**self._params, **job_kwargs}
-        
-        
-        #~ self._locations = []
-        #~ for segment_index in range(recording.get_num_segments()):
-            #~ mask = sorting_peaks["segment_ind"] == segment_index
-            #~ locs_seg = locs[mask]
-            #~ self._locations.append(locs)
-            
-            #~ # save to folder
-            #~ file_locs = self.extension_folder / f'locations_segment_{segment_index}.npy'
-            #~ np.save(file_locs, locs_seg)
         
         self.locations = localize_peaks(we.recording, self.spikes, **self._params, **job_kwargs)
         np.save(self.extension_folder / 'spike_locations.npy', self.locations)
@@ -166,10 +117,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
                 for unit_ind, unit_id in enumerate(sorting.unit_ids):
                     mask = spikes['unit_ind'] == unit_ind
                     locations_by_unit[segment_index][unit_id] = locations[mask]
-                    #~ spike_times, spike_labels = self._all_spikes[segment_index]
-                    #~ mask = spike_labels == unit_index
-                    #~ amps = self._locations[segment_index][mask]
-                    #~ locations_by_unit[segment_index][unit_id] = amps
             return locations_by_unit
 
 

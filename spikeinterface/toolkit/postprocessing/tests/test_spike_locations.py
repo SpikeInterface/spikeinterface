@@ -45,9 +45,9 @@ def test_compute_spike_locations():
     assert we.is_extension('spike_locations')
     slc = we.load_extension('spike_locations')
     assert isinstance(slc, SpikeLocationsCalculator)
-    assert slc._locations is not None
+    assert slc.locations is not None
     slc = SpikeLocationsCalculator.load_from_folder(folder)
-    assert slc._locations is not None
+    assert slc.locations is not None
 
 
 def test_compute_spike_locations_parallel():
