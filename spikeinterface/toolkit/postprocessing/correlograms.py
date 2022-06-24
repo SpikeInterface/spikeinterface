@@ -143,7 +143,7 @@ def compute_correlograms(sorting, window_ms=100.0,
 
 def compute_correlograms_numpy(sorting,
                          window_ms=100.0, bin_ms=5.0,
-                         symmetrize=False):
+                         symmetrize=True):
     """
     Computes several cross-correlogram in one course
     from several cluster.
@@ -247,12 +247,13 @@ def compute_correlograms_numba(sorting,
     Adaptation: Aurélien Wyngaard
     """
 
-    assert HAVE_NUMBA
+    assert HAVE_NUMBA and symmetrize
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
 
-    window_size = int(fs * window_ms/2 * 1e-3)
-    bin_size = int(fs * bin_ms * 1e-3)
+    window_size = int(round(fs * window_ms/2 * 1e-3))
+    bin_size = int(round(fs * bin_ms * 1e-3))
+    windows_size -= window_size % bin_size
     real_bin_duration_ms = bin_size / fs * 1e3
     num_bins = 2 * int(window_size / bin_size)
 
