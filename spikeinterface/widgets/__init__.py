@@ -2,6 +2,7 @@ from .widget_list import *
 from .utils import get_unit_colors, array_to_image
 from .base import set_default_plotter_backend, get_default_plotter_backend
 
+# check if backend are available
 try:
     import matplotlib
     HAVE_MPL = True
@@ -14,10 +15,7 @@ try:
 except:
     HAVE_SV = False
 
-# for debegging I mock sortingview
-HAVE_SV = True
-
-
+# theses import make the Widget.resgister() at import time
 if HAVE_MPL:
     from .matplotlib import *
 
@@ -25,6 +23,7 @@ if HAVE_SV:
     from .sortingview import *
 
 
-# we keep this to keep compatibility having all previous widgets
-# TODO : remove when the refactoring will be done
-# from .legacy_mpl_widgets import *
+# we keep this to keep compatibility so we have all previous widgets
+# except the one that have been ported that are imported
+# with "from .widget_list import *" in the first line
+from .legacy_mpl_widgets import *
