@@ -34,7 +34,7 @@ class SlidingHdbscanClustering:
     This method is a bit slow
     """
     _default_params = {
-        'waveform_mode': 'memmap',
+        'waveform_mode': 'shared_memory',
         'tmp_folder': None,
         'ms_before': 1.5,
         'ms_after': 2.5,
