@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.spatial
-from scipy.stats import norm, multivariate_normal
+from scipy.stats import norm, multivariate_normal, median_abs_deviation
 
 
 def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, 
@@ -105,9 +105,7 @@ def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     
     """
     random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
-    med = np.median(random_chunks, axis=0, keepdims=True)
-    noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6745
-    return noise_levels
+    return median_abs_deviation(random_chunks, axis=0, scale="normal")
 
 
 def create_ground_truth_pc_distributions(center_locations, total_points):

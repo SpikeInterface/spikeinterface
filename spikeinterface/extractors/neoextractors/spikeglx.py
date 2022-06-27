@@ -9,19 +9,21 @@ import neo
 
 from packaging import version
 
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+
 HAS_NEO_10_2 = version.parse(neo.__version__) >= version.parse("0.10.2")
 
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading data from a SpikeGLX system  (NI-DAQ for neuropixel probe)
+    Class for reading data saved by SpikeGLX software.
     See https://billkarsh.github.io/SpikeGLX/
 
     Based on :py:class:`neo.rawio.SpikeGLXRawIO`
 
     Contrary to older verion this reader is folder based.
     So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
-    then it has to be specified xwith stream_id=
+    then it has to be specified with stream_id=
 
     Parameters
     ----------
@@ -36,6 +38,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
         
     """
+
     mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
 
@@ -65,26 +68,16 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             
             # load sample shifts
             imDatPrb_type = probe.annotations["imDatPrb_type"]
-            sample_shifts = _get_sample_shifts(self.get_num_channels(), imDatPrb_type)
+
+            if imDatPrb_type == 2:
+                num_adcs = 16
+            else:
+                num_adcs = 12
+
+            sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs.update(dict(folder_path=str(folder_path)))
 
 
 read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
-
-
-# TODO check sample shifts for different configurations!!!
-def _get_sample_shifts(num_contact, imDatPrb_type):
-    # calculate sample_shift
-    # See adc_shift: https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
-    if imDatPrb_type == 0:
-        adc_channels = 12
-    elif imDatPrb_type >= 2:
-        adc_channels = 16
-
-    adc = np.floor(np.arange(num_contact) / (adc_channels * 2)) * 2 + np.mod(np.arange(num_contact), 2)
-    sample_shift = np.zeros_like(adc)
-    for a in adc:
-        sample_shift[adc == a] = np.arange(adc_channels) / adc_channels
-    return sample_shift
