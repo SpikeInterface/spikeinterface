@@ -1,10 +1,15 @@
 """
-There are 2 openephys reader:
-  * OpenEphysLegacyRecordingExtractor: old one aka "open ephys format"
-  * OpenEphysBinaryRecordingExtractor: new one aka "binary format"
 
-https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
+There are two extractors for data saved by the Open Ephys GUI
+
+  * OpenEphysLegacyRecordingExtractor: reads the original "Open Ephys" data format
+  * OpenEphysBinaryRecordingExtractor: reads the new default "Binary" format
+
+See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html 
+for more info.
+
 """
+
 from pathlib import Path
 
 import numpy as np
@@ -18,9 +23,11 @@ from .neobaseextractor import (NeoBaseRecordingExtractor,
 
 class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading data from a OpenEphy board.
+    Class for reading data saved by the Open Ephys GUI.
 
-    This open the openephys "legacy" format: one file per channel.
+    This extractor works with the Open Ephys "legacy" format, which saves data using
+    one file per continuous channel (.continuous files).
+
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Open-Ephys-format.html
 
     Based on :py:class:`neo.rawio.OpenEphysRawIO`
@@ -46,9 +53,11 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
 
 class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading traces from a OpenEphy board.
+    Class for reading data saved by the Open Ephys GUI.
 
-    This open the openephys "new" "binary" format: one file per continuous stream.
+    This extractor works with the  Open Ephys "binary" format, which saves data using
+    one file per continuous stream (.dat files).
+
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html
 
     Based on neo.rawio.OpenEphysBinaryRawIO
@@ -63,6 +72,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotation from neo.
         
     """
+    
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
 
@@ -79,9 +89,11 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     """
-    Class for reading events from a OpenEphy board.
+    Class for reading events saved by the Open Ephys GUI
 
-    This open the openephys "new" "binary" format: one file per continuous stream.
+    This extractor works with the  Open Ephys "binary" format, which saves data using
+    one file per continuous stream.
+
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html
 
     Based on neo.rawio.OpenEphysBinaryRawIO
