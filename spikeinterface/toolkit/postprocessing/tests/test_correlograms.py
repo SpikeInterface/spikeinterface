@@ -12,8 +12,7 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-@pytest.mark.skip(reason="Called by main")
-def test_correlograms(recording, sorting, window_ms: float, bin_ms: float, methods: List[str]):
+def _test_correlograms(recording, sorting, window_ms: float, bin_ms: float, methods: List[str]):
     for method in methods:
         correlograms, bins = st.compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, symmetrize=True, method=method)
 
@@ -31,8 +30,8 @@ def test_compute_correlograms():
 
     recording, sorting = se.toy_example(num_segments=2, num_units=4, duration=100)
 
-    test_correlograms(recording, sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
-    test_correlograms(recording, sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
+    _test_correlograms(recording, sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
+    _test_correlograms(recording, sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
         
 
 
