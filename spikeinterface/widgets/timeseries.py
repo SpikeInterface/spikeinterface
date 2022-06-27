@@ -134,6 +134,7 @@ class TimeseriesWidget(BaseWidget):
 
         
         plot_data = dict(
+            recording=recording,
             channel_ids=channel_ids,
             time_range=time_range,
             frame_range=frame_range,
