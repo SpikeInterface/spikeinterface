@@ -693,13 +693,13 @@ class BaseRecording(BaseExtractor):
         -------
         is_binary_compatible: bool
         """
-        # have to changed in subclass is yes
+        # has to be changed in subclass if yes
         return False
         
     def get_binary_description(self):
         """
         When `rec.is_binary_compatible()` is True
-        This must return describing the binary format.
+        this returns a dictionary describing the binary format.
         """
         if not self.is_binary_compatible:
             raise NotImplementedError
