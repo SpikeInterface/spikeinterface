@@ -193,14 +193,14 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
                     sub_peaks = peaks[peaks_indices]
                     snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
                     max_peaks = min(peaks_indices.size, params['n_peaks'])
-                    preprocessing = QuantileTransformer(output_distribution='uniform')
+                    preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles = min(100, len(snrs)))
                     snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
                     probabilities = np.random.rand(len(snrs))
                     selected_peaks += [np.random.permutation(np.where(snrs[:,0] > probabilities)[0])[:max_peaks]]
 
             else:
                 snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
-                preprocessing = QuantileTransformer(output_distribution='uniform')
+                preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, len(snrs)))
                 snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
                 num_peaks = min(peaks.size, params['n_peaks'])
                 probabilities = np.random.rand(len(snrs))
@@ -223,19 +223,21 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
             params.update(method_kwargs)
 
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
-            assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
+            assert params['peaks_locations'] is not None, "peaks_locations should be d96efined!"
 
-            preprocessing = QuantileTransformer(output_distribution='uniform')
-            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y']])
+            nb_spikes = len(params['peaks_locations']['x'])
+            preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
+            
+            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y']]).T
             data = preprocessing.fit_transform(data)
 
             max_peaks = min(params['peaks_locations'].size, params['n_peaks'])
 
             probabilities = np.random.rand(len(data))
-            data_x = np.where(data[:, 0] < probabilities)[0]
+            data_x = data[:, 0] < probabilities
 
             probabilities = np.random.rand(len(data))
-            data_y = np.where(data[:, 1] < probabilities)[0]
+            data_y = data[:, 1] < probabilities
 
             selection = np.where(data_x * data_y)[0]
 
@@ -252,8 +254,7 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
             ## To do so, one must provide the peaks locations, and the number of bins for the 
             ## probability density histogram
 
-            params = {'peaks_locations' : None, 
-                      'n_bins' : (50, 50, 50),
+            params = {'peaks_locations' : None,
                       'n_peaks' : None}
 
             params.update(method_kwargs)
@@ -261,20 +262,21 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
             assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
 
-            preprocessing = QuantileTransformer(output_distribution='uniform')
-            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y'], peaks['sample_ind']])
+            nb_spikes = len(params['peaks_locations']['x'])
+            preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
+            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y'], peaks['sample_ind']]).T
             data = preprocessing.fit_transform(data)
 
             max_peaks = min(params['peaks_locations'].size, params['n_peaks'])
 
             probabilities = np.random.rand(len(data))
-            data_x = np.where(data[:, 0] < probabilities)[0]
+            data_x = data[:, 0] < probabilities
 
             probabilities = np.random.rand(len(data))
-            data_y = np.where(data[:, 1] < probabilities)[0]
+            data_y = data[:, 1] < probabilities
 
             probabilities = np.random.rand(len(data))
-            data_t = np.where(data[:, 2] < probabilities)[0]
+            data_t = data[:, 2] < probabilities
 
             selection = np.where(data_x * data_y * data_t)[0]
 
