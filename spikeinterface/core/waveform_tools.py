@@ -253,7 +253,7 @@ def _init_worker_waveform_extractor(recording, unit_ids, spikes, wfs_arrays_info
         from multiprocessing.shared_memory import SharedMemory
         wfs_arrays = {}
         shms = {}
-        for unit_id, (sm, shm_name, dtype, shape) in wfs_arrays_info.items():
+        for unit_id, (shm, shm_name, dtype, shape) in wfs_arrays_info.items():
             if shm_name is None:
                 arr = np.zeros(shape=shape, dtype=dtype)
             else:

@@ -21,6 +21,8 @@ from .principal_component import (
 
 from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculator
 
+from .spike_locations import compute_spike_locations, SpikeLocationsCalculator
+
 from .correlograms import compute_correlograms
 
 from .unit_localization import localize_units, compute_center_of_mass
