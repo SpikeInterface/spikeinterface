@@ -10,17 +10,17 @@ except:
     HAVE_MPL = False
     
 try:
-    import sortingview
-    HAVE_SV = True
+    import figurl
+    HAVE_FIGURL = True
 except:
-    HAVE_SV = False
+    HAVE_FIGURL = False
 
 # theses import make the Widget.resgister() at import time
 if HAVE_MPL:
     from .matplotlib import *
 
-if HAVE_SV:
-    from .sortingview import *
+if HAVE_FIGURL:
+    from .figurl import *
 
 
 # we keep this to keep compatibility so we have all previous widgets
