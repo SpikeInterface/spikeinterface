@@ -221,10 +221,6 @@ def compute_correlograms_numpy(sorting,
 
     if symmetrize:
         # We symmetrize c[i, j, 0].
-        # This is necessary because the algorithm in correlograms()
-        # is sensitive to the order of identical spikes.
-        correlograms[..., 0] = np.maximum(correlograms[..., 0],
-                                          correlograms[..., 0].T)
         sym = correlograms[..., :][..., ::-1]
         sym = np.transpose(sym, (1, 0, 2))
         correlograms = np.dstack((sym, correlograms))
