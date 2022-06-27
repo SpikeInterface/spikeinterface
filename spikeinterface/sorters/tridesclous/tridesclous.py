@@ -102,7 +102,7 @@ class TridesclousSorter(BaseSorter):
             dtype = recording.get_dtype().str
             file_paths = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
             write_binary_recording(recording, file_paths=file_paths,
-                                                     dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
+                                   dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
             file_offset = 0
 
         # initialize source and probe file
