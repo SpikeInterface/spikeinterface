@@ -68,6 +68,8 @@ def test_BaseSorting():
 
     spikes = sorting.to_spike_vector()
     # print(spikes)
+    spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1:5, 2:18})
+    # print(spikes)
     
     # select units
     keep_units = [0, 1]
