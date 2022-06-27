@@ -21,7 +21,7 @@ def test_correlograms(recording, sorting, window_ms: float, bin_ms: float, metho
             ref_bins = bins
         else:
             assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
-            assert np.all(bins == ref_bins), f"Failed with method={method}"
+            assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 def test_compute_correlograms():
     methods = ["numpy"]
