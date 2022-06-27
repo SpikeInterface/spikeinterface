@@ -124,7 +124,7 @@ class KilosortBase:
             # local copy needed
             binary_file_path = output_folder / 'recording.dat'
             write_binary_recording(recording, file_paths=[binary_file_path],
-                                                     dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
+                                   dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
 
         cls._generate_ops_file(recording, params, output_folder, binary_file_path)
 

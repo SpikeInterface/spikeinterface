@@ -98,7 +98,7 @@ class KlustaSorter(BaseSorter):
             raw_filename = output_folder / 'recording.dat'
             dtype = 'int16'
             write_binary_recording(recording, file_paths=[raw_filename], verbose=False, 
-                                                     **get_job_kwargs(params, verbose))
+                                   **get_job_kwargs(params, verbose))
 
         if p['detect_sign'] < 0:
             detect_sign = 'negative'
