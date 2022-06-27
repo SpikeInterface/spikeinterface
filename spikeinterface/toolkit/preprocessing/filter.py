@@ -158,6 +158,35 @@ class BandpassFilterRecording(FilterRecording):
         self._kwargs.update(filter_kwargs)
 
 
+class HighpassFilterRecording(FilterRecording):
+    """
+    Highpass filter of a recording
+
+    Parameters
+    ----------
+    recording: Recording
+        The recording extractor to be re-referenced
+    freq_min: float
+        The highpass cutoff frequency in Hz
+    margin_ms: float
+        Margin in ms on border to avoid border effect
+    dtype: dtype or None
+        The dtype of the returned traces. If None, the dtype of the parent recording is used
+    {}
+    Returns
+    -------
+    filter_recording: HighpassFilterRecording
+        The highpass-filtered recording extractor object
+    """
+    name = 'highpass_filter'
+
+    def __init__(self, recording, freq_min=300., margin_ms=5.0, dtype=None, **filter_kwargs):
+        FilterRecording.__init__(self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype,
+                                 btype='highpass', **filter_kwargs)
+        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, margin_ms=margin_ms)
+        self._kwargs.update(filter_kwargs)
+
+
 class NotchFilterRecording(BasePreprocessor):
     """
     Parameters
@@ -205,6 +234,7 @@ class NotchFilterRecording(BasePreprocessor):
 filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
+highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
 
 def fix_dtype(recording, dtype):

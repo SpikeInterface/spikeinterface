@@ -18,7 +18,19 @@ function kilosort2_5_master(fpath, kilosortPath)
         rez = preprocessDataSub(ops);
 
         % NEW STEP TO DO DATA REGISTRATION
-        rez = datashift2(rez, 1); % last input is for shifting data
+        if isfield(ops, 'do_correction')
+            do_correction = ops.do_correction;
+        else 
+            do_correction = 1;
+        end
+
+        if do_correction
+            fprintf("Drift correction ENABLED\n");
+        else
+            fprintf("Drift correction DISABLED\n");
+        end
+
+        rez = datashift2(rez, do_correction); % last input is for shifting data
 
         % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
         iseed = 1;

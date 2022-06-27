@@ -483,11 +483,11 @@ class WaveformExtractor:
         """
         # TODO : run this in parralel
 
-        dtype = self._params['dtype']
         unit_ids = self.sorting.unit_ids
         num_chans = self.recording.get_num_channels()
 
         for mode in modes:
+            dtype = self._params['dtype'] if mode == 'median' else np.float32
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
             self._template_cache[mode] = templates
 
