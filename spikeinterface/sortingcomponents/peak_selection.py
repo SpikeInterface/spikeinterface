@@ -28,7 +28,7 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
     
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
-            'uniform_amplitudes':
+            'uniform':
                 * select_per_channel: bool
                     If True, the selection is done on a per channel basis (False by default)
                 * n_peaks: int
@@ -72,7 +72,7 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
     if seed is not None:
         np.random.seed(seed)
 
-    if method == 'uniform_amplitudes':
+    if method == 'uniform':
 
         params = {'select_per_channel' : False, 
                   'n_peaks' : None}
