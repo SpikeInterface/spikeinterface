@@ -164,9 +164,9 @@ WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
 
 
 def compute_spike_amplitudes(waveform_extractor, load_if_exists=False, 
-    peak_sign='neg', return_scaled=True,
-    outputs='concatenated',
-    **job_kwargs):
+                             peak_sign='neg', return_scaled=True,
+                             outputs='concatenated',
+                             **job_kwargs):
 
     folder = waveform_extractor.folder
     ext_folder = folder / SpikeAmplitudesCalculator.extension_name

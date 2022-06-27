@@ -4,7 +4,6 @@ Some tools for processing
 
 import numpy as np
 
-
 def get_chunk_with_margin(rec_segment, start_frame, end_frame,
                           channel_indices, margin, add_zeros=False, 
                           window_on_margin=False, dtype=None):
@@ -88,4 +87,5 @@ def get_chunk_with_margin(rec_segment, start_frame, end_frame,
             right_margin = margin
 
     return traces_chunk, left_margin, right_margin
+
 
