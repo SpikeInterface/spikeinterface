@@ -134,10 +134,10 @@ def test_pca_models_and_project_new():
                                             load_if_exists=True, mode="by_channel_local")
     pc_local_par = compute_principal_components(we_cp, n_components=n_components,
                                                 load_if_exists=True, mode="by_channel_local",
-                                                n_jobs=2)
+                                                n_jobs=2, progress_bar=True)
 
     all_pca = pc_local.get_pca_model()
-    all_pca_par = pc_local.get_pca_model()
+    all_pca_par = pc_local_par.get_pca_model()
 
     assert len(all_pca) == we.recording.get_num_channels()
     assert len(all_pca_par) == we.recording.get_num_channels()

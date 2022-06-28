@@ -52,7 +52,7 @@ def test_compute_quality_metrics():
     assert 'isolation_distance' in metrics.columns
     
     # with PC - parallel
-    metrics_par = compute_quality_metrics(we, n_jobs=2)
+    metrics_par = compute_quality_metrics(we, n_jobs=2, verbose=True, progress_bar=True)
     for metric_name in metrics.columns:
         assert np.allclose(metrics[metric_name], metrics_par[metric_name])
     print(metrics)
