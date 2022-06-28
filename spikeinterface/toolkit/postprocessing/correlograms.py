@@ -1,3 +1,4 @@
+import math
 import numpy as np
 
 
@@ -113,10 +114,10 @@ if HAVE_NUMBA:
                 if diff >= max_time:
                     start_j += 1
                     continue
-                if diff <= -max_time:
+                if diff < -max_time:
                     break
 
-                bin = int(diff / bin_size) - (0 if diff >= 0 else 1)
+                bin = math.floor(diff / bin_size)
                 cross_corr[n_bins//2 + bin] += 1
 
         return (cross_corr, bins)
