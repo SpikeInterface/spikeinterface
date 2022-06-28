@@ -37,11 +37,11 @@ def setup_module():
     we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms_1seg',
                            ms_before=3., ms_after=4., max_spikes_per_unit=500,
                            n_jobs=1, chunk_size=30000)
+    shutil.copytree(cache_folder / 'toy_waveforms_1seg', cache_folder / 'toy_waveforms_1seg_cp')
 
 
 def test_WaveformPrincipalComponent():
-    we = WaveformExtractor.load_from_folder(
-        cache_folder / 'toy_waveforms_2seg')
+    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms_2seg')
     unit_ids = we.sorting.unit_ids
     num_channels = we.recording.get_num_channels()
     pc = WaveformPrincipalComponent(we)
@@ -121,6 +121,8 @@ def test_pca_models_and_project_new():
                       "principal_components")
     we = WaveformExtractor.load_from_folder(
         cache_folder / 'toy_waveforms_1seg')
+    we_cp = WaveformExtractor.load_from_folder(
+        cache_folder / 'toy_waveforms_1seg_cp')
 
     wfs0 = we.get_waveforms(unit_id=we.sorting.unit_ids[0])
     n_samples = wfs0.shape[1]
@@ -130,9 +132,18 @@ def test_pca_models_and_project_new():
     # local
     pc_local = compute_principal_components(we, n_components=n_components,
                                             load_if_exists=True, mode="by_channel_local")
+    pc_local_par = compute_principal_components(we_cp, n_components=n_components,
+                                                load_if_exists=True, mode="by_channel_local",
+                                                n_jobs=2, progress_bar=True)
 
     all_pca = pc_local.get_pca_model()
+    all_pca_par = pc_local_par.get_pca_model()
+
     assert len(all_pca) == we.recording.get_num_channels()
+    assert len(all_pca_par) == we.recording.get_num_channels()
+
+    for (pc, pc_par) in zip(all_pca, all_pca_par):
+        assert np.allclose(pc.components_, pc_par.components_)
 
     # project
     new_waveforms = np.random.randn(100, n_samples, n_channels)
@@ -187,7 +198,7 @@ def test_select_units():
 
 
 if __name__ == '__main__':
-    #~ setup_module()
+    setup_module()
     #~ test_WaveformPrincipalComponent()
     #~ test_compute_principal_components_for_all_spikes()
     test_pca_models_and_project_new()
