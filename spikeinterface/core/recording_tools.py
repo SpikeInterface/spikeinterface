@@ -1,5 +1,4 @@
 import numpy as np
-# import scipy.spatial
 
 
 def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, 
@@ -53,7 +52,10 @@ def get_channel_distances(recording):
     """
     Distance between channel pairs
     """
+    # TODO SAM: convert to numpy
+    import scipy
     locations = recording.get_channel_locations()
+    
     channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
     return channel_distances
 
@@ -104,7 +106,10 @@ def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     
     """
     random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
-    return median_abs_deviation(random_chunks, axis=0, scale="normal")
+    med = np.median(random_chunks, axis=0, keepdims=True)
+    # hard-coded so that core doesn't depend on scipy
+    noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+    return noise_levels
 
 
 def get_chunk_with_margin(rec_segment, start_frame, end_frame,
