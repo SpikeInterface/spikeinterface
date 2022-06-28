@@ -1,23 +1,40 @@
+from typing import List
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset, extract_waveforms
 import spikeinterface.extractors as se
-from spikeinterface.toolkit import compute_correlograms
+import spikeinterface.toolkit as st
 
+try:
+    import numba
+    HAVE_NUMBA = True
+except ModuleNotFoundError as err:
+    HAVE_NUMBA = False
+
+
+def _test_correlograms(recording, sorting, window_ms: float, bin_ms: float, methods: List[str]):
+    for method in methods:
+        correlograms, bins = st.compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, symmetrize=True, method=method)
+
+        if method == "numpy":
+            ref_correlograms = correlograms
+            ref_bins = bins
+        else:
+            assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
+            assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 def test_compute_correlograms():
-    repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-    remote_path = 'mearec/mearec_test_10s.h5'
-    local_path = download_dataset(
-        repo=repo, remote_path=remote_path, local_folder=None)
-    # ~ recording = se.MEArecRecordingExtractor(local_path)
-    sorting = se.MEArecSortingExtractor(local_path)
+    methods = ["numpy"]
+    if HAVE_NUMBA:
+        methods.append("numba")
 
-    unit_ids = sorting.unit_ids
-    sorting2 = sorting.select_units(unit_ids[:3])
-    correlograms, bins = compute_correlograms(sorting2)
+    recording, sorting = se.toy_example(num_segments=2, num_units=4, duration=100)
+
+    _test_correlograms(recording, sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
+    _test_correlograms(recording, sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
+        
 
 
 if __name__ == '__main__':
     test_compute_correlograms()
+
