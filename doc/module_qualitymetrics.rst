@@ -2,7 +2,7 @@ Quality Metrics module
 ======================
 
 Quality metrics allows to quantitatively assess to *goodness* of a spike sorting output. 
-The :code:`toolkit.qualitymetrics` sub-module includes functions to compute a large variety of available metrics.
+The :code:`qualitymetrics` sub-module includes functions to compute a large variety of available metrics.
 All of the metrics currently implemented in spikeInterface are *per unit* (pairwise metrics do appear in the literature).
 
 Each metric aims to identify some quality of the unit.
