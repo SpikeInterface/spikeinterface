@@ -12,13 +12,6 @@ from scipy.signal import resample_poly
 
 from .template_tools import get_template_extremum_channel, get_template_channel_sparsity
 
-"""
-@alessio: you must totaly check tchis code!!!!!
-
-This replace : spikefeatures.features + spiketoolkit.postprocessing.features but in the same place.
-
-"""
-
 
 def get_template_metric_names():
     return deepcopy(list(_metric_name_to_func.keys()))
@@ -43,7 +36,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         If templates is specified and waveform_extractor is None, metrics are computed on
         the provided template -- shape: ()
     feature_names : list, optional
-        List of metrics to compute (see si.toolkit.get_template_metric_names()), by default None
+        List of metrics to compute (see si.postprocessing.get_template_metric_names()), by default None
     peak_sign : str, optional
         "pos" | "neg", by default 'neg'
     upsampling_factor : int, optional

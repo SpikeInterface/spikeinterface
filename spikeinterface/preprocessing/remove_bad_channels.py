@@ -5,7 +5,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor
 
-from ..utils import get_random_data_chunks
+from ..core import get_random_data_chunks
 
 
 class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
