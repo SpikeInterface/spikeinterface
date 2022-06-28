@@ -98,9 +98,9 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
     run_in_parallel = n_jobs > 1
 
     units_loop = enumerate(unit_ids)
-    if progress_bar:
-        units_loop = tqdm(units_loop,
-                          desc="Computing PCA metrics", total=len(unit_ids))
+    if progress_bar and not run_in_parallel:
+        units_loop = tqdm(units_loop, desc="Computing PCA metrics", total=len(unit_ids))
+
     if run_in_parallel:
         parallel_functions = []
 
@@ -128,6 +128,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
             
     if run_in_parallel:
         if progress_bar:
+            units_loop = tqdm(units_loop, desc="Computing PCA metrics", total=len(unit_ids))
             with tqdm_joblib(units_loop) as pb:
                 pc_metrics_units = Parallel(n_jobs=n_jobs)(parallel_functions)
         else:
