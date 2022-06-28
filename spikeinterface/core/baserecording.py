@@ -731,7 +731,7 @@ class BaseRecording(BaseExtractor):
         if file_offset is not None and file_offset != d['file_offset']:
             return False
         
-        if file_suffix is not None and not all(Path(e).suffix == file_suffix):
+        if file_suffix is not None and not all(Path(e).suffix == file_suffix  for e in d['file_paths']):
             return False
 
         # good job you pass all crucible
