@@ -3,7 +3,7 @@
 Postprocessing Tutorial
 =======================
 
-Spike sorters generally output a set of units with corresponding spike trains. The :code:`toolkit.postprocessing`
+Spike sorters generally output a set of units with corresponding spike trains. The :code:`postprocessing`
 submodule allows to combine the :code:`RecordingExtractor` and the sorted :code:`SortingExtractor` objects to perform
 further postprocessing.
 """

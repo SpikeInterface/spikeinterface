@@ -3,7 +3,7 @@ Quality Metrics Tutorial
 ========================
 
 After spike sorting, you might want to validate the goodness of the sorted units. This can be done using the
-:code:`toolkit.qualitymetrics` submodule, which computes several quality metrics of the sorted units.
+:code:`qualitymetrics` submodule, which computes several quality metrics of the sorted units.
 
 """
 
@@ -37,7 +37,7 @@ we = si.extract_waveforms(recording, sorting, folder,
 print(we)
 
 ##############################################################################
-# The :code:`spikeinterface.toolkit.qualitymetrics` submodule has a set of functions that allow users to compute
+# The :code:`spikeinterface.qualitymetrics` submodule has a set of functions that allow users to compute
 # metrics in a compact and easy way. To compute a single metric, one can simply run one of the
 # quality metric functions as shown below. Each function has a variety of adjustable parameters that can be tuned.
 
