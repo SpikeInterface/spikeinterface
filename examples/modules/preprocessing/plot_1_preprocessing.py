@@ -3,7 +3,7 @@ Preprocessing Tutorial
 ======================
 
 Before spike sorting, you may need to preproccess your signals in order to improve the spike sorting performance.
-You can do that in SpikeInterface using the :py:mod:`spikeinterface.toolkit.preprocessing` submodule.
+You can do that in SpikeInterface using the :py:mod:`spikeinterface.preprocessing` submodule.
 
 """
 
