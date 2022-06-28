@@ -9,8 +9,9 @@ quality metrics.
 
 import spikeinterface as si
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
-import spikeinterface.sorters as ss
+from spikeinterface.postprocessing import compute_principal_components
+from spikeinterface.qualitymetrics import compute_quality_metrics
+
 
 ##############################################################################
 # First, let's download a simulated dataset
@@ -20,8 +21,7 @@ import spikeinterface.sorters as ss
 # 
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
-recording = se.MEArecRecordingExtractor(local_path)
-sorting = se.MEArecSortingExtractor(local_path)
+recording, sorting = se.read_mearec(local_path)
 print(recording)
 print(sorting)
 
@@ -35,14 +35,14 @@ we = si.extract_waveforms(recording, sorting, folder,
                           n_jobs=1, chunk_size=30000)
 print(we)
 
-pc = st.compute_principal_components(we, load_if_exists=True,
+pc = compute_principal_components(we, load_if_exists=True,
                                      n_components=3, mode='by_channel_local')
 print(pc)
 
 ##############################################################################
 # Then we compute some quality metrics:
 
-metrics = st.compute_quality_metrics(we, metric_names=['snr', 'isi_violation', 'nearest_neighbor'])
+metrics = compute_quality_metrics(we, metric_names=['snr', 'isi_violation', 'nearest_neighbor'])
 print(metrics)
 
 ##############################################################################

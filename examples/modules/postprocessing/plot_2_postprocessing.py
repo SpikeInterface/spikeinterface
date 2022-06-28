@@ -12,15 +12,14 @@ import matplotlib.pylab as plt
 
 import spikeinterface as si
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
+from spikeinterface.postprocessing import get_template_extremum_channel, compute_principal_components
 
 ##############################################################################
 # First, let's download a simulated dataset
 # from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
-recording = se.MEArecRecordingExtractor(local_path)
-sorting = se.MEArecSortingExtractor(local_path)
+recording, sorting = se.read_mearec(local_path)
 print(recording)
 print(sorting)
 
@@ -77,7 +76,7 @@ for i, unit_id in enumerate(sorting.unit_ids[:3]):
 # (minimum or maximum). The code:`get_template_extremum_channel` outputs a
 # dictionary unit_ids as keys and channel_ids as values:
 
-extremum_channels_ids = st.get_template_extremum_channel(we, peak_sign='neg')
+extremum_channels_ids = get_template_extremum_channel(we, peak_sign='neg')
 print(extremum_channels_ids)
 
 ##############################################################################
@@ -98,7 +97,7 @@ print(extremum_channels_ids)
 # the shape of the pc scores is (n_spikes, n_components, n_channels).
 # Here, we compute PC scores and plot the first and second components of channel 8:
 
-pc = st.compute_principal_components(we, load_if_exists=True,
+pc = compute_principal_components(we, load_if_exists=True,
                                      n_components=3, mode='by_channel_local')
 print(pc)
 
@@ -125,32 +124,5 @@ for i, unit_id in enumerate(sorting.unit_ids):
     mask = all_labels == unit_id
     comp = all_components[mask, :, :]
     ax.scatter(comp[:, 0, 8], comp[:, 1, 8], color=cmap(i))
-
-##############################################################################
-# Export sorted data to Phy for manual curation
-# ---------------------------------------------
-# 
-# @alessio : please remove this cell when you read it
-#  export_to_phy is not anymore in toolkit but in exporter
-# We won't make a tutorial for it because it is super slow. Only statics docs.
-# Finally, it is common to visualize and manually curate the data after
-# spike sorting. In order to do so, we interface with the Phy GUI
-# (https://phy-contrib.readthedocs.io/en/latest/template-gui/).
-#  
-# First, we need to export the data to the phy format:
-
-
-# output_folder = 'mearec_exported_to_phy'
-# st.export_to_phy(we,
-#                  compute_pc_features=False, compute_amplitudes=True,
-#                  remove_if_exists=True)
-
-##############################################################################
-# To run phy you can then run (from terminal):
-# :code:`phy template-gui mearec_exported_to_phy/params.py`
-#  
-# Or from a notebook:  :code:`!phy template-gui mearec_exported_to_phy/params.py`
-#
-# After manual curation you can load back the curated data using the :code:`PhySortingExtractor`:
 
 plt.show()
