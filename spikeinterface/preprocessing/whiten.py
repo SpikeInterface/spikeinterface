@@ -3,7 +3,7 @@ import numpy as np
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-from ..utils import get_random_data_chunks
+from ..core import get_random_data_chunks
 from spikeinterface import ChannelsAggregationRecording
 
 

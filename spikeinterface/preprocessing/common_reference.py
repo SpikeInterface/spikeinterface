@@ -3,7 +3,7 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from ..utils import get_closest_channels
+from ..core import get_closest_channels
 
 
 class CommonReferenceRecording(BasePreprocessor):

@@ -15,7 +15,8 @@ from copy import deepcopy
 
 
 import spikeinterface as si
-from ..utils import get_random_data_chunks, tqdm_joblib
+from ..core import get_random_data_chunks
+from ..core.job_tools import tqdm_joblib
 from ..postprocessing import get_template_channel_sparsity
 
 from ..postprocessing import WaveformPrincipalComponent

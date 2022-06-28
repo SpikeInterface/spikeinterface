@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.lib.recfunctions as rfn
 
-from ..utils import get_channel_distances, get_noise_levels
+from ..core import get_channel_distances, get_noise_levels
 
 
 def get_template_amplitudes(waveform_extractor, peak_sign="neg", mode="extremum"):
