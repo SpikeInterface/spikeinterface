@@ -12,7 +12,8 @@ import matplotlib.pylab as plt
 import scipy.signal
 
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
+from spikeinterface.preprocessing import (bandpass_filter, notch_filter, common_reference,
+                                          remove_artifacts, preprocesser_dict)
 
 ##############################################################################
 # First, let's create a toy example:
@@ -28,9 +29,9 @@ recording, sorting = se.toy_example(num_channels=4, duration=10, seed=0)
 # Note that these operation are **lazy** the computation is done on the fly
 # with `rec.get_traces()`
 
-recording_bp = st.preprocessing.bandpass_filter(recording, freq_min=300, freq_max=6000)
+recording_bp = bandpass_filter(recording, freq_min=300, freq_max=6000)
 print(recording_bp)
-recording_notch = st.preprocessing.notch_filter(recording, freq=2000, q=30)
+recording_notch = notch_filter(recording, freq=2000, q=30)
 print(recording_notch)
 
 ##############################################################################
@@ -59,9 +60,7 @@ ax.semilogy(f_raw, p_raw, f_bp, p_bp, f_notch, p_notch)
 # :py:func:`~spikeinterface.toolkit.preprocessing.rectify` functions. In
 # this example LFP and MUA are resampled at 1000 Hz.
 
-recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max=300)
-# TODO alessio, this is for you
-# recording_lfp = st.preprocessing.resample(recording_lfp, 1000)
+recording_lfp = bandpass_filter(recording, freq_min=1, freq_max=300)
 
 
 ##############################################################################
@@ -83,10 +82,10 @@ recording_lfp = st.preprocessing.bandpass_filter(recording, freq_min=1, freq_max
 # computed on different groups. Single channels can also be used as
 # reference.
 
-recording_car = st.common_reference(recording, reference='global', operator='average')
-recording_cmr = st.common_reference(recording, reference='global', operator='median')
-recording_single = st.common_reference(recording, reference='single', ref_channel_ids=[1])
-recording_single_groups = st.common_reference(recording, reference='single',
+recording_car = common_reference(recording, reference='global', operator='average')
+recording_cmr = common_reference(recording, reference='global', operator='median')
+recording_single = common_reference(recording, reference='single', ref_channel_ids=[1])
+recording_single_groups = common_reference(recording, reference='single',
                                               groups=[[0, 1], [2, 3]], 
                                               ref_channel_ids=[0, 2])
 
@@ -124,7 +123,7 @@ stimulation_trigger_frames = [
 
 
 # large ms_before and s_after are used for plotting only
-recording_rm_artifact = st.remove_artifacts(recording, stimulation_trigger_frames,
+recording_rm_artifact = remove_artifacts(recording, stimulation_trigger_frames,
                                                          ms_before=100, ms_after=200)
 
 trace0 = recording.get_traces(segment_index=0)[:, 0]
@@ -137,7 +136,7 @@ ax3.plot(trace0_rm)
 # You can list the available preprocessors with:
 
 from pprint import pprint
-pprint(st.preprocesser_dict)
+pprint(preprocesser_dict)
 
 
 plt.show()

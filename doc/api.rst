@@ -33,7 +33,12 @@ spikeinterface.core
     .. autofunction:: set_global_tmp_folder
     .. autofunction:: set_global_dataset_folder
     .. autoclass:: ChunkRecordingExecutor
-
+    .. autofunction:: get_random_data_chunks
+    .. autofunction:: get_channel_distances
+    .. autofunction:: get_closest_channels
+    .. autofunction:: get_noise_levels
+    .. autofunction:: get_chunk_with_margin
+    
 
 
 spikeinterface.extractors
@@ -94,25 +99,11 @@ Non-NEO-based
 
 
 
-spikeinterface.toolkit
-----------------------
-
-toolkit.utils
-~~~~~~~~~~~~~
+spikeinterface.preprocessing
+----------------------------
 
 
-.. automodule:: spikeinterface.toolkit
-
-    .. autofunction:: get_random_data_chunks
-    .. autofunction:: get_channel_distances
-    .. autofunction:: get_closest_channels
-    .. autofunction:: get_noise_levels
-
-
-Preprocessing
-~~~~~~~~~~~~~
-
-.. automodule:: spikeinterface.toolkit.preprocessing
+.. automodule:: spikeinterface.preprocessing
 
     .. autofunction:: bandpass_filter
     .. autofunction:: blank_staturation
@@ -130,9 +121,10 @@ Preprocessing
 
 
 
-Postprocessing
-~~~~~~~~~~~~~~
-.. automodule:: spikeinterface.toolkit.postprocessing
+spikeinterface.postprocessing
+-----------------------------
+
+.. automodule:: spikeinterface.postprocessing
 
     .. autofunction:: get_template_amplitudes
     .. autofunction:: get_template_extremum_channel
@@ -147,9 +139,10 @@ Postprocessing
     .. autofunction:: compute_correlograms
 
 
-Quality metrics
-~~~~~~~~~~~~~~~
-.. automodule:: spikeinterface.toolkit.qualitymetrics
+spikeinterface.qualitymetrics
+-----------------------------
+
+.. automodule:: spikeinterface.qualitymetrics
 
     .. autofunction:: compute_quality_metrics
     .. autofunction:: get_quality_metric_list

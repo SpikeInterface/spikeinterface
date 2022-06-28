@@ -6,10 +6,11 @@ Modules documentation
 
     module_core
     module_extractors
-    module_toolkit
+    module_preprocessing
     module_sorters
+    module_postprocessing
+    module_qualitymetrics
     module_comparison
     module_exporters
     module_widgets
     module_sorting_components
-
