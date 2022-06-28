@@ -26,7 +26,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
     extension_name = 'quality_metrics'
 
-    def __init__(self, waveform_extractor):
+    def __init__(self, waveform_extractor, skip_pc_metrics=False):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         if waveform_extractor.is_extension('principal_components'):
@@ -36,6 +36,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting
+        self.skip_pc_metrics = skip_pc_metrics
 
         self._metrics = None
 
@@ -49,7 +50,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             # So by default we take all metrics and 3 metrics PCA based only
             # 'nearest_neighbor' is really slow and not taken by default
             metric_names = list(_metric_name_to_func.keys())
-            if self.principal_component is not None:
+            if self.principal_component is not None and not self.skip_pc_metrics:
                 metric_names += ['isolation_distance', 'l_ratio', 'd_prime']
 
         params = dict(metric_names=[str(name) for name in metric_names],
@@ -71,27 +72,9 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         new_metrics = self._metrics.loc[np.array(unit_ids)]
         new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
 
-    def compute_metrics(self):
-        """Compute quality metrics.
-
-        Parameters
-        ----------
-        metric_names: list or None
-            List of quality metrics to compute. If None, all metrics are computed
-            [ "num_spikes", "firing_rate", "presence_ratio",  "snr", "isi_violation", "amplitude_cutoff",
-            'isolation_distance', 'l_ratio', 'd_prime', 'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
-        **kwargs: keyword arguments for quality metrics (TODO)
-            max_spikes_for_nn: int
-                maximum number of spikes to use per cluster in PCA metrics
-            n_neighbors: int
-                number of nearest neighbors to check membership of in PCA metrics
-            seed: int
-                seed for pseudo-random number generator used in PCA metrics (e.g. nn_isolation)
-
-        Returns
-        -------
-        metrics: pd.DataFrame
-
+    def compute_metrics(self, n_jobs, verbose, sparsity=None, progress_bar=False):
+        """
+        Compute quality metrics.
         """
 
         metric_names = self._params['metric_names']
@@ -101,6 +84,9 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
         # simple metrics not based on PCs
         for name in metric_names:
+            if verbose:
+                if name not in _possible_pc_metric_names:
+                    print(f"Computing {name}")
             if name in _possible_pc_metric_names:
                 continue
             func = _metric_name_to_func[name]
@@ -120,12 +106,15 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
-        if len(pc_metric_names):
+        if len(pc_metric_names) > 0 and not self.skip_pc_metrics:
             if self.principal_component is None:
                 raise ValueError('waveform_principal_component must be provied')
             kwargs = {k: self._params[k] for k in ('max_spikes_for_nn', 'n_neighbors', 'seed')}
             pc_metrics = calculate_pc_metrics(self.principal_component,
-                                              metric_names=pc_metric_names, **kwargs)
+                                              metric_names=pc_metric_names, 
+                                              sparsity=sparsity,
+                                              progress_bar=progress_bar, 
+                                              n_jobs=n_jobs, **kwargs)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 
@@ -147,7 +136,8 @@ WaveformExtractor.register_extension(QualityMetricCalculator)
 
 
 def compute_quality_metrics(waveform_extractor, load_if_exists=False,
-                            metric_names=None, **params):
+                            metric_names=None, sparsity=None, skip_pc_metrics=False, 
+                            n_jobs=1, verbose=False, progress_bar=False, **params):
     """Compute quality metrics on waveform extractor.
 
     Parameters
@@ -158,6 +148,18 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         Whether to load precomputed quality metrics, if they already exist.
     metric_names : list or None
         List of quality metrics to compute.
+    sparsity : dict or None
+        If given, the sparse channel_ids for each unit in PCA metrics computation. 
+        This is used also to identify neighbor units and speed up computations. 
+        If None (default) all channels and all units are used for each unit.
+    skip_pc_metrics : bool
+        If True, PC metrics computation is skipped.
+    n_jobs : int
+        Number of jobs (used for PCA metrics)
+    verbose : bool
+        If True, output is verbose.
+    progress_bar : bool
+        If True, progress bar is shown.
     **params
         Keyword arguments for quality metrics.
 
@@ -172,9 +174,9 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
     if load_if_exists and ext_folder.is_dir():
         qmc = QualityMetricCalculator.load_from_folder(folder)
     else:
-        qmc = QualityMetricCalculator(waveform_extractor)
+        qmc = QualityMetricCalculator(waveform_extractor, skip_pc_metrics)
         qmc.set_params(metric_names=metric_names, **params)
-        qmc.compute_metrics()
+        qmc.compute_metrics(n_jobs, verbose, progress_bar=progress_bar, sparsity=sparsity)
 
     metrics = qmc.get_metrics()
 
