@@ -1,0 +1,1 @@
+from .spikeinterface_sorter import SpikeInterfaceSorter
