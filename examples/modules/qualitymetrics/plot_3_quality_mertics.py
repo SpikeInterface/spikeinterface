@@ -9,15 +9,16 @@ After spike sorting, you might want to validate the goodness of the sorted units
 
 import spikeinterface as si
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
+from spikeinterface.postprocessing import compute_principal_components
+from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rate, 
+    compute_isi_violations, calculate_pc_metrics, compute_quality_metrics)
 
 ##############################################################################
 # First, let's download a simulated dataset
 # from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
-recording = se.MEArecRecordingExtractor(local_path)
-sorting = se.MEArecSortingExtractor(local_path)
+recording, sorting = se.read_mearec(local_path)
 print(recording)
 print(sorting)
 
@@ -40,27 +41,27 @@ print(we)
 # metrics in a compact and easy way. To compute a single metric, one can simply run one of the
 # quality metric functions as shown below. Each function has a variety of adjustable parameters that can be tuned.
 
-firing_rates = st.compute_firing_rate(we)
+firing_rates = compute_firing_rate(we)
 print(firing_rates)
-isi_violation_ratio, isi_violations_rate, isi_violations_count = st.compute_isi_violations(we)
+isi_violation_ratio, isi_violations_rate, isi_violations_count = compute_isi_violations(we)
 print(isi_violation_ratio)
-snrs = st.compute_snrs(we)
+snrs = compute_snrs(we)
 print(snrs)
 
 ##############################################################################
 # Some metrics are based on the principal component scores, so they require a
 # :code:`WaveformsPrincipalComponent` object as input:
 
-pc = st.compute_principal_components(we, load_if_exists=True,
+pc = compute_principal_components(we, load_if_exists=True,
                                      n_components=3, mode='by_channel_local')
 print(pc)
 
-pc_metrics = st.calculate_pc_metrics(pc, metric_names=['nearest_neighbor'])
+pc_metrics = calculate_pc_metrics(pc, metric_names=['nearest_neighbor'])
 print(pc_metrics)
 
 ##############################################################################
 # To compute more than one metric at once, we can use the :code:`compute_quality_metrics` function and indicate
 # which metrics we want to compute. This will return a pandas dataframe:
 
-metrics = st.compute_quality_metrics(we)
+metrics = compute_quality_metrics(we)
 print(metrics)
