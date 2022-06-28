@@ -135,7 +135,7 @@ class WaveformExtractor:
         import spikeinterface as si
         si.WaveformExtractor.extensions == []
 
-        from spikeinterface.toolkit import WaveformPrincipalComponent
+        from spikeinterface.postprocessing import WaveformPrincipalComponent
         si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
 
         """

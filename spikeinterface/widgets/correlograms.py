@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
-from spikeinterface.toolkit import compute_correlograms
+from spikeinterface.postprocessing import compute_correlograms
 
 
 class CrossCorrelogramsWidget(BaseWidget):
