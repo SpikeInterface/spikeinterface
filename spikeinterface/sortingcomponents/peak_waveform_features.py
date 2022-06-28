@@ -1,6 +1,4 @@
 """Sorting components: peak waveform features."""
-
-from lib2to3.pgen2.token import AMPER
 import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
