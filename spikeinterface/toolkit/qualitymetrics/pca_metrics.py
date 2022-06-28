@@ -1,7 +1,6 @@
 """Cluster quality metrics computed from principal components."""
 
 from cmath import nan
-from distributed import progress
 import numpy as np
 from spikeinterface.core.waveform_extractor import WaveformExtractor
 from spikeinterface.toolkit.postprocessing.template_tools import get_template_extremum_channel
