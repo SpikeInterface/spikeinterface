@@ -14,7 +14,7 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
     method: 'uniform', 'uniform_locations', 'smart_sampling_amplitudes', 'smart_sampling_locations', 
     'smart_sampling_locations_and_time'
         Method to use. Options:
-            * 'uniform_amplitudes': a random subset is selected from all the peaks, on a per channel basis by default
+            * 'uniform': a random subset is selected from all the peaks, on a per channel basis by default
             * 'uniform_locations': a random subset is selected from all the peaks, to cover uniformly the space
             * 'smart_sampling_amplitudes': peaks are selected via monte-carlo rejection probabilities 
                 based on peak amplitudes, on a per channel basis
