@@ -47,26 +47,6 @@ f_notch, p_notch = scipy.signal.welch(recording_notch.get_traces(segment_index=0
 fig, ax = plt.subplots()
 ax.semilogy(f_raw, p_raw, f_bp, p_bp, f_notch, p_notch)
 
-##############################################################################
-# Compute LFP and MUA
-# --------------------
-#  
-# Local field potentials (LFP) are low frequency components of the
-# extracellular recordings. Multi-unit activity (MUA) are rectified and
-# low-pass filtered recordings showing the diffuse spiking activity.
-#  
-# In :py:mod:`spikeinterface.toolkit`, LFP and MUA can be extracted combining the
-# :py:func:`~spikeinterface.toolkit.preprocessing.bandpass_filter` and
-# :py:func:`~spikeinterface.toolkit.preprocessing.rectify` functions. In
-# this example LFP and MUA are resampled at 1000 Hz.
-
-recording_lfp = bandpass_filter(recording, freq_min=1, freq_max=300)
-
-
-##############################################################################
-#  The toy example data are only contain high frequency components, but
-#  these lines of code will work on experimental data
-
 
 ##############################################################################
 # Change reference
@@ -75,8 +55,8 @@ recording_lfp = bandpass_filter(recording, freq_min=1, freq_max=300)
 # In many cases, before spike sorting, it is wise to re-reference the
 # signals to reduce the common-mode noise from the recordings.
 #
-# To re-reference in :py:mod:`spikeinterface.toolkit` you can use the
-# :py:func:`~spikeinterface.toolkit.preprocessing.common_reference`
+# To re-reference in :py:mod:`spikeinterface.preprocessing` you can use the
+# :py:func:`~spikeinterface.preprocessing.common_reference`
 # function. Both common average reference (CAR) and common median
 # reference (CMR) can be applied. Moreover, the average/median can be
 # computed on different groups. Single channels can also be used as
@@ -111,8 +91,8 @@ ax2.plot(trace0_groups)
 # ----------------------------
 #  
 # In some applications, electrodes are used to electrically stimulate the
-# tissue, generating a large artifact. In :py:mod:`spikeinterface.toolkit`, the artifact
-# can be zeroed-out using the :py:func:`~spikeinterface.toolkit.preprocessing.remove_artifacts` function.
+# tissue, generating a large artifact. In :py:mod:`spikeinterface.preprocessing`, the artifact
+# can be zeroed-out using the :py:func:`~spikeinterface.preprocessing.remove_artifacts` function.
 
 
 # create dummy stimulation triggers per segment
