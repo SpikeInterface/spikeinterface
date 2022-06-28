@@ -87,6 +87,8 @@ def test_get_template_channel_sparsity():
     # load from folder because sorting properties must be loaded
     rec = load_extractor(cache_folder / 'toy_rec')
     sort = load_extractor(cache_folder / 'toy_sort')
+    sort.set_property("group", [0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+
     we = extract_waveforms(rec, sort, cache_folder / 'toy_waveforms_1')
     sparsity = get_template_channel_sparsity(we, method='by_property', outputs='id', by_property="group")
     print(sparsity)
@@ -103,7 +105,7 @@ def test_get_template_extremum_amplitude():
 
 
 if __name__ == '__main__':
-    # ~ setup_module()
+    setup_module()
 
     # ~ test_get_template_amplitudes()
     # ~ test_get_template_extremum_channel()
