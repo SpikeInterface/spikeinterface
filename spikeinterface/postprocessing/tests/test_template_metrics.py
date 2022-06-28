@@ -10,9 +10,9 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.postprocessing import calculate_template_metrics, get_template_channel_sparsity
 
 if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "toolkit"
+    cache_folder = pytest.global_test_folder / "postprocessing"
 else:
-    cache_folder = Path("cache_folder") / "toolkit"
+    cache_folder = Path("cache_folder") / "postprocessing"
 
 
 def setup_module():

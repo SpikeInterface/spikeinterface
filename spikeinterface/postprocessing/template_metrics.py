@@ -44,7 +44,7 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     sparsity: dict or None
         Default is sparsity=None and template metric is computed on extremum channel only.
         If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
-        For more generating a sparsity dict, see the toolkit.get_template_channel_sparsity() function.
+        For more generating a sparsity dict, see the postprocessing.get_template_channel_sparsity() function.
     **kwargs: keyword arguments for get_recovery_slope function:
         * window_ms: window in ms after the positiv peak to compute slope
 

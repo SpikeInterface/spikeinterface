@@ -14,9 +14,9 @@ from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nea
         compute_num_spikes, compute_snrs)
 
 if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "toolkit"
+    cache_folder = pytest.global_test_folder / "qualitymetrics"
 else:
-    cache_folder = Path("cache_folder") / "toolkit"
+    cache_folder = Path("cache_folder") / "qualitymetrics"
 
 
 def setup_module():

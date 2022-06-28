@@ -39,7 +39,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
            * by SNR threshold: sparsity_dict=dict(method="threshold", threshold=2)
            * by property: sparsity_dict=dict(method="by_property", by_property="group")
         Default is sparsity_dict=dict(method="best_channels", num_channels=16)
-        For more info, see the toolkit.get_template_channel_sparsity() function.
+        For more info, see the postprocessing.get_template_channel_sparsity() function.
     max_channels_per_template: int or None
         Maximum channels per unit to return. If None, all channels are returned
     copy_binary: bool

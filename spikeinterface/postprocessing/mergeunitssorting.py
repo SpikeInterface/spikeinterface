@@ -119,7 +119,7 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
             times = self._parent_segment.get_unit_spike_train(unit_id, start_frame, end_frame)
             return times
 
-#TODO move this function to toolkit or similar
+#TODO move this function to postprocessing or similar
 def get_non_duplicated_events(times_list, delta): 
 
     times_concat = np.concatenate(times_list)

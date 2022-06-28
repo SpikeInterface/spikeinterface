@@ -10,9 +10,9 @@ from spikeinterface.preprocessing import CommonReferenceRecording, common_refere
 import numpy as np
 
 if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "toolkit"
+    cache_folder = pytest.global_test_folder / "preprocessing"
 else:
-    cache_folder = Path("cache_folder") / "toolkit"
+    cache_folder = Path("cache_folder") / "preprocessing"
 
 set_global_tmp_folder(cache_folder)
 
