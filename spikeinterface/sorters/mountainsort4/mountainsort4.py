@@ -1,7 +1,7 @@
 import copy
 from pathlib import Path
 
-from spikeinterface.toolkit import bandpass_filter, whiten
+from spikeinterface.preprocessing import bandpass_filter, whiten
 
 from ..basesorter import BaseSorter
 from spikeinterface.core.old_api_utils import NewToOldRecording

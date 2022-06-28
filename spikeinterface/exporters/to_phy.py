@@ -8,9 +8,9 @@ import pandas as pd
 import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
-from spikeinterface.toolkit import (get_template_channel_sparsity,
-                                    compute_spike_amplitudes, compute_template_similarity,
-                                    compute_principal_components)
+from spikeinterface.postprocessing import (get_template_channel_sparsity,
+                                           compute_spike_amplitudes, compute_template_similarity,
+                                           compute_principal_components)
 
 
 def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
@@ -90,7 +90,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
 
     if not recording.is_filtered():
         print("Warning: recording is not filtered! It's recommended to filter the recording before exporting to phy.\n"
-              "You can run spikeinterface.toolkit.preprocessing.bandpass_filter(recording)")
+              "You can run spikeinterface.preprocessing.bandpass_filter(recording)")
 
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")
