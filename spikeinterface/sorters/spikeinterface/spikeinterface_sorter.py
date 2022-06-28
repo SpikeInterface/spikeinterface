@@ -22,8 +22,8 @@ class SpikeInterfaceSorter(BaseSorter):
         'localization' : {'method' : 'center_of_mass', 'method_kwargs' : {}},
         'clustering': {'method' : 'position', 'method_kwargs' : {}},
         'matching':  {'method' : 'circus-omp', 'method_kwargs' : {}},
-        'common_reference': True,
-        'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M', 'verbose' : True}
+        'common_reference': False,
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : True}
     }
 
     @classmethod
@@ -77,19 +77,24 @@ class SpikeInterfaceSorter(BaseSorter):
         matching_params['waveform_extractor'] = we
         matching_params.update({'noise_levels' : noise_levels})
 
+        matching_job_params = params['job_kwargs'].copy()
+        matching_job_params['chunk_duration'] = '100ms'
+
         spikes = find_spikes_from_templates(recording_f, method=params['matching']['method'], 
-            method_kwargs=matching_params, **params['job_kwargs'])
+            method_kwargs=matching_params, **matching_job_params)
 
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_rate)
-        
+        sorting = sorting.save(folder=output_folder / "sorting")
+
         return sorting
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
         params['job_kwargs']['verbose'] = verbose
         params['job_kwargs']['progress_bar'] = verbose
+        cls.set_params_to_folder(recording, output_folder, params, verbose)
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
-        sorting = NumpySorting(folder_path=output_folder)
+        sorting = load_extractor(output_folder / "sorting")
         return sorting
