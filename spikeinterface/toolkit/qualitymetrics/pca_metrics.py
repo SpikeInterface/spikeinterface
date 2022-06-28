@@ -1,10 +1,11 @@
 """Cluster quality metrics computed from principal components."""
 
 from cmath import nan
+from distributed import progress
 import numpy as np
 from spikeinterface.core.waveform_extractor import WaveformExtractor
 from spikeinterface.toolkit.postprocessing.template_tools import get_template_extremum_channel
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import scipy.stats
 import scipy.spatial.distance
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -34,7 +35,7 @@ def get_quality_pca_metric_list():
 
 def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_nn=10000,
                          min_spikes_for_nn=10, n_neighbors=4, n_components=10,
-                         radius_um=100, seed=0, n_jobs=1, verbose=False):
+                         radius_um=100, seed=0, n_jobs=1, progress_bar=False):
     """Calculate principal component derived metrics.
 
     Parameters
@@ -67,8 +68,8 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
         Random seed value.
     n_jobs : int
         Number of jobs to parallelize metric computations.
-    verbose : bool
-        If True, output is verbose.
+    progress_bar : bool
+        If True, progress bar is shown.
 
     Returns
     -------
@@ -96,18 +97,16 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
 
     run_in_parallel = n_jobs > 1
 
-    if verbose and not run_in_parallel:
-        units_loop = tqdm(np.arange(len(unit_ids)),
-                          desc="Computing PCA metrics")
-    else:
-        units_loop = np.arange(len(unit_ids))
+    units_loop = enumerate(unit_ids)
+    if progress_bar:
+        units_loop = tqdm(units_loop,
+                          desc="Computing PCA metrics", total=len(unit_ids))
+    if run_in_parallel:
         parallel_functions = []
 
     neighbor_unit_ids = unit_ids
     neighbor_channel_ids = channel_ids
-    for ui in units_loop:
-        unit_id = unit_ids[ui]
-        
+    for unit_ind, unit_id in units_loop:        
         if sparsity is None:
             neighbor_channel_ids = channel_ids
             neighbor_unit_ids = unit_ids
@@ -116,24 +115,22 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
             neighbor_unit_ids = [other_unit for other_unit in unit_ids 
                                  if extremum_channels[other_unit] in neighbor_channel_ids]
         
+        func_args = (we.folder, metric_names, unit_id, neighbor_channel_ids, neighbor_unit_ids, unit_ids, 
+                     max_spikes_for_nn, min_spikes_for_nn, n_neighbors,  n_components, radius_um, seed,)
+            
+
         if not run_in_parallel:
-            pca_metrics_unit = pca_metrics_one_unit(we_folder=we.folder, metric_names=metric_names,
-                                                    unit_id=unit_id, neighbor_channel_ids=neighbor_channel_ids,
-                                                    neighbor_unit_ids=neighbor_unit_ids,
-                                                    unit_ids=unit_ids,
-                                                    max_spikes_for_nn=max_spikes_for_nn,
-                                                    min_spikes_for_nn=min_spikes_for_nn,
-                                                    n_neighbors=n_neighbors, n_components=n_components,
-                                                    radius_um=radius_um, seed=seed)
+            pca_metrics_unit = pca_metrics_one_unit(*func_args)
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
         else:
-            parallel_functions.append(delayed(pca_metrics_one_unit)(we.folder, metric_names, unit_ids[ui],
-                                                                    neighbor_channel_ids, neighbor_unit_ids,
-                                                                    unit_ids, max_spikes_for_nn, min_spikes_for_nn,
-                                                                    n_neighbors, n_components, radius_um, seed))
+            parallel_functions.append(delayed(pca_metrics_one_unit)(*func_args))
+            
     if run_in_parallel:
-        with tqdm_joblib(tqdm(desc="Computing PCA metrics", total=len(unit_ids))) as progress_bar:
+        if progress_bar:
+            with tqdm_joblib(units_loop) as pb:
+                pc_metrics_units = Parallel(n_jobs=n_jobs)(parallel_functions)
+        else:
             pc_metrics_units = Parallel(n_jobs=n_jobs)(parallel_functions)
 
         for ui, pca_metrics_unit in enumerate(pc_metrics_units):

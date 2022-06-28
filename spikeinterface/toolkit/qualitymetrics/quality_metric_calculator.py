@@ -72,7 +72,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         new_metrics = self._metrics.loc[np.array(unit_ids)]
         new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
 
-    def compute_metrics(self, n_jobs, verbose, sparsity=None):
+    def compute_metrics(self, n_jobs, verbose, sparsity=None, progress_bar=False):
         """
         Compute quality metrics.
         """
@@ -113,7 +113,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             pc_metrics = calculate_pc_metrics(self.principal_component,
                                               metric_names=pc_metric_names, 
                                               sparsity=sparsity,
-                                              verbose=verbose, 
+                                              progress_bar=progress_bar, 
                                               n_jobs=n_jobs, **kwargs)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
@@ -137,7 +137,7 @@ WaveformExtractor.register_extension(QualityMetricCalculator)
 
 def compute_quality_metrics(waveform_extractor, load_if_exists=False,
                             metric_names=None, sparsity=None, skip_pc_metrics=False, 
-                            n_jobs=1, verbose=False, **params):
+                            n_jobs=1, verbose=False, progress_bar=False, **params):
     """Compute quality metrics on waveform extractor.
 
     Parameters
@@ -158,6 +158,8 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         Number of jobs (used for PCA metrics)
     verbose : bool
         If True, output is verbose.
+    progress_bar : bool
+        If True, progress bar is shown.
     **params
         Keyword arguments for quality metrics.
 
@@ -174,7 +176,7 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
     else:
         qmc = QualityMetricCalculator(waveform_extractor, skip_pc_metrics)
         qmc.set_params(metric_names=metric_names, **params)
-        qmc.compute_metrics(n_jobs, verbose, sparsity=sparsity)
+        qmc.compute_metrics(n_jobs, verbose, progress_bar=progress_bar, sparsity=sparsity)
 
     metrics = qmc.get_metrics()
 
