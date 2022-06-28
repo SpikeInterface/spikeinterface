@@ -1,7 +1,7 @@
 Preprocessing module
 ====================
 
-The :py:mod:`~spikeinterface.toolkit.preprocessing` module includes preprocessing steps to apply before spike
+The :py:mod:`~spikeinterface.preprocessing` module includes preprocessing steps to apply before spike
 sorting. Preprocessors are *lazy*, meaning that no computation is performed until it is required (usually at the
 spike sorting step). This enables one to build preprocessing chains to be applied in sequence to a
 :code:`RecordingExtractor` object.
@@ -15,11 +15,11 @@ In this code example, we build a preprocessing chain with 2 steps:
 
 .. code-block:: python
 
-    import spikeinterface.toolkit as st
+    import spikeinterface.preprocessing import bandpass_filter, common_reference
 
     # recording is a RecordingEctractor object
-    recording_f = st.bandpass_filter(recording, freq_min=300, freq_max=6000)
-    recording_cmr = st.common_reference(recording_f, operator="median")
+    recording_f = bandpass_filter(recording, freq_min=300, freq_max=6000)
+    recording_cmr = common_reference(recording_f, operator="median")
 
 After preprocessing, we can optionally save the processed recording with the efficient SI :code:`save()` function:
 
