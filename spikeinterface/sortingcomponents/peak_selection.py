@@ -2,10 +2,10 @@
 
 import numpy as np
 import scipy
+from sklearn.preprocessing import QuantileTransformer
 
 
-
-def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
+def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs):
 
     """Method to subsample all the found peaks before clustering
     Parameters
@@ -30,7 +30,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
         Keyword arguments for the chosen method:
             'uniform':
                 * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (default)
+                    If True, the selection is done on a per channel basis (False by default)
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
@@ -44,27 +44,17 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             'smart_sampling_amplitudes':
                 * noise_levels : array
                     The noise levels used while detecting the peaks
-                * detect_threshold : int
-                    The detection threshold 
-                * peak_sign: string
-                    If the peaks are detected as negative, positive, or both 
-                * n_bins: int
-                    The number of bins used to estimate the distributions at each channel
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
                 * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (default)
+                    If True, the selection is done on a per channel basis (False by default)
             'smart_sampling_locations':
-                * n_bins: int
-                    The number of bins used to estimate the distributions on each dimensions
                 * n_peaks: int
                     Total number of peaks to select
                 * peaks_locations: array
                     The locations of all the peaks, computed via localize_peaks
             'smart_sampling_locations_and_time':
-                * n_bins: int
-                    The number of bins used to estimate the distributions on each dimensions
                 * n_peaks: int
                     Total number of peaks to select
                 * peaks_locations: array
@@ -84,7 +74,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
     if method == 'uniform':
 
-        params = {'select_per_channel' : True, 
+        params = {'select_per_channel' : False, 
                   'n_peaks' : None}
 
         params.update(method_kwargs)
@@ -131,36 +121,6 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
     elif method in ['smart_sampling_amplitudes', 'smart_sampling_locations', 'smart_sampling_locations_and_time']:
 
-        def reject_rate(x, d, a, target, n_bins):
-            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
-
-        def get_valid_indices(params, snrs, exponent=1, n_bins=None):
-            if n_bins is None:
-                n_bins = params['n_bins']
-            bins = np.linspace(snrs.min(), snrs.max(), n_bins)
-            x, y = np.histogram(snrs, bins=bins)
-            histograms = {'probability' : x/x.sum(), 'snrs' : y[1:]}
-            indices = np.searchsorted(histograms['snrs'], snrs)
-
-            probabilities = histograms['probability']
-            z = probabilities[probabilities > 0]
-            c = 1.0 / np.min(z)
-            d = np.ones(len(probabilities))
-            d[probabilities > 0] = 1. / (c * z)
-            d = np.minimum(1, d)
-            d /= np.sum(d)
-            twist = np.sum(probabilities * d)
-            factor = twist * c
-
-            target_rejection = (1 - max(0, params['n_peaks']/len(indices)))**exponent
-            res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, n_bins), disp=False)
-            rejection_curve = np.clip(1 - d*res[0], 0, 1)
-
-            acceptation_threshold = rejection_curve[indices]
-            valid_indices = acceptation_threshold < np.random.rand(len(indices))
-
-            return valid_indices
-
         if method == 'smart_sampling_amplitudes':
 
             ## This method will try to select around n_peaks per channel but in a non uniform manner
@@ -172,12 +132,9 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             ## To do so, one must provide the noise_levels, detect_threshold used to detect the peaks, the 
             ## sign of the peaks, and the number of bins for the probability density histogram
 
-            params = {'detect_threshold' : 5, 
-                      'peak_sign' : 'neg',
-                      'n_bins' : 50, 
-                      'n_peaks' : None, 
+            params = {'n_peaks' : None, 
                       'noise_levels' : None,
-                      'select_per_channel' : True}
+                      'select_per_channel' : False}
 
             params.update(method_kwargs)
 
@@ -192,14 +149,19 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
                     peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
                     sub_peaks = peaks[peaks_indices]
                     snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
-                    valid_indices = get_valid_indices(params, snrs)
-                    selected_peaks += [peaks_indices[valid_indices]]
-            else:
+                    max_peaks = min(peaks_indices.size, params['n_peaks'])
+                    preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles = min(100, len(snrs)))
+                    snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
+                    probabilities = np.random.rand(len(snrs))
+                    selected_peaks += [np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:max_peaks]]
 
+            else:
                 snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
-                valid_indices = get_valid_indices(params, snrs)
-                valid_indices,  = np.where(valid_indices)
-                selected_peaks = [valid_indices]
+                preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, len(snrs)))
+                snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
+                num_peaks = min(peaks.size, params['n_peaks'])
+                probabilities = np.random.rand(len(snrs))
+                selected_peaks = [np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:num_peaks]]
 
         elif method == 'smart_sampling_locations':
 
@@ -212,30 +174,31 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             ## To do so, one must provide the peaks locations, and the number of bins for the 
             ## probability density histogram
 
-            params = {'peaks_locations' : None, 
-                      'n_bins' : (50, 50),
+            params = {'peaks_locations' : None,
                       'n_peaks' : None}
 
             params.update(method_kwargs)
 
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
-            assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
+            assert params['peaks_locations'] is not None, "peaks_locations should be d96efined!"
 
-            def f(x):
-                valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=x)
-                valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=x)
-                valid_indices,  = np.where(valid_indices_x*valid_indices_y)
-                return np.abs(1-len(valid_indices)/params['n_peaks'])**2
+            nb_spikes = len(params['peaks_locations']['x'])
+            preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
+            
+            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y']]).T
+            data = preprocessing.fit_transform(data)
 
-            exponents = np.arange(1, 100)
-            data = [f(exponent) for exponent in exponents]
-            best_exponent = exponents[np.argmin(data)]
+            max_peaks = min(params['peaks_locations'].size, params['n_peaks'])
 
-            valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=best_exponent)
-            valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=best_exponent)
+            probabilities = np.random.rand(len(data))
+            data_x = data[:, 0] < probabilities
 
-            valid_indices,  = np.where(valid_indices_x*valid_indices_y)
-            selected_peaks = [valid_indices]
+            probabilities = np.random.rand(len(data))
+            data_y = data[:, 1] < probabilities
+
+            selection = np.where(data_x * data_y)[0]
+
+            selected_peaks = [np.random.permutation(selection)[:max_peaks]]
 
         elif method == 'smart_sampling_locations_and_time':
 
@@ -248,8 +211,7 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             ## To do so, one must provide the peaks locations, and the number of bins for the 
             ## probability density histogram
 
-            params = {'peaks_locations' : None, 
-                      'n_bins' : (50, 50, 50),
+            params = {'peaks_locations' : None,
                       'n_peaks' : None}
 
             params.update(method_kwargs)
@@ -257,23 +219,25 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
             assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
 
-            def f(x):
-                valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=x)
-                valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=x)
-                valid_indices_time = get_valid_indices(params, peaks['sample_ind'], n_bins=params['n_bins'][2], exponent=x)
-                valid_indices,  = np.where(valid_indices_x*valid_indices_y*valid_indices_time)
-                return np.abs(1-len(valid_indices)/params['n_peaks'])**2
+            nb_spikes = len(params['peaks_locations']['x'])
+            preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
+            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y'], peaks['sample_ind']]).T
+            data = preprocessing.fit_transform(data)
 
-            exponents = np.arange(1, 100)
-            data = [f(exponent) for exponent in exponents]
-            best_exponent = exponents[np.argmin(data)]
+            max_peaks = min(params['peaks_locations'].size, params['n_peaks'])
 
-            valid_indices_x = get_valid_indices(params, params['peaks_locations']['x'], n_bins=params['n_bins'][0], exponent=best_exponent)
-            valid_indices_y = get_valid_indices(params, params['peaks_locations']['y'], n_bins=params['n_bins'][1], exponent=best_exponent)
-            valid_indices_time = get_valid_indices(params, peaks['sample_ind'], n_bins=params['n_bins'][2], exponent=best_exponent)
+            probabilities = np.random.rand(len(data))
+            data_x = data[:, 0] < probabilities
 
-            valid_indices,  = np.where(valid_indices_x*valid_indices_y*valid_indices_time)
-            selected_peaks = [valid_indices]
+            probabilities = np.random.rand(len(data))
+            data_y = data[:, 1] < probabilities
+
+            probabilities = np.random.rand(len(data))
+            data_t = data[:, 2] < probabilities
+
+            selection = np.where(data_x * data_y * data_t)[0]
+
+            selected_peaks = [np.random.permutation(selection)[:max_peaks]]
 
     else:
 
