@@ -1,9 +1,9 @@
 import os
 import numpy as np
-from .base_sv import SortingviewPlotter
+from .base_figurl import FigurlPlotter
 
 
-class UnitWaveformPlotter(SortingviewPlotter):
+class UnitWaveformPlotter(FigurlPlotter):
     def do_plot(self, data_plot):
         try:
             import figurl as fig
