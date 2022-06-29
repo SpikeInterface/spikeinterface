@@ -32,7 +32,7 @@ class Spykingcircus2Sorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "1.0"
+        return "2.0"
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
