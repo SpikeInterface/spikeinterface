@@ -30,7 +30,7 @@ class PositionAndFeaturesClustering:
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99, "verbose" : True},
         "debug" : False,
         "tmp_folder" : None,
-        "radius_um" : 50,
+        "local_radius_um" : 50,
         "max_spikes_per_unit" : 100,
         "ms_before" : 1.5,
         "ms_after": 2.5,
@@ -84,16 +84,16 @@ class PositionAndFeaturesClustering:
         spikes = np.zeros(peaks.size, dtype=peak_dtype)
         spikes['sample_ind'] = peaks['sample_ind']
         spikes['segment_ind'] = peaks['segment_ind']
+        spikes['unit_ind'] = peaks['channel_ind']
 
         num_chans = recording.get_num_channels()
         sparsity_mask = np.zeros((peaks.size, num_chans), dtype='bool')
         chan_locs = recording.get_channel_locations()
         unit_inds = range(num_chans)
         chan_distances = get_channel_distances(recording)
-        spikes['unit_ind'] = np.argmin(np.linalg.norm(chan_locs - locations[:, np.newaxis, :], axis=2), 1) 
-
+        
         for main_chan in unit_inds:
-            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['radius_um'])
+            closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['local_radius_um'])
             sparsity_mask[main_chan, closest_chans] = True
 
         if params['waveform_mode'] == 'shared_memory':
@@ -149,10 +149,11 @@ class PositionAndFeaturesClustering:
                 dist_stds[idx, 0] = np.linalg.norm(chan_locs[std_channels] - locations[idx], axis=1)
                 energies[idx, 0] = np.linalg.norm(waveforms, axis=(1,2))/np.sqrt(len(channels))
 
+
         to_cluster_from = np.hstack((locations, local_ptps, dist_ptps, dist_stds, energies))
         preprocessing = QuantileTransformer(output_distribution='uniform')
         to_cluster_from = preprocessing.fit_transform(to_cluster_from)
-
+        
         clustering = hdbscan.hdbscan(to_cluster_from, **d['hdbscan_kwargs'])
         peak_labels = clustering[0]
 
