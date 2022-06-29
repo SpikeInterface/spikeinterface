@@ -28,14 +28,12 @@ class PositionAndFeaturesClustering:
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99, "verbose" : True},
-        "debug" : False,
         "tmp_folder" : None,
         "local_radius_um" : 50,
         "max_spikes_per_unit" : 100,
         "ms_before" : 1.5,
         "ms_after": 2.5,
         "waveform_mode" : "memmap",
-        "tmp_folder" : None,
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
     }
 
