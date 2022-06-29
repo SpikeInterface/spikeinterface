@@ -9,6 +9,7 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.toolkit.postprocessing import WaveformPrincipalComponent
 from spikeinterface.toolkit.preprocessing import scale
 from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics, QualityMetricCalculator
+from spikeinterface.toolkit import get_template_channel_sparsity
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -49,7 +50,22 @@ def test_compute_quality_metrics():
     pca.run()
     metrics = compute_quality_metrics(we)
     assert 'isolation_distance' in metrics.columns
+    
+    # with PC - parallel
+    metrics_par = compute_quality_metrics(we, n_jobs=2, verbose=True, progress_bar=True)
+    for metric_name in metrics.columns:
+        assert np.allclose(metrics[metric_name], metrics_par[metric_name])
     print(metrics)
+    
+    # with sparsity
+    sparsity = get_template_channel_sparsity(we, method="radius", radius_um=20)
+    print(sparsity)
+    # test parallel
+    metrics_sparse = compute_quality_metrics(we, sparsity=sparsity, n_jobs=1)
+    assert 'isolation_distance' in metrics_sparse.columns
+    # for metric_name in metrics.columns:
+    #     assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+    print(metrics_sparse)
 
     # reload as an extension from we
     assert QualityMetricCalculator in we.get_available_extensions()
@@ -102,4 +118,5 @@ def test_select_units():
 
 if __name__ == '__main__':
     setup_module()
-    test_compute_quality_metrics_peak_sign()
+    test_compute_quality_metrics()
+    # test_compute_quality_metrics_peak_sign()
