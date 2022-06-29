@@ -2,7 +2,8 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import load_extractor
-from spikeinterface.extractors import BinaryRecordingExtractor, KiloSortSortingExtractor
+from spikeinterface.extractors import KiloSortSortingExtractor
+from spikeinterface.core import write_binary_recording
 import json
 from ..basesorter import BaseSorter, get_job_kwargs
 
@@ -137,20 +138,22 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        if not isinstance(recording, BinaryRecordingExtractor):
-            BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
+        if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+            # local copy needed
+            write_binary_recording(recording, file_paths=output_folder / 'recording.dat',
                                                      verbose=False, **get_job_kwargs(params, verbose))
-        
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         
-        if not isinstance(recording, BinaryRecordingExtractor):
+        if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # saved by setup recording
             dat_path = output_folder / 'recording.dat'
         else:
-            dat_path = recording._kwargs['file_paths'][0]
+            # no copy
+            d = recording.get_binary_description()
+            dat_path = d['file_paths'][0]
 
         num_chans = recording.get_num_channels()
         locations = recording.get_channel_locations()

@@ -8,7 +8,7 @@ from ..utils import ShellScript
 
 from spikeinterface.core import load_extractor
 
-from spikeinterface.core import BinaryRecordingExtractor
+from spikeinterface.core import write_binary_recording
 from spikeinterface.extractors import YassSortingExtractor
 
 
@@ -159,8 +159,8 @@ class YassSorter(BaseSorter):
         input_file_path = os.path.join(output_folder, 'data.bin')
         dtype = 'int16'  # HARD CODE THIS FOR YASS
         input_file_path = output_folder / 'data.bin'
-        BinaryRecordingExtractor.write_recording(recording, file_paths=[input_file_path],
-                                                 dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
+        
+        write_binary_recording(recording, file_paths=[input_file_path], dtype=dtype, **get_job_kwargs(params, verbose))
 
         retrain = False
         if params['neural_nets_path'] is None:
