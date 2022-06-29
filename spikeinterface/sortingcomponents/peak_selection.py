@@ -5,7 +5,7 @@ import scipy
 from sklearn.preprocessing import QuantileTransformer
 
 
-def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs):
+def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
     """Method to subsample all the found peaks before clustering
     Parameters
@@ -119,8 +119,16 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
                         snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
                         preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles = min(100, len(snrs)))
                         snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
-                        probabilities = np.random.rand(len(snrs))
-                        selected_peaks += [peaks_indices[np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:params['n_peaks']]]]
+
+                        my_selection = np.zeros(0, dtype=np.int32)
+                        all_index = np.arange(len(snrs))
+                        while my_selection.size < params['n_peaks']:
+                            candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
+                            probabilities = np.random.rand(len(candidates))
+                            valid = candidates[np.where(snrs[candidates,0] < probabilities)[0]]
+                            my_selection = np.concatenate((my_selection, valid))
+
+                        selected_peaks += [peaks_indices[np.random.permutation(my_selection)[:params['n_peaks']]]]
 
             else:
                 if params['n_peaks'] > peaks.size:
@@ -129,8 +137,16 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
                     snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
                     preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, len(snrs)))
                     snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
-                    probabilities = np.random.rand(len(snrs))
-                    selected_peaks = [np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:params['n_peaks']]]
+
+                    my_selection = np.zeros(0, dtype=np.int32)
+                    all_index = np.arange(len(snrs))
+                    while my_selection.size < params['n_peaks']:
+                        candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
+                        probabilities = np.random.rand(len(candidates))
+                        valid = candidates[np.where(snrs[candidates,0] < probabilities)[0]]
+                        my_selection = np.concatenate((my_selection, valid))
+
+                    selected_peaks = [np.random.permutation(my_selection)[:params['n_peaks']]]
 
         elif method == 'smart_sampling_locations':
 
@@ -152,22 +168,30 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
             assert params['peaks_locations'] is not None, "peaks_locations should be d96efined!"
 
             nb_spikes = len(params['peaks_locations']['x'])
-            preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
-            
-            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y']]).T
-            data = preprocessing.fit_transform(data)
 
-            max_peaks = min(params['peaks_locations'].size, params['n_peaks'])
+            if params['n_peaks'] > nb_spikes:
+                selected_peaks += [np.arange(peaks.size)]
+            else:
+                
+                preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
+                data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y']]).T
+                data = preprocessing.fit_transform(data)
 
-            probabilities = np.random.rand(len(data))
-            data_x = data[:, 0] < probabilities
+                my_selection = np.zeros(0, dtype=np.int32)
+                all_index = np.arange(peaks.size)
+                while my_selection.size < params['n_peaks']:
+                    candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
 
-            probabilities = np.random.rand(len(data))
-            data_y = data[:, 1] < probabilities
+                    probabilities = np.random.rand(len(candidates))
+                    data_x = data[:, 0] < probabilities
 
-            selection = np.where(data_x * data_y)[0]
+                    probabilities = np.random.rand(len(candidates))
+                    data_y = data[:, 1] < probabilities
 
-            selected_peaks = [np.random.permutation(selection)[:max_peaks]]
+                    valid = candidates[np.where(data_x * data_y)[0]]
+                    my_selection = np.concatenate((my_selection, valid))
+
+                selected_peaks = [np.random.permutation(my_selection)[:params['n_peaks']]]
 
         elif method == 'smart_sampling_locations_and_time':
 
@@ -189,24 +213,33 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
             assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
 
             nb_spikes = len(params['peaks_locations']['x'])
-            preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
-            data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y'], peaks['sample_ind']]).T
-            data = preprocessing.fit_transform(data)
 
-            max_peaks = min(params['peaks_locations'].size, params['n_peaks'])
+            if params['n_peaks'] > nb_spikes:
+                selected_peaks += [np.arange(peaks.size)]
+            else:
 
-            probabilities = np.random.rand(len(data))
-            data_x = data[:, 0] < probabilities
+                preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
+                data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y'], peaks['sample_ind']]).T
+                data = preprocessing.fit_transform(data)
 
-            probabilities = np.random.rand(len(data))
-            data_y = data[:, 1] < probabilities
+                my_selection = np.zeros(0, dtype=np.int32)
+                all_index = np.arange(peaks.size)
+                while my_selection.size < params['n_peaks']:
+                    candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
 
-            probabilities = np.random.rand(len(data))
-            data_t = data[:, 2] < probabilities
+                    probabilities = np.random.rand(len(candidates))
+                    data_x = data[:, 0] < probabilities
 
-            selection = np.where(data_x * data_y * data_t)[0]
+                    probabilities = np.random.rand(len(candidates))
+                    data_y = data[:, 1] < probabilities
 
-            selected_peaks = [np.random.permutation(selection)[:max_peaks]]
+                    probabilities = np.random.rand(len(candidates))
+                    data_t = data[:, 2] < probabilities
+
+                    valid = candidates[np.where(data_x * data_y * data_t)[0]]
+                    my_selection = np.concatenate((my_selection, valid))
+
+                selected_peaks = [np.random.permutation(my_selection)[:params['n_peaks']]]
 
     else:
 
