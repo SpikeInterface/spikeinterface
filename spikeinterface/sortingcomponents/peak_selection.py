@@ -15,7 +15,6 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
     'smart_sampling_locations_and_time'
         Method to use. Options:
             * 'uniform': a random subset is selected from all the peaks, on a per channel basis by default
-            * 'uniform_locations': a random subset is selected from all the peaks, to cover uniformly the space
             * 'smart_sampling_amplitudes': peaks are selected via monte-carlo rejection probabilities 
                 based on peak amplitudes, on a per channel basis
             * 'smart_sampling_locations': peaks are selection via monte-carlo rejections probabilities 
@@ -34,13 +33,6 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
-            'uniform_locations':
-                * peaks_locations: array
-                    The locations of all the peaks, computed via localize_peaks
-                * n_peaks: int
-                    The number of peaks to select in a given region of the space, in a uniform manner
-                * n_bins: tuple
-                    The number of bins used to delimit the space in (x, y) dimensions [default (10, 10)]
             'smart_sampling_amplitudes':
                 * noise_levels : array
                     The noise levels used while detecting the peaks
@@ -92,33 +84,6 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
             num_peaks = min(peaks.size, params['n_peaks'])
             selected_peaks = [np.random.choice(peaks.size, size=num_peaks, replace=False)]
 
-    elif method == 'uniform_locations':
-
-        params = {'peaks_locations' : None, 
-                  'n_bins' : (50, 50),
-                  'n_peaks' : None}
-
-        params.update(method_kwargs)
-
-        assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
-        assert params['n_peaks'] is not None, "n_peaks should be defined!"
-
-        xmin, xmax = np.min(params['peaks_locations']['x']), np.max(params['peaks_locations']['x'])
-        ymin, ymax = np.min(params['peaks_locations']['y']), np.max(params['peaks_locations']['y'])
-
-        x_grid = np.linspace(xmin, xmax, params['n_bins'][0])
-        y_grid = np.linspace(ymin, ymax, params['n_bins'][1])
-
-        x_idx = np.searchsorted(x_grid, params['peaks_locations']['x'])
-        y_idx = np.searchsorted(y_grid, params['peaks_locations']['y'])
-
-        for i in range(params['n_bins'][0]):
-            for j in range(params['n_bins'][1]):
-                peaks_indices = np.where((x_idx == i) & (y_idx == j))[0]
-                max_peaks = min(peaks_indices.size, params['n_peaks'])
-                selected_peaks += [np.random.choice(peaks_indices, size=max_peaks, replace=False)]
-
-
     elif method in ['smart_sampling_amplitudes', 'smart_sampling_locations', 'smart_sampling_locations_and_time']:
 
         if method == 'smart_sampling_amplitudes':
@@ -146,22 +111,26 @@ def select_peaks(peaks, method='uniform_amplitudes', seed=None, **method_kwargs)
             if params['select_per_channel']:
                 for channel in np.unique(peaks['channel_ind']):
 
-                    peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
-                    sub_peaks = peaks[peaks_indices]
-                    snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
-                    max_peaks = min(peaks_indices.size, params['n_peaks'])
-                    preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles = min(100, len(snrs)))
-                    snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
-                    probabilities = np.random.rand(len(snrs))
-                    selected_peaks += [np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:max_peaks]]
+                    peaks_indices = np.where(peaks['channel_ind'] == channel)[0]                
+                    if params['n_peaks'] > peaks_indices.size:
+                        selected_peaks += [peaks_indices]
+                    else:
+                        sub_peaks = peaks[peaks_indices]
+                        snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
+                        preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles = min(100, len(snrs)))
+                        snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
+                        probabilities = np.random.rand(len(snrs))
+                        selected_peaks += [peaks_indices[np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:params['n_peaks']]]]
 
             else:
-                snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
-                preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, len(snrs)))
-                snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
-                num_peaks = min(peaks.size, params['n_peaks'])
-                probabilities = np.random.rand(len(snrs))
-                selected_peaks = [np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:num_peaks]]
+                if params['n_peaks'] > peaks.size:
+                    selected_peaks += [np.arange(peaks.size)]
+                else:
+                    snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
+                    preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, len(snrs)))
+                    snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
+                    probabilities = np.random.rand(len(snrs))
+                    selected_peaks = [np.random.permutation(np.where(snrs[:,0] < probabilities)[0])[:params['n_peaks']]]
 
         elif method == 'smart_sampling_locations':
 
