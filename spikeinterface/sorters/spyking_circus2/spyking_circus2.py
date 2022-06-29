@@ -15,14 +15,14 @@ class Spykingcircus2Sorter(BaseSorter):
     sorter_name = 'spykingcircus2'
 
     _default_params = {
-        'waveforms' : {'ms_before' : 2, 'ms_after' : 2, 'max_spikes_per_unit' : 200, 'overwrite' : True},
+        'waveforms' : {'ms_before' : 2.5, 'ms_after' : 3.5, 'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'freq_min' : 300, 'freq_max' : 6000, 'dtype' : 'float32'},
-        'detection' : {'peak_sign': 'neg', 'detect_threshold': 5, 'n_shifts' : 100},
+        'detection' : {'peak_sign': 'neg', 'detect_threshold': 5, 'n_shifts' : 100, 'local_radius_um' : 50},
         'selection' : {'n_peaks' : 50000},
-        'localization' : {'local_radius_um' : 100},
+        'localization' : {'local_radius_um' : 50},
         'clustering': {},
         'matching':  {},
-        'common_reference': False,
+        'common_reference': True,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : True}
     }
 
@@ -52,10 +52,10 @@ class Spykingcircus2Sorter(BaseSorter):
             **detection_params)
 
         selection_params = params['selection']
-        noise_levels = get_noise_levels(recording_f, return_scaled=False)
+        noise_levels = get_noise_levels(recording_f)
         selection_params.update({'noise_levels' : noise_levels})
 
-        selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', **selection_params)
+        selected_peaks = select_peaks(peaks, method='uniform', **selection_params)
 
         localization_params = params['localization'].copy()
 
