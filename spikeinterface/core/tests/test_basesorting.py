@@ -25,7 +25,7 @@ def test_BaseSorting():
     create_sorting_npz(num_seg, file_path)
 
     sorting = NpzSortingExtractor(file_path)
-    print(sorting)
+    # print(sorting)
 
     assert sorting.get_num_segments() == 2
     assert sorting.get_num_units() == 3
