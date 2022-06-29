@@ -8,7 +8,8 @@ import scipy.io
 
 from .utils import ShellScript
 from .basesorter import get_job_kwargs
-from spikeinterface.extractors import KiloSortSortingExtractor, BinaryRecordingExtractor
+from spikeinterface.extractors import KiloSortSortingExtractor
+from spikeinterface.core import write_binary_recording
 
 
 class KilosortBase:
@@ -113,17 +114,17 @@ class KilosortBase:
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-
         cls._generate_channel_map_file(recording, output_folder)
         
-        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['time_axis'] == 0 and \
-                recording._kwargs['dtype'] == np.dtype('int16') and len(recording._kwargs['file_paths']) == 1:
-            # in this specific case no copy is needed !!
-            binary_file_path = Path(recording._kwargs['file_paths'][0])
+        if recording.binary_compatible_with(dtype='int16', time_axis=0, file_paths_lenght=1):
+            # no copy
+            d = recording.get_binary_description()
+            binary_file_path = Path(d['file_paths'][0])
         else:
+            # local copy needed
             binary_file_path = output_folder / 'recording.dat'
-            BinaryRecordingExtractor.write_recording(recording, file_paths=binary_file_path,
-                                                     dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
+            write_binary_recording(recording, file_paths=[binary_file_path],
+                                   dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
 
         cls._generate_ops_file(recording, params, output_folder, binary_file_path)
 
