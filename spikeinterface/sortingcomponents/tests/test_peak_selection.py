@@ -31,9 +31,9 @@ def test_detect_peaks():
                                     n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
 
     subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100)
-    subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100, select_per_channel=False)
+    subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100, select_per_channel=True)
     subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels)
-    subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels, select_per_channel=False)
+    subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels, select_per_channel=True)
     subset_peaks = select_peaks(peaks, 'smart_sampling_locations', n_peaks=100, peaks_locations=peak_locations)
     subset_peaks = select_peaks(peaks, 'smart_sampling_locations_and_time', n_peaks=100, peaks_locations=peak_locations)
     
