@@ -10,9 +10,9 @@ from spikeinterface.core import load_extractor, BaseRecording
 from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.core import extract_waveforms
 
-class SpikeInterfaceSorter(BaseSorter):
+class Spykingcircus2Sorter(BaseSorter):
 
-    sorter_name = 'spikeinterface'
+    sorter_name = 'spyking_circus2'
 
     _default_params = {
         'waveforms' : {'ms_before' : 2, 'ms_after' : 2, 'max_spikes_per_unit' : 200, 'overwrite' : True},
