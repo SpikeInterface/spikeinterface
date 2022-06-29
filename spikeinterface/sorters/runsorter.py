@@ -24,6 +24,7 @@ SORTER_DOCKER_MAP = dict(
     mountainsort4='mountainsort4',
     pykilosort='pykilosort',
     spykingcircus='spyking-circus',
+    spykingcircus2='spyking-circus2',
     tridesclous='tridesclous',
     # Matlab compiled sorters:
     hdsort='hdsort-compiled',
