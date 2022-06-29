@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from spikeinterface import extract_waveforms, download_dataset
 
-from spikeinterface.widgets import HAVE_MPL, HAVE_SV
+from spikeinterface.widgets import HAVE_MPL, HAVE_FIGURL
 
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
