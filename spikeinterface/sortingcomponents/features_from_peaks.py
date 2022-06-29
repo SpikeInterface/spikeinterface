@@ -10,7 +10,7 @@ def compute_features_from_peaks(
     recording,
     peaks,
     feature_list=["amplitude", "ptp"],
-    feature_params = {"amplitude" : {"ms_before" : 0.2, "ms_after" : 0.2, "peak_sign" : "neg"},
+    feature_params = {"amplitude" : {"ms_before" : 0, "ms_after" : 0, "peak_sign" : "neg"},
                       "ptp" : {"ms_before" : 1, "ms_after" : 1},
                       "com" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50},
                       "dist_com_vs_max_ptp_channel" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50},
@@ -32,8 +32,8 @@ def compute_features_from_peaks(
             - amplitude (params: ms_before, ms_after, peak_sign)
             - ptp (params: ms_before, ms_after)
             - com (params: ms_before, ms_after, local_radius_um)
-            - dist_com_vs_max_p2p_channel (params: ms_before, ms_after)
-            - dist_com_vs_max_std_channel (params: ms_before, ms_after)
+            - dist_com_vs_max_p2p_channel (params: ms_before, ms_after, local_radius_um)
+            - dist_com_vs_max_std_channel (params: ms_before, ms_after, local_radius_um)
 
     {}
 
@@ -199,6 +199,8 @@ def compute_features(
 
     feature_idx = 0
 
+    _loop_idx = {}
+
     for feature in feature_list:
 
         nbefore = feature_params[feature]['nbefore']
@@ -207,12 +209,15 @@ def compute_features(
         wf = traces[local_peak['sample_ind'][:, None] + np.arange(-nbefore, nafter), :]
 
         if feature == 'amplitude':
-            if feature_params['peak_sign'] == 'neg':
-                features = np.min(wf, axis=(1, 2))
-            elif feature_params['peak_sign'] == 'pos':
-                features = np.max(wf, axis=(1, 2))
-            elif feature_params['peak_sign'] == 'both':
-                features = np.max(np.abs(wf), axis=(1, 2))
+            if wf.shape[1] == 0:
+                features = local_peak['amplitude']
+            else:
+                if feature_params[feature]['peak_sign'] == 'neg':
+                    features = np.min(wf, axis=(1, 2))
+                elif feature_params[feature]['peak_sign'] == 'pos':
+                    features = np.max(wf, axis=(1, 2))
+                elif feature_params[feature]['peak_sign'] == 'both':
+                    features = np.max(np.abs(wf), axis=(1, 2))
 
         elif feature == 'ptp':
             all_ptps = np.ptp(wf, axis=1)
@@ -221,14 +226,22 @@ def compute_features(
         elif feature == 'energy':
             features = np.zeros(local_peak.size, dtype=np.float32)
             for main_chan in range(traces.shape[1]):
-                idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                if main_chan in _loop_idx:
+                    idx =_loop_idx[main_chan]
+                else:
+                    idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                    _loop_idx[main_chan] = idx
                 nb_channels = np.sum(feature_params[feature]['sparsity_mask'][main_chan])
                 features[idx] = np.linalg.norm(wf[idx] * feature_params[feature]['sparsity_mask'][main_chan], axis=(1, 2))/np.sqrt(nb_channels)
 
         elif feature == 'com':
             features = np.zeros((local_peak.size, feature_params['nb_com_dims']), dtype=np.float32)
             for main_chan in range(traces.shape[1]):
-                idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                if main_chan in _loop_idx:
+                    idx =_loop_idx[main_chan]
+                else:
+                    idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                    _loop_idx[main_chan] = idx
                 chan_inds, = np.nonzero(feature_params[feature]['sparsity_mask'][main_chan])
                 local_contact_locations = feature_params['chan_locs'][chan_inds, :]
 
@@ -238,7 +251,11 @@ def compute_features(
         elif feature == 'dist_com_vs_max_ptp_channel':
             features = np.zeros(local_peak.size, dtype=np.float32)
             for main_chan in range(traces.shape[1]):
-                idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                if main_chan in _loop_idx:
+                    idx =_loop_idx[main_chan]
+                else:
+                    idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                    _loop_idx[main_chan] = idx
                 chan_inds, = np.nonzero(feature_params[feature]['sparsity_mask'][main_chan])
                 local_contact_locations = feature_params['chan_locs'][chan_inds, :]
 
@@ -250,7 +267,11 @@ def compute_features(
         elif feature == 'dist_com_vs_max_std_channel':
             features = np.zeros(local_peak.size, dtype=np.float32)
             for main_chan in range(traces.shape[1]):
-                idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                if main_chan in _loop_idx:
+                    idx =_loop_idx[main_chan]
+                else:
+                    idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+                    _loop_idx[main_chan] = idx
                 chan_inds, = np.nonzero(feature_params[feature]['sparsity_mask'][main_chan])
                 local_contact_locations = feature_params['chan_locs'][chan_inds, :]
 
