@@ -6,7 +6,7 @@ import numpy as np
 
 import joblib
 import sys
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 # import loky
 from concurrent.futures import ProcessPoolExecutor
