@@ -34,7 +34,7 @@ class SlidingHdbscanClustering:
     This method is a bit slow
     """
     _default_params = {
-        'waveform_mode': 'memmap',
+        'waveform_mode': 'shared_memory',
         'tmp_folder': None,
         'ms_before': 1.5,
         'ms_after': 2.5,
@@ -48,7 +48,7 @@ class SlidingHdbscanClustering:
         'auto_merge_quantile_limit': 0.8, 
         'ratio_num_channel_intersect': 0.5,
         #~ 'auto_trash_misalignment_shift' : 4,
-        'job_kwargs' : {}
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M', 'verbose' : True, 'progress_bar' : True},
     }
 
     @classmethod
