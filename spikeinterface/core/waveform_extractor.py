@@ -548,7 +548,7 @@ class WaveformExtractor:
         mode: str
             'average' (default), 'median' , 'std'(standard deviation)
         sparsity: dict or None
-            If given, dictionary with unit ids as keys and channel sparsity by index as values.
+            If given, dictionary with unit ids as keys and channel sparsity as values.
             The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
             (make sure to use the default output='id' when computing the sparsity)
 
