@@ -17,7 +17,7 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
     num_channels : The total number of channels in a recording. 
         All currently available Neuropixels variants have 384 channels.
 
-    num_channels_per_adc : The total number of ADCs on the probe
+    num_channels_per_adc : The number channels per ADCs on the probe
         Neuropixels 1.0 probes have 12 ADCs
         Neuropixels 2.0 probes have 16 ADCs
 
