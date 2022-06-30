@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
-from ...toolkit import get_template_extremum_channel, get_template_extremum_amplitude
+from ...postprocessing import get_template_extremum_channel, get_template_extremum_amplitude
 from .utils import get_unit_colors
 
 

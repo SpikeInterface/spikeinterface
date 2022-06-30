@@ -1,12 +1,11 @@
 from pathlib import Path
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
+
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.extractors.neoextractors.spikeglx import _get_sample_shifts
 
 import probeinterface as pi 
-
-
 
 try:
     import mtscomp
@@ -90,7 +89,13 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
         # load sample shifts
         imDatPrb_type = probe.annotations["imDatPrb_type"]
-        sample_shifts = _get_sample_shifts(self.get_num_channels(), imDatPrb_type)
+        
+        if imDatPrb_type < 2:
+            num_adcs = 12
+        else:
+            num_adcs = 16
+
+        sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
         self.set_property("inter_sample_shift", sample_shifts)
         
 

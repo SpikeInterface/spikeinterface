@@ -21,18 +21,18 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.toolkit as st
+	import spikeinterface.qualitymetrics as qm
 
 	# Make recording, sorting and wvf_extractor objects for your data.
 	
-	fraction_missing = st.compute_amplitudes_cutoff(wvf_extractor, peak_sign="neg")
+	fraction_missing = qm.compute_amplitudes_cutoff(wvf_extractor, peak_sign="neg")
 	# fraction_missing is a dict containing the units' ID as keys,
 	# and their estimated fraction of missing spikes as values.
 
 Reference
 ---------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
 	.. autofunction:: compute_amplitudes_cutoff
 
@@ -40,7 +40,7 @@ Reference
 Links to source code
 --------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/ae679aff788a6dd4d8e7783e1f72ec7e550c1bf9/spikeinterface/toolkit/qualitymetrics/misc_metrics.py#L259/>`_
+From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L259/>`_
 
 From the `AllenInstitute <https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/metrics.py#L219/>`_
 
