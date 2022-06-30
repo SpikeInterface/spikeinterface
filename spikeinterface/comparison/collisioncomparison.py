@@ -119,17 +119,11 @@ class CollisionGTComparison(GroundTruthComparison):
         similarities = []
         pair_names = []
 
-        performances = self.get_performance()['accuracy']
-
         for r in range(n):
             for c in range(r + 1, n):
 
                 u1 = unit_ids[r]
                 u2 = unit_ids[c]
-
-                # if good_only:
-                #     if (performances[u1] < quality_level) or (performances[u2] < 0.9):
-                #         continue
 
                 ind1 = self.sorting1.id_to_index(u1)
                 ind2 = self.sorting1.id_to_index(u2)
