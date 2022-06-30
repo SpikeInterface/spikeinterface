@@ -1,10 +1,10 @@
 
 from spikeinterface.core import extract_waveforms
-from spikeinterface.toolkit import bandpass_filter, common_reference
+from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
-from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics
+from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import CollisionGTComparison
 from spikeinterface.widgets import plot_sorting_performance, plot_agreement_matrix, plot_comparison_collision_by_similarity, plot_unit_templates, plot_unit_waveforms
 
