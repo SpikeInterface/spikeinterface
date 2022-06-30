@@ -85,7 +85,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         probe = pi.read_openephys(folder_path, raise_error=False)
         if probe is not None:
             self.set_probe(probe, in_place=True)
-            probe_name = probe.annotations("probe_name")
+            probe_name = probe.annotations["probe_name"]
             # load num_channels_per_adc depending on probe type
             if "2.0" in probe_name:
                 num_channels_per_adc = 16
