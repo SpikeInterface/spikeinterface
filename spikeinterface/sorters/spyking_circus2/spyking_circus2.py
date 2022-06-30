@@ -53,7 +53,7 @@ class Spykingcircus2Sorter(BaseSorter):
             **detection_params)
 
         selection_params = params['selection']
-        selection_params['n_peaks'] = params['selection']['n_peaks_per_electrode'] * recording.get_num_channels()
+        selection_params['n_peaks'] = params['selection']['n_peaks_per_electrodes'] * recording.get_num_channels()
         selection_params['n_peaks'] = max(selection_params['min_n_spikes'], selection_params['n_peaks']) 
         noise_levels = get_noise_levels(recording_f)
         selection_params.update({'noise_levels' : noise_levels})
