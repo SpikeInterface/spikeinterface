@@ -7,6 +7,7 @@ try:
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
+
 def compute_autocorrelogram_from_spiketrain(spike_train, max_time, bin_size, sampling_f):
     """
     Compute the auto-correlogram from a given spike train.
@@ -242,7 +243,7 @@ def compute_correlograms_numba(sorting,
     This is a "brute force" method using compiled code (numba)
     to accelerate the computation.
     
-    Adaptation: Aurélien Wyngaard
+    Implementation: Aurélien Wyngaard
     """
 
     assert HAVE_NUMBA and symmetrize
@@ -253,11 +254,10 @@ def compute_correlograms_numba(sorting,
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
     num_bins = 2 * int(window_size / bin_size)
+    assert num_bins >= 1
 
     bins = np.arange(-window_size, window_size+bin_size, bin_size) * 1e3 / fs
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
-
-    assert num_bins >= 1
 
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
 
@@ -271,7 +271,7 @@ def compute_correlograms_numba(sorting,
 if HAVE_NUMBA:
     @numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
                 nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
+    def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f): # TODO: is sampling_f really required?
         n_units = correlograms.shape[0]
 
         for i in numba.prange(n_units):
