@@ -174,7 +174,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         'sparsify_threshold': 0.99,
-        'amplitudes' : [0.5, 1.5],
+        'amplitudes' : [0.75, 1.25],
         'noise_levels': None,
         'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,

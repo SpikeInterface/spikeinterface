@@ -5,7 +5,7 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
-from spikeinterface.toolkit import bandpass_filter, common_reference
+from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.core import load_extractor, BaseRecording
 from spikeinterface.toolkit import get_noise_levels
 from spikeinterface.core import extract_waveforms
