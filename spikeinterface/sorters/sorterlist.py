@@ -15,6 +15,7 @@ from .mountainsort4 import Mountainsort4Sorter
 from .spyking_circus import SpykingcircusSorter
 from .tridesclous import TridesclousSorter
 from .waveclus import WaveClusSorter
+from .waveclus import WaveClusSnippetsSorter
 from .yass import YassSorter
 
 sorter_full_list = [
@@ -32,6 +33,7 @@ sorter_full_list = [
     SpykingcircusSorter,
     TridesclousSorter,
     WaveClusSorter,
+    WaveClusSnippetsSorter,
     YassSorter,
 ]
 

@@ -12,17 +12,18 @@ from .base import load_extractor  # , load_extractor_from_dict, load_extractor_f
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
+from .basesnippets import BaseSnippets, BaseSnippetsSegment
+from .baserecordingsnippets import BaseRecordingSnippets
 
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
-from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent
+from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent, NumpySnippetsExtractor
 from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 
-
 # utility extractors (equivalent to OLD subrecording/subsorting)
-from .channelslicerecording import ChannelSliceRecording
+from .channelslice import ChannelSliceRecording, ChannelSliceSnippets
 from .unitsselectionsorting import UnitsSelectionSorting
 from .frameslicerecording import FrameSliceRecording
 from .frameslicesorting import FrameSliceSorting
