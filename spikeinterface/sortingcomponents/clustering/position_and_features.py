@@ -10,9 +10,8 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string, os
-from spikeinterface.core import get_global_tmp_folder
+from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
-from spikeinterface.toolkit import get_channel_distances, get_noise_levels
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates
 from spikeinterface.core import NumpySorting
@@ -192,7 +191,7 @@ class PositionAndFeaturesClustering:
                      **params['job_kwargs'])
 
         print("We found %d raw clusters, starting to clean..." %len(labels))
-        noise_levels = get_noise_levels(recording)
+        noise_levels = get_noise_levels(recording, return_scaled=False)
         labels, peak_labels = remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params['cleaning_kwargs'])
 
         return labels, peak_labels

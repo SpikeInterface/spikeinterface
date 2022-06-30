@@ -11,6 +11,7 @@ from spikeinterface.widgets import plot_probe_map, plot_agreement_matrix, plot_c
 from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.postprocessing import get_template_extremum_channel
+from spikeinterface.core import get_noise_levels 
 
 import time
 import string, random
@@ -389,7 +390,7 @@ class BenchmarkClustering:
         energy = []
         nb_channels = []
 
-        from spikeinterface.toolkit import get_noise_levels 
+        
         noise_levels = get_noise_levels(self.recording_f)
 
         for found, real in zip(unit_ids2, unit_ids1):
