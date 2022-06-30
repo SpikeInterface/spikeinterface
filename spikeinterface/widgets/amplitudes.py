@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
-from ..toolkit import compute_spike_amplitudes
+from ..postprocessing import compute_spike_amplitudes
 from .utils import get_unit_colors
 
 
