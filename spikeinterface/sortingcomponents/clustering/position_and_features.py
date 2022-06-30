@@ -26,16 +26,14 @@ class PositionAndFeaturesClustering:
     _default_params = {
         "peak_locations" : None,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
-        "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1},
+        "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99, "verbose" : True},
-        "debug" : False,
         "tmp_folder" : None,
         "local_radius_um" : 50,
         "max_spikes_per_unit" : 100,
         "ms_before" : 1.5,
         "ms_after": 2.5,
         "waveform_mode" : "memmap",
-        "tmp_folder" : None,
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
     }
 
@@ -113,11 +111,10 @@ class PositionAndFeaturesClustering:
                                 sparsity_mask=sparsity_mask,  copy=(params['waveform_mode'] == 'shared_memory'),
                                 **params['job_kwargs'])
 
-        energies = np.zeros((len(locations), 1))
-        local_ptps = np.zeros((len(locations), 1))
-        dist_ptps = np.zeros((len(locations), 1))
-        dist_stds = np.zeros((len(locations), 1))
-        #dist_abs_barycenters = np.zeros((len(locations), 1))
+
+        n_loc = len(location_keys)
+        hdbscan_data = np.zeros((len(locations), n_loc + 3), dtype=np.float32)
+        hdbscan_data[:, :n_loc] = locations
 
         import scipy, sklearn
 
@@ -138,23 +135,18 @@ class PositionAndFeaturesClustering:
             if len(waveforms) > 0:
                 waveforms_filtered = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
                 waveforms = waveforms_filtered*(1 - step_window) + step_window*waveforms
-
                 all_ptps = np.ptp(waveforms, axis=1)
-                local_ptps[idx, 0] = np.max(all_ptps, axis=1)
-
                 ptp_channels = channels[np.argmax(np.ptp(waveforms, axis=1), axis=1)]
-                std_channels = channels[np.argmax(np.std(waveforms, axis=1), axis=1)]
 
-                dist_ptps[idx, 0] = np.linalg.norm(chan_locs[ptp_channels] - locations[idx], axis=1)
-                dist_stds[idx, 0] = np.linalg.norm(chan_locs[std_channels] - locations[idx], axis=1)
-                energies[idx, 0] = np.linalg.norm(waveforms, axis=(1,2))/np.sqrt(len(channels))
+                hdbscan_data[idx, n_loc] = np.max(all_ptps, axis=1)
+                hdbscan_data[idx, n_loc + 1] = np.linalg.norm(chan_locs[ptp_channels] - locations[idx], axis=1)
+                hdbscan_data[idx, n_loc + 2] = np.linalg.norm(waveforms, axis=(1,2))/np.sqrt(len(channels))
 
 
-        to_cluster_from = np.hstack((locations, local_ptps, dist_ptps, dist_stds, energies))
         preprocessing = QuantileTransformer(output_distribution='uniform')
-        to_cluster_from = preprocessing.fit_transform(to_cluster_from)
+        hdbscan_data = preprocessing.fit_transform(hdbscan_data)
         
-        clustering = hdbscan.hdbscan(to_cluster_from, **d['hdbscan_kwargs'])
+        clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
         peak_labels = clustering[0]
 
         labels = np.unique(peak_labels)
@@ -168,7 +160,7 @@ class PositionAndFeaturesClustering:
 
         for unit_ind in labels:
             mask = peak_labels == unit_ind
-            data = to_cluster_from[mask]
+            data = hdbscan_data[mask]
             centroid = np.median(data, axis=0)
             distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
             best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:params["max_spikes_per_unit"]]]
