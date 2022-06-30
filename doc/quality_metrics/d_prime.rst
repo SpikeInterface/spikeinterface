@@ -32,19 +32,19 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.toolkit as st
+	import spikeinterface.qualitymetrics as qm
 
-    d_prime = st.lda_metrics(all_pcs, all_labels, 0)
+    d_prime = qm.lda_metrics(all_pcs, all_labels, 0)
 
 Links to source code
 --------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/ccaec9bac37b0b7d31c955594780c706fe165c37/spikeinterface/toolkit/qualitymetrics/pca_metrics.py#L188>`_
+From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/pca_metrics.py#L188>`_
 
 Reference
 ---------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.pca_metrics
+.. automodule:: spikeinterface.qualitymetrics.pca_metrics
 
     .. autofunction:: lda_metrics
 
