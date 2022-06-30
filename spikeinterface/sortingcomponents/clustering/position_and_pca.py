@@ -12,7 +12,7 @@ except:
     HAVE_HDBSCAN = False
 
 from spikeinterface.core import get_global_tmp_folder
-from spikeinterface.toolkit import get_channel_distances, get_random_data_chunks
+from spikeinterface.core.recording_tools import get_channel_distances, get_random_data_chunks
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import auto_clean_clustering, auto_split_clustering
 
