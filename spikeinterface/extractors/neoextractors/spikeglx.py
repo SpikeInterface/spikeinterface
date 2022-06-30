@@ -66,15 +66,15 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_probe(probe, in_place=True)
             self.set_probe(probe, in_place=True)
             
-            # load sample shifts
+            # load num_channels_per_adc depending on probe type
             imDatPrb_type = probe.annotations["imDatPrb_type"]
 
             if imDatPrb_type == 2:
-                num_adcs = 16
+                num_channels_per_adc = 16
             else:
-                num_adcs = 12
+                num_channels_per_adc = 12
 
-            sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
+            sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs.update(dict(folder_path=str(folder_path)))
