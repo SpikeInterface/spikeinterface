@@ -6,7 +6,7 @@ def get_neuropixels_sample_shifts(num_channels = 384, num_adcs = 12):
     Calculates the relative sampling phase of each channel that results 
     from Neuropixels ADC multiplexing.
 
-    This information is needed to perform the toolkit.preprocessing.phase_shift operation.
+    This information is needed to perform the preprocessing.phase_shift operation.
 
     See https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
     for the original implementation.
@@ -57,7 +57,7 @@ def get_neuropixels_channel_groups(num_channels = 384, num_adcs = 12):
     |||         |||
      V           V
 
-    This information is needed to perform the toolkit.preprocessing.common_reference operation
+    This information is needed to perform the preprocessing.common_reference operation
     on channels that are sampled synchronously.
 
     Params

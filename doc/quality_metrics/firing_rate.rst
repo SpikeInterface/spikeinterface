@@ -37,18 +37,18 @@ With SpikeInterface:
 
 .. code-block:: python
 
-    import spikeinterface.toolkit as st
+    import spikeinterface.qualitymetrics as qm
 
     # Make recording, sorting and wvf_extractor object for your data.
     
-    firing_rate = st.compute_firing_rate(wvf_extractor)
+    firing_rate = qm.compute_firing_rate(wvf_extractor)
     # firing_rate is a dict containing the units' ID as keys,
     # and their firing rate across segments as values (in Hz).
 
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
     .. autofunction:: compute_firing_rate
 
@@ -56,7 +56,7 @@ References
 Links to source code
 --------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/ae679aff788a6dd4d8e7783e1f72ec7e550c1bf9/spikeinterface/toolkit/qualitymetrics/misc_metrics.py#L52>`_
+From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L52>`_
 
 From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Firing-rate>`_
 

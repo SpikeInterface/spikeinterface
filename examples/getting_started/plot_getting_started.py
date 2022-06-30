@@ -18,24 +18,26 @@ import spikeinterface
 
 ##############################################################################
 # We need to import one by one different submodules separately (preferred).
-# There are 5 modules:
+# There several modules:
 #
 # - :code:`extractors` : file IO
-# - :code:`toolkit` : processing toolkit for pre-, post-processing, validation, and automatic curation
+# - :code:`preprocessing` : preprocessing 
 # - :code:`sorters` : Python wrappers of spike sorters
+# - :code:`postprocessing` : postprocessing
+# - :code:`qualitymetrics` : quality metrics on units found by sorter 
 # - :code:`comparison` : comparison of spike sorting output
 # - :code:`widgets` : visualization
 
 import spikeinterface as si  # import core only
 import spikeinterface.extractors as se
-import spikeinterface.toolkit as st
 import spikeinterface.sorters as ss
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
 ##############################################################################
 #  We can also import all submodules at once with this
-#   this internally import core+extractors+toolkit+sorters+comparison+widgets+exporters
+#  this internally import core+extractors+preprocessing+sorters+postprocessing+
+#  qualitymetrics+comparison+widgets+exporters
 #
 # This is useful for notebooks but this is a more heavy import because internally many more dependency
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
@@ -103,16 +105,16 @@ from probeinterface.plotting import plot_probe
 plot_probe(probe)
 
 ##############################################################################
-# Using the :py:mod:`spikeinterface.toolkit`, you can perform preprocessing on the recordings.
+# Using the :py:mod:`spikeinterface.preprocessing`, you can perform preprocessing on the recordings.
 # Each pre-processing function also returns a :py:class:`~spikeinterface.core.BaseRecording`,
 # which makes it easy to build pipelines. Here, we filter the recording and apply common median reference (CMR).
 # All these preprocessing steps are "lazy". The computation is done on demand when we call
 # `recording.get_traces(...)` or when we save the object to disk.
 
 recording_cmr = recording
-recording_f = st.bandpass_filter(recording, freq_min=300, freq_max=6000)
+recording_f = si.bandpass_filter(recording, freq_min=300, freq_max=6000)
 print(recording_f)
-recording_cmr = st.common_reference(recording_f, reference='global', operator='median')
+recording_cmr = si.common_reference(recording_f, reference='global', operator='median')
 print(recording_cmr)
 
 # this computes and saves the recording after applying the preprocessing chain
@@ -185,7 +187,7 @@ print(template.shape)
 ##############################################################################
 # Once we have the  `WaveformExtractor` object
 # we can post-process, validate, and curate the results. With
-# the :py:mod:`spikeinterface.toolkit.postprocessing` submodule, one can, for example,
+# the :py:mod:`spikeinterface.postprocessing` submodule, one can, for example,
 # get waveforms, templates, maximum channels, PCA scores, or export the data
 # to Phy. `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
@@ -202,14 +204,14 @@ export_to_phy(we_TDC, './phy_folder_for_TDC',
 
 ##############################################################################
 # Quality metrics for the spike sorting output are very important to asses the spike sorting performance.
-# The :py:mod:`spikeinterface.toolkit.qualitymetrics` module implements several quality metrics
+# The :py:mod:`spikeinterface.qualitymetrics` module implements several quality metrics
 # to assess the goodness of sorted units. Among those, for example,
 # are signal-to-noise ratio, ISI violation ratio, isolation distance, and many more.
 # Theses metrics are built on top of WaveformExtractor class and return a dictionary with the unit ids as keys:
 
-snrs = st.compute_snrs(we_TDC)
+snrs = si.compute_snrs(we_TDC)
 print(snrs)
-si_violations_ratio, isi_violations_rate, isi_violations_count = st.compute_isi_violations(we_TDC, isi_threshold_ms=1.5)
+si_violations_ratio, isi_violations_rate, isi_violations_count = si.compute_isi_violations(we_TDC, isi_threshold_ms=1.5)
 print(si_violations_ratio)
 print(isi_violations_rate)
 print(isi_violations_count)
@@ -218,7 +220,7 @@ print(isi_violations_count)
 # All theses quality metrics can be computed in one shot and returned as
 # a :code:`pandas.Dataframe`
 
-metrics = st.compute_quality_metrics(we_TDC, metric_names=['snr', 'isi_violation', 'amplitude_cutoff'])
+metrics = si.compute_quality_metrics(we_TDC, metric_names=['snr', 'isi_violation', 'amplitude_cutoff'])
 print(metrics)
 
 ##############################################################################
