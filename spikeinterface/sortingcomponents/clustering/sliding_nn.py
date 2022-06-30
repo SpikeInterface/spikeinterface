@@ -14,7 +14,7 @@ try:
 except ImportError:
     HAVE_NNDESCENT = False
 
-from spikeinterface.toolkit import get_channel_distances
+from spikeinterface.core import get_channel_distances
 from tqdm.auto import tqdm
 import hdbscan
 import copy
