@@ -3,7 +3,7 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
-from spikeinterface.toolkit import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 
 
