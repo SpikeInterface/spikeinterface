@@ -2,7 +2,8 @@ import warnings
 warnings.simplefilter('always', DeprecationWarning)
 
 warnings.warn("The 'toolkit' module is deprecated. "
-              "Use spikeinterface.preprocessing/postptocessing/qualitymetrics instead", DeprecationWarning)
+              "Use spikeinterface.preprocessing/postptocessing/qualitymetrics instead",
+              DeprecationWarning, stacklevel=2)
 
 from . import preprocessing
 from .. import postprocessing
