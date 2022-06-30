@@ -1,5 +1,6 @@
 from typing import Iterable, List, Union
 from pathlib import Path
+import warnings
 
 import numpy as np
 
@@ -103,6 +104,13 @@ class BaseRecording(BaseExtractor):
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
+            if hasattr(self, "NeoRawIOClass"):
+                if self.has_non_standard_units:
+                    message = ( 
+                    f'This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)'
+                    )
+                    warnings.warn(message)
+            
             if not self.has_scaled_traces():
                 raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_'
                                  'to_uV properties)')
