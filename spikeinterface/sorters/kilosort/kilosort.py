@@ -88,7 +88,9 @@ class KilosortSorter(KilosortBase, BaseSorter):
         
     @classmethod
     def use_gpu(cls, params):
-        return params["useGPU"]
+        if 'useGPU' in params:
+            return params['useGPU']
+        return cls.default_params()['useGPU']
 
     @classmethod
     def set_kilosort_path(cls, kilosort_path: str):

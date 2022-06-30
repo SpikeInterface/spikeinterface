@@ -4,7 +4,7 @@ from .basewidget import BaseWidget
 
 from probeinterface.plotting import plot_probe
 
-from spikeinterface.toolkit import localize_units
+from spikeinterface.postprocessing import localize_units
 
 from .utils import get_unit_colors
 

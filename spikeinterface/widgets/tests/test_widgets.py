@@ -16,7 +16,8 @@ from spikeinterface.widgets import HAVE_MPL, HAVE_FIGURL
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
-import spikeinterface.toolkit as st
+from spikeinterface.postprocessing import compute_spike_amplitudes
+from spikeinterface.qualitymetrics import compute_quality_metrics
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -33,15 +34,15 @@ class TestWidgets(unittest.TestCase):
         self.sorting = se.MEArecSortingExtractor(local_path)
 
         self.num_units = len(self.sorting.get_unit_ids())
-        #  self.we = extract_waveforms(self.recording, self.sorting, './toy_example', load_if_exists=True)
+        #self.we = extract_waveforms(self.recording, self.sorting, './toy_example', load_if_exists=True)
         self.we = extract_waveforms(self.recording, self.sorting, cache_folder / 'mearec_test', load_if_exists=True)
-
-        self.amplitudes = st.compute_spike_amplitudes(self.we, peak_sign='neg', outputs='by_unit')
-        self.gt_comp = sc.compare_sorter_to_ground_truth(self.sorting, self.sorting)
 
         # @jeremy : for testing sorting view we can find something here
         # at the moment only mpl will be tested on github actions
         sw.set_default_plotter_backend('matplotlib')
+        
+        self.amplitudes = compute_spike_amplitudes(self.we, peak_sign='neg', outputs='by_unit')
+        self.gt_comp = sc.compare_sorter_to_ground_truth(self.sorting, self.sorting)
 
     def tearDown(self):
         pass
@@ -52,7 +53,6 @@ class TestWidgets(unittest.TestCase):
         sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True)
         sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True, order_channel_by_depth=True)
 
-    
     def test_plot_unit_waveforms(self):
         w = sw.plot_unit_waveforms(self.we)
         unit_ids = self.sorting.unit_ids[:6]
@@ -79,8 +79,8 @@ if __name__ == '__main__':
     
     mytest.test_plot_timeseries()
     
-    # mytest.test_plot_unit_waveforms()
-    # mytest.test_plot_unit_templates()
-    # mytest.test_plot_unit_waveforms_density_map()
+    mytest.test_plot_unit_waveforms()
+    mytest.test_plot_unit_templates()
+    mytest.test_plot_unit_waveforms_density_map()
 
     plt.show()

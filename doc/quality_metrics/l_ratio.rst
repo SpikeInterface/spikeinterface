@@ -40,13 +40,13 @@ Example code
 Links to source code
 --------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/ccaec9bac37b0b7d31c955594780c706fe165c37/spikeinterface/toolkit/qualitymetrics/pca_metrics.py#L128>`_
+From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/pca_metrics.py#L128>`_
 
 
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.pca_metrics
+.. automodule:: spikeinterface.qualitymetrics.pca_metrics
 
     .. autofunction:: mahalanobis_metrics
 

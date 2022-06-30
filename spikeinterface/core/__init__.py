@@ -18,6 +18,8 @@ from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
 from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent
 from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
+from .binaryfolder import BinaryFolderRecording, read_binary_folder
+
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslicerecording import ChannelSliceRecording
@@ -52,6 +54,9 @@ from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
 from .core_tools import write_binary_recording, write_to_h5_dataset_format, write_binary_recording, read_python, \
     write_python
 from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor
+from .recording_tools import (get_random_data_chunks, get_channel_distances, get_closest_channels, 
+                              get_noise_levels, get_chunk_with_margin)
+from .waveform_tools import extract_waveforms_to_buffers
 
 # waveform extractor
 from .waveform_extractor import WaveformExtractor, extract_waveforms

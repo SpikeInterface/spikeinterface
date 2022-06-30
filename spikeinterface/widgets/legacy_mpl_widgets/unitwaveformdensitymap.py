@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 from .utils import get_unit_colors
-from ...toolkit import get_template_channel_sparsity
+from ...postprocessing import get_template_channel_sparsity
 
 
 class UnitWaveformDensityMapWidget(BaseWidget):

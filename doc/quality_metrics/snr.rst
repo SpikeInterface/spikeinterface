@@ -41,17 +41,17 @@ With SpikeInterface:
 
 .. code-block:: python
 
-    import spikeinterface.toolkit as st
+    import spikeinterface.qualitymetrics as qm
 
     # Make recording, sorting and wvf_extractor object for your data.
 
-    SNRs = st.compute_snrs(wvf_extractor)
+    SNRs = qm.compute_snrs(wvf_extractor)
     # SNRs is a dict containing the units' ID as keys and their SNR as values.
 
 Links to source code
 --------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/85244cd686bfe2a80649246ea1e29120930cb9c7/spikeinterface/toolkit/qualitymetrics/misc_metrics.py#L130>`_
+From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L130>`_
 
 From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#SNR>`_
 
@@ -59,7 +59,7 @@ From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/n
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
     .. autofunction:: compute_snrs
 
