@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface import download_dataset
 
-from spikeinterface.toolkit import get_noise_levels
+from spikeinterface.core import get_noise_levels
 from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
