@@ -9,7 +9,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
 
-from spikeinterface.toolkit import get_noise_levels
+from spikeinterface.core import get_noise_levels
 from spikeinterface.extractors import read_mearec
 
 import time

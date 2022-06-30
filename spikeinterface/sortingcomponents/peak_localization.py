@@ -3,18 +3,18 @@
 import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from spikeinterface.toolkit import get_channel_distances
+from spikeinterface.core.recording_tools import get_channel_distances
 
 import scipy.optimize
 
-from ..toolkit import get_chunk_with_margin
+from ..core import get_chunk_with_margin
 
-from ..toolkit.postprocessing.unit_localization import (dtype_localize_by_method, 
-                                                        possible_localization_methods,  
-                                                        make_initial_guess_and_bounds,
-                                                        estimate_distance_error, 
-                                                        ptp_at,
-                                                        estimate_distance_error_with_log)
+from ..postprocessing.unit_localization import (dtype_localize_by_method, 
+                                                possible_localization_methods,  
+                                                make_initial_guess_and_bounds,
+                                                estimate_distance_error, 
+                                                ptp_at,
+                                                estimate_distance_error_with_log)
 
 
 def init_kwargs_dict(method, method_kwargs):
@@ -204,7 +204,7 @@ def localize_peaks_monopolar_triangulation(traces, local_peak, contact_locations
     Notes
     -----
     This method is from  Julien Boussard, Erdem Varol and Charlie Windolf
-    See spikeinterface.toolkit.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_localization.
     """
 
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['monopolar_triangulation'])
