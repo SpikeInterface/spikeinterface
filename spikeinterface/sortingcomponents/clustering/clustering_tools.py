@@ -3,7 +3,7 @@ This gather some function usefull for some clusetring algos.
 """
 
 import numpy as np
-from spikeinterface.toolkit import check_equal_template_with_distribution_overlap
+from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
 
 
 def _split_waveforms(wfs_and_noise, noise_size, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug):

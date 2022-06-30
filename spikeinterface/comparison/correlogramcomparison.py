@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from .paircomparisons import GroundTruthComparison
-from spikeinterface.toolkit import compute_correlograms
+from spikeinterface.postprocessing import compute_correlograms
 
 
 class CorrelogramGTComparison(GroundTruthComparison):
