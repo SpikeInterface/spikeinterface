@@ -2,7 +2,7 @@
 import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from ..toolkit import get_chunk_with_margin
+from ..core import get_chunk_with_margin
 
 
 def compute_waveform_features_peaks(

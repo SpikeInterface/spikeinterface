@@ -26,7 +26,7 @@ A well isolated unit should have a large isolation distance.
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.pca_metrics
+.. automodule:: spikeinterface.qualitymetrics.pca_metrics
 
     .. autofunction:: mahalanobis_metrics
 
