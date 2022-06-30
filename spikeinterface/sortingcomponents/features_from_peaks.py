@@ -2,8 +2,7 @@
 import numpy as np
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from ..toolkit import get_chunk_with_margin
-from spikeinterface.toolkit import get_channel_distances
+from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 
 
 def compute_features_from_peaks(
@@ -14,7 +13,6 @@ def compute_features_from_peaks(
                       "ptp" : {"ms_before" : 1, "ms_after" : 1},
                       "com" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50},
                       "dist_com_vs_max_ptp_channel" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50},
-                      "dist_com_vs_max_std_channel" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50},
                       "energy" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50}
                       },
     **job_kwargs,
@@ -33,7 +31,6 @@ def compute_features_from_peaks(
             - ptp (params: ms_before, ms_after)
             - com (params: ms_before, ms_after, local_radius_um)
             - dist_com_vs_max_p2p_channel (params: ms_before, ms_after, local_radius_um)
-            - dist_com_vs_max_std_channel (params: ms_before, ms_after, local_radius_um)
 
     {}
 
@@ -263,22 +260,6 @@ def compute_features(
                 max_ptp_channels = np.argmax(wf_ptp, axis=1)
                 coms = peak_waveform_features[idx, com_start:com_start+feature_params['nb_com_dims']]
                 features[idx] = np.linalg.norm(local_contact_locations[max_ptp_channels] - coms, axis=1)
-
-        elif feature == 'dist_com_vs_max_std_channel':
-            features = np.zeros(local_peak.size, dtype=np.float32)
-            for main_chan in range(traces.shape[1]):
-                if main_chan in _loop_idx:
-                    idx =_loop_idx[main_chan]
-                else:
-                    idx = np.where(local_peak['channel_ind'] == main_chan)[0]
-                    _loop_idx[main_chan] = idx
-                chan_inds, = np.nonzero(feature_params[feature]['sparsity_mask'][main_chan])
-                local_contact_locations = feature_params['chan_locs'][chan_inds, :]
-
-                wf_std = (wf[idx][:, :, chan_inds]).std(axis=1)
-                max_std_channels = np.argmax(wf_std, axis=1)
-                coms = peak_waveform_features[idx, com_start:com_start+feature_params['nb_com_dims']]
-                features[idx] = np.linalg.norm(local_contact_locations[max_std_channels] - coms, axis=1)
 
         if feature != 'com':
             peak_waveform_features[:, feature_idx] = features
