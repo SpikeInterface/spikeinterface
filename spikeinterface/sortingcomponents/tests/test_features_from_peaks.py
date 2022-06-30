@@ -26,7 +26,7 @@ def test_features_from_peaks():
                          chunk_size=10000, verbose=1, progress_bar=False, noise_levels=noise_levels)
 
     # locally_exclusive
-    features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel', 'dist_com_vs_max_std_channel'])
+    features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel'])
 
 if __name__ == '__main__':
     test_features_from_peaks()
