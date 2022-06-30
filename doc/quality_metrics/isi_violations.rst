@@ -77,16 +77,16 @@ With SpikeInterface:
 
 .. code-block:: python
 
-    import spikeinterface.toolkit as st
+    import spikeinterface.qualitymetrics as qm
 
     # Make recording, sorting and wvf_extractor object for your data.
 
-    isi_violations_ratio, isi_violations_rate, isi_violations_count = st.compute_isi_violations(wvf_extractor, isi_threshold_ms=1.0)
+    isi_violations_ratio, isi_violations_rate, isi_violations_count = qm.compute_isi_violations(wvf_extractor, isi_threshold_ms=1.0)
 
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
     .. autofunction:: compute_isi_violations
 
@@ -94,7 +94,7 @@ References
 Links to source code
 --------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/ae679aff788a6dd4d8e7783e1f72ec7e550c1bf9/spikeinterface/toolkit/qualitymetrics/misc_metrics.py#L169>`_
+From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L169>`_
 
 From `Lussac <https://github.com/BarbourLab/lussac/blob/main/postprocessing/utils.pyx#L365>`_
 
@@ -116,14 +116,14 @@ This figure can be generated with the following code:
 .. code-block:: python
 
     import plotly.graph_objects as go
-    import spikeinterface.toolkit as st
+    from spikeinterface.postprocessing import compute_correlograms
 
     # Create your sorting object
     unit_ids = ... # Units you are interested in vizulazing.
     sorting = sorting.select_units(unit_ids)
     t_r = 1.5   # Refractory period (in ms).
 
-    correlograms, bins = st.compute_correlograms(sorting, window_ms=50.0, bin_ms=0.2, symmetrize=True)
+    correlograms, bins = compute_correlograms(sorting, window_ms=50.0, bin_ms=0.2, symmetrize=True)
 
     fig = go.Figure().set_subplots(rows=1, cols=2)
 

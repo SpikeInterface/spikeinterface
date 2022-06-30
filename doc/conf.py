@@ -46,8 +46,6 @@ folders =  [
 
     '../examples/modules/sorters/tridesclous_output',
 
-    '../examples/modules/toolkit/waveforms_mearec',
-
     '../examples/modules/widgets/waveforms_mearec',
 
 
@@ -122,8 +120,10 @@ sphinx_gallery_conf = {
     'subsection_order': ExplicitOrder([
                                         '../examples/modules/core/',
                                         '../examples/modules/extractors/',
-                                       '../examples/modules/toolkit',
+                                       '../examples/modules/preprocessing',
                                        '../examples/modules/sorters',
+                                       '../examples/modules/postprocessing',
+                                       '../examples/modules/qualitymetrics',
                                        '../examples/modules/comparison',
                                        '../examples/modules/widgets',
                                        ]),

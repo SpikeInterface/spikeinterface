@@ -9,7 +9,7 @@ from pprint import pprint
 from spikeinterface.extractors import TridesclousSortingExtractor
 
 from ..basesorter import BaseSorter, get_job_kwargs
-from spikeinterface.core import BinaryRecordingExtractor
+from spikeinterface.core import write_binary_recording
 
 from probeinterface import write_prb
 
@@ -87,14 +87,13 @@ class TridesclousSorter(BaseSorter):
         num_seg = recording.get_num_segments()
         sr = recording.get_sampling_frequency()
 
-        # source file
-        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['time_axis'] == 0:
-            # no need to copy
-            kwargs = recording._kwargs
-            file_paths = kwargs['file_paths']
-            dtype = kwargs['dtype']
-            num_chan = kwargs['num_chan']
-            file_offset = kwargs['file_offset']
+        if recording.binary_compatible_with(time_axis=0):
+            # no copy
+            d = recording.get_binary_description()
+            file_paths = d['file_paths']
+            dtype = str(d['dtype'])
+            num_chan = d['num_channels']
+            file_offset = d['file_offset']
         else:
             if verbose:
                 print('Local copy of recording')
@@ -102,8 +101,8 @@ class TridesclousSorter(BaseSorter):
             num_chan = recording.get_num_channels()
             dtype = recording.get_dtype().str
             file_paths = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
-            BinaryRecordingExtractor.write_recording(recording, file_paths=file_paths,
-                                                     dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
+            write_binary_recording(recording, file_paths=file_paths,
+                                   dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
             file_offset = 0
 
         # initialize source and probe file

@@ -25,7 +25,7 @@ def test_BaseSorting():
     create_sorting_npz(num_seg, file_path)
 
     sorting = NpzSortingExtractor(file_path)
-    print(sorting)
+    # print(sorting)
 
     assert sorting.get_num_segments() == 2
     assert sorting.get_num_units() == 3
@@ -67,6 +67,8 @@ def test_BaseSorting():
     # print(spikes)
 
     spikes = sorting.to_spike_vector()
+    # print(spikes)
+    spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1:5, 2:18})
     # print(spikes)
     
     # select units
