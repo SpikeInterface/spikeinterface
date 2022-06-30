@@ -1,8 +1,7 @@
 import numpy as np
 import scipy
-from spikeinterface.core import WaveformExtractor
-from spikeinterface.toolkit import (get_noise_levels, get_template_channel_sparsity,
-    get_channel_distances, get_chunk_with_margin, get_template_extremum_channel, get_random_data_chunks)
+from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channel_distances)
+from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
 
