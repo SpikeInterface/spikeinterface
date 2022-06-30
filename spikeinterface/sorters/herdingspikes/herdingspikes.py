@@ -148,7 +148,7 @@ class HerdingspikesSorter(BaseSorter):
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         import herdingspikes as hs
-        import spikeinterface.toolkit as st
+        from spikeinterface.preprocessing import bandpass_filter, normalize_by_quantile
 
         hs_version = version.parse(hs.__version__)
 
@@ -163,11 +163,11 @@ class HerdingspikesSorter(BaseSorter):
 
         # Bandpass filter
         if p['filter'] and p['freq_min'] is not None and p['freq_max'] is not None:
-            recording = st.bandpass_filter(
+            recording = bandpass_filter(
                 recording=recording, freq_min=p['freq_min'], freq_max=p['freq_max'])
 
         if p['pre_scale']:
-            recording = st.normalize_by_quantile(
+            recording = normalize_by_quantile(
                 recording=recording, scale=p['pre_scale_value'],
                 median=0.0, q1=0.05, q2=0.95
             )

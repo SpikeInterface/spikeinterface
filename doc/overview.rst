@@ -20,11 +20,13 @@ In the following documentation, we provide an overview of SpikeInterface.
 Organization
 ------------
 
-SpikeInterface consists of 5 main sub-packages which encapsulate all steps in a typical spike sorting pipeline:
+SpikeInterface consists several sub-packages which encapsulate all steps in a typical spike sorting pipeline:
 
 - spikeinterface.extractors
-- spikeinterface.toolkit
+- spikeinterface.preprocessing
 - spikeinterface.sorters
+- spikeinterface.postprocessing
+- spikeinterface.qualitymetrics
 - spikeinterface.comparisons
 - spikeinterface.widgets
 
@@ -32,7 +34,6 @@ SpikeInterface consists of 5 main sub-packages which encapsulate all steps in a 
 Contrary to the previous version (<0.90.0), :code:`spikeinterface` is now one unique package.
 Before that, :code:`spikeinterface` was a metapackage that depended on 5 independent packages.
 
-.. image:: images/overview.png
 
 
 Related projects
