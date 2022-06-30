@@ -1,6 +1,6 @@
 import numpy as np
 
-def get_neuropixels_sample_shifts(num_channels = 384, num_adcs = 12):
+def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
 
     """
     Calculates the relative sampling phase of each channel that results 
@@ -17,7 +17,7 @@ def get_neuropixels_sample_shifts(num_channels = 384, num_adcs = 12):
     num_channels : The total number of channels in a recording. 
         All currently available Neuropixels variants have 384 channels.
 
-    num_adcs : The total number of ADCs on the probe
+    num_channels_per_adc : The total number of ADCs on the probe
         Neuropixels 1.0 probes have 12 ADCs
         Neuropixels 2.0 probes have 16 ADCs
 
@@ -28,17 +28,18 @@ def get_neuropixels_sample_shifts(num_channels = 384, num_adcs = 12):
    
     """
 
-    adc_indices = np.floor(np.arange(num_channels) / (num_adcs * 2)) * 2 + np.mod(np.arange(num_channels), 2)
+    adc_indices = np.floor(np.arange(num_channels) / 
+                           (num_channels_per_adc * 2)) * 2 + np.mod(np.arange(num_channels), 2)
 
     sample_shifts = np.zeros_like(adc_indices)
 
     for a in adc_indices:
-        sample_shifts[adc_indices == a] = np.arange(num_adcs) / num_adcs
+        sample_shifts[adc_indices == a] = np.arange(num_channels_per_adc) / num_channels_per_adc
 
     return sample_shifts
 
 
-def get_neuropixels_channel_groups(num_channels = 384, num_adcs = 12):
+def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
     
     """
     Returns groups of simultaneously sampled channels on a Neuropixels probe.
@@ -79,12 +80,12 @@ def get_neuropixels_channel_groups(num_channels = 384, num_adcs = 12):
 
     groups = []
 
-    for i in range(num_adcs):
+    for i in range(num_channels_per_adc):
         
         groups.append(
             list(
-                np.sort(np.concatenate([np.arange(i*2, num_channels, num_adcs*2),
-                                        np.arange(i*2+1, num_channels, num_adcs*2)]))
+                np.sort(np.concatenate([np.arange(i*2, num_channels, num_channels_per_adc*2),
+                                        np.arange(i*2+1, num_channels, num_channels_per_adc*2)]))
             )
         )
         
