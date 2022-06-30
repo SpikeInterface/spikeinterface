@@ -1,3 +1,5 @@
+**/cache_folder/**
+
 spikeinterface/core/tests/*.raw
 spikeinterface/core/tests/*.json
 spikeinterface/core/tests/*.pkl

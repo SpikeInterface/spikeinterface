@@ -9,7 +9,7 @@ from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict, run_sorters
 
 from spikeinterface import WaveformExtractor
-from spikeinterface.toolkit import compute_quality_metrics
+from spikeinterface.qualitymetrics import compute_quality_metrics
 
 from .comparisontools import _perf_keys
 from .paircomparisons import compare_sorter_to_ground_truth

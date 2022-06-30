@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 import sklearn.metrics
 
-from spikeinterface.toolkit.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 try:
     import numba
