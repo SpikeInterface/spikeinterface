@@ -7,7 +7,8 @@ from .template_tools import (
     get_peaks_from_templates,
 )
 
-from .template_metrics import calculate_template_metrics, get_template_metric_names
+from .template_metrics import (TemplateMetricsCalculator, compute_template_metrics, 
+                               calculate_template_metrics, get_template_metric_names)
 
 from .template_similarity import (
     compute_template_similarity,

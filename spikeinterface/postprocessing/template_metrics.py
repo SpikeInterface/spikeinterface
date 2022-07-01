@@ -10,16 +10,138 @@ from copy import deepcopy
 import scipy.stats
 from scipy.signal import resample_poly
 
+from ..core import WaveformExtractor
+from ..core.core_tools import check_json
+from ..core.waveform_extractor import BaseWaveformExtractorExtension
 from .template_tools import get_template_extremum_channel, get_template_channel_sparsity
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
 
 
 def get_template_metric_names():
     return deepcopy(list(_metric_name_to_func.keys()))
 
 
-def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign='neg',
-                               upsampling_factor=10, sparsity=None,
-                               **kwargs):
+class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
+    """Class to compute template metrics of waveform shapes.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor object
+    """
+    extension_name = 'template_metrics'
+
+    def __init__(self, waveform_extractor):
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+        
+        self.waveform_extractor = waveform_extractor
+        self.template_metrics = None
+
+    def _set_params(self, metric_names=None, peak_sign='neg', 
+                    upsampling_factor=10, sparsity=None,
+                    window_slope_ms=0.7):
+
+        if metric_names is None:
+            metric_names = get_template_metric_names()
+
+        params = dict(metric_names=[str(name) for name in metric_names],
+                      sparsity=sparsity,
+                      peak_sign=peak_sign,
+                      upsampling_factor=int(upsampling_factor),
+                      window_slope_ms=float(window_slope_ms))
+
+        return params
+
+    def _specific_load_from_folder(self):
+        self.template_metrics = pd.read_csv(self.extension_folder / 'metrics.csv', index_col=0)
+
+    def _reset(self):
+        self._amplitudes = None
+
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+        # filter metrics dataframe
+        new_metrics = self.template_metrics.loc[np.array(unit_ids)]
+        new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
+        
+    def compute_metrics(self, sparsity=None):
+        metric_names = self._params['metric_names']
+        sparsity = self._params['sparsity']
+        peak_sign = self._params['peak_sign']
+        upsampling_factor = self._params['upsampling_factor']
+        unit_ids = self.waveform_extractor.sorting.unit_ids
+        sampling_frequency = self.waveform_extractor.recording.get_sampling_frequency()
+
+        if sparsity is None:
+            extremum_channels_ids = get_template_extremum_channel(self.waveform_extractor, 
+                                                                  peak_sign=peak_sign,
+                                                                  outputs='id')
+
+            template_metrics = pd.DataFrame(
+                index=unit_ids, columns=metric_names)
+        else:
+            extremum_channels_ids = sparsity
+            unit_ids = []
+            channel_ids = []
+            for unit_id, sparse_channels in extremum_channels_ids.items():
+                unit_ids += [unit_id] * len(sparse_channels)
+                channel_ids += list(sparse_channels)
+            multi_index = pd.MultiIndex.from_tuples(list(zip(unit_ids, channel_ids)),
+                                                    names=["unit_id", "channel_id"])
+            template_metrics = pd.DataFrame(
+                index=multi_index, columns=metric_names)
+
+        for unit_id in unit_ids:
+            template_all_chans = self.waveform_extractor.get_template(unit_id)
+            chan_ids = np.array(extremum_channels_ids[unit_id])
+            if chan_ids.ndim == 0:
+                chan_ids = [chan_ids]
+            chan_ind = self.waveform_extractor.recording.ids_to_indices(chan_ids)
+            template = template_all_chans[:, chan_ind]
+
+            for i, template_single in enumerate(template.T):
+                if sparsity is None:
+                    index = unit_id
+                else:
+                    index = (unit_id, chan_ids[i])
+                if upsampling_factor > 1:
+                    assert isinstance(
+                        upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
+                    template_upsampled = resample_poly(
+                        template_single, up=upsampling_factor, down=1)
+                    sampling_frequency_up = upsampling_factor * sampling_frequency
+                else:
+                    template_upsampled = template_single
+                    sampling_frequency_up = sampling_frequency
+
+                for metric_name in metric_names:
+                    func = _metric_name_to_func[metric_name]
+                    value = func(template_upsampled,
+                                 sampling_frequency=sampling_frequency_up,
+                                 window_ms=self._params['window_slope_ms'])
+                    template_metrics.at[index, metric_name] = value
+
+        self.template_metrics = template_metrics
+        
+        # save to folder
+        template_metrics.to_csv(self.extension_folder / 'metrics.csv')
+
+    def get_metrics(self):
+        """Get the computed metrics."""
+
+        msg = "Template metrics are not computed. Use the 'compute_metrics()' function."
+        assert self.template_metrics is not None, msg
+        return self.template_metrics
+
+
+
+WaveformExtractor.register_extension(TemplateMetricsCalculator)
+
+
+def compute_template_metrics(waveform_extractor, load_if_exists=False,
+                             metric_names=None, peak_sign='neg',
+                             upsampling_factor=10, sparsity=None,
+                             window_slope_ms=0.7):
     """
     Compute template metrics including:
     * peak_to_valley
@@ -32,10 +154,9 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
     ----------
     waveform_extractor : WaveformExtractor, optional
         The waveform extractor used to compute template metrics
-    templates : np.array, optional
-        If templates is specified and waveform_extractor is None, metrics are computed on
-        the provided template -- shape: ()
-    feature_names : list, optional
+    load_if_exists : bool, optional, default: False
+        Whether to load precomputed template metrics, if they already exist.
+    metric_names : list, optional
         List of metrics to compute (see si.postprocessing.get_template_metric_names()), by default None
     peak_sign : str, optional
         "pos" | "neg", by default 'neg'
@@ -45,8 +166,8 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         Default is sparsity=None and template metric is computed on extremum channel only.
         If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
         For more generating a sparsity dict, see the postprocessing.get_template_channel_sparsity() function.
-    **kwargs: keyword arguments for get_recovery_slope function:
-        * window_ms: window in ms after the positiv peak to compute slope
+    window_slope_ms: float
+        Window in ms after the positiv peak to compute slope, by default 0.7
 
     Returns
     -------
@@ -55,61 +176,20 @@ def calculate_template_metrics(waveform_extractor, feature_names=None, peak_sign
         If 'sparsity' is None, the index is the unit_id.
         If 'sparsity' is given, the index is a multi-index (unit_id, channel_id)
     """
-    unit_ids = waveform_extractor.sorting.unit_ids
-    sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
-
-    if feature_names is None:
-        feature_names = list(_metric_name_to_func.keys())
-
-    if sparsity is None:
-        extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign,
-                                                              outputs='id')
-
-        template_metrics = pd.DataFrame(
-            index=unit_ids, columns=feature_names)
+    folder = waveform_extractor.folder
+    ext_folder = folder / TemplateMetricsCalculator.extension_name
+    if load_if_exists and ext_folder.is_dir():
+        tmc = TemplateMetricsCalculator.load_from_folder(folder)
     else:
-        extremum_channels_ids = sparsity
-        unit_ids = []
-        channel_ids = []
-        for unit_id, sparse_channels in extremum_channels_ids.items():
-            unit_ids += [unit_id] * len(sparse_channels)
-            channel_ids += list(sparse_channels)
-        multi_index = pd.MultiIndex.from_tuples(list(zip(unit_ids, channel_ids)),
-                                                names=["unit_id", "channel_id"])
-        template_metrics = pd.DataFrame(
-            index=multi_index, columns=feature_names)
+        tmc = TemplateMetricsCalculator(waveform_extractor)
+        tmc.set_params(metric_names=metric_names, peak_sign=peak_sign,
+                       upsampling_factor=upsampling_factor, sparsity=sparsity,
+                       window_slope_ms=window_slope_ms)
+        tmc.compute_metrics(sparsity=sparsity)
 
-    for unit_id in unit_ids:
-        template_all_chans = waveform_extractor.get_template(unit_id)
-        chan_ids = extremum_channels_ids[unit_id]
-        if chan_ids.ndim == 0:
-            chan_ids = [chan_ids]
-        chan_ind = waveform_extractor.recording.ids_to_indices(chan_ids)
-        template = template_all_chans[:, chan_ind]
+    metrics = tmc.get_metrics()
 
-        for i, template_single in enumerate(template.T):
-            if sparsity is None:
-                index = unit_id
-            else:
-                index = (unit_id, chan_ids[i])
-            if upsampling_factor > 1:
-                assert isinstance(
-                    upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
-                template_upsampled = resample_poly(
-                    template_single, up=upsampling_factor, down=1)
-                sampling_frequency_up = upsampling_factor * sampling_frequency
-            else:
-                template_upsampled = template_single
-                sampling_frequency_up = sampling_frequency
-
-            for feature_name in feature_names:
-                func = _metric_name_to_func[feature_name]
-                value = func(template_upsampled,
-                             sampling_frequency=sampling_frequency_up,
-                             **kwargs)
-                template_metrics.at[index, feature_name] = value
-
-    return template_metrics
+    return metrics
 
 
 def get_trough_and_peak_idx(template):
@@ -240,3 +320,15 @@ _metric_name_to_func = {
     'repolarization_slope': get_repolarization_slope,
     'recovery_slope': get_recovery_slope,
 }
+
+
+
+# back-compatibility
+def calculate_template_metrics(*args, **kwargs):
+    warnings.warn("The 'calculate_template_metrics' function is deprecated. "
+                  "Use 'compute_template_metrics' instead",
+                   DeprecationWarning, stacklevel=2)
+    return compute_template_metrics(*args, **kwargs)
+
+
+calculate_template_metrics.__doc__ = compute_template_metrics.__doc__

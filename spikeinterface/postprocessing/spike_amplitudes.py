@@ -47,7 +47,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self._amplitudes = None
+        self.amplitudes = None
         self._all_spikes = None
 
     def _set_params(self, peak_sign='neg', return_scaled=True):
@@ -63,14 +63,14 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
         self._all_spikes = all_spikes
 
-        self._amplitudes = []
+        self.amplitudes = []
         for segment_index in range(recording.get_num_segments()):
             file_amps = self.extension_folder / f'amplitude_segment_{segment_index}.npy'
             amps_seg = np.load(file_amps)
-            self._amplitudes.append(amps_seg)
+            self.amplitudes.append(amps_seg)
 
     def _reset(self):
-        self._amplitudes = None
+        self.amplitudes = None
     
     def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # load filter and save amplitude files
@@ -126,11 +126,11 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         amps = np.concatenate(amps)
         segments = np.concatenate(segments)
 
-        self._amplitudes = []
+        self.amplitudes = []
         for segment_index in range(recording.get_num_segments()):
             mask = segments == segment_index
             amps_seg = amps[mask]
-            self._amplitudes.append(amps_seg)
+            self.amplitudes.append(amps_seg)
             
             # save to folder
             file_amps = self.extension_folder / f'amplitude_segment_{segment_index}.npy'
@@ -144,7 +144,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         sorting = we.sorting
 
         if outputs == 'concatenated':
-            return self._amplitudes
+            return self.amplitudes
 
         elif outputs == 'by_unit':
             amplitudes_by_unit = []
@@ -153,7 +153,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
                     spike_times, spike_labels = self._all_spikes[segment_index]
                     mask = spike_labels == unit_index
-                    amps = self._amplitudes[segment_index][mask]
+                    amps = self.amplitudes[segment_index][mask]
                     amplitudes_by_unit[segment_index][unit_id] = amps
             return amplitudes_by_unit
 
