@@ -2,7 +2,7 @@ from typing import List
 import numpy as np
 
 import spikeinterface.extractors as se
-from spikeinterface.postprocessing import compute_ISI
+from spikeinterface.postprocessing import compute_isi_histograms
 
 try:
     import numba
@@ -13,7 +13,7 @@ except ModuleNotFoundError as err:
 
 def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
 	for method in methods:
-		ISI, bins = compute_ISI(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+		ISI, bins = compute_isi_histograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
 
 		if method == "numpy":
 			ref_ISI = ISI
