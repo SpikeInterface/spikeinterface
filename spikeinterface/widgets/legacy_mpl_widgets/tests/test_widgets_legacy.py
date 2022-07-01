@@ -13,7 +13,8 @@ from spikeinterface import extract_waveforms, download_dataset
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
-import spikeinterface.toolkit as st
+from spikeinterface.postprocessing import compute_spike_amplitudes
+from spikeinterface.qualitymetrics import compute_quality_metrics
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -33,7 +34,7 @@ class TestWidgets(unittest.TestCase):
         #  self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
         self._we = extract_waveforms(self._rec, self._sorting, cache_folder / 'mearec_test', load_if_exists=True)
 
-        self._amplitudes = st.compute_spike_amplitudes(self._we, peak_sign='neg', outputs='by_unit')
+        self._amplitudes = compute_spike_amplitudes(self._we, peak_sign='neg', outputs='by_unit')
         self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
 
     def tearDown(self):
@@ -142,7 +143,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
 
     def test_sorting_performance(self):
-        metrics = st.compute_quality_metrics(self._we, metric_names=['snr'])
+        metrics = compute_quality_metrics(self._we, metric_names=['snr'])
         sw.plot_sorting_performance(self._gt_comp, metrics, performance_name='accuracy', metric_name='snr')
 
     def test_plot_unit_summary(self):
