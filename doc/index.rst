@@ -36,6 +36,7 @@ With SpikeInterface, users can:
     modules_doc
     modules/index.rst
     supported_formats_and_sorters
+    containerized_sorters
     install_sorters
     viewers
     contribute

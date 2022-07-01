@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from ..toolkit.postprocessing import compute_template_similarity
-
 from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BasePairComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .comparisontools import (do_count_event, make_match_count_matrix, 
                               make_agreement_scores_from_count, do_score_labels, do_confusion_matrix, 
                               do_count_score, compute_performance)
+from ..postprocessing import compute_template_similarity
 
 
 class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):

@@ -35,57 +35,15 @@ The :code:`sorters` includes :code:`run()` functions to easily run spike sorters
     # which is equivalent to
     sorting_TDC = ss.run_sorter("tridesclous", recording, output_folder="tridesclous_output")
 
+
 Running sorters in container docker/singularity
 -----------------------------------------------
 
-Some sorters are hard to install! To alleviate this headache, SI provides a built-in mechanism to run a spike sorting
-job in a docker or singularity container.
+One of the biggest bottlenecks for users is installing spike sorting software. To alleviate this, we build and
+maintain containerized versions of several popular spike sorters on the `SpikeInterface Docker Hub repository
+<https://hub.docker.com/u/spikeinterface>`_. 
 
-We are maintaining a set of sorter-specific docker files in the `spikeinterface-dockerfiles repo <https://github.com/SpikeInterface/spikeinterface-dockerfiles>`_
-and most of the docker images are available on Docker Hub from the `SpikeInterface organization <https://hub.docker.com/orgs/spikeinterface/repositories>`_.
-
-singularity has an internal mechanism to convert docker images to singularity images.
-
-singularity is often prefered because you don't need root privilege to run the container.
-docker needs *almost  root* privilege
-
-Running spike sorting in a docker container container just requires to:
-
-1) have docker installed
-2) have docker python SDK installed (:code:`pip install docker`)
-
-or
-
-1) have singularity installed
-2) have `singularity python <https://singularityhub.github.io/singularity-cli/>`_ (:code:`pip install spython`)
-
-When docker is installed, you can simply run the sorter in a specified docker image:
-
-.. code-block:: python
-
-    import spikeinterface.sorters as ss
-
-    # recording is a RecordingExtractor object
-    sorting_TDC = ss.run_tridesclous(
-        recording,
-        output_folder="tridesclous_output",
-        docker_image="spikeinterface/tridesclous-base:1.6.4",
-    )
-
-And the same goes for singularity:
-
-.. code-block:: python
-
-    import spikeinterface.sorters as ss
-
-    # recording is a RecordingExtractor object
-    sorting_TDC = ss.run_tridesclous(
-        recording,
-        output_folder="tridesclous_output",
-        singularity_image="spikeinterface/tridesclous-base:1.6.4",
-    )
-
-
+See full documentation here: :ref:`containerizedsorters`
 
 Run several sorting jobs in parallel
 ------------------------------------

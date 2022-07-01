@@ -2,8 +2,8 @@
 
 import numpy as np
 from spikeinterface.core import WaveformExtractor
-from spikeinterface.toolkit import (get_noise_levels, get_template_channel_sparsity,
-    get_channel_distances, get_chunk_with_margin, get_template_extremum_channel, get_random_data_chunks)
+from spikeinterface.core import get_noise_levels, get_channel_distances, get_chunk_with_margin, get_random_data_chunks
+from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
 
@@ -26,7 +26,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     default_params = {
         'waveform_extractor': None,
         'peak_sign': 'neg',
-        'n_shifts': 10,
+        'exclude_sweep_ms': 0.1,
         'detect_threshold': 5,
         'noise_levels': None,
         'local_radius_um': 100,
@@ -52,7 +52,9 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d['neighbours_mask'] = channel_distance < d['local_radius_um']
 
         d['nbefore'] = we.nbefore
-        d['nafter'] = we.nafter        
+        d['nafter'] = we.nafter
+
+        d['exclude_sweep_size'] = int(d['exclude_sweep_ms'] * recording.get_sampling_frequency() / 1000.)
 
         return d
     
@@ -89,7 +91,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         
         peak_sign = method_kwargs['peak_sign']
         abs_threholds = method_kwargs['abs_threholds']
-        n_shifts = method_kwargs['n_shifts']
+        exclude_sweep_size = method_kwargs['exclude_sweep_size']
         neighbours_mask = method_kwargs['neighbours_mask']
         templates = method_kwargs['templates']
         
@@ -102,7 +104,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
             peak_traces = traces[margin:-margin, :]
         else:
             peak_traces = traces
-        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(peak_traces, peak_sign, abs_threholds, n_shifts, neighbours_mask)
+        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(peak_traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask)
         peak_sample_ind += margin
 
 
