@@ -11,7 +11,7 @@ except ModuleNotFoundError as err:
 def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
                                             bin_size: int, sampling_f: float):
     """
-    Compute the auto-correlogram from a given spike train.
+    Computes the auto-correlogram from a given spike train.
 
     This implementation only works if you have numba installed, to accelerate the
     computation time.
@@ -45,7 +45,7 @@ def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: i
 def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_train2: np.ndarray,
                                              max_time: int, bin_size: int, sampling_f: float):
     """
-    Compute the cros-correlogram between two given spike trains.
+    Computes the cros-correlogram between two given spike trains.
 
     This implementation only works if you have numba installed, to accelerate the
     computation time.
