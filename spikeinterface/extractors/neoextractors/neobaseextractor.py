@@ -64,11 +64,12 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         offsets = signal_channels['offset']
 
         units = signal_channels['units']
-        if not np.all(np.isin(units, ['V', 'Volt', 'mV', 'uV'])):
-            # check that units are V, mV or uV
-            message = f'This extractor based on  neo.{self.NeoRawIOClass} have strange units not in (V, mV, uV) {units}'
-            warnings.warn(message)
         
+        # mark that units are V, mV or uV
+        self.has_non_standard_units = False
+        if not np.all(np.isin(units, ['V', 'Volt', 'mV', 'uV'])):
+            self.has_non_standard_units = True
+
         additional_gain = np.ones(units.size, dtype='float')
         additional_gain[units == 'V'] = 1e6
         additional_gain[units == 'Volt'] = 1e6
