@@ -1,5 +1,11 @@
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 import numpy as np
+import os
+
+from spikeinterface.core.baserecording import BaseRecording
+from ..basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from ..zeropad_channel import ZeroChannelPaddedRecording
+
+from spikeinterface.toolkit.utils import get_random_data_chunks
 
 try:
     from tensorflow.keras.models import load_model
@@ -23,26 +29,71 @@ except ImportError:
     
 class DeepInterpolatedRecording(BasePreprocessor):
     name = 'deepinterpolate'
-    
-    def __init__(self, recording, path_to_model='./2020_02_29_15_28_unet_single_ephys_1024_mean_squared_error-1050.h5', 
-                 pre_frames=30, post_frames=30, pre_post_omission=1, 
-                 n_frames_normalize=20000, batch_size=128):
+    def __init__(self, recording: BaseRecording, path_to_model: str, 
+                 pre_frames: int, post_frames: int, pre_post_omission: int, 
+                 n_frames_normalize=20000, batch_size=128, use_GPU=False):
+        """Applies DeepInterpolation, a neural network based denoising method, to the recording.
         
-        assert HAVE_TF, "To use deep interpolation, you need to install tensorflow first."
-        assert recording.get_num_channels()==384, "Deep interpolation only works on Neuropixels 1.0-like recordings with 384 channels"
+        Notes
+        -----
+        * Currently this only works on Neuropixels 1.0-like recordings with 384 channels.
+        If the recording has fewer number of channels, consider matching the channel count with
+        `ZeroChannelPaddedRecording`.
+        * The specified model must have the same input dimensions as the model from original paper.
+        * Will use GPU if available.
+        * Inference (application of model) is done lazily, i.e. only when `get_traces` is called.
+        
+        For more information, see:
+        Lecoq et al. (2021) Removing independent noise in systems neuroscience data using DeepInterpolation.
+        Nature Methods. 18: 1401-1408. doi: 10.1038/s41592-021-01285-2.
+        
+        Parts of this code is adapted from https://github.com/AllenInstitute/deepinterpolation.
+
+        Parameters
+        ----------
+        recording : si.BaseRecording
+        path_to_model : str
+            path to pre-trained model
+        pre_frames : int
+            number of frames before target frame used for training and inference
+        post_frames : int
+            number of frames after target frame used for training and inference
+        pre_post_omission : int
+            number of frames around the target frame to omit
+        n_frames_normalize : int, optional
+            number of frames to estimate mean and std for normalization, by default 20000
+        batch_size : int, optional
+            number of frames per batch to infer (adjust based on hardware); by default 128
+        """
+        
+        assert HAVE_TF, "To use DeepInterpolation, you first need to install `tensorflow`."
+        assert recording.get_num_channels() <= 384, ("DeepInterpolation only works on Neuropixels 1.0-like recordings with 384 channels. "
+                                                     "This recording has too many channels.")
+        assert recording.get_num_channels() == 384, ("DeepInterpolation only works on Neuropixels 1.0-like recordings with 384 channels. "
+                                                     "This recording has too few channels. "
+                                                     "Try matching the channel count with `ZeroChannelPaddedRecording`.")
+
+        if use_GPU is False:
+            os.environ['CUDA_VISIBLE_DEVICES']='-1'
         
         BasePreprocessor.__init__(self, recording)
         
         # load model
         self.model = load_model(filepath=path_to_model)
         
+        # check input shape for the last dimension
+        config = self.model.get_config()
+        input_shape = config["layers"][0]["config"]["batch_input_shape"]
+        assert input_shape[-1]==pre_frames+post_frames, "The sum of `pre_frames` and `post_frames` must match the last dimension of the model."
+        
         # estimate mean and std
         if n_frames_normalize > recording.get_num_frames():
-            print('Too few frames; using all frames to estimate mean and std')
+            print('Recording has too few frames; using all frames to estimate mean and std.')
             n_frames_normalize = recording.get_num_frames()
-            
-        local_data = recording.get_traces(start_frame=0, 
-                                          end_frame=n_frames_normalize)
+        
+        local_data = get_random_data_chunks(recording, chunk_size=n_frames_normalize, num_chunks_per_segment=1, seed=0)
+        if isinstance(recording, ZeroChannelPaddedRecording):            
+            local_data = local_data[:, recording.channel_mapping]
 
         local_mean = np.mean(local_data.flatten())
         local_std = np.std(local_data.flatten())
@@ -52,6 +103,10 @@ class DeepInterpolatedRecording(BasePreprocessor):
             recording_segment = DeepInterpolatedRecordingSegment(segment, self.model, pre_frames, post_frames, pre_post_omission,
                                                                  local_mean, local_std, batch_size)
             self.add_recording_segment(recording_segment)
+        
+        self._kwargs = dict(recording=recording.to_dict(), path_to_model=path_to_model, 
+                            pre_frames=pre_frames, post_frames=post_frames, pre_post_omission=pre_post_omission, 
+                            n_frames_normalize=n_frames_normalize, batch_size=batch_size)
         
 class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
     
@@ -79,8 +134,8 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         if end_frame==None:
             end_frame=n_frames
 
-        # only apply DI to frames that have full training data (i.e. pre and post frames including omissinos)
-        # for those that don't, just return uninterpolated data
+        # for frames that lack full training data (i.e. pre and post frames including omissinos),
+        # just return uninterpolated
         if start_frame<self.pre_frames+self.pre_post_omission:
             true_start_frame = self.pre_frames+self.pre_post_omission
             array_to_append_front = self.parent_recording_segment.get_traces(start_frame=0,
@@ -97,7 +152,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         else:
             true_end_frame = end_frame
         
-        print('Creating input generator...')
+        # instantiate an input generator that can be passed directly to model.predict
         input_generator = DeepInterpolationInputGenerator(recording=self.parent_recording_segment, 
                                                           start_frame=true_start_frame,
                                                           end_frame=true_end_frame,
@@ -108,14 +163,10 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
                                                           local_std=self.local_std,
                                                           batch_size=self.batch_size)
 
-        print('Running model...')
         di_output = self.model.predict(input_generator, verbose=2)
         
-        print('Preparing output...')
-        # prepare output
-        out_traces = self.get_output(di_output)
+        out_traces = self.reshape_backward(di_output)
         
-        print('Handling margins...')
         if true_start_frame != start_frame:
             out_traces = np.concatenate((array_to_append_front, out_traces),axis=0)
 
@@ -124,22 +175,22 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
 
         return out_traces[:, channel_indices]
     
-    def get_output(self, di_frames):
-        """given the prediction from model, recovers the values
+    def reshape_backward(self, di_frames):
+        """reshapes the prediction from model back to frames
 
         Parameters
         ----------
-        di_frame : (frames, 384, 2, 1)
+        di_frames : ndarray, (frames, 384, 2, 1)
             predicted output of the model
 
         Returns
         -------
         reshaped_frames : ndarray; (frames, 384)
-            predicted frames reshaped
+            predicted frames after reshaping
         """
         # currently works only for recording with 384 channels
+        nb_probes = 384
         n_frames = di_frames.shape[0]
-        nb_probes=384
         even = np.arange(0, nb_probes, 2)
         odd = even + 1
         reshaped_frames = np.zeros((n_frames,384))
@@ -149,18 +200,16 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         reshaped_frames = reshaped_frames*self.local_std+self.local_mean
         return reshaped_frames
 
-
 # function for API
 def deepinterpolate(*args, **kwargs):
     return DeepInterpolatedRecording(*args, **kwargs)
 
-
 deepinterpolate.__doc__ = DeepInterpolatedRecording.__doc__
 
-
-# Data generator (useful for both training and inference)
 class DeepInterpolationInputGenerator(Sequence):
-    # This doesn't deal with margins
+    """A data generator class for DeepInterpolation. Useful for both training (fine-tuning) and inference (e.g. can set batch size).
+    Note: this doesn't handle frames that lack complete training data (e.g. frames before pre_frames).
+    """
     def __init__(self, recording, start_frame, end_frame, batch_size,
                  pre_frames, post_frames, pre_post_omission, 
                  local_mean, local_std):
@@ -177,7 +226,6 @@ class DeepInterpolationInputGenerator(Sequence):
         
         self.local_mean = local_mean
         self.local_std = local_std
-        
         
     def __len__(self):
         return -((self.end_frame-self.start_frame) // -self.batch_size)
@@ -202,14 +250,13 @@ class DeepInterpolationInputGenerator(Sequence):
         di_label = np.zeros((batch_size, 384, 2, 1))
         for index_frame in range(self.pre_frames+self.pre_post_omission,
                                  batch_size+self.pre_frames+self.pre_post_omission):
-            di_input[index_frame-self.pre_frames-self.pre_post_omission] = self.get_input(index_frame, traces)
-            di_label[index_frame-self.pre_frames-self.pre_post_omission] = traces[index_frame,:]
+            di_input[index_frame-self.pre_frames-self.pre_post_omission] = self.reshape_input_forward(index_frame, traces)
+            di_label[index_frame-self.pre_frames-self.pre_post_omission] = self.reshape_label_forward(traces[index_frame])
         return (di_input, di_label)
     
-    def get_input(self, index_frame, raw_data):
-        """Gives the surround frames used to infer the center frame
-        after reshaping to the form expected by model;
-        also subtracts mean and divides by std
+    def reshape_input_forward(self, index_frame, raw_data):
+        """Reshapes the frames surrounding the target frame to the form expected by model;
+        also subtracts mean and divides by std.
 
         Parameters
         ----------
@@ -260,31 +307,26 @@ class DeepInterpolationInputGenerator(Sequence):
         input_full[0, odd, 1, :] = data_img_input[:, 1, :]
         return input_full
     
-    def get_target(self, index_frame, raw_data):
-        """Returns the target frame after reshaping to form
-        expected by model
+    def reshape_label_forward(self, label):
+        """Reshapes the target frame to the form expected by model.
 
         Parameters
         ----------
-        index_frame : int
-            index of the target frame (i.e. frame to be predicted)
-        raw_data : ndarray, (frames, 192, 2)
-            a chunk of data used to generate the input
+        label : ndarray, (1, 192, 2)
 
         Returns
         -------
-        input_full : ndarray, (1, 384, 2, 1)
+        reshaped_label : ndarray, (1, 384, 2, 1)
             target frame after reshaping
         """
         # currently only works for recordings with 384 channels
         nb_probes = 384
-
-        # We reorganize to follow true geometry of probe for convolution
+        
         input_full = np.zeros(
             [1, nb_probes, 2, 1], dtype="float32"
         )
 
-        data_img_input = raw_data[index_frame, :, :]
+        data_img_input = np.expand_dims(label,axis=0)
         data_img_input = np.swapaxes(data_img_input, 1, 2)
         data_img_input = np.swapaxes(data_img_input, 0, 2)
 
@@ -298,3 +340,24 @@ class DeepInterpolationInputGenerator(Sequence):
         input_full[0, even, 0, :] = data_img_input[:, 0, :]
         input_full[0, odd, 1, :] = data_img_input[:, 1, :]
         return input_full
+
+def fine_tune_deepinterpolate(recording: BaseRecording, path_to_model: str,
+                              epochs: int=10,
+                              optimizer: str='adam', 
+                              loss: str='mean_squared_error',
+                              metric:str = 'accuracy',
+                              **optimizer_kwargs):
+    model = load_model(filepath=path_to_model)
+    model.compile(optimizer=optimizer,
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
+    input_generator = DeepInterpolationInputGenerator(recording=self.parent_recording_segment, 
+                                                      start_frame=true_start_frame,
+                                                      end_frame=true_end_frame,
+                                                      pre_frames=self.pre_frames,
+                                                      post_frames=self.post_frames, 
+                                                      pre_post_omission=self.pre_post_omission, 
+                                                      local_mean=self.local_mean,
+                                                      local_std=self.local_std,
+                                                      batch_size=self.batch_size)
+    model.fit(input_generator, epochs=epochs)
