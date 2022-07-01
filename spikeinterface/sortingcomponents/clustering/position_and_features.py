@@ -153,7 +153,6 @@ class PositionAndFeaturesClustering:
 
         best_spikes = {}
         nb_spikes = 0
-        max_spikes_per_unit = 100
 
         all_indices = np.arange(0, peak_labels.size)
 

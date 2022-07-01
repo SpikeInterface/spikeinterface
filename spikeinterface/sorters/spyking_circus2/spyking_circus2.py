@@ -18,7 +18,7 @@ class Spykingcircus2Sorter(BaseSorter):
         'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'freq_min' : 300, 'freq_max' : 6000, 'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5, 'exclude_sweep_ms' : 2},
-        'selection' : {'n_peaks_per_channel' : 1000, 'min_n_peaks' : 20000},
+        'selection' : {'n_peaks_per_channel' : 2000, 'min_n_peaks' : 20000},
         'localization' : {},
         'clustering': {},
         'matching':  {},
@@ -54,9 +54,14 @@ class Spykingcircus2Sorter(BaseSorter):
         detection_params.update(params['job_kwargs'])
         if 'local_radius_um' not in detection_params:
             detection_params['local_radius_um'] = params['general']['local_radius_um']
+        if 'exclude_sweep_ms' not in detection_params:
+            detection_params['exclude_sweep_ms'] = max(params['general']['ms_before'], params['general']['ms_after'])
 
         peaks = detect_peaks(recording_f, method='locally_exclusive', 
             **detection_params)
+
+        if verbose:
+            print('We found %d peaks in total' %len(peaks))
 
         ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
         ## channels as flat as possible
@@ -67,6 +72,9 @@ class Spykingcircus2Sorter(BaseSorter):
         noise_levels = get_noise_levels(recording_f, return_scaled=False)
         selection_params.update({'noise_levels' : noise_levels})
         selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
+
+        if verbose:
+            print('We kept %d peaks for clustering' %len(selected_peaks))
 
         ## We localize the CoM of the peaks
         localization_params = params['localization'].copy()
@@ -108,6 +116,9 @@ class Spykingcircus2Sorter(BaseSorter):
 
         spikes = find_spikes_from_templates(recording_f, method='circus-omp', 
             method_kwargs=matching_params, **matching_job_params)
+
+        if verbose:
+            print('We found %d spikes' %len(spikes))
 
         ## And this is it! We have a spyking circus
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_rate)
