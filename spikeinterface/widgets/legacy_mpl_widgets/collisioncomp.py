@@ -122,6 +122,9 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         metric for ordering
     good_only: True
         keep only the pairs with a non zero accuracy (found templates)
+    min_accuracy: float
+        If good only, the minimum accuracy every cell should have, individually, to be
+        considered in a putative pair
     unit_ids: list
         List of considered units
     figure: matplotlib figure
@@ -131,7 +134,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
     """
 
     def __init__(self, comp, templates, unit_ids=None, metric='cosine_similarity', figure=None, ax=None, 
-        mode='heatmap', similarity_bins=np.linspace(-0.4, 1, 8), cmap='winter', good_only=True,  show_legend=False,
+        mode='heatmap', similarity_bins=np.linspace(-0.4, 1, 8), cmap='winter', good_only=True,  min_accuracy=0.9, show_legend=False,
         ylim = (0, 1)):
         BaseWidget.__init__(self, figure, ax)
 
@@ -151,6 +154,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         self.unit_ids = unit_ids
         self.metric = metric
         self.good_only = good_only
+        self.min_accuracy = min_accuracy
 
     def plot(self):
         self._do_plot()
@@ -176,7 +180,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
         n = len(self.unit_ids)
 
-        similarities, recall_scores, pair_names = self.comp.compute_collision_by_similarity(similarity_matrix, unit_ids=self.unit_ids, good_only=self.good_only)
+        similarities, recall_scores, pair_names = self.comp.compute_collision_by_similarity(similarity_matrix, unit_ids=self.unit_ids, good_only=self.good_only, min_accuracy=self.min_accuracy)
 
         if self.mode == 'heatmap':
 
@@ -249,6 +253,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
     def __init__(self, study, metric='cosine_similarity',
                  similarity_bins=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
                  good_only=True,
+                 min_accuracy=0.9,
                  ncols=3, axes=None, cmap='winter'):
 
         if axes is None:
@@ -265,6 +270,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         self.show_legend = show_legend
         self.ylim = ylim
         self.good_only = good_only
+        self.min_accuracy = min_accuracy
 
 
     def plot(self):
@@ -272,7 +278,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         my_cmap = plt.get_cmap(self.cmap)
         cNorm  = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
-        self.study.precompute_scores_by_similarities(self.good_only)
+        self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
@@ -309,7 +315,7 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
 
     def __init__(self, study, metric='cosine_similarity',
                  similarity_range=[0, 1], show_legend=False, ylim=(0.5, 1),
-                 good_only=True, ax=None):
+                 good_only=True, min_accuracy=0.9, ax=None):
 
         BaseWidget.__init__(self, None, ax)
 
@@ -319,11 +325,12 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
         self.show_legend = show_legend
         self.ylim = ylim
         self.good_only = good_only
+        self.min_accuracy = min_accuracy
 
 
     def plot(self):
 
-        self.study.precompute_scores_by_similarities(self.good_only)
+        self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
@@ -346,7 +353,7 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
 
     def __init__(self, study, metric='cosine_similarity',
                  similarity_ranges=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
-                 good_only=True, ax=None, show_std=False):
+                 good_only=True, min_accuracy=0.9, ax=None, show_std=False):
 
         BaseWidget.__init__(self, None, ax)
 
@@ -357,11 +364,12 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
         self.ylim = ylim
         self.good_only = good_only
         self.show_std = show_std
+        self.min_accuracy = min_accuracy
 
 
     def plot(self):
 
-        self.study.precompute_scores_by_similarities(self.good_only)
+        self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):

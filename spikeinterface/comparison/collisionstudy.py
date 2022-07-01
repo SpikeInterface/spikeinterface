@@ -21,7 +21,7 @@ class CollisionGTStudy(GroundTruthStudy):
         lags = self.comparisons[(self.rec_names[0], self.sorter_names[0])].bins / fs * 1000
         return lags
 
-    def precompute_scores_by_similarities(self, good_only=True):
+    def precompute_scores_by_similarities(self, good_only=True, min_accuracy=0.9):
 
         if not hasattr(self, '_good_only') or self._good_only != good_only:
 
@@ -48,7 +48,7 @@ class CollisionGTStudy(GroundTruthStudy):
                     if (rec_name, sorter_name) in self.comparisons.keys():
 
                         comp = self.comparisons[(rec_name, sorter_name)]
-                        similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=good_only)
+                        similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(similarity_matrix[rec_name], good_only=good_only, min_accuracy=min_accuracy)
 
                     all_similarities.append(similarities)
                     all_recall_scores.append(recall_scores)
