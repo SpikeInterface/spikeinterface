@@ -11,7 +11,29 @@ except ModuleNotFoundError as err:
 def compute_ISI_from_spiketrain(spike_train: np.ndarray, max_time: int,
                                 bin_size: int, sampling_f: float):
     """
-    TODO
+    Computes the Inter-Spike Intervals histogram from a given spike train.
+
+    This implementation only works if you have numba installed, to accelerate the
+    computation time.
+
+    Parameters
+    ----------
+    spike_train: np.ndarray
+        The ordered spike train to compute the ISI.
+    max_time: int
+        Compute the ISI from 0 to +max_time (in sampling time).
+    bin_size: int
+        Size of a bin (in sampling time).
+    sampling_f: float
+        Sampling rate/frequency (in Hz).
+
+    Returns
+    -------
+    tuple (ISI, bins)
+    ISI: np.ndarray[int64]
+        The computed ISI histogram.
+    bins: np.ndarray[float64]
+        The bins for the ISI histogram.
     """
     if not HAVE_NUMBA:
         print("Error: numba is not installed.")
@@ -61,7 +83,12 @@ def compute_ISI(sorting, window_ms: float = 50.0, bin_ms: float = 1.0,
 
 def compute_ISI_numpy(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     """
-    TODO
+    Computes the Inter-Spike Intervals histogram for all
+    the units inside the given sorting.
+
+    This is a very standard numpy implementation, nothing fancy.
+
+    Implementation: Aurélien Wyngaard
     """
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
