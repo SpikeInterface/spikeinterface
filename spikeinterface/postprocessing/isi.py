@@ -43,7 +43,7 @@ if HAVE_NUMBA:
 
 
 def compute_ISI(sorting, window_ms: float = 50.0, bin_ms: float = 1.0,
-                method: str = "auto")
+                method: str = "auto"):
     """
     Computes the Inter-Spike Intervals histogram for all
     the units inside the given sorting.
