@@ -2,7 +2,7 @@ import numpy as np
 
 from .base import BaseWidget, define_widget_function_from_class
 from .utils import get_unit_colors
-from ..toolkit import get_template_channel_sparsity
+from ..postprocessing import get_template_channel_sparsity
 
 
 
