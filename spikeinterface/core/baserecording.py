@@ -1,5 +1,6 @@
 from typing import Iterable, List, Union
 from pathlib import Path
+import warnings
 
 import numpy as np
 
@@ -20,7 +21,7 @@ class BaseRecording(BaseExtractor):
     _main_annotations = ['is_filtered']
     _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []  # recording do not handle features
-
+    
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
 
@@ -103,6 +104,13 @@ class BaseRecording(BaseExtractor):
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
+            if hasattr(self, "NeoRawIOClass"):
+                if self.has_non_standard_units:
+                    message = ( 
+                    f'This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)'
+                    )
+                    warnings.warn(message)
+            
             if not self.has_scaled_traces():
                 raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_'
                                  'to_uV properties)')
@@ -184,7 +192,6 @@ class BaseRecording(BaseExtractor):
             t_starts = None
 
         if format == 'binary':
-            # TODO save properties as npz!!!!!
             folder = save_kwargs['folder']
             file_paths = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
             dtype = save_kwargs.get('dtype', None)
@@ -200,6 +207,10 @@ class BaseRecording(BaseExtractor):
                                               t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
                                               file_offset=0, gain_to_uV=self.get_channel_gains(),
                                               offset_to_uV=self.get_channel_offsets())
+            cached.dump(folder / 'binary.json', relative_to=folder)
+
+            from .binaryfolder import BinaryFolderRecording
+            cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == 'memory':
             job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
@@ -680,6 +691,59 @@ class BaseRecording(BaseExtractor):
         recording2d.set_probe(probe2d, in_place=True)
 
         return recording2d
+    
+    def is_binary_compatible(self):
+        """
+        Inform is this recording is "binary" compatible.
+        To be used before calling `rec.get_binary_description()`
+        
+        Returns
+        -------
+        is_binary_compatible: bool
+        """
+        # has to be changed in subclass if yes
+        return False
+        
+    def get_binary_description(self):
+        """
+        When `rec.is_binary_compatible()` is True
+        this returns a dictionary describing the binary format.
+        """
+        if not self.is_binary_compatible:
+            raise NotImplementedError
+    
+    def binary_compatible_with(self, dtype=None, time_axis=None, file_paths_lenght=None, 
+            file_offset=None, file_suffix=None):
+        """
+        Check is the recording is binary compatible with some constrain on
+          * dtype
+          * tim_axis
+          * len(file_paths)
+          * file_offset
+          * file_suffix
+        """
+        if not self.is_binary_compatible():
+            return False
+        
+        d = self.get_binary_description()
+        
+        if dtype is not None and dtype != d['dtype']:
+            return False
+        
+        if time_axis is not None and time_axis != d['time_axis']:
+            return False
+        
+        if file_paths_lenght is not None and file_paths_lenght != len(d['file_paths']):
+            return False
+        
+        if file_offset is not None and file_offset != d['file_offset']:
+            return False
+        
+        if file_suffix is not None and not all(Path(e).suffix == file_suffix  for e in d['file_paths']):
+            return False
+
+        # good job you pass all crucible
+        return True
 
 
 class BaseRecordingSegment(BaseSegment):

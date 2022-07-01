@@ -14,9 +14,8 @@ except:
     HAVE_HDBSCAN = False
 
 
-from spikeinterface.core import get_global_tmp_folder
-from spikeinterface.toolkit import get_channel_distances, get_random_data_chunks
-from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
+from spikeinterface.core import (get_global_tmp_folder, get_channel_distances, 
+                                 get_random_data_chunks, extract_waveforms_to_buffers)
 from .clustering_tools import auto_clean_clustering, auto_split_clustering
 
 
@@ -34,7 +33,7 @@ class SlidingHdbscanClustering:
     This method is a bit slow
     """
     _default_params = {
-        'waveform_mode': 'memmap',
+        'waveform_mode': 'shared_memory',
         'tmp_folder': None,
         'ms_before': 1.5,
         'ms_after': 2.5,
@@ -48,7 +47,7 @@ class SlidingHdbscanClustering:
         'auto_merge_quantile_limit': 0.8, 
         'ratio_num_channel_intersect': 0.5,
         #~ 'auto_trash_misalignment_shift' : 4,
-        'job_kwargs' : {}
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M', 'verbose' : True, 'progress_bar' : True},
     }
 
     @classmethod

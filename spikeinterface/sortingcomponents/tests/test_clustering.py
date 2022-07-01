@@ -9,7 +9,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
 
-from spikeinterface.toolkit import get_noise_levels
+from spikeinterface.core import get_noise_levels
 from spikeinterface.extractors import read_mearec
 
 import time
@@ -24,7 +24,7 @@ def test_find_cluster_from_peaks():
     noise_levels = get_noise_levels(recording, return_scaled=False)
     
     peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, n_shifts=2,
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=False, progress_bar=False, noise_levels=noise_levels)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',

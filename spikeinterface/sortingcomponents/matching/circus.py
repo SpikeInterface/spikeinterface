@@ -14,10 +14,10 @@ try:
 except ImportError:
     HAVE_SKLEARN = False
 
-from spikeinterface.core import WaveformExtractor
+from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_random_data_chunks, 
+                                 get_chunk_with_margin, get_channel_distances)
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
-from spikeinterface.toolkit import (get_noise_levels, get_template_channel_sparsity,
-    get_channel_distances, get_chunk_with_margin, get_template_extremum_channel, get_random_data_chunks)
+from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
 
@@ -174,7 +174,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         'sparsify_threshold': 0.99,
-        'amplitudes' : [0.5, 1.5],
+        'amplitudes' : [0.75, 1.25],
         'noise_levels': None,
         'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,
@@ -485,7 +485,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     ----------
     peak_sign: str
         Sign of the peak (neg, pos, or both)
-    n_shifts: int
+    exclude_sweep_ms: float
         The number of samples before/after to classify a peak (should be low)
     jitter: int
         The number of samples considered before/after every peak to search for
@@ -515,7 +515,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         'peak_sign': 'neg', 
-        'n_shifts': 1, 
+        'exclude_sweep_ms': 0.1,
         'jitter' : 1, 
         'detect_threshold': 5, 
         'noise_levels': None, 
@@ -719,6 +719,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d = cls._prepare_templates(d)
         d = cls._prepare_overlaps(d)
 
+        d['exclude_sweep_size'] = int(d['exclude_sweep_ms'] * recording.get_sampling_frequency() / 1000.)
+
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
         d['patch_sizes'] = (d['waveform_extractor'].nsamples, d['num_channels'])
@@ -758,7 +760,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     def main_function(cls, traces, d):
         peak_sign = d['peak_sign']
         abs_threholds = d['abs_threholds']
-        n_shifts = d['n_shifts']
+        exclude_sweep_size = d['exclude_sweep_size']
         templates = d['templates']
         num_templates = d['num_templates']
         num_channels = d['num_channels']
@@ -775,7 +777,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         is_dense = d['is_dense']
         
         peak_traces = traces[margin // 2:-margin // 2, :]
-        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(peak_traces, peak_sign, abs_threholds, n_shifts)
+        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(peak_traces, peak_sign, abs_threholds, exclude_sweep_size)
 
         if jitter > 0:
             jittered_peaks = peak_sample_ind[:, np.newaxis] + np.arange(-jitter, jitter)
