@@ -103,7 +103,7 @@ def compute_ISI_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
 if HAVE_NUMBA:
     @numba.jit((numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
                nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_ISI_numba(ISIs, spike_trains, spike_clusters, max_time, bin_size, smapling_f):
+    def _compute_ISI_numba(ISIs, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
         n_units = ISIs.shape[0]
 
         for i in numba.prange(n_units):
