@@ -5,7 +5,7 @@ from pathlib import Path
 from spikeinterface import NumpySorting
 from spikeinterface import download_dataset
 from spikeinterface import extract_waveforms
-from spikeinterface.toolkit import get_noise_levels
+from spikeinterface.core import get_noise_levels
 from spikeinterface.extractors import read_mearec
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods

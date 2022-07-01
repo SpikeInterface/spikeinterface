@@ -88,19 +88,19 @@ class BaseMultiComparison(BaseComparison):
         if self._verbose:
             print('Multicomaprison step 1: pairwise comparison')
 
-        self.comparisons = []
+        self.comparisons = {}
         for i in range(len(self.object_list)):
             for j in range(i + 1, len(self.object_list)):
+                if self.name_list is not None:
+                    name_i = self.name_list[i]
+                    name_j = self.name_list[j]
+                else:
+                    name_i = "object i"
+                    name_j = "object j"
                 if self._verbose:
-                    if self.name_list is not None:
-                        name_i = self.name_list[i]
-                        name_j = self.name_list[j]
-                    else:
-                        name_i = "object i"
-                        name_j = "object j"
                     print(f"  Comparing: {name_i} and {name_j}")
                 comp = self._compare_ij(i, j)
-                self.comparisons.append(comp)
+                self.comparisons[(name_i, name_j)] = comp
 
     def _do_graph(self):
         if self._verbose:
@@ -111,12 +111,13 @@ class BaseMultiComparison(BaseComparison):
         self._populate_nodes()
 
         # edges
-        for comp in self.comparisons:
+        for comp_name, comp in self.comparisons.items():
             for u1 in comp.hungarian_match_12.index.values:
                 u2 = comp.hungarian_match_12[u1]
                 if u2 != -1:
-                    node1 = comp.name_list[0], u1
-                    node2 = comp.name_list[1], u2
+                    name_1, name_2 = comp_name
+                    node1 = name_1, u1
+                    node2 = name_2, u2
                     score = comp.agreement_scores.loc[u1, u2]
                     self.graph.add_edge(node1, node2, weight=score)
 

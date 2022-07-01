@@ -5,9 +5,9 @@ import scipy
 
 from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from spikeinterface.toolkit import get_noise_levels, get_channel_distances
+from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
-from ..toolkit import get_chunk_with_margin
+from ..core import get_chunk_with_margin
 
 from .peak_localization import (dtype_localize_by_method, init_kwargs_dict,
                                 localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation)

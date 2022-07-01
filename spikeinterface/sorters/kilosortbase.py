@@ -8,7 +8,8 @@ import scipy.io
 
 from .utils import ShellScript
 from .basesorter import get_job_kwargs
-from spikeinterface.extractors import KiloSortSortingExtractor, BinaryRecordingExtractor
+from spikeinterface.extractors import KiloSortSortingExtractor
+from spikeinterface.core import write_binary_recording
 
 
 class KilosortBase:
@@ -62,14 +63,8 @@ class KilosortBase:
         channel_map['fs'] = float(sample_rate)
         scipy.io.savemat(str(output_folder / 'chanMap.mat'), channel_map)
 
-    @staticmethod
-    def _write_recording(recording, output_folder, params, verbose):
-        # save binary file
-        BinaryRecordingExtractor.write_recording(recording, file_paths=output_folder / 'recording.dat',
-                                                 dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
-
     @classmethod
-    def _generate_ops_file(cls, recording, params, output_folder):
+    def _generate_ops_file(cls, recording, params, output_folder, binary_file_path):
         """
         This function generates ops (configs) data for kilosort and saves as `ops.mat`
 
@@ -92,7 +87,7 @@ class KilosortBase:
         ops['Nchan'] = nchan  # number of active channels (omit if already in chanMap file)
 
         ops['datatype'] = 'dat'  # binary ('dat', 'bin') or 'openEphys'
-        ops['fbinary'] = str((output_folder / 'recording.dat').absolute())  # will be created for 'openEphys'
+        ops['fbinary'] = str(binary_file_path.absolute())  # will be created for 'openEphys'
         ops['fproc'] = str((output_folder / 'temp_wh.dat').absolute())  # residual from RAM of preprocessed data
         ops['root'] = str(output_folder.absolute())  # 'openEphys' only: where raw files are
         ops['trange'] = [0, np.Inf] #  time range to sort
@@ -119,12 +114,19 @@ class KilosortBase:
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-
         cls._generate_channel_map_file(recording, output_folder)
+        
+        if recording.binary_compatible_with(dtype='int16', time_axis=0, file_paths_lenght=1):
+            # no copy
+            d = recording.get_binary_description()
+            binary_file_path = Path(d['file_paths'][0])
+        else:
+            # local copy needed
+            binary_file_path = output_folder / 'recording.dat'
+            write_binary_recording(recording, file_paths=[binary_file_path],
+                                   dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
 
-        cls._write_recording(recording, output_folder, params, verbose)
-
-        cls._generate_ops_file(recording, params, output_folder)
+        cls._generate_ops_file(recording, params, output_folder, binary_file_path)
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
@@ -132,7 +134,7 @@ class KilosortBase:
         if cls.check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
-                {cls.compiled_name} {output_folder}
+                {cls.compiled_name} "{output_folder}"
             '''
         else:
             source_dir = Path(Path(__file__).parent)

@@ -11,6 +11,12 @@ from spikeinterface.core.core_tools import check_json, recursive_path_modifier, 
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
 
+try:
+    HAS_DOCKER = True
+    import docker
+except ModuleNotFoundError:
+    HAS_DOCKER = False
+
 REGISTRY = 'spikeinterface'
 
 SORTER_DOCKER_MAP = dict(
@@ -24,6 +30,7 @@ SORTER_DOCKER_MAP = dict(
     ironclust='ironclust-compiled',
     kilosort='kilosort-compiled',
     kilosort2='kilosort2-compiled',
+    kilosort2_5='kilosort2_5-compiled',
     kilosort3='kilosort3-compiled',
     waveclus='waveclus-compiled',
 )
@@ -223,19 +230,15 @@ class ContainerClient:
             'container_requires_gpu', None)
 
         if mode == 'docker':
-            import docker
+            if not HAS_DOCKER:
+                raise ModuleNotFoundError("No module named 'docker'")
             client = docker.from_env()
             if container_requires_gpu is not None:
                 extra_kwargs.pop('container_requires_gpu')
                 extra_kwargs["device_requests"] = [
                     docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
 
-            # check if the image is already present locally
-            repo_tags = []
-            for image in client.images.list():
-                repo_tags.extend(image.attrs['RepoTags'])
-
-            if container_image not in repo_tags:
+            if self._get_docker_image(container_image) is None:
                 print(f"Docker: pulling image {container_image}")
                 client.images.pull(container_image)
 
@@ -245,13 +248,36 @@ class ContainerClient:
         elif mode == 'singularity':
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
+            sif_file = Client._get_filename(container_image)
+            singularity_image = None
             if Path(container_image).exists():
-                self.singularity_image = container_image
+                singularity_image = container_image
+            elif Path(sif_file).exists():
+                singularity_image = sif_file
             else:
-                print(f"Singularity: pulling image {container_image}")
-                self.singularity_image = Client.pull(f'docker://{container_image}')
+                if HAS_DOCKER:
+                    docker_image = self._get_docker_image(container_image)
+                    if docker_image:
+                        print('Building singularity image from local docker image')
+                        # Save docker image as tar and build singularity image
+                        tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
+                        f = open(tmp_file, 'wb')
+                        try:
+                            for chunk in docker_image.save(chunk_size=100*1024*1024):  # 100 MB
+                                f.write(chunk)
+                            singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file, sudo=False)
+                        except Exception as e:
+                            print(f'Failed to build singularity image from local: {e}')
+                        finally:
+                            # Clean up
+                            f.close()
+                            if os.path.exists(tmp_file):
+                                os.remove(tmp_file)
+                if not singularity_image:
+                    print(f"Singularity: pulling image {container_image}")
+                    singularity_image = Client.pull(f'docker://{container_image}')
 
-            if not Path(self.singularity_image).exists():
+            if not Path(singularity_image).exists():
                 raise FileNotFoundError(f'Unable to locate container image {container_image}')
             
             # bin options
@@ -263,7 +289,16 @@ class ContainerClient:
                 # only nvidia at the moment
                 options += ['--nv']
 
-            self.client_instance = Client.instance(self.singularity_image, start=False, options=options)
+            self.client_instance = Client.instance(singularity_image, start=False, options=options)
+
+    @staticmethod
+    def _get_docker_image(container_image):
+        docker_client = docker.from_env(timeout=300)
+        try:
+            docker_image = docker_client.images.get(container_image)
+        except docker.errors.ImageNotFound:
+            docker_image = None
+        return docker_image
 
     def start(self):
         if self.mode == 'docker':
@@ -372,18 +407,20 @@ import json
 from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter_local
 
-# load recording in docker
-recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
+if __name__ == '__main__':
+    # this __name__ protection help in some case with multiprocessing (for instance HS2)
+    # load recording in container
+    recording = load_extractor('{parent_folder_unix}/in_container_recording.json')
 
-# load params in docker
-with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
-    sorter_params = json.load(f)
+    # load params in container
+    with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
+        sorter_params = json.load(f)
 
-# run in docker
-output_folder = '{output_folder_unix}'
-run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
-            remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-            verbose={verbose}, raise_error={raise_error}, **sorter_params)
+    # run in container
+    output_folder = '{output_folder_unix}'
+    run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
+                remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+                verbose={verbose}, raise_error={raise_error}, **sorter_params)
 """
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
@@ -445,8 +482,7 @@ run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
             # TODO later check output
             if install_si_from_source:
                 si_source = 'local machine'
-                res_output = container_client.run_command(f'cp -rf {si_dev_path_unix} /opt')
-                cmd = f'pip install /opt/spikeinterface[full]'
+                cmd = f'pip install {si_dev_path_unix}[full]'
             else:
                 si_source = 'remote repository'
                 cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
