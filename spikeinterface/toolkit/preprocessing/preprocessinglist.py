@@ -16,7 +16,8 @@ from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
 from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
 from .phase_shift import PhaseShiftRecording, phase_shift
-from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
+# not importing deepinterpolation by default
+# from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
 
 preprocessers_full_list = [
     # filter stuff
@@ -44,7 +45,7 @@ preprocessers_full_list = [
     RemoveArtifactsRecording,
     RemoveBadChannelsRecording,
 
-    DeepInterpolatedRecording
+    # DeepInterpolatedRecording
     # TODO: @alessio this one  is for you
     # ResampleRecording,
 
