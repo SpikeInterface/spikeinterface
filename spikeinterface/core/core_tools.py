@@ -703,16 +703,18 @@ def recursive_path_modifier(d, func, target='path', copy=True):
         dc = d
     
     if "kwargs" in dc.keys():
-        # handle nested
         kwargs = dc["kwargs"]
+        
+        # change in place (copy=False)
+        recursive_path_modifier(kwargs, func, copy=False)
+        
+        # find nested and also change inplace (copy=False)
         nested_extractor_dict = None
         for k, v in kwargs.items():
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
-        if nested_extractor_dict is None:
-            recursive_path_modifier(kwargs, func, copy=False)
-        else:
-            recursive_path_modifier(nested_extractor_dict, func, copy=False)
+                recursive_path_modifier(nested_extractor_dict, func, copy=False)
+
         return dc
     else:
         for k, v in d.items():
