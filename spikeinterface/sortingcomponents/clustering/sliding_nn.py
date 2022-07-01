@@ -14,9 +14,13 @@ try:
 except ImportError:
     HAVE_NNDESCENT = False
 
-from spikeinterface.toolkit import get_channel_distances
+from spikeinterface.core import get_channel_distances
 from tqdm.auto import tqdm
-import hdbscan
+try:
+    import hdbscan
+    HAVE_HDBSCAN = True
+except:
+    HAVE_HDBSCAN = False
 import copy
 from scipy.sparse import coo_matrix
 
@@ -74,6 +78,7 @@ class SlidingNNClustering:
         "n_neighbors" : 5,
         "embedding_dim" : None,
         "low_memory" : True,
+        'waveform_mode' : 'shared_memory',
         "mde_negative_to_positive_samples" : 5,
         "mde_device" : "cpu",
         "create_embedding" : True,
@@ -92,6 +97,7 @@ class SlidingNNClustering:
         assert HAVE_TORCH, "SlidingNN needs torch to work"
         assert HAVE_NNDESCENT, "SlidingNN needs pynndescent to work"
         assert HAVE_PYMDE, "SlidingNN needs pymde to work"
+        assert HAVE_HDBSCAN, "SlidingNN needs hdbscan to work"
 
         d = params
         tmp_folder = params['tmp_folder']
@@ -357,121 +363,6 @@ class SlidingNNClustering:
         # )
 
         return labels, peak_labels
-
-def build_windowed_nn_graph(
-    recording,
-    peaks,
-    time_window_s=60 * 5,
-    margin_ms=100,
-    ms_before=1,
-    ms_after=1,
-    n_channel_neighbors=8,
-    n_neighbors=5,
-    knn_verbose=True,
-    low_memory=False,
-    n_jobs=-1,
-    suppress_tqdm=False,
-):
-    """_summary_
-
-    Args:
-        recording (_type_): _description_
-        peaks (_type_): _description_
-        time_window_s (_type_, optional): window for sampling nearest neighbors. Defaults to 60*5.
-        margin_ms (int, optional): margin for chunking. Defaults to 100.
-        ms_before (int, optional): time prior to peak. Defaults to 1.
-        ms_after (int, optional): time after peak. Defaults to 1.
-        n_channel_neighbors (int, optional): number of neighbors per channel. Defaults to 8.
-        n_neighbors (int, optional): number of neighbors for graph construction. Defaults to 5.
-        knn_verbose (bool, optional):  whether to make knn computation verbose. Defaults to True.
-        low_memory (bool, optional): memory usage for nearest neighbor computation. Defaults to False.
-        n_jobs (int, optional): number of jobs to perform computations over. Defaults to -1.
-        suppress_tqdm (bool, optional): Whether to display tqdm progress bar. Defaults to False.
-    Returns:
-        nn_idx (array, # spikes x # 2*n_neighbors): Graph of nearest neighbor indices
-        nn_dist (array, # spikes x # 2*n_neighbors): Distances between nearest neighbor points
-
-    """
-
-    # prepare neighborhood parameters
-    fs = recording.get_sampling_frequency()
-    n_frames = recording.get_num_frames()
-    duration = n_frames / fs
-    time_window_frames = fs * time_window_s
-    margin_frames = int(margin_ms / 1000 * fs)
-    spike_pre_frames = int(ms_before / 1000 * fs)
-    spike_post_frames = int(ms_after / 1000 * fs)
-    n_channels = recording.get_num_channels()
-    n_samples = spike_pre_frames + spike_post_frames
-
-    # get channel distances from one another
-    channel_distance = get_channel_distances(recording)
-
-    # get nearest neighbors of channels
-    channel_neighbors = np.argsort(channel_distance, axis=1)[
-        :, :n_channel_neighbors]
-
-    # divide the recording into chunks of time_window_s seconds
-    n_chunks = int(np.ceil(n_frames / time_window_frames))
-
-    peaks_in_chunk_idx_list = []
-    knn_indices_list = []
-    knn_distances_list = []
-
-    # for each chunk grab spike nearest neighbors
-    # TODO: this can be parallelized (although nearest neighbors is already
-    #    parallelized, and bandwidth is limited for reading from raw data)
-    for chunk in tqdm(range(n_chunks - 1), display=not suppress_tqdm):
-        # set the start and end frame to grab for this chunk
-        start_frame = int(chunk * time_window_frames)
-        end_frame = int((chunk + 2) * time_window_frames)
-        if end_frame > n_frames:
-            end_frame = n_frames
-
-        # grab all spikes
-        all_spikes, all_chan_idx, peaks_in_chunk_idx = get_chunk_spike_waveforms(
-            recording,
-            start_frame,
-            end_frame,
-            peaks,
-            channel_neighbors,
-            spike_pre_frames=spike_pre_frames,
-            spike_post_frames=spike_post_frames,
-            n_channel_neighbors=n_channel_neighbors,
-            margin_frames=margin_frames,
-        )
-
-        # grab nearest neighbors
-        knn_indices, knn_distances = get_spike_nearest_neighbors(
-            all_spikes,
-            all_chan_idx=all_chan_idx,
-            n_samples=spike_post_frames + spike_pre_frames,
-            n_neighbors=n_neighbors,
-            n_channel_neighbors=n_channel_neighbors,
-            low_memory=low_memory,
-            knn_verbose=knn_verbose,
-            n_jobs=n_jobs,
-        )
-
-        # get value relative to absolute spike number in dataset
-        knn_indices_abs = peaks_in_chunk_idx[knn_indices][:, 1:]
-        # knn_indices += start_frame # offset
-        knn_indices_list.append(knn_indices_abs)
-        knn_distances_list.append(knn_distances[:, 1:])
-
-        # add peaks indices to list
-        peaks_in_chunk_idx_list.append(peaks_in_chunk_idx)
-
-    # merge together chunked nearest neighbors graphs
-    nn_idx, nn_dist = merge_nn_dicts(
-        peaks,
-        n_neighbors,
-        peaks_in_chunk_idx_list,
-        knn_indices_list,
-        knn_distances_list,
-    )
-    return nn_idx, nn_dist
-
 
 if HAVE_NUMBA:
     @numba.jit(fastmath=True, cache=True)

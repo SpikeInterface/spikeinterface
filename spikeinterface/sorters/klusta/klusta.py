@@ -3,12 +3,12 @@ from pathlib import Path
 import sys
 import shutil
 
-from ..basesorter import BaseSorter
+from ..basesorter import BaseSorter, get_job_kwargs
 from ..utils import ShellScript
 
 from probeinterface import write_prb
 
-from spikeinterface.core import BinaryRecordingExtractor
+from spikeinterface.core import write_binary_recording
 from spikeinterface.extractors import KlustaSortingExtractor
 
 try:
@@ -26,6 +26,7 @@ class KlustaSorter(BaseSorter):
     sorter_name = 'klusta'
 
     requires_locations = False
+    requires_binary_data = True
 
     _default_params = {
         'adjacency_radius': None,
@@ -37,8 +38,6 @@ class KlustaSorter(BaseSorter):
         'n_features_per_channel': 3,
         'pca_n_waveforms_max': 10000,
         'num_starting_clusters': 50,
-        'total_memory': '500M',
-        'n_jobs_bin': 1
     }
 
     _params_description = {
@@ -52,8 +51,6 @@ class KlustaSorter(BaseSorter):
         'n_features_per_channel': "Number of PCA features per channel",
         'pca_n_waveforms_max': "Maximum number of waveforms for PCA",
         'num_starting_clusters': "Number of initial clusters",
-        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)"
     }
 
     sorter_description = """Klusta is a density-based spike sorter that uses a masked EM approach for clustering.
@@ -91,23 +88,17 @@ class KlustaSorter(BaseSorter):
         write_prb(prb_file, probegroup, radius=p['adjacency_radius'])
 
         # source file
-        # TODO fix .dat
-        if isinstance(recording, BinaryRecordingExtractor) and recording._kwargs['file_offset'] == 0:
-            # no need to copy
-            raw_filename = Path(recording._kwargs['file_paths'][0]).resolve()
-            if raw_filename.suffix != ".dat":
-                print("Binary file is not a .dat file. Making a copy!")
-                shutil.copy(raw_filename, output_folder / "recording.dat")
-                raw_filename = output_folder / "recording.dat"
-            raw_filename = str(raw_filename)
-            dtype = recording._kwargs['dtype']
+        if recording.binary_compatible_with(time_axis=0, file_offset=0, file_suffix='.dat'):
+            # no copy
+            d = recording.get_binary_description()
+            raw_filename = str(d['file_paths'][0])
+            dtype = str(d['dtype'])
         else:
             # save binary file (chunk by chunk) into a new file
             raw_filename = output_folder / 'recording.dat'
             dtype = 'int16'
-            BinaryRecordingExtractor.write_recording(recording, file_paths=[raw_filename],
-                                                     dtype='int16', total_memory=p["total_memory"],
-                                                     n_jobs=p["n_jobs_bin"], verbose=False, progress_bar=verbose)
+            write_binary_recording(recording, file_paths=[raw_filename], verbose=False, 
+                                   **get_job_kwargs(params, verbose))
 
         if p['detect_sign'] < 0:
             detect_sign = 'negative'

@@ -13,16 +13,16 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path: str
         The tdt folder.
-    stream_id: str or None
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
     """
     mode = 'folder'
     NeoRawIOClass = 'AxonaRawIO'
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, all_annotations=False):
         neo_kwargs = {'filename': file_path}
-        NeoBaseRecordingExtractor.__init__(self, **neo_kwargs)
-
-        self._kwargs = dict(file_path=str(file_path))
+        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
+        self._kwargs.update({'file_path': file_path})
 
 
 read_axona = define_function_from_class(source_class=AxonaRecordingExtractor, name="read_axona")

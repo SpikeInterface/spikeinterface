@@ -18,19 +18,22 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         Path to maxwell h5 file
-    stream_id: str or None
-        For MaxTwo when there are several wells at the same time you
-        need to specify stream_id='well000' or 'well0001' or ...
     rec_name: str or None
         When the file contains several blocks (aka recordings) you need to specify the one
         you want to extract. (rec_name='rec0000')
+    stream_id: str or None
+        If several stream, specify the one you want.
+        For MaxTwo when there are several wells at the same time you
+        need to specify stream_id='well000' or 'well0001' or ...
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'MaxwellRawIO'
 
-    def __init__(self, file_path, stream_id=None, rec_name=None):
-        neo_kwargs = {'filename': str(file_path)}
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, rec_name=rec_name, **neo_kwargs)
+    def __init__(self, file_path, stream_id=None, all_annotations=False, rec_name=None):
+        neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=False, **neo_kwargs)
 
         self.extra_requirements.append('h5py')
 
@@ -41,7 +44,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         probe = pi.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
         self.set_probe(probe, in_place=True)
         self.set_property("electrode", self.get_property("contact_vector")["electrode"])
-        self._kwargs = dict(file_path=str(file_path), stream_id=stream_id, rec_name=rec_name)
+        self._kwargs.update(dict(file_path=str(file_path), rec_name=rec_name))
 
 
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])

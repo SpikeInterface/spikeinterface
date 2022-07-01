@@ -1,12 +1,18 @@
 Installing Spike Sorters
 ========================
 
-An important aspect of spikeinterface is the `spikeinterface.sorters` module.
-This module wraps many popular spike sorting tools.
-This means that you can run multiple sorters on the same dataset with only a few lines of code
-and through Python.
+An important aspect of spikeinterface is the :py:mod:`spikeinterface.sorters` module.
+This module wraps many popular spike sorting tools, allowing you to run multiple sorters on the same dataset with
+only a few lines of code and through Python.
 
-These spike sorting algorithms **must be installed externally**.
+We have created docker images for most of these sorters, and in many cases the easiest way to run them is to do so
+via docker or singularity. This is the approach we would recommend for most users. To run containerized sorters, see
+see our documentation here: .
+
+There are some cases where users will need to install the spike sorting algorithms in their own environment. If you
+are on a system where it is infeasible to run docker or singularity containers, or if you are actively developing the
+spike sorting software, you will likely need to install each spike sorter yourself.
+
 Some of theses sorters are written in Matlab, so you will also to install Matlab if you want
 to use them (Kilosort, Kilosort2, Ironclust, ...)
 Some of then will also need some computing library like CUDA (Kilosort, Kilosort2, Ironclust (optional)) or
@@ -117,17 +123,30 @@ Kilosort3
 pykilosort
 ----------
 
-* python, requires cuda
+* Python, requires cuda
 * Url: https://github.com/MouseLand/pykilosort
-* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyril Rossant
+* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant
 
-* Installation needs Matlab and cudatoolkit::
+* Install the python cuda toolkit. In principle, this should work::
+    
+    pip install cupy  (or pip install cupy-cudaXXX)
 
-    pip install cupy  (or pip install cupy-cudaXXX)  >>> can be quite hard
-    pip install phylib, pypandic
+* However, conda installation could be less painful::
+    
+    conda install cupy 
+
+* Next, clone and install pykilosort. Note that we support the newer version on the `develop` branch::
+
+    pip install phylib, pypandoc
     git clone https://github.com/MouseLand/pykilosort
+    git checkout develop
     cd pykilosort
+    pip install -r requirements.txt
     python setup.py install
+    
+* Alternatively, you can use the `pyks2.yml` environment file in the pykilosort repo and update your favorite environment with::
+
+    conda env update --name my-fav-env --file pyks2.yml --prune
 
 * See also https://github.com/MouseLand/pykilosort#installation
 

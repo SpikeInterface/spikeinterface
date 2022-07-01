@@ -8,9 +8,9 @@ import pandas as pd
 import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
-from spikeinterface.toolkit import (get_template_channel_sparsity,
-                                    compute_spike_amplitudes, compute_template_similarity,
-                                    compute_principal_components)
+from spikeinterface.postprocessing import (get_template_channel_sparsity,
+                                           compute_spike_amplitudes, compute_template_similarity,
+                                           compute_principal_components)
 
 
 def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
@@ -39,7 +39,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
            * by SNR threshold: sparsity_dict=dict(method="threshold", threshold=2)
            * by property: sparsity_dict=dict(method="by_property", by_property="group")
         Default is sparsity_dict=dict(method="best_channels", num_channels=16)
-        For more info, see the toolkit.get_template_channel_sparsity() function.
+        For more info, see the postprocessing.get_template_channel_sparsity() function.
     max_channels_per_template: int or None
         Maximum channels per unit to return. If None, all channels are returned
     copy_binary: bool
@@ -55,6 +55,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     verbose: bool
         If True, output is verbose
     {}
+    
     """
     assert isinstance(waveform_extractor, spikeinterface.core.waveform_extractor.WaveformExtractor), \
         'waveform_extractor must be a WaveformExtractor object'
@@ -89,7 +90,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
 
     if not recording.is_filtered():
         print("Warning: recording is not filtered! It's recommended to filter the recording before exporting to phy.\n"
-              "You can run spikeinterface.toolkit.preprocessing.bandpass_filter(recording)")
+              "You can run spikeinterface.preprocessing.bandpass_filter(recording)")
 
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")

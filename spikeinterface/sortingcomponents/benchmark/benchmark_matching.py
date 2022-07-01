@@ -1,10 +1,10 @@
 
 from spikeinterface.core import extract_waveforms
-from spikeinterface.toolkit import bandpass_filter, common_reference
+from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
-from spikeinterface.toolkit.qualitymetrics import compute_quality_metrics
+from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import CollisionGTComparison
 from spikeinterface.widgets import plot_sorting_performance, plot_agreement_matrix, plot_comparison_collision_by_similarity, plot_unit_templates, plot_unit_waveforms
 
@@ -50,9 +50,7 @@ class BenchmarkMatching:
         self.run_time = time.time() - t_start
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], self.sampling_rate)
         self.comp = CollisionGTComparison(self.gt_sorting, sorting)
-    
-    def compute_benchmark(self, metrics_names=['snr']):
-        self.metrics = compute_quality_metrics(self.we, metric_names=metrics_names, load_if_exists=True)
+        self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
 
     def plot(self, title=None):
         
@@ -60,7 +58,7 @@ class BenchmarkMatching:
             title = self.method
 
         if self.metrics is None:
-            self.compute_benchmark()
+            self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
 
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
         ax = axs[0, 0]
@@ -146,7 +144,7 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
             if all_spikes > 0:
                 b = wfs_sliced.reshape(all_spikes, -1)
                 if metric == 'cosine':
-                    distances = sklearn.metrics.pairwise.cosine_similarity(a, b, metric).flatten()
+                    distances = sklearn.metrics.pairwise.cosine_similarity(a, b).flatten()
                 else:
                     distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
                 results[label]['mean'] += [np.nanmean(distances)]
@@ -167,7 +165,7 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
         ax.set_ylabel(metric)
 
 
-def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall', 'precision'], ylim=(0.5, 1)):
+def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall', 'precision'], colors = ['g', 'b', 'r'], ylim=(0.5, 1)):
     nb_benchmarks = len(benchmarks)
     fig, axs = plt.subplots(ncols=nb_benchmarks, nrows=nb_benchmarks - 1, figsize=(10, 10))
     for i in range(nb_benchmarks - 1):
@@ -178,10 +176,10 @@ def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall'
             ax.spines['left'].set_visible(False)
             ax.spines['bottom'].set_visible(False)
             if j > i:
-                for performance in performance_names:
+                for performance, color in zip(performance_names, colors):
                     perf1 = benchmarks[i].comp.get_performance()[performance]
                     perf2 = benchmarks[j].comp.get_performance()[performance]
-                    ax.plot(perf1, perf2, '.', label=performance)
+                    ax.plot(perf2, perf1, '.', label=performance, color=color)
                 ax.plot([0, 1], [0, 1], 'k--', alpha=0.5)
                 ax.spines['left'].set_visible(True)
                 ax.spines['bottom'].set_visible(True)
@@ -199,7 +197,31 @@ def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall'
                 ax.set_yticks([], [])
                 ax.set_xticks([], [])
                 if (i == 0) and (j == 0):
-                    for k in range(len(performance_names)):
-                        ax.plot([0,0],[0,0])
+                    for color, k in zip(colors, range(len(performance_names))):
+                        ax.plot([0,0],[0,0],c=color)
                     ax.legend(performance_names)
     plt.tight_layout()
+
+    # def plot_average_comparison_matching(benchmarks, performance_names=['recall'], ylim=(0, 1)):    
+    #     nb_benchmarks = len(benchmarks)
+    #     results = {}
+    #     for i in range(nb_benchmarks):
+    #         results[benchmarks[i].method] = {}
+    #         for performance in performance_names:
+    #             results[benchmarks[i].method][performance] = benchmarks[i].comp.get_performance()[performance]
+        
+    #     width = 1/(ncol+2)
+    #     methods = [i.method for i in benchmarks]
+        
+    #     for c, col in enumerate(methods):
+    #         x = np.arange(performances) + 1 + c / (ncol + 2)
+    #         yerr = results[]
+    #         ax.bar(x, m[col].values.flatten(), yerr=yerr.flatten(), width=width, color=cmap(c), label=clean_labels[c])
+
+    #     ax.legend()
+
+    #     ax.set_xticks(np.arange(sorter_names.size) + 1 + width)
+    #     ax.set_xticklabels(sorter_names, rotation=45)
+    #     ax.set_ylabel('metric')
+    #     ax.set_xlim(0, sorter_names.size + 1)
+    #     
