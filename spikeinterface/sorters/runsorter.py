@@ -24,6 +24,7 @@ SORTER_DOCKER_MAP = dict(
     mountainsort4='mountainsort4',
     pykilosort='pykilosort',
     spykingcircus='spyking-circus',
+    spykingcircus2='spyking-circus2',
     tridesclous='tridesclous',
     # Matlab compiled sorters:
     hdsort='hdsort-compiled',
@@ -482,8 +483,7 @@ if __name__ == '__main__':
             # TODO later check output
             if install_si_from_source:
                 si_source = 'local machine'
-                res_output = container_client.run_command(f'cp -rf {si_dev_path_unix} /opt')
-                cmd = f'pip install /opt/spikeinterface[full]'
+                cmd = f'pip install {si_dev_path_unix}[full]'
             else:
                 si_source = 'remote repository'
                 cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
