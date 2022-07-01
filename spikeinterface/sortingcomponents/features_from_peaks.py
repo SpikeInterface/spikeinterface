@@ -42,7 +42,7 @@ def compute_features_from_peaks(
             - com (params: ms_before, ms_after, local_radius_um)
             - dist_com_vs_max_p2p_channel (params: ms_before, ms_after, local_radius_um)
             - energy (params: ms_before, ms_after, local_radius_um)
-        If one_fetaure_per_peak is False, can be chosen between
+        If one_feature_per_peak is False, can be chosen between
             - amplitude (params: ms_before, ms_after, peak_sign)
             - ptp (params: ms_before, ms_after)
         Note that if all features have common ms_before, ms_after, this is faster not to
@@ -54,7 +54,7 @@ def compute_features_from_peaks(
         The duration in ms before the peak for extracting the features (default 1 ms)
     ms_after: float
         The duration in ms  after the peakfor extracting the features (default 1 ms)
-    smoothing: can be None, or 'savitky'
+    smoothing: can be None, or 'savgol'
 
     {}
 
@@ -123,8 +123,8 @@ def compute_features_from_peaks(
             my_params['nb_com_dims'] = len(recording.get_channel_locations().shape)
 
 
-    my_params['nbefore'] = nbefore
-    my_params['nafter'] = nafter
+    my_params['nbefore'] = nbefore_max
+    my_params['nafter'] = nafter_max
     my_params['smoothing'] = smoothing
     my_params['one_feature_per_peak'] = one_feature_per_peak
 
