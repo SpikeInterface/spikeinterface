@@ -207,15 +207,6 @@ def find_recording_folder(d):
             return folder_to_mount
 
 
-# def find_recording_folder(d):
-#     folders_to_mount = []
-#     def no_change(p):
-#         folders_to_mount.append(p)
-#         return p
-#     recursive_path_modifier(d, no_change, target='path', copy=True)
-#     print(folders_to_mount)
-
-
 
 def path_to_unix(path):
     path = Path(path)
