@@ -50,7 +50,7 @@ follows:
         recording, method='by_channel',
         peak_sign='neg',
         detect_threshold=5,
-        n_shifts=2,
+        exclude_sweep_ms=0.2,
         local_radius_um=100,
         noise_levels=None,
         random_chunk_kwargs={},
