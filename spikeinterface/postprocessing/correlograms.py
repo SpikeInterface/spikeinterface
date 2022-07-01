@@ -8,7 +8,8 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-def compute_autocorrelogram_from_spiketrain(spike_train, max_time, bin_size, sampling_f):
+def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
+                                            bin_size: int, sampling_f: float):
     """
     Compute the auto-correlogram from a given spike train.
 
@@ -41,7 +42,8 @@ def compute_autocorrelogram_from_spiketrain(spike_train, max_time, bin_size, sam
 
     return _compute_autocorr_numba(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
 
-def compute_crosscorrelogram_from_spiketrain(spike_train1, spike_train2, max_time, bin_size, sampling_f):
+def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_train2: np.ndarray,
+                                             max_time: int, bin_size: int, sampling_f: float):
     """
     Compute the cros-correlogram between two given spike trains.
 
@@ -96,7 +98,7 @@ if HAVE_NUMBA:
                 auto_corr[n_bins//2 - bin - 1] += 1
                 auto_corr[n_bins//2 + bin] += 1
 
-        return (auto_corr, bins)
+        return auto_corr, bins
 
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32, numba.int32, numba.float32),
                 nopython=True, nogil=True, cache=True)
@@ -120,12 +122,12 @@ if HAVE_NUMBA:
                 bin = int(diff / bin_size) - (0 if diff >= 0 else 1)
                 cross_corr[n_bins//2 + bin] += 1
 
-        return (cross_corr, bins)
+        return cross_corr, bins
 
 
-def compute_correlograms(sorting, window_ms=100.0,
-                         bin_ms=5.0, symmetrize=False,
-                         method="auto"):
+def compute_correlograms(sorting, window_ms: float = 100.0,
+                         bin_ms: float = 5.0, symmetrize: bool = False,
+                         method: str = "auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
     """
@@ -142,9 +144,8 @@ def compute_correlograms(sorting, window_ms=100.0,
 
 
 
-def compute_correlograms_numpy(sorting,
-                         window_ms=100.0, bin_ms=5.0,
-                         symmetrize=True):
+def compute_correlograms_numpy(sorting, window_ms: float = 100.0,
+                               bin_ms: float = 5.0, symmetrize: bool = False):
     """
     Computes several cross-correlogram in one course
     from several cluster.
@@ -233,9 +234,8 @@ def compute_correlograms_numpy(sorting,
     return np.transpose(correlograms, (1, 0, 2)), bins
 
 
-def compute_correlograms_numba(sorting,
-                         window_ms=100.0, bin_ms=5.0,
-                         symmetrize=False):
+def compute_correlograms_numba(sorting, window_ms: float = 100.0,
+                               bin_ms: float = 5.0, symmetrize: bool = False):
     """
     Computes several cross-correlogram in one course
     from several cluster.
@@ -271,14 +271,14 @@ def compute_correlograms_numba(sorting,
 if HAVE_NUMBA:
     @numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
                 nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f): # TODO: is sampling_f really required?
+    def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
         n_units = correlograms.shape[0]
 
         for i in numba.prange(n_units):
-            spike_train1 = spike_trains[spike_clusters==i]
+            spike_train1 = spike_trains[spike_clusters == i]
 
             for j in range(i, n_units):
-                spike_train2 = spike_trains[spike_clusters==j]
+                spike_train2 = spike_trains[spike_clusters == j]
 
                 if i == j:
                     correlograms[i, j] += _compute_autocorr_numba(spike_train1, max_time, bin_size, sampling_f)[0]
