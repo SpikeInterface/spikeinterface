@@ -16,7 +16,11 @@ except ImportError:
 
 from spikeinterface.core import get_channel_distances
 from tqdm.auto import tqdm
-import hdbscan
+try:
+    import hdbscan
+    HAVE_HDBSCAN = True
+except:
+    HAVE_HDBSCAN = False
 import copy
 from scipy.sparse import coo_matrix
 
@@ -93,6 +97,7 @@ class SlidingNNClustering:
         assert HAVE_TORCH, "SlidingNN needs torch to work"
         assert HAVE_NNDESCENT, "SlidingNN needs pynndescent to work"
         assert HAVE_PYMDE, "SlidingNN needs pymde to work"
+        assert HAVE_HDBSCAN, "SlidingNN needs hdbscan to work"
 
         d = params
         tmp_folder = params['tmp_folder']
