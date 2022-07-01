@@ -14,11 +14,12 @@ class Spykingcircus2Sorter(BaseSorter):
     sorter_name = 'spykingcircus2'
 
     _default_params = {
-        'waveforms' : {'ms_before' : 2.5, 'ms_after' : 3.5, 'max_spikes_per_unit' : 200, 'overwrite' : True},
+        'general' : {'ms_before' : 2.5, 'ms_after' : 3.5, 'local_radius_um' : 50},
+        'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'freq_min' : 300, 'freq_max' : 6000, 'dtype' : 'float32'},
-        'detection' : {'peak_sign': 'neg', 'detect_threshold': 5, 'n_shifts' : 100, 'local_radius_um' : 50},
-        'selection' : {'n_peaks_per_electrode' : 1000, 'min_n_spikes' : 20000},
-        'localization' : {'local_radius_um' : 50},
+        'detection' : {'peak_sign': 'neg', 'detect_threshold': 5, 'exclude_sweep_ms' : 2},
+        'selection' : {'n_peaks_per_channel' : 1000, 'min_n_peaks' : 20000},
+        'localization' : {},
         'clustering': {},
         'matching':  {},
         'registration' : {},
@@ -40,45 +41,64 @@ class Spykingcircus2Sorter(BaseSorter):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
 
+        ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
         recording_f = bandpass_filter(recording, **filtering_params)
+
         if params['common_reference']:
             recording_f = common_reference(recording_f)
 
+
+        ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()
         detection_params.update(params['job_kwargs'])
+        if 'local_radius_um' not in detection_params:
+            detection_params['local_radius_um'] = params['general']['local_radius_um']
 
         peaks = detect_peaks(recording_f, method='locally_exclusive', 
             **detection_params)
 
+        ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
+        ## channels as flat as possible
         selection_params = params['selection']
-        selection_params['n_peaks'] = params['selection']['n_peaks_per_electrode'] * recording.get_num_channels()
-        selection_params['n_peaks'] = max(selection_params['min_n_spikes'], selection_params['n_peaks']) 
+        selection_params['n_peaks'] = params['selection']['n_peaks_per_channel'] * recording.get_num_channels()
+        selection_params['n_peaks'] = max(selection_params['min_n_peaks'], selection_params['n_peaks'])
+
         noise_levels = get_noise_levels(recording_f, return_scaled=False)
         selection_params.update({'noise_levels' : noise_levels})
-
         selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
 
+        ## We localize the CoM of the peaks
         localization_params = params['localization'].copy()
+        if 'local_radius_um' not in localization_params:
+            localization_params['local_radius_um'] = params['general']['local_radius_um']
 
         localizations = localize_peaks(recording_f, selected_peaks, method='center_of_mass', 
             method_kwargs=localization_params, **params['job_kwargs'])
 
+        ## We launch a clustering (using hdbscan) relying on positions and features extracted on
+        ## the fly from the snippets
         clustering_params = params['clustering'].copy()
         clustering_params.update(params['waveforms'])
         clustering_params['peak_locations'] = localizations
         clustering_params['job_kwargs'] = params['job_kwargs']
 
+        if 'local_radius_um' not in clustering_params:
+            clustering_params['local_radius_um'] = params['general']['local_radius_um']
+
         labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='position_and_features', 
             method_kwargs=clustering_params)
 
+        ## We get the labels for our peaks
         mask = peak_labels > -1
         sorting = NumpySorting.from_times_labels(selected_peaks['sample_ind'][mask], peak_labels[mask], sampling_rate)
 
+        ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()
         waveforms_params.update(params['job_kwargs'])
         we = extract_waveforms(recording_f, sorting, output_folder / "waveforms", **waveforms_params)
 
+        ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
         matching_params = params['matching'].copy()
         matching_params['waveform_extractor'] = we
         matching_params.update({'noise_levels' : noise_levels})
@@ -89,6 +109,7 @@ class Spykingcircus2Sorter(BaseSorter):
         spikes = find_spikes_from_templates(recording_f, method='circus-omp', 
             method_kwargs=matching_params, **matching_job_params)
 
+        ## And this is it! We have a spyking circus
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_rate)
         sorting = sorting.save(folder=output_folder / "sorting")
 
