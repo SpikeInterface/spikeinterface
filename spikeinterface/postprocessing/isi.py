@@ -63,8 +63,27 @@ def compute_ISI_numpy(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     """
     TODO
     """
-    raise NotImplementedError()
-    return None
+    fs = sorting.get_sampling_frequency()
+    num_units = len(sorting.unit_ids)
+
+    window_size = int(round(fs * window_ms * 1e-3))
+    bin_size = int(round(fs * bin_ms * 1e-3))
+    window_size -= window_size % bin_size
+    num_bins = int(window_size / bin_size)
+    assert num_bins >= 1
+
+    ISIs = np.zeros((num_units, num_bins), dtype=np.int64)
+    bins = np.arange(0, window_size+bin_size, bin_size) * 1e3 / fs
+    
+    # TODO: There might be a better way than a double for loop?
+    for i, unit_id in enumerate(sorting.unit_ids):
+        for seg_index in range(sorting.get_num_segments()):
+            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=seg_index)
+            ISI = np.histogram(np.diff(spike_train), bins=num_bins, range=(0, window_size-1))[0]
+            ISIs[i] += ISI
+
+    return ISIs, bins
+
 
 def compute_ISI_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     """
@@ -97,7 +116,7 @@ def compute_ISI_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
                            spikes[seg_index][1].astype(np.int32),
                            window_size, bin_size, fs)
 
-    return correlograms, bins
+    return ISIs, bins
 
 
 if HAVE_NUMBA:
