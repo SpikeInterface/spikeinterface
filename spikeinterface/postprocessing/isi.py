@@ -8,7 +8,7 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
-def compute_ISI_from_spiketrain(spike_train: np.ndarray, max_time: int,
+def compute_isi_histograms_from_spiketrain(spike_train: np.ndarray, max_time: int,
                                 bin_size: int, sampling_f: float):
     """
     Computes the Inter-Spike Intervals histogram from a given spike train.
@@ -40,12 +40,12 @@ def compute_ISI_from_spiketrain(spike_train: np.ndarray, max_time: int,
         print("compute_ISI_from_spiketrain cannot run without numba.")
         return 0
 
-    return _compute_ISI_from_spiketrain(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
+    return _compute_isi_histograms_from_spiketrain(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
 
 if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int32, numba.int32, numba.float32),
                nopython=True, nogil=True, cache=True)
-    def _compute_ISI_from_spiketrain(spike_train, max_time, bin_size, sampling_f):
+    def _compute_isi_histograms_from_spiketrain(spike_train, max_time, bin_size, sampling_f):
         n_bins = int(max_time / bin_size)
 
         bins = np.arange(0, max_time+bin_size, bin_size) * 1e3 / sampling_f
@@ -77,11 +77,11 @@ def compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0
         method = "numba" if HAVE_NUMBA else "numpy"
 
     if method == "numpy":
-        return compute_ISI_numpy(sorting, window_ms, bin_ms)
+        return compute_isi_histograms_numpy(sorting, window_ms, bin_ms)
     if method == "numba":
-        return compute_ISI_numba(sorting, window_ms, bin_ms)
+        return compute_isi_histograms_numba(sorting, window_ms, bin_ms)
 
-def compute_ISI_numpy(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
+def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     """
     Computes the Inter-Spike Intervals histogram for all
     the units inside the given sorting.
@@ -112,7 +112,7 @@ def compute_ISI_numpy(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     return ISIs, bins
 
 
-def compute_ISI_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
+def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     """
     Computes the Inter-Spike Intervals histogram for all
     the units inside the given sorting.
@@ -139,7 +139,7 @@ def compute_ISI_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     ISIs = np.zeros((num_units, num_bins), dtype=np.int64)
 
     for seg_index in range(sorting.get_num_segments()):
-        _compute_ISI_numba(ISIs, spikes[seg_index][0].astype(np.int64),
+        _compute_isi_histograms_numba(ISIs, spikes[seg_index][0].astype(np.int64),
                            spikes[seg_index][1].astype(np.int32),
                            window_size, bin_size, fs)
 
@@ -149,10 +149,10 @@ def compute_ISI_numba(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
 if HAVE_NUMBA:
     @numba.jit((numba.int64[:, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
                nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_ISI_numba(ISIs, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
+    def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
         n_units = ISIs.shape[0]
 
         for i in numba.prange(n_units):
             spike_train = spike_trains[spike_clusters == i]
 
-            ISIs[i] += _compute_ISI_from_spiketrain(spike_train, max_time, bin_size, sampling_f)[0]
+            ISIs[i] += _compute_isi_histograms_from_spiketrain(spike_train, max_time, bin_size, sampling_f)[0]
