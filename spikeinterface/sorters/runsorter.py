@@ -167,44 +167,27 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
     return sorting
 
 
-def find_recording_folder(d):
-    if "kwargs" in d.keys():
-        # handle nested
-        kwargs = d["kwargs"]
-        nested_extractor_dict = None
-        for k, v in kwargs.items():
-            if isinstance(v, dict) and is_dict_extractor(v):
-                nested_extractor_dict = v
-        if nested_extractor_dict is None:
-            folder_to_mount = find_recording_folder(kwargs)
-        else:
-            folder_to_mount = find_recording_folder(nested_extractor_dict)
-        return folder_to_mount
-    else:
-        for k, v in d.items():
-            if "path" in k:
-                # paths can be str or list of str
-                if isinstance(v, str):
-                    # one path
-                    abs_path = Path(v)
-                    if abs_path.is_file():
-                        folder_to_mount = abs_path.parent
-                    elif abs_path.is_dir():
-                        folder_to_mount = abs_path
-                elif isinstance(v, list):
-                    # list of path
-                    relative_paths = []
-                    folder_to_mount = None
-                    for abs_path in v:
-                        abs_path = Path(abs_path)
-                        if folder_to_mount is None:
-                            folder_to_mount = abs_path.parent
-                        else:
-                            assert folder_to_mount == abs_path.parent
-                else:
-                    raise ValueError(
-                        f'{k} key for path  must be str or list[str]')
-            return folder_to_mount
+def find_recording_folders(d):
+    folders_to_mount = []
+
+    def append_parent_folder(p):
+        p = Path(p)
+        folders_to_mount.append(p.resolve().absolute().parent)
+        return p
+
+    _ = recursive_path_modifier(d, append_parent_folder, target='path', copy=True)
+    
+    try: # this will fail if on different drives (Windows)
+        base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
+    except ValueError:
+        base_folders_to_mount = folders_to_mount
+    
+    # let's not mount root if dries are /home/..., /mnt1/...
+    if len(base_folders_to_mount) == 1:
+        if len(str(base_folders_to_mount[0])) == 1:
+            base_folders_to_mount = folders_to_mount
+    
+    return base_folders_to_mount
 
 
 def path_to_unix(path):
@@ -380,7 +363,7 @@ def run_sorter_container(
 
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
-    recording_input_folder = find_recording_folder(rec_dict).absolute().resolve()
+    recording_input_folders = find_recording_folders(rec_dict)
 
     if platform.system() == 'Windows':
         rec_dict = windows_extractor_dict_to_unix(rec_dict)
@@ -398,11 +381,11 @@ def run_sorter_container(
         # skip C:
         parent_folder_unix = path_to_unix(parent_folder)
         output_folder_unix = path_to_unix(output_folder)
-        recording_input_folder_unix = path_to_unix(recording_input_folder)
+        recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
     else:
         parent_folder_unix = parent_folder
         output_folder_unix = output_folder
-        recording_input_folder_unix = recording_input_folder
+        recording_input_folders_unix = recording_input_folders
     py_script = f"""
 import json
 from spikeinterface import load_extractor
@@ -426,8 +409,11 @@ if __name__ == '__main__':
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
     volumes = {}
-    volumes[str(recording_input_folder)] = {
-        'bind': str(recording_input_folder_unix), 'mode': 'ro'}
+    for recording_folder, recording_folder_unix in zip(recording_input_folders, recording_input_folders_unix):
+        # handle duplicates
+        if str(recording_folder) not in volumes:
+            volumes[str(recording_folder)] = {
+                'bind': str(recording_folder_unix), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder_unix), 'mode': 'rw'}
     si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
 
