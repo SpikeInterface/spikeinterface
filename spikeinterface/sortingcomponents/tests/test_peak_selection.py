@@ -24,7 +24,7 @@ def test_detect_peaks():
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
     peaks = detect_peaks(recording, method='by_channel',
-                         peak_sign='neg', detect_threshold=5, n_shifts=2,
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=1, progress_bar=False, noise_levels=noise_levels)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
