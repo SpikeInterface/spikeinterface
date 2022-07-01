@@ -1,6 +1,11 @@
 import pytest
-from spikeinterface.core.datasets import HAVE_DATALAD
 from spikeinterface.core import download_dataset
+
+try:
+    import datalad
+    HAVE_DATALAD = True
+except:
+    HAVE_DATALAD = False
 
 
 @pytest.mark.skipif(not HAVE_DATALAD, reason='No datalad')
