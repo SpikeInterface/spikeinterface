@@ -14,6 +14,7 @@ import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
 from spikeinterface.postprocessing import compute_spike_amplitudes
+from spikeinterface.qualitymetrics import compute_quality_metrics
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -142,7 +143,7 @@ class TestWidgets(unittest.TestCase):
         sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
 
     def test_sorting_performance(self):
-        metrics = st.compute_quality_metrics(self._we, metric_names=['snr'])
+        metrics = compute_quality_metrics(self._we, metric_names=['snr'])
         sw.plot_sorting_performance(self._gt_comp, metrics, performance_name='accuracy', metric_name='snr')
 
     def test_plot_unit_summary(self):
