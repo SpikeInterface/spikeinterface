@@ -3,9 +3,8 @@ import os
 
 from spikeinterface.core.baserecording import BaseRecording
 from ..basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from ..zeropad_channel import ZeroChannelPaddedRecording
-
-from spikeinterface.toolkit.utils import get_random_data_chunks
+from ..zero_channelpad import ZeroChannelPaddedRecording
+from spikeinterface.core import get_random_data_chunks
 
 try:
     from tensorflow.keras.models import load_model
