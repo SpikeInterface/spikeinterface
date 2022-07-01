@@ -9,12 +9,13 @@ def compute_features_from_peaks(
     recording,
     peaks,
     feature_list=["amplitude", "ptp"],
-    feature_params = {"amplitude" : {"ms_before" : 0, "ms_after" : 0, "peak_sign" : "neg"},
-                      "ptp" : {"ms_before" : 1, "ms_after" : 1},
-                      "com" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50},
-                      "dist_com_vs_max_ptp_channel" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50},
-                      "energy" : {"ms_before" : 1, "ms_after" : 1, "local_radius_um" : 50}
+    feature_params = {"amplitude" : {"peak_sign" : "neg"},
+                      "ptp" : {},
+                      "com" : {"local_radius_um" : 50},
+                      "dist_com_vs_max_ptp_channel" : {"local_radius_um" : 50},
+                      "energy" : {"local_radius_um" : 50}
                       },
+    extraction_options = {'smoothing' : None, "ms_before" : 1, "ms_after" : 1}
     **job_kwargs,
 ):
     """Extract features on the fly from the recording given a list of peaks. 
@@ -31,7 +32,13 @@ def compute_features_from_peaks(
             - ptp (params: ms_before, ms_after)
             - com (params: ms_before, ms_after, local_radius_um)
             - dist_com_vs_max_p2p_channel (params: ms_before, ms_after, local_radius_um)
-
+            - energy (params: ms_before, ms_after, local_radius_um)
+    extraction_options: dict
+        The option that should be common to all extracted features. Note that using common
+        features for the extraction can speed up the call
+            - smoothing: bool (False by default)
+            - ms_before: float
+            - ms_after: float
     {}
 
     Returns
@@ -44,22 +51,29 @@ def compute_features_from_peaks(
         assert feature in feature_params.keys(), "feature is not known..."
         if feature == 'com':
             has_com = True
-        if feature in ['dist_com_vs_max_std_channel', 'dist_com_vs_max_ptp_channel']:
+        if feature in ['dist_com_vs_max_ptp_channel']:
             assert has_com, "some features requires CoM to be computed first"
 
 
+    all_nbefore = []
+    all_nafter = []
+
     nbefore_max = 0
     nafter_max = 0
+
+    feature_params["global_times"] = True
 
     for feature in feature_list:
         if "ms_before" in feature_params[feature]:
             ms_before = feature_params[feature]['ms_before']
             nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.0)
             feature_params[feature]['nbefore'] = nbefore
+            feature_params["global_times"] = False
         if "ms_after" in feature_params[feature]:
             ms_after = feature_params[feature]['ms_after']
             nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
             feature_params[feature]['nafter'] = nafter
+            feature_params["global_times"] = False
 
         if nbefore > nbefore_max:
             nbefore_max = nbefore
