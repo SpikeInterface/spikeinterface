@@ -118,6 +118,7 @@ class CollisionGTComparison(GroundTruthComparison):
         recall_scores = []
         similarities = []
         pair_names = []
+
         for r in range(n):
             for c in range(r + 1, n):
 
@@ -127,6 +128,7 @@ class CollisionGTComparison(GroundTruthComparison):
                 if good_only:
                     if (performances[u1] < min_accuracy) or (performances[u2] < min_accuracy):
                         continue
+
 
                 ind1 = self.sorting1.id_to_index(u1)
                 ind2 = self.sorting1.id_to_index(u2)
