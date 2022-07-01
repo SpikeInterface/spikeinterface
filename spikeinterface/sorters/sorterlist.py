@@ -1,3 +1,5 @@
+import warnings
+
 from .combinato import CombinatoSorter
 from .hdsort import HDSortSorter
 from .herdingspikes import HerdingspikesSorter
@@ -14,6 +16,7 @@ from .spyking_circus import SpykingcircusSorter
 from .tridesclous import TridesclousSorter
 from .waveclus import WaveClusSorter
 from .yass import YassSorter
+from .spyking_circus2 import Spykingcircus2Sorter
 
 sorter_full_list = [
     CombinatoSorter,
@@ -31,6 +34,7 @@ sorter_full_list = [
     TridesclousSorter,
     WaveClusSorter,
     YassSorter,
+    Spykingcircus2Sorter
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
@@ -59,7 +63,7 @@ def print_sorter_versions():
     print(txt)
 
 
-def get_default_params(sorter_name_or_class):
+def get_default_sorter_params(sorter_name_or_class):
     """Returns default parameters for the specified sorter.
 
     Parameters
@@ -83,7 +87,13 @@ def get_default_params(sorter_name_or_class):
     return SorterClass.default_params()
 
 
-def get_params_description(sorter_name_or_class):
+def get_default_params(sorter_name_or_class):
+    warnings.warn("Use get_sorter_default_params() function instead", 
+                  category=DeprecationWarning)
+    return get_default_sorter_params(sorter_name_or_class)
+
+
+def get_sorter_params_description(sorter_name_or_class):
     """Returns a description of the parameters for the specified sorter.
 
     Parameters
@@ -105,6 +115,12 @@ def get_params_description(sorter_name_or_class):
         raise (ValueError('Unknown sorter'))
 
     return SorterClass.params_description()
+
+
+def get_params_description(sorter_name_or_class):
+    warnings.warn("Use get_sorter_params_description() function instead",
+                  category=DeprecationWarning)
+    return get_sorter_params_description(sorter_name_or_class)
 
 
 def get_sorter_description(sorter_name_or_class):

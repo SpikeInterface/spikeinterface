@@ -119,10 +119,11 @@ class BaseSorting(BaseExtractor):
                 warnings.warn(
                     "The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
-        else:
+        elif format == 'memory':
             from .numpyextractors import NumpySorting
             cached = NumpySorting.from_extractor(self)
-            
+        else:
+            raise ValueError(f'format {format} not supported')            
         return cached
 
     def get_unit_property(self, unit_id, key):
@@ -199,23 +200,39 @@ class BaseSorting(BaseExtractor):
             spikes.append((spike_times, spike_labels))
         return spikes
 
-    def to_spike_vector(self):
+    def to_spike_vector(self, extremum_channel_inds=None):
         """
         Construct a unique structured numpy vector concatenating all spikes 
         with several fields: sample_ind, unit_index, segment_index.
 
         See also `get_all_spike_trains()`
+
+        Parameters
+        ----------
+        extremum_channel_inds: None or dict
+            If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_ind'.
+            This can be convinient for computing spikes postion after sorter.
+            
+            This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
         
         Returns
         -------
         spikes: np.array
             Structured numpy array ('sample_ind', 'unit_index', 'segment_index') with all spikes
+            Or ('sample_ind', 'unit_index', 'segment_index', 'channel_ind') if extremum_channel_inds
+            is given
+            
         """
         spikes_ = self.get_all_spike_trains(outputs='unit_index')
 
         n = np.sum([e[0].size for e in spikes_])
         spike_dtype = [('sample_ind', 'int64'), ('unit_ind',
                                                  'int64'), ('segment_ind', 'int64')]
+        
+        if extremum_channel_inds is not None:
+            spike_dtype += [('channel_ind', 'int64')]
+        
+        
         spikes = np.zeros(n, dtype=spike_dtype)
 
         pos = 0
@@ -225,6 +242,13 @@ class BaseSorting(BaseExtractor):
             spikes[pos:pos+n]['unit_ind'] = spike_labels
             spikes[pos:pos+n]['segment_ind'] = segment_index
             pos += n
+        
+
+        if extremum_channel_inds is not None:
+            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+            # vector way
+            spikes['channel_ind'] = ext_channel_inds[spikes['unit_ind']]
+
 
         return spikes
 

@@ -87,7 +87,7 @@ jobs:
         id: modules-changed
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [[ $file == *"/core/"* ]]; then
+            if [ $file == *"/core/"* ] || [ $file == *"/extractors/neoextractors/neobaseextractor.py" ]; then
               echo "Core changed"
               echo "::set-output name=CORE_CHANGED::true"
             fi
@@ -95,9 +95,17 @@ jobs:
               echo "Extractors changed"
               echo "::set-output name=EXTRACTORS_CHANGED::true"
             fi
-            if [[ $file == *"/toolkit/"* ]]; then
-              echo "Toolkit changed"
-              echo "::set-output name=TOOLKIT_CHANGED::true"
+            if [[ $file == *"/preprocessing/"* ]]; then
+              echo "Preprocessing changed"
+              echo "::set-output name=PREPROCESSING_CHANGED::true"
+            fi
+            if [[ $file == *"/postprocessing/"* ]]; then
+              echo "Postprocessing changed"
+              echo "::set-output name=POSTPROCESSING_CHANGED::true"
+            fi
+            if [[ $file == *"/qualitymetrics/"* ]]; then
+              echo "Quality metrics changed"
+              echo "::set-output name=QUALITYMETRICS_CHANGED::true"
             fi
             if [[ $file == *"/sorters/"* ]]; then
               echo "Sorters changed"
@@ -125,11 +133,21 @@ jobs:
         run: |
           source ~/test_env/bin/activate
           pytest -v -m extractors
-      - name: Test toolkit
-        if: steps.modules-changed.outputs.TOOLKIT_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+      - name: Test preprocessing
+        if: steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m toolkit
+          pytest -v -m preprocessing
+      - name: Test postprocessing
+        if: steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m postprocessing
+      - name: Test quality metrics
+        if: steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m qualitymetrics
       - name: Test sorters
         if: steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: |

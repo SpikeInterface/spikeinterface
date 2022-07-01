@@ -1,88 +1,80 @@
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib.ticker import MaxNLocator
-from .basewidget import BaseWidget
 
-import scipy.spatial
+from .base import BaseWidget, define_widget_function_from_class
+from .utils import get_unit_colors
+from ..postprocessing import get_template_channel_sparsity
+
+
 
 
 class TimeseriesWidget(BaseWidget):
-    """
-    Plots recording timeseries.
-
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor object
-    segment_index: None or int
-        The segment index.
-    channel_ids: list
-        The channel ids to display.
-    order_channel_by_depth: boolean
-        Reorder channel by depth.
-    time_range: list
-        List with start time and end time
-    mode: 'line' or 'map' or 'auto'
-        2 possible mode:
-            * 'line' : classical for low channel count
-            * 'map' : for high channel count use color heat map
-            * 'auto' : auto switch depending the channel count <32ch
-    cmap: str default 'RdBu'
-        matplotlib colormap used in mode 'map'
-    show_channel_ids: bool
-        Set yticks with channel ids
-    color_groups: bool
-        If True groups are plotted with different colors
-    color: matplotlib color, default: None
-        The color used to draw the traces.
-    clim: None or tupple
-        When mode='map' this control color lims
-    with_colorbar: bool default True
-        When mode='map' add colorbar
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
-
-    Returns
-    -------
-    W: TimeseriesWidget
-        The output widget
-    """
-
+    possible_backends = {}
+    
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, with_colorbar=True,
-                 figure=None, ax=None, **plot_kwargs):
-        BaseWidget.__init__(self, figure, ax)
-        self.recording = recording
-        self._sampling_frequency = recording.get_sampling_frequency()
-        self.visible_channel_ids = channel_ids
-        self._plot_kwargs = plot_kwargs
+                 
+                 backend=None, **backend_kwargs):
+                 #~ figure=None, ax=None, **plot_kwargs):
+        """
+        Plots recording timeseries.
+
+        Parameters
+        ----------
+        recording: RecordingExtractor
+            The recording extractor object
+        segment_index: None or int
+            The segment index.
+        channel_ids: list
+            The channel ids to display.
+        order_channel_by_depth: boolean
+            Reorder channel by depth.
+        time_range: list
+            List with start time and end time
+        mode: 'line' or 'map' or 'auto'
+            2 possible mode:
+                * 'line' : classical for low channel count
+                * 'map' : for high channel count use color heat map
+                * 'auto' : auto switch depending the channel count <32ch
+        cmap: str default 'RdBu'
+            matplotlib colormap used in mode 'map'
+        show_channel_ids: bool
+            Set yticks with channel ids
+        color_groups: bool
+            If True groups are plotted with different colors
+        color:   str default: None
+            The color used to draw the traces.
+        clim: None or tupple
+            When mode='map' this control color lims
+        with_colorbar: bool default True
+            When mode='map' add colorbar
+
+        Returns
+        -------
+        W: TimeseriesWidget
+            The output widget
+        """
 
         if segment_index is None:
-            nseg = recording.get_num_segments()
-            if nseg != 1:
+            if recording.get_num_segments() != 1:
                 raise ValueError('You must provide segment_index=...')
-                segment_index = 0
-        self.segment_index = segment_index
-
-        if self.visible_channel_ids is None:
-            self.visible_channel_ids = recording.get_channel_ids()
+            segment_index = 0
+        
+        if channel_ids is None:
+            channel_ids = recording.channel_ids
 
         if order_channel_by_depth:
-            locations = self.recording.get_channel_locations()
-            channel_inds = self.recording.ids_to_indices(self.visible_channel_ids)
+            import scipy.spatial
+            locations = recording.get_channel_locations()
+            channel_inds = recording.ids_to_indices(channel_ids)
             locations = locations[channel_inds, :]
             origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[None, :]
             dist = scipy.spatial.distance.cdist(locations, origin, metric='euclidean')
             dist = dist[:, 0]
-            self.order = np.argsort(dist)
+            order = np.argsort(dist)
         else:
-            self.order = None
+            order = None
 
-        if channel_ids is None:
-            channel_ids = recording.get_channel_ids()
 
         fs = recording.get_sampling_frequency()
         if time_range is None:
@@ -95,123 +87,69 @@ class TimeseriesWidget(BaseWidget):
                 mode = 'line'
             else:
                 mode = 'map'
-        self.mode = mode
-        self.cmap = cmap
+        mode = mode
+        cmap = cmap
 
-        self.show_channel_ids = show_channel_ids
+        frame_range = (time_range * fs).astype('int64')
+        a_max = recording.get_num_frames(segment_index=segment_index)
+        frame_range = np.clip(frame_range, 0, a_max)
+        time_range = frame_range / fs
+        times = np.arange(frame_range[0], frame_range[1]) / fs
 
-        self._frame_range = (time_range * fs).astype('int64')
-        a_max = self.recording.get_num_frames(segment_index=self.segment_index)
-        self._frame_range = np.clip(self._frame_range, 0, a_max)
-        self._time_range = [e / fs for e in self._frame_range]
+
+        traces = recording.get_traces(
+            segment_index=segment_index,
+            channel_ids=channel_ids,
+            start_frame=frame_range[0],
+            end_frame=frame_range[1]
+        )
         
-        self.clim = clim
-        self.with_colorbar = with_colorbar
+        if order is not None:
+            traces = traces[:, order]
+            channel_ids = np.asarray(channel_ids)[order]
         
-        self._initialize_stats()
-
-        # self._vspacing = self._mean_channel_std * 20
-        self._vspacing = self._max_channel_amp * 1.5
+        # stat for auto scaling
+        mean_channel_std = np.mean(np.std(traces, axis=0))
+        max_channel_amp = np.max(np.max(np.abs(traces), axis=0))
+        vspacing = max_channel_amp * 1.5
 
         if recording.get_channel_groups() is None:
             color_groups = False
 
-        self._color_groups = color_groups
-        self._color = color
         if color_groups:
-            self._colors = []
-            self._group_color_map = {}
-            all_groups = recording.get_channel_groups()
-            groups = np.unique(all_groups)
-            N = len(groups)
+            channel_groups = recording.get_channel_groups(channel_ids=channel_ids)
+            groups = np.unique(channel_groups)
+            n_groups = groups.size
             import colorsys
-            HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
-            self._colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
-            color_idx = 0
-            for group in groups:
-                self._group_color_map[group] = color_idx
-                color_idx += 1
-        self.name = 'TimeSeries'
+            group_colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) for x in range(n_groups)]
+            group_colors = dict(zip(groups,  group_colors))
+            
+            channel_colors = {}
+            for i, chan_id in enumerate(channel_ids):
+                group = channel_groups[i]
+                channel_colors[chan_id] = group_colors[group]
+            
+        else:
+            channel_colors = {chan_id: color for chan_id in channel_ids}
 
-    def plot(self):
-        self._do_plot()
-
-    def _do_plot(self):
-        chunk0 = self.recording.get_traces(
-            segment_index=self.segment_index,
-            channel_ids=self.visible_channel_ids,
-            start_frame=self._frame_range[0],
-            end_frame=self._frame_range[1]
+        
+        plot_data = dict(
+            channel_ids=channel_ids,
+            time_range=time_range,
+            frame_range=frame_range,
+            times=times,
+            traces=traces,
+            mode = mode,
+            cmap = cmap,
+            clim = clim,
+            with_colorbar = with_colorbar,
+            mean_channel_std=mean_channel_std,
+            max_channel_amp=max_channel_amp,
+            vspacing=vspacing,
+            channel_colors=channel_colors,
+            show_channel_ids=show_channel_ids,
         )
-        if self.order is not None:
-            chunk0 = chunk0[:, self.order]
-            self.visible_channel_ids = np.array(self.visible_channel_ids)[self.order]
-
-        ax = self.ax
-
-        n = len(self.visible_channel_ids)
-
-        if self.mode == 'line':
-            ax.set_xlim(self._frame_range[0] / self._sampling_frequency,
-                        self._frame_range[1] / self._sampling_frequency)
-            ax.set_ylim(-self._vspacing, self._vspacing * n)
-            ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
-            ax.get_yaxis().set_ticks([])
-            ax.set_xlabel('time (s)')
-
-            self._plots = {}
-            self._plot_offsets = {}
-            offset0 = self._vspacing * (n - 1)
-            times = np.arange(self._frame_range[0], self._frame_range[1]) / self._sampling_frequency
-            for im, m in enumerate(self.visible_channel_ids):
-                self._plot_offsets[m] = offset0
-                if self._color_groups:
-                    group = self.recording.get_channel_groups(channel_ids=[m])[0]
-                    group_color_idx = self._group_color_map[group]
-                    color = self._colors[group_color_idx]
-                else:
-                    color = self._color
-                self._plots[m] = ax.plot(times, self._plot_offsets[m] + chunk0[:, im], color=color, **self._plot_kwargs)
-                offset0 = offset0 - self._vspacing
-
-            if self.show_channel_ids:
-                ax.set_yticks(np.arange(n) * self._vspacing)
-                ax.set_yticklabels([str(chan_id) for chan_id in self.visible_channel_ids[::-1]])
-
-        elif self.mode == 'map':
-            extent = (self._time_range[0], self._time_range[1], 0, self.recording.get_num_channels())
-            im = ax.imshow(chunk0.T, interpolation='nearest',
-                           origin='upper', aspect='auto', extent=extent, cmap=self.cmap)
-            
-            if self.clim is None:
-                im.set_clim(-self._max_channel_amp, self._max_channel_amp)
-            else:
-                im.set_clim(*self.clim)
-            
-            if self.with_colorbar:
-                self.figure.colorbar(im, ax=ax)
-
-            
-            if self.show_channel_ids:
-                ax.set_yticks(np.arange(n) + 0.5)
-                ax.set_yticklabels([str(chan_id) for chan_id in self.visible_channel_ids[::-1]])
-
-    def _initialize_stats(self):
-        chunk0 = self.recording.get_traces(
-            segment_index=self.segment_index,
-            channel_ids=self.visible_channel_ids,
-            start_frame=self._frame_range[0],
-            end_frame=self._frame_range[1]
-        )
-
-        self._mean_channel_std = np.mean(np.std(chunk0, axis=0))
-        self._max_channel_amp = np.max(np.max(np.abs(chunk0), axis=0))
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-def plot_timeseries(*args, **kwargs):
-    W = TimeseriesWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_timeseries.__doc__ = TimeseriesWidget.__doc__
+plot_timeseries = define_widget_function_from_class(TimeseriesWidget, 'plot_timeseries')

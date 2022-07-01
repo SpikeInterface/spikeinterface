@@ -41,8 +41,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'ntbuff': 64,
         'Nfilt': None,
         'NT': None,
-        'total_memory': '500M',
-        'n_jobs_bin': 1,
         'wave_length': 61,
     }
 
@@ -55,8 +53,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
         'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
         'Nfilt': "Number of clusters to use (if None it is automatically computed)",
         'NT': "Batch size (if None it is automatically computed)",
-        'total_memory': "Chunk size in Mb for saving to binary format (default 500Mb)",
-        'n_jobs_bin': "Number of jobs for saving to binary format (Default 1)",
         'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
     }
 
@@ -92,7 +88,9 @@ class KilosortSorter(KilosortBase, BaseSorter):
         
     @classmethod
     def use_gpu(cls, params):
-        return params["useGPU"]
+        if 'useGPU' in params:
+            return params['useGPU']
+        return cls.default_params()['useGPU']
 
     @classmethod
     def set_kilosort_path(cls, kilosort_path: str):

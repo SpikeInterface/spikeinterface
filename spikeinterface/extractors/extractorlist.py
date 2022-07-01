@@ -6,9 +6,11 @@ from spikeinterface.core import (BinaryRecordingExtractor,
 from .neoextractors import (
     MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec,
     SpikeGLXRecordingExtractor, read_spikeglx,
-    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, read_openephys,
+    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, 
+    read_openephys, read_openephys_event,
     IntanRecordingExtractor, read_intan,
-    NeuroScopeRecordingExtractor, read_neuroscope_recording, NeuroScopeSortingExtractor, read_neuroscope_sorting,
+    NeuroScopeRecordingExtractor, read_neuroscope_recording, 
+    NeuroScopeSortingExtractor, read_neuroscope_sorting,
     read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
     NeuralynxRecordingExtractor, read_neuralynx,
@@ -51,6 +53,7 @@ from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtract
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
+from .neuropixels_utils import get_neuropixels_channel_groups, get_neuropixels_sample_shifts
 
 ########################################
 
@@ -82,6 +85,7 @@ recording_extractor_full_list = [
     BiocamRecordingExtractor,
     AxonaRecordingExtractor,
     TdtRecordingExtractor,
+    AlphaOmegaRecordingExtractor,
 
     # others
     CompressedBinaryIblExtractor,
@@ -116,5 +120,6 @@ sorting_extractor_full_list = [
 
 event_extractor_full_list = [
     OpenEphysBinaryEventExtractor,
-    MaxwellEventExtractor
+    MaxwellEventExtractor,
+    AlphaOmegaEventExtractor
 ]

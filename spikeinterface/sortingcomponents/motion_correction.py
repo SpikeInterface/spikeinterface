@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 import sklearn.metrics
 
-from spikeinterface.toolkit.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 try:
     import numba
@@ -176,13 +176,9 @@ class CorrectMotionRecording(BasePreprocessor):
     """
     Recording that corrects motion on-the-fly given a rigid or non-rigid
     motion vector estimation.
-
     This internally applies for every time bin an inverse weighted distance interpolation
     on the original after reverse the motion.
-
-    This is still experimental at the moment.
-
-    estimate_motion() must be call before this to get the motion vector.
+    `estimate_motion()` must be call before this to get the motion vector.
 
     Parameters
     ----------

@@ -129,13 +129,13 @@ class WaveformExtractor:
     def register_extension(cls, extension_class):
         """
         This maintains a list of possible extensions that are available.
-        It depends on the imported submodules (e.g. for toolkit module).
+        It depends on the imported submodules (e.g. for postprocessing module).
 
         For instance:
         import spikeinterface as si
         si.WaveformExtractor.extensions == []
 
-        from spikeinterface.toolkit import WaveformPrincipalComponent
+        from spikeinterface.postprocessing import WaveformPrincipalComponent
         si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
 
         """
@@ -393,7 +393,7 @@ class WaveformExtractor:
             If False, waveforms are loaded as np.array objects (default True)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by channel ids as values.
-            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            The sparsity can be computed with the get_template_channel_sparsity() function
             (make sure to use the default output='id' when computing the sparsity)
 
         Returns
@@ -459,7 +459,7 @@ class WaveformExtractor:
             Unit id to retrieve waveforms for
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by index as values.
-            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            The sparsity can be computed with the get_template_channel_sparsity() function
             (make sure to use the default output='id' when computing the sparsity)
 
         Returns
@@ -483,11 +483,11 @@ class WaveformExtractor:
         """
         # TODO : run this in parralel
 
-        dtype = self._params['dtype']
         unit_ids = self.sorting.unit_ids
         num_chans = self.recording.get_num_channels()
 
         for mode in modes:
+            dtype = self._params['dtype'] if mode == 'median' else np.float32
             templates = np.zeros((len(unit_ids), self.nsamples, num_chans), dtype=dtype)
             self._template_cache[mode] = templates
 
@@ -548,8 +548,8 @@ class WaveformExtractor:
         mode: str
             'average' (default), 'median' , 'std'(standard deviation)
         sparsity: dict or None
-            If given, dictionary with unit ids as keys and channel sparsity by index as values.
-            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            If given, dictionary with unit ids as keys and channel sparsity as values.
+            The sparsity can be computed with the get_template_channel_sparsity() function
             (make sure to use the default output='id' when computing the sparsity)
 
         Returns
@@ -597,7 +597,7 @@ class WaveformExtractor:
             'average'  (default), 'median', 'std'(standard deviation)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by index as values.
-            The sparsity can be computed with the toolkit.get_template_channel_sparsity() function
+            The sparsity can be computed with the get_template_channel_sparsity() function
             (make sure to use the default output='id' when computing the sparsity)
 
         Returns

@@ -233,6 +233,8 @@ class BaseExtractor:
 
         if ids is None:
             inds = slice(None)
+        elif len(ids) == 0:
+            inds = slice(0, 0)
         else:
             inds = self.ids_to_indices(ids)
 
@@ -524,14 +526,22 @@ class BaseExtractor:
             # case from a folder after a calling extractor.save(...)
             folder = file_path
             file = None
+            
+            # the is spikeinterface<=0.94.0
+            # a folder came with 'cached.sjon'
             for dump_ext in ('json', 'pkl', 'pickle'):
                 f = folder / f'cached.{dump_ext}'
                 if f.is_file():
                     file = f
+            
+            # spikeinterface>=0.95.0
+            f = folder / f'si_folder.json'
+            if f.is_file():
+                file = f
+
             if file is None:
                 raise ValueError(f'This folder is not a cached folder {file_path}')
             extractor = BaseExtractor.load(file, base_folder=folder)
-
 
             return extractor
 
@@ -598,7 +608,7 @@ class BaseExtractor:
         return cached
 
     # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, folder=None, dump_ext='json', verbose=True, **save_kwargs):
+    def save_to_folder(self, name=None, folder=None,  verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -634,6 +644,7 @@ class BaseExtractor:
         -------
         cached: saved copy of the extractor.
         """
+        
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
@@ -652,7 +663,7 @@ class BaseExtractor:
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
-        provenance_file = folder / f'provenance.{dump_ext}'
+        provenance_file = folder / f'provenance.json'
         if self.check_if_dumpable():
             self.dump(provenance_file)
         else:
@@ -660,17 +671,18 @@ class BaseExtractor:
                 json.dumps({'warning': 'the provenace is not dumpable!!!'}),
                 encoding='utf8'
             )
-
+        
+        self.save_metadata_to_folder(folder)
+        
         # save data (done the subclass)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
-
-        self.save_metadata_to_folder(folder)
 
         # copy properties/
         self.copy_metadata(cached)
 
         # dump
-        cached.dump(folder / f'cached.{dump_ext}', relative_to=folder, folder_metadata=folder)
+        # cached.dump(folder / f'cached.json', relative_to=folder, folder_metadata=folder)
+        cached.dump(folder / f'si_folder.json', relative_to=folder)
 
         return cached
 
