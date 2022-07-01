@@ -24,7 +24,7 @@ class Spykingcircus2Sorter(BaseSorter):
         'matching':  {},
         'registration' : {},
         'common_reference': True,
-        'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : True}
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
 
     @classmethod
