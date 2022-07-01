@@ -17,6 +17,7 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
 def init_kwargs_dict(method, method_kwargs, recording):
     """Initialize a dictionary of keyword arguments."""
 
+    # @charlie : here are the default params per methods
     if method == 'center_of_mass':
         method_kwargs_ = dict(local_radius_um=150)
     elif method == 'monopolar_triangulation':
@@ -24,15 +25,16 @@ def init_kwargs_dict(method, method_kwargs, recording):
             local_radius_um=150,
             max_distance_um=1000,
             optimizer='minimize_with_log_penality',
+            enforce_decrease=False, # I put False by default tell me if you prefer True
             enforce_decrease_radial_parents=None,
         )
 
     method_kwargs_.update(method_kwargs)
-
-    if method_kwargs_.get("enforce_decrease", None) is not None:
+    
+    if method == 'monopolar_triangulation' and method_kwargs_["enforce_decrease"]:
         contact_locations = recording.get_channel_locations()
         channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < method_kwargs.get('local_radius_um', 150)
+        neighbours_mask = channel_distance < method_kwargs_['local_radius_um']
         method_kwargs_["enforce_decrease_radial_parents"] = make_radial_order_parents(
             contact_locations, neighbours_mask
         )
