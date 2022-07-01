@@ -31,7 +31,7 @@ def setup_module():
     # detect and localize
     peaks = detect_peaks(recording,
                          method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, n_shifts=2,
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=1, progress_bar=True,
                          localization_dict=dict(method='center_of_mass', local_radius_um=150,
                                                 ms_before=0.1, ms_after=0.3),
