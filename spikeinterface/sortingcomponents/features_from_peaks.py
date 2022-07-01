@@ -5,17 +5,22 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kw
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 
 
+default_params = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
+                  "ptp" : {"ms_before" : None, "ms_after" : None},
+                  "com" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
+                  "dist_com_vs_max_ptp_channel" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
+                  "energy" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None}
+                }
+
+
 def compute_features_from_peaks(
     recording,
     peaks,
     feature_list=["amplitude", "ptp"],
-    feature_params = {"amplitude" : {"peak_sign" : "neg"},
-                      "ptp" : {},
-                      "com" : {"local_radius_um" : 50},
-                      "dist_com_vs_max_ptp_channel" : {"local_radius_um" : 50},
-                      "energy" : {"local_radius_um" : 50}
-                      },
-    extraction_options = {'smoothing' : None, "ms_before" : 1, "ms_after" : 1}
+    feature_params = {},
+    ms_before=1, 
+    ms_after=1,
+    smoothing=None,
     **job_kwargs,
 ):
     """Extract features on the fly from the recording given a list of peaks. 
@@ -33,12 +38,14 @@ def compute_features_from_peaks(
             - com (params: ms_before, ms_after, local_radius_um)
             - dist_com_vs_max_p2p_channel (params: ms_before, ms_after, local_radius_um)
             - energy (params: ms_before, ms_after, local_radius_um)
-    extraction_options: dict
-        The option that should be common to all extracted features. Note that using common
-        features for the extraction can speed up the call
-            - smoothing: bool (False by default)
-            - ms_before: float
-            - ms_after: float
+        Note that if all features have common ms_before, ms_after, this is faster not to
+        specify them in these individual dicts
+    ms_before: float
+        The duration in ms before the peak for extracting the features (default 1 ms)
+    ms_after: float
+        The duration in ms  after the peakfor extracting the features (default 1 ms)
+    smoothing: can be None, or 'savitky'
+
     {}
 
     Returns
@@ -46,34 +53,38 @@ def compute_features_from_peaks(
     waveform_features: ndarray (NxCxF)
         Array with waveform features for each spike.
     """
+
+    my_params = default_params.copy()
+    for key in feature_params.keys():
+        my_params[key].update(feature_params[key])
+
     has_com = False
     for feature in feature_list:
-        assert feature in feature_params.keys(), "feature is not known..."
+        assert feature in default_params.keys(), "feature is not known..."
         if feature == 'com':
             has_com = True
         if feature in ['dist_com_vs_max_ptp_channel']:
             assert has_com, "some features requires CoM to be computed first"
 
-
-    all_nbefore = []
-    all_nafter = []
-
     nbefore_max = 0
     nafter_max = 0
 
-    feature_params["global_times"] = True
+    my_params["global_times"] = True
 
     for feature in feature_list:
-        if "ms_before" in feature_params[feature]:
-            ms_before = feature_params[feature]['ms_before']
-            nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.0)
-            feature_params[feature]['nbefore'] = nbefore
-            feature_params["global_times"] = False
-        if "ms_after" in feature_params[feature]:
-            ms_after = feature_params[feature]['ms_after']
-            nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
-            feature_params[feature]['nafter'] = nafter
-            feature_params["global_times"] = False
+        if my_params[feature]["ms_before"] is not None:
+            ms_before = my_params[feature]['ms_before']
+            my_params["global_times"] = False
+
+        nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.0)
+        my_params[feature]['nbefore'] = nbefore
+
+        if my_params[feature]["ms_after"] is not None:
+            ms_after = my_params[feature]['ms_after']
+            my_params["global_times"] = False
+
+        nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
+        my_params[feature]['nafter'] = nafter
 
         if nbefore > nbefore_max:
             nbefore_max = nbefore
@@ -81,22 +92,26 @@ def compute_features_from_peaks(
         if nafter > nafter_max:
             nafter_max = nafter
 
-        if "local_radius_um" in feature_params[feature]:
+        if "local_radius_um" in my_params[feature]:
             num_chans = recording.get_num_channels()
             sparsity_mask = np.zeros((peaks.size, num_chans), dtype='bool')
             chan_locs = recording.get_channel_locations()
             unit_inds = range(num_chans)
             chan_distances = get_channel_distances(recording)
-            #spikes['unit_ind'] = np.argmin(np.linalg.norm(chan_locs - locations[:, np.newaxis, :], axis=2), 1) 
 
             for main_chan in unit_inds:
-                closest_chans, = np.nonzero(chan_distances[main_chan, :] <= feature_params[feature]['local_radius_um'])
+                closest_chans, = np.nonzero(chan_distances[main_chan, :] <= my_params[feature]['local_radius_um'])
                 sparsity_mask[main_chan, closest_chans] = True
-            feature_params[feature]['sparsity_mask'] = sparsity_mask
-            feature_params['chan_locs'] = chan_locs
+            my_params[feature]['sparsity_mask'] = sparsity_mask
+            my_params['chan_locs'] = chan_locs
 
         if feature == "com":
-            feature_params['nb_com_dims'] = len(recording.get_channel_locations().shape)
+            my_params['nb_com_dims'] = len(recording.get_channel_locations().shape)
+
+
+    my_params['nbefore'] = nbefore
+    my_params['nafter'] = nafter
+    my_params['smoothing'] = smoothing
 
     # margin at border for get_trace
     margin = max(nbefore_max, nafter_max)
@@ -109,7 +124,7 @@ def compute_features_from_peaks(
         peaks,
         margin,
         feature_list,
-        feature_params
+        my_params,
     )
     processor = ChunkRecordingExecutor(
         recording,
@@ -211,13 +226,18 @@ def compute_features(
     feature_idx = 0
 
     _loop_idx = {}
+    wf = None
 
     for feature in feature_list:
 
-        nbefore = feature_params[feature]['nbefore']
-        nafter = feature_params[feature]['nafter']
-
-        wf = traces[local_peak['sample_ind'][:, None] + np.arange(-nbefore, nafter), :]
+        if feature_params['global_times'] and wf is None:
+            nbefore = feature_params['nbefore']
+            nafter = feature_params['nafter']
+            wf = traces[local_peak['sample_ind'][:, None] + np.arange(-nbefore, nafter), :]
+        else:
+            nbefore = feature_params[feature]['nbefore']
+            nafter = feature_params[feature]['nafter']
+            wf = traces[local_peak['sample_ind'][:, None] + np.arange(-nbefore, nafter), :]
 
         if feature == 'amplitude':
             if wf.shape[1] == 0:
