@@ -4,17 +4,12 @@ Some simple function to retrieve public datasets.
 
 from .default_folders import get_global_dataset_folder, is_set_global_dataset_folder
 
-try:
-    import datalad.api
-    from datalad.support.gitrepo import GitRepo
-    HAVE_DATALAD = True
-except:
-    HAVE_DATALAD = False
-
 
 def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False,
                      unlock=False):
-    assert HAVE_DATALAD, 'You need to install datalad'
+    import datalad.api
+    from datalad.support.gitrepo import GitRepo
+
 
     if repo is None:
         #  print('Use gin NeuralEnsemble/ephy_testing_data')
