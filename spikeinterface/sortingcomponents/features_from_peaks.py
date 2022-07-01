@@ -5,12 +5,15 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kw
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 
 
-default_params = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
-                  "ptp" : {"ms_before" : None, "ms_after" : None},
-                  "com" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
-                  "dist_com_vs_max_ptp_channel" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
-                  "energy" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None}
-                }
+one_features_per_peak = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
+                         "ptp" : {"ms_before" : None, "ms_after" : None},
+                         "com" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
+                         "dist_com_vs_max_ptp_channel" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
+                         "energy" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None}
+                        }
+
+n_chans_features_per_peak = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
+                  "ptp" : {"ms_before" : None, "ms_after" : None}}
 
 
 def compute_features_from_peaks(
@@ -20,6 +23,7 @@ def compute_features_from_peaks(
     feature_params = {},
     ms_before=1, 
     ms_after=1,
+    one_feature_per_peak=True,
     smoothing=None,
     **job_kwargs,
 ):
@@ -31,15 +35,21 @@ def compute_features_from_peaks(
         The recording extractor object.
     peaks: array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way.
-    feature_list: List
-        List of features to be computed. Can be chosen between:
+    feature_list: List of features to be computed.
+        If one_feature_per_peak is True, can be chosen between
             - amplitude (params: ms_before, ms_after, peak_sign)
             - ptp (params: ms_before, ms_after)
             - com (params: ms_before, ms_after, local_radius_um)
             - dist_com_vs_max_p2p_channel (params: ms_before, ms_after, local_radius_um)
             - energy (params: ms_before, ms_after, local_radius_um)
+        If one_fetaure_per_peak is False, can be chosen between
+            - amplitude (params: ms_before, ms_after, peak_sign)
+            - ptp (params: ms_before, ms_after)
         Note that if all features have common ms_before, ms_after, this is faster not to
         specify them in these individual dicts
+    one_feature_per_peak: bool
+        If True, we only get one single feature per peak. If False, then values over all
+        channels are returned.
     ms_before: float
         The duration in ms before the peak for extracting the features (default 1 ms)
     ms_after: float
@@ -50,17 +60,21 @@ def compute_features_from_peaks(
 
     Returns
     -------
-    waveform_features: ndarray (NxCxF)
+    waveform_features: ndarray (NxCxF) if one_feature_per_peak is False, or (NxF) if True
         Array with waveform features for each spike.
     """
 
-    my_params = default_params.copy()
+    if one_feature_per_peak:
+        my_params = one_features_per_peak.copy()
+    else:
+        my_params = n_chans_features_per_peak.copy()
+
     for key in feature_params.keys():
         my_params[key].update(feature_params[key])
 
     has_com = False
     for feature in feature_list:
-        assert feature in default_params.keys(), "feature is not known..."
+        assert feature in my_params.keys(), "feature is not known..."
         if feature == 'com':
             has_com = True
         if feature in ['dist_com_vs_max_ptp_channel']:
@@ -112,6 +126,7 @@ def compute_features_from_peaks(
     my_params['nbefore'] = nbefore
     my_params['nafter'] = nafter
     my_params['smoothing'] = smoothing
+    my_params['one_feature_per_peak'] = one_feature_per_peak
 
     # margin at border for get_trace
     margin = max(nbefore_max, nafter_max)
@@ -213,15 +228,23 @@ def compute_features(
 ):
     """Localize peaks using the center of mass method."""
 
-    if 'com' in feature_list:
-        feature_size = len(feature_list) + (feature_params['nb_com_dims'] - 1)
-        com_start = feature_list.index('com')
+    if feature_params['one_feature_per_peak']:
+        if 'com' in feature_list:
+            feature_size = len(feature_list) + (feature_params['nb_com_dims'] - 1)
+            com_start = feature_list.index('com')
+        else:
+            feature_size = len(feature_list)
+
+        peak_waveform_features = np.zeros(
+            (local_peak.size, feature_size), dtype=np.float32
+        )
+
     else:
         feature_size = len(feature_list)
 
-    peak_waveform_features = np.zeros(
-        (local_peak.size, feature_size), dtype=np.float32
-    )
+        peak_waveform_features = np.zeros(
+            (local_peak.size, traces.shape[1], feature_size), dtype=np.float32
+        )
 
     feature_idx = 0
 
@@ -243,16 +266,28 @@ def compute_features(
             if wf.shape[1] == 0:
                 features = local_peak['amplitude']
             else:
-                if feature_params[feature]['peak_sign'] == 'neg':
-                    features = np.min(wf, axis=(1, 2))
-                elif feature_params[feature]['peak_sign'] == 'pos':
-                    features = np.max(wf, axis=(1, 2))
-                elif feature_params[feature]['peak_sign'] == 'both':
-                    features = np.max(np.abs(wf), axis=(1, 2))
+
+                if feature_params['one_feature_per_peak']:
+                    if feature_params[feature]['peak_sign'] == 'neg':
+                        features = np.min(wf, axis=(1, 2))
+                    elif feature_params[feature]['peak_sign'] == 'pos':
+                        features = np.max(wf, axis=(1, 2))
+                    elif feature_params[feature]['peak_sign'] == 'both':
+                        features = np.max(np.abs(wf), axis=(1, 2))
+                else:
+                    if feature_params[feature]['peak_sign'] == 'both':
+                        features = np.max(np.abs(wf, axis=1))
+                    elif feature_params[feature]['peak_sign'] == 'neg':
+                        features = np.min(wf, axis=1)
+                    elif feature_params[feature]['peak_sign'] == 'pos':
+                        features = np.max(wf, axis=1)
 
         elif feature == 'ptp':
-            all_ptps = np.ptp(wf, axis=1)
-            features = np.max(all_ptps, axis=1)
+            if feature_params['one_feature_per_peak']:
+                all_ptps = np.ptp(wf, axis=1)
+                features = np.max(all_ptps, axis=1)
+            else:
+                features = np.ptp(wf, axis=1)
 
         elif feature == 'energy':
             features = np.zeros(local_peak.size, dtype=np.float32)
@@ -295,11 +330,17 @@ def compute_features(
                 coms = peak_waveform_features[idx, com_start:com_start+feature_params['nb_com_dims']]
                 features[idx] = np.linalg.norm(local_contact_locations[max_ptp_channels] - coms, axis=1)
 
-        if feature != 'com':
-            peak_waveform_features[:, feature_idx] = features
-            feature_idx += 1
+
+        if feature_params['one_feature_per_peak']:
+            if feature != 'com':
+                peak_waveform_features[:, feature_idx] = features
+                feature_idx += 1
+            else:
+                peak_waveform_features[:, feature_idx:feature_idx+feature_params['nb_com_dims']] = features
+                feature_idx += feature_params['nb_com_dims']
+
         else:
-            peak_waveform_features[:, feature_idx:feature_idx+feature_params['nb_com_dims']] = features
-            feature_idx += feature_params['nb_com_dims']
+            peak_waveform_features[:, :, feature_idx] = features
+            feature_idx += 1
 
     return peak_waveform_features

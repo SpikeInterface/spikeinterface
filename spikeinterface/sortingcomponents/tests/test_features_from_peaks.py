@@ -29,6 +29,7 @@ def test_features_from_peaks():
     features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel'])
 
     features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel'], {'ptp' : {'ms_before' : 5}})
+    features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp'], one_feature_per_peak=False)
 
 if __name__ == '__main__':
     test_features_from_peaks()
