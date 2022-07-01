@@ -496,7 +496,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 # def clean_clusters_via_matching(waveform_extractor, sparsify_threshold=0.95, method_kwargs={}, job_kwargs={}):
 
 #     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-#     from spikeinterface.toolkit import get_noise_levels 
+#     from spikeinterface import get_noise_levels 
 #     from spikeinterface.core import BinaryRecordingExtractor
 #     from spikeinterface.core import NumpySorting
 #     from spikeinterface.core import extract_waveforms
