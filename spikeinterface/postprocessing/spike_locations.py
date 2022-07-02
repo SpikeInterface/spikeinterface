@@ -11,6 +11,11 @@ from .template_tools import (get_template_extremum_channel,
 class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
     """
     Computes spike locations from WaveformExtractor.
+    
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        A waveform extractor object
     """    
     extension_name = 'spike_locations'
     
@@ -86,8 +91,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
             return locations_by_unit
 
 
-SpikeLocationsCalculator.__doc__.format(_shared_job_kwargs_doc)
-
 WaveformExtractor.register_extension(SpikeLocationsCalculator)
 
 
@@ -97,30 +100,33 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
                             method_kwargs={},
                             outputs='concatenated',
                             **job_kwargs):
-    """_summary_
+    """
+    Localize spikes in 2D or 3D with several methods given the template.
 
     Parameters
     ----------
-    waveform_extractor : _type_
-        _description_
+    waveform_extractor : WaveformExtractor
+        A waveform extractor object.
     load_if_exists : bool, optional, default: False
         Whether to load precomputed spike locations, if they already exist.
-    ms_before : _type_, optional
-        _description_, by default 1.
-    ms_after : float, optional
-        _description_, by default 1.5
-    method : str, optional
-        _description_, by default 'center_of_mass'
-    method_kwargs : dict, optional
-        _description_, by default {}
-    outputs : str, optional
-        _description_, by default 'concatenated'
+    ms_before : float
+        The left window, before a peak, in milliseconds.
+    ms_after : float
+        The right window, after a peak, in milliseconds.
+    method : str
+        'center_of_mass' / 'monopolar_triangulation'
+    method_kwargs : dict 
+        Other kwargs depending on the method.
+    outputs : str 
+        'numpy' (default) / 'numpy_dtype' / 'dict'
     {}
 
     Returns
     -------
-    _type_
-        _description_
+    spike_locations: np.array or list of dict
+        The spike locations.
+            - If 'concatenated' all locations for all spikes and all units are concatenated
+            - If 'by_unit', locations are returned as a list (for segments) of dictionaries (for units)
     """
 
     folder = waveform_extractor.folder
@@ -137,4 +143,4 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     return locs
 
 
-compute_spike_locations.__doc__ = SpikeLocationsCalculator.__doc__
+compute_spike_locations.__doc__.format(_shared_job_kwargs_doc)

@@ -191,31 +191,32 @@ if HAVE_NUMBA:
 def compute_correlograms(waveform_or_sorting_extractor, 
                          load_if_exists=False,
                          window_ms: float = 100.0,
-                         bin_ms: float = 5.0, symmetrize: bool = False,
+                         bin_ms: float = 5.0, symmetrize: bool = True,
                          method: str = "auto"):
-    """_summary_
+    """Compute auto and cross correlograms.
 
     Parameters
     ----------
-    waveform_or_sorting_extractor : _type_
-        _description_
+    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
+        If WaveformExtractor, the correlograms are saved as WaveformExtensions.
     load_if_exists : bool, optional, default: False
         Whether to load precomputed crosscorrelograms, if they already exist.
     window_ms : float, optional
-        _description_, by default 100.0
+        The window in ms, by default 100.0.
     bin_ms : float, optional
-        _description_, by default 5.0
+        The bin size in ms, by default 5.0.
     symmetrize : bool, optional
-        _description_, by default False
+        If True, the correlograms are defined in [-window_ms/2, window_ms/2].
+        If False, they are defined in [0, window_ms/2], by default True
     method : str, optional
-        _description_, by default "auto"
+        "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
 
     Returns
     -------
     ccgs : np.array
-        _description_
-    bins :  np,array
-
+        Correlograms with shape (num_units, num_units, num_bins)
+    bins :  np.array
+        The bin edges in ms
     """
     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
         waveform_extractor = waveform_or_sorting_extractor

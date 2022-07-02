@@ -227,7 +227,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     
     if waveform_extractor.is_extension('quality_metrics'):
         qm = waveform_extractor.load_extension('quality_metrics')
-        qm_data = qm.get_metrics()
+        qm_data = qm.get_data()
         for column_name in qm_data.columns:
             # already computed by phy
             if column_name not in ["num_spikes", "firing_rate"]:

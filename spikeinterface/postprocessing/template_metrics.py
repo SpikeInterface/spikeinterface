@@ -142,11 +142,11 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
                              window_slope_ms=0.7):
     """
     Compute template metrics including:
-    * peak_to_valley
-    * peak_trough_ratio
-    * halfwidth
-    * repolarization_slope
-    * recovery_slope
+        * peak_to_valley
+        * peak_trough_ratio
+        * halfwidth
+        * repolarization_slope
+        * recovery_slope
 
     Parameters
     ----------
