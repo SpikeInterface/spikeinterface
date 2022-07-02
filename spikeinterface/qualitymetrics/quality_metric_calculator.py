@@ -37,7 +37,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting
 
-        self._metrics = None
+        self.quality_metrics = None
 
     def _set_params(self, metric_names=None, sparsity=None, peak_sign='neg',
                     max_spikes_for_nn=2000, n_neighbors=6, seed=None,
@@ -64,14 +64,14 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         return params
 
     def _specific_load_from_folder(self):
-        self._metrics = pd.read_csv(self.extension_folder / 'metrics.csv', index_col=0)
+        self.quality_metrics = pd.read_csv(self.extension_folder / 'metrics.csv', index_col=0)
 
     def _reset(self):
-        self._metrics = None
+        self.quality_metrics = None
 
     def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # filter metrics dataframe
-        new_metrics = self._metrics.loc[np.array(unit_ids)]
+        new_metrics = self.quality_metrics.loc[np.array(unit_ids)]
         new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
 
     def run(self, n_jobs, verbose, progress_bar=False):
@@ -121,7 +121,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 
-        self._metrics = metrics
+        self.quality_metrics = metrics
 
         # save to folder
         metrics.to_csv(self.extension_folder / 'metrics.csv')
@@ -130,8 +130,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         """Get the computed metrics."""
 
         msg = "Quality metrics are not computed. Use the 'run()' function."
-        assert self._metrics is not None, msg
-        return self._metrics
+        assert self.quality_metrics is not None, msg
+        return self.quality_metrics
 
 
 WaveformExtractor.register_extension(QualityMetricCalculator)

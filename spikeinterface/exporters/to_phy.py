@@ -179,7 +179,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     if compute_amplitudes:
         if waveform_extractor.is_extension('spike_amplitudes'):
             sac = waveform_extractor.load_extension('spike_amplitudes')
-            amplitudes = sac.get_amplitudes(outputs='concatenated')
+            amplitudes = sac.get_data(outputs='concatenated')
         else:
             amplitudes = compute_spike_amplitudes(waveform_extractor, peak_sign=peak_sign, outputs='concatenated', 
                                                   **job_kwargs)

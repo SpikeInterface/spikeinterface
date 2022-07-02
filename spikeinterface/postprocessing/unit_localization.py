@@ -63,8 +63,8 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
         np.save(self.extension_folder /
                 'unit_locations.npy', self.unit_locations)
 
-    def get_data(self, outputs='concatenated'):
-        if outputs == 'concatenated':
+    def get_data(self, outputs='numpy'):
+        if outputs == 'numpy':
             return self.unit_locations
 
         elif outputs == 'by_unit':
@@ -79,7 +79,8 @@ WaveformExtractor.register_extension(UnitLocationsCalculator)
 
 def compute_unit_locations(waveform_extractor, 
                            load_if_exists=False,
-                           method='center_of_mass', outputs='numpy', **method_kwargs):
+                           method='center_of_mass', 
+                           outputs='numpy', **method_kwargs):
     """
     Localize units in 2D or 3D with several methods given the template.
 
