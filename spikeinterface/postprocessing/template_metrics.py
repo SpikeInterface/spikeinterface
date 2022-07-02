@@ -11,11 +11,9 @@ import scipy.stats
 from scipy.signal import resample_poly
 
 from ..core import WaveformExtractor
-from ..core.core_tools import check_json
 from ..core.waveform_extractor import BaseWaveformExtractorExtension
 from .template_tools import get_template_extremum_channel, get_template_channel_sparsity
 import warnings
-warnings.simplefilter('always', DeprecationWarning)
 
 
 def get_template_metric_names():
@@ -57,14 +55,14 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         self.template_metrics = pd.read_csv(self.extension_folder / 'metrics.csv', index_col=0)
 
     def _reset(self):
-        self._amplitudes = None
+        self.template_metrics = None
 
     def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # filter metrics dataframe
         new_metrics = self.template_metrics.loc[np.array(unit_ids)]
         new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
         
-    def compute_metrics(self, sparsity=None):
+    def run(self):
         metric_names = self._params['metric_names']
         sparsity = self._params['sparsity']
         peak_sign = self._params['peak_sign']
@@ -126,10 +124,10 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         # save to folder
         template_metrics.to_csv(self.extension_folder / 'metrics.csv')
 
-    def get_metrics(self):
+    def get_data(self):
         """Get the computed metrics."""
 
-        msg = "Template metrics are not computed. Use the 'compute_metrics()' function."
+        msg = "Template metrics are not computed. Use the 'run()' function."
         assert self.template_metrics is not None, msg
         return self.template_metrics
 
@@ -185,9 +183,9 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
         tmc.set_params(metric_names=metric_names, peak_sign=peak_sign,
                        upsampling_factor=upsampling_factor, sparsity=sparsity,
                        window_slope_ms=window_slope_ms)
-        tmc.compute_metrics(sparsity=sparsity)
+        tmc.run()
 
-    metrics = tmc.get_metrics()
+    metrics = tmc.get_data()
 
     return metrics
 

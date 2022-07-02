@@ -1,8 +1,10 @@
 import numpy as np
 import scipy.optimize
+import warnings
 
 from .template_tools import get_template_channel_sparsity, get_template_amplitudes
-
+from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
 
 dtype_localize_by_method = {
@@ -13,7 +15,66 @@ dtype_localize_by_method = {
 possible_localization_methods = list(dtype_localize_by_method.keys())
 
 
-def localize_units(waveform_extractor, method='center_of_mass', output='numpy', **method_kwargs):
+class UnitLocationsCalculator(BaseWaveformExtractorExtension):
+    """
+    Comput unit locations from WaveformExtractor
+    """
+    extension_name = 'unit_locations'
+
+    def __init__(self, waveform_extractor):
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+
+        self.unit_locations = None
+
+    def _set_params(self, method='center_of_mass', method_kwargs={}):
+
+        params = dict(method=method,
+                      method_kwargs=method_kwargs)
+        return params
+
+    def _specific_load_from_folder(self):
+        self.unit_locations = np.load(self.extension_folder / 'unit_locations.npy')
+
+    def _reset(self):
+        self.unit_locations = None
+
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+        unit_inds = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
+
+        new_unit_location = self.locaunit_locationstions[unit_inds]
+        np.save(new_waveforms_folder / 'unit_locations.npy', new_unit_location)
+
+    def run(self, **job_kwargs):
+        method = self._params['method']
+        method_kwargs = self._params['method_kwargs']
+        
+        assert method in possible_localization_methods
+
+        if method == 'center_of_mass':
+            unit_location = compute_center_of_mass(self.waveform_extractor,  **method_kwargs)
+        elif method == 'monopolar_triangulation':
+            unit_location = compute_monopolar_triangulation(self.waveform_extractor,  **method_kwargs)
+        self.unit_locations = unit_location
+        np.save(self.extension_folder /
+                'unit_locations.npy', self.unit_locations)
+
+    def get_data(self, outputs='concatenated'):
+        if outputs == 'concatenated':
+            return self.unit_locations
+
+        elif outputs == 'by_unit':
+            locations_by_unit = {}
+            for unit_ind, unit_id in enumerate(self.waveform_extractor.sorting.unit_ids):
+                locations_by_unit[unit_id] = self.unit_locations[unit_ind]
+            return locations_by_unit
+
+
+WaveformExtractor.register_extension(UnitLocationsCalculator)
+
+
+def compute_unit_locations(waveform_extractor, 
+                           load_if_exists=False,
+                           method='center_of_mass', outputs='numpy', **method_kwargs):
     """
     Localise units in 2D or 3D with several methods given the template.
 
@@ -33,22 +94,25 @@ def localize_units(waveform_extractor, method='center_of_mass', output='numpy', 
     unit_location: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
-    assert method in possible_localization_methods
+    folder = waveform_extractor.folder
+    ext_folder = folder / UnitLocationsCalculator.extension_name
 
-    if method == 'center_of_mass':
-        unit_location = compute_center_of_mass(waveform_extractor,  **method_kwargs)
-    elif method == 'monopolar_triangulation':
-        unit_location = compute_monopolar_triangulation(waveform_extractor,  **method_kwargs)
+    if load_if_exists and ext_folder.is_dir():
+        ulc = UnitLocationsCalculator.load_from_folder(folder)
+    else:
+        ulc = UnitLocationsCalculator(waveform_extractor)
+        ulc.set_params(method=method, method_kwargs=method_kwargs)
+        ulc.run()
 
-    # handle some outputs
-    if output == 'numpy':
-        return unit_location
-    elif output == 'dict':
-        return dict(zip(waveform_extractor.sorting.unit_ids, unit_location))
-    elif output == 'numpy_dtype':
-        raise NotImplementedError
+    locs = ulc.get_data(outputs=outputs)
+    return locs
 
 
+def localize_units(*args, **kwargs):
+    warnings.warn("The 'localize_units' function is deprecated. "
+                  "Use 'compute_unit_locations' instead",
+                  DeprecationWarning, stacklevel=2)
+    return compute_unit_locations(*args, **kwargs)
 
 
 def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um, initial_z = 20):
