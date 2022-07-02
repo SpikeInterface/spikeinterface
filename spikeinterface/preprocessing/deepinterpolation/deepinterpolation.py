@@ -30,7 +30,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
     name = 'deepinterpolate'
     def __init__(self, recording: BaseRecording, path_to_model: str, 
                  pre_frames: int, post_frames: int, pre_post_omission: int, 
-                 n_frames_normalize=20000, batch_size=128, use_GPU=False):
+                 n_frames_normalize=20000, batch_size=128, use_gpu:bool=False):
         """Applies DeepInterpolation, a neural network based denoising method, to the recording.
         
         Notes
@@ -72,7 +72,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
                                                      "This recording has too few channels. "
                                                      "Try matching the channel count with `ZeroChannelPaddedRecording`.")
 
-        if use_GPU is False:
+        if use_gpu is False:
             os.environ['CUDA_VISIBLE_DEVICES']='-1'
         
         BasePreprocessor.__init__(self, recording)
