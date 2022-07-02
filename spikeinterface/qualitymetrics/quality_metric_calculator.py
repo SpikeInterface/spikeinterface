@@ -109,7 +109,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
-        if not self._params['skip_pc_metrics']:
+        if len(pc_metric_names) > 0 and not self._params['skip_pc_metrics']:
             if self.principal_component is None:
                 raise ValueError('waveform_principal_component must be provied')
             kwargs = {k: self._params[k] for k in ('max_spikes_for_nn', 'n_neighbors', 'seed')}
@@ -176,8 +176,9 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
     if load_if_exists and ext_folder.is_dir():
         qmc = QualityMetricCalculator.load_from_folder(folder)
     else:
-        qmc = QualityMetricCalculator(waveform_extractor, skip_pc_metrics)
-        qmc.set_params(metric_names=metric_names, sparsity=sparsity, **params)
+        qmc = QualityMetricCalculator(waveform_extractor)
+        qmc.set_params(metric_names=metric_names, sparsity=sparsity, 
+                       skip_pc_metrics=skip_pc_metrics, **params)
         qmc.run(n_jobs, verbose, progress_bar=progress_bar)
 
     metrics = qmc.get_data()
