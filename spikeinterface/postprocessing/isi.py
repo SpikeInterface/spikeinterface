@@ -1,5 +1,6 @@
 import numpy as np
-
+from ..core import WaveformExtractor
+from ..core.waveform_extractor import BaseWaveformExtractorExtension
 
 try:
     import numba
@@ -8,8 +9,68 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
+class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
+    """Compute ISI histograms of spike trains.
+    
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        A waveform extractor object
+    """
+    extension_name = 'isi_histograms'
+
+    def __init__(self, waveform_extractor):
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+
+        self.waveform_extractor = waveform_extractor
+        self.isi_histograms = None
+        self.bins = None
+
+    def _set_params(self, window_ms: float = 100.0,
+                    bin_ms: float = 5.0, method: str = "auto"):
+
+        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
+
+        return params
+
+    def _specific_load_from_folder(self):
+        self.isi_histograms = np.load(self.extension_folder / 'isi_histograms.npy')
+        self.bins = np.load(self.extension_folder / 'bins.npy')
+
+    def _reset(self):
+        self.isi_histograms = None
+        self.bins = None
+
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+        # filter metrics dataframe
+        unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
+        new_isi_hists = self.isi_histograms[np.array(unit_indices), :]
+        np.save(new_waveforms_folder /
+                self.extension_name / 'isi_histograms.npy', new_isi_hists)
+        np.save(new_waveforms_folder /
+                self.extension_name / 'bins.npy', self.bins)
+
+    def run(self):
+        isi_histograms, bins = _compute_isi_histograms(
+            self.waveform_extractor.sorting, **self._params)
+        np.save(self.extension_folder / 'isi_histograms.npy', isi_histograms)
+        np.save(self.extension_folder / 'bins.npy', bins)
+        self.isi_histograms = isi_histograms
+        self.bins = bins
+
+    def get_data(self):
+        """Get the computed ISI histograms."""
+
+        msg = "ISI histograms are not computed. Use the 'run()' function."
+        assert self.isi_histograms is not None and self.bins is not None, msg
+        return self.isi_histograms, self.bins
+
+
+WaveformExtractor.register_extension(ISIHistogramsCalculator)
+
+
 def compute_isi_histograms_from_spiketrain(spike_train: np.ndarray, max_time: int,
-                                bin_size: int, sampling_f: float):
+                                           bin_size: int, sampling_f: float):
     """
     Computes the Inter-Spike Intervals histogram from a given spike train.
 
@@ -42,6 +103,7 @@ def compute_isi_histograms_from_spiketrain(spike_train: np.ndarray, max_time: in
 
     return _compute_isi_histograms_from_spiketrain(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
 
+
 if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int32, numba.int32, numba.float32),
                nopython=True, nogil=True, cache=True)
@@ -63,9 +125,49 @@ if HAVE_NUMBA:
         return ISI, bins
 
 
+def compute_isi_histograms(waveform_or_sorting_extractor, load_if_exists=False, 
+                           window_ms: float = 50.0, bin_ms: float = 1.0,
+                           method: str = "auto"):
+    """_summary_
 
-def compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0,
-                method: str = "auto"):
+    Parameters
+    ----------
+    waveform_or_sorting_extractor : _type_
+        _description_
+    load_if_exists : bool, optional, default: False
+        Whether to load precomputed ISI histograms, if they already exist.
+    window_ms : float, optional
+        _description_, by default 50.0
+    bin_ms : float, optional
+        _description_, by default 1.0
+    method : str, optional
+        _description_, by default "auto"
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
+        waveform_extractor = waveform_or_sorting_extractor
+        folder = waveform_extractor.folder
+        ext_folder = folder / ISIHistogramsCalculator.extension_name
+        if load_if_exists and ext_folder.is_dir():
+            isic = ISIHistogramsCalculator.load_from_folder(folder)
+        else:
+            isic = ISIHistogramsCalculator(waveform_extractor)
+            isic.set_params(window_ms=window_ms, bin_ms=bin_ms,
+                            method=method)
+            isic.run()
+        isi_histograms, bins = isic.get_data()
+        return isi_histograms, bins
+    else:
+        return _compute_isi_histograms(waveform_or_sorting_extractor, window_ms=window_ms,
+                                       bin_ms=bin_ms, method=method)
+
+
+def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0,
+                            method: str = "auto"):
     """
     Computes the Inter-Spike Intervals histogram for all
     the units inside the given sorting.
@@ -81,6 +183,8 @@ def compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0
     if method == "numba":
         return compute_isi_histograms_numba(sorting, window_ms, bin_ms)
 
+
+# LOW-LEVEL IMPLEMENTATIONS
 def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float = 1.0):
     """
     Computes the Inter-Spike Intervals histogram for all

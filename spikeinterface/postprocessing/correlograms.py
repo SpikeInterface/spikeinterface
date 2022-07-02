@@ -1,11 +1,71 @@
 import numpy as np
-
+from ..core import WaveformExtractor
+from ..core.waveform_extractor import BaseWaveformExtractorExtension
 
 try:
     import numba
     HAVE_NUMBA = True
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
+    
+
+class CrossCorrelogramsCalculator(BaseWaveformExtractorExtension):
+    """Compute crosscorrelograms of spike trains.
+    
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        A waveform extractor object
+    """
+    extension_name = 'crosscorrelograms'
+
+    def __init__(self, waveform_extractor):
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+
+        self.waveform_extractor = waveform_extractor
+        self.ccgs = None
+        self.bins = None
+
+    def _set_params(self, window_ms: float = 100.0,
+                    bin_ms: float = 5.0, symmetrize: bool = False,
+                    method: str = "auto"):
+
+        params = dict(window_ms=window_ms, bin_ms=bin_ms, 
+                      symmetrize=symmetrize, method=method)
+
+        return params
+
+    def _specific_load_from_folder(self):
+        self.ccgs = np.load(self.extension_folder / 'ccgs.npy')
+        self.bins = np.load(self.extension_folder / 'bins.npy')
+
+    def _reset(self):
+        self.ccgs = None
+        self.bins = None
+
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+        # filter metrics dataframe
+        unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
+        new_ccgs = self.ccgs[np.array(unit_indices), np.array(unit_indices)]
+        np.save(new_waveforms_folder / self.extension_name / 'ccgs.npy', new_ccgs)
+        np.save(new_waveforms_folder / self.extension_name / 'bins.npy', self.bins)
+        
+    def run(self):
+        ccgs, bins = _compute_correlograms(self.waveform_extractor.sorting, **self._params)
+        np.save(self.extension_folder  / 'ccgs.npy', ccgs)
+        np.save(self.extension_folder / 'bins.npy', bins)
+        self.ccgs = ccgs
+        self.bins = bins
+
+    def get_data(self):
+        """Get the computed crosscorrelograms."""
+
+        msg = "Crosscorrelograms are not computed. Use the 'run()' function."
+        assert self.ccgs is not None and self.bins is not None, msg
+        return self.ccgs, self.bins
+
+
+WaveformExtractor.register_extension(CrossCorrelogramsCalculator)
 
 
 def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
@@ -42,6 +102,7 @@ def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: i
 
     return _compute_autocorr_numba(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
 
+
 def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_train2: np.ndarray,
                                              max_time: int, bin_size: int, sampling_f: float):
     """
@@ -76,7 +137,9 @@ def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_tra
         print("compute_crosscorrelogram_from_spiketrain cannot run without numba.")
         return 0
 
-    return _compute_crosscorr_numba(spike_train1.astype(np.int64), spike_train2.astype(np.int64), max_time, bin_size, sampling_f)
+    return _compute_crosscorr_numba(spike_train1.astype(np.int64), spike_train2.astype(np.int64),
+                                    max_time, bin_size, sampling_f)
+
 
 if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int32, numba.int32, numba.float32), nopython=True,
@@ -125,9 +188,56 @@ if HAVE_NUMBA:
         return cross_corr, bins
 
 
-def compute_correlograms(sorting, window_ms: float = 100.0,
+def compute_correlograms(waveform_or_sorting_extractor, 
+                         load_if_exists=False,
+                         window_ms: float = 100.0,
                          bin_ms: float = 5.0, symmetrize: bool = False,
                          method: str = "auto"):
+    """_summary_
+
+    Parameters
+    ----------
+    waveform_or_sorting_extractor : _type_
+        _description_
+    load_if_exists : bool, optional, default: False
+        Whether to load precomputed crosscorrelograms, if they already exist.
+    window_ms : float, optional
+        _description_, by default 100.0
+    bin_ms : float, optional
+        _description_, by default 5.0
+    symmetrize : bool, optional
+        _description_, by default False
+    method : str, optional
+        _description_, by default "auto"
+
+    Returns
+    -------
+    ccgs : np.array
+        _description_
+    bins :  np,array
+
+    """
+    if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
+        waveform_extractor = waveform_or_sorting_extractor
+        folder = waveform_extractor.folder
+        ext_folder = folder / CrossCorrelogramsCalculator.extension_name
+        if load_if_exists and ext_folder.is_dir():
+            ccc = CrossCorrelogramsCalculator.load_from_folder(folder)
+        else:
+            ccc = CrossCorrelogramsCalculator(waveform_extractor)
+            ccc.set_params(window_ms=window_ms, bin_ms=bin_ms,
+                           symmetrize=symmetrize, method=method)
+            ccc.run()
+        ccgs, bins = ccc.get_data()
+        return ccgs, bins
+    else:
+        return _compute_correlograms(waveform_or_sorting_extractor, window_ms=window_ms,
+                                     bin_ms=bin_ms, symmetrize=symmetrize,
+                                     method=method)
+
+def _compute_correlograms(sorting, window_ms: float = 100.0,
+                          bin_ms: float = 5.0, symmetrize: bool = False,
+                          method: str = "auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
     """
@@ -143,7 +253,7 @@ def compute_correlograms(sorting, window_ms: float = 100.0,
         return compute_correlograms_numba(sorting, window_ms, bin_ms, symmetrize)
 
 
-
+# LOW-LEVEL IMPLEMENTATIONS
 def compute_correlograms_numpy(sorting, window_ms: float = 100.0,
                                bin_ms: float = 5.0, symmetrize: bool = False):
     """
@@ -189,7 +299,6 @@ def compute_correlograms_numpy(sorting, window_ms: float = 100.0,
         shift = 1
         while mask[:-shift].any():
             # Number of time samples between spike i and spike i+shift.
-            # ~ spike_diff = _diff_shifted(spike_indexes, shift)
             spike_diff = spike_times[shift:] - spike_times[:len(spike_times) - shift]
 
             # Binarize the delays between spike i and spike i+shift.
@@ -201,7 +310,6 @@ def compute_correlograms_numpy(sorting, window_ms: float = 100.0,
             # Cache the masked spike delays.
             m = mask[:-shift].copy()
             d = spike_diff_b[m]
-            # ~ d = d.astype('int32')
 
             # Find the indices in the raveled correlograms array that need
             # to be incremented, taking into account the spike clusters.

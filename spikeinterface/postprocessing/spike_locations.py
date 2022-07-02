@@ -10,40 +10,7 @@ from .template_tools import (get_template_extremum_channel,
 
 class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
     """
-    Localize spikes in 2D or 3D depending the method.
-
-    When a probe is 2D then:
-       * X is axis 0 of the probe (width)
-       * Y is axis 1 of the probe (depth)
-       * Z is orthogonal to the plane of the probe
-
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor object
-    ms_before: float
-        The left window, before a peak, in milliseconds.
-    ms_after: float
-        The right window, after a peak, in milliseconds.
-    method: 'center_of_mass' or 'monopolar_triangulation'
-        Method to use.
-    method_kwargs: dict of kwargs method
-        Keyword arguments for the chosen method:
-            'center_of_mass':
-                * local_radius_um: float
-                    For channel sparsity.
-            'monopolar_triangulation':
-                * local_radius_um: float
-                    For channel sparsity.
-                * max_distance_um: float, default: 1000
-                    Boundary for distance estimation.
-    {}
-
-    Returns
-    -------
-    spike_locations: np.array
-        The spike locations.
-            - If 'concatenated' all locations for all spikes and all units are concatenated
+    Computes spike locations from WaveformExtractor.
     """    
     extension_name = 'spike_locations'
     
@@ -80,7 +47,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         new_location = self.locations[spike_mask]
         np.save(new_waveforms_folder / 'spike_locations.npy', new_location)
         
-    def compute_locations(self, **job_kwargs):
+    def run(self, **job_kwargs):
         """
         This function first transforms the sorting object into a `peaks` numpy array and then
         uses the`sortingcomponents.peak_localization.localize_peaks()` function to triangulate
@@ -95,9 +62,8 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         
         self.locations = localize_peaks(we.recording, self.spikes, **self._params, **job_kwargs)
         np.save(self.extension_folder / 'spike_locations.npy', self.locations)
-
     
-    def get_locations(self, outputs='concatenated'):
+    def get_data(self, outputs='concatenated'):
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -131,7 +97,31 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
                             method_kwargs={},
                             outputs='concatenated',
                             **job_kwargs):
+    """_summary_
 
+    Parameters
+    ----------
+    waveform_extractor : _type_
+        _description_
+    load_if_exists : bool, optional, default: False
+        Whether to load precomputed spike locations, if they already exist.
+    ms_before : _type_, optional
+        _description_, by default 1.
+    ms_after : float, optional
+        _description_, by default 1.5
+    method : str, optional
+        _description_, by default 'center_of_mass'
+    method_kwargs : dict, optional
+        _description_, by default {}
+    outputs : str, optional
+        _description_, by default 'concatenated'
+    {}
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
 
     folder = waveform_extractor.folder
     ext_folder = folder / SpikeLocationsCalculator.extension_name
@@ -141,9 +131,9 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     else:
         slc = SpikeLocationsCalculator(waveform_extractor)
         slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs)
-        slc.compute_locations(**job_kwargs)
+        slc.run(**job_kwargs)
     
-    locs = slc.get_locations(outputs=outputs)
+    locs = slc.get_data(outputs=outputs)
     return locs
 
 

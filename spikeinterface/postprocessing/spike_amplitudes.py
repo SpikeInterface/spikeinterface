@@ -83,7 +83,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                     amp_file_name, amps[filtered_idxs])
     
         
-    def compute_amplitudes(self, **job_kwargs):
+    def run(self, **job_kwargs):
         
         we = self.waveform_extractor
         recording = we.recording
@@ -102,8 +102,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
         peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
         
-        
-
         if return_scaled:
             # check if has scaled values:
             if not we.recording.has_scaled_traces():
@@ -135,10 +133,8 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             # save to folder
             file_amps = self.extension_folder / f'amplitude_segment_{segment_index}.npy'
             np.save(file_amps, amps_seg)
-        
-
     
-    def get_amplitudes(self, outputs='concatenated'):
+    def get_data(self, outputs='concatenated'):
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -176,19 +172,16 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
     else:
         sac = SpikeAmplitudesCalculator(waveform_extractor)
         sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
-        sac.compute_amplitudes(**job_kwargs)
+        sac.run(**job_kwargs)
     
-    amps = sac.get_amplitudes(outputs=outputs)
+    amps = sac.get_data(outputs=outputs)
     return amps
-
-
 
 
 compute_spike_amplitudes.__doc__ = SpikeAmplitudesCalculator.__doc__
 
 # alias for backward compatibility
 get_spike_amplitudes = compute_spike_amplitudes
-
 
 
 def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
@@ -201,17 +194,12 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
         from spikeinterface.core import load_extractor
         sorting = load_extractor(sorting)
     
-    
-    
-    
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
     worker_ctx['return_scaled'] = return_scaled
     worker_ctx['peak_shifts'] = peak_shifts
     worker_ctx['min_shift'] = np.min(peak_shifts)
     worker_ctx['max_shifts'] = np.max(peak_shifts)
-
-    
     
     all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
