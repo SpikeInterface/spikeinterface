@@ -17,6 +17,7 @@ from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
 from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
 from .phase_shift import PhaseShiftRecording, phase_shift
+from .zero_channelpad import ZeroChannelPaddedRecording, zero_channelpad
 # not importing deepinterpolation by default
 # from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
 
@@ -46,6 +47,7 @@ preprocessers_full_list = [
     BlankSaturationRecording,
     RemoveArtifactsRecording,
     RemoveBadChannelsRecording,
+    ZeroChannelPaddedRecording,
 
     # DeepInterpolatedRecording
     # TODO: @alessio this one  is for you
