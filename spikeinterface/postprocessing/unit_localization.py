@@ -17,7 +17,12 @@ possible_localization_methods = list(dtype_localize_by_method.keys())
 
 class UnitLocationsCalculator(BaseWaveformExtractorExtension):
     """
-    Comput unit locations from WaveformExtractor
+    Comput unit locations from WaveformExtractor.
+    
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        A waveform extractor object
     """
     extension_name = 'unit_locations'
 
@@ -76,22 +81,24 @@ def compute_unit_locations(waveform_extractor,
                            load_if_exists=False,
                            method='center_of_mass', outputs='numpy', **method_kwargs):
     """
-    Localise units in 2D or 3D with several methods given the template.
+    Localize units in 2D or 3D with several methods given the template.
 
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
-        A waveform extractor object
+        A waveform extractor object.
+    load_if_exists : bool, optional, default: False
+        Whether to load precomputed unit locations, if they already exist.
     method: str
         'center_of_mass' / 'monopolar_triangulation'
-    output: str 
+    outputs: str 
         'numpy' (default) / 'numpy_dtype' / 'dict'
     method_kwargs: 
-        other kwargs method dependant
+        Other kwargs depending on the method.
 
     Returns
     -------
-    unit_location: np.array
+    unit_locations: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
     folder = waveform_extractor.folder
@@ -104,8 +111,8 @@ def compute_unit_locations(waveform_extractor,
         ulc.set_params(method=method, method_kwargs=method_kwargs)
         ulc.run()
 
-    locs = ulc.get_data(outputs=outputs)
-    return locs
+    unit_locations = ulc.get_data(outputs=outputs)
+    return unit_locations
 
 
 def localize_units(*args, **kwargs):

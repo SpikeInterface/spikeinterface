@@ -128,25 +128,27 @@ if HAVE_NUMBA:
 def compute_isi_histograms(waveform_or_sorting_extractor, load_if_exists=False, 
                            window_ms: float = 50.0, bin_ms: float = 1.0,
                            method: str = "auto"):
-    """_summary_
-
+    """Compute ISI histograms.
+    
     Parameters
     ----------
-    waveform_or_sorting_extractor : _type_
-        _description_
+    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
+        If WaveformExtractor, the ISI histograms are saved as WaveformExtensions.
     load_if_exists : bool, optional, default: False
-        Whether to load precomputed ISI histograms, if they already exist.
+        Whether to load precomputed crosscorrelograms, if they already exist.
     window_ms : float, optional
-        _description_, by default 50.0
+        The window in ms, by default 50.0.
     bin_ms : float, optional
-        _description_, by default 1.0
+        The bin size in ms, by default 1.0.
     method : str, optional
-        _description_, by default "auto"
+        "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
 
     Returns
     -------
-    _type_
-        _description_
+    isi_histograms : np.array
+        IDI_histograms with shape (num_units, num_bins)
+    bins :  np.array
+        The bin edges in ms
     """
     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
         waveform_extractor = waveform_or_sorting_extractor

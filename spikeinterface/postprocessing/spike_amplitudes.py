@@ -11,36 +11,7 @@ from .template_tools import (get_template_extremum_channel,
 
 class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     """
-    Computes the spike amplitudes from a WaveformExtractor.
-
-    1. The waveform extractor is used to determine the max channel per unit.
-    2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
-       peak.
-    3. Amplitudes are extracted in chunks (parallel or not)
-
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor object
-    peak_sign: str
-        The sign to compute maximum channel:
-            - 'neg'
-            - 'pos'
-            - 'both'
-    return_scaled: bool
-        If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
-    outputs: str
-        How the output should be returned:
-            - 'concatenated'
-            - 'by_unit'
-    {}
-
-    Returns
-    -------
-    amplitudes: np.array
-        The spike amplitudes.
-            - If 'concatenated' all amplitudes for all spikes and all units are concatenated
-            - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
+    Computes spike amplitudes form WaveformExtractor.
     """    
     extension_name = 'spike_amplitudes'
     
@@ -154,8 +125,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             return amplitudes_by_unit
 
 
-SpikeAmplitudesCalculator.__doc__.format(_shared_job_kwargs_doc)
-
 WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
 
 
@@ -163,7 +132,40 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
                              peak_sign='neg', return_scaled=True,
                              outputs='concatenated',
                              **job_kwargs):
+    """
+    Computes the spike amplitudes from a WaveformExtractor.
 
+    1. The waveform extractor is used to determine the max channel per unit.
+    2. Then a "peak_shift" is estimated because for some sorters the spike index is not always at the
+       peak.
+    3. Amplitudes are extracted in chunks (parallel or not)
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor object
+    load_if_exists : bool, optional, default: False
+        Whether to load precomputed spike amplitudes, if they already exist.
+    peak_sign: str
+        The sign to compute maximum channel:
+            - 'neg'
+            - 'pos'
+            - 'both'
+    return_scaled: bool
+        If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
+    outputs: str
+        How the output should be returned:
+            - 'concatenated'
+            - 'by_unit'
+    {}
+
+    Returns
+    -------
+    amplitudes: np.array or list of dict
+        The spike amplitudes.
+            - If 'concatenated' all amplitudes for all spikes and all units are concatenated
+            - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
+    """
     folder = waveform_extractor.folder
     ext_folder = folder / SpikeAmplitudesCalculator.extension_name
 
@@ -178,10 +180,7 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
     return amps
 
 
-compute_spike_amplitudes.__doc__ = SpikeAmplitudesCalculator.__doc__
-
-# alias for backward compatibility
-get_spike_amplitudes = compute_spike_amplitudes
+compute_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 
 
 def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):

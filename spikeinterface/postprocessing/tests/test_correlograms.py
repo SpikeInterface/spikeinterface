@@ -43,6 +43,7 @@ def test_compute_correlograms():
     _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
     _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
 
+
 def test_correlograms_extension():
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
