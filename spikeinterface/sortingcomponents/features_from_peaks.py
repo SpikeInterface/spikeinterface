@@ -5,14 +5,14 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kw
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 
 
-one_feature_per_peak = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
+one_feature_per_peak_params = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
                          "ptp" : {"ms_before" : None, "ms_after" : None},
                          "com" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
                          "dist_com_vs_max_ptp_channel" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None},
                          "energy" : {"local_radius_um" : 50, "ms_before" : None, "ms_after" : None}
                         }
 
-n_chans_features_per_peak = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
+n_chans_features_per_peak_params = {"amplitude" : {"peak_sign" : "neg", "ms_before" : None, "ms_after" : None},
                              "ptp" : {"ms_before" : None, "ms_after" : None}}
 
 
@@ -64,10 +64,10 @@ def compute_features_from_peaks(
         Array with waveform features for each spike.
     """
 
-    if one_feature_per_peak:
-        my_params = one_feature_per_peak.copy()
+    if one_feature_per_peak_params:
+        my_params = one_feature_per_peak_params.copy()
     else:
-        my_params = n_chans_features_per_peak.copy()
+        my_params = n_chans_features_per_peak_params.copy()
 
     for key in feature_params.keys():
         my_params[key].update(feature_params[key])
