@@ -28,6 +28,9 @@ or
 1) have singularity installed
 2) have `singularity python <https://singularityhub.github.io/singularity-cli/>`_ (:code:`pip install spython`)
 
+Some sorters are GPU required or optional. To run containerized sorters with GPU capabilities, CUDA and `nvidia-container-toolkit <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html>`_ needs to be installed.
+Only NVIDIA GPUs are supported for now.
+
 The containers are built with Docker, but Singularity has an internal mechanism to convert docker images.
 Using Singularity is often prefered due to its simpler approach with regard to root privilege.
 
