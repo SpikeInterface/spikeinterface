@@ -407,7 +407,7 @@ if __name__ == '__main__':
     sorting = run_sorter_local(
         '{sorter_name}', recording, output_folder=output_folder,
          remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-          verbose={verbose}, raise_error={raise_error}, **sorter_params
+          verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
     sorting.save_to_folder(folder='{npz_sorting_path}')
 """
@@ -557,8 +557,8 @@ if __name__ == '__main__':
                 sorting = SorterClass.get_result_from_folder(output_folder)
             except Exception as e:
                 if verbose:
-                    print(f'Failed to get result with sorter specific extractor.\n'
-                          'Error Message: {e}\n'
+                    print('Failed to get result with sorter specific extractor.\n'
+                          f'Error Message: {e}\n'
                           'Getting result from in-container saved NpzSortingExtractor')
                 sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
 
