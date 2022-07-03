@@ -7,7 +7,8 @@ from typing import Optional, Union
 
 from ..core import BaseRecording
 from ..version import version as si_version
-from spikeinterface.core.core_tools import check_json, recursive_path_modifier, is_dict_extractor
+from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
+from spikeinterface.core.core_tools import check_json, recursive_path_modifier
 from .sorterlist import sorter_dict
 from .utils import SpikeSortingError, has_nvidia
 
@@ -386,6 +387,7 @@ def run_sorter_container(
         parent_folder_unix = parent_folder
         output_folder_unix = output_folder
         recording_input_folders_unix = recording_input_folders
+    npz_sorting_path = output_folder_unix / 'in_container_sorting'
     py_script = f"""
 import json
 from spikeinterface import load_extractor
@@ -402,9 +404,12 @@ if __name__ == '__main__':
 
     # run in container
     output_folder = '{output_folder_unix}'
-    run_sorter_local('{sorter_name}', recording, output_folder=output_folder,
-                remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-                verbose={verbose}, raise_error={raise_error}, **sorter_params)
+    sorting = run_sorter_local(
+        '{sorter_name}', recording, output_folder=output_folder,
+         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+          verbose={verbose}, raise_error={raise_error}, **sorter_params
+    )
+    sorting.save_to_folder(folder='{npz_sorting_path}')
 """
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
@@ -548,7 +553,14 @@ if __name__ == '__main__':
                 f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
     else:
         if with_output:
-            sorting = SorterClass.get_result_from_folder(output_folder)
+            try:
+                sorting = SorterClass.get_result_from_folder(output_folder)
+            except Exception as e:
+                if verbose:
+                    print(f'Failed to get result with sorter specific extractor.\n'
+                          'Error Message: {e}\n'
+                          'Getting result from in-container saved NpzSortingExtractor')
+                sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
