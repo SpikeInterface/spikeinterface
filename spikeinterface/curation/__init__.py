@@ -1,1 +1,1 @@
-from .remove_duplicates import remove_redundant_units, find_redundant_units
+from .remove_redundant import remove_redundant_units, find_redundant_units
