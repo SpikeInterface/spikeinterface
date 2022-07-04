@@ -3,11 +3,12 @@ Some utils to handle parallel jobs on top of job and/or loky
 """
 from pathlib import Path
 import numpy as np
+import platform
 
 import joblib
 import sys
-from tqdm.auto import tqdm
 import contextlib
+from tqdm.auto import tqdm
 
 
 # import loky
@@ -30,7 +31,7 @@ _shared_job_kwargs_doc = \
             * progress_bar: bool
                 If True, a progress bar is printed
             * mp_context: str
-                Context for multiprocessing. "fork" (default) or "spawn"
+                Context for multiprocessing. "fork" (default) or "spawn". "fork" is only available on UNIX systems
     """
     
 job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
@@ -221,7 +222,8 @@ class ChunkRecordingExecutor:
     chunk_duration : str or float or None
         Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
     mp_context : str or None
-        "fork" (default) or "spawn". If None, the context is taken by the recording.preferred_mp_context
+        "fork" (default) or "spawn". If None, the context is taken by the recording.preferred_mp_context.
+        "fork" is only available on UNIX systems.
     job_name: str
         Job name
 
@@ -237,6 +239,11 @@ class ChunkRecordingExecutor:
         if mp_context is None:
             mp_context = recording.preferred_mp_context
         assert mp_context in ('fork', 'spawn')
+        
+        # force "spawn" for windows
+        if platform.system() == "Windows":
+            mp_ccontext = "spawn"
+        
         self.recording = recording
         self.func = func
         self.init_func = init_func
