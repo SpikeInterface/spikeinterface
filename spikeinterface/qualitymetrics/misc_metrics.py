@@ -287,13 +287,19 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period: tupl
         print("compute_refrac_period_violations cannot run without numba.")
         return 0
 
+
     sorting = waveform_extractor.sorting
+    fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
     spikes = sorting.get_all_spike_trains(outputs="unit_index")
 
+    t_c = int(round(refractory_period[0] * fs * 1e-3))
+    t_r = int(round(refractory_period[1] * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int32)
 
     for seg_index in range(sorting.get_num_segments()):
+        _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
+                                     spikes[seg_index][1].astype(np.int32), t_c, t_r)
 
 
 
@@ -377,7 +383,7 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
                nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, tc, tr):
+    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
         n_units = len(nb_rp_violations)
 
         for i in numba.prange(n_units):
