@@ -381,16 +381,6 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
 
 if HAVE_NUMBA:
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
-               nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
-        n_units = len(nb_rp_violations)
-
-        for i in numba.prange(n_units):
-            spike_train = spike_trains[spike_clusters == i]
-            n_v = _compute_nb_violations_numba(spike_train, t_r)
-            nb_rp_violations[i] += n_v
-
     @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
     def _compute_nb_violations_numba(spike_train, t_r):
         n_v = 0
@@ -410,3 +400,12 @@ if HAVE_NUMBA:
 
         return n_v
 
+    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
+               nopython=True, nogil=True, cache=True, parallel=True)
+    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
+        n_units = len(nb_rp_violations)
+
+        for i in numba.prange(n_units):
+            spike_train = spike_trains[spike_clusters == i]
+            n_v = _compute_nb_violations_numba(spike_train, t_r)
+            nb_rp_violations[i] += n_v
