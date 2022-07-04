@@ -4,7 +4,7 @@ import os
 from ...core import BaseRecording
 from ...core.core_tools import define_function_from_class
 from ..basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from ..zero_channelpad import ZeroChannelPaddedRecording
+from ..zero_channel_pad import ZeroChannelPaddedRecording
 from spikeinterface.core import get_random_data_chunks
 
 
