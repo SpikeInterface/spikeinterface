@@ -256,6 +256,10 @@ class BaseExtractor:
         # TODO: copy features also
 
         other.extra_requirements.extend(self.extra_requirements)
+        
+        if hasattr(self, "preferred_mp_context"):
+            if self.preferred_mp_context is not None:
+                other.preferred_mp_context = self.preferred_mp_context    
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
                 relative_to=None, folder_metadata=None):
