@@ -22,11 +22,10 @@ def test_BaseSnippets():
     num_channels = 3
     nbefore = 20
     nafter = 44
-    wf_folder = cache_folder / "wfs"
-    wf_folder.mkdir(parents=True)
+
     nse, sorting = generate_snippets(durations=duration, num_channels=num_channels,
-                                        nbefore=nbefore, nafter=nafter, 
-                                        wf_folder=wf_folder)
+                                     nbefore=nbefore, nafter=nafter, 
+                                     wf_folder=None)
 
     assert nse.get_probe() is not None
     assert nse.get_num_segments() == len(duration)

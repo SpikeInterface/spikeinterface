@@ -19,7 +19,7 @@ from .core_tools import make_shared_array
 
 def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
                                  mode='memmap', return_scaled=False, folder=None, dtype=None,
-                                 sparsity_mask=None,  copy=False, **job_kwargs):
+                                 sparsity_mask=None, copy=True, **job_kwargs):
     """
     Allocate buffers (memmap or or shared memory) and then distribute every waveform into theses buffers.
 
@@ -53,6 +53,9 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
         dtype for waveforms buffer
     sparsity_mask: None or array of bool
         If not None shape must be must be (len(unit_ids), len(channel_ids))
+    copy: bool
+        If True (default), the output shared memory object is copied to a numpy standard array.
+        If False, the shared buffer is returned with the array info.
 
     {}
     
