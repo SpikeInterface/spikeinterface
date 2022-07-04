@@ -6,7 +6,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 
 class ZeroChannelPaddedRecording(BaseRecording):
-    name = 'zero_channelpad'
+    name = 'zero_channel_pad'
     installed = True
 
     def __init__(self, parent_recording: BaseRecording,
@@ -23,7 +23,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             Mapping from the channel index in the original recording to the zero-channel-padded recording, 
             by default None.
             If None, sorts the channel indices in ascending y channel location and puts them at the 
-            beginning of the zero channel-padded recording.
+            beginning of the zero-channel-padded recording.
         """
         BaseRecording.__init__(self, parent_recording.get_sampling_frequency(), 
                                np.arange(num_channels), parent_recording.get_dtype())
@@ -32,7 +32,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             assert len(channel_mapping) == parent_recording.get_num_channels(), \
                 "The new mapping must be specified for all channels."
             assert max(channel_mapping) < num_channels, ("The new mapping cannot exceed total number of channels "
-                                                         "in the zero chanenl-padded recording.")
+                                                         "in the zero-chanenl-padded recording.")
         else:
             if 'locations' in parent_recording.get_property_keys() or \
                 'contact_vector' in parent_recording.get_property_keys():
