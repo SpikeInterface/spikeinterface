@@ -230,17 +230,8 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         reshaped_frames = reshaped_frames*self.local_std+self.local_mean
         return reshaped_frames
 
-
 # function for API
 deepinterpolate = define_function_from_class(source_class=DeepInterpolatedRecording, name="deepinterpolate")
-
-# if HAVE_TF:
-#     tf = import_tf()
-#     class DeepInterpolationInputGenerator(tf.keras.utils.Sequence):
-#         """A data generator class for DeepInterpolation. Useful for both training (fine-tuning) and inference 
-#         (e.g. can set batch size).
-#         Note: this doesn't handle frames that lack complete training data (e.g. frames before pre_frames).
-#         """
 
 def di_input_gen_constructor(self, recording, start_frame, end_frame, batch_size,
                 pre_frames, post_frames, pre_post_omission,
