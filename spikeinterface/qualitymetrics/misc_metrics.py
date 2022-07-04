@@ -19,6 +19,12 @@ from ..postprocessing import (
     get_template_extremum_amplitude,
 )
 
+try:
+    import numba
+    HAVE_NUMBA = True
+except ModuleNotFoundError as err:
+    HAVE_NUMBA = False
+
 
 def compute_num_spikes(waveform_extractor, **kwargs):
     """Compute the number of spike across segments.
@@ -251,6 +257,46 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
 
 
+def compute_refrac_period_violations(waveform_extractor, refractory_period: tuple = (0.0, 1.0)):
+    """Calculates the number of refractory period violations.
+
+    This is similar (but slightly different) to the ISI violations.
+    The key difference being that the violations are not only computed on consecutive spikes.
+
+    This is required for some formulas (e.g. the ones from Llobet & Wyngaard 2022).
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object
+    refractory_period : tuple of 2 floats, optional, default: (0.0, 1.0)
+        This tuple contains the censored period as well as the refractory period (in ms).
+        If there is no censored period, you can leave it at 0.0.
+
+    Returns
+    -------
+    TODO
+
+    Reference
+    ---------
+    [1] Llobet & Wyngaard (2022) BioRxiv
+    """
+
+    if not HAVE_NUMBA:
+        print("Error: numba is not installed.")
+        print("compute_refrac_period_violations cannot run without numba.")
+        return 0
+
+    sorting = waveform_extractor.sorting
+    num_units = len(sorting.unit_ids)
+    spikes = sorting.get_all_spike_trains(outputs="unit_index")
+
+    nb_rp_violations = np.zeros((num_units), dtype=np.int32)
+
+    for seg_index in range(sorting.get_num_segments()):
+
+
+
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
                               num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
@@ -326,3 +372,15 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         all_fraction_missing[unit_id] = fraction_missing
 
     return all_fraction_missing
+
+
+if HAVE_NUMBA:
+    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
+               nopython=True, nogil=True, cache=True, parallel=True)
+    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, tc, tr):
+        n_units = len(nb_rp_violations)
+
+        for i in numba.prange(n_units):
+            spike_train = spike_trains[spike_clusters == i]
+            n_v = 0 # TODO
+            nb_rp_violations[i] += n_v
