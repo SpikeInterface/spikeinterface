@@ -30,8 +30,9 @@ _shared_job_kwargs_doc = \
                 Number of jobs to use. With -1 the number of jobs is the same as number of cores
             * progress_bar: bool
                 If True, a progress bar is printed
-            * mp_context: str
-                Context for multiprocessing. "fork" (default) or "spawn". "fork" is only available on UNIX systems
+            * mp_context: str or None
+                Context for multiprocessing. \It can be None (default), "fork" or "spawn". 
+                Note that "fork" is only available on UNIX systems
     """
     
 job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
@@ -235,19 +236,17 @@ class ChunkRecordingExecutor:
 
     def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
                  n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None,
-                 mp_context="fork", job_name=''):
-        if mp_context is None:
-            mp_context = recording.preferred_mp_context
-        assert mp_context in ('fork', 'spawn')
-        
-        # force "spawn" for windows
-        if platform.system() == "Windows":
-            mp_context = "spawn"
-        
+                 mp_context=None, job_name=''):        
         self.recording = recording
         self.func = func
         self.init_func = init_func
         self.init_args = init_args
+        
+        if mp_context is None:
+            mp_context = recording.preferred_mp_context
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+                
         self.mp_context = mp_context
 
         self.verbose = verbose
