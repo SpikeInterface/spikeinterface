@@ -4,7 +4,7 @@ from .basewidget import BaseWidget
 
 from probeinterface.plotting import plot_probe
 
-from spikeinterface.postprocessing import localize_units
+from spikeinterface.postprocessing import compute_unit_locations
 
 from .utils import get_unit_colors
 
@@ -20,8 +20,6 @@ class UnitLocalizationWidget(BaseWidget):
     peaks: None or numpy array
         Optionally can give already detected peaks
         to avoid multiple computation.
-    unit_location: None or 2d array
-        If None then it is computed with 'method' option
     method: str default 'center_of_mass'
         Method used to estimate unit localization if 'unit_location' is None
     method_kwargs: dict
@@ -42,14 +40,13 @@ class UnitLocalizationWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, waveform_extractor, unit_location=None,
+    def __init__(self, waveform_extractor, 
                  method='center_of_mass', method_kwargs={},
                  unit_colors=None, with_channel_ids=False,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
         self.waveform_extractor = waveform_extractor
-        self.unit_location = unit_location
         self.method = method
         self.method_kwargs = method_kwargs
 
@@ -61,11 +58,12 @@ class UnitLocalizationWidget(BaseWidget):
 
     def plot(self):
         we = self.waveform_extractor
-        unit_location = self.unit_location
         unit_ids = we.sorting.unit_ids
 
-        if unit_location is None:
-            unit_location = localize_units(we, method=self.method, **self.method_kwargs)
+        if we.is_extension('unit_locations'):
+            unit_locations = we.load_extension('unit_locations').get_data()
+        else:
+            unit_locations = compute_unit_locations(we, method=self.method, **self.method_kwargs)
 
         ax = self.ax
         probegroup = we.recording.get_probegroup()
@@ -90,7 +88,7 @@ class UnitLocalizationWidget(BaseWidget):
 
         color = np.array([self.unit_colors[unit_id] for unit_id in unit_ids])
         loc = ax.scatter(
-            unit_location[:, 0], unit_location[:, 1], marker='1', color=color, s=80, lw=3)
+            unit_locations[:, 0], unit_locations[:, 1], marker='1', color=color, s=80, lw=3)
         loc.set_zorder(3)
 
 
