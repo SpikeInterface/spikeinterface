@@ -242,7 +242,7 @@ class ChunkRecordingExecutor:
         
         # force "spawn" for windows
         if platform.system() == "Windows":
-            mp_ccontext = "spawn"
+            mp_context = "spawn"
         
         self.recording = recording
         self.func = func
