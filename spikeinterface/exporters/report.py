@@ -45,7 +45,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
 
     if we.is_extension('spike_amplitudes'):
         sac = we.load_extension('spike_amplitudes')
-        amplitudes = sac.get_amplitudes(outputs='by_unit')
+        amplitudes = sac.get_data(outputs='by_unit')
     else:
         amplitudes = compute_spike_amplitudes(we, peak_sign=peak_sign, outputs='by_unit', **job_kwargs)
 
@@ -67,12 +67,12 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     # metrics
     if we.is_extension('quality_metrics'):
         qmc = we.load_extension('quality_metrics')
-        metrics = qmc._metrics
+        metrics = qmc.get_data()
     else:
         # compute principal_components if not done
         if not we.is_extension('principal_components'):
             pca = compute_principal_components(we, load_if_exists=True,
-                                                  n_components=5, mode='by_channel_local')
+                                               n_components=5, mode='by_channel_local')
         metrics = compute_quality_metrics(we)
     metrics.to_csv(output_folder / 'quality metrics.csv')
 

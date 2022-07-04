@@ -72,12 +72,10 @@ def test_compute_quality_metrics():
     assert we.is_extension('quality_metrics')
     qmc = we.load_extension('quality_metrics')
     assert isinstance(qmc, QualityMetricCalculator)
-    assert qmc._metrics is not None
-    # print(qmc._metrics)
+    assert qmc.quality_metrics is not None
     qmc = QualityMetricCalculator.load_from_folder(
         cache_folder / 'toy_waveforms')
-    assert qmc._metrics is not None
-    # print(qmc._metrics)
+    assert qmc.quality_metrics is not None
 
 
 def test_compute_quality_metrics_peak_sign():
