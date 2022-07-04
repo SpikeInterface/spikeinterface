@@ -80,53 +80,66 @@ def write_python(path, dict):
 
 
 def check_json(d):
+    dc = deepcopy(d)
     # quick hack to ensure json writable
     for k, v in d.items():
+        # take care of keys first
+        if isinstance(k, np.int64):
+            del dc[k]
+            dc[int(k)] = v
+        if isinstance(k, np.float64):
+            del dc[k]
+            dc[float(k)] = v
         if isinstance(v, dict):
-            d[k] = check_json(v)
+            dc[k] = check_json(v)
         elif isinstance(v, Path):
-            d[k] = str(v.absolute())
+            dc[k] = str(v.absolute())
         elif isinstance(v, bool):
-            d[k] = bool(v)
+            dc[k] = bool(v)
         elif isinstance(v, (np.int32, np.int64)):
-            d[k] = int(v)
+            dc[k] = int(v)
         elif isinstance(v, (np.float32, np.float64)):
-            d[k] = float(v)
+            dc[k] = float(v)
         elif isinstance(v, datetime.datetime):
-            d[k] = v.isoformat()
+            dc[k] = v.isoformat()
         elif isinstance(v, (np.ndarray, list)):
             if len(v) > 0:
                 if isinstance(v[0], dict):
                     # these must be extractors for multi extractors
-                    d[k] = [check_json(v_el) for v_el in v]
+                    dc[k] = [check_json(v_el) for v_el in v]
                 else:
                     v_arr = np.array(v)
+                    # 64-bit types are not serializable
+                    if v_arr.dtype == np.dtype('int64'):
+                        v_arr = v_arr.astype('int32')
+                    if v_arr.dtype == np.dtype('float64'):
+                        v_arr = v_arr.astype('float32')
                     if len(v_arr.shape) == 1:
                         if 'int' in str(v_arr.dtype):
                             v_arr = [int(v_el) for v_el in v_arr]
-                            d[k] = v_arr
+                            dc[k] = v_arr
                         elif 'float' in str(v_arr.dtype):
                             v_arr = [float(v_el) for v_el in v_arr]
-                            d[k] = v_arr
+                            dc[k] = v_arr
                         elif isinstance(v_arr[0], str):
                             v_arr = [str(v_el) for v_el in v_arr]
-                            d[k] = v_arr
+                            dc[k] = v_arr
                         else:
                             print(f'Skipping field {k}: only 1D arrays of int, float, or str types can be serialized')
                     elif len(v_arr.shape) == 2:
                         if 'int' in str(v_arr.dtype):
                             v_arr = [[int(v_el) for v_el in v_row] for v_row in v_arr]
-                            d[k] = v_arr
+                            dc[k] = v_arr
                         elif 'float' in str(v_arr.dtype):
                             v_arr = [[float(v_el) for v_el in v_row] for v_row in v_arr]
-                            d[k] = v_arr
+                            dc[k] = v_arr
                         else:
                             print(f'Skipping field {k}: only 2D arrays of int or float type can be serialized')
                     else:
                         print(f"Skipping field {k}: only 1D and 2D arrays can be serialized")
             else:
-                d[k] = list(v)
-    return d
+                dc[k] = list(v)
+    return dc
 
 
 def add_suffix(file_path, possible_suffix):

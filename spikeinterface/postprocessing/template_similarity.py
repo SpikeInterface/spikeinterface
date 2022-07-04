@@ -1,25 +1,64 @@
 import numpy as np
+from ..core import WaveformExtractor
+from ..core.waveform_extractor import BaseWaveformExtractorExtension
 
-def compute_template_similarity(waveform_extractor, 
-                                waveform_extractor_other=None,
-                                method='cosine_similarity'):
-    """
-    Compute similarity between templates with several methods.
+
+class TemplateSimilarityCalculator(BaseWaveformExtractorExtension):
+    """Compute similarity between templates with several methods.
     
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
         A waveform extractor object
-    waveform_extractor_other: WaveformExtractor, optional
-        A second waveform extractor object
-    method: str
-        Method name ('cosine_similarity')
-
-    Returns
-    -------
-    similarity: np.array
-        The similarity matrix
     """
+    extension_name = 'similarity'
+
+    def __init__(self, waveform_extractor):
+        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+
+        self.waveform_extractor = waveform_extractor
+        self.template_metrics = None
+
+    def _set_params(self, method='cosine_similarity'):
+
+        params = dict(method=method)
+
+        return params
+
+    def _specific_load_from_folder(self):
+        self.similarity = np.load(self.extension_folder / 'similarity.npy')
+
+    def _reset(self):
+        self.similarity = None
+
+    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+        # filter metrics dataframe
+        unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
+        new_similarity = self.similarity[np.array(
+            unit_indices), np.array(unit_indices)]
+        np.save(new_waveforms_folder / self.extension_name / 'similarity.npy',
+                new_similarity)
+        
+    def run(self):
+        similarity = _compute_template_similarity(self.waveform_extractor, method=self._params['method'])
+        np.save(self.extension_folder / 'similarity.npy', similarity)
+        self.similarity = similarity
+
+    def get_data(self):
+        """Get the computed similarity."""
+
+        msg = "Template similarity is not computed. Use the 'run()' function."
+        assert self.similarity is not None, msg
+        return self.similarity
+
+
+WaveformExtractor.register_extension(TemplateSimilarityCalculator)
+
+
+def _compute_template_similarity(waveform_extractor, 
+                                 load_if_exists=False,
+                                 method='cosine_similarity',
+                                 waveform_extractor_other=None):
     import sklearn.metrics.pairwise
 
     templates = waveform_extractor.get_all_templates()
@@ -42,14 +81,50 @@ def compute_template_similarity(waveform_extractor,
     return similarity
 
 
+def compute_template_similarity(waveform_extractor, 
+                                load_if_exists=False,
+                                method='cosine_similarity',
+                                waveform_extractor_other=None):
+    """Compute similarity between templates with several methods.
+    
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        A waveform extractor object
+    load_if_exists : bool, optional, default: False
+        Whether to load precomputed similarity, if is already exists.
+    method: str
+        Method name ('cosine_similarity')
+    waveform_extractor_other: WaveformExtractor, optional
+        A second waveform extractor object
+
+    Returns
+    -------
+    similarity: np.array
+        The similarity matrix
+    """
+    if waveform_extractor_other is None:
+        folder = waveform_extractor.folder
+        ext_folder = folder / TemplateSimilarityCalculator.extension_name
+        if load_if_exists and ext_folder.is_dir():
+            tmc = TemplateSimilarityCalculator.load_from_folder(folder)
+        else:
+            tmc = TemplateSimilarityCalculator(waveform_extractor)
+            tmc.set_params(method=method)
+            tmc.run()
+        similarity = tmc.get_data()
+        return similarity
+    else:
+        return _compute_template_similarity(waveform_extractor, waveform_extractor_other, method)
+
+
 
 def check_equal_template_with_distribution_overlap(waveforms0, waveforms1,
-                template0=None, template1=None,
-                num_shift = 2, quantile_limit=0.8, 
-                return_shift=False,
-                debug=False):
+                                                   template0=None, template1=None,
+                                                   num_shift = 2, quantile_limit=0.8, 
+                                                   return_shift=False):
     """
-    Given 2 waveforms set check if they come from the same distribution.
+    Given 2 waveforms sets, check if they come from the same distribution.
     
     This is computed with a simple trick:
     It project all waveforms from each cluster on the normed vector going from
@@ -117,24 +192,6 @@ def check_equal_template_with_distribution_overlap(waveforms0, waveforms1,
         l1 = np.quantile(scalar_product1, 1 - quantile_limit)
         
         equal = l0 >= l1
-        
-        #~ if debug:
-        #~ if debug and equal:
-            #~ import matplotlib.pyplot as plt
-            #~ fig, axs = plt.subplots(nrows=2)
-            #~ ax = axs[0]
-            #~ count, bins = np.histogram(scalar_product0, bins=100)
-            #~ ax.plot(bins[:-1], count, color='g')
-            #~ count, bins = np.histogram(scalar_product1, bins=100)
-            #~ ax.plot(bins[:-1], count, color='r')
-            #~ ax.axvline(l0)
-            #~ ax.axvline(l1)
-            #~ ax.set_title(f'equal={equal} shift={shift}')
-            #~ ax = axs[1]
-            #~ ax.plot(template0.T.flatten())
-            #~ ax.plot(template1.T.flatten())
-            #~ ax.set_title(f'shift {shift}')
-            #~ plt.show()
         
         if equal:
             final_shift = shift - num_shift

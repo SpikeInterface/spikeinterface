@@ -6,7 +6,7 @@ import pytest
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
 from spikeinterface.extractors import toy_example
-from spikeinterface.postprocessing import localize_units
+from spikeinterface.postprocessing import compute_unit_locations, UnitLocationsCalculator
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -34,44 +34,35 @@ def setup_module():
 
 
 def test_compute_unit_center_of_mass():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    folder = cache_folder / 'toy_waveforms'
+    we = WaveformExtractor.load_from_folder(folder)
 
-    unit_location = localize_units(
+    unit_location = compute_unit_locations(
         we, method='center_of_mass',  num_channels=4)
-    unit_location_dict = localize_units(
-        we, method='center_of_mass',  num_channels=4, output='dict')
-
-    # ~ import matplotlib.pyplot as plt
-    # ~ from probeinterface.plotting import plot_probe
-    # ~ fig, ax = plt.subplots()
-    #~ plot_probe(we.recording.get_probe(), ax=ax)
-    #~ ax.scatter(unit_location[:, 0], unit_location[:, 1])
-    #~ plt.show()
+    unit_location_dict = compute_unit_locations(
+        we, method='center_of_mass',  num_channels=4, outputs='dict')
+    
+    # reload as an extension from we
+    assert UnitLocationsCalculator in we.get_available_extensions()
+    assert we.is_extension('unit_locations')
+    ulc = we.load_extension('unit_locations')
+    assert isinstance(ulc, UnitLocationsCalculator)
+    assert ulc.unit_locations is not None
+    ulc = UnitLocationsCalculator.load_from_folder(folder)
+    assert ulc.unit_locations is not None
 
 
 def test_compute_monopolar_triangulation():
     we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
-    unit_location = localize_units(
+    unit_location = compute_unit_locations(
         we, method='monopolar_triangulation', radius_um=150)
-    unit_location_dict = localize_units(
-        we, method='monopolar_triangulation', radius_um=150, output='dict',
+    unit_location_dict = compute_unit_locations(
+        we, method='monopolar_triangulation', radius_um=150, outputs='dict',
         optimizer='least_square')
 
-    unit_location_dict = localize_units(
-        we, method='monopolar_triangulation', radius_um=150, output='dict',
+    unit_location_dict = compute_unit_locations(
+        we, method='monopolar_triangulation', radius_um=150, outputs='dict',
         optimizer='minimize_with_log_penality')
-
-
-    #~ import matplotlib.pyplot as plt
-    #~ from probeinterface.plotting import plot_probe
-    #~ fig, ax = plt.subplots()
-    #~ plot_probe(we.recording.get_probe(), ax=ax)
-    #~ ax.scatter(unit_location[:, 0], unit_location[:, 1])
-    #~ fig = plt.figure()
-    #~ ax = fig.add_subplot(1, 1, 1, projection='3d')
-    #~ plot_probe(we.recording.get_probe().to_3d(axes='xy'), ax=ax)
-    #~ ax.scatter(unit_location[:, 0], unit_location[:, 1], unit_location[:, 2])
-    #~ plt.show()
 
 
 if __name__ == '__main__':

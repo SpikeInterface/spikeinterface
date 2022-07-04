@@ -57,9 +57,9 @@ def test_compute_spike_amplitudes():
     assert we_scaled.is_extension('spike_amplitudes')
     sac = we.load_extension('spike_amplitudes')
     assert isinstance(sac, SpikeAmplitudesCalculator)
-    assert sac._amplitudes is not None
-    qmc = SpikeAmplitudesCalculator.load_from_folder(folder)
-    assert sac._amplitudes is not None
+    assert sac.amplitudes is not None
+    sac = SpikeAmplitudesCalculator.load_from_folder(folder)
+    assert sac.amplitudes is not None
 
 
 def test_compute_spike_amplitudes_parallel():
