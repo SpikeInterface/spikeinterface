@@ -11,17 +11,25 @@ from numpy.testing import assert_raises
 from spikeinterface.core.testing_tools import generate_snippets
 from spikeinterface.core.numpyextractors import NumpySnippetsExtractor
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "core"
+else:
+    cache_folder = Path("cache_folder") / "core"
+    cache_folder.mkdir(exist_ok=True, parents=True)
 
 def test_BaseSnippets():
-    duration = [4,3]
+    duration = [4, 3]
     num_channels = 3
     nbefore = 20
     nafter = 44
+    wf_folder = cache_folder / "wfs"
+    wf_folder.mkdir(parents=True)
     nse, sorting = generate_snippets(durations=duration, num_channels=num_channels,
-                            nbefore=nbefore, nafter=nafter)
+                                        nbefore=nbefore, nafter=nafter, 
+                                        wf_folder=wf_folder)
 
     assert nse.get_probe() is not None
-    assert nse.get_num_segments() == 1
+    assert nse.get_num_segments() == len(duration)
 
     assert np.all(nse.ids_to_indices([0, 1, 2]) == [0, 1, 2])
     assert np.all(nse.ids_to_indices(

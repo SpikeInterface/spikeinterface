@@ -18,8 +18,8 @@ from .core_tools import make_shared_array
 
 
 def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
-                                mode='memmap', return_scaled=False, folder=None, dtype=None,
-                                sparsity_mask=None,  copy=False, **job_kwargs):
+                                 mode='memmap', return_scaled=False, folder=None, dtype=None,
+                                 sparsity_mask=None,  copy=False, **job_kwargs):
     """
     Allocate buffers (memmap or or shared memory) and then distribute every waveform into theses buffers.
 
@@ -59,7 +59,7 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
     Returns
     -------
     wfs_arrays: dict of arrays
-        Arrays for all units (memmap or shared_memmep
+        Arrays for all units (memmap or shared_memmep)
 
     wfs_arrays_info: dict of info
         Optionally return in case of shared_memory if copy=False.
@@ -96,7 +96,7 @@ extract_waveforms_to_buffers.__doc__ = extract_waveforms_to_buffers.__doc__.form
 
 
 def allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=None, dtype=None,
-                       sparsity_mask=None):
+                               sparsity_mask=None):
     """
     Allocate memmap or shared memory buffers before snippet extraction.
 
