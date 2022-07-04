@@ -15,9 +15,9 @@ def import_tf(use_gpu=True, disable_tf_logger=True):
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     if disable_tf_logger:
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
         tf.get_logger().setLevel('ERROR')
-    
+
     tf.compat.v1.disable_eager_execution()
     gpus = tf.config.list_physical_devices('GPU')
     if gpus:
@@ -39,20 +39,22 @@ def has_tf(use_gpu=True, disable_tf_logger=True):
         return False
 
 
-def define_generator_class(use_gpu):
+def define_input_generator_class(use_gpu, disable_tf_logger=True):
     """Define DeepInterpolationInputGenerator class at run-time
 
     Parameters
     ----------
     use_gpu : bool
         Whether to load TF with GPU capabilities
+    disable_tf_logger : bool, optional
+            If True, tensorflow logging is disabled, by default True
 
     Returns
     -------
     class
         The defined DeepInterpolationInputGenerator class
     """
-    tf = import_tf(use_gpu)
+    tf = import_tf(use_gpu, disable_tf_logger)
 
     class DeepInterpolationInputGenerator(tf.keras.utils.Sequence):
 
@@ -89,7 +91,8 @@ def define_generator_class(use_gpu):
                                                    channel_indices=slice(None))
                 batch_size = self.batch_size
             else:
-                start_frame = self.end_frame-self.last_batch_size-self.pre_frames-self.pre_post_omission
+                start_frame = self.end_frame-self.last_batch_size - \
+                    self.pre_frames-self.pre_post_omission
                 end_frame = self.end_frame+self.post_frames+self.pre_post_omission
                 traces = self.recording.get_traces(start_frame=start_frame,
                                                    end_frame=end_frame,
@@ -206,7 +209,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
 
     def __init__(self, recording: BaseRecording, model_path: str,
                  pre_frames: int = 30, post_frames: int = 30, pre_post_omission: int = 1,
-                 batch_size=128, use_gpu: bool = True, disable_tf_logger : bool = True, 
+                 batch_size=128, use_gpu: bool = True, disable_tf_logger: bool = True,
                  **random_chunk_kwargs):
         """Applies DeepInterpolation, a neural network based denoising method, to the recording.
 
@@ -236,14 +239,15 @@ class DeepInterpolatedRecording(BasePreprocessor):
             Number of frames after target frame used for training and inference
         pre_post_omission : int
             Number of frames around the target frame to omit
-        n_frames_normalize : int, optional
-            Number of frames to estimate mean and std for normalization, by default 20000
         batch_size : int, optional
             Number of frames per batch to infer (adjust based on hardware); by default 128
+        disable_tf_logger : bool, optional
+            If True, tensorflow logging is disabled, by default True
         random_chunk_kwargs: keyword arguments for get_random_data_chunks
         """
 
-        assert has_tf(use_gpu, disable_tf_logger), "To use DeepInterpolation, you first need to install `tensorflow`."
+        assert has_tf(
+            use_gpu, disable_tf_logger), "To use DeepInterpolation, you first need to install `tensorflow`."
         assert recording.get_num_channels() <= 384, ("DeepInterpolation only works on Neuropixels 1.0-like "
                                                      "recordings with 384 channels. This recording has too many "
                                                      "channels.")
@@ -256,6 +260,16 @@ class DeepInterpolatedRecording(BasePreprocessor):
         # try move model load here with spawn
         BasePreprocessor.__init__(self, recording)
 
+        # first time retrieving traces check that dimensions are ok
+        self.tf.keras.backend.clear_session()
+        self.model = self.tf.keras.models.load_model(filepath=model_path)
+        # check input shape for the last dimension
+        config = self.model.get_config()
+        input_shape = config["layers"][0]["config"]["batch_input_shape"]
+        assert input_shape[-1] == pre_frames + \
+            post_frames, ("The sum of `pre_frames` and `post_frames` must match "
+                          "the last dimension of the model.")
+
         local_data = get_random_data_chunks(
             recording, **random_chunk_kwargs)
         if isinstance(recording, ZeroChannelPaddedRecording):
@@ -266,9 +280,10 @@ class DeepInterpolatedRecording(BasePreprocessor):
 
         # add segment
         for segment in recording._recording_segments:
-            recording_segment = DeepInterpolatedRecordingSegment(segment, model_path,
+            recording_segment = DeepInterpolatedRecordingSegment(segment, self.model,
                                                                  pre_frames, post_frames, pre_post_omission,
-                                                                 local_mean, local_std, batch_size, use_gpu)
+                                                                 local_mean, local_std, batch_size, use_gpu,
+                                                                 disable_tf_logger)
             self.add_recording_segment(recording_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), model_path=model_path,
@@ -279,13 +294,13 @@ class DeepInterpolatedRecording(BasePreprocessor):
 
 class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
 
-    def __init__(self, recording_segment, model_path,
+    def __init__(self, recording_segment, model,
                  pre_frames, post_frames, pre_post_omission,
-                 local_mean, local_std, batch_size, use_gpu):
+                 local_mean, local_std, batch_size, use_gpu,
+                 disable_tf_logger):
         BasePreprocessorSegment.__init__(self, recording_segment)
 
-        self.model = None
-        self.model_path = model_path
+        self.model = model
         self.pre_frames = pre_frames
         self.post_frames = post_frames
         self.pre_post_omission = pre_post_omission
@@ -295,22 +310,10 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         self.use_gpu = use_gpu
 
         # creating class dynamically to use the imported TF with GPU enabled/disabled based on the use_gpu flag
-        self.DeepInterpolationInputGenerator = define_generator_class(use_gpu)
+        self.DeepInterpolationInputGenerator = define_input_generator_class(
+            use_gpu, disable_tf_logger)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if self.model is None:
-            # first time retrieving traces check that dimensions are ok
-            tf = import_tf(self.use_gpu)
-            tf.keras.backend.clear_session()
-            self.model = tf.keras.models.load_model(
-                filepath=self.model_path)
-            # check input shape for the last dimension
-            config = self.model.get_config()
-            input_shape = config["layers"][0]["config"]["batch_input_shape"]
-            assert input_shape[-1] == self.pre_frames + \
-                self.post_frames, ("The sum of `pre_frames` and `post_frames` must match "
-                                   "the last dimension of the model.")
-
         n_frames = self.parent_recording_segment.get_num_samples()
 
         if start_frame == None:
