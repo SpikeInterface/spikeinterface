@@ -4,7 +4,7 @@ from pathlib import Path
 
 from spikeinterface.core.testing_tools import generate_recording
 
-from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording
+from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
 
 try:
     from multiprocessing.shared_memory import SharedMemory
@@ -64,6 +64,31 @@ def test_write_memory_recording():
                                verbose=False, n_jobs=2, total_memory='200k', progress_bar=True)
 
 
+
+def test_recursive_path_modifier():
+    # this test nested depth 2 path modifier
+    d = {
+        'kwargs':{
+            'path' : '/yep/path1',
+            'recording': {
+                'module': 'mock_module',
+                'class': 'mock_class',
+                'version': '1.2',
+                'annotations': {},
+                'kwargs': {
+                    'path':'/yep/path2'
+                },
+            
+            }
+        }
+    }
+
+    d2  =recursive_path_modifier(d, lambda p: p.replace('/yep', '/yop'))
+    assert d2['kwargs']['path'].startswith('/yop')
+    assert d2['kwargs']['recording']['kwargs'] ['path'].startswith('/yop')
+
+
 if __name__ == '__main__':
     # test_write_binary_recording()
-    test_write_memory_recording()
+    # test_write_memory_recording()
+    test_recursive_path_modifier()
