@@ -388,5 +388,25 @@ if HAVE_NUMBA:
 
         for i in numba.prange(n_units):
             spike_train = spike_trains[spike_clusters == i]
-            n_v = 0 # TODO
+            n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
+
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    def _compute_nb_violations_numba(spike_train, t_r):
+        n_v = 0
+        N = len(spike_train)
+
+        for i in range(N):
+            for j in range(i+1, N):
+                diff = spike_train[j] - spike_train[i]
+
+                if diff > t_r:
+                    break
+
+                # if diff < t_c:
+                #     continue
+
+                n_v += 1
+
+        return n_v
+
