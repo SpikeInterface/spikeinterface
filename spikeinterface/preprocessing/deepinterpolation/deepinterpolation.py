@@ -8,13 +8,15 @@ from ..zero_channelpad import ZeroChannelPaddedRecording
 from spikeinterface.core import get_random_data_chunks
 
 
-def import_tf(use_gpu=True):
+def import_tf(use_gpu=True, disable_tf_logger=True):
     import tensorflow as tf
-    
+
     if not use_gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-        
-    tf.get_logger().setLevel('WARNING')
+
+    if disable_tf_logger:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+        tf.get_logger().setLevel('ERROR')
     
     tf.compat.v1.disable_eager_execution()
     gpus = tf.config.list_physical_devices('GPU')
@@ -25,16 +27,17 @@ def import_tf(use_gpu=True):
                 tf.config.experimental.set_memory_growth(gpu, True)
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
-            print(e)        
+            print(e)
     return tf
 
-def has_tf(use_gpu=True):
+
+def has_tf(use_gpu=True, disable_tf_logger=True):
     try:
-        import_tf(use_gpu)
+        import_tf(use_gpu, disable_tf_logger)
         return True
     except ImportError:
         return False
-    
+
 
 def define_generator_class(use_gpu):
     """Define DeepInterpolationInputGenerator class at run-time
@@ -50,9 +53,9 @@ def define_generator_class(use_gpu):
         The defined DeepInterpolationInputGenerator class
     """
     tf = import_tf(use_gpu)
-    
+
     class DeepInterpolationInputGenerator(tf.keras.utils.Sequence):
-    
+
         def __init__(self, recording, start_frame, end_frame, batch_size,
                      pre_frames, post_frames, pre_post_omission,
                      local_mean, local_std):
@@ -76,17 +79,21 @@ def define_generator_class(use_gpu):
 
         def __getitem__(self, idx):
             n_batches = self.__len__()
-            if idx < n_batches-1:
-                traces = self.recording.get_traces(start_frame=self.start_frame+self.batch_size*idx-self.pre_frames-self.pre_post_omission,
-                                                end_frame=self.start_frame+self.batch_size *
-                                                (idx+1)+self.post_frames +
-                                                self.pre_post_omission,
-                                                channel_indices=slice(None))
+            if idx < n_batches - 1:
+                start_frame = self.start_frame + self.batch_size * \
+                    idx-self.pre_frames-self.pre_post_omission
+                end_frame = self.start_frame + self.batch_size * \
+                    (idx + 1) + self.post_frames + self.pre_post_omission
+                traces = self.recording.get_traces(start_frame=start_frame,
+                                                   end_frame=end_frame,
+                                                   channel_indices=slice(None))
                 batch_size = self.batch_size
             else:
-                traces = self.recording.get_traces(start_frame=self.end_frame-self.last_batch_size-self.pre_frames-self.pre_post_omission,
-                                                end_frame=self.end_frame+self.post_frames+self.pre_post_omission,
-                                                channel_indices=slice(None))
+                start_frame = self.end_frame-self.last_batch_size-self.pre_frames-self.pre_post_omission
+                end_frame = self.end_frame+self.post_frames+self.pre_post_omission
+                traces = self.recording.get_traces(start_frame=start_frame,
+                                                   end_frame=end_frame,
+                                                   channel_indices=slice(None))
                 batch_size = self.last_batch_size
 
             shape = (traces.shape[0], int(384 / 2), 2)
@@ -96,11 +103,11 @@ def define_generator_class(use_gpu):
                 (batch_size, 384, 2, self.pre_frames+self.post_frames))
             di_label = np.zeros((batch_size, 384, 2, 1))
             for index_frame in range(self.pre_frames+self.pre_post_omission,
-                                    batch_size+self.pre_frames+self.pre_post_omission):
+                                     batch_size+self.pre_frames+self.pre_post_omission):
                 di_input[index_frame-self.pre_frames -
-                        self.pre_post_omission] = self.reshape_input_forward(index_frame, traces)
+                         self.pre_post_omission] = self.reshape_input_forward(index_frame, traces)
                 di_label[index_frame-self.pre_frames -
-                        self.pre_post_omission] = self.reshape_label_forward(traces[index_frame])
+                         self.pre_post_omission] = self.reshape_label_forward(traces[index_frame])
             return (di_input, di_label)
 
         def reshape_input_forward(self, index_frame, raw_data):
@@ -125,7 +132,7 @@ def define_generator_class(use_gpu):
             # We reorganize to follow true geometry of probe for convolution
             input_full = np.zeros(
                 [1, nb_probes, 2,
-                self.pre_frames + self.post_frames], dtype="float32"
+                 self.pre_frames + self.post_frames], dtype="float32"
             )
 
             input_index = np.arange(
@@ -136,9 +143,9 @@ def define_generator_class(use_gpu):
 
             for index_padding in np.arange(self.pre_post_omission + 1):
                 input_index = input_index[input_index !=
-                                        index_frame - index_padding]
+                                          index_frame - index_padding]
                 input_index = input_index[input_index !=
-                                        index_frame + index_padding]
+                                          index_frame + index_padding]
 
             data_img_input = raw_data[input_index, :, :]
 
@@ -189,16 +196,18 @@ def define_generator_class(use_gpu):
             input_full[0, even, 0, :] = data_img_input[:, 0, :]
             input_full[0, odd, 1, :] = data_img_input[:, 1, :]
             return input_full
-        
+
     return DeepInterpolationInputGenerator
 
 
 class DeepInterpolatedRecording(BasePreprocessor):
     name = 'deepinterpolate'
+    preferred_mp_context = "spawn"
 
     def __init__(self, recording: BaseRecording, model_path: str,
-                 pre_frames: int=30, post_frames: int=30, pre_post_omission: int=1,
-                 batch_size=128, use_gpu: bool = True, **random_chunk_kwargs):
+                 pre_frames: int = 30, post_frames: int = 30, pre_post_omission: int = 1,
+                 batch_size=128, use_gpu: bool = True, disable_tf_logger : bool = True, 
+                 **random_chunk_kwargs):
         """Applies DeepInterpolation, a neural network based denoising method, to the recording.
 
         Notes
@@ -234,7 +243,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
         random_chunk_kwargs: keyword arguments for get_random_data_chunks
         """
 
-        assert has_tf(use_gpu), "To use DeepInterpolation, you first need to install `tensorflow`."
+        assert has_tf(use_gpu, disable_tf_logger), "To use DeepInterpolation, you first need to install `tensorflow`."
         assert recording.get_num_channels() <= 384, ("DeepInterpolation only works on Neuropixels 1.0-like "
                                                      "recordings with 384 channels. This recording has too many "
                                                      "channels.")
@@ -242,8 +251,9 @@ class DeepInterpolatedRecording(BasePreprocessor):
                                                      "recordings with 384 channels. "
                                                      "This recording has too few channels. Try matching the channel "
                                                      "count with `ZeroChannelPaddedRecording`.")
-        self.tf = import_tf(use_gpu)
+        self.tf = import_tf(use_gpu, disable_tf_logger)
 
+        # try move model load here with spawn
         BasePreprocessor.__init__(self, recording)
 
         local_data = get_random_data_chunks(
@@ -283,10 +293,10 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         self.local_std = local_std
         self.batch_size = batch_size
         self.use_gpu = use_gpu
-        
+
         # creating class dynamically to use the imported TF with GPU enabled/disabled based on the use_gpu flag
         self.DeepInterpolationInputGenerator = define_generator_class(use_gpu)
-    
+
     def get_traces(self, start_frame, end_frame, channel_indices):
         if self.model is None:
             # first time retrieving traces check that dimensions are ok
@@ -376,5 +386,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         reshaped_frames = reshaped_frames*self.local_std+self.local_mean
         return reshaped_frames
 
+
 # function for API
-deepinterpolate = define_function_from_class(source_class=DeepInterpolatedRecording, name="deepinterpolate")
+deepinterpolate = define_function_from_class(
+    source_class=DeepInterpolatedRecording, name="deepinterpolate")
