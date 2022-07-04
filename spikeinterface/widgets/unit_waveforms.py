@@ -5,7 +5,7 @@ from ..core.waveform_extractor import WaveformExtractor
 from ..core.baserecording import BaseRecording
 from ..core.basesorting import BaseSorting
 from .utils import get_unit_colors
-from ..toolkit import get_template_channel_sparsity
+from ..postprocessing import get_template_channel_sparsity
 
 
 class UnitWaveformsWidget(BaseWidget):

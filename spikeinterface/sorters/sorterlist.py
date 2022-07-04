@@ -17,6 +17,7 @@ from .tridesclous import TridesclousSorter
 from .waveclus import WaveClusSorter
 from .waveclus import WaveClusSnippetsSorter
 from .yass import YassSorter
+from .spyking_circus2 import Spykingcircus2Sorter
 
 sorter_full_list = [
     CombinatoSorter,
@@ -35,6 +36,7 @@ sorter_full_list = [
     WaveClusSorter,
     WaveClusSnippetsSorter,
     YassSorter,
+    Spykingcircus2Sorter
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}

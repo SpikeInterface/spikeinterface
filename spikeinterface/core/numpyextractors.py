@@ -103,7 +103,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency):
+    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None):
         """
         Construct sorting extractor from:
           * an array of spike times (in frames)
@@ -116,6 +116,8 @@ class NumpySorting(BaseSorting):
             An array of spike times (in frames).
         labels_list: list of array (or array)
             An array of spike labels corresponding to the given times.
+        unit_ids: (None by default) the explicit list of unit_ids that should be extracted from labels_list
+            If None, then it will be np.unique(labels_list)
         """
 
         if isinstance(times_list, np.ndarray):
@@ -127,7 +129,8 @@ class NumpySorting(BaseSorting):
         labels_list = [np.asarray(e) for e in labels_list]
 
         nseg = len(times_list)
-        unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
+        if unit_ids is None:
+            unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
 
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for i in range(nseg):

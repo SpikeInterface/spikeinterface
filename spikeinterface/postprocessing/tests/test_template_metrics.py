@@ -7,7 +7,8 @@ import pytest
 from spikeinterface import extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import toy_example
 
-from spikeinterface.postprocessing import calculate_template_metrics, get_template_channel_sparsity
+from spikeinterface.postprocessing import (compute_template_metrics, get_template_channel_sparsity, 
+                                           TemplateMetricsCalculator)
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "postprocessing"
@@ -30,20 +31,30 @@ def setup_module():
 
 
 def test_calculate_template_metrics():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
-    features = calculate_template_metrics(we, upsampling_factor=1)
-    print(features)
+    folder = cache_folder / 'toy_waveforms'
+    we = WaveformExtractor.load_from_folder(folder)
+    tm = compute_template_metrics(we, upsampling_factor=1)
+    print(tm)
+    
+    # reload as an extension from we
+    assert TemplateMetricsCalculator in we.get_available_extensions()
+    assert we.is_extension('template_metrics')
+    tmc = we.load_extension('template_metrics')
+    assert isinstance(tmc, TemplateMetricsCalculator)
+    assert tmc.template_metrics is not None
+    tmc = TemplateMetricsCalculator.load_from_folder(folder)
+    assert tmc.template_metrics is not None
 
-    features_up = calculate_template_metrics(we, upsampling_factor=2)
-    print(features_up)
-
+    tm_up = compute_template_metrics(we, upsampling_factor=2)
+    print(tm_up)
+    
     sparsity = get_template_channel_sparsity(we, method="radius", radius_um=20)
-    features_sparse = calculate_template_metrics(we, upsampling_factor=2,
+    tm_sparse = compute_template_metrics(we, upsampling_factor=2,
                                                  sparsity=sparsity)
-    print(features_sparse)
+    print(tm_sparse)
 
 
 if __name__ == '__main__':
-    # setup_module()
+    setup_module()
 
     test_calculate_template_metrics()
