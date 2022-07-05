@@ -8,7 +8,7 @@ import numpy as np
 class MplPlotter(BackendPlotter):
     backend = 'matplotlib'
     
-    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
+    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None, **extra):
         """
         figure/ax/axes : only one of then can be not None
         """

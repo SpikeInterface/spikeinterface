@@ -30,7 +30,6 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         t_start = 0. 
         t_stop = rec.get_num_samples(segment_index=0) / rec.get_sampling_frequency()
         
-        
         time_slider = FloatSlider(
             orientation='horizontal',
             description='time:',
@@ -47,12 +46,18 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         time_range = data_plot['time_range']
         win_sizer = BoundedFloatText(value=np.diff(time_range)[0], step=0.1, min=0.005, description='win (s)')
         
-        mode_selector = Dropdown(options=['line', 'map'], description='mode')
-        
+        mode_selector = Dropdown(options=['line', 'map'], description='mode', value=data_plot['mode'])
         
         widgets = (time_slider, seg_selector, win_sizer, mode_selector)
         
-        updater = PlotUpdater(rec, ax,  *widgets)
+        # propagate plot kwargs
+        mpl_kwargs = data_plot
+        del mpl_kwargs["recording"]
+        del mpl_kwargs["with_colorbar"] 
+        del mpl_kwargs["mode"]
+        del mpl_kwargs["time_range"]
+        
+        updater = PlotUpdater(rec, ax, *widgets, **mpl_kwargs)
         for w in widgets:
             w.observe(updater)
         
@@ -75,13 +80,14 @@ TimeseriesPlotter.register(TimeseriesWidget)
 
 
 class PlotUpdater:
-    def __init__(self, rec, ax,  time_slider, seg_selector, win_sizer, mode_selector):
+    def __init__(self, rec, ax, time_slider, seg_selector, win_sizer, mode_selector, **kwargs):
         self.rec = rec
         self.ax = ax
         self.time_slider = time_slider
         self.seg_selector = seg_selector
         self.win_sizer = win_sizer
         self.mode_selector = mode_selector
+        self.kwargs = kwargs
         
     
     def __call__(self, change):
@@ -91,14 +97,16 @@ class PlotUpdater:
         
         self.ax.clear()
         
-        plot_timeseries(self.rec,
-                segment_index=self.seg_selector.value,
-                time_range=time_range,
-                mode=self.mode_selector.value,
-                with_colorbar=False,
-                ax=self.ax,
-                backend='matplotlib',
-            )
+        plot_timeseries(
+            self.rec,
+            segment_index=self.seg_selector.value,
+            time_range=time_range,
+            mode=self.mode_selector.value,
+            with_colorbar=False,
+            ax=self.ax,
+            backend='matplotlib',
+            **self.kwargs
+        )
         
         fig = self.ax.figure
         fig.canvas.draw()
