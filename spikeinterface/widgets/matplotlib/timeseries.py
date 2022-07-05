@@ -24,6 +24,7 @@ class TimeseriesPlotter(MplPlotter):
                     offset = d.vspacing * (n - 1 - i)
                     color = d.colors[layer_key][chan_id]
                     ax.plot(d.times, offset + traces[:, i], color=color)
+                ax.get_lines()[-1].set_label(layer_key)
 
             if d.show_channel_ids:
                 ax.set_yticks(np.arange(n) * d.vspacing)
@@ -34,6 +35,7 @@ class TimeseriesPlotter(MplPlotter):
             ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
             ax.get_yaxis().set_ticks([])
             ax.set_xlabel('time (s)')
+            ax.legend()
 
         elif d.mode == 'map':
             assert len(d.list_traces) == 1, 'plot_timeseries with mode="map" do not support multi recording'
