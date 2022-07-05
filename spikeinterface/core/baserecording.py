@@ -1,5 +1,6 @@
 from typing import Iterable, List, Union
 from pathlib import Path
+import warnings
 
 import numpy as np
 
@@ -20,6 +21,9 @@ class BaseRecording(BaseExtractor):
     _main_annotations = ['is_filtered']
     _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []  # recording do not handle features
+    
+    # multiprocessing context preference. If None, then it's OS-dependent
+    preferred_mp_context = None
     
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
@@ -103,6 +107,13 @@ class BaseRecording(BaseExtractor):
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
         if return_scaled:
+            if hasattr(self, "NeoRawIOClass"):
+                if self.has_non_standard_units:
+                    message = ( 
+                    f'This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)'
+                    )
+                    warnings.warn(message)
+            
             if not self.has_scaled_traces():
                 raise ValueError('This recording do not support return_scaled=True (need gain_to_uV and offset_'
                                  'to_uV properties)')

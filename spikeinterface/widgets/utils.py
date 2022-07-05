@@ -1,43 +1,71 @@
 import numpy as np
 import random
 
+try:
+    import distinctipy
+    HAVE_DISTINCTIPY = True
+except ImportError:
+    HAVE_DISTINCTIPY = False
+
+try:
+    import matplotlib.pyplot as plt
+    HAVE_MPL = True
+except ImportError:
+    HAVE_MPL = False
 
 
-def get_unit_colors(sorting, map_name='gist_ncar', format='RGBA', shuffle=False):
+def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=False):
     """
-    Return a dict colors per units.
+    Return a dict of colors for given keys
     """
+    assert color_engine in ('auto', 'distinctipy', 'matplotlib', 'colorsys')
+    
     possible_formats = ('RGBA',)
     assert format in possible_formats, f'format must be {possible_formats}'
     
+    # select the colormap engine
+    if color_engine == 'auto':
+        if HAVE_DISTINCTIPY:
+            color_engine = 'distinctipy'
+        elif HAVE_MPL:
+            color_engine = 'matplotlib'
+        else:
+            color_engine = 'colorsys'
     
-    unit_ids = sorting.unit_ids
+    N = len(keys)
     
-    try:
-        import distinctipy
-        HAVE_DISTINCTIPY = True
-    except ImportError:
-        HAVE_DISTINCTIPY = False
-
-    
-    if HAVE_DISTINCTIPY:
-        colors = distinctipy.get_colors(unit_ids.size)
+    if color_engine == 'distinctipy':
+        colors = distinctipy.get_colors(N)
         # add the alpha
         colors = [ color + (1., ) for color in colors]
-    else:
-        import matplotlib.pyplot as plt
-        # some map have black or white at border so +10
-        margin = max(4, len(unit_ids) // 20) // 2
-        cmap = plt.get_cmap(map_name, len(unit_ids) + 2 * margin)
 
-        colors = [cmap(i+margin) for i, unit_id in enumerate(unit_ids)]
+    elif color_engine == 'matplotlib':
+        # some map have black or white at border so +10
+        margin = max(4, N // 20) // 2
+        cmap = plt.get_cmap(map_name, N + 2 * margin)
+        colors = [cmap(i+margin) for i, key in enumerate(keys)]
         if shuffle:
             random.shuffle(colors)
+
+    elif color_engine == 'colorsys': 
+        import colorsys
+        colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5)  + (1., )  for x in range(N)]
+
     
-    dict_colors = dict(zip(unit_ids, colors))
+    dict_colors = dict(zip(keys, colors))
     
 
     return dict_colors
+
+
+
+def get_unit_colors(sorting, color_engine='auto',map_name='gist_ncar', format='RGBA', shuffle=False):
+    """
+    Return a dict colors per units.
+    """
+    colors = get_some_colors(sorting.unit_ids, color_engine=color_engine, 
+                        map_name=map_name, format=format, shuffle=shuffle)
+    return colors
 
 
 def array_to_image(data, 
