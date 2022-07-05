@@ -29,7 +29,7 @@ from .unit_waveforms_density_map import UnitWaveformDensityMapWidget, plot_unit_
 
 
 
-from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
+# from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
 
 
 widget_list = [
@@ -40,8 +40,23 @@ widget_list = [
     UnitWaveformDensityMapWidget,
 
 
-    AmplitudeTimeseriesWidget,
+    # AmplitudeTimeseriesWidget,
 
 ]
+
+# for wcls in widget_list:
+#     wcls_doc = wcls.__doc__
+#     print(wcls, wcls_doc)
+    
+#     wcls_doc += """
+#     backends: str
+#         {backends}
+#     backend_kwargs: kwargs
+#         {backend_kwargs}
+#     """
+#     print(wcls, wcls_doc)
+    
+#     wcls.__doc__ = wcls_doc.format(backends=list(wcls.possible_backends.keys()),
+#                                    backend_kwargs=wcls.possible_backends_kwargs)
 
 

@@ -7,6 +7,14 @@ import numpy as np
 
 class MplPlotter(BackendPlotter):
     backend = 'matplotlib'
+    backend_kwargs = {
+        "figure": "the matplotlib figure",
+        "ax": "the matplotlib figure",
+        "axes": "the matplotlib figure",
+        "num_axes": "the matplotlib figure",
+    }
+    # def __init__(self):
+    #     pass
     
     def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
         """

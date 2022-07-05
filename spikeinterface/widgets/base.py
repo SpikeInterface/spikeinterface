@@ -24,6 +24,7 @@ def set_default_plotter_backend(backend):
 class BaseWidget:
     # this need to be reset in the subclass
     possible_backends = None
+    possible_backends_kwargs = None
     
     def __init__(self, plot_data=None, backend=None, **backend_kwargs):
         # every widgets must prepare a dict "plot_data" in the init
@@ -43,11 +44,13 @@ class BaseWidget:
 
     @classmethod
     def register_backend(cls, backend_plotter):
-        cls.possible_backends[backend_plotter.backend] = backend_plotter
+        cls.possible_backends[backend_plotter.backend] = backend_plotter   
+        cls.possible_backends_kwargs[backend_plotter.backend] = backend_plotter.backend_kwargs     
 
 
 class BackendPlotter():
     backend = ''
+    backend_kwargs_docs = """"""
     
     @classmethod
     def register(cls, widget_cls):
@@ -71,7 +74,7 @@ def define_widget_function_from_class(widget_class, name):
         # we could return something else if needed  as we discussed
         return W
 
-    widget_func.__doc__ = widget_class.__init__.__doc__
+    widget_func.__doc__ = widget_class.__doc__
     widget_func.__name__ = name
 
     return widget_func
