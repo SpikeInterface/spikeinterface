@@ -18,11 +18,12 @@ class TimeseriesPlotter(MplPlotter):
 
         if d.mode == 'line':
             offset = d.vspacing * (n - 1)
-            
-            for i, chan_id in enumerate(d.channel_ids):
-                offset = d.vspacing * (n - 1 - i)
-                color = d.channel_colors[chan_id]
-                ax.plot(d.times, offset + d.traces[:, i], color=color)
+
+            for layer_key, traces in zip(d.layer_keys, d.list_traces):
+                for i, chan_id in enumerate(d.channel_ids):
+                    offset = d.vspacing * (n - 1 - i)
+                    color = d.colors[layer_key][chan_id]
+                    ax.plot(d.times, offset + traces[:, i], color=color)
 
             if d.show_channel_ids:
                 ax.set_yticks(np.arange(n) * d.vspacing)
@@ -35,19 +36,19 @@ class TimeseriesPlotter(MplPlotter):
             ax.set_xlabel('time (s)')
 
         elif d.mode == 'map':
+            assert len(d.list_traces) == 1, 'plot_timeseries with mode="map" do not support multi recording'
             extent = (d.time_range[0], d.time_range[1], 0, len(d.channel_ids))
-            im = ax.imshow(d.traces.T, interpolation='nearest',
+            im = ax.imshow(d.list_traces[0].T, interpolation='nearest',
                            origin='upper', aspect='auto', extent=extent, cmap=d.cmap)
-            
+
             if d.clim is None:
                 im.set_clim(-d.max_channel_amp, d.max_channel_amp)
             else:
                 im.set_clim(*d.clim)
-            
+
             if d.with_colorbar:
                 self.figure.colorbar(im, ax=ax)
 
-            
             if d.show_channel_ids:
                 ax.set_yticks(np.arange(n) + 0.5)
                 ax.set_yticklabels([str(chan_id) for chan_id in d.channel_ids[::-1]])
