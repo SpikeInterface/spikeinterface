@@ -112,12 +112,12 @@ class PlotUpdater:
             recordings = self.recordings
         elif mode =='map':
             layer_keys = [selected_layer]
-            recordings = {selected_layer: rec}
+            recordings = {selected_layer: self.recordings[selected_layer]}
         
         channel_ids = self.data_plot['channel_ids']
         order =  self.data_plot['order']
         times, list_traces, frame_range, order = _get_trace_list(recordings, channel_ids, time_range, order, segment_index)
-        print('list_traces', len(list_traces))
+        #~ print('list_traces', len(list_traces))
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
