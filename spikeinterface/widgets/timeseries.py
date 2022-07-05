@@ -180,6 +180,7 @@ class TimeseriesWidget(BaseWidget):
             vspacing=vspacing,
             colors=colors,
             show_channel_ids=show_channel_ids,
+            order_channel_by_depth=order_channel_by_depth
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
