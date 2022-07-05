@@ -55,8 +55,8 @@ class TestWidgets(unittest.TestCase):
         sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True, order_channel_by_depth=True)
         
         # multi layer
-        sw.plot_timeseries({'rec0' : self.recording, 'rec1' : scale(self.recording, gain=0.8, offset=0)}, color='r',
-                    mode='line', show_channel_ids=True)
+        sw.plot_timeseries({'rec0' : self.recording, 'rec1' : scale(self.recording, gain=0.8, offset=0)},
+                    color='r', mode='line', show_channel_ids=True)
 
     def test_plot_unit_waveforms(self):
         w = sw.plot_unit_waveforms(self.we)
@@ -84,8 +84,8 @@ if __name__ == '__main__':
     
     mytest.test_plot_timeseries()
     
-    #~ mytest.test_plot_unit_waveforms()
-    #~ mytest.test_plot_unit_templates()
-    #~ mytest.test_plot_unit_waveforms_density_map()
+    mytest.test_plot_unit_waveforms()
+    mytest.test_plot_unit_templates()
+    mytest.test_plot_unit_waveforms_density_map()
 
     plt.show()
