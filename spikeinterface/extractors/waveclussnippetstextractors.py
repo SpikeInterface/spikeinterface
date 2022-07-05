@@ -20,7 +20,7 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
         if file_path.name.startswith('times_'):
             times = self._getfield("cluster_class")[:, 1]
         elif file_path.name.endswith('_spikes.mat'):
-            times = self._getfield("index")
+            times = np.ravel(self._getfield("index"))
         else:
             raise ("Filename not compatible with waveclus file.")
 
@@ -43,7 +43,6 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
         snp_segment = WaveClustSnippetsSegment(snippets=snippets, spikesframes=np.round(times*(sampling_frequency/1000)))
         self.add_snippets_segment(snp_segment)
 
-        self.annotate(is_aligned=True)
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
 
     @staticmethod
@@ -136,4 +135,4 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
         """
         if indeces is None:
             return self._spikestimes
-        raise self._spikestimes[indeces]
+        return self._spikestimes[indeces]

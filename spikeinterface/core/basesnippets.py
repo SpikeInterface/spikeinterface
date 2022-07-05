@@ -13,7 +13,7 @@ class BaseSnippets(BaseRecordingSnippets):
     """
     Abstract class representing several multichannel snippets.
     """
-    _main_annotations = ['is_filtered', 'is_alinged']
+    _main_annotations = []
     _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []
 
@@ -30,8 +30,6 @@ class BaseSnippets(BaseRecordingSnippets):
 
         self._snippets_segments: List[BaseSnippetsSegment] = []
         # initialize main annotation and properties
-        self.annotate(is_alinged=True)
-        self.annotate(is_filtered=True)
 
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -76,10 +74,9 @@ class BaseSnippets(BaseRecordingSnippets):
         for segment_index in range(self.get_num_segments()):
             s += self.get_num_snippets(segment_index)
         return s
-    
+
     def is_aligned(self):
-        # the is_filtered is handle with annotation
-        return self._annotations.get('is_aligned', False)
+        return self._nbefore is not None
 
     def get_num_segments(self):
         return len(self._snippets_segments)
