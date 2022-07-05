@@ -95,16 +95,32 @@ class PlotUpdater:
         self.recordings = data_plot['recordings']
         self.next_data_plot = data_plot.copy()
         
+        self.actual_segment_index = self.seg_selector.value
+        
+        rec0 = self.recordings[self.data_plot['layer_keys'][0]]
+        self.t_stops = [rec0.get_num_samples(segment_index=seg_index) / rec0.get_sampling_frequency()
+                            for seg_index in range(rec0.get_num_segments())]
     
     def __call__(self, change):
         self.ax.clear()
         
         t = self.time_slider.value
         d = self.win_sizer.value
-        time_range = np.array([t, t+d])
+        
         selected_layer = self.layer_selector.value
         segment_index = self.seg_selector.value
         mode = self.mode_selector.value
+        
+        t_stop = self.t_stops[segment_index]
+        if self.actual_segment_index != segment_index:
+            # change time_slider limits
+            self.time_slider.max = t_stop
+
+        # protect limits
+        if t >= t_stop - d:
+            t = t_stop - d
+
+        time_range = np.array([t, t+d])
         
         if mode =='line':
             # plot all layer
@@ -117,7 +133,6 @@ class PlotUpdater:
         channel_ids = self.data_plot['channel_ids']
         order =  self.data_plot['order']
         times, list_traces, frame_range, order = _get_trace_list(recordings, channel_ids, time_range, order, segment_index)
-        #~ print('list_traces', len(list_traces))
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
