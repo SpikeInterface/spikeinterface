@@ -6,7 +6,7 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
-from spikeinterface.toolkit import get_noise_levels
+from spikeinterface.core import get_noise_levels
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
