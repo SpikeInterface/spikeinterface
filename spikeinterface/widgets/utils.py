@@ -123,6 +123,7 @@ def array_to_image(data,
     for ir in range(num_rows):
         i1 = ir * num_timepoints_per_row_after_scaling
         i2 = min(i1 + num_timepoints_per_row_after_scaling, num_timepoints_after_scaling)
-        output_image[ir * (num_channels_after_scaling + spacing):ir * (num_channels_after_scaling + spacing) + num_channels_after_scaling, :i2-i1, :] = a[:, i1:i2, :]
+        output_image[ir * (num_channels_after_scaling + spacing):ir * (num_channels_after_scaling + spacing) + \
+            num_channels_after_scaling, :i2-i1, :] = a[:, i1:i2, :]
 
     return output_image
