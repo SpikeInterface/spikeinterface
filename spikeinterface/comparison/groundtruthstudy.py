@@ -248,7 +248,7 @@ class GroundTruthStudy:
         # metrics
         metrics = compute_quality_metrics(we, metric_names=metric_names)
         folder = self.study_folder / 'metrics'
-        folder.mkdir()
+        folder.mkdir(exist_ok=True)
         filename = folder / f'metrics _{rec_name}.txt'
         metrics.to_csv(filename, sep='\t', index=True)
 
