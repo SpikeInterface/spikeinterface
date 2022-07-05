@@ -13,9 +13,7 @@ class TimeseriesWidget(BaseWidget):
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, with_colorbar=True,
-                 
                  backend=None, **backend_kwargs):
-                 #~ figure=None, ax=None, **plot_kwargs):
         """
         Plots recording timeseries.
 
@@ -140,10 +138,10 @@ class TimeseriesWidget(BaseWidget):
             frame_range=frame_range,
             times=times,
             traces=traces,
-            mode = mode,
-            cmap = cmap,
-            clim = clim,
-            with_colorbar = with_colorbar,
+            mode=mode,
+            cmap=cmap,
+            clim=clim,
+            with_colorbar=with_colorbar,
             mean_channel_std=mean_channel_std,
             max_channel_amp=max_channel_amp,
             vspacing=vspacing,
