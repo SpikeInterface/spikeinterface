@@ -9,51 +9,51 @@ from ..postprocessing import get_template_channel_sparsity
 
 
 class UnitWaveformsWidget(BaseWidget):
+    """
+    Plots unit waveforms.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+    channel_ids: list
+        The channel ids to display
+    unit_ids: list
+        List of unit ids.
+    plot_templates: bool
+        If True, templates are plotted over the waveforms
+    radius_um: None or float
+        If not None, all channels within a circle around the peak waveform will be displayed
+        Incompatible with with `max_channels`
+    max_channels : None or int
+        If not None only max_channels are displayed per units.
+        Incompatible with with `radius_um`
+    set_title: bool
+        Create a plot title with the unit number if True.
+    plot_channels: bool
+        Plot channel locations below traces.
+    axis_equal: bool
+        Equal aspect ratio for x and y axis, to visualize the array geometry to scale.
+    lw: float
+        Line width for the traces.
+    unit_colors: None or dict
+        A dict key is unit_id and value is any color format handled by matplotlib.
+        If None, then the get_unit_colors() is internally used.
+    unit_selected_waveforms: None or dict
+        A dict key is unit_id and value is the subset of waveforms indices that should be 
+        be displayed
+    show_all_channels: bool
+        Show the whole probe if True, or only selected channels if False
+        The axis to be used. If not given an axis is created
+    """
     possible_backends = {}
+    possible_backends_kwargs = {}
     
     def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, max_channels=None, radius_um=None,
                  ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
-                 set_title=True,
-                 
-                 backend=None, **backend_kwargs):
-        """
-        Plots unit waveforms.
-
-        Parameters
-        ----------
-        waveform_extractor: WaveformExtractor
-        channel_ids: list
-            The channel ids to display
-        unit_ids: list
-            List of unit ids.
-        plot_templates: bool
-            If True, templates are plotted over the waveforms
-        radius_um: None or float
-            If not None, all channels within a circle around the peak waveform will be displayed
-            Incompatible with with `max_channels`
-        max_channels : None or int
-            If not None only max_channels are displayed per units.
-            Incompatible with with `radius_um`
-        set_title: bool
-            Create a plot title with the unit number if True.
-        plot_channels: bool
-            Plot channel locations below traces.
-        axis_equal: bool
-            Equal aspect ratio for x and y axis, to visualize the array geometry to scale.
-        lw: float
-            Line width for the traces.
-        unit_colors: None or dict
-            A dict key is unit_id and value is any color format handled by matplotlib.
-            If None, then the get_unit_colors() is internally used.
-        unit_selected_waveforms: None or dict
-            A dict key is unit_id and value is the subset of waveforms indices that should be 
-            be displayed
-        show_all_channels: bool
-            Show the whole probe if True, or only selected channels if False
-            The axis to be used. If not given an axis is created
-        """
+                 set_title=True, backend=None, **backend_kwargs):
+        
 
         # self.waveform_extractor = waveform_extractor
         # self._recording = we.recording

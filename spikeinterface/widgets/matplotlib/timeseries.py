@@ -6,6 +6,9 @@ from matplotlib.ticker import MaxNLocator
 
 
 class TimeseriesPlotter(MplPlotter):
+    
+    # def __init__(self):
+    #     MplPlotter.__init__(self)
 
     def do_plot(self, data_plot, **backend_kwargs):
         d = to_attr(data_plot)

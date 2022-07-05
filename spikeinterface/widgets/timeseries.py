@@ -7,52 +7,54 @@ from ..postprocessing import get_template_channel_sparsity
 
 
 class TimeseriesWidget(BaseWidget):
+    """
+    Plots recording timeseries.
+
+    Parameters
+    ----------
+    recording: RecordingExtractor or dict or list
+        The recording extractor object
+        If dict (or list) then it is a multi layer display to compare some processing
+        for instance
+    segment_index: None or int
+        The segment index.
+    channel_ids: list
+        The channel ids to display.
+    order_channel_by_depth: boolean
+        Reorder channel by depth.
+    time_range: list
+        List with start time and end time
+    mode: 'line' or 'map' or 'auto'
+        2 possible mode:
+            * 'line' : classical for low channel count
+            * 'map' : for high channel count use color heat map
+            * 'auto' : auto switch depending the channel count <32ch
+    cmap: str default 'RdBu'
+        matplotlib colormap used in mode 'map'
+    show_channel_ids: bool
+        Set yticks with channel ids
+    color_groups: bool
+        If True groups are plotted with different colors
+    color:   str default: None
+        The color used to draw the traces.
+    clim: None or tupple
+        When mode='map' this control color lims
+    with_colorbar: bool default True
+        When mode='map' add colorbar
+
+    Returns
+    -------
+    W: TimeseriesWidget
+        The output widget
+    """
     possible_backends = {}
+    possible_backends_kwargs = {}
+    
 
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, with_colorbar=True,
                  backend=None, **backend_kwargs):
-        """
-        Plots recording timeseries.
-
-        Parameters
-        ----------
-        recording: RecordingExtractor or dict or list
-            The recording extractor object
-            If dict (or list) then it is a multi layer display to compare some processing
-            for instance
-        segment_index: None or int
-            The segment index.
-        channel_ids: list
-            The channel ids to display.
-        order_channel_by_depth: boolean
-            Reorder channel by depth.
-        time_range: list
-            List with start time and end time
-        mode: 'line' or 'map' or 'auto'
-            2 possible mode:
-                * 'line' : classical for low channel count
-                * 'map' : for high channel count use color heat map
-                * 'auto' : auto switch depending the channel count <32ch
-        cmap: str default 'RdBu'
-            matplotlib colormap used in mode 'map'
-        show_channel_ids: bool
-            Set yticks with channel ids
-        color_groups: bool
-            If True groups are plotted with different colors
-        color:   str default: None
-            The color used to draw the traces.
-        clim: None or tupple
-            When mode='map' this control color lims
-        with_colorbar: bool default True
-            When mode='map' add colorbar
-
-        Returns
-        -------
-        W: TimeseriesWidget
-            The output widget
-        """
         if isinstance(recording, BaseRecording):
             recordings = {'rec': recording}
         elif isinstance(recording, dict):

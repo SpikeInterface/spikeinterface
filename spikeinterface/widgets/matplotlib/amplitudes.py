@@ -1,10 +1,10 @@
 
-from .base_mpl import MplPlotter
+# from .base_mpl import MplPlotter
 
 
-class AmplitudeTimeseriesPlotter(MplPlotter):
-    def plot(self, data):
-        print('plot')
+# class AmplitudeTimeseriesPlotter(MplPlotter):
+#     def plot(self, data):
+#         print('plot')
 
-from ..amplitudes import AmplitudeTimeseriesWidget
-AmplitudeTimeseriesPlotter.register(AmplitudeTimeseriesWidget)
+# from ..amplitudes import AmplitudeTimeseriesWidget
+# AmplitudeTimeseriesPlotter.register(AmplitudeTimeseriesWidget)
