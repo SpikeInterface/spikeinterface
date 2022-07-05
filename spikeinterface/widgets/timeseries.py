@@ -1,28 +1,27 @@
 import numpy as np
 
+from ..core import BaseRecording
 from .base import BaseWidget, define_widget_function_from_class
-from .utils import get_unit_colors
+from .utils import get_some_colors
 from ..postprocessing import get_template_channel_sparsity
-
-
 
 
 class TimeseriesWidget(BaseWidget):
     possible_backends = {}
-    
+
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, with_colorbar=True,
-                 
                  backend=None, **backend_kwargs):
-                 #~ figure=None, ax=None, **plot_kwargs):
         """
         Plots recording timeseries.
 
         Parameters
         ----------
-        recording: RecordingExtractor
+        recording: RecordingExtractor or dict or list
             The recording extractor object
+            If dict (or list) then it is a multi layer display to compare some processing
+            for instance
         segment_index: None or int
             The segment index.
         channel_ids: list
@@ -54,12 +53,25 @@ class TimeseriesWidget(BaseWidget):
         W: TimeseriesWidget
             The output widget
         """
+        if isinstance(recording, BaseRecording):
+            recordings = {'rec': recording}
+        elif isinstance(recording, dict):
+            recordings = recording
+            k0 = list(recordings.keys())[0]
+            recording = recordings[k0]
+        elif isinstance(recording, list):
+            recordings = {f'rec{i}': rec for i, rec in enumerate(recording)}
+            recording = recordings[0]
+        else:
+            raise ValueError('plot_timeseries recording must be recording or dict or list')
+
+        layer_keys = list(recordings.keys())
 
         if segment_index is None:
             if recording.get_num_segments() != 1:
                 raise ValueError('You must provide segment_index=...')
             segment_index = 0
-        
+
         if channel_ids is None:
             channel_ids = recording.channel_ids
 
@@ -74,7 +86,6 @@ class TimeseriesWidget(BaseWidget):
             order = np.argsort(dist)
         else:
             order = None
-
 
         fs = recording.get_sampling_frequency()
         if time_range is None:
@@ -96,57 +107,78 @@ class TimeseriesWidget(BaseWidget):
         time_range = frame_range / fs
         times = np.arange(frame_range[0], frame_range[1]) / fs
 
+        list_traces = []
+        for rec_name, rec in recordings.items():
+            traces = rec.get_traces(
+                segment_index=segment_index,
+                channel_ids=channel_ids,
+                start_frame=frame_range[0],
+                end_frame=frame_range[1]
+            )
 
-        traces = recording.get_traces(
-            segment_index=segment_index,
-            channel_ids=channel_ids,
-            start_frame=frame_range[0],
-            end_frame=frame_range[1]
-        )
-        
-        if order is not None:
-            traces = traces[:, order]
-            channel_ids = np.asarray(channel_ids)[order]
-        
-        # stat for auto scaling
-        mean_channel_std = np.mean(np.std(traces, axis=0))
-        max_channel_amp = np.max(np.max(np.abs(traces), axis=0))
+            if order is not None:
+                traces = traces[:, order]
+                channel_ids = np.asarray(channel_ids)[order]
+
+            list_traces.append(traces)
+
+        # stat for auto scaling done on the first layer
+        traces0 = list_traces[0]
+        mean_channel_std = np.mean(np.std(traces0, axis=0))
+        max_channel_amp = np.max(np.max(np.abs(traces0), axis=0))
         vspacing = max_channel_amp * 1.5
 
         if recording.get_channel_groups() is None:
             color_groups = False
 
+        # colors is a nested dict by layer and channels
+        # lets first create black for all channels and layer
+        colors = {}
+        for k in layer_keys:
+            colors[k] = {chan_id: 'k' for chan_id in channel_ids}
+
         if color_groups:
             channel_groups = recording.get_channel_groups(channel_ids=channel_ids)
             groups = np.unique(channel_groups)
-            n_groups = groups.size
-            import colorsys
-            group_colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) for x in range(n_groups)]
-            group_colors = dict(zip(groups,  group_colors))
-            
+
+            group_colors = get_some_colors(groups, color_engine='auto')
+
             channel_colors = {}
             for i, chan_id in enumerate(channel_ids):
                 group = channel_groups[i]
                 channel_colors[chan_id] = group_colors[group]
-            
-        else:
-            channel_colors = {chan_id: color for chan_id in channel_ids}
 
-        
+            # first layer is colored then black
+            colors[layer_keys[0]] = channel_colors
+
+        elif color is not None:
+            # old behavior one color for all channel
+            # if multi layer then black for all
+            colors[layer_keys[0]] = {chan_id: color for chan_id in channel_ids}
+        elif color is None and len(recordings) > 1:
+            # several layer
+            layer_colors = get_some_colors(layer_keys)
+            for k in layer_keys:
+                colors[k] = {chan_id: layer_colors[k] for chan_id in channel_ids}
+        else:
+            # color is None unique layer : all channels black
+            pass
+
         plot_data = dict(
             channel_ids=channel_ids,
             time_range=time_range,
             frame_range=frame_range,
             times=times,
-            traces=traces,
-            mode = mode,
-            cmap = cmap,
-            clim = clim,
-            with_colorbar = with_colorbar,
+            layer_keys=layer_keys,
+            list_traces=list_traces,
+            mode=mode,
+            cmap=cmap,
+            clim=clim,
+            with_colorbar=with_colorbar,
             mean_channel_std=mean_channel_std,
             max_channel_amp=max_channel_amp,
             vspacing=vspacing,
-            channel_colors=channel_colors,
+            colors=colors,
             show_channel_ids=show_channel_ids,
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
