@@ -117,11 +117,11 @@ class PositionAndFeaturesClustering:
 
         import scipy, sklearn
 
-        hanning_window = np.zeros(nbefore+nafter)
-        hanning_window[:nbefore] = np.hanning(2*nbefore)[:nbefore]
-        hanning_window[nbefore:] = np.hanning(2*nafter)[nafter:]
+        #hanning_window = np.zeros(nbefore+nafter)
+        #hanning_window[:nbefore] = np.hanning(2*nbefore)[:nbefore]
+        #hanning_window[nbefore:] = np.hanning(2*nafter)[nafter:]
 
-        step_window = hanning_window[:, np.newaxis]
+        #step_window = hanning_window[:, np.newaxis]
         #step_window = step_window[:, np.newaxis]
 
         for main_chan, waveforms in wfs_arrays.items():
@@ -132,8 +132,8 @@ class PositionAndFeaturesClustering:
             #closest_channels = idx_sorted[:nb_ptps]
 
             if len(waveforms) > 0:
-                waveforms_filtered = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
-                waveforms = waveforms_filtered*(1 - step_window) + step_window*waveforms
+                #waveforms_filtered = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
+                #waveforms = waveforms_filtered*(1 - step_window) + step_window*waveforms
                 all_ptps = np.ptp(waveforms, axis=1)
                 ptp_channels = channels[np.argmax(np.ptp(waveforms, axis=1), axis=1)]
 

@@ -18,7 +18,7 @@ class Spykingcircus2Sorter(BaseSorter):
         'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'freq_min' : 300, 'freq_max' : 6000, 'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5, 'exclude_sweep_ms' : 2},
-        'selection' : {'n_peaks_per_channel' : 2000, 'min_n_peaks' : 20000},
+        'selection' : {'n_peaks_per_channel' : 5000, 'min_n_peaks' : 20000},
         'localization' : {},
         'clustering': {},
         'matching':  {},
