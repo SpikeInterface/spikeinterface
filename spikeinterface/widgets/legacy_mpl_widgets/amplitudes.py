@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
-from ...toolkit import compute_spike_amplitudes
+from ...postprocessing import compute_spike_amplitudes
 from .utils import get_unit_colors
 
 
@@ -17,7 +17,7 @@ class AmplitudeBaseWidget(BaseWidget):
         
         if self.we.is_extension('spike_amplitudes'):
             sac = self.we.load_extension('spike_amplitudes')
-            self.amplitudes = sac.get_amplitudes(outputs='by_unit')
+            self.amplitudes = sac.get_data(outputs='by_unit')
         else:
             self.amplitudes = compute_spike_amplitudes(self.we, outputs='by_unit', **compute_kwargs)
         
