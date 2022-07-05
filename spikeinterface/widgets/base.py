@@ -50,7 +50,6 @@ class BaseWidget:
 
 class BackendPlotter():
     backend = ''
-    backend_kwargs_docs = """"""
     
     @classmethod
     def register(cls, widget_cls):
