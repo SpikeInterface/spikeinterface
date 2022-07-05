@@ -22,9 +22,9 @@ def test_NpySnippetsExtractor():
     npy_snippets = NpySnippetsExtractor(file_path, sampling_frequency=sampling_frequency)
 
     assert npy_snippets.get_num_segments() == snippets.get_num_segments()
-    assert npy_snippets.get_num_snippets() == snippets.get_num_snippets()
+    assert npy_snippets.get_num_snippets(1) == snippets.get_num_snippets(1)
     assert npy_snippets.snippet_len == snippets.snippet_len
 
 
 if __name__ == '__main__':
-    test_NpySnippetsExtractor
+    test_NpySnippetsExtractor()

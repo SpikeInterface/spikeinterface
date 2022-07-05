@@ -112,7 +112,7 @@ def generate_snippets(
     peaks2['segment_ind'] = np.concatenate(
         [si+np.zeros(len(s[0])) for si, s in enumerate(strains)])
     peaks2['unit_ind'] = 0
-    wfs = []
+    
     
     if wf_folder is None:
         mode = "shared_memory"
@@ -120,13 +120,14 @@ def generate_snippets(
     else:
         mode = "memmap"
         folder = wf_folder
-    
+   
+    wfs_arrays = extract_waveforms_to_buffers(recording, peaks2, [0], nbefore, nafter,
+                                                mode=mode, return_scaled=False, folder=folder,
+                                                dtype=recording.get_dtype(), sparsity_mask=None, 
+                                                n_jobs=1, copy=True)
+    wfs = []
     for i in range(len(durations)):
-        wfs_arrays = extract_waveforms_to_buffers(recording, peaks2, [0], nbefore, nafter,
-                                                  mode=mode, return_scaled=False, folder=folder,
-                                                  dtype=recording.get_dtype(), sparsity_mask=None, 
-                                                  n_jobs=1, copy=True)
-        wfs.append(wfs_arrays[0])  # extract class zero
+         wfs.append(wfs_arrays[0][peaks2['segment_ind']==i,:,:])  # extract class zero
 
     nse = NumpySnippetsExtractor(snippets_list=wfs, spikesframes_list=[np.sort(s[0]) for s in strains],
                                  sampling_frequency=recording.get_sampling_frequency(),
