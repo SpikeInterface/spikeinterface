@@ -1,4 +1,3 @@
-from tabnanny import verbose
 import numpy as np
 import warnings
 
@@ -52,6 +51,7 @@ class TimeseriesPlotter(FigurlPlotter):
             
         url = tiled_image.url(label=f'SpikeInterface - {data_plot["layer_keys"]}', verbose=False)
         print(url)
+        return url
 
 
 TimeseriesPlotter.register(TimeseriesWidget)
