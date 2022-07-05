@@ -115,6 +115,7 @@ class PlotUpdater:
         if self.actual_segment_index != segment_index:
             # change time_slider limits
             self.time_slider.max = t_stop
+            self.actual_segment_index = segment_index
 
         # protect limits
         if t >= t_stop - d:
