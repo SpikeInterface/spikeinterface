@@ -43,20 +43,3 @@ widget_list = [
     # AmplitudeTimeseriesWidget,
 
 ]
-
-# for wcls in widget_list:
-#     wcls_doc = wcls.__doc__
-#     print(wcls, wcls_doc)
-    
-#     wcls_doc += """
-#     backends: str
-#         {backends}
-#     backend_kwargs: kwargs
-#         {backend_kwargs}
-#     """
-#     print(wcls, wcls_doc)
-    
-#     wcls.__doc__ = wcls_doc.format(backends=list(wcls.possible_backends.keys()),
-#                                    backend_kwargs=wcls.possible_backends_kwargs)
-
-
