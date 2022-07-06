@@ -55,30 +55,31 @@ class TimeseriesWidget(BaseWidget):
         """
         if isinstance(recording, BaseRecording):
             recordings = {'rec': recording}
+            rec0 = recording
         elif isinstance(recording, dict):
             recordings = recording
             k0 = list(recordings.keys())[0]
-            recording = recordings[k0]
+            rec0 = recordings[k0]
         elif isinstance(recording, list):
             recordings = {f'rec{i}': rec for i, rec in enumerate(recording)}
-            recording = recordings[0]
+            rec0= recordings[0]
         else:
             raise ValueError('plot_timeseries recording must be recording or dict or list')
 
         layer_keys = list(recordings.keys())
 
         if segment_index is None:
-            if recording.get_num_segments() != 1:
+            if rec0.get_num_segments() != 1:
                 raise ValueError('You must provide segment_index=...')
             segment_index = 0
 
         if channel_ids is None:
-            channel_ids = recording.channel_ids
+            channel_ids = rec0.channel_ids
 
         if order_channel_by_depth:
             import scipy.spatial
-            locations = recording.get_channel_locations()
-            channel_inds = recording.ids_to_indices(channel_ids)
+            locations = rec0.get_channel_locations()
+            channel_inds = rec0.ids_to_indices(channel_ids)
             locations = locations[channel_inds, :]
             origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[None, :]
             dist = scipy.spatial.distance.cdist(locations, origin, metric='euclidean')
@@ -87,7 +88,7 @@ class TimeseriesWidget(BaseWidget):
         else:
             order = None
 
-        fs = recording.get_sampling_frequency()
+        fs = rec0.get_sampling_frequency()
         if time_range is None:
             time_range = (0, 1.)
         time_range = np.array(time_range)
@@ -100,35 +101,16 @@ class TimeseriesWidget(BaseWidget):
                 mode = 'map'
         mode = mode
         cmap = cmap
-
-        frame_range = (time_range * fs).astype('int64')
-        a_max = recording.get_num_frames(segment_index=segment_index)
-        frame_range = np.clip(frame_range, 0, a_max)
-        time_range = frame_range / fs
-        times = np.arange(frame_range[0], frame_range[1]) / fs
-
-        list_traces = []
-        for rec_name, rec in recordings.items():
-            traces = rec.get_traces(
-                segment_index=segment_index,
-                channel_ids=channel_ids,
-                start_frame=frame_range[0],
-                end_frame=frame_range[1]
-            )
-
-            if order is not None:
-                traces = traces[:, order]
-                channel_ids = np.asarray(channel_ids)[order]
-
-            list_traces.append(traces)
-
+        
+        times, list_traces, frame_range, order = _get_trace_list(recordings, channel_ids, time_range, order, segment_index)
+        
         # stat for auto scaling done on the first layer
         traces0 = list_traces[0]
         mean_channel_std = np.mean(np.std(traces0, axis=0))
         max_channel_amp = np.max(np.max(np.abs(traces0), axis=0))
         vspacing = max_channel_amp * 1.5
 
-        if recording.get_channel_groups() is None:
+        if rec0.get_channel_groups() is None:
             color_groups = False
 
         # colors is a nested dict by layer and channels
@@ -138,7 +120,7 @@ class TimeseriesWidget(BaseWidget):
             colors[k] = {chan_id: 'k' for chan_id in channel_ids}
 
         if color_groups:
-            channel_groups = recording.get_channel_groups(channel_ids=channel_ids)
+            channel_groups = rec0.get_channel_groups(channel_ids=channel_ids)
             groups = np.unique(channel_groups)
 
             group_colors = get_some_colors(groups, color_engine='auto')
@@ -165,6 +147,7 @@ class TimeseriesWidget(BaseWidget):
             pass
 
         plot_data = dict(
+            recordings=recordings,
             channel_ids=channel_ids,
             time_range=time_range,
             frame_range=frame_range,
@@ -180,8 +163,40 @@ class TimeseriesWidget(BaseWidget):
             vspacing=vspacing,
             colors=colors,
             show_channel_ids=show_channel_ids,
+            order=order,
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
 plot_timeseries = define_widget_function_from_class(TimeseriesWidget, 'plot_timeseries')
+
+
+def _get_trace_list(recordings, channel_ids, time_range, order, segment_index):
+    # function also used in ipywidgets plotter
+    k0 = list(recordings.keys())[0]
+    rec0 = recordings[k0]
+
+    fs = rec0.get_sampling_frequency()
+    
+    frame_range = (time_range * fs).astype('int64')
+    a_max = rec0.get_num_frames(segment_index=segment_index)
+    frame_range = np.clip(frame_range, 0, a_max)
+    time_range = frame_range / fs
+    times = np.arange(frame_range[0], frame_range[1]) / fs
+
+    list_traces = []
+    for rec_name, rec in recordings.items():
+        traces = rec.get_traces(
+            segment_index=segment_index,
+            channel_ids=channel_ids,
+            start_frame=frame_range[0],
+            end_frame=frame_range[1]
+        )
+
+        if order is not None:
+            traces = traces[:, order]
+            channel_ids = np.asarray(channel_ids)[order]
+
+        list_traces.append(traces)
+    
+    return times, list_traces, frame_range, order

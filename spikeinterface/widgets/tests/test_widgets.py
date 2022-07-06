@@ -84,8 +84,8 @@ if __name__ == '__main__':
     
     mytest.test_plot_timeseries()
     
-    mytest.test_plot_unit_waveforms()
-    mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_waveforms_density_map()
+    # mytest.test_plot_unit_waveforms()
+    # mytest.test_plot_unit_templates()
+    # mytest.test_plot_unit_waveforms_density_map()
 
     plt.show()
