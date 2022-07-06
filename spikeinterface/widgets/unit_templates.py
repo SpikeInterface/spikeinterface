@@ -12,7 +12,7 @@ from .unit_waveforms import UnitWaveformsWidget
 
 class UnitTemplateWidget(UnitWaveformsWidget):
     possible_backends = {}
-    possible_backends_kwargs = {}
+
 
     def __init__(self, *args, **kargs):
         kargs['plot_waveforms'] = False

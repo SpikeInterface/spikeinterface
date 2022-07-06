@@ -24,7 +24,6 @@ def set_default_plotter_backend(backend):
 class BaseWidget:
     # this need to be reset in the subclass
     possible_backends = None
-    possible_backends_kwargs = None
     
     def __init__(self, plot_data=None, backend=None, **backend_kwargs):
         # every widgets must prepare a dict "plot_data" in the init

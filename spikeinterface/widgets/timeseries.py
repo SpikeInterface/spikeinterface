@@ -48,7 +48,6 @@ class TimeseriesWidget(BaseWidget):
         The output widget
     """
     possible_backends = {}
-    possible_backends_kwargs = {}
     
 
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,

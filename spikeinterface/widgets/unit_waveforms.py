@@ -46,7 +46,7 @@ class UnitWaveformsWidget(BaseWidget):
         The axis to be used. If not given an axis is created
     """
     possible_backends = {}
-    possible_backends_kwargs = {}
+
     
     def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
