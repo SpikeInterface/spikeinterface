@@ -64,7 +64,7 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         
         
         app = AppLayout(
-            center=output,
+            center=fig.canvas,
             footer=VBox([time_slider,
                         HBox([layer_selector, seg_selector, win_sizer, mode_selector]),
                         ]),
