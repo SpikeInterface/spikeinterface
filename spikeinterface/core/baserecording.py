@@ -22,9 +22,6 @@ class BaseRecording(BaseExtractor):
     _main_properties = ['group', 'location', 'gain_to_uV', 'offset_to_uV']
     _main_features = []  # recording do not handle features
     
-    # multiprocessing context preference. If None, then it's OS-dependent
-    preferred_mp_context = None
-    
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
 
