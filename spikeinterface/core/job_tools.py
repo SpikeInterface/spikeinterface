@@ -223,7 +223,7 @@ class ChunkRecordingExecutor:
     chunk_duration : str or float or None
         Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
     mp_context : str or None
-        "fork" (default) or "spawn". If None, the context is taken by the recording.preferred_mp_context.
+        "fork" (default) or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
         "fork" is only available on UNIX systems.
     job_name: str
         Job name
@@ -243,7 +243,7 @@ class ChunkRecordingExecutor:
         self.init_args = init_args
         
         if mp_context is None:
-            mp_context = recording.preferred_mp_context
+            mp_context = recording.get_preferred_mp_context()
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
                 

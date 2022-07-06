@@ -54,8 +54,11 @@ class BaseExtractor:
 
         self.is_dumpable = True
 
-        # Extractor specific list of pip extra requirements
+        # extractor specific list of pip extra requirements
         self.extra_requirements = []
+        
+        # preferred context for multiprocessing
+        self._preferred_mp_context = None
 
     def get_num_segments(self):
         # This is implemented in BaseRecording or BaseSorting
@@ -124,6 +127,13 @@ class BaseExtractor:
             else:
                 raise ValueError(f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it")
 
+    def get_preferred_mp_context(self):
+        """
+        Get the preferred context for multiprocessing.
+        If None, the context is set by the multiprocessing package.
+        """
+        return self._preferred_mp_context
+    
     def get_annotation(self, key, copy=True):
         """
         Get a annotation.
@@ -253,13 +263,11 @@ class BaseExtractor:
             values = self._properties[k]
             if values is not None:
                 other.set_property(k, values[inds])
-        # TODO: copy features also
 
         other.extra_requirements.extend(self.extra_requirements)
         
-        if hasattr(self, "preferred_mp_context"):
-            if self.preferred_mp_context is not None:
-                other.preferred_mp_context = self.preferred_mp_context    
+        if self._preferred_mp_context is not None:
+            other._preferred_mp_context = self._preferred_mp_context
 
     def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
                 relative_to=None, folder_metadata=None):

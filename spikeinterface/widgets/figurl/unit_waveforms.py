@@ -8,7 +8,7 @@ class UnitWaveformPlotter(FigurlPlotter):
         try:
             import figurl as fig
         except ModuleNotFoundError:
-            raise Exception('Figurl is not installed. See https://github.com/scratchrealm/figurl2')
+            raise Exception('Figurl is not installed. See https://github.com/flatironinstitute/figurl')
 
         d = data_plot
         unit_ids = d['unit_ids']
@@ -53,4 +53,3 @@ class UnitWaveformPlotter(FigurlPlotter):
 
 from ..unit_waveforms import UnitWaveformsWidget
 UnitWaveformPlotter.register(UnitWaveformsWidget)
-
