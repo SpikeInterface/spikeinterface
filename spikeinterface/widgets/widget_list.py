@@ -29,7 +29,7 @@ from .unit_waveforms_density_map import UnitWaveformDensityMapWidget, plot_unit_
 
 
 
-from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
+# from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
 
 
 widget_list = [
@@ -40,8 +40,6 @@ widget_list = [
     UnitWaveformDensityMapWidget,
 
 
-    AmplitudeTimeseriesWidget,
+    # AmplitudeTimeseriesWidget,
 
 ]
-
-
