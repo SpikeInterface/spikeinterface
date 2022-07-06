@@ -26,12 +26,13 @@ class PositionAndFeaturesClustering:
         "peak_locations" : None,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
-        "cleaning_kwargs" : {"method": "cosine", "similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
+        "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "tmp_folder" : None,
         "local_radius_um" : 50,
         "max_spikes_per_unit" : 100,
         "ms_before" : 1.5,
         "ms_after": 2.5,
+        "cleaning": "cosine",
         "waveform_mode" : "memmap",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
     }
@@ -185,7 +186,7 @@ class PositionAndFeaturesClustering:
             wf_folder.mkdir()
 
 
-        cleaning_method = params["cleaning_kwargs"].pop("method")
+        cleaning_method = params["cleaning"]
 
         print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
 
