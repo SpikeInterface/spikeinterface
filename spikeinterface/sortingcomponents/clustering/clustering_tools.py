@@ -543,9 +543,9 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     recording.annotate(is_filtered=True)
 
     method_kwargs.update({'waveform_extractor' : waveform_extractor, 
-                          'noise_levels' : np.zeros(num_chans),
-                          'amplitudes' : [0.95, 1.05],
-                          'sparsify_threshold' : sparsify_threshold, 
+                          'noise_levels' : noise_levels,
+                          'amplitudes' : [0.9, 1.1],
+                          'sparsify_threshold' : 1,
                           'omp_min_sps' : 0})
 
     ignore_ids = []
@@ -559,7 +559,6 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
                               'norms' : computed['norms'],
                               'sparsities' : computed['sparsities']})
         valid = (spikes['sample_ind'] > padding + i*duration) * (spikes['sample_ind'] < padding + (i+1)*duration)
-        print(spikes[valid])
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
                 j = spikes[valid]['cluster_ind'][0]
