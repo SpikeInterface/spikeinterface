@@ -25,7 +25,10 @@ class BenchmarkPeakSelection:
         self.verbose = verbose
         self.recording, self.gt_sorting = read_mearec(mearec_file)
         self.job_kwargs = job_kwargs
-        self.recording_f = bandpass_filter(self.recording, dtype='float32')
+        if not self.recording.is_filtered():
+            self.recording_f = bandpass_filter(self.recording,  dtype='float32')
+        else:
+            self.recording_f = self.recording
         self.recording_f = common_reference(self.recording_f)
         self.sampling_rate = self.recording_f.get_sampling_frequency()
 

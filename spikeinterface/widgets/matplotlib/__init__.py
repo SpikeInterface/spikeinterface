@@ -5,4 +5,4 @@ from .unit_templates import UnitTemplateWidget
 from .unit_waveforms_density_map import UnitWaveformDensityMapPlotter
 
 
-from .amplitudes import AmplitudeTimeseriesPlotter
+# from .amplitudes import AmplitudeTimeseriesPlotter
