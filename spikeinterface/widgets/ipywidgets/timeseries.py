@@ -28,7 +28,7 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = Output(layout=Layout(width=f'{width}cm'))
             with output:
-                fig, ax = plt.subplots(figsize=(width * cm, hight * cm))
+                fig, ax = plt.subplots(figsize=(width * cm, height * cm))
                 plt.show()
 
         t_start = 0. 
