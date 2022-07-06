@@ -35,7 +35,7 @@ class TimeseriesPlotter(MplPlotter):
             ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
             ax.get_yaxis().set_ticks([])
             ax.set_xlabel('time (s)')
-            ax.legend()
+            ax.legend(loc='upper right')
 
         elif d.mode == 'map':
             assert len(d.list_traces) == 1, 'plot_timeseries with mode="map" do not support multi recording'
