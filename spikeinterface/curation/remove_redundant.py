@@ -77,7 +77,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
                 remove_unit_ids.append(u2)
     elif remove_strategy == 'highest_amplitude':
         peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="at_index")
-        print(peak_values)
+        peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
         for u1, u2 in redundant_unit_pairs:
             if np.abs(peak_values[u1]) < np.abs(peak_values[u2]):
                 remove_unit_ids.append(u1)
