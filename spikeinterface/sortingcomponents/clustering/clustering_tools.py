@@ -355,7 +355,7 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
             
             equal, shift = check_equal_template_with_distribution_overlap(wfs0, wfs1,
                             num_shift=auto_merge_num_shift, quantile_limit=auto_merge_quantile_limit, 
-                            return_shift=True, debug=False)
+                            return_shift=True)
             
             if equal:
                 auto_merge_list.append((l0, l1, shift))
