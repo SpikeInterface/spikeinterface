@@ -1,0 +1,169 @@
+########################################################
+# YASS configuration example (all sections and values) #
+########################################################
+
+data:
+  # project's root folder, data will be loaded and saved here
+  # can be an absolute or relative path
+  root_folder: ./
+  # recordings filename (must be a binary file), details about the recordings
+  # are specified in the recordings section
+  recordings: data.bin
+  # channel geometry filename , supports txt (one x, y pair per line,
+  # separated by spaces) or a npy file with shape (n_channels, 2),
+  # where every row contains a x, y pair. see yass.geometry.parse for details
+  geometry: geom.txt
+  # if you have an initial templates, then yass will skip clustering stage and
+  # run the final deconvolution step.
+  # make sure that it is a .npy file
+  # with shape (# neurons x # temporal length x # channels)
+  # temporal length should be the same as recordings.spike_size_ms*recordings.sampling_rate: 20000
+  # channels equals to recordings.n_channels
+  # Also make sure the scale (or the unit) of the voltage trace is
+  # the same as yass-preprocessed voltage units. (recommend using yass output templates)
+  initial_templates:
+
+resources:
+  # CPU multi-processing flag: 1 = use multiple cores
+  multi_processing: 1
+  # Number of cores to use
+  n_processors: 2
+  # number of GPUs to use
+  n_gpu_processors: 1
+  # Length of processing chunk in seconds for multi-processing stages
+  n_sec_chunk: 10
+  # n_sec_chunk for gpu detection (lower if you get memory error during detection)
+  n_sec_chunk_gpu_detect: 0.5
+  # n_sec_chunk for gpu deconvolution (lower if you get memory error during deconv)
+  n_sec_chunk_gpu_deconv: 5
+  # which gpu to use, default is 0, i.e. first gpu;
+  gpu_id: 0
+  # generate phy visualization files; 0 - do not run; 1: generate phy files
+  generate_phy: 1
+  # generate phy visualization files; ratio of spikes that are processed for phy visualization
+  # decrease if memory issues are present
+  phy_percent_spikes: 0.05
+
+recordings:
+  # precision of the recording – must be a valid numpy dtype
+  dtype: int16
+  # recording rate (in Hz)
+  sampling_rate: 20000
+  # number of channels
+  n_channels: 10
+  # channels spatial radius to consider them neighbors, see
+  # yass.geometry.find_channel_neighbors for details
+  spatial_radius: 70
+  # temporal length of templates in ms. It must capture
+  # the full shape of waveforms on all channels
+  # (reminder: there is a propagation delay in waveform shape across channels)
+  # but longer means slower
+  spike_size_ms: 5
+  # temporal length of waveforms in ms (not considering propagation).
+  center_spike_size_ms: 2
+  # chunks to run clustering on (in seconds)
+  # leave blank to run it on full
+  clustering_chunk: [0, 300]
+  # chunks to run final deconv on (in seconds)
+  # leave blank to run it on full
+  final_deconv_chunk: #[0, 120]
+
+neuralnetwork:
+  # decide to use nn or not
+  apply_nn: True
+  detect:
+    # model name, it can be an absolute path to a model
+    # (e.g. /path/to/my/model.ckpt) or a name of one of models included in yass
+    # (e.g. detect.pt). Check /src/yass/assets/nn_models for the list of available
+    # models.
+    filename: detect.pt
+    # number of filters. you can leave it as it is.
+    n_filters: [16, 8, 8]
+  denoise:
+    # model name, same rule as detect filename
+    filename: denoise.pt
+    # number of filters and size. you can leave it as it is.
+    n_filters: [16, 8, 4]
+    filter_sizes : [5, 11, 21]
+  training:
+    # input spike train file name. It must be a numpy file of an array of n x 2.
+    # n is the number of spikes, the first column is the spike times
+    # (center of spikes), the second column is the unit id.
+    # if you don't have an input spike train, leave it empty.
+    # it will run some parts of yass to make one
+    input_spike_train_filname:
+    # temporal length of spike to go into nn (default 3ms if left empty)
+    # for sorting (not training), you can leave it empty since it will be automatically
+    # determined from the above nn files.
+    spike_size_ms:
+
+preprocess:
+  # apply butterworth filter in the preprocessing step
+  apply_filter: True
+  # output dtype for transformed data
+  dtype: float32
+  # filter configuration
+  filter:
+    # Order of Butterworth filter
+    order: 3
+    # Low pass frequency (Hz)
+    low_pass_freq: 300
+    # High pass factor (proportion of sampling rate)
+    high_factor: 0.1
+
+detect:
+  # threshold
+  # if it is nn detector, must be between [0, 1]
+  # if amplitude threshold detector, recommend between [4, 6]
+  threshold: 0.5
+
+# All values are optional
+cluster:
+  # maximum number of spikes per clustering group
+  # if the total number of spikes per clustering group exceeds it,
+  # it randomly subsample
+  max_n_spikes: 10000
+  # knn_triage percentage (0.05 means triage 5%)
+  knn_triage: 0.05
+  # minimum firing rate
+  min_fr: 0.2
+  # cluster prior information
+  prior:
+    beta: 1
+    a: 1
+    lambda0: 0.01
+    nu: 5
+    V: 2
+
+clean_up:
+  # absolute maximum difference between two templates
+  # to be considered as distinct
+  abs_max_diff: 1.5 # range: 1.0 (oversplits) to 2.0 (overmerges)
+  # relative maximum difference (to ptp of larger template)
+  rel_max_diff: 0.1 # range: 0.05 (oversplits) to 0.2 (overmerges)
+  # minimum ptp allowed (in standardized unit)
+  min_ptp: 3.0 # range: 1 (keep more small units) to 8
+  # minimum firing rates (in Hz)
+  min_fr: 0.2
+  # if a template is off centered, it is a garbage template
+  off_center: 5
+  mad:
+    # minimum gap between theoretical and estimated variance allowed
+    min_var_gap: 2
+    # how many points of violation are allowed
+    max_violations: 10
+
+deconvolution:
+    threshold: 50
+
+    # only GPU option available for now
+    deconv_gpu: True
+
+    # update templates periodically based on drift model
+    update_templates: True
+
+    # discover new neurons periodically (period as in template update time)
+    neuron_discover: True
+
+    # time batches to update templates (sec)
+    template_update_time: 300

@@ -1,0 +1,34 @@
+
+experiment_name = r"{}"
+prb_file = r"{}"
+
+traces = dict(
+	raw_data_files=[r"{}"],
+	voltage_gain=1.,
+	sample_rate={},
+	n_channels={},
+	dtype={},
+)
+
+spikedetekt = dict(
+	chunk_size_seconds=3,
+	chunk_overlap_seconds=.015,
+
+	n_excerpts=50,
+	excerpt_size_seconds=1,
+	threshold_strong_std_factor={},
+	threshold_weak_std_factor={},
+	detect_spikes={},
+
+	connected_component_join_size=1,
+
+	extract_s_before={},
+	extract_s_after={},
+
+	n_features_per_channel={},
+	pca_n_waveforms_max=10000,
+)
+
+klustakwik2 = dict(
+	num_starting_clusters=50,
+)
