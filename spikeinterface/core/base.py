@@ -58,7 +58,7 @@ class BaseExtractor:
         self.extra_requirements = []
         
         # preferred context for multiprocessing
-        self._preferred_mp_context
+        self._preferred_mp_context = None
 
     def get_num_segments(self):
         # This is implemented in BaseRecording or BaseSorting
