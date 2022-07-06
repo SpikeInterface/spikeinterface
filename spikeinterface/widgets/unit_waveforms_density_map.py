@@ -36,7 +36,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         Plot channel locations below traces, only used if channel_locs is True
     """
     possible_backends = {}
-    possible_backends_kwargs = {}
+
     
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
                 max_channels=None, radius_um=None, same_axis=False,
