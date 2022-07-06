@@ -43,11 +43,13 @@ class Spykingcircus2Sorter(BaseSorter):
 
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
-        recording_f = bandpass_filter(recording, **filtering_params)
+        if not recording.is_filtered():
+            recording_f = bandpass_filter(recording, **filtering_params)
+        else:
+            recording_f = recording
 
         if params['common_reference']:
             recording_f = common_reference(recording_f)
-
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()
