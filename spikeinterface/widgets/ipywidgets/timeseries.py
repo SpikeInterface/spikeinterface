@@ -23,7 +23,7 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         cm = 1/2.54
         # width in cm
         width = 25
-        hight = 15
+        height = 15
         
         with plt.ioff():
             output = Output(layout=Layout(width=f'{width}cm'))
