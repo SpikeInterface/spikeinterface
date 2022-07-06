@@ -44,7 +44,8 @@ for wcls in widget_list:
     """
     backend_str = f"    {list(wcls.possible_backends.keys())}"
     backend_kwargs_str = ""
-    for backend, backend_kwargs_vals in wcls.possible_backends_kwargs.items():
+    for backend, backend_plotter in wcls.possible_backends.items():
+        backend_kwargs_vals = backend_plotter.backend_kwargs
         if len(backend_kwargs_vals) > 0:
             backend_kwargs_str += f"\n        {backend}:"
             for bk, bk_dsc in backend_kwargs_vals.items():

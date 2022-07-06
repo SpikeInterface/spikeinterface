@@ -45,7 +45,6 @@ class BaseWidget:
     @classmethod
     def register_backend(cls, backend_plotter):
         cls.possible_backends[backend_plotter.backend] = backend_plotter   
-        cls.possible_backends_kwargs[backend_plotter.backend] = backend_plotter.backend_kwargs     
 
 
 class BackendPlotter():
