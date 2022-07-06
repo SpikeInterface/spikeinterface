@@ -38,7 +38,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
                 'contact_vector' in parent_recording.get_property_keys():
                 self.channel_mapping = np.argsort(parent_recording.get_channel_locations()[:, 1])
             else:
-                self.channel_mapping = np.arange(num_channels)
+                self.channel_mapping = np.arange(parent_recording.get_num_channels())
 
         self.parent_recording = parent_recording
         self.num_channels = num_channels
