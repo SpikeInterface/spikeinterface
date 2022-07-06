@@ -42,10 +42,12 @@ def test_remove_redundant_units():
     we = extract_waveforms(rec, sorting_with_dup, folder=wf_folder)
     print(we)
     
-    sorting_clean = remove_redundant_units(we)
+    sorting_clean = remove_redundant_units(we, remove_strategy='minimum_shift')
     print(sorting_clean)
-    
-    
+    print(sorting_clean.unit_ids)
+
+    sorting_clean = remove_redundant_units(we, remove_strategy='highest_amplitude')
+    print(sorting_clean)
     print(sorting_clean.unit_ids)
 
 
