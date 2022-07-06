@@ -22,7 +22,7 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, n_shifts=2,
+def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                  local_radius_um=50, noise_levels=None, random_chunk_kwargs={},
                  outputs='numpy_compact', localization_dict=None, **job_kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
@@ -39,10 +39,10 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         Sign of the peak.
     detect_threshold: float
         Threshold, in median absolute deviations (MAD), to use to detect peaks.
-    n_shifts: int
-        Number of shifts to find peak.
-        For example, if `n_shift` is 2, a peak is detected if a sample crosses the threshold,
-        and the two samples before and after are above the sample.
+    exclude_sweep_ms: float or None
+        Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
+        For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
+        and no larger peaks are located during the 0.1ms preceding and following the peak.
     local_radius_um: float
         The radius to use for detection across local channels.
     noise_levels: array, optional
@@ -101,9 +101,11 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         extra_margin = max(nbefore, nafter)
 
     # and run
+    exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
+    
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
-    init_args = (recording.to_dict(), method, peak_sign, abs_threholds, n_shifts,
+    init_args = (recording.to_dict(), method, peak_sign, abs_threholds, exclude_sweep_size,
                  neighbours_mask, extra_margin, localization_dict)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='detect peaks', **job_kwargs)
@@ -119,7 +121,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
 detect_peaks.__doc__ = detect_peaks.__doc__.format(_shared_job_kwargs_doc)
 
 
-def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, n_shifts,
+def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclude_sweep_size,
                               neighbours_mask, extra_margin, localization_dict):
     """Initialize a worker for detecting peaks."""
 
@@ -133,7 +135,7 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, n_shi
     worker_ctx['method'] = method
     worker_ctx['peak_sign'] = peak_sign
     worker_ctx['abs_threholds'] = abs_threholds
-    worker_ctx['n_shifts'] = n_shifts
+    worker_ctx['exclude_sweep_size'] = exclude_sweep_size
     worker_ctx['neighbours_mask'] = neighbours_mask
     worker_ctx['extra_margin'] = extra_margin
     worker_ctx['localization_dict'] = localization_dict
@@ -163,12 +165,12 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     peak_sign = worker_ctx['peak_sign']
     abs_threholds = worker_ctx['abs_threholds']
-    n_shifts = worker_ctx['n_shifts']
+    exclude_sweep_size = worker_ctx['exclude_sweep_size']
     method = worker_ctx['method']
     extra_margin = worker_ctx['extra_margin']
     localization_dict = worker_ctx['localization_dict']
 
-    margin = n_shifts + extra_margin
+    margin = exclude_sweep_size + extra_margin
 
     # load trace in memory
     recording_segment = recording._recording_segments[segment_index]
@@ -182,10 +184,10 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         trace_detection = traces
 
     if method == 'by_channel':
-        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(trace_detection, peak_sign, abs_threholds, n_shifts)
+        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(trace_detection, peak_sign, abs_threholds, exclude_sweep_size)
     elif method == 'locally_exclusive':
         peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(trace_detection, peak_sign, abs_threholds, 
-                                                                       n_shifts, worker_ctx['neighbours_mask'])
+                                                                       exclude_sweep_size, worker_ctx['neighbours_mask'])
 
     if extra_margin > 0:
         peak_sample_ind += extra_margin
@@ -231,26 +233,26 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     return peaks
 
 
-def detect_peaks_by_channel(traces, peak_sign, abs_threholds, n_shifts):
+def detect_peaks_by_channel(traces, peak_sign, abs_threholds, exclude_sweep_size):
     """Detect peaks using the 'by channel' method."""
 
-    traces_center = traces[n_shifts:-n_shifts, :]
+    traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
     length = traces_center.shape[0]
 
     if peak_sign in ('pos', 'both'):
         peak_mask = traces_center > abs_threholds[None, :]
-        for i in range(n_shifts):
+        for i in range(exclude_sweep_size):
             peak_mask &= traces_center > traces[i:i + length, :]
-            peak_mask &= traces_center >= traces[n_shifts + i + 1:n_shifts + i + 1 + length, :]
+            peak_mask &= traces_center >= traces[exclude_sweep_size + i + 1:exclude_sweep_size + i + 1 + length, :]
 
     if peak_sign in ('neg', 'both'):
         if peak_sign == 'both':
             peak_mask_pos = peak_mask.copy()
 
         peak_mask = traces_center < -abs_threholds[None, :]
-        for i in range(n_shifts):
+        for i in range(exclude_sweep_size):
             peak_mask &= traces_center < traces[i:i + length, :]
-            peak_mask &= traces_center <= traces[n_shifts + i + 1:n_shifts + i + 1 + length, :]
+            peak_mask &= traces_center <= traces[exclude_sweep_size + i + 1:exclude_sweep_size + i + 1 + length, :]
 
         if peak_sign == 'both':
             peak_mask = peak_mask | peak_mask_pos
@@ -258,20 +260,20 @@ def detect_peaks_by_channel(traces, peak_sign, abs_threholds, n_shifts):
     # find peaks
     peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
     # correct for time shift
-    peak_sample_ind += n_shifts
+    peak_sample_ind += exclude_sweep_size
 
     return peak_sample_ind, peak_chan_ind
 
 
-def detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, n_shifts, neighbours_mask):
+def detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask):
     """Detect peaks using the 'locally exclusive' method."""
 
     assert HAVE_NUMBA, 'You need to install numba'
-    traces_center = traces[n_shifts:-n_shifts, :]
+    traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 
     if peak_sign in ('pos', 'both'):
         peak_mask = traces_center > abs_threholds[None, :]
-        peak_mask = _numba_detect_peak_pos(traces, traces_center, peak_mask, n_shifts,
+        peak_mask = _numba_detect_peak_pos(traces, traces_center, peak_mask, exclude_sweep_size,
                                            abs_threholds, peak_sign, neighbours_mask)
 
     if peak_sign in ('neg', 'both'):
@@ -279,7 +281,7 @@ def detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, n_shifts, ne
             peak_mask_pos = peak_mask.copy()
 
         peak_mask = traces_center < -abs_threholds[None, :]
-        peak_mask = _numba_detect_peak_neg(traces, traces_center, peak_mask, n_shifts,
+        peak_mask = _numba_detect_peak_neg(traces, traces_center, peak_mask, exclude_sweep_size,
                                            abs_threholds, peak_sign, neighbours_mask)
 
         if peak_sign == 'both':
@@ -287,14 +289,14 @@ def detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, n_shifts, ne
 
     # Find peaks and correct for time shift
     peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
-    peak_sample_ind += n_shifts
+    peak_sample_ind += exclude_sweep_size
 
     return peak_sample_ind, peak_chan_ind
 
 
 if HAVE_NUMBA:
     @numba.jit(parallel=False)
-    def _numba_detect_peak_pos(traces, traces_center, peak_mask, n_shifts,
+    def _numba_detect_peak_pos(traces, traces_center, peak_mask, exclude_sweep_size,
                                abs_threholds, peak_sign, neighbours_mask):
         num_chans = traces_center.shape[1]
         for chan_ind in range(num_chans):
@@ -304,11 +306,11 @@ if HAVE_NUMBA:
                 for neighbour in range(num_chans):
                     if not neighbours_mask[chan_ind, neighbour]:
                         continue
-                    for i in range(n_shifts):
+                    for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
                             peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces_center[s, neighbour]
                         peak_mask[s, chan_ind] &= traces_center[s, chan_ind] > traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces[n_shifts + s + i + 1, neighbour]
+                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces[exclude_sweep_size + s + i + 1, neighbour]
                         if not peak_mask[s, chan_ind]:
                             break
                     if not peak_mask[s, chan_ind]:
@@ -317,7 +319,7 @@ if HAVE_NUMBA:
 
 
     @numba.jit(parallel=False)
-    def _numba_detect_peak_neg(traces, traces_center, peak_mask, n_shifts,
+    def _numba_detect_peak_neg(traces, traces_center, peak_mask, exclude_sweep_size,
                                abs_threholds, peak_sign, neighbours_mask):
         num_chans = traces_center.shape[1]
         for chan_ind in range(num_chans):
@@ -327,11 +329,11 @@ if HAVE_NUMBA:
                 for neighbour in range(num_chans):
                     if not neighbours_mask[chan_ind, neighbour]:
                         continue
-                    for i in range(n_shifts):
+                    for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
                             peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces_center[s, neighbour]
                         peak_mask[s, chan_ind] &= traces_center[s, chan_ind] < traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces[n_shifts + s + i + 1, neighbour]
+                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces[exclude_sweep_size + s + i + 1, neighbour]
                         if not peak_mask[s, chan_ind]:
                             break
                     if not peak_mask[s, chan_ind]:

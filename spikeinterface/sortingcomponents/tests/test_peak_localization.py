@@ -18,7 +18,7 @@ def test_localize_peaks():
     recording = MEArecRecordingExtractor(local_path)
 
     peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, n_shifts=2,
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=False, progress_bar=False)
 
     list_locations = []

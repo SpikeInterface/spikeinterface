@@ -4,7 +4,8 @@ from pathlib import Path
 
 from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import read_mearec
-from spikeinterface.postprocessing import compute_template_similarity, check_equal_template_with_distribution_overlap
+from spikeinterface.postprocessing import (compute_template_similarity, check_equal_template_with_distribution_overlap,
+                                           TemplateSimilarityCalculator)
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -30,14 +31,18 @@ def setup_module():
 
 
 def test_compute_template_similarity():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'mearec_waveforms')
+    folder = cache_folder / 'mearec_waveforms'
+    we = WaveformExtractor.load_from_folder(folder)
     similarity = compute_template_similarity(we)
 
-    # DEBUG
-    #~ import matplotlib.pyplot as plt
-    #~ fig, ax = plt.subplots()
-    #~ ax.imshow(similarity, interpolation='nearest')
-    #~ plt.show()
+    # reload as an extension from we
+    assert TemplateSimilarityCalculator in we.get_available_extensions()
+    assert we.is_extension('similarity')
+    tsc = we.load_extension('similarity')
+    assert isinstance(tsc, TemplateSimilarityCalculator)
+    assert tsc.similarity is not None
+    tsc = TemplateSimilarityCalculator.load_from_folder(folder)
+    assert tsc.similarity is not None
 
 
 def test_check_equal_template_with_distribution_overlap():
@@ -51,10 +56,10 @@ def test_check_equal_template_with_distribution_overlap():
             if unit_id0 == unit_id1:
                 continue
             waveforms1 = we.get_waveforms(unit_id1)
-            check_equal_template_with_distribution_overlap(waveforms0, waveforms1, debug=False)
+            check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
             
         
-    
+
     
     
     
