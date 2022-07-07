@@ -100,11 +100,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         proj = np.load(proj_file)
         return proj
 
-    def get_components(self, unit_id):
-        warnings.warn("The 'get_components()' function has been substituted by the 'get_projections()' "
-                      "function and it will be removed in the next release", DeprecationWarning)
-        return self.get_projections(unit_id)
-
     def load_pca_model(self):
         """
         Load PCA model from folder.
@@ -193,11 +188,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return all_labels, all_projections
 
-    def get_all_components(self, channel_ids=None, unit_ids=None, outputs='id'):
-        warnings.warn("The 'get_all_components()' function has been substituted by the 'get_all_projections()' "
-                      "function and it will be removed in the next release", DeprecationWarning)
-        return self.get_all_projections(channel_ids=channel_ids, unit_ids=unit_ids, outputs=outputs)
-
     def project_new(self, new_waveforms):
         """
         Projects new waveforms or traces snippets on the PC components.
@@ -281,6 +271,9 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             self._run_by_channel_global(projection_memmap, n_jobs, progress_bar)
         elif p['mode'] == 'concatenated':
             self._run_concatenated(projection_memmap, n_jobs, progress_bar)
+            
+    def get_data(self):
+        return self.get_all_projections()
 
     def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg',
                            **job_kwargs):
@@ -452,9 +445,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             shape = wfs.shape
             wfs_concat = wfs.transpose(0, 2, 1).reshape(shape[0] * shape[2], shape[1])
             pca_model.partial_fit(wfs_concat)
-            
-            # for chan_ind, chan_id in enumerate(channel_ids):
-            #     pca_model.partial_fit(wfs[:, :, chan_ind])
 
         # save
         mode = p["mode"]

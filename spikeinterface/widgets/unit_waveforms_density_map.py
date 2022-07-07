@@ -6,43 +6,41 @@ from ..postprocessing import get_template_channel_sparsity
 
 
 class UnitWaveformDensityMapWidget(BaseWidget):
+    """
+    Plots unit waveforms using heat map density.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+    channel_ids: list
+        The channel ids to display
+    unit_ids: list
+        List of unit ids.
+    plot_templates: bool
+        If True, templates are plotted over the waveforms
+    max_channels : None or int
+        If not None only max_channels are displayed per units.
+        Incompatible with with `radius_um`
+    radius_um: None or float
+        If not None, all channels within a circle around the peak waveform will be displayed
+        Incompatible with with `max_channels`
+    unit_colors: None or dict
+        A dict key is unit_id and value is any color format handled by matplotlib.
+        If None, then the get_unit_colors() is internally used.
+    same_axis: bool
+        If True then all density are plot on the same axis and then channels is the union
+        all channel per units.
+    set_title: bool
+        Create a plot title with the unit number if True.
+    plot_channels: bool
+        Plot channel locations below traces, only used if channel_locs is True
+    """
     possible_backends = {}
+
     
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
                 max_channels=None, radius_um=None, same_axis=False,
-                unit_colors=None,
-
-                backend=None, **backend_kwargs):
-
-        """
-        Plots unit waveforms using heat map density.
-
-        Parameters
-        ----------
-        waveform_extractor: WaveformExtractor
-        channel_ids: list
-            The channel ids to display
-        unit_ids: list
-            List of unit ids.
-        plot_templates: bool
-            If True, templates are plotted over the waveforms
-        max_channels : None or int
-            If not None only max_channels are displayed per units.
-            Incompatible with with `radius_um`
-        radius_um: None or float
-            If not None, all channels within a circle around the peak waveform will be displayed
-            Incompatible with with `max_channels`
-        unit_colors: None or dict
-            A dict key is unit_id and value is any color format handled by matplotlib.
-            If None, then the get_unit_colors() is internally used.
-        same_axis: bool
-            If True then all density are plot on the same axis and then channels is the union
-            all channel per units.
-        set_title: bool
-            Create a plot title with the unit number if True.
-        plot_channels: bool
-            Plot channel locations below traces, only used if channel_locs is True
-        """
+                unit_colors=None, backend=None, **backend_kwargs):
 
         we = waveform_extractor
 
