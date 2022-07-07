@@ -54,7 +54,7 @@ def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: st
     return peak_values
 
 
-def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", outputs: str = "id"):
+def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mode: str = "extremum", outputs: str = "id"):
     """
     Compute the channel with the extremum peak for each unit.
 
@@ -77,7 +77,7 @@ def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", ou
     unit_ids = waveform_extractor.sorting.unit_ids
     channel_ids = waveform_extractor.recording.channel_ids
 
-    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
+    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode=mode)
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
