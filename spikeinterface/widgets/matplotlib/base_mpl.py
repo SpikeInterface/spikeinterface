@@ -1,17 +1,22 @@
 from spikeinterface.widgets.base import BackendPlotter
 
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
 import numpy as np
 
 
 class MplPlotter(BackendPlotter):
     backend = 'matplotlib'
-    backend_kwargs = {
+    backend_kwargs_desc = {
         "figure": "Matplotlib figure. When None, it is created. Default None",
         "ax": "Single matplotlib axis. When None, it is created. Default None",
         "axes": "Multiple matplotlib axes. When None, they is created. Default None",
         "num_axes": "Number of axes to create in subplots.  Default None",
+    }
+    default_backend_kwargs = {
+        "figure": None,
+        "ax": None,
+        "axes": None,
+        "num_axes": None,
     }
 
     def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
