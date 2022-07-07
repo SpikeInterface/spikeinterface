@@ -131,12 +131,18 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the template to compute best channels.
+    peak_mode: {'extremum', 'at_index'}
+        How to compute the amplitude.
+        Extremum takes the maxima/minima
+        At_index takes the value at t=0
 
     Returns
     -------
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
+    assert peak_sign in ("neg", "pos", "both")
+    assert peak_mode in ("extremum", "at_index")
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting

@@ -64,6 +64,9 @@ def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mo
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
+        'extremum':  max or min
+        'at_index': take value at spike index
     outputs: str
         * 'id': channel id
         * 'index': channel index
@@ -74,6 +77,9 @@ def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mo
         Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
         as values
     """
+    assert method in ("best_channels", "radius", "threshold", "by_property")
+    assert outputs in ("id", "index")
+
     unit_ids = waveform_extractor.sorting.unit_ids
     channel_ids = waveform_extractor.recording.channel_ids
 
@@ -260,6 +266,10 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", 
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
+        Where the amplitude is computed
+        'extremum':  max or min
+        'at_index': take value at spike index
 
     Returns
     -------
