@@ -124,52 +124,32 @@ class ComparisonPerformancesByTemplateSimilarity(BaseWidget):
         found by the sorter
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
-    cmap_name
 
     """
-    def __init__(self, gt_comp, similarity_matrix, cmap_name='Set1', ax=None, ylim=(0.6, 1), show_legend=True):
+    def __init__(self, gt_comp, similarity_matrix, ax=None, ylim=(0.6, 1)):
 
         self.gt_comp = gt_comp
-        self.cmap_name = cmap_name
-        self.show_legend = show_legend
+        self.similarity_matrix = similarity_matrix
         self.ylim = ylim
 
         BaseWidget.__init__(self, ax=ax)
 
     def plot(self):
 
-        cmap = plt.get_cmap(self.cmap_name, 1)
-        colors = cmap(0)
+
         all_results = {'similarity' : [], 'accuracy' : []}
-
-
         comp = self.gt_comp
 
         for i, u1 in enumerate(comp.sorting1.unit_ids):
             u2 = comp.best_match_12[u1]
             if u2 != -1:
-                all_results['similarity'] += [similarity_matrix[comp.sorting1.id_to_index(u1), comp.sorting2.id_to_index(u2)]]
+                all_results['similarity'] += [self.similarity_matrix[comp.sorting1.id_to_index(u1), comp.sorting2.id_to_index(u2)]]
                 all_results['accuracy'] += [comp.agreement_scores.at[u1, u2]]
 
         all_results['similarity'] = np.array(all_results['similarity'])
         all_results['accuracy'] = np.array(all_results['accuracy'])
 
-        from matplotlib.patches import Ellipse
-
-        similarity_mean = all_results['similarity'].mean()
-        similarity_stds= all_results['similarity'].std()
-
-        accuracy_means = all_results['accuracy'].mean()
-        accuracy_stds = all_results['accuracy'].std()
-
-        scount = 0
-        for x,y, i,j in zip(similarity_means, accuracy_means, similarity_stds, accuracy_stds):
-            e = Ellipse((x,y), i, j)
-            e.set_alpha(0.2)
-            e.set_facecolor(colors[scount])
-            self.ax.add_artist(e)
-            self.ax.scatter([x], [y], c=colors[scount])
-            scount += 1
+        self.ax.plot(all_results['similarity'], all_results['accuracy'], '.')
 
         self.ax.set_ylabel('accuracy')
         self.ax.set_xlabel('cosine similarity')
