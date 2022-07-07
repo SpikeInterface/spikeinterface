@@ -12,6 +12,9 @@ hdbscan
 # zarr is needed for testing
 zarr
 
+# for widget colors
+distinctipy
+
 # CurtationSorting
 networkx
 
