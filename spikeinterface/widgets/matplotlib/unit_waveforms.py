@@ -9,8 +9,6 @@ class UnitWaveformPlotter(MplPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         d = to_attr(data_plot)
 
-
-
         ncols = min(d.ncols, len(d.unit_ids))
         nrows = int(np.ceil(len(d.unit_ids) / ncols))
 

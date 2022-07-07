@@ -6,7 +6,7 @@ from matplotlib.ticker import MaxNLocator
 
 
 class TimeseriesPlotter(MplPlotter):
-
+    
     def do_plot(self, data_plot, **backend_kwargs):
         d = to_attr(data_plot)
         
@@ -35,7 +35,7 @@ class TimeseriesPlotter(MplPlotter):
             ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
             ax.get_yaxis().set_ticks([])
             ax.set_xlabel('time (s)')
-            ax.legend()
+            ax.legend(loc='upper right')
 
         elif d.mode == 'map':
             assert len(d.list_traces) == 1, 'plot_timeseries with mode="map" do not support multi recording'
@@ -54,6 +54,5 @@ class TimeseriesPlotter(MplPlotter):
             if d.show_channel_ids:
                 ax.set_yticks(np.arange(n) + 0.5)
                 ax.set_yticklabels([str(chan_id) for chan_id in d.channel_ids[::-1]])
-
 
 TimeseriesPlotter.register(TimeseriesWidget)

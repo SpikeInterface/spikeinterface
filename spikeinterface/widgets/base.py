@@ -43,7 +43,7 @@ class BaseWidget:
 
     @classmethod
     def register_backend(cls, backend_plotter):
-        cls.possible_backends[backend_plotter.backend] = backend_plotter
+        cls.possible_backends[backend_plotter.backend] = backend_plotter   
 
 
 class BackendPlotter():
@@ -71,7 +71,7 @@ def define_widget_function_from_class(widget_class, name):
         # we could return something else if needed  as we discussed
         return W
 
-    widget_func.__doc__ = widget_class.__init__.__doc__
+    widget_func.__doc__ = widget_class.__doc__
     widget_func.__name__ = name
 
     return widget_func
