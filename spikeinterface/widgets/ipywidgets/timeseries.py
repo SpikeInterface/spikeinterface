@@ -20,15 +20,18 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         # first layer
         rec0 = recordings[data_plot['layer_keys'][0]]
         
-        cm = 1/2.54
-        # width in cm
-        width = 25
-        height = 15
+        cm = 1 / 2.54
         
+        # width in cm
+        backend_kwargs_ = self.default_backend_kwargs.copy()
+        backend_kwargs_.update(backend_kwargs)
+        width_cm = backend_kwargs_["width_cm"]
+        height_cm = backend_kwargs_["height_cm"]
+
         with plt.ioff():
-            output = Output(layout=Layout(width=f'{width}cm'))
+            output = Output(layout=Layout(width=f'{width_cm}cm'))
             with output:
-                fig, ax = plt.subplots(figsize=(width * cm, height * cm))
+                fig, ax = plt.subplots(figsize=(width_cm * cm, height_cm * cm))
                 plt.show()
 
         t_start = 0. 
@@ -41,7 +44,7 @@ class TimeseriesPlotter(IpywidgetsPlotter):
             min=t_start,
             max=t_stop,
             continuous_update=False,
-            layout=Layout(width=f'{width}cm')
+            layout=Layout(width=f'{width_cm}cm')
         )
         
         layer_selector = Dropdown(description='layer', options=data_plot['layer_keys'])
@@ -127,13 +130,16 @@ class PlotUpdater:
             # plot all layer
             layer_keys = self.data_plot['layer_keys']
             recordings = self.recordings
+            clims = None
         elif mode =='map':
             layer_keys = [selected_layer]
             recordings = {selected_layer: self.recordings[selected_layer]}
+            clims = self.data_plot["clims"][selected_layer]
         
         channel_ids = self.data_plot['channel_ids']
         order =  self.data_plot['order']
-        times, list_traces, frame_range, order = _get_trace_list(recordings, channel_ids, time_range, order, segment_index)
+        times, list_traces, frame_range, order = _get_trace_list(recordings, channel_ids, time_range, order,
+                                                                 segment_index)
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
@@ -145,10 +151,11 @@ class PlotUpdater:
         data_plot['layer_keys'] = layer_keys
         data_plot['list_traces'] = list_traces
         data_plot['times'] = times
+        data_plot['clims'] = clims
 
         backend_kwargs = {}
         backend_kwargs['ax'] = self.ax
-        self.mpl_plotter.do_plot(data_plot,  **backend_kwargs)
+        self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         
         fig = self.ax.figure
         fig.canvas.draw()

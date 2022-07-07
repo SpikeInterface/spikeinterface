@@ -29,24 +29,21 @@ class TimeseriesPlotter(MplPlotter):
             if d.show_channel_ids:
                 ax.set_yticks(np.arange(n) * d.vspacing)
                 ax.set_yticklabels([str(chan_id) for chan_id in d.channel_ids[::-1]])
-
             ax.set_xlim(*d.time_range)
             ax.set_ylim(-d.vspacing, d.vspacing * n)
             ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
-            ax.get_yaxis().set_ticks([])
             ax.set_xlabel('time (s)')
             ax.legend(loc='upper right')
 
         elif d.mode == 'map':
             assert len(d.list_traces) == 1, 'plot_timeseries with mode="map" do not support multi recording'
+            assert len(d.clims) == 1
+            clim = list(d.clims.values())[0]
             extent = (d.time_range[0], d.time_range[1], 0, len(d.channel_ids))
             im = ax.imshow(d.list_traces[0].T, interpolation='nearest',
                            origin='upper', aspect='auto', extent=extent, cmap=d.cmap)
 
-            if d.clim is None:
-                im.set_clim(-d.max_channel_amp, d.max_channel_amp)
-            else:
-                im.set_clim(*d.clim)
+            im.set_clim(*clim)
 
             if d.with_colorbar:
                 self.figure.colorbar(im, ax=ax)
