@@ -122,7 +122,7 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     return presence_ratio
 
 
-def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
+def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum", **kwargs):
     """Compute signal to noise ratio.
 
     Parameters
@@ -143,8 +143,8 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
     unit_ids = sorting.unit_ids
     channel_ids = recording.channel_ids
 
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-    unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign)
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
+    unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
     return_scaled = waveform_extractor.return_scaled
     noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **kwargs)
 
