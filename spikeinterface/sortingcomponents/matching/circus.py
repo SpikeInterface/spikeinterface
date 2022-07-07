@@ -174,7 +174,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         'sparsify_threshold': 0.99,
-        'amplitudes' : [0.75, 1.25],
+        'amplitudes' : [0.6, 1.4],
         'noise_levels': None,
         'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,
@@ -281,7 +281,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         
         if d['noise_levels'] is None:
             print('CircusOMPPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'])
+            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'], return_scaled=False)
 
         d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()
         d['num_samples'] = d['waveform_extractor'].nsamples
