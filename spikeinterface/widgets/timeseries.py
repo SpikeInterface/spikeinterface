@@ -36,13 +36,13 @@ class TimeseriesWidget(BaseWidget):
         If True groups are plotted with different colors
     color:   str default: None
         The color used to draw the traces.
-    clim: None, tuple, or list of tuples
+    clim: None, tuple, or dict
         When mode='map' this control color lims. 
-        If list of tuples, each entry is the color lims for one layer.
+        If dict, keys should be the same as recording keys
     with_colorbar: bool default True
         When mode='map' add colorbar
     tile_size: int
-        For figurl backend, the size of each tile in the redered image
+        For figurl backend, the size of each tile in the rendered image
     seconds_per_row: float
         For 'map' mode and figurl backend, seconds to reder in each row
 
@@ -150,6 +150,17 @@ class TimeseriesWidget(BaseWidget):
         else:
             # color is None unique layer : all channels black
             pass
+        
+        if clim is None:
+            clims = {layer_key: [-200, 200] for layer_key in layer_keys}
+        else:
+            if isinstance(clim, tuple):
+                clims = {layer_key: clim for layer_key in layer_keys}
+            elif isinstance(clim, dict):
+                assert all(layer_key in clim for layer_key in layer_keys), ""
+                clims = clim
+            else:
+                raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
 
         plot_data = dict(
             recordings=recordings,
@@ -161,7 +172,7 @@ class TimeseriesWidget(BaseWidget):
             list_traces=list_traces,
             mode=mode,
             cmap=cmap,
-            clim=clim,
+            clims=clims,
             with_colorbar=with_colorbar,
             mean_channel_std=mean_channel_std,
             max_channel_amp=max_channel_amp,

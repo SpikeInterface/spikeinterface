@@ -6,7 +6,7 @@ import numpy as np
 
 class MplPlotter(BackendPlotter):
     backend = 'matplotlib'
-    backend_kwargs = {
+    backend_kwargs_desc = {
         "figure": "Matplotlib figure. When None, it is created. Default None",
         "ax": "Single matplotlib axis. When None, it is created. Default None",
         "axes": "Multiple matplotlib axes. When None, they is created. Default None",

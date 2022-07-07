@@ -20,16 +20,18 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         # first layer
         rec0 = recordings[data_plot['layer_keys'][0]]
         
-        # width in cm
-        if "width_cm" not in backend_kwargs:
-            width_cm = self.default_backend_kwargs["width_cm"]
-        if "height_cm" not in backend_kwargs:
-            height_cm = self.default_backend_kwargs["height_cm"]
+        cm = 1 / 2.54
         
+        # width in cm
+        backend_kwargs_ = self.default_backend_kwargs.copy()
+        backend_kwargs_.update(backend_kwargs)
+        width_cm = backend_kwargs_["width_cm"]
+        height_cm = backend_kwargs_["height_cm"]
+
         with plt.ioff():
             output = Output(layout=Layout(width=f'{width_cm}cm'))
             with output:
-                fig, ax = plt.subplots(figsize=(width_cm, height_cm))
+                fig, ax = plt.subplots(figsize=(width_cm * cm, height_cm * cm))
                 plt.show()
 
         t_start = 0. 
@@ -93,15 +95,6 @@ class PlotUpdater:
         self.mode_selector = mode_selector
         self.layer_selector = layer_selector
         
-        clim = data_plot["clim"]
-        if clim is not None:
-            if np.array(clim).ndim == len(data_plot["layer_keys"]):
-                self.clims = clim
-            else:
-                self.clims = [clim] * len(data_plot["layer_keys"])
-        else:
-            self.clims = None
-        
         self.recordings = data_plot['recordings']
         self.next_data_plot = data_plot.copy()
         
@@ -137,14 +130,11 @@ class PlotUpdater:
             # plot all layer
             layer_keys = self.data_plot['layer_keys']
             recordings = self.recordings
-            clim = None
+            clims = None
         elif mode =='map':
             layer_keys = [selected_layer]
             recordings = {selected_layer: self.recordings[selected_layer]}
-            if self.clims is not None:
-                clim = self.clims[list(self.recordings.keys()).index(selected_layer)]
-            else:
-                clim = None
+            clims = self.data_plot["clims"][selected_layer]
         
         channel_ids = self.data_plot['channel_ids']
         order =  self.data_plot['order']
@@ -161,7 +151,7 @@ class PlotUpdater:
         data_plot['layer_keys'] = layer_keys
         data_plot['list_traces'] = list_traces
         data_plot['times'] = times
-        data_plot['clim'] = clim
+        data_plot['clims'] = clims
 
         backend_kwargs = {}
         backend_kwargs['ax'] = self.ax
