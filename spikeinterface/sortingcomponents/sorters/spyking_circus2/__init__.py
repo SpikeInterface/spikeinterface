@@ -1,1 +1,0 @@
-from .spyking_circus2 import Spykingcircus2Sorter
