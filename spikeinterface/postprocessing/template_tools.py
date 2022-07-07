@@ -284,7 +284,7 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", 
     for unit_id in unit_ids:
         channel_id = extremum_channels_ids[unit_id]
         best_channel = waveform_extractor.recording.id_to_index(channel_id)
-        unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][:, best_channel]
+        unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes
 
