@@ -7,13 +7,13 @@ import numpy as np
 
 class IpywidgetsPlotter(BackendPlotter):
     backend = 'ipywidgets'
-    backend_kwargs = {
+    backend_kwargs_desc = {
         "width_cm": "Width of the figure in cm (default 10)",
         "height_cm": "Height of the figure in cm (default 6)"
     }
     default_backend_kwargs = {
-        "width_cm": 10,
-        "height_cm": 6
+        "width_cm": 25,
+        "height_cm": 10
     }
     
     

@@ -120,7 +120,7 @@ def array_to_image(data,
     scaled_data[scaled_data < clim[0]] = clim[0]
     scaled_data[scaled_data > clim[1]] = clim[1]
     scaled_data = (scaled_data - clim[0]) / np.ptp(clim)
-    a = np.flip((cmap(scaled_data.T)[:, :, :3]*255).astype(np.uint8), axis=0)  # colorize and convert to uint8
+    a = (cmap(scaled_data.T)[:, :, :3]*255).astype(np.uint8)  # colorize and convert to uint8
 
     num_rows = int(np.ceil(num_timepoints / num_timepoints_per_row))
 
