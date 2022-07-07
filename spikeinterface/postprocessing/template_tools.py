@@ -77,7 +77,8 @@ def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mo
         Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
         as values
     """
-    assert method in ("best_channels", "radius", "threshold", "by_property")
+    assert peak_sign in ("both", "neg", "pos")
+    assert mode in ("extremum", "at_index")
     assert outputs in ("id", "index")
 
     unit_ids = waveform_extractor.sorting.unit_ids
