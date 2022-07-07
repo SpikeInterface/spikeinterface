@@ -119,6 +119,8 @@ class CollisionGTComparison(GroundTruthComparison):
         similarities = []
         pair_names = []
 
+        performances = self.get_performance()['accuracy']
+
         for r in range(n):
             for c in range(r + 1, n):
 
