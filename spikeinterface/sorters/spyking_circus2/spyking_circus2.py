@@ -16,7 +16,7 @@ class Spykingcircus2Sorter(BaseSorter):
     _default_params = {
         'general' : {'ms_before' : 2.5, 'ms_after' : 3.5, 'local_radius_um' : 100},
         'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
-        'filtering' : {'freq_min' : 300, 'freq_max' : 6000, 'dtype' : 'float32'},
+        'filtering' : {'freq_min' : 300, 'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5},
         'selection' : {'n_peaks_per_channel' : 5000, 'min_n_peaks' : 20000},
         'localization' : {},
@@ -43,11 +43,10 @@ class Spykingcircus2Sorter(BaseSorter):
 
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
-        if not recording.is_filtered():
-            recording_f = bandpass_filter(recording, **filtering_params)
-        else:
-            recording_f = recording
+        if 'freq_max' not in filtering_params:
+            filtering_params['freq_max'] = 0.95*sampling_rate/2
 
+        recording_f = bandpass_filter(recording, **filtering_params)
         if params['common_reference']:
             recording_f = common_reference(recording_f)
 
