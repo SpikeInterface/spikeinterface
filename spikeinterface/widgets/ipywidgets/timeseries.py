@@ -134,7 +134,7 @@ class PlotUpdater:
         elif mode =='map':
             layer_keys = [selected_layer]
             recordings = {selected_layer: self.recordings[selected_layer]}
-            clims = self.data_plot["clims"][selected_layer]
+            clims = {selected_layer: self.data_plot["clims"][selected_layer]}
         
         channel_ids = self.data_plot['channel_ids']
         order =  self.data_plot['order']
