@@ -29,7 +29,7 @@ class ComparisonPerformancesWidget(BaseWidget):
         self.gt_comp = gt_comp
         self.palette = palette
 
-        BaseWidget.__init__(self, axes=ax)
+        BaseWidget.__init__(self, ax=ax)
 
     def plot(self):
         import seaborn as sns
@@ -44,7 +44,7 @@ class ComparisonPerformancesWidget(BaseWidget):
                     value_vars=('accuracy','precision', 'recall'))
         import seaborn as sns
         sns.swarmplot(data=df, x="Metric", y='Score', hue='Metric', dodge=True,
-                                    s=3) # order=sorter_list,
+                                    s=3, ax=ax) # order=sorter_list,
         #~ ax.set_xticklabels(sorter_names_short, rotation=30, ha='center')
         #~ ax.legend(bbox_to_anchor=(1.0, 1), loc=2, borderaxespad=0., frameon=False, fontsize=8, markerscale=0.5)
 
