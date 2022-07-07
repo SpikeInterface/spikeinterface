@@ -9,6 +9,7 @@ Implementations here have been refactored to support the multi-segment API of sp
 
 from collections import namedtuple
 
+import math
 import numpy as np
 import warnings
 import scipy.ndimage
@@ -288,18 +289,40 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period: tupl
         return 0
 
 
+    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
+    num_segments = sorting.get_num_segments()
     spikes = sorting.get_all_spike_trains(outputs="unit_index")
 
     t_c = int(round(refractory_period[0] * fs * 1e-3))
     t_r = int(round(refractory_period[1] * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int32)
 
-    for seg_index in range(sorting.get_num_segments()):
+    for seg_index in range(num_segments):
         _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
                                      spikes[seg_index][1].astype(np.int32), t_c, t_r)
+
+    if num_segments == 1:
+        T = recording.get_num_frames()
+    else:
+        T = 0
+        for segment_idx in range(num_segments):
+            T += recording.get_num_frames(segment_idx)
+
+    nb_violations = {}
+    contamination = {}
+
+    for i, unit_id in enumerate(sorting.unit_ids):
+        nb_violations[unit_id] = n_v = nb_rp_violations[i]
+        N = len(sorting.get_unit_spike_train(unit_id))
+        D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
+        contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
+
+    res = namedtuple("rp_violations", ['rp_violations', 'contamination'])
+
+    return res(nb_violations, contamination)
 
 
 
@@ -400,7 +423,7 @@ if HAVE_NUMBA:
 
         return n_v
 
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
+    @numba.jit((numba.int32[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
                nopython=True, nogil=True, cache=True, parallel=True)
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
         n_units = len(nb_rp_violations)
