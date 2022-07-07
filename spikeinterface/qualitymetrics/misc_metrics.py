@@ -308,8 +308,8 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
-        # TODO : change with something better scipy.ndimage.filters.gaussian_filter1d
-        pdf = scipy.ndimage.filters.gaussian_filter1d(h, histogram_smoothing_value)
+        # TODO : change with something better scipy.ndimage.gaussian_filter1d
+        pdf = scipy.ndimage.gaussian_filter1d(h, histogram_smoothing_value)
         support = b[:-1]
         bin_size = np.mean(np.diff(support))
         peak_index = np.argmax(pdf)

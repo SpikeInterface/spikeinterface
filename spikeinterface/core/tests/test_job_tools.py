@@ -102,14 +102,20 @@ def test_ChunkRecordingExecutor():
                                        n_jobs=1, chunk_memory="500k")
     processor.run()
 
-    # chunk + parralel
+    # chunk + parallel
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        verbose=True, progress_bar=True,
-                                       #~ n_jobs=2, total_memory="200k",
                                        n_jobs=2, chunk_duration="200ms",
                                        job_name='job_name')
     processor.run()
 
+    # chunk + parallel + spawn
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
+                                       verbose=True, progress_bar=True,
+                                       mp_context="spawn",
+                                       n_jobs=2, chunk_duration="200ms",
+                                       job_name='job_name')
+    processor.run()
 
 if __name__ == '__main__':
     test_divide_segment_into_chunks()
