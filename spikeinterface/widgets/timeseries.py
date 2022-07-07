@@ -3,7 +3,6 @@ import numpy as np
 from ..core import BaseRecording
 from .base import BaseWidget, define_widget_function_from_class
 from .utils import get_some_colors
-from ..postprocessing import get_template_channel_sparsity
 
 
 class TimeseriesWidget(BaseWidget):
@@ -37,10 +36,15 @@ class TimeseriesWidget(BaseWidget):
         If True groups are plotted with different colors
     color:   str default: None
         The color used to draw the traces.
-    clim: None or tupple
-        When mode='map' this control color lims
+    clim: None, tuple, or dict
+        When mode='map' this control color lims. 
+        If dict, keys should be the same as recording keys
     with_colorbar: bool default True
         When mode='map' add colorbar
+    tile_size: int
+        For figurl backend, the size of each tile in the rendered image
+    seconds_per_row: float
+        For 'map' mode and figurl backend, seconds to reder in each row
 
     Returns
     -------
@@ -52,8 +56,8 @@ class TimeseriesWidget(BaseWidget):
 
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
-                 color_groups=False, color=None, clim=None, with_colorbar=True,
-                 backend=None, **backend_kwargs):
+                 color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
+                 with_colorbar=True, backend=None, **backend_kwargs):
         if isinstance(recording, BaseRecording):
             recordings = {'rec': recording}
             rec0 = recording
@@ -146,6 +150,17 @@ class TimeseriesWidget(BaseWidget):
         else:
             # color is None unique layer : all channels black
             pass
+        
+        if clim is None:
+            clims = {layer_key: [-200, 200] for layer_key in layer_keys}
+        else:
+            if isinstance(clim, tuple):
+                clims = {layer_key: clim for layer_key in layer_keys}
+            elif isinstance(clim, dict):
+                assert all(layer_key in clim for layer_key in layer_keys), ""
+                clims = clim
+            else:
+                raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
 
         plot_data = dict(
             recordings=recordings,
@@ -157,14 +172,17 @@ class TimeseriesWidget(BaseWidget):
             list_traces=list_traces,
             mode=mode,
             cmap=cmap,
-            clim=clim,
+            clims=clims,
             with_colorbar=with_colorbar,
             mean_channel_std=mean_channel_std,
             max_channel_amp=max_channel_amp,
             vspacing=vspacing,
             colors=colors,
             show_channel_ids=show_channel_ids,
+            order_channel_by_depth=order_channel_by_depth,
             order=order,
+            tile_size=tile_size,
+            num_timepoints_per_row=int(seconds_per_row * fs)
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
