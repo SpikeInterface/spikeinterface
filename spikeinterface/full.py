@@ -16,6 +16,7 @@ from .sorters import *
 from .preprocessing import *
 from .postprocessing import *
 from .qualitymetrics import *
+from .curation import *
 from .comparison import *
 from .widgets import *
 from .exporters import *
