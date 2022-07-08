@@ -52,6 +52,11 @@ from .gtstudy import (StudyComparisonRunTimesWidget, plot_gt_study_run_times,
     StudyComparisonPerformancesAveragesWidget,
     plot_gt_study_performances_by_template_similarity, StudyComparisonPerformancesByTemplateSimilarity,)
 
+# ground truth comparions (=comparison over sorter)
+from .gtcomparison import (plot_gt_performances, plot_gt_performances_averages, ComparisonPerformancesWidget,
+    ComparisonPerformancesAveragesWidget,
+    plot_gt_performances_by_template_similarity, ComparisonPerformancesByTemplateSimilarity,)
+
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget
 

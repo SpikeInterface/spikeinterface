@@ -95,7 +95,39 @@ class BaseRecording(BaseExtractor):
                    channel_ids: Union[Iterable, None] = None,
                    order: Union[str, None] = None,
                    return_scaled=False,
+                   cast_unsigned=False
                    ):
+        """Returns traces from recording.
+
+        Parameters
+        ----------
+        segment_index : Union[int, None], optional
+            The segment index to get traces from. If recording is multi-segment, it is required, by default None
+        start_frame : Union[int, None], optional
+            The start frame. If None, 0 is used, by default None
+        end_frame : Union[int, None], optional
+            The end frame. If None, the number of samples in the segment is used, by default None
+        channel_ids : Union[Iterable, None], optional
+            The channel ids. If None, all channels are used, by default None
+        order : Union[str, None], optional
+            The order of the traces ("C" | "F"). If None, traces are returned as they are, by default None
+        return_scaled : bool, optional
+            If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+            traces are scaled to uV, by default False
+        cast_unsigned : bool, optional
+            If True and the traces are unsigned, they are cast to integer and centered 
+            (an offset of (2**nbits) is subtracted), by default False
+
+        Returns
+        -------
+        np.array
+            The traces (num_samples, num_channels)
+
+        Raises
+        ------
+        ValueError
+            If return_scaled is True, but recording does not have scaled traces
+        """
         segment_index = self._check_segment_index(segment_index)
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
         rs = self._recording_segments[segment_index]
@@ -103,6 +135,18 @@ class BaseRecording(BaseExtractor):
         if order is not None:
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
+
+        if cast_unsigned:
+            dtype = traces.dtype
+            # if dtype is unsigned, return centered signed signal
+            if dtype.kind == "u":
+                itemsize = dtype.itemsize
+                assert itemsize < 8, "Cannot upcast uint64!"
+                nbits = dtype.itemsize * 8
+                # upcast to int with double itemsize
+                traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (nbits - 1)
+                traces = traces.astype(f"int{dtype.itemsize * 8}")
+
         if return_scaled:
             if hasattr(self, "NeoRawIOClass"):
                 if self.has_non_standard_units:
