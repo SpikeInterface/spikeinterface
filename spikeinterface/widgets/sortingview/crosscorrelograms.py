@@ -1,3 +1,4 @@
+from ..base import to_attr
 from ..crosscorrelograms import CrossCorrelogramsWidget
 from .base_sortingview import SortingviewPlotter
 
@@ -8,22 +9,19 @@ class CrossCorrelogramsPlotter(SortingviewPlotter):
         import sortingview.views as vv
         
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        dp = to_attr(data_plot)
         
-        ccgs = data_plot["correlograms"]
-        bins = data_plot["bins"]
-        unit_ids = data_plot["unit_ids"]
-        
-        unit_ids = self.make_serializable(unit_ids)
+        unit_ids = self.make_serializable(dp.unit_ids)
 
         cc_items = []
-        for i in range(ccgs.shape[0]):
-            for j in range(i, ccgs.shape[0]):
+        for i in range(len(unit_ids)):
+            for j in range(i, len(unit_ids)):
                 cc_items.append(
                     vv.CrossCorrelogramItem(
                         unit_id1=unit_ids[i],
                         unit_id2=unit_ids[j],
-                        bin_edges_sec=(bins/1000.).astype("float32"),
-                        bin_counts=ccgs[i, j].astype("int32")
+                        bin_edges_sec=(dp.bins/1000.).astype("float32"),
+                        bin_counts=dp.correlograms[i, j].astype("int32")
                     )
                 )
 
@@ -32,7 +30,8 @@ class CrossCorrelogramsPlotter(SortingviewPlotter):
         )
 
         if backend_kwargs["generate_url"]:
-            label = backend_kwargs.get("figlabel", "SpikeInterface - CrossCorrelograms")
+            if backend_kwargs.get("figlabel") is None:
+                label = "SpikeInterface - CrossCorrelograms"
             url = v_cross_correlograms.url(label=label)
             print(url)
         return v_cross_correlograms

@@ -1,21 +1,22 @@
 
+from ..base import to_attr
 from ..crosscorrelograms import CrossCorrelogramsWidget
-from .base_mpl import MplPlotter, to_attr
+from .base_mpl import MplPlotter
 
 
 class CrossCorrelogramsPlotter(MplPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
-        d = to_attr(data_plot)
+        dp = to_attr(data_plot)
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        backend_kwargs["ncols"] = len(d.unit_ids)
-        backend_kwargs["num_axes"] = int(len(d.unit_ids) ** 2)
+        backend_kwargs["ncols"] = len(dp.unit_ids)
+        backend_kwargs["num_axes"] = int(len(dp.unit_ids) ** 2)
 
         self.make_mpl_figure(**backend_kwargs)
         
-        bins = d.bins
-        unit_ids = d.unit_ids
-        correlograms = d.correlograms
+        bins = dp.bins
+        unit_ids = dp.unit_ids
+        correlograms = dp.correlograms
         bin_width = bins[1] - bins[0]
         
         for i, unit_id1 in enumerate(unit_ids):
