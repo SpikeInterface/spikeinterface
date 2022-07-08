@@ -8,11 +8,11 @@ class UnitWaveformPlotter(MplPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         d = to_attr(data_plot)
+        backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        backend_kwargs["ncols"] = min(d.ncols, len(d.unit_ids))
+        backend_kwargs["num_axes"] = d.num_axes
 
-        ncols = min(d.ncols, len(d.unit_ids))
-        nrows = int(np.ceil(len(d.unit_ids) / ncols))
-
-        self.make_mpl_figure(ncols=ncols, num_axes=d.num_axes, **backend_kwargs)
+        self.make_mpl_figure(**backend_kwargs)
         
         for i, unit_id in enumerate(d.unit_ids):
 

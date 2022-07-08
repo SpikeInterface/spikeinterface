@@ -1,12 +1,4 @@
-import numpy as np
-
-from .base import BaseWidget, define_widget_function_from_class
-from ..core.waveform_extractor import WaveformExtractor
-from ..core.baserecording import BaseRecording
-from ..core.basesorting import BaseSorting
-from .utils import get_unit_colors
-from ..postprocessing import get_template_channel_sparsity
-
+from .base import define_widget_function_from_class
 
 from .unit_waveforms import UnitWaveformsWidget
 

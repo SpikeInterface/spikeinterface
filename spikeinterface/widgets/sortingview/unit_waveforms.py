@@ -4,10 +4,7 @@ from .base_sortingview import SortingviewPlotter
 
 class UnitWaveformPlotter(SortingviewPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
-        try:
-            import sortingview.views as vv
-        except ModuleNotFoundError:
-            raise Exception('sortingview is not installed. See https://github.com/flatironinstitute/sortingview')
+        vv = self.get_sortingviews()
 
         d = data_plot
         unit_ids = d['unit_ids']
