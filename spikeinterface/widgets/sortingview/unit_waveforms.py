@@ -4,10 +4,7 @@ from .base_sortingview import SortingviewPlotter
 
 class UnitWaveformPlotter(SortingviewPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
-        try:
-            import sortingview.views as vv
-        except ModuleNotFoundError:
-            raise Exception('sortingview is not installed. See https://github.com/flatironinstitute/sortingview')
+        import sortingview.views as vv
 
         d = data_plot
         unit_ids = d['unit_ids']
@@ -45,7 +42,8 @@ class UnitWaveformPlotter(SortingviewPlotter):
             channel_locations=locations
         )
         if backend_kwargs["generate_url"]:
-            url = v_average_waveforms.url(label='SpikeInterface - AverageWaveforms')
+            label = backend_kwargs.get("figlabel", "SpikeInterface - AverageWaveforms")
+            url = v_average_waveforms.url(label=label)
             print(url)
         return v_average_waveforms
 

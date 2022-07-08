@@ -7,8 +7,8 @@ from .probemap import plot_probe_map, ProbeMapWidget
 
 # isi/ccg/acg
 from .isidistribution import plot_isi_distribution, ISIDistributionWidget
-from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
-                           plot_autocorrelograms, AutoCorrelogramsWidget)
+# from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
+#                            plot_autocorrelograms, AutoCorrelogramsWidget)
 
 # peak activity
 from .activity import plot_peak_activity_map, PeakActivityMapWidget

@@ -8,23 +8,19 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         d = to_attr(data_plot)
+        backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        if 'axes' in backend_kwargs or 'ax' in backend_kwargs:
+        if backend_kwargs["axes"] is not None or backend_kwargs["ax"] is not None:
             self.make_mpl_figure(**backend_kwargs)
         else:
             if d.same_axis:
                 num_axes = 1
-                ncols = 1
             else:
                 num_axes = len(d.unit_ids)
-                ncols = 1
-            self.make_mpl_figure(num_axes=num_axes, ncols=ncols)
+            backend_kwargs["ncols"] = 1
+            backend_kwargs["num_axes"] = num_axes
+            self.make_mpl_figure(**backend_kwargs)
         
-
-                # ax = self.axes[unit_index]
-                # im = ax.imshow(hist2d.T, interpolation='nearest',
-                #                origin='lower', aspect='auto', extent=(0, hist2d.shape[0], bin_min, bin_max), cmap='hot')
-
         if d.same_axis:
             ax = self.ax
             hist2d = d.all_hist2d

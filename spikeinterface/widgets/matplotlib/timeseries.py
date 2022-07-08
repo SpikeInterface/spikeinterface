@@ -9,11 +9,10 @@ class TimeseriesPlotter(MplPlotter):
     
     def do_plot(self, data_plot, **backend_kwargs):
         d = to_attr(data_plot)
-        
-        self.make_mpl_figure(**backend_kwargs)
-        
-        ax = self.ax
+        backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
+        self.make_mpl_figure(**backend_kwargs)
+        ax = self.ax
         n = len(d.channel_ids)
 
         if d.mode == 'line':
