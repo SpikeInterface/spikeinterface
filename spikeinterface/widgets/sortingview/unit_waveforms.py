@@ -42,7 +42,8 @@ class UnitWaveformPlotter(SortingviewPlotter):
             channel_locations=locations
         )
         if backend_kwargs["generate_url"]:
-            url = v_average_waveforms.url(label='SpikeInterface - AverageWaveforms')
+            label = backend_kwargs.get("figlabel", "SpikeInterface - AverageWaveforms")
+            url = v_average_waveforms.url(label=label)
             print(url)
         return v_average_waveforms
 

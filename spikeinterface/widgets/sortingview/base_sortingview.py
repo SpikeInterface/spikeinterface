@@ -4,10 +4,12 @@ from spikeinterface.widgets.base import BackendPlotter
 class SortingviewPlotter(BackendPlotter):
     backend = 'sortingview'
     backend_kwargs_desc = {
-        "generate_url": "If True, the figurl URL is generated and printed. Default is True"
+        "generate_url": "If True, the figurl URL is generated and printed. Default is True",
+        "figlabel": "The figurl figure label. Default None"
     }
     default_backend_kwargs = {
-        "generate_url": True
+        "generate_url": True,
+        "figlabel": None
     }
     
     def make_serializable(*args):
