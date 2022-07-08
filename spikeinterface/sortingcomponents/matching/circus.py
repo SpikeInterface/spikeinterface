@@ -174,17 +174,21 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         'sparsify_threshold': 0.99,
-        'amplitudes' : [0.75, 1.25],
+        'amplitudes' : [0.6, 1.4],
         'noise_levels': None,
         'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,
         'waveform_extractor': None,
+        'templates' : None,
+        'overlaps' : None,
+        'norms' : None,
+        'ignored_ids' : []
     }
 
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.25*noise_levels
+        is_silent = template.std(0) < 0.1*noise_levels
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2
@@ -277,7 +281,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         
         if d['noise_levels'] is None:
             print('CircusOMPPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'])
+            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'], return_scaled=False)
 
         d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()
         d['num_samples'] = d['waveform_extractor'].nsamples
@@ -285,8 +289,16 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
 
-        d = cls._prepare_templates(d)
-        d = cls._prepare_overlaps(d)
+        if d['templates'] is None:
+            d = cls._prepare_templates(d)
+        else:
+            for key in ['norms', 'sparsities']:
+                assert d[key] is not None, "If templates are provided, %d should also be there" %key
+
+        if d['overlaps'] is None: 
+            d = cls._prepare_overlaps(d)
+
+        d['ignored_ids'] = np.array(d['ignored_ids'])
 
         return d        
 
@@ -322,6 +334,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d['amplitudes']
         sparsities = d['sparsities']
+        ignored_ids = d['ignored_ids']
 
         if 'cached_fft_kernels' not in d:
             d['cached_fft_kernels'] = {'fshape' : 0}
@@ -359,6 +372,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                 scalar_products[i] = convolution.sum(0)
             else:
                 scalar_products[i] = 0
+
+        if len(ignored_ids) > 0:
+            scalar_products[ignored_ids] = -np.inf
 
         num_spikes = 0
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
@@ -531,7 +547,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.25*noise_levels
+        is_silent = template.std(0) < 0.1*noise_levels
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2
