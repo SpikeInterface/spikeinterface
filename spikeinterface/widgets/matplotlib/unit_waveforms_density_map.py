@@ -9,11 +9,6 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         d = to_attr(data_plot)
 
-        print(data_plot.keys())
-
-
-        d = to_attr(data_plot)
-
         if 'axes' in backend_kwargs or 'ax' in backend_kwargs:
             self.make_mpl_figure(**backend_kwargs)
         else:

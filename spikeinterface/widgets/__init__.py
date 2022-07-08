@@ -10,10 +10,10 @@ except:
     HAVE_MPL = False
 
 try:
-    import figurl
-    HAVE_FIGURL = True
+    import sortingview
+    HAVE_SV = True
 except:
-    HAVE_FIGURL = False
+    HAVE_SV = False
 
 try:
     import ipywidgets
@@ -26,8 +26,8 @@ except:
 if HAVE_MPL:
     from .matplotlib import *
 
-if HAVE_FIGURL:
-    from .figurl import *
+if HAVE_SV:
+    from .sortingview import *
 
 if HAVE_IPYW:
     from .ipywidgets import *

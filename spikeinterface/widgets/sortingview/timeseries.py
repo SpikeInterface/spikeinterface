@@ -3,7 +3,7 @@ import warnings
 
 from ..timeseries import TimeseriesWidget
 from ..utils import array_to_image
-from .base_figurl import FigurlPlotter
+from .base_sortingview import SortingviewPlotter
 
 try:
     from figurl_tiled_image import TiledImage
@@ -12,18 +12,20 @@ except ImportError:
     HAVE_TILED_IMAGE = False
 
 
-class TimeseriesPlotter(FigurlPlotter):
+class TimeseriesPlotter(SortingviewPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
-        assert HAVE_TILED_IMAGE, ("To use the figurl backend for timeseries, you neeed the 'figurl_tiled_image'. "
+        assert HAVE_TILED_IMAGE, ("To use the sortingview backend for timeseries, you neeed the 'figurl_tiled_image'. "
                                   "Install it with >>> pip install figurl_tiled_image")
-        tile_size = data_plot.get("tile_size", 512)
-        num_timepoints_per_row = data_plot.get("num_timepoints_per_row", 6000)
+        backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        tile_size = data_plot["tile_size"]
+        num_timepoints_per_row = data_plot["num_timepoints_per_row"]
         
         tiled_image = TiledImage(tile_size=tile_size)
         
         if not data_plot["order_channel_by_depth"]:
-            warnings.warn("It is recommended to set 'order_channel_by_depth' to True when using the figurl backend")
+            warnings.warn("It is recommended to set 'order_channel_by_depth' to True "
+                          "when using the sortingview backend")
         
         for layer_key, traces in zip(data_plot["layer_keys"], data_plot["list_traces"]):     
             img = array_to_image(traces, 
@@ -32,10 +34,11 @@ class TimeseriesPlotter(FigurlPlotter):
                                  colormap=data_plot["cmap"])
             
             tiled_image.add_layer(layer_key, img)
-            
-        url = tiled_image.url(label=f'SpikeInterface - {data_plot["layer_keys"]}', verbose=False)
-        print(url)
-        return url
+        
+        if backend_kwargs["generate_url"]: 
+            url = tiled_image.url(label='SpikeInterface - Timeseries', verbose=False)
+            print(url)
+        return tiled_image
 
 
 TimeseriesPlotter.register(TimeseriesWidget)

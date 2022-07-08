@@ -42,9 +42,9 @@ class TimeseriesWidget(BaseWidget):
     with_colorbar: bool default True
         When mode='map' add colorbar
     tile_size: int
-        For figurl backend, the size of each tile in the rendered image
+        For sortingview backend, the size of each tile in the rendered image
     seconds_per_row: float
-        For 'map' mode and figurl backend, seconds to reder in each row
+        For 'map' mode and sortingview backend, seconds to reder in each row
 
     Returns
     -------
