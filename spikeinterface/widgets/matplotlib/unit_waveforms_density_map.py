@@ -10,7 +10,7 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
         d = to_attr(data_plot)
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        if 'axes' in backend_kwargs or 'ax' in backend_kwargs:
+        if backend_kwargs["axes"] is not None or backend_kwargs["ax"] is not None:
             self.make_mpl_figure(**backend_kwargs)
         else:
             if d.same_axis:
