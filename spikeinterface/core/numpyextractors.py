@@ -289,7 +289,7 @@ class NumpyEventSegment(BaseEventSegment):
 
         return times
 
-class NumpySnippetsExtractor(BaseSnippets):
+class NumpySnippets(BaseSnippets):
     """
     In memory recording.
     Contrary to previous version this class does not handle npy files.

@@ -1,11 +1,10 @@
 from typing import List, Union
 from pathlib import Path
-from .base import BaseExtractor, BaseSegment
+from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
-
 # snippets segments?
 
 
@@ -40,8 +39,8 @@ class BaseSnippets(BaseRecordingSnippets):
         return txt
     
     @property
-    def before(self):
-        return self._before
+    def nbefore(self):
+        return self._nbefore
     
     @property
     def snippet_len(self):
@@ -81,7 +80,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_num_segments(self):
         return len(self._snippets_segments)
 
-    def has_scaled_snippets(self):
+    def has_scaled(self):
         if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
             return False
         else:
@@ -153,6 +152,57 @@ class BaseSnippets(BaseRecordingSnippets):
     def _select_segments(self, segment_indices):
         from .segmentutils import SelectSegmentSnippets
         return SelectSegmentSnippets(self, segment_indices=segment_indices)
+
+    def _save(self, format='npy', **save_kwargs):
+        """
+        At the moment only 'npy' and 'memory' avaiable:
+        """
+
+        if format == 'npy':
+            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
+
+            folder = save_kwargs['folder']
+            file_paths = [folder / f'traces_cached_seg{i}.npy' for i in range(self.get_num_segments())]
+            dtype = save_kwargs.get('dtype', None)
+            if dtype is None:
+                dtype = self.get_dtype()
+
+
+            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
+            
+            NpySnippetsExtractor.write_snippets(snippets=self, file_paths=file_paths, dtype=dtype)
+            cached = NpySnippetsExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
+                                              channel_ids=self.get_channel_ids(),
+                                              nbefore=self.nbefore, gain_to_uV=self.get_channel_gains(),
+                                              offset_to_uV=self.get_channel_offsets())
+            cached.dump(folder / 'npy.json', relative_to=folder)
+
+            from spikeinterface.core.npyfoldersnippets import NpyFolderSnippets
+            cached = NpyFolderSnippets(folder_path=folder)
+
+        elif format == 'memory':
+            snippets_list = []
+            spikesframes_list = []
+            for i in range(self.get_num_segments()):
+                spikesframes_list.append(self.get_frames(segment_index=i))
+                snippets_list.append(self.get_snippets(segment_index=i))
+
+            from .numpyextractors import NumpySnippets
+            cached = NumpySnippets(snippets_list=snippets_list, spikesframes_list=spikesframes_list,
+                                sampling_frequency = self.get_sampling_frequency(), nbefore=self.nbefore,
+                                channel_ids=self.channel_ids)
+
+        else:
+            raise ValueError(f'format {format} not supported')
+
+        if self.get_property('contact_vector') is not None:
+            probegroup = self.get_probegroup()
+            cached.set_probegroup(probegroup)
+
+        return cached
+
+    def get_times(self):
+        return self.get_frames()/self.sampling_frequency
 
 
 class BaseSnippetsSegment(BaseSegment):

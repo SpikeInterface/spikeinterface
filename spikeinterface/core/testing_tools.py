@@ -1,9 +1,9 @@
 import numpy as np
 
-from spikeinterface import NumpyRecording, NumpySorting, NumpySnippetsExtractor
+from spikeinterface import NumpyRecording, NumpySorting
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from probeinterface import generate_linear_probe
-
+from spikeinterface.core.snippets_tools import snippets_from_sorting
 
 def generate_recording(
         num_channels=2,
@@ -93,7 +93,7 @@ def generate_snippets(
         set_probe=True,
         ndim=2,
         num_units=5,
-        empty_units=None
+        empty_units=None, **job_kwargs
 ):
 
     recording = generate_recording(durations=durations, num_channels=num_channels,
@@ -102,36 +102,10 @@ def generate_snippets(
 
     sorting = generate_sorting(num_units=num_units,  sampling_frequency=sampling_frequency,
                                durations=durations, empty_units=empty_units)
-    strains = sorting.get_all_spike_trains()
 
-    peaks_times = np.concatenate([np.sort(s[0]) for s in strains])
-    peak_dtype = [('sample_ind', 'int64'), ('unit_ind',
-                                            'int64'), ('segment_ind', 'int64')]
-    peaks2 = np.zeros(len(peaks_times), dtype=peak_dtype)
-    peaks2['sample_ind'] = peaks_times
-    peaks2['segment_ind'] = np.concatenate(
-        [si+np.zeros(len(s[0])) for si, s in enumerate(strains)])
-    peaks2['unit_ind'] = 0
+    nse = snippets_from_sorting(recording=recording, sorting=sorting,
+        nbefore=nbefore, nafter=nafter, wf_folder=wf_folder, **job_kwargs)
     
-    
-    if wf_folder is None:
-        mode = "shared_memory"
-        folder = None
-    else:
-        mode = "memmap"
-        folder = wf_folder
-   
-    wfs_arrays = extract_waveforms_to_buffers(recording, peaks2, [0], nbefore, nafter,
-                                                mode=mode, return_scaled=False, folder=folder,
-                                                dtype=recording.get_dtype(), sparsity_mask=None, 
-                                                n_jobs=1, copy=True)
-    wfs = []
-    for i in range(len(durations)):
-         wfs.append(wfs_arrays[0][peaks2['segment_ind']==i,:,:])  # extract class zero
-
-    nse = NumpySnippetsExtractor(snippets_list=wfs, spikesframes_list=[np.sort(s[0]) for s in strains],
-                                 sampling_frequency=recording.get_sampling_frequency(),
-                                 nbefore=nbefore, channel_ids=None)
     if set_probe:
         probe = recording.get_probe()
         nse = nse.set_probe(probe)

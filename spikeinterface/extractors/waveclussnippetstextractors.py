@@ -57,8 +57,8 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
                                 for sinx in range(snippets_extractor.get_num_segments())])
         spikes = np.swapaxes(spikes,1,2).reshape([spikes.shape[0], spikes.shape[1]*spikes.shape[2]], order='C')
         par = dict(sr=snippets_extractor.get_sampling_frequency(),
-                    w_pre=snippets_extractor.nbefore,
-                    w_post=snippets_extractor.nafter)
+                    w_pre=snippets_extractor.nbefore+1, # waveclus includes the peak in the pre samples
+                    w_post=snippets_extractor.nafter-1)
         MatlabHelper.write_dict_to_mat(mat_file_path=save_file_path, 
             dict_to_write={'index':index,
                             'spikes':spikes,
