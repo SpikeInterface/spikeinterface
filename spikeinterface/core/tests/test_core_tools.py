@@ -42,6 +42,7 @@ def test_write_binary_recording():
                            dtype=None, verbose=False, n_jobs=2, total_memory='200k', progress_bar=True)
 
 
+
 def test_write_memory_recording():
     # 2 segments
     recording = generate_recording(num_channels=2, durations=[10.325, 3.5])

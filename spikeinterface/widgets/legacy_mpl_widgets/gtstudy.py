@@ -159,7 +159,10 @@ class StudyComparisonPerformancesWidget(BaseWidget):
         self.palette = palette
 
         num_rec = len(study.rec_names)
-        fig, axes = plt.subplots(ncols=1, nrows=num_rec, squeeze=False)
+        if ax is None:
+            fig, axes = plt.subplots(ncols=1, nrows=num_rec, squeeze=False)
+        else:
+            axes = np.array([ax]).T
 
         BaseWidget.__init__(self, axes=axes)
 
@@ -177,7 +180,7 @@ class StudyComparisonPerformancesWidget(BaseWidget):
             ax = self.axes[r, 0]
             df = perf_by_units.loc[perf_by_units['rec_name'] == rec_name, :]
             df = pd.melt(df, id_vars='sorter_name', var_name='Metric', value_name='Score',
-                    value_vars=('accuracy','precision', 'recall'))
+                    value_vars=('accuracy','precision', 'recall')).sort_values('sorter_name')
             sns.swarmplot(data=df, x='sorter_name', y='Score', hue='Metric', dodge=True,
                             s=3, ax=ax) # order=sorter_list,
         #~ ax.set_xticklabels(sorter_names_short, rotation=30, ha='center')
@@ -185,6 +188,9 @@ class StudyComparisonPerformancesWidget(BaseWidget):
 
             ax.set_ylim(0, 1.05)
             ax.set_ylabel(f'Perfs for {rec_name}')
+            if r < len(study.rec_names) - 1:
+                ax.set_xlabel('')
+
 
 
 

@@ -181,18 +181,17 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
 
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
 
-    for i, peak in enumerate(local_peak):
-        chan_mask = neighbours_mask[peak['channel_ind'], :]
-        chan_inds, = np.nonzero(chan_mask)
+    wf = traces[local_peak['sample_ind'][:, None]+np.arange(-nbefore, nafter)]
 
+    for main_chan in range(traces.shape[1]):
+        idx = np.where(local_peak['channel_ind'] == main_chan)[0]
+        chan_inds, = np.nonzero(neighbours_mask[main_chan])
         local_contact_locations = contact_locations[chan_inds, :]
 
-        wf = traces[peak['sample_ind']-nbefore:peak['sample_ind']+nafter, :][:, chan_inds]
-        wf_ptp = wf.ptp(axis=0)
-        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
-
-        peak_locations['x'][i] = com[0]
-        peak_locations['y'][i] = com[1]
+        wf_ptp = (wf[idx][:, :, chan_inds]).ptp(axis=1)
+        coms = np.dot(wf_ptp, local_contact_locations)/(np.sum(wf_ptp, axis=1)[:,np.newaxis])
+        peak_locations['x'][idx] = coms[:, 0]
+        peak_locations['y'][idx] = coms[:, 1]
 
     return peak_locations
 

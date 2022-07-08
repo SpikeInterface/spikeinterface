@@ -5,9 +5,6 @@ from spikeinterface import download_dataset
 
 from spikeinterface.extractors import MEArecRecordingExtractor
 
-from spikeinterface.sortingcomponents.peak_waveform_features import (
-    compute_waveform_features_peaks,
-)
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.clustering.triage import nearest_neighor_triage
