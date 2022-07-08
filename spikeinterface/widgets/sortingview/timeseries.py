@@ -36,7 +36,8 @@ class TimeseriesPlotter(SortingviewPlotter):
             tiled_image.add_layer(layer_key, img)
         
         if backend_kwargs["generate_url"]: 
-            url = tiled_image.url(label='SpikeInterface - Timeseries', verbose=False)
+            label = backend_kwargs.get("figlabel", "SpikeInterface - Timeseries")
+            url = tiled_image.url(label=label, verbose=False)
             print(url)
         return tiled_image
 

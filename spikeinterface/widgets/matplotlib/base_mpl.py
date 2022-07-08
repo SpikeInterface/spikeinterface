@@ -11,17 +11,20 @@ class MplPlotter(BackendPlotter):
         "ax": "Single matplotlib axis. When None, it is created. Default None",
         "axes": "Multiple matplotlib axes. When None, they is created. Default None",
         "ncols": "Number of columns to create in subplots.  Default 5",
-        "figsize": "Size of matplotlib figure. Default None"
+        "figsize": "Size of matplotlib figure. Default None",
+        "figtitle": "The figure title. Default None"
     }
     default_backend_kwargs = {
         "figure": None,
         "ax": None,
         "axes": None,
         "ncols": 5,
-        "figsize": None
+        "figsize": None,
+        "figtitle": None
     }
 
-    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None, figsize=None):
+    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None,
+                        figsize=None, figtitle=None):
         """
         figure/ax/axes : only one of then can be not None
         """
@@ -69,6 +72,9 @@ class MplPlotter(BackendPlotter):
         self.ax = ax
         # axes is a 2D array of ax
         self.axes = axes
+        
+        if figtitle is not None:
+            self.figure.suptitle(figtitle)
 
 
 

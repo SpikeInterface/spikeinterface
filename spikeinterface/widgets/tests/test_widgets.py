@@ -74,6 +74,13 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_waveforms_density_map(self.we, max_channels=5, unit_ids=unit_ids)
         sw.plot_unit_waveforms_density_map(self.we, max_channels=5, same_axis=True, unit_ids=unit_ids)
 
+    def test_autocorrelograms(self):
+        unit_ids = self.sorting.unit_ids[:4]
+        sw.plot_autocorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
+
+    def test_crosscorrelogram(self):
+        unit_ids = self.sorting.unit_ids[:4]
+        sw.plot_crosscorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
 
 
 if __name__ == '__main__':
@@ -82,10 +89,10 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
     
-    mytest.test_plot_timeseries()
+    # mytest.test_plot_timeseries()
     
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
-    # mytest.test_plot_unit_waveforms_density_map()
+    mytest.test_plot_unit_waveforms_density_map()
 
     plt.show()

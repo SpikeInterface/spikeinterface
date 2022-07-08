@@ -32,7 +32,8 @@ class CrossCorrelogramsPlotter(SortingviewPlotter):
         )
 
         if backend_kwargs["generate_url"]:
-            url = v_cross_correlograms.url(label='SpikeInterface - CrossCorrelograms')
+            label = backend_kwargs.get("figlabel", "SpikeInterface - CrossCorrelograms")
+            url = v_cross_correlograms.url(label=label)
             print(url)
         return v_cross_correlograms
 
