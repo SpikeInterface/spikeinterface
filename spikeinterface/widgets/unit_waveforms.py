@@ -74,6 +74,7 @@ class UnitWaveformsWidget(BaseWidget):
         num_axes = len(unit_ids)
         channel_locations = recording.get_channel_locations(channel_ids=channel_ids)
 
+        # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if radius_um is not None:
             channel_inds = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=radius_um)
         elif max_channels is not None:
@@ -81,7 +82,8 @@ class UnitWaveformsWidget(BaseWidget):
                                                          num_channels=max_channels)
         else:
             # all channels
-            channel_inds = {unit_id: np.arange(recording.get_num_channels()) for unit_id in unit_ids}
+            channel_inds = {unit_id: np.arange(recording.get_num_channels()) for unit_id in sorting.unit_ids}
+        
         sparsity = {u: recording.channel_ids[channel_inds[u]] for u in sorting.unit_ids}
         
         # get templates
