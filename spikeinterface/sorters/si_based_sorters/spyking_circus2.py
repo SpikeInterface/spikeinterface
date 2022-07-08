@@ -1,15 +1,10 @@
-from spikeinterface.sorters import BaseSorter
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-from spikeinterface.core import NumpySorting
-from spikeinterface.preprocessing import bandpass_filter, common_reference
-from spikeinterface.core import load_extractor, BaseRecording, get_noise_levels
-from spikeinterface.core import extract_waveforms
+from .si_based import ComponentsBasedSorter
 
-class Spykingcircus2Sorter(BaseSorter):
+from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
+    get_noise_levels, extract_waveforms)
+from spikeinterface.preprocessing import bandpass_filter, common_reference
+
+class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     sorter_name = 'spykingcircus2'
 
@@ -28,15 +23,24 @@ class Spykingcircus2Sorter(BaseSorter):
     }
 
     @classmethod
-    def is_installed(cls):
-        return True 
-
-    @classmethod
     def get_sorter_version(cls):
         return "2.0"
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
+    
+        params['job_kwargs']['verbose'] = verbose
+        params['job_kwargs']['progress_bar'] = verbose
+
+    
+        # this is importanted only on demand because numba import are too heavy
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+        from spikeinterface.sortingcomponents.peak_selection import select_peaks
+        from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+        from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+
+        
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
@@ -127,13 +131,3 @@ class Spykingcircus2Sorter(BaseSorter):
 
         return sorting
 
-    @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
-        params['job_kwargs']['verbose'] = verbose
-        params['job_kwargs']['progress_bar'] = verbose
-        cls.set_params_to_folder(recording, output_folder, params, verbose)
-
-    @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        sorting = load_extractor(output_folder / "sorting")
-        return sorting
