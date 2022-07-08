@@ -96,6 +96,7 @@ class UnitWaveformsWidget(BaseWidget):
         wfs_by_ids = {unit_id: we.get_waveforms(unit_id) for unit_id in unit_ids}
 
         plot_data = dict(
+            waveform_extractor=waveform_extractor,
             sampling_frequency=recording.get_sampling_frequency(),
             unit_ids=unit_ids,
             channel_ids=channel_ids,
