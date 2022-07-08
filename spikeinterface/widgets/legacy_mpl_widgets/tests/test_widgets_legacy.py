@@ -101,13 +101,13 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_localization(self._we, with_channel_ids=True)
         sw.plot_unit_localization(self._we, method='monopolar_triangulation')
 
-    def test_autocorrelograms(self):
-        unit_ids = self._sorting.unit_ids[:4]
-        sw.plot_autocorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, symmetrize=True)
+    # def test_autocorrelograms(self):
+    #     unit_ids = self._sorting.unit_ids[:4]
+    #     sw.plot_autocorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, symmetrize=True)
 
-    def test_crosscorrelogram(self):
-        unit_ids = self._sorting.unit_ids[:4]
-        sw.plot_crosscorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, symmetrize=True)
+    # def test_crosscorrelogram(self):
+    #     unit_ids = self._sorting.unit_ids[:4]
+    #     sw.plot_crosscorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, symmetrize=True)
 
     def test_isi_distribution(self):
         sw.plot_isi_distribution(self._sorting, bin_ms=5., window_ms=500.)

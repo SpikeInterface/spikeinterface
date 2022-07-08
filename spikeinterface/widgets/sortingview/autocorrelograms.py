@@ -32,7 +32,8 @@ class AutoCorrelogramsPlotter(SortingviewPlotter):
         )
 
         if backend_kwargs["generate_url"]:
-            url = v_autocorrelograms.url(label='SpikeInterface - AutoCorrelograms')
+            label = backend_kwargs.get("figlabel", "SpikeInterface - AutoCorrelograms")
+            url = v_autocorrelograms.url(label=label)
             print(url)
         return v_autocorrelograms
 
