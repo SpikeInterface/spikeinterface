@@ -81,6 +81,11 @@ class TestWidgets(unittest.TestCase):
     def test_crosscorrelogram(self):
         unit_ids = self.sorting.unit_ids[:4]
         sw.plot_crosscorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
+        
+    def test_amplitudes_timeseries(self):
+        sw.plot_amplitudes_timeseries(self.we)
+        unit_ids = self.we.sorting.unit_ids[:4]
+        sw.plot_amplitudes_timeseries(self.we, unit_ids=unit_ids)
 
 
 if __name__ == '__main__':

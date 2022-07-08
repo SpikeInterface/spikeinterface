@@ -1,19 +1,20 @@
+from ..base import to_attr
 from ..autocorrelograms import AutoCorrelogramsWidget
-from .base_mpl import MplPlotter, to_attr
+from .base_mpl import MplPlotter
 
 
 class AutoCorrelogramsPlotter(MplPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
-        d = to_attr(data_plot)
+        dp = to_attr(data_plot)
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        backend_kwargs["num_axes"] = len(d.unit_ids)
+        backend_kwargs["num_axes"] = len(dp.unit_ids)
 
         self.make_mpl_figure(**backend_kwargs)
         
-        bins = d.bins
-        unit_ids = d.unit_ids
-        correlograms = d.correlograms
+        bins = dp.bins
+        unit_ids = dp.unit_ids
+        correlograms = dp.correlograms
         bin_width = bins[1] - bins[0]
 
         for i, unit_id in enumerate(unit_ids):

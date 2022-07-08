@@ -86,13 +86,13 @@ class TestWidgets(unittest.TestCase):
     def test_plot_units_depth_vs_amplitude(self):
         sw.plot_units_depth_vs_amplitude(self._we)
 
-    def test_amplitudes_timeseries(self):
-        sw.plot_amplitudes_timeseries(self._we)
-        unit_ids = self._sorting.unit_ids[:4]
-        sw.plot_amplitudes_timeseries(self._we, unit_ids=unit_ids)
+    # def test_amplitudes_timeseries(self):
+    #     sw.plot_amplitudes_timeseries(self._we)
+    #     unit_ids = self._sorting.unit_ids[:4]
+    #     sw.plot_amplitudes_timeseries(self._we, unit_ids=unit_ids)
 
-    def test_amplitudes_distribution(self):
-        sw.plot_amplitudes_distribution(self._we)
+    # def test_amplitudes_distribution(self):
+    #     sw.plot_amplitudes_distribution(self._we)
 
     def test_principal_component(self):
         sw.plot_principal_component(self._we)
