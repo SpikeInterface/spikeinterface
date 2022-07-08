@@ -5,7 +5,7 @@ from .base_sortingview import SortingviewPlotter
 class CrossCorrelogramsPlotter(SortingviewPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
-        vv = self.get_sortingviews()
+        import sortingview.views as vv
         
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         
