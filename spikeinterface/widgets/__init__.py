@@ -32,7 +32,6 @@ if HAVE_SV:
 if HAVE_IPYW:
     import spikeinterface.widgets.ipywidgets
 
-
 # we keep this to keep compatibility so we have all previous widgets
 # except the one that have been ported that are imported
 # with "from .widget_list import *" in the first line

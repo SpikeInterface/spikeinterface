@@ -1,3 +1,4 @@
+from ..base import to_attr
 from ..autocorrelograms import AutoCorrelogramsWidget
 from .base_sortingview import SortingviewPlotter
 
@@ -5,25 +6,21 @@ from .base_sortingview import SortingviewPlotter
 class AutoCorrelogramsPlotter(SortingviewPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
-        vv = self.get_sortingviews()
+        import sortingview.views as vv
         
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        
-        ccgs = data_plot["correlograms"]
-        bins = data_plot["bins"]
-        unit_ids = data_plot["unit_ids"]
-        
-        unit_ids = self.make_serializable(unit_ids)
+        dp = to_attr(data_plot)
+        unit_ids = self.make_serializable(dp.unit_ids)
 
         ac_items = []
-        for i in range(ccgs.shape[0]):
-            for j in range(i, ccgs.shape[0]):
+        for i in range(len(unit_ids)):
+            for j in range(i, len(unit_ids)):
                 if i == j:
                     ac_items.append(
                         vv.AutocorrelogramItem(
                             unit_id=unit_ids[i],
-                            bin_edges_sec=(bins/1000.).astype("float32"),
-                            bin_counts=ccgs[i, j].astype("int32")
+                            bin_edges_sec=(dp.bins/1000.).astype("float32"),
+                            bin_counts=dp.correlograms[i, j].astype("int32")
                         )
                     )
 
@@ -32,7 +29,8 @@ class AutoCorrelogramsPlotter(SortingviewPlotter):
         )
 
         if backend_kwargs["generate_url"]:
-            label = backend_kwargs.get("figlabel", "SpikeInterface - AutoCorrelograms")
+            if backend_kwargs.get("figlabel") is None:
+                label = "SpikeInterface - AutoCorrelograms"
             url = v_autocorrelograms.url(label=label)
             print(url)
         return v_autocorrelograms

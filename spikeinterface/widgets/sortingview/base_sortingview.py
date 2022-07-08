@@ -20,11 +20,3 @@ class SortingviewPlotter(BackendPlotter):
         if len(returns) == 1:
             returns = returns[0]
         return returns
-    
-    def get_sortingviews(self):
-        try:
-            import sortingview.views as vv
-        except ModuleNotFoundError:
-            raise Exception('sortingview is not installed. See https://github.com/flatironinstitute/sortingview')
-        return vv
-        
