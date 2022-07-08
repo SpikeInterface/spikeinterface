@@ -33,6 +33,8 @@ from .spike_locations import compute_spike_locations, SpikeLocationsCalculator
 from .unit_localization import (compute_unit_locations, UnitLocationsCalculator,
                                 localize_units, compute_center_of_mass)
 
+from .alignsorting import align_sorting, AlignSortingExtractor
+
 # curation utilities
 from .mergeunitssorting import MergeUnitsSorting
 from .splitunitsorting import SplitUnitSorting
