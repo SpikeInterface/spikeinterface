@@ -54,6 +54,11 @@ class BackendPlotter():
         #~ print('BackendPlotter.register', print(cls), isinstance(cls, BackendPlotter))
         widget_cls.register_backend(cls)
 
+    def update_backend_kwargs(self, **backend_kwargs):
+        backend_kwargs_ = self.default_backend_kwargs.copy()
+        backend_kwargs_.update(backend_kwargs)
+        return backend_kwargs_
+    
 def copy_signature(source_fct):
     def copy(target_fct):
         target_fct.__signature__ = inspect.signature(source_fct)
