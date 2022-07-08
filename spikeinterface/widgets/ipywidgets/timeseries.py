@@ -22,11 +22,9 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         
         cm = 1 / 2.54
         
-        # width in cm
-        backend_kwargs_ = self.default_backend_kwargs.copy()
-        backend_kwargs_.update(backend_kwargs)
-        width_cm = backend_kwargs_["width_cm"]
-        height_cm = backend_kwargs_["height_cm"]
+        backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        width_cm = backend_kwargs["width_cm"]
+        height_cm = backend_kwargs["height_cm"]
 
         with plt.ioff():
             output = Output(layout=Layout(width=f'{width_cm}cm'))

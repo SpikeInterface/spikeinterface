@@ -35,7 +35,7 @@ class UnitWaveformPlotter(MplPlotter):
 
             # plot template
             if d.plot_templates:
-                template = d.templates[i, :, :][:, chan_inds] * d.y_scale + d.y_offset[:, chan_inds]
+                template = d.all_templates[i, :, :][:, chan_inds] * d.y_scale + d.y_offset[:, chan_inds]
                 if d.plot_waveforms and d.plot_templates:
                     color = 'k'
                 ax.plot(xvectors_flat, template.T.flatten(), lw=1, color=color)
