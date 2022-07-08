@@ -1,7 +1,8 @@
 import numpy as np
 
 import matplotlib.pyplot as plt
-from ipywidgets import AppLayout, Layout, Output,  HBox, FloatSlider, Dropdown, BoundedFloatText, VBox
+from ipywidgets import AppLayout, Layout, Output,  SelectMultiple
+
 
 
 from ..base import to_attr
@@ -19,6 +20,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         
         cm = 1 / 2.54
+        we =data_plot['waveform_extractor']
         
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
@@ -27,12 +29,18 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = Output(layout=Layout(width=f'{width_cm}cm'))
             with output:
-                #~ fig, ax = plt.subplots(figsize=(width_cm * cm, height_cm * cm))
-                fig = plt.fugure(figsize=(width_cm * cm, height_cm * cm))
+                fig = plt.figure(figsize=(width_cm * cm, height_cm * cm))
                 plt.show()
 
-        widgets = (time_slider, seg_selector, win_sizer, mode_selector, layer_selector)
-        
+        unit_selector = SelectMultiple(
+            options=we.sorting.unit_ids,
+            value=list(data_plot['unit_ids']),
+            description='units:',
+            disabled=False,
+            layout=Layout(width=f'5cm', height=f'{height_cm}cm')
+        )
+
+        widgets = (unit_selector, )
         
         mpl_plotter = MplUnitWaveformPlotter()
         
@@ -43,9 +51,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
         
         app = AppLayout(
             center=fig.canvas,
-            footer=VBox([time_slider,
-                        HBox([layer_selector, seg_selector, win_sizer, mode_selector]),
-                        ]),
+            left_sidebar=unit_selector,
             pane_heights=[0, 6, 1]
         )
         
@@ -62,28 +68,30 @@ UnitWaveformPlotter.register(UnitWaveformsWidget)
 
 
 class PlotUpdater:
-    def __init__(self, data_plot, mpl_plotter, fig):
+    def __init__(self, data_plot, mpl_plotter, fig, unit_selector):
         self.data_plot = data_plot
         self.mpl_plotter = mpl_plotter
-        
         self.fig = fig
+        self.unit_selector = unit_selector
         
         self.we = data_plot['waveform_extractor']
-        
         self.next_data_plot = data_plot.copy()
         
     
     def __call__(self, change):
+        self.fig.clear()
         
+        unit_ids = self.unit_selector.value
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
+        data_plot['unit_ids'] = unit_ids
+        data_plot['wfs_by_ids'] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
 
         backend_kwargs = {}
-        backend_kwargs['fig'] = self.fig
+        backend_kwargs['figure'] = None
+        
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         
-        fig = self.ax.figure
-        fig.canvas.draw()
-        fig.canvas.flush_events()
-        
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()

@@ -28,10 +28,18 @@ class MplPlotter(BackendPlotter):
         """
         figure/ax/axes : only one of then can be not None
         """
-        if figure is not None:
+        if figure is not None and num_axes is None:
             assert ax is None and axes is None, 'figure/ax/axes : only one of then can be not None'
             ax = figure.add_subplot(111)
             axes = np.array([[ax]])
+        elif figure is not None and num_axes is not None:
+            assert ncols is not None
+            axes = []
+            nrows = int(np.ceil(num_axes / ncols))
+            for i in range(num_axes):
+                ax = figure.add_subplots(nrows, ncols, i + 1)
+                axes.append(ax)
+            axes = np.array(axes)
         elif ax is not None:
             assert figure is None and axes is None, 'figure/ax/axes : only one of then can be not None'
             figure = ax.get_figure()
