@@ -191,12 +191,19 @@ def _init_binary_worker(recording, rec_memmaps_dict, dtype):
     else:
         worker_ctx['recording'] = recording
 
+    recording_dtype = np.dtype(worker_ctx['recording'].get_dtype())
+
     rec_memmaps = []
     for d in rec_memmaps_dict:
         rec_memmaps.append(np.memmap(**d))
 
     worker_ctx['rec_memmaps'] = rec_memmaps
     worker_ctx['dtype'] = np.dtype(dtype)
+
+    if worker_ctx['dtype'] != recording_dtype and recording_dtype.kind == "u":
+        worker_ctx['cast_unsigned'] = True
+    else:
+        worker_ctx['cast_unsigned'] = False
 
     return worker_ctx
 
@@ -207,9 +214,11 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     dtype = worker_ctx['dtype']
     rec_memmap = worker_ctx['rec_memmaps'][segment_index]
+    cast_unsigned = worker_ctx['cast_unsigned']
 
     # apply function
-    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                  cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     rec_memmap[start_frame:end_frame, :] = traces
 
@@ -332,6 +341,7 @@ def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
     else:
         worker_ctx['recording'] = recording
 
+    recording_dtype = np.dtype(worker_ctx['recording'].get_dtype())
     worker_ctx['dtype'] = np.dtype(dtype)
 
     if arrays is None:
@@ -348,6 +358,11 @@ def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
 
     worker_ctx['arrays'] = arrays
 
+    if worker_ctx['dtype'] != recording_dtype and recording_dtype.kind == "u":
+        worker_ctx['cast_unsigned'] = True
+    else:
+        worker_ctx['cast_unsigned'] = False
+
     return worker_ctx
 
 
@@ -357,9 +372,11 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     dtype = worker_ctx['dtype']
     arr = worker_ctx['arrays'][segment_index]
+    cast_unsigned = worker_ctx['cast_unsigned']
 
     # apply function
-    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                  cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     arr[start_frame:end_frame, :] = traces
 
@@ -636,6 +653,8 @@ def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtyp
     else:
         worker_ctx['recording'] = recording
 
+    recording_dtype = np.dtype(worker_ctx['recording'].get_dtype())
+
     # reload root and datasets
     if storage_options is None:
         if isinstance(zarr_path, str):
@@ -654,6 +673,11 @@ def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtyp
     worker_ctx['zarr_datasets'] = zarr_datasets
     worker_ctx['dtype'] = np.dtype(dtype)
 
+    if worker_ctx['dtype'] != recording_dtype and recording_dtype.kind == "u":
+        worker_ctx['cast_unsigned'] = True
+    else:
+        worker_ctx['cast_unsigned'] = False
+
     return worker_ctx
 
 
@@ -663,10 +687,11 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     dtype = worker_ctx['dtype']
     zarr_dataset = worker_ctx['zarr_datasets'][segment_index]
+    cast_unsigned = worker_ctx['cast_unsigned']
 
     # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                  cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
 

@@ -181,6 +181,10 @@ def test_BaseRecording():
     rec_int16 = NumpyRecording([traces], sampling_frequency)
     assert rec_int16.get_dtype() == 'int16'
 
+    traces = np.zeros((1000, 5), dtype='uint16')
+    rec_uint16 = NumpyRecording([traces], sampling_frequency)
+    assert rec_uint16.get_dtype() == 'uint16'
+
     traces_int16 = rec_int16.get_traces()
     assert traces_int16.dtype == 'int16'
     # return_scaled raise error when no gain_to_uV/offset_to_uV properties
@@ -190,6 +194,22 @@ def test_BaseRecording():
     rec_int16.set_property('offset_to_uV', [0.] * 5)
     traces_float32 = rec_int16.get_traces(return_scaled=True)
     assert traces_float32.dtype == 'float32'
+
+    # test cast unsigned
+    tr_u = rec_uint16.get_traces(cast_unsigned=False)
+    assert tr_u.dtype.kind == "u"
+    tr_i = rec_uint16.get_traces(cast_unsigned=True)
+    assert tr_i.dtype.kind == "i"
+    folder = cache_folder / 'recording_unsigned'
+    rec_u = rec_uint16.save(folder=folder)
+    rec_u.get_dtype() == 'uint16'
+    folder = cache_folder / 'recording_signed'
+    rec_i = rec_uint16.save(folder=folder, dtype="int16")
+    rec_i.get_dtype() == 'int16'
+    assert np.allclose(rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
+                       rec_i.get_traces().astype("float"))
+    assert np.allclose(rec_u.get_traces(cast_unsigned=True),
+                       rec_i.get_traces().astype("float"))
 
     # test with t_start
     rec = BinaryRecordingExtractor(
@@ -242,6 +262,16 @@ def test_BaseRecording():
     rec_zarr2 = rec2.save(format="zarr", zarr_path=cache_folder / "recording_channel_chunk.zarr",
                           compressor=compressor, channel_chunk_size=2)
     check_recordings_equal(rec2, rec_zarr2, return_scaled=False)
+
+    # test cast unsigned
+    rec_u = rec_uint16.save(format="zarr", zarr_path=cache_folder / "rec_u.zarr")
+    rec_u.get_dtype() == 'uint16'
+    rec_i = rec_uint16.save(format="zarr", zarr_path=cache_folder / "rec_i.zarr", dtype="int16")
+    rec_i.get_dtype() == 'int16'
+    assert np.allclose(rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
+                       rec_i.get_traces().astype("float"))
+    assert np.allclose(rec_u.get_traces(cast_unsigned=True),
+                       rec_i.get_traces().astype("float"))
 
 
 
