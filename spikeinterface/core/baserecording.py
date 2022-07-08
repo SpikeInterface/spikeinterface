@@ -95,7 +95,7 @@ class BaseRecording(BaseExtractor):
                    channel_ids: Union[Iterable, None] = None,
                    order: Union[str, None] = None,
                    return_scaled=False,
-                   cast_unsigned=True
+                   cast_unsigned=False
                    ):
         """Returns traces from recording.
 
@@ -116,7 +116,7 @@ class BaseRecording(BaseExtractor):
             traces are scaled to uV, by default False
         cast_unsigned : bool, optional
             If True and the traces are unsigned, they are cast to integer and centered 
-            (an offset of (2**nbits) is subtracted), by default True
+            (an offset of (2**nbits) is subtracted), by default False
 
         Returns
         -------
@@ -140,8 +140,11 @@ class BaseRecording(BaseExtractor):
             dtype = traces.dtype
             # if dtype is unsigned, return centered signed signal
             if dtype.kind == "u":
+                itemsize = dtype.itemsize
+                assert itemsize < 8, "Cannot upcast uint64!"
                 nbits = dtype.itemsize * 8
-                traces = traces.astype('float32') - 2 ** (nbits - 1)
+                # upcast to int with double itemsize
+                traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (nbits - 1)
                 traces = traces.astype(f"int{dtype.itemsize * 8}")
 
         if return_scaled:
