@@ -4,7 +4,7 @@ from .base_sortingview import SortingviewPlotter
 
 class UnitWaveformPlotter(SortingviewPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
-        vv = self.get_sortingviews()
+        import sortingview.views as vv
 
         d = data_plot
         unit_ids = d['unit_ids']
