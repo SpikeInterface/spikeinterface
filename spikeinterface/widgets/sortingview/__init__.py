@@ -1,2 +1,4 @@
+from .autocorrelograms import AutoCorrelogramsPlotter
+from .crosscorrelograms import CrossCorrelogramsPlotter
 from .unit_waveforms import UnitWaveformPlotter
 from .timeseries import TimeseriesPlotter
