@@ -38,9 +38,11 @@ class AmplitudeTimeseriesWidget(BaseWidget):
 
         if sorting.get_num_segments() > 1:
             assert segment_index is not None, "Specify segment index for multi-segment object"
-            amplitudes_segment = amplitudes[segment_index]
         else:
-            amplitudes_segment = amplitudes[0]
+            segment_index = 0
+        amplitudes_segment = amplitudes[segment_index]
+        total_duration = waveform_extractor.recording.get_num_samples(segment_index) / \
+            waveform_extractor.recording.get_sampling_frequency()
 
         spiketrains_segment = {}
         for i, unit_id in enumerate(unit_ids):
@@ -52,6 +54,7 @@ class AmplitudeTimeseriesWidget(BaseWidget):
             amplitudes=amplitudes_segment,
             unit_ids=unit_ids,
             spiketrains=spiketrains_segment,
+            total_duration=total_duration
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

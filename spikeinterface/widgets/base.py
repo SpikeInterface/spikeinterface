@@ -66,6 +66,23 @@ def copy_signature(source_fct):
     return copy
 
 
+class to_attr(object):
+    def __init__(self, d):
+        """
+        Helper function that transform a dict into
+        an object where attributes are the keys of the dict
+
+        d = {'a': 1, 'b': 'yep'}
+        o = to_attr(d)
+        print(o.a, o.b)
+        """
+        object.__init__(self)
+        object.__setattr__(self, '__d', d)
+
+    def __getattribute__(self, k):
+        d = object.__getattribute__(self, '__d')
+        return d[k]
+
 def define_widget_function_from_class(widget_class, name):
 
     @copy_signature(widget_class)
