@@ -24,13 +24,13 @@ except:
 
 # theses import make the Widget.resgister() at import time
 if HAVE_MPL:
-    from .matplotlib import *
+    import spikeinterface.widgets.matplotlib
 
 if HAVE_SV:
-    from .sortingview import *
+    import spikeinterface.widgets.sortingview
 
 if HAVE_IPYW:
-    from .ipywidgets import *
+    import spikeinterface.widgets.ipywidgets
 
 
 # we keep this to keep compatibility so we have all previous widgets

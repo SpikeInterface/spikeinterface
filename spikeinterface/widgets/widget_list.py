@@ -29,12 +29,12 @@ from .crosscorrelograms import CrossCorrelogramsWidget, plot_crosscorrelograms
 
 # correlogram comparison
 
-
-
-# from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
+# amplitudes
+from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
 
 
 widget_list = [
+    AmplitudeTimeseriesWidget,
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
     TimeseriesWidget,
