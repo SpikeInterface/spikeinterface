@@ -29,7 +29,7 @@ class UnitWaveformPlotter(SortingviewPlotter):
             for u, t in templates_dict.items()
         ]
 
-        locations = {ch: dp.channel_locations[i_ch].astype("float32")
+        locations = {str(ch): dp.channel_locations[i_ch].astype("float32")
                      for i_ch, ch in enumerate(channel_ids)}
         v_average_waveforms = vv.AverageWaveforms(
             average_waveforms=aw_items,
