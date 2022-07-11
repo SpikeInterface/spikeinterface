@@ -180,6 +180,7 @@ class StudyComparisonUnitCountsWidget(BaseWidget):
 
         for r, rec_name in enumerate(study.rec_names):
             ax = self.axes[r, 0]
+            ax.set_title(rec_name)
             df = count_units.loc[count_units['rec_name'] == rec_name, :]
             m = df.groupby('sorter_name')[columns].mean()
             sorter_names = m.index
@@ -256,6 +257,7 @@ class StudyComparisonPerformancesWidget(BaseWidget):
 
         for r, rec_name in enumerate(study.rec_names):
             ax = self.axes[r, 0]
+            ax.set_title(rec_name)
             df = perf_by_units.loc[perf_by_units['rec_name'] == rec_name, :]
             df = pd.melt(df, id_vars='sorter_name', var_name='Metric', value_name='Score',
                     value_vars=('accuracy','precision', 'recall')).sort_values('sorter_name')
@@ -268,6 +270,7 @@ class StudyComparisonPerformancesWidget(BaseWidget):
             ax.set_ylabel(f'Perfs for {rec_name}')
             if r < len(study.rec_names) - 1:
                 ax.set_xlabel('')
+                ax.set(xticklabels=[])
 
 
 
