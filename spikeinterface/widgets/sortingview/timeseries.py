@@ -21,6 +21,8 @@ class TimeseriesPlotter(SortingviewPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
         
+        assert dp.mode == 'map', 'sortingview plot_timeseries is only mode="map"'
+
         tiled_image = TiledImage(tile_size=dp.tile_size)
         
         if not dp.order_channel_by_depth:
