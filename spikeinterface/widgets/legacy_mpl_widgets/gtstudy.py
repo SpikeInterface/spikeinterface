@@ -189,7 +189,8 @@ class StudyComparisonUnitCountsWidget(BaseWidget):
                 x = np.arange(sorter_names.size) + 1 + c / (ncol + 2)
                 ax.bar(x, m[col].values, width=1/(ncol+2), color=cmap(c), label=clean_labels[c])
         
-            ax.legend()
+            if r == 0:
+                ax.legend()
 
             ax.set_yscale('log')
             if r == len(study.rec_names) - 1:
@@ -251,7 +252,7 @@ class StudyComparisonPerformancesWidget(BaseWidget):
         sns.set_palette(sns.color_palette(self.palette))
 
         perf_by_units = study.aggregate_performance_by_unit()
-        perf_by_units = perf_by_units.reset_index()
+        perf_by_units = perf_by_units.reset_index() 
 
         for r, rec_name in enumerate(study.rec_names):
             ax = self.axes[r, 0]
