@@ -37,7 +37,7 @@ class MplPlotter(BackendPlotter):
             axes = []
             nrows = int(np.ceil(num_axes / ncols))
             for i in range(num_axes):
-                ax = figure.add_subplots(nrows, ncols, i + 1)
+                ax = figure.add_subplot(nrows, ncols, i + 1)
                 axes.append(ax)
             axes = np.array(axes)
         elif ax is not None:

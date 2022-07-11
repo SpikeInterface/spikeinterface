@@ -15,8 +15,8 @@ class UnitWaveformPlotter(SortingviewPlotter):
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
-            templates_dict[unit]["mean"] = dp.all_templates[u_i].T
-            templates_dict[unit]["std"] = dp.all_stds[u_i].T
+            templates_dict[unit]["mean"] = dp.templates[u_i].T
+            templates_dict[unit]["std"] = dp.template_stds[u_i].T
 
         aw_items = [
             vv.AverageWaveformItem(

@@ -87,11 +87,11 @@ class UnitWaveformsWidget(BaseWidget):
         sparsity = {u: recording.channel_ids[channel_inds[u]] for u in sorting.unit_ids}
         
         # get templates
-        all_templates = we.get_all_templates(unit_ids=unit_ids)
-        all_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
+        templates = we.get_all_templates(unit_ids=unit_ids)
+        template_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
         
         xvectors, y_scale, y_offset = get_waveforms_scales(
-            waveform_extractor, all_templates, channel_locations)
+            waveform_extractor, templates, channel_locations)
         
         wfs_by_ids = {unit_id: we.get_waveforms(unit_id) for unit_id in unit_ids}
 
@@ -103,8 +103,8 @@ class UnitWaveformsWidget(BaseWidget):
             sparsity=sparsity,
             unit_colors=unit_colors,
             channel_locations=channel_locations,
-            all_templates=all_templates,
-            all_stds=all_stds,
+            templates=templates,
+            template_stds=template_stds,
             plot_waveforms=plot_waveforms,
             plot_templates=plot_templates,
             plot_channels=plot_channels,

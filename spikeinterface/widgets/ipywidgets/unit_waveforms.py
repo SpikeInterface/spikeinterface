@@ -29,7 +29,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = Output(layout=Layout(width=f'{width_cm}cm'))
             with output:
-                fig = plt.figure(figsize=(width_cm * cm, height_cm * cm))
+                fig = plt.figure(figsize=((width_cm - 5) * cm, height_cm * cm))
                 plt.show()
 
         unit_selector = SelectMultiple(
@@ -87,9 +87,11 @@ class PlotUpdater:
         data_plot = self.next_data_plot
         data_plot['unit_ids'] = unit_ids
         data_plot['wfs_by_ids'] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
+        data_plot['templates'] = self.we.get_all_templates(unit_ids=unit_ids)
+        data_plot['template_stds'] = self.we.get_all_templates(unit_ids=unit_ids, mode="std")
 
         backend_kwargs = {}
-        backend_kwargs['figure'] = None
+        backend_kwargs['figure'] = self.fig
         
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         
