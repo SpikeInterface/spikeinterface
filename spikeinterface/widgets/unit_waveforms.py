@@ -53,6 +53,8 @@ class UnitWaveformsWidget(BaseWidget):
                  unit_colors=None, max_channels=None, radius_um=None,
                  ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
                  set_title=True, backend=None, **backend_kwargs):
+        self.check_backend(backend)
+
         we = waveform_extractor
         recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
@@ -119,11 +121,10 @@ class UnitWaveformsWidget(BaseWidget):
             wfs_by_ids=wfs_by_ids,
             set_title=set_title,
         )
-
+        
+        if "do_plot" not in backend_kwargs:
+            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-
-
 
 
 def get_waveforms_scales(we, templates, channel_locations):

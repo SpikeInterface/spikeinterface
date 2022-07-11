@@ -5,7 +5,7 @@ from .base_sortingview import SortingviewPlotter
 
 class CrossCorrelogramsPlotter(SortingviewPlotter):
 
-    def do_plot(self, data_plot, **backend_kwargs):
+    def do_plot(self, data_plot, hide_unit_selector=False, **backend_kwargs):
         import sortingview.views as vv
         
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -26,7 +26,8 @@ class CrossCorrelogramsPlotter(SortingviewPlotter):
                 )
 
         v_cross_correlograms = vv.CrossCorrelograms(
-            cross_correlograms=cc_items
+            cross_correlograms=cc_items,
+            hide_unit_selector=hide_unit_selector
         )
 
         if backend_kwargs["generate_url"]:

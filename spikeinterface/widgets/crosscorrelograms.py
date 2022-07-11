@@ -25,6 +25,7 @@ class CrossCorrelogramsWidget(BaseWidget):
     def __init__(self, waveform_or_sorting_extractor: Union[WaveformExtractor, BaseSorting], 
                  unit_ids=None, window_ms=100.0, bin_ms=1.0, 
                  backend=None, **backend_kwargs):
+        self.check_backend(backend)
         if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
             sorting = waveform_or_sorting_extractor.sorting
             if waveform_or_sorting_extractor.is_extension("crosscorrelograms"):
@@ -45,7 +46,7 @@ class CrossCorrelogramsWidget(BaseWidget):
             correlograms = ccgs
         else:
             unit_indices = sorting.ids_to_indices(unit_ids)
-            correlograms = ccgs[unit_indices, unit_indices, :]
+            correlograms = ccgs[unit_indices][unit_indices]
 
         plot_data = dict(
             correlograms=correlograms,
@@ -53,6 +54,8 @@ class CrossCorrelogramsWidget(BaseWidget):
             unit_ids=unit_ids,
         )
 
+        if "do_plot" not in backend_kwargs:
+            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

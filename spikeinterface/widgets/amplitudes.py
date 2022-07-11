@@ -23,6 +23,8 @@ class AmplitudeTimeseriesWidget(BaseWidget):
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
                  segment_index=None, compute_kwargs=None, backend=None, **backend_kwargs):
+        self.check_backend(backend)
+
         sorting = waveform_extractor.sorting
         if waveform_extractor.is_extension('spike_amplitudes'):
             sac = waveform_extractor.load_extension('spike_amplitudes')
@@ -57,6 +59,8 @@ class AmplitudeTimeseriesWidget(BaseWidget):
             total_duration=total_duration
         )
 
+        if "do_plot" not in backend_kwargs:
+            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

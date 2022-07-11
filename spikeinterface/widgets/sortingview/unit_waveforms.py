@@ -1,4 +1,5 @@
 from ..base import to_attr
+from ..unit_waveforms import UnitWaveformsWidget
 from .base_sortingview import SortingviewPlotter
 
 
@@ -10,7 +11,7 @@ class UnitWaveformPlotter(SortingviewPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         
         # ensure serializable for sortingview
-        unit_ids, channel_ids, sparsity = self.make_serializable(dp.unit_ids, dp.channel_ids, dp.all_templates)
+        unit_ids, channel_ids, sparsity = self.make_serializable(dp.unit_ids, dp.channel_ids, dp.sparsity)
 
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
@@ -42,5 +43,4 @@ class UnitWaveformPlotter(SortingviewPlotter):
         return v_average_waveforms
 
 
-from ..unit_waveforms import UnitWaveformsWidget
 UnitWaveformPlotter.register(UnitWaveformsWidget)

@@ -32,6 +32,9 @@ from .crosscorrelograms import CrossCorrelogramsWidget, plot_crosscorrelograms
 # amplitudes
 from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
 
+# summary
+from .sorting_summary import SortingSummaryWidget, plot_sorting_summary
+
 
 widget_list = [
     AmplitudeTimeseriesWidget,
@@ -41,4 +44,7 @@ widget_list = [
     UnitWaveformsWidget,
     UnitTemplateWidget,
     UnitWaveformDensityMapWidget,
+    
+    # summary
+    SortingSummaryWidget
 ]
