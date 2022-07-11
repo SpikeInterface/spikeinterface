@@ -22,7 +22,7 @@ class UnitWaveformPlotter(SortingviewPlotter):
         aw_items = [
             vv.AverageWaveformItem(
                 unit_id=u,
-                channel_ids=list(dp.sparsity[u]),
+                channel_ids=list(sparsity[u]),
                 waveform=t['mean'].astype('float32'),
                 waveform_std_dev=t['std'].astype('float32')
             )
