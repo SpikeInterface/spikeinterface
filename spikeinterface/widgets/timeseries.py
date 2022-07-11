@@ -58,6 +58,7 @@ class TimeseriesWidget(BaseWidget):
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
                  with_colorbar=True, backend=None, **backend_kwargs):
+        self.check_backend(backend)
         if isinstance(recording, BaseRecording):
             recordings = {'rec': recording}
             rec0 = recording
@@ -184,6 +185,9 @@ class TimeseriesWidget(BaseWidget):
             tile_size=tile_size,
             num_timepoints_per_row=int(seconds_per_row * fs)
         )
+
+        if "do_plot" not in backend_kwargs:
+            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

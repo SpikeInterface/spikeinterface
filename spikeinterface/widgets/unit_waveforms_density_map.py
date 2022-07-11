@@ -39,8 +39,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
-                max_channels=None, radius_um=None, same_axis=False,
-                unit_colors=None, backend=None, **backend_kwargs):
+                 max_channels=None, radius_um=None, same_axis=False,
+                 unit_colors=None, backend=None, **backend_kwargs):
+        self.check_backend(backend)
 
         we = waveform_extractor
 
@@ -131,6 +132,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             templates_flat=templates_flat,
             template_width=wfs.shape[1]
         )
+        
+        if "do_plot" not in backend_kwargs:
+            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
