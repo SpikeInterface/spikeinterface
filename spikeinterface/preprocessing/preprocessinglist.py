@@ -1,3 +1,4 @@
+from spikeinterface.preprocessing.resample import ResampleRecording
 from .filter import (FilterRecording, filter,
                      BandpassFilterRecording, bandpass_filter,
                      NotchFilterRecording, notch_filter,
@@ -16,6 +17,7 @@ from .clip import (
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
 from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
+from .resample import ResampleRecording, resample
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 # not importing deepinterpolation by default
@@ -44,14 +46,13 @@ preprocessers_full_list = [
 
     # misc
     RectifyRecording,
+    ClipRecording,
     BlankSaturationRecording,
     RemoveArtifactsRecording,
     RemoveBadChannelsRecording,
     ZeroChannelPaddedRecording,
-
-    # DeepInterpolatedRecording
-    # TODO: @alessio this one  is for you
-    # ResampleRecording,
+    DeepInterpolatedRecording,
+    ResampleRecording
 
 ]
 

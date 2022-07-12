@@ -780,3 +780,13 @@ def recursive_path_modifier(d, func, target='path', copy=True):
                 else:
                     raise ValueError(
                         f'{k} key for path  must be str or list[str]')
+
+
+def recursive_key_finder(d, key):
+    # Find all values for a key on a dictionary, even if nested
+    for k, v in d.items():
+        if isinstance(v, dict):
+            yield from recursive_key_finder(v, key)
+        else:
+            if k == key:
+                yield v
