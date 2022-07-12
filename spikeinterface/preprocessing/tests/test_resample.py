@@ -14,7 +14,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "preprocessing"
 
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     import matplotlib.pyplot as plt
