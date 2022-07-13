@@ -45,7 +45,7 @@ class CrossCorrelogramsWidget(BaseWidget):
             correlograms = ccgs
         else:
             unit_indices = sorting.ids_to_indices(unit_ids)
-            correlograms = ccgs[unit_indices][unit_indices]
+            correlograms = ccgs[unit_indices][:, unit_indices]
 
         plot_data = dict(
             correlograms=correlograms,
