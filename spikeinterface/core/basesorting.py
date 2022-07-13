@@ -131,6 +131,24 @@ class BaseSorting(BaseExtractor):
         v = values[self.id_to_index(unit_id)]
         return v
 
+    def get_total_num_spikes(self):
+        """
+        Get total number of spikes for each unit across segments.
+
+        Returns
+        -------
+        dict
+            Dictionary with unit_ids as key and number of spikes as values
+        """
+        num_spikes = {}
+        for unit_id in self.unit_ids:
+            n = 0
+            for segment_index in range(self.get_num_segments()):
+                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                n += st.size
+            num_spikes[unit_id] = n
+        return num_spikes
+
     def select_units(self, unit_ids, renamed_unit_ids=None):
         """
         Selects a subset of units
