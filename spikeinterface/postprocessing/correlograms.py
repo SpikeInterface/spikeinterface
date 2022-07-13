@@ -46,7 +46,7 @@ class CrossCorrelogramsCalculator(BaseWaveformExtractorExtension):
     def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # filter metrics dataframe
         unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_ccgs = self.ccgs[unit_indices][unit_indices]
+        new_ccgs = self.ccgs[unit_indices][:, unit_indices]
         np.save(new_waveforms_folder / self.extension_name / 'ccgs.npy', new_ccgs)
         np.save(new_waveforms_folder / self.extension_name / 'bins.npy', self.bins)
         
