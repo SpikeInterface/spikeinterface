@@ -37,14 +37,15 @@ class SortingSummaryWidget(BaseWidget):
             if sparsity_kwargs is not None:
                 sparsity = get_template_channel_sparsity(we, **sparsity_kwargs)
             else:
-                sparsity = {u: channel_ids for u in unit_ids}
+                sparsity = {u: channel_ids for u in sorting.unit_ids}
         else:
-            assert all(u in sparsity for u in unit_ids), "Sparsity needs to be defined for all units!"
+            assert all(u in sparsity for u in sorting.unit_ids), "Sparsity needs to be defined for all units!"
 
         job_kwargs = job_kwargs if job_kwargs is not None else {}
         
         # use other widgets to generate data (except for similarity)
-        waveforms_plot_data = UnitWaveformsWidget(we, unit_ids=unit_ids, do_plot=False).plot_data
+        waveforms_plot_data = UnitWaveformsWidget(we, unit_ids=unit_ids, sparsity=sparsity, 
+                                                  do_plot=False).plot_data
         
         correlograms_kwargs = correlograms_kwargs if correlograms_kwargs is not None else {}
         ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, do_plot=False,
