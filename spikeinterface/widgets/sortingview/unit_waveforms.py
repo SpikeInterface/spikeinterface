@@ -12,12 +12,13 @@ class UnitWaveformPlotter(SortingviewPlotter):
         
         # ensure serializable for sortingview
         unit_ids, channel_ids, sparsity = self.make_serializable(dp.unit_ids, dp.channel_ids, dp.sparsity)
+        channel_inds = dp.channel_inds
 
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
-            templates_dict[unit]["mean"] = dp.all_templates[u_i].T
-            templates_dict[unit]["std"] = dp.all_stds[u_i].T
+            templates_dict[unit]["mean"] = dp.all_templates[u_i].T.astype("float32")[channel_inds[unit]]
+            templates_dict[unit]["std"] = dp.all_stds[u_i].T.astype("float32")[channel_inds[unit]]
 
         aw_items = [
             vv.AverageWaveformItem(
