@@ -1,5 +1,6 @@
 from .amplitudes import AmplitudeTimeseriesPlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
-from .unit_waveforms import UnitWaveformPlotter
 from .timeseries import TimeseriesPlotter
+from .unit_locations import UnitLocationsPlotter
+from .unit_waveforms import UnitWaveformPlotter
