@@ -13,7 +13,6 @@ class UnitLocationsPlotter(MplPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        backend_kwargs["num_axes"] = 1
 
         self.make_mpl_figure(**backend_kwargs)
         
