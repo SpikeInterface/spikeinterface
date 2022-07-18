@@ -20,3 +20,14 @@ class SortingviewPlotter(BackendPlotter):
         if len(returns) == 1:
             returns = returns[0]
         return returns
+
+
+def generate_unit_table_view(unit_ids):
+    import sortingview.views as vv
+    ut_rows = [
+        vv.UnitsTableRow(unit_id=u, values={})
+        for u in unit_ids
+    ]
+    ut_columns = []
+    v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns)
+    return v_units_table

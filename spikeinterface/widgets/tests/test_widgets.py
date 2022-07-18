@@ -86,6 +86,10 @@ class TestWidgets(unittest.TestCase):
         sw.plot_amplitudes_timeseries(self.we)
         unit_ids = self.we.sorting.unit_ids[:4]
         sw.plot_amplitudes_timeseries(self.we, unit_ids=unit_ids)
+        
+    def test_plot_unit_localization(self):
+        sw.plot_unit_locations(self.we, with_channel_ids=True)
+        sw.plot_unit_locations(self.we, compute_kwargs=dict(method='monopolar_triangulation'))
 
 
 if __name__ == '__main__':

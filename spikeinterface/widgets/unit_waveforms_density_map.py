@@ -41,8 +41,6 @@ class UnitWaveformDensityMapWidget(BaseWidget):
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
                  max_channels=None, radius_um=None, same_axis=False,
                  unit_colors=None, backend=None, **backend_kwargs):
-        self.check_backend(backend)
-
         we = waveform_extractor
 
         if channel_ids is None:

@@ -23,8 +23,6 @@ class SortingSummaryWidget(BaseWidget):
                  similarity_kwargs=None, job_kwargs=None,
                  # compute_pca_kwargs=None, localization_kwargs=None,
                  backend=None, **backend_kwargs):
-        self.check_backend(backend)
-
         we = waveform_extractor
         recording = we.recording
         sorting = we.sorting

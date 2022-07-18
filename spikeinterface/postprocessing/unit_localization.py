@@ -47,7 +47,7 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
         unit_inds = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
 
         new_unit_location = self.unit_locations[unit_inds]
-        np.save(new_waveforms_folder / 'unit_locations.npy', new_unit_location)
+        np.save(new_waveforms_folder / self.extension_name / 'unit_locations.npy', new_unit_location)
 
     def run(self, **job_kwargs):
         method = self._params['method']

@@ -31,17 +31,14 @@ class BaseWidget:
         self.backend = backend
 
         
-    def check_backend(self, backend):
+    def check_backend(self, backend, **backend_kwargs):
         if backend is None:
             backend = get_default_plotter_backend()
         assert backend in self.possible_backends, (f"{backend} backend not available! Available backends are: "
                                                    f"{list(self.possible_backends.keys())}")
 
     def do_plot(self, backend, **backend_kwargs):
-        if backend is None:
-            backend = get_default_plotter_backend()
-    
-        assert backend in self.possible_backends, f'Backend {backend} not supported for this widget'    
+        self.check_backend(backend, **backend_kwargs)
         plotter = self.possible_backends[backend]()
         plotter.do_plot(self.plot_data, **backend_kwargs)
         self.plotter = plotter

@@ -58,7 +58,6 @@ class TimeseriesWidget(BaseWidget):
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
                  with_colorbar=True, backend=None, **backend_kwargs):
-        self.check_backend(backend)
         if isinstance(recording, BaseRecording):
             recordings = {'rec': recording}
             rec0 = recording

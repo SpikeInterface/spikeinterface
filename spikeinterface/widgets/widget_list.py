@@ -17,8 +17,8 @@ from .crosscorrelograms import CrossCorrelogramsWidget, plot_crosscorrelograms
 
 # PC related
 
-
 # units on probe
+from .unit_locations import UnitLocationsWidget, plot_unit_locations
 
 # unit summary
 
@@ -41,8 +41,9 @@ widget_list = [
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
     TimeseriesWidget,
-    UnitWaveformsWidget,
+    UnitLocationsWidget,
     UnitTemplateWidget,
+    UnitWaveformsWidget,
     UnitWaveformDensityMapWidget,
     
     # summary

@@ -55,8 +55,6 @@ class UnitWaveformsWidget(BaseWidget):
                  unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
                  ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
                  set_title=True, backend=None, **backend_kwargs):
-        self.check_backend(backend)
-
         we = waveform_extractor
         recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
