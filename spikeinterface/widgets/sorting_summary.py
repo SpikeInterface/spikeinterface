@@ -44,18 +44,15 @@ class SortingSummaryWidget(BaseWidget):
         job_kwargs = job_kwargs if job_kwargs is not None else {}
         
         # use other widgets to generate data (except for similarity)
-        waveforms_plot_data = UnitWaveformsWidget(we, unit_ids=unit_ids, sparsity=sparsity, 
-                                                  do_plot=False).plot_data
+        waveforms_plot_data = UnitWaveformsWidget(we, unit_ids=unit_ids, sparsity=sparsity).plot_data
         
         correlograms_kwargs = correlograms_kwargs if correlograms_kwargs is not None else {}
-        ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, do_plot=False,
-                                                **correlograms_kwargs).plot_data
+        ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, **correlograms_kwargs).plot_data
         
         amplitudes_kwargs = amplitudes_kwargs if amplitudes_kwargs is not None else {}
         amplitudes_kwargs = amplitudes_kwargs.update(job_kwargs)
         amps_plot_data = AmplitudeTimeseriesWidget(we, unit_ids=unit_ids,
-                                                   compute_kwargs=amplitudes_kwargs,
-                                                   do_plot=False).plot_data
+                                                   compute_kwargs=amplitudes_kwargs).plot_data
         
         if we.is_extension("similarity"):
             ccc = we.load_extension("similarity")
@@ -76,8 +73,6 @@ class SortingSummaryWidget(BaseWidget):
             similarity=similarity_plot_data
         )
 
-        if "do_plot" not in backend_kwargs:
-            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

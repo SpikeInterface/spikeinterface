@@ -128,9 +128,7 @@ class UnitWaveformsWidget(BaseWidget):
             wfs_by_ids=wfs_by_ids,
             set_title=set_title,
         )
-        
-        if "do_plot" not in backend_kwargs:
-            backend_kwargs["do_plot"] = True
+
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

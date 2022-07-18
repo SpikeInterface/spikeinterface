@@ -186,8 +186,6 @@ class TimeseriesWidget(BaseWidget):
             num_timepoints_per_row=int(seconds_per_row * fs)
         )
 
-        if "do_plot" not in backend_kwargs:
-            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

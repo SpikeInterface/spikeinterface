@@ -59,8 +59,6 @@ class AmplitudeTimeseriesWidget(BaseWidget):
             total_duration=total_duration
         )
 
-        if "do_plot" not in backend_kwargs:
-            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

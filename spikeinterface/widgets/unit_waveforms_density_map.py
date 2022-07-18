@@ -132,9 +132,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             templates_flat=templates_flat,
             template_width=wfs.shape[1]
         )
-        
-        if "do_plot" not in backend_kwargs:
-            backend_kwargs["do_plot"] = True
+
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

@@ -54,8 +54,6 @@ class CrossCorrelogramsWidget(BaseWidget):
             unit_ids=unit_ids,
         )
 
-        if "do_plot" not in backend_kwargs:
-            backend_kwargs["do_plot"] = True
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

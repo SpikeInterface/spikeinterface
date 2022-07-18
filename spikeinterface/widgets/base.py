@@ -25,14 +25,11 @@ class BaseWidget:
     # this need to be reset in the subclass
     possible_backends = None
     
-    def __init__(self, plot_data=None, backend=None, do_plot=True, **backend_kwargs):
+    def __init__(self, plot_data=None, backend=None, **backend_kwargs):
         # every widgets must prepare a dict "plot_data" in the init
         self.plot_data = plot_data
         self.backend = backend
-        
-        # delegated to one of the plotter
-        if do_plot:
-            self.do_plot(backend, **backend_kwargs)
+
         
     def check_backend(self, backend):
         if backend is None:
@@ -96,6 +93,7 @@ def define_widget_function_from_class(widget_class, name):
     @copy_signature(widget_class)
     def widget_func(*args, **kwargs):
         W = widget_class(*args, **kwargs)
+        W.do_plot()
         return W.plotter
 
     widget_func.__doc__ = widget_class.__doc__
