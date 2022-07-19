@@ -15,6 +15,8 @@ class CrossCorrelogramsWidget(BaseWidget):
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
         The object to compute/get crosscorrelograms from
+    unit_ids: list
+        List of unit ids.
     window_ms : float
         Window for CCGs in ms, by default 100 ms
     bin_ms : float
