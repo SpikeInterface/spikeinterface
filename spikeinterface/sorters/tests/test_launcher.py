@@ -178,6 +178,31 @@ def test_run_sorters_dask():
     print(t1 - t0)
 
 
+@pytest.mark.skipif(True, reason='This is tested locally')
+def test_run_sorters_slurm():
+    working_folder = cache_folder / 'test_run_sorters_slurm'
+    if working_folder.is_dir():
+        shutil.rmtree(working_folder)
+
+    # create recording
+    recording_dict = {}
+    for i in range(8):
+        rec, _ = toy_example(num_channels=4, duration=30,
+                             seed=0, num_segments=1)
+        # make dumpable
+        rec = rec.save(name=f'rec_{i}')
+        recording_dict[f'rec_{i}'] = rec
+
+    sorter_list = ['tridesclous', ]
+    
+    tmp_script_folder = working_folder / 'slurm_scripts'
+    tmp_script_folder.mkdir(parents=True)
+    
+    run_sorters(sorter_list, recording_dict, working_folder,
+                engine='slurm', engine_kwargs={'tmp_script_folder': tmp_script_folder, },
+                with_output=False, mode_if_folder_exists='keep')
+
+
 def test_collect_sorting_outputs():
     working_folder = cache_folder / 'test_run_sorters_dict'
     results = collect_sorting_outputs(working_folder)
@@ -194,12 +219,14 @@ if __name__ == '__main__':
     #pass
     # test_run_sorters_with_list()
 
-    test_run_sorter_by_property()
+    # test_run_sorter_by_property()
 
     # test_run_sorters_with_dict()
 
     # test_run_sorters_joblib()
 
     # test_run_sorters_dask()
+    
+    test_run_sorters_slurm()
 
     # test_collect_sorting_outputs()
