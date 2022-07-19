@@ -26,8 +26,8 @@ def test_run_sorters_with_list():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(folder=working_folder/'rec0')
-    rec1 = rec1.save(folder=working_folder/'rec1')
+    rec0 = rec0.save(folder=working_folder/'raw_rec0')
+    rec1 = rec1.save(folder=working_folder/'raw_rec1')
 
     recording_list = [rec0, rec1]
     sorter_list = ['tridesclous']
