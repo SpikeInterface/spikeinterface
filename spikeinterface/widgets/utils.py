@@ -70,7 +70,9 @@ def array_to_image(data,
                    clim=None,
                    spatial_zoom=(0.75, 1.25),
                    num_timepoints_per_row=30000,
-                   row_spacing=0.25):
+                   row_spacing=0.25,
+                   scalebar=False,
+                   sampling_frequency=None):
     """
     Converts a 2D numpy array (width x height) to a 
     3D image array (width x height x RGB color).
@@ -99,7 +101,7 @@ def array_to_image(data,
     """
 
     from scipy.ndimage import zoom
-    
+
     if clim is not None:
         assert len(clim) == 2, "'clim' should have a minimum and maximum value"
     else:
@@ -115,7 +117,7 @@ def array_to_image(data,
 
     cmap = plt.get_cmap(colormap)
     zoomed_data = zoom(data, spatial_zoom)
-    
+
     scaled_data = zoomed_data
     scaled_data[scaled_data < clim[0]] = clim[0]
     scaled_data[scaled_data > clim[1]] = clim[1]
@@ -125,7 +127,7 @@ def array_to_image(data,
     num_rows = int(np.ceil(num_timepoints / num_timepoints_per_row))
 
     output_image = np.ones(
-        (num_rows * (num_channels_after_scaling + spacing) - spacing,
+        (num_rows * (num_channels_after_scaling + spacing),
          num_timepoints_per_row_after_scaling, 3), dtype=np.uint8
     ) * 255
 
@@ -134,5 +136,42 @@ def array_to_image(data,
         i2 = min(i1 + num_timepoints_per_row_after_scaling, num_timepoints_after_scaling)
         output_image[ir * (num_channels_after_scaling + spacing):ir * (num_channels_after_scaling + spacing) +
                      num_channels_after_scaling, :i2-i1, :] = a[:, i1:i2, :]
+
+    if scalebar:
+        assert sampling_frequency is not None
+
+        try:
+            from PIL import Image, ImageFont, ImageDraw
+        except ImportError:
+            raise ImportError("To add a scalebar, you need pillow: >>> pip install pillow")
+        import platform
+
+        y_scalebar = output_image.shape[0] - 10
+        fontsize = int(0.8 * spacing)
+        row_ms = (num_timepoints_per_row / sampling_frequency) * 1000
+
+        font = None
+        if platform.system() == "Linux":
+            font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize)
+        else:
+            try:
+                font = ImageFont.truetype("arial.ttf", fontsize)
+            except OSError:
+                print(f"Could not load font to use in scalebar. Scalebar will not be drawn.")
+
+        if font is not None:
+            image = Image.fromarray(output_image)
+            image_editable = ImageDraw.Draw(image)
+
+            # bar should be around 1/5 of row and ultiple of 5
+            bar_ms = int((row_ms / 5) // 5 * 5)
+            bar_px = bar_ms * num_timepoints_per_row / row_ms
+
+            x_offset = int(0.1 * num_timepoints_per_row)
+            image_editable.line((x_offset, y_scalebar, x_offset + bar_px, y_scalebar), fill=(0, 0, 0), width=10)
+            image_editable.text((x_offset + 0.3 * (bar_px), y_scalebar - 1.1 * fontsize),
+                                text="10 ms", font=font, fill=(0, 0, 0))
+
+            output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image

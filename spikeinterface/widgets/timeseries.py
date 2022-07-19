@@ -184,6 +184,7 @@ class TimeseriesWidget(BaseWidget):
             tile_size=tile_size,
             num_timepoints_per_row=int(seconds_per_row * fs)
         )
+
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 

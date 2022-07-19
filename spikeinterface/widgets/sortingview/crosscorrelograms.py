@@ -26,7 +26,8 @@ class CrossCorrelogramsPlotter(SortingviewPlotter):
                 )
 
         v_cross_correlograms = vv.CrossCorrelograms(
-            cross_correlograms=cc_items
+            cross_correlograms=cc_items,
+            hide_unit_selector=dp.hide_unit_selector
         )
 
         if backend_kwargs["generate_url"]:

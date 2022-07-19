@@ -22,11 +22,13 @@ class UnitLocationsWidget(BaseWidget):
         add channel ids text on the probe
     compute_kwargs : dict or None
         If given, dictionary with keyword arguments for `compute_unit_locations` function
+    hide_unit_selector : bool
+        For sortingview backend, if True the unit selector is not displayed
     """
     possible_backends = {}
 
     def __init__(self, waveform_extractor: Union[WaveformExtractor, BaseSorting], 
-                 unit_ids=None, with_channel_ids=False, compute_kwargs=None, 
+                 unit_ids=None, with_channel_ids=False, compute_kwargs=None, hide_unit_selector=False,
                  backend=None, **backend_kwargs):
         if waveform_extractor.is_extension("unit_locations"):
             ulc = waveform_extractor.load_extension("unit_locations")
@@ -59,7 +61,8 @@ class UnitLocationsWidget(BaseWidget):
             unit_colors=unit_colors,
             channel_locations=channel_locations,
             probegroup_dict=probegroup.to_dict(),
-            with_channel_ids=with_channel_ids
+            with_channel_ids=with_channel_ids,
+            hide_unit_selector=hide_unit_selector
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

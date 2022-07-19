@@ -32,6 +32,9 @@ from .unit_locations import UnitLocationsWidget, plot_unit_locations
 # amplitudes
 from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
 
+# summary
+from .sorting_summary import SortingSummaryWidget, plot_sorting_summary
+
 
 widget_list = [
     AmplitudeTimeseriesWidget,
@@ -42,4 +45,7 @@ widget_list = [
     UnitTemplateWidget,
     UnitWaveformsWidget,
     UnitWaveformDensityMapWidget,
+    
+    # summary
+    SortingSummaryWidget
 ]
