@@ -27,7 +27,7 @@ class UnitWaveformPlotter(MplPlotter):
             if dp.plot_waveforms:
                 wfs = dp.wfs_by_ids[unit_id]
                 if dp.unit_selected_waveforms is not None:
-                    wfs = wfs[dp.unit_selected_waveforms[unit_id], :, chan_inds]
+                    wfs = wfs[dp.unit_selected_waveforms[unit_id]][:, :, chan_inds]
                 else:
                     wfs = wfs[:, :, chan_inds]
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
