@@ -104,7 +104,7 @@ class Mountainsort4Sorter(BaseSorter):
         # Whiten
         if p['whiten']:
             if verbose:
-                print('whitenning')
+                print('whitening')
             recording = whiten(recording=recording)
 
         print('Mountainsort4 use the OLD spikeextractors mapped with NewToOldRecording')
@@ -121,6 +121,8 @@ class Mountainsort4Sorter(BaseSorter):
         
         # temporary folder
         if parse(mountainsort4.__version__) >= parse("1.0.2"):
+            if p["tempdir"] is not None:
+                p["tempdir"] = str(p["tempdir"])
             ms4_params.update(tempdir=p['tempdir'])
 
         # Check location no more needed done in basesorter
