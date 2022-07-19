@@ -18,18 +18,13 @@ class SortingSummaryPlotter(SortingviewPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         
         amplitudes_plotter = AmplitudeTimeseriesPlotter()
-        v_spike_amplitudes = amplitudes_plotter.do_plot(dp.amplitudes, hide_unit_selector=True, 
-                                                        generate_url=False, backend="sortingview")
+        v_spike_amplitudes = amplitudes_plotter.do_plot(dp.amplitudes, generate_url=False, backend="sortingview")
         waveforms_plotter = UnitWaveformPlotter()
-        v_average_waveforms = waveforms_plotter.do_plot(dp.waveforms, 
-                                                        generate_url=False, backend="sortingview")
+        v_average_waveforms = waveforms_plotter.do_plot(dp.waveforms, generate_url=False, backend="sortingview")
         xcorrelograms_plotter = CrossCorrelogramsPlotter()
-        v_cross_correlograms = xcorrelograms_plotter.do_plot(dp.correlograms, hide_unit_selector=True, 
-                                                             generate_url=False, backend="sortingview")
-        
+        v_cross_correlograms = xcorrelograms_plotter.do_plot(dp.correlograms, generate_url=False, backend="sortingview")
         acorrelograms_plotter = AutoCorrelogramsPlotter()
-        v_auto_correlograms = acorrelograms_plotter.do_plot(dp.correlograms, hide_unit_selector=True, 
-                                                            generate_url=False, backend="sortingview")
+        v_auto_correlograms = acorrelograms_plotter.do_plot(dp.correlograms, generate_url=False, backend="sortingview")
         
         # unit ids
         ut_rows = [

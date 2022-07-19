@@ -37,9 +37,10 @@ class BaseWidget:
             backend = get_default_plotter_backend()
         assert backend in self.possible_backends, (f"{backend} backend not available! Available backends are: "
                                                    f"{list(self.possible_backends.keys())}")
+        return backend, backend_kwargs
 
     def do_plot(self, backend, **backend_kwargs):
-        self.check_backend(backend, **backend_kwargs)
+        backend, backend_kwargs = self.check_backend(backend, **backend_kwargs)
         plotter = self.possible_backends[backend]()
         plotter.do_plot(self.plot_data, **backend_kwargs)
         self.plotter = plotter

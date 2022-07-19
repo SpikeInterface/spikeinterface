@@ -7,7 +7,7 @@ from .base_sortingview import SortingviewPlotter
 
 class AmplitudeTimeseriesPlotter(SortingviewPlotter):
 
-    def do_plot(self, data_plot, hide_unit_selector=False, **backend_kwargs):
+    def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
@@ -27,7 +27,7 @@ class AmplitudeTimeseriesPlotter(SortingviewPlotter):
             start_time_sec=0,
             end_time_sec=dp.total_duration,
             plots=sa_items,
-            hide_unit_selector=hide_unit_selector
+            hide_unit_selector=dp.hide_unit_selector
         )
 
         if backend_kwargs["generate_url"]:

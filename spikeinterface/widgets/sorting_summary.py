@@ -45,12 +45,13 @@ class SortingSummaryWidget(BaseWidget):
         waveforms_plot_data = UnitWaveformsWidget(we, unit_ids=unit_ids, sparsity=sparsity).plot_data
         
         correlograms_kwargs = correlograms_kwargs if correlograms_kwargs is not None else {}
-        ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, **correlograms_kwargs).plot_data
+        ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True,
+                                                **correlograms_kwargs).plot_data
         
         amplitudes_kwargs = amplitudes_kwargs if amplitudes_kwargs is not None else {}
         amplitudes_kwargs = amplitudes_kwargs.update(job_kwargs)
-        amps_plot_data = AmplitudeTimeseriesWidget(we, unit_ids=unit_ids,
-                                                   compute_kwargs=amplitudes_kwargs).plot_data
+        amps_plot_data = AmplitudeTimeseriesWidget(we, unit_ids=unit_ids, compute_kwargs=amplitudes_kwargs,
+                                                   hide_unit_selector=True).plot_data
         
         if we.is_extension("similarity"):
             ccc = we.load_extension("similarity")
