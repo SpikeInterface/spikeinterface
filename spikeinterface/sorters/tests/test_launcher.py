@@ -26,8 +26,8 @@ def test_run_sorters_with_list():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec0')
-    rec1 = rec1.save(name='rec1')
+    rec0 = rec0.save(folder=working_folder/'rec0')
+    rec1 = rec1.save(folder=working_folder/'rec1')
 
     recording_list = [rec0, rec1]
     sorter_list = ['tridesclous']
@@ -51,7 +51,7 @@ def test_run_sorter_by_property():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec000')
+    rec0 = rec0.save(folder=working_folder1/'rec000')
     sorter_name = 'tridesclous'
 
     sorting0 = run_sorter_by_property(sorter_name, rec0, "group", working_folder1,
@@ -66,7 +66,7 @@ def test_run_sorter_by_property():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec1 = rec1.save(name='rec001')
+    rec1 = rec1.save(folder=working_folder1/'rec001')
     sorter_name = 'tridesclous'
 
     sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder2,
@@ -85,8 +85,8 @@ def test_run_sorters_with_dict():
 
     # make dumpable
     set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec00')
-    rec1 = rec1.save(name='rec01')
+    rec0 = rec0.save(folder=working_folder/'rec00')
+    rec1 = rec1.save(folder=working_folder/'rec01')
 
     recording_dict = {'toy_tetrode': rec0, 'toy_octotrode': rec1}
 
@@ -126,7 +126,7 @@ def test_run_sorters_joblib():
         rec, _ = toy_example(num_channels=4, duration=30,
                              seed=0, num_segments=1)
         # make dumpable
-        rec = rec.save(folder=cache_folder / f'rec_{i}')
+        rec = rec.save(folder=working_folder / f'raw_rec_{i}')
         recording_dict[f'rec_{i}'] = rec
 
     sorter_list = ['tridesclous', ]
@@ -153,7 +153,7 @@ def test_run_sorters_dask():
         rec, _ = toy_example(num_channels=4, duration=30,
                              seed=0, num_segments=1)
         # make dumpable
-        rec = rec.save(name=f'rec_{i}')
+        rec = rec.save(folder=working_folder/f'raw_rec_{i}')
         recording_dict[f'rec_{i}'] = rec
 
     sorter_list = ['tridesclous', ]
@@ -190,16 +190,21 @@ def test_run_sorters_slurm():
         rec, _ = toy_example(num_channels=4, duration=30,
                              seed=0, num_segments=1)
         # make dumpable
-        rec = rec.save(name=f'rec_{i}')
+        rec = rec.save(folder=working_folder/f'raw_rec_{i}')
         recording_dict[f'rec_{i}'] = rec
 
-    sorter_list = ['tridesclous', ]
+    sorter_list = ['spykingcircus2', 'tridesclous2', ]
     
     tmp_script_folder = working_folder / 'slurm_scripts'
     tmp_script_folder.mkdir(parents=True)
     
     run_sorters(sorter_list, recording_dict, working_folder,
-                engine='slurm', engine_kwargs={'tmp_script_folder': tmp_script_folder, },
+                engine='slurm',
+                engine_kwargs={
+                    'tmp_script_folder': tmp_script_folder,
+                    'cpus_per_task': 32,
+                    'mem': '32G',
+                    },
                 with_output=False, mode_if_folder_exists='keep')
 
 
