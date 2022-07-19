@@ -27,6 +27,7 @@ class AutoCorrelogramsPlotter(SortingviewPlotter):
         v_autocorrelograms = vv.Autocorrelograms(
             autocorrelograms=ac_items
         )
+        self.set_view(v_autocorrelograms)
 
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
