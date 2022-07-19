@@ -21,6 +21,8 @@ class CrossCorrelogramsWidget(BaseWidget):
         Window for CCGs in ms, by default 100 ms
     bin_ms : float
         Bin size in ms, by default 1 ms
+    hide_unit_selector : bool
+        For sortingview backend, if True the unit selector is not displayed
     """
     possible_backends = {}
 

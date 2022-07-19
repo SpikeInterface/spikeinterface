@@ -31,21 +31,24 @@ class UnitLocationsPlotter(SortingviewPlotter):
             disable_auto_rotate=True
         )
 
-        v_units_table = generate_unit_table_view(unit_ids)
+        if not dp.hide_unit_selector:
+            v_units_table = generate_unit_table_view(unit_ids)
 
-        v_unit_locations_w_table = vv.Box(direction='horizontal',
-                      items=[
-                          vv.LayoutItem(v_units_table, max_size=150),
-                          vv.LayoutItem(v_unit_locations)
-                      ]
-                )
+            view = vv.Box(direction='horizontal',
+                        items=[
+                            vv.LayoutItem(v_units_table, max_size=150),
+                            vv.LayoutItem(v_unit_locations)
+                        ]
+                    )
+        else:
+            view = v_unit_locations
 
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
                 label = "SpikeInterface - UnitLocations"
-            url = v_unit_locations_w_table.url(label=label)
+            url = view.url(label=label)
             print(url)
-        return v_unit_locations_w_table
+        return view
 
 
 UnitLocationsPlotter.register(UnitLocationsWidget)

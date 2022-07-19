@@ -1,7 +1,7 @@
 import numpy as np
 
 from .base import BaseWidget, define_widget_function_from_class
-from .widget_list import AutoCorrelogramsWidget, CrossCorrelogramsWidget, UnitWaveformsWidget, AmplitudeTimeseriesWidget
+from .widget_list import (CrossCorrelogramsWidget, UnitWaveformsWidget, AmplitudeTimeseriesWidget, UnitLocationsWidget)
 from ..core import WaveformExtractor
 from ..postprocessing import get_template_channel_sparsity, compute_template_similarity
 
@@ -21,7 +21,7 @@ class SortingSummaryWidget(BaseWidget):
                  sparsity=None, sparsity_kwargs={}, 
                  correlograms_kwargs=None, amplitudes_kwargs=None, 
                  similarity_kwargs=None, job_kwargs=None,
-                 # compute_pca_kwargs=None, localization_kwargs=None,
+                 localization_kwargs=None,
                  backend=None, **backend_kwargs):
         we = waveform_extractor
         recording = we.recording
@@ -53,6 +53,10 @@ class SortingSummaryWidget(BaseWidget):
         amps_plot_data = AmplitudeTimeseriesWidget(we, unit_ids=unit_ids, compute_kwargs=amplitudes_kwargs,
                                                    hide_unit_selector=True).plot_data
         
+        localization_kwargs = localization_kwargs if localization_kwargs is not None else {}
+        locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True,
+                                             compute_kwargs=localization_kwargs).plot_data
+
         if we.is_extension("similarity"):
             ccc = we.load_extension("similarity")
             similarity = ccc.get_data()
@@ -69,7 +73,8 @@ class SortingSummaryWidget(BaseWidget):
             waveforms=waveforms_plot_data,
             correlograms=ccg_plot_data,
             amplitudes=amps_plot_data,
-            similarity=similarity_plot_data
+            similarity=similarity_plot_data,
+            unit_locations=locs_plot_data
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
