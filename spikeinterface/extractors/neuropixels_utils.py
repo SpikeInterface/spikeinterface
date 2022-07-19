@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
 
     """
@@ -90,3 +91,44 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
         )
         
     return groups
+
+
+def synchronize_neuropixel_streams(recording_ref, recording_other):
+    """
+    Use latest synchro channel from spikeglx or openephys neuropixel to synchronize
+    recordings.
+    
+    Method used :
+      1. detect pulse times on both streams.
+      2. make a linear regression from other to ref.
+          The slope is near 1 and correspond to sample rate corection
+          The intersept is near 0 and correspond to delta time start
+    
+    """
+    
+    
+    synhcro_chan_id = recording_ref.channel_ids[-1]
+    trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
+    trig_ref = trig_ref[:, 0]
+    times_ref = recording_ref.get_times()
+    
+    synhcro_chan_id = recording_other.channel_ids[-1]
+    trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
+    trig_other = trig_other[:, 0]
+    times_other = recording_other.get_times()
+    
+    # print(trig_ref.shape, trig_other.shape)
+    print(trig_ref.dtype, trig_other.dtype)
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(times_ref, trig_ref)
+    ax.plot(times_other, trig_other)
+    plt.show()
+
+    
+    
+    
+    
+    
+    
