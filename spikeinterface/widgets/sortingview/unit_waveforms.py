@@ -36,6 +36,8 @@ class UnitWaveformPlotter(SortingviewPlotter):
             average_waveforms=aw_items,
             channel_locations=locations
         )
+        self.set_view(v_average_waveforms)
+
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
                 label = "SpikeInterface - AverageWaveforms"

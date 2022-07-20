@@ -21,6 +21,9 @@ class SortingviewPlotter(BackendPlotter):
             returns = returns[0]
         return returns
 
+    def set_view(self, view):
+        self.view = view
+
 
 def generate_unit_table_view(unit_ids):
     import sortingview.views as vv
