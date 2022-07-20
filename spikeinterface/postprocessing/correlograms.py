@@ -236,17 +236,6 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     num_units = len(sorting.unit_ids)
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
-    #~ fs = sorting.get_sampling_frequency()
-    #~ window_size = int(round(fs * window_ms / 2000.))
-    #~ bin_size = int(round(fs * bin_ms / 1000.))
-    #~ window_size -= window_size % bin_size
-    #~ window_size *= 2
-    #~ real_bin_duration_ms = bin_size / fs * 1000.
-
-    #~ # force odd
-    #~ num_total_bins = window_size // bin_size
-    #~ assert num_total_bins >= 1
-    #~ num_half_bins = num_total_bins // 2
     num_half_bins = int(window_size / bin_size)
 
     correlograms = np.zeros((num_units, num_units, num_half_bins), dtype='int64')
@@ -266,10 +255,12 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
             spike_diff = spike_times[shift:] - spike_times[:len(spike_times) - shift]
 
             # Binarize the delays between spike i and spike i+shift.
+            # the operator // is np.floor_divide
             spike_diff_b = spike_diff // bin_size
+            # spike_diff_b = np.floor_divide(spike_diff, bin_size).astype('int64')
 
             # Spikes with no matching spikes are masked.
-            mask[:-shift][spike_diff_b > (num_half_bins - 1)] = False
+            mask[:-shift][spike_diff_b >= num_half_bins] = False
 
             # Cache the masked spike delays.
             m = mask[:-shift].copy()
@@ -333,8 +324,8 @@ if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int32, numba.int32), nopython=True,
                 nogil=True, cache=True)
     def _compute_autocorr_numba(spike_times, window_size, bin_size):
-        n_bins = 2 * int(window_size / bin_size)
-        auto_corr = np.zeros(n_bins, dtype=np.int64)
+        num_bins = 2 * int(window_size / bin_size)
+        auto_corr = np.zeros(num_bins, dtype=np.int64)
 
         for i in range(len(spike_times)):
             for j in range(i+1, len(spike_times)):
@@ -344,17 +335,17 @@ if HAVE_NUMBA:
                     break
 
                 bin = int(diff / bin_size)
-                auto_corr[n_bins//2 - bin - 1] += 1
-                auto_corr[n_bins//2 + bin] += 1
+                auto_corr[num_bins//2 - bin - 1] += 1
+                auto_corr[num_bins//2 + bin] += 1
 
         return auto_corr
 
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32, numba.int32),
                 nopython=True, nogil=True, cache=True)
     def _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size):
-        n_bins = 2 * int(window_size / bin_size)
+        num_bins = 2 * int(window_size / bin_size)
 
-        cross_corr = np.zeros(n_bins, dtype=np.int64)
+        cross_corr = np.zeros(num_bins, dtype=np.int64)
 
         start_j = 0
         for i in range(len(spike_times1)):
@@ -368,7 +359,7 @@ if HAVE_NUMBA:
                     break
 
                 bin = int(math.floor(diff / bin_size))
-                cross_corr[n_bins//2 + bin] += 1
+                cross_corr[num_bins//2 + bin] += 1
 
         return cross_corr
 
