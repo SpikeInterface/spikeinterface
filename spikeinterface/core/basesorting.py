@@ -131,6 +131,24 @@ class BaseSorting(BaseExtractor):
         v = values[self.id_to_index(unit_id)]
         return v
 
+    def get_total_num_spikes(self):
+        """
+        Get total number of spikes for each unit across segments.
+
+        Returns
+        -------
+        dict
+            Dictionary with unit_ids as key and number of spikes as values
+        """
+        num_spikes = {}
+        for unit_id in self.unit_ids:
+            n = 0
+            for segment_index in range(self.get_num_segments()):
+                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                n += st.size
+            num_spikes[unit_id] = n
+        return num_spikes
+
     def select_units(self, unit_ids, renamed_unit_ids=None):
         """
         Selects a subset of units
@@ -151,6 +169,25 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(
             self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
+    
+    def remove_units(self, remove_unit_ids):
+        """
+        Removes a subset of units
+
+        Parameters
+        ----------
+        remove_unit_ids :  numpy.array or list
+            List of unit ids to remove
+
+        Returns
+        -------
+        BaseSorting
+            Sorting object without removed units
+        """
+        from spikeinterface import UnitsSelectionSorting
+        new_unit_ids = self.unit_ids[~np.in1d(self.unit_ids, remove_unit_ids)]
+        new_sorting = UnitsSelectionSorting(self, new_unit_ids)
+        return new_sorting
 
     def remove_empty_units(self):
         """

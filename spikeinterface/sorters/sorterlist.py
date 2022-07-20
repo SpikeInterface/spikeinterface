@@ -16,7 +16,9 @@ from .spyking_circus import SpykingcircusSorter
 from .tridesclous import TridesclousSorter
 from .waveclus import WaveClusSorter
 from .yass import YassSorter
-from .spyking_circus2 import Spykingcircus2Sorter
+
+# based on spikeinertface.sortingcomponents
+from .si_based_sorters import Spykingcircus2Sorter, Tridesclous2Sorter
 
 sorter_full_list = [
     CombinatoSorter,
@@ -34,7 +36,10 @@ sorter_full_list = [
     TridesclousSorter,
     WaveClusSorter,
     YassSorter,
-    Spykingcircus2Sorter
+    
+    # si_based_sorters
+    Spykingcircus2Sorter,
+    Tridesclous2Sorter
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}

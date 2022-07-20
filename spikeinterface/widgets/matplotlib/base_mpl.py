@@ -1,14 +1,30 @@
 from spikeinterface.widgets.base import BackendPlotter
 
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
 import numpy as np
 
 
 class MplPlotter(BackendPlotter):
     backend = 'matplotlib'
-    
-    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None):
+    backend_kwargs_desc = {
+        "figure": "Matplotlib figure. When None, it is created. Default None",
+        "ax": "Single matplotlib axis. When None, it is created. Default None",
+        "axes": "Multiple matplotlib axes. When None, they is created. Default None",
+        "ncols": "Number of columns to create in subplots.  Default 5",
+        "figsize": "Size of matplotlib figure. Default None",
+        "figtitle": "The figure title. Default None"
+    }
+    default_backend_kwargs = {
+        "figure": None,
+        "ax": None,
+        "axes": None,
+        "ncols": 5,
+        "figsize": None,
+        "figtitle": None
+    }
+
+    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None,
+                        figsize=None, figtitle=None):
         """
         figure/ax/axes : only one of then can be not None
         """
@@ -27,16 +43,16 @@ class MplPlotter(BackendPlotter):
         else:
             # one fig with one ax
             if num_axes is None:
-                figure, ax = plt.subplots()
+                figure, ax = plt.subplots(figsize=figsize)
                 axes = np.array([[ax]])
             else:
                 if num_axes == 0:
                     # one figure without plots (diffred subplot creation with
-                    figure = plt.figure()
+                    figure = plt.figure(figsize=figsize)
                     ax = None
                     axes = None
                 elif num_axes == 1:
-                    figure = plt.figure()
+                    figure = plt.figure(figsize=figsize)
                     ax = figure.add_subplot(111)
                     axes = np.array([[ax]])
                 else:
@@ -44,7 +60,8 @@ class MplPlotter(BackendPlotter):
                     if num_axes < ncols:
                         ncols = num_axes
                     nrows = int(np.ceil(num_axes / ncols))
-                    figure, axes = plt.subplots(nrows=nrows, ncols=ncols, )
+                    figure, axes = plt.subplots(
+                        nrows=nrows, ncols=ncols, figsize=figsize)
                     ax = None
                     # remove extra axes
                     if ncols * nrows > num_axes:
@@ -55,6 +72,9 @@ class MplPlotter(BackendPlotter):
         self.ax = ax
         # axes is a 2D array of ax
         self.axes = axes
+        
+        if figtitle is not None:
+            self.figure.suptitle(figtitle)
 
 
 

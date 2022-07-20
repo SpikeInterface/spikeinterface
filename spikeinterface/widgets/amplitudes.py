@@ -1,151 +1,67 @@
-import numpy as np
-from matplotlib import pyplot as plt
-
-from .base import BaseWidget
-
+from .base import BaseWidget, define_widget_function_from_class
+from ..core.waveform_extractor import WaveformExtractor
 from ..postprocessing import compute_spike_amplitudes
-from .utils import get_unit_colors
 
 
-class AmplitudeBaseWidget(BaseWidget):
-    def __init__(self, waveform_extractor, unit_ids=None, 
-        compute_kwargs={},
-        unit_colors=None, figure=None, ax=None):
-        BaseWidget.__init__(self, figure, ax)
-
-        self.we = waveform_extractor
-        
-        if self.we.is_extension('spike_amplitudes'):
-            sac = self.we.load_extension('spike_amplitudes')
-            self.amplitudes = sac.get_amplitudes(outputs='by_unit')
-        else:
-            self.amplitudes = compute_spike_amplitudes(self.we, outputs='by_unit', **compute_kwargs)
-        
-        if unit_ids is None:
-            unit_ids = waveform_extractor.sorting.unit_ids
-        self.unit_ids = unit_ids
-
-        if unit_colors is None:
-            unit_colors = get_unit_colors(self.we.sorting)
-        self.unit_colors = unit_colors
-
-    def plot(self):
-        self._do_plot()
-
-
-class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
-    possible_backends = {}
-    
+class AmplitudeTimeseriesWidget(BaseWidget):
     """
-    Plots waveform amplitudes distribution.
+    Plots spike amplitudes
 
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
-
-    amplitudes: None or pre computed amplitudes
-        If None then amplitudes are recomputed
-    peak_sign: 'neg', 'pos', 'both'
-        In case of recomputing amplitudes.
-
-    Returns
-    -------
-    W: AmplitudeDistributionWidget
-        The output widget
+        The input waveform extractor
+    unit_ids: list
+        List of unit ids.
+    segment_index: int
+        The segment index (or None if mono-segment)
+    compute_kwargs: dict
+        Keyword arguments for computing amplitude (if not computed yet)
+    hide_unit_selector : bool
+        For sortingview backend, if True the unit selector is not displayed
     """
+    possible_backends = {}
 
-    def _do_plot(self):
-        sorting = self.we.sorting
-        # ~ unit_ids = sorting.unit_ids
-        num_seg = sorting.get_num_segments()
-        fs = sorting.get_sampling_frequency()
+    
+    def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
+                 segment_index=None, compute_kwargs=None, hide_unit_selector=False,
+                 backend=None, **backend_kwargs):
+        sorting = waveform_extractor.sorting
+        if waveform_extractor.is_extension('spike_amplitudes'):
+            sac = waveform_extractor.load_extension('spike_amplitudes')
+            amplitudes = sac.get_data(outputs='by_unit')
+        else:
+            if compute_kwargs is None:
+                compute_kwargs = {}
+            amplitudes = compute_spike_amplitudes(
+                waveform_extractor, outputs='by_unit', **compute_kwargs)
 
-        # TODO handle segment
-        ax = self.ax
-        for i, unit_id in enumerate(self.unit_ids):
-            for segment_index in range(num_seg):
-                times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
-                times = times / fs
-                amps = self.amplitudes[segment_index][unit_id]
-                ax.scatter(times, amps, color=self.unit_colors[unit_id], s=3, alpha=1)
+        if unit_ids is None:
+            unit_ids = sorting.unit_ids
 
-                if i == 0:
-                    ax.set_title(f'segment {segment_index}')
-                if i == len(self.unit_ids) - 1:
-                    ax.set_xlabel('Times [s]')
-                if segment_index == 0:
-                    ax.set_ylabel(f'Amplitude')
+        if sorting.get_num_segments() > 1:
+            assert segment_index is not None, "Specify segment index for multi-segment object"
+        else:
+            segment_index = 0
+        amplitudes_segment = amplitudes[segment_index]
+        total_duration = waveform_extractor.recording.get_num_samples(segment_index) / \
+            waveform_extractor.recording.get_sampling_frequency()
 
-        ylims = ax.get_ylim()
-        if np.max(ylims) < 0:
-            ax.set_ylim(min(ylims), 0)
-        if np.min(ylims) > 0:
-            ax.set_ylim(0, max(ylims))
+        spiketrains_segment = {}
+        for i, unit_id in enumerate(unit_ids):
+            times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
+            times = times / sorting.get_sampling_frequency()
+            spiketrains_segment[unit_id] = times
 
+        plot_data = dict(
+            amplitudes=amplitudes_segment,
+            unit_ids=unit_ids,
+            spiketrains=spiketrains_segment,
+            total_duration=total_duration,
+            hide_unit_selector=hide_unit_selector
+        )
 
-#~ class AmplitudeDistributionWidget(AmplitudeBaseWidget):
-    #~ """
-    #~ Plots waveform amplitudes distribution.
-
-    #~ Parameters
-    #~ ----------
-    #~ waveform_extractor: WaveformExtractor
-
-    #~ amplitudes: None or pre computed amplitudes
-        #~ If None then amplitudes are recomputed
-    #~ peak_sign: 'neg', 'pos', 'both'
-        #~ In case of recomputing amplitudes.
-
-    #~ Returns
-    #~ -------
-    #~ W: AmplitudeDistributionWidget
-        #~ The output widget
-    #~ """
-
-    #~ def _do_plot(self):
-        #~ sorting = self.we.sorting
-        #~ unit_ids = sorting.unit_ids
-        #~ num_seg = sorting.get_num_segments()
-
-        #~ ax = self.ax
-        #~ unit_amps = []
-        #~ for i, unit_id in enumerate(unit_ids):
-            #~ amps = []
-            #~ for segment_index in range(num_seg):
-                #~ amps.append(self.amplitudes[segment_index][unit_id])
-            #~ amps = np.concatenate(amps)
-            #~ unit_amps.append(amps)
-        #~ parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
-
-        #~ for i, pc in enumerate(parts['bodies']):
-            #~ color = self.unit_colors[unit_ids[i]]
-            #~ pc.set_facecolor(color)
-            #~ pc.set_edgecolor('black')
-            #~ pc.set_alpha(1)
-
-        #~ ax.set_xticks(np.arange(len(unit_ids)) + 1)
-        #~ ax.set_xticklabels([str(unit_id) for unit_id in unit_ids])
-
-        #~ ylims = ax.get_ylim()
-        #~ if np.max(ylims) < 0:
-            #~ ax.set_ylim(min(ylims), 0)
-        #~ if np.min(ylims) > 0:
-            #~ ax.set_ylim(0, max(ylims))
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-def plot_amplitudes_timeseries(*args, **kwargs):
-    W = AmplitudeTimeseriesWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_amplitudes_timeseries.__doc__ = AmplitudeTimeseriesWidget.__doc__
-
-
-#~ def plot_amplitudes_distribution(*args, **kwargs):
-    #~ W = AmplitudeDistributionWidget(*args, **kwargs)
-    #~ W.plot()
-    #~ return W
-
-
-#~ plot_amplitudes_distribution.__doc__ = AmplitudeDistributionWidget.__doc__
+plot_amplitudes_timeseries = define_widget_function_from_class(AmplitudeTimeseriesWidget, 'plot_amplitudes_timeseries')
