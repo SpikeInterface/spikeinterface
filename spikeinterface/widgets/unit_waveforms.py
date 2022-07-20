@@ -42,10 +42,10 @@ class UnitWaveformsWidget(BaseWidget):
         If None, then the get_unit_colors() is internally used.
     unit_selected_waveforms: None or dict
         A dict key is unit_id and value is the subset of waveforms indices that should be 
-        be displayed
-    show_all_channels: bool
-        Show the whole probe if True, or only selected channels if False
-        The axis to be used. If not given an axis is created
+        be displayed (matplotlib backend)
+    max_spikes_per_unit: int or None
+        If given and unit_selected_waveforms is None, only max_spikes_per_unit random units are
+        displayed per waveform (matplotlib backend)
     """
     possible_backends = {}
 
@@ -54,7 +54,8 @@ class UnitWaveformsWidget(BaseWidget):
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
                  ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
-                 set_title=True, backend=None, **backend_kwargs):
+                 max_spikes_per_unit=None, set_title=True, 
+                 backend=None, **backend_kwargs):
         we = waveform_extractor
         recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
@@ -118,6 +119,7 @@ class UnitWaveformsWidget(BaseWidget):
             unit_selected_waveforms=unit_selected_waveforms,
             axis_equal=axis_equal,
             lw=lw,
+            max_spikes_per_unit=max_spikes_per_unit,
             xvectors=xvectors,
             y_scale=y_scale,
             y_offset=y_offset,
@@ -135,7 +137,7 @@ def get_waveforms_scales(we, templates, channel_locations):
     Return scales and x_vector for templates plotting
     """
     wf_max = np.max(templates)
-    wf_min = np.max(templates)
+    wf_min = np.min(templates)
 
     x_chans = np.unique(channel_locations[:, 0])
     if x_chans.size > 1:
