@@ -6,6 +6,8 @@ from pathlib import Path
 from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
 import spikeinterface.extractors as se
 from spikeinterface.postprocessing import compute_correlograms, CrossCorrelogramsCalculator
+from spikeinterface.postprocessing.correlograms import _make_bins
+
 
 try:
     import numba
@@ -20,7 +22,22 @@ else:
     cache_folder = Path("cache_folder") / "postprocessing"
 
 
-def _test_correlograms(sorting, window_ms: float, bin_ms: float, methods: List[str]):
+def test_make_bins():
+    recording, sorting = se.toy_example(num_segments=2, num_units=10, duration=100)
+    window_ms = 43.57
+    bin_ms = 1.6421
+    bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
+    assert bins.size == np.floor(window_ms / bin_ms) +1 
+    # print(bins, window_size, bin_size)
+
+    window_ms=60.0
+    bin_ms=2.0
+    bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
+    assert bins.size == np.floor(window_ms / bin_ms) +1 
+    # print(bins, window_size, bin_size)
+    
+
+def _test_correlograms(sorting, window_ms, bin_ms, methods):
     for method in methods:
         correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, symmetrize=True, 
                                                   method=method)
@@ -79,6 +96,7 @@ def test_correlograms_extension():
 
 
 if __name__ == '__main__':
+    #~ test_make_bins()
     test_compute_correlograms()
-    test_correlograms_extension()
+    #~ test_correlograms_extension()
 

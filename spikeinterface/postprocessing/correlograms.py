@@ -1,4 +1,5 @@
 import math
+import warnings
 import numpy as np
 from ..core import WaveformExtractor
 from ..core.waveform_extractor import BaseWaveformExtractorExtension
@@ -69,8 +70,24 @@ class CrossCorrelogramsCalculator(BaseWaveformExtractorExtension):
 WaveformExtractor.register_extension(CrossCorrelogramsCalculator)
 
 
-def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
-                                            bin_size: int, sampling_f: float):
+
+def _make_bins(sorting, window_ms, bin_ms):
+
+    fs = sorting.get_sampling_frequency()
+
+    window_size = int(round(fs * window_ms/2 * 1e-3))
+    bin_size = int(round(fs * bin_ms * 1e-3))
+    window_size -= window_size % bin_size
+    num_bins = 2 * int(window_size / bin_size)
+    assert num_bins >= 1
+
+    bins = np.arange(-window_size, window_size+bin_size, bin_size) * 1e3 / fs
+    
+    return bins, window_size, bin_size
+    
+
+
+def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
     """
     Computes the auto-correlogram from a given spike train.
 
@@ -79,10 +96,10 @@ def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: i
 
     Parameters
     ----------
-    spike_train: np.ndarray
+    spike_times: np.ndarray
         The ordered spike train to compute the auto-correlogram.
-    max_time: int
-        Compute the auto-correlogram between -max_time and +max_time (in sampling time).
+    window_size: int
+        Compute the auto-correlogram between -window_size and +window_size (in sampling time).
     bin_size: int
         Size of a bin (in sampling time).
     sampling_f: float
@@ -93,19 +110,12 @@ def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: i
     tuple (auto_corr, bins)
     auto_corr: np.ndarray[int64]
         The computed auto-correlogram.
-    bins: np.ndarray[float64]
-        The bins for the auto-correlogram.
     """
-    if not HAVE_NUMBA:
-        print("Error: numba is not installed.")
-        print("compute_autocorrelogram_from_spiketrain cannot run without numba.")
-        return 0
-
-    return _compute_autocorr_numba(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
+    assert HAVE_NUMBA
+    return _compute_autocorr_numba(spike_times.astype(np.int64), window_size, bin_size)
 
 
-def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_train2: np.ndarray,
-                                             max_time: int, bin_size: int, sampling_f: float):
+def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_size, bin_size):
     """
     Computes the cros-correlogram between two given spike trains.
 
@@ -114,79 +124,26 @@ def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_tra
 
     Parameters
     ----------
-    spike_train1: np.ndarray
+    spike_times1: np.ndarray
         The ordered spike train to compare against the second one.
-    spike_train2: np.ndarray
+    spike_times2: np.ndarray
         The ordered spike train that serves as a reference for the cross-correlogram.
-    max_time: int
-        Compute the auto-correlogram between -max_time and +max_time (in sampling time).
+    window_size: int
+        Compute the auto-correlogram between -window_size and +window_size (in sampling time).
     bin_size: int
         Size of a bin (in sampling time).
-    sampling_f: float:
-        Sampling rate/frequency (in Hz).
 
     Returns
     -------
     tuple (auto_corr, bins)
     auto_corr: np.ndarray[int64]
         The computed auto-correlogram.
-    bins: np.ndarray[float64]
-        The bins for the auto-correlogram.
     """
-    if not HAVE_NUMBA:
-        print("Error: numba is not installed.")
-        print("compute_crosscorrelogram_from_spiketrain cannot run without numba.")
-        return 0
-
-    return _compute_crosscorr_numba(spike_train1.astype(np.int64), spike_train2.astype(np.int64),
-                                    max_time, bin_size, sampling_f)
+    assert HAVE_NUMBA
+    return _compute_crosscorr_numba(spike_times1.astype(np.int64), spike_times2.astype(np.int64), window_size, bin_size)
 
 
-if HAVE_NUMBA:
-    @numba.jit((numba.int64[::1], numba.int32, numba.int32, numba.float32), nopython=True,
-                nogil=True, cache=True)
-    def _compute_autocorr_numba(spike_train, max_time, bin_size, sampling_f):
-        n_bins = 2 * int(max_time / bin_size)
 
-        bins = np.arange(-max_time, max_time+bin_size, bin_size) * 1e3 / sampling_f
-        auto_corr = np.zeros(n_bins, dtype=np.int64)
-
-        for i in range(len(spike_train)):
-            for j in range(i+1, len(spike_train)):
-                diff = spike_train[j] - spike_train[i]
-
-                if diff >= max_time:
-                    break
-
-                bin = int(diff / bin_size)
-                auto_corr[n_bins//2 - bin - 1] += 1
-                auto_corr[n_bins//2 + bin] += 1
-
-        return auto_corr, bins
-
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32, numba.int32, numba.float32),
-                nopython=True, nogil=True, cache=True)
-    def _compute_crosscorr_numba(spike_train1, spike_train2, max_time, bin_size, sampling_f):
-        n_bins = 2 * int(max_time / bin_size)
-
-        bins = np.arange(-max_time, max_time+bin_size, bin_size) * 1e3 / sampling_f
-        cross_corr = np.zeros(n_bins, dtype=np.int64)
-
-        start_j = 0
-        for i in range(len(spike_train1)):
-            for j in range(start_j, len(spike_train2)):
-                diff = spike_train1[i] - spike_train2[j]
-
-                if diff >= max_time:
-                    start_j += 1
-                    continue
-                if diff < -max_time:
-                    break
-
-                bin = int(math.floor(diff / bin_size))
-                cross_corr[n_bins//2 + bin] += 1
-
-        return cross_corr, bins
 
 
 def compute_correlograms(waveform_or_sorting_extractor, 
@@ -237,27 +194,32 @@ def compute_correlograms(waveform_or_sorting_extractor,
                                      bin_ms=bin_ms, symmetrize=symmetrize,
                                      method=method)
 
-def _compute_correlograms(sorting, window_ms: float = 100.0,
-                          bin_ms: float = 5.0, symmetrize: bool = False,
-                          method: str = "auto"):
+
+def _compute_correlograms(sorting, window_ms, bin_ms, symmetrize=True, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
     """
+    
+    if symmetrize:
+        warnings.warn("symmetrize is deprecated. It will always be True soon.", DeprecationWarning, stacklevel=2)        
 
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
+
+
+    bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
     
     if method == "numpy":
-        return compute_correlograms_numpy(sorting, window_ms, bin_ms, symmetrize)
+        correlograms =  compute_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
-        return compute_correlograms_numba(sorting, window_ms, bin_ms, symmetrize)
-
+        correlograms = compute_correlograms_numba(sorting, window_size, bin_size)
+    
+    return correlograms, bins
 
 # LOW-LEVEL IMPLEMENTATIONS
-def compute_correlograms_numpy(sorting, window_ms: float = 100.0,
-                               bin_ms: float = 5.0, symmetrize: bool = False):
+def compute_correlograms_numpy(sorting, window_size, bin_size):
     """
     Computes several cross-correlogram in one course
     from several cluster.
@@ -274,18 +236,18 @@ def compute_correlograms_numpy(sorting, window_ms: float = 100.0,
     num_units = len(sorting.unit_ids)
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
-    fs = sorting.get_sampling_frequency()
+    #~ fs = sorting.get_sampling_frequency()
+    #~ window_size = int(round(fs * window_ms / 2000.))
+    #~ bin_size = int(round(fs * bin_ms / 1000.))
+    #~ window_size -= window_size % bin_size
+    #~ window_size *= 2
+    #~ real_bin_duration_ms = bin_size / fs * 1000.
 
-    window_size = int(round(fs * window_ms / 2000.))
-    bin_size = int(round(fs * bin_ms / 1000.))
-    window_size -= window_size % bin_size
-    window_size *= 2
-    real_bin_duration_ms = bin_size / fs * 1000.
-
-    # force odd
-    num_total_bins = window_size // bin_size
-    assert num_total_bins >= 1
-    num_half_bins = num_total_bins // 2
+    #~ # force odd
+    #~ num_total_bins = window_size // bin_size
+    #~ assert num_total_bins >= 1
+    #~ num_half_bins = num_total_bins // 2
+    num_half_bins = int(window_size / bin_size)
 
     correlograms = np.zeros((num_units, num_units, num_half_bins), dtype='int64')
 
@@ -331,21 +293,15 @@ def compute_correlograms_numpy(sorting, window_ms: float = 100.0,
                      np.arange(num_units),
                      0] = 0
 
-    if symmetrize:
-        # We symmetrize c[i, j, 0].
-        sym = correlograms[..., :][..., ::-1]
-        sym = np.transpose(sym, (1, 0, 2))
-        correlograms = np.dstack((sym, correlograms))
-        bins = np.arange(correlograms.shape[2] + 1) * real_bin_duration_ms - real_bin_duration_ms * num_half_bins
-
-    else:
-        bins = np.arange(correlograms.shape[2] + 1) * real_bin_duration_ms
-
-    return np.transpose(correlograms, (1, 0, 2)), bins
+    # We symmetrize c[i, j, 0].
+    sym = correlograms[..., :][..., ::-1]
+    sym = np.transpose(sym, (1, 0, 2))
+    correlograms = np.dstack((sym, correlograms))
+    correlograms = np.transpose(correlograms, (1, 0, 2))
+    return correlograms
 
 
-def compute_correlograms_numba(sorting, window_ms: float = 100.0,
-                               bin_ms: float = 5.0, symmetrize: bool = False):
+def compute_correlograms_numba(sorting, window_size, bin_size):
     """
     Computes several cross-correlogram in one course
     from several cluster.
@@ -356,42 +312,81 @@ def compute_correlograms_numba(sorting, window_ms: float = 100.0,
     Implementation: Aurélien Wyngaard
     """
 
-    assert HAVE_NUMBA and symmetrize
-    fs = sorting.get_sampling_frequency()
-    num_units = len(sorting.unit_ids)
-
-    window_size = int(round(fs * window_ms/2 * 1e-3))
-    bin_size = int(round(fs * bin_ms * 1e-3))
-    window_size -= window_size % bin_size
+    assert HAVE_NUMBA
+    
     num_bins = 2 * int(window_size / bin_size)
-    assert num_bins >= 1
-
-    bins = np.arange(-window_size, window_size+bin_size, bin_size) * 1e3 / fs
+    num_units = len(sorting.unit_ids)
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
-
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
 
     for seg_index in range(sorting.get_num_segments()):
-        _compute_correlograms_numba(correlograms, spikes[seg_index][0].astype(np.int64),
-                                    spikes[seg_index][1].astype(np.int32),
-                                    window_size, bin_size, fs)
+        spike_times, spike_labels = spikes[seg_index]
+        _compute_correlograms_numba(correlograms,
+                                    spike_times.astype(np.int64),
+                                    spike_labels.astype(np.int32),
+                                    window_size, bin_size)
     
-    return correlograms, bins
+    return correlograms
 
 if HAVE_NUMBA:
-    @numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
+
+    @numba.jit((numba.int64[::1], numba.int32, numba.int32), nopython=True,
+                nogil=True, cache=True)
+    def _compute_autocorr_numba(spike_times, window_size, bin_size):
+        n_bins = 2 * int(window_size / bin_size)
+        auto_corr = np.zeros(n_bins, dtype=np.int64)
+
+        for i in range(len(spike_times)):
+            for j in range(i+1, len(spike_times)):
+                diff = spike_times[j] - spike_times[i]
+
+                if diff >= window_size:
+                    break
+
+                bin = int(diff / bin_size)
+                auto_corr[n_bins//2 - bin - 1] += 1
+                auto_corr[n_bins//2 + bin] += 1
+
+        return auto_corr
+
+    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32, numba.int32),
+                nopython=True, nogil=True, cache=True)
+    def _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size):
+        n_bins = 2 * int(window_size / bin_size)
+
+        cross_corr = np.zeros(n_bins, dtype=np.int64)
+
+        start_j = 0
+        for i in range(len(spike_times1)):
+            for j in range(start_j, len(spike_times2)):
+                diff = spike_times1[i] - spike_times2[j]
+
+                if diff >= window_size:
+                    start_j += 1
+                    continue
+                if diff < -window_size:
+                    break
+
+                bin = int(math.floor(diff / bin_size))
+                cross_corr[n_bins//2 + bin] += 1
+
+        return cross_corr
+
+    
+    @numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
                 nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_correlograms_numba(correlograms, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
+    def _compute_correlograms_numba(correlograms, spike_times, spike_labels, window_size, bin_size):
+        
         n_units = correlograms.shape[0]
 
         for i in numba.prange(n_units):
-            spike_train1 = spike_trains[spike_clusters == i]
+            spike_times1 = spike_times[spike_labels == i]
 
             for j in range(i, n_units):
-                spike_train2 = spike_trains[spike_clusters == j]
+                spike_times2 = spike_times[spike_labels == j]
 
                 if i == j:
-                    correlograms[i, j] += _compute_autocorr_numba(spike_train1, max_time, bin_size, sampling_f)[0]
+                    correlograms[i, j] += _compute_autocorr_numba(spike_times1, window_size, bin_size)
                 else:
-                    correlograms[i, j] += _compute_crosscorr_numba(spike_train1, spike_train2, max_time, bin_size, sampling_f)[0]
+                    correlograms[i, j] += _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size)
                     correlograms[j, i] = correlograms[i, j, ::-1]
