@@ -24,11 +24,19 @@ def _test_correlograms(sorting, window_ms: float, bin_ms: float, methods: List[s
     for method in methods:
         correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, symmetrize=True, 
                                                   method=method)
-
         if method == "numpy":
             ref_correlograms = correlograms
             ref_bins = bins
         else:
+            import matplotlib.pyplot as plt
+            
+            for i in range(ref_correlograms.shape[1]):
+                fig, ax = plt.subplots()
+                ax.plot(bins[:-1], ref_correlograms[0, i, :], color='green', label='numpy')
+                ax.plot(bins[:-1], correlograms[0, i, :], color='red', label=method)
+                ax.legend()
+
+                plt.show()
             assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
             assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
@@ -72,4 +80,5 @@ def test_correlograms_extension():
 
 if __name__ == '__main__':
     test_compute_correlograms()
+    test_correlograms_extension()
 
