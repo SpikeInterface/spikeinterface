@@ -75,12 +75,14 @@ class StudyComparisonUnitCountsAveragesWidget(BaseWidget):
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     cmap_name
+    logscale: if the y-axis should be displayed as log scaled
 
     """
-    def __init__(self, study, cmap_name='Set2', ax=None):
+    def __init__(self, study, cmap_name='Set2', logscale=False, ax=None):
 
         self.study = study
         self.cmap_name = cmap_name
+        self.logscale = logscale
 
         BaseWidget.__init__(self, ax=ax)
 
@@ -121,7 +123,8 @@ class StudyComparisonUnitCountsAveragesWidget(BaseWidget):
             ax.bar(x, m[col].values, yerr=yerr, width=1/(ncol+2), color=cmap(c), label=clean_labels[c])
 
         ax.legend()
-        ax.set_yscale('log')
+        if self.logscale:
+            ax.set_yscale('log')
 
         ax.set_xticks(np.arange(sorter_names.size) + 1)
         ax.set_xticklabels(sorter_names, rotation=45)
@@ -145,12 +148,14 @@ class StudyComparisonUnitCountsWidget(BaseWidget):
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     cmap_name
+    logscale: if the y-axis should be displayed as log scaled
 
     """
-    def __init__(self, study, cmap_name='Set2',  ax=None):
+    def __init__(self, study, cmap_name='Set2',  logscale=False, ax=None):
 
         self.study = study
         self.cmap_name = cmap_name
+        self.logscale = logscale
 
         num_rec = len(study.rec_names)
         if ax is None:
@@ -193,7 +198,9 @@ class StudyComparisonUnitCountsWidget(BaseWidget):
             if r == 0:
                 ax.legend()
 
-            ax.set_yscale('log')
+            if self.logscale:
+                ax.set_yscale('log')
+    
             if r == len(study.rec_names) - 1:
                 ax.set_xticks(np.arange(sorter_names.size) + 1)
                 ax.set_xticklabels(sorter_names, rotation=45)
