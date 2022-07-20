@@ -384,8 +384,7 @@ def make_shared_array(shape, dtype):
         raise Exception('SharedMemory is available only for python>=3.8')
 
     dtype = np.dtype(dtype)
-    # nbytes = shape[0] * shape[1] * dtype.itemsize
-    nbytes = np.prod(shape) * dtype.itemsize
+    nbytes = int(np.prod(shape) * dtype.itemsize)
     shm = SharedMemory(name=None, create=True, size=nbytes)
     arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
     arr[:] = 0
