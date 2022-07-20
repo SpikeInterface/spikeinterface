@@ -23,7 +23,7 @@ from .drift import (plot_drift_over_time, DriftOverTimeWidget,
 # from .unitwaveformdensitymap import plot_unit_waveform_density_map, UnitWaveformDensityMapWidget
 # from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
-from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
+# from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
 # units on probe
 from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
