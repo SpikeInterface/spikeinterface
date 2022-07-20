@@ -32,6 +32,8 @@ class UnitWaveformPlotter(MplPlotter):
                     if len(wfs) > dp.max_spikes_per_unit:
                         random_idxs = np.random.permutation(len(wfs))[:dp.max_spikes_per_unit]
                         wfs = wfs[random_idxs][:, :, chan_inds]
+                    else:
+                        wfs = wfs[:, :, chan_inds]
                 else:
                     wfs = wfs[:, :, chan_inds]
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
