@@ -76,8 +76,7 @@ class WaveformExtractor:
                     self._params = json.load(f)
         else:
             # this is in case of in-memory
-            self._memory_objects = {"wfs_arrays": None,
-                                    "wfs_array_info": None,
+            self._memory_objects = {"wfs_arrays": {},
                                     "sampled_indices": {}}
 
     def __repr__(self):
@@ -272,6 +271,9 @@ class WaveformExtractor:
                     template_file.unlink()
 
             waveform_folder.mkdir()
+        else:
+            # remove shared objects
+            self._memory_objects
 
     def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
         """
@@ -372,11 +374,10 @@ class WaveformExtractor:
         else:
             sorting = self.sorting.select_units(unit_ids)
             we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory")
+            we.set_params(**self._params)
             # copy memory objects
-            we._memory_objects["wfs_arrays"] = {}
             for unit_id in unit_ids:
                 we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
-                we._memory_objects["wfs_array_info"][unit_id] = self._memory_objects["wfs_array_info"][unit_id]
                 we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
 
         return we
@@ -716,18 +717,16 @@ class WaveformExtractor:
         if self.folder is not None:
             wf_folder = self.folder / 'waveforms'
             mode = "memmap"
+            copy = False
         else:
             wf_folder = None
             mode = "shared_memory"
-        wfs_returns = extract_waveforms_to_buffers(self.recording, spikes, unit_ids, nbefore, nafter,
-                                                   mode=mode, return_scaled=return_scaled, folder=wf_folder,
-                                                   dtype=p['dtype'], sparsity_mask=None, copy=False, **job_kwargs)
+            copy = True
+        wfs_arrays = extract_waveforms_to_buffers(self.recording, spikes, unit_ids, nbefore, nafter,
+                                                  mode=mode, return_scaled=return_scaled, folder=wf_folder,
+                                                  dtype=p['dtype'], sparsity_mask=None, copy=copy, **job_kwargs)
         if self.folder is None:
-            # we need to reference the array info!
-            wfs_arrays, wfs_array_info = wfs_returns
-
-            self._memory_objects = {"wfs_arrays": wfs_arrays,
-                                    "wfs_array_info": wfs_array_info}
+            self._memory_objects["wfs_arrays"] = wfs_arrays
 
 
 def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None, seed=None):
@@ -847,7 +846,7 @@ def extract_waveforms(recording, sorting, folder=None,
             return we
     we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path)
     we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
-                    return_scaled=return_scaled)
+                  return_scaled=return_scaled)
     we.run_extract_waveforms(seed=seed, **job_kwargs)
 
     if precompute_template is not None:
