@@ -43,7 +43,7 @@ class UnitWaveformsWidget(BaseWidget):
     unit_selected_waveforms: None or dict
         A dict key is unit_id and value is the subset of waveforms indices that should be 
         be displayed (matplotlib backend)
-    max_spikes_per_unit: int or None
+    max_spikes_per_unit: int or None default 50
         If given and unit_selected_waveforms is None, only max_spikes_per_unit random units are
         displayed per waveform (matplotlib backend)
     """
@@ -54,7 +54,7 @@ class UnitWaveformsWidget(BaseWidget):
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
                  ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
-                 max_spikes_per_unit=None, set_title=True, 
+                 max_spikes_per_unit=50, set_title=True, 
                  backend=None, **backend_kwargs):
         we = waveform_extractor
         recording: BaseRecording = we.recording
