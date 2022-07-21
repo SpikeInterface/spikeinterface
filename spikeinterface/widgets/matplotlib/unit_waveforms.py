@@ -9,9 +9,10 @@ class UnitWaveformPlotter(MplPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
+        
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         backend_kwargs["ncols"] = min(dp.ncols, len(dp.unit_ids))
-        backend_kwargs["num_axes"] = dp.num_axes
+        backend_kwargs["num_axes"] = len(dp.unit_ids)
 
         self.make_mpl_figure(**backend_kwargs)
         
@@ -42,7 +43,7 @@ class UnitWaveformPlotter(MplPlotter):
 
             # plot template
             if dp.plot_templates:
-                template = dp.all_templates[i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                template = dp.templates[i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
                 if dp.plot_waveforms and dp.plot_templates:
                     color = 'k'
                 ax.plot(xvectors_flat, template.T.flatten(), lw=1.5, color=color)
