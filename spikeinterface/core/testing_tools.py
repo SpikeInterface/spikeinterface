@@ -55,6 +55,8 @@ def generate_sorting(
                 #  15 Hz for all units
                 n_spike = int(15. * durations[seg_index])
                 spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n_spike)))
+                keep, = np.nonzero(np.diff(spike_times) > (sampling_frequency * 0.005))
+                spike_times = spike_times[keep]
                 units_dict[unit_id] = spike_times
             else:
                 units_dict[unit_id] = np.array([], dtype=int)

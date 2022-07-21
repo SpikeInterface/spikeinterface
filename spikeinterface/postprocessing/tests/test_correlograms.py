@@ -3,10 +3,11 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
+from spikeinterface import download_dataset, extract_waveforms,  NumpySorting
 import spikeinterface.extractors as se
 from spikeinterface.postprocessing import compute_correlograms, CrossCorrelogramsCalculator
 from spikeinterface.postprocessing.correlograms import _make_bins
+from spikeinterface.core.testing_tools import generate_sorting
 
 
 try:
@@ -23,7 +24,8 @@ else:
 
 
 def test_make_bins():
-    recording, sorting = se.toy_example(num_segments=2, num_units=10, duration=100)
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000., durations=[10.325, 3.5])
+    
     window_ms = 43.57
     bin_ms = 1.6421
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
@@ -57,16 +59,81 @@ def _test_correlograms(sorting, window_ms, bin_ms, methods):
             assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
             assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
-@pytest.mark.skip(reason="Is going to be fixed (PR #750)")
-def test_compute_correlograms():
-    methods = ["numpy", "auto"]
+def test_equal_results_correlograms():
+    # compare that the 2 methods have same results
+    methods = ["numpy"]
     if HAVE_NUMBA:
         methods.append("numba")
 
-    recording, sorting = se.toy_example(num_segments=2, num_units=10, duration=100)
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000., durations=[10.325, 3.5])
 
     _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
     _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
+
+
+def test_flat_cross_correlogram():
+    sorting = generate_sorting(num_units=2, sampling_frequency=10000., durations=[100000.])
+
+    methods = ["numpy"]
+    if HAVE_NUMBA:
+        methods.append("numba")
+
+    #~ import matplotlib.pyplot as plt
+    #~ fig, ax = plt.subplots()
+    
+    for method in methods:
+        correlograms, bins = compute_correlograms(sorting, window_ms=50., bin_ms=0.1, method=method)
+        cc = correlograms[1, 0, :].copy()
+        m = np.mean(cc)
+        assert np.all(cc > (m*0.90))
+        assert np.all(cc < (m*1.10))
+
+        #~ ax.plot(bins[:-1], cc, label=method)
+    #~ ax.legend()
+    #~ ax.set_ylim(0, np.max(correlograms) * 1.1)
+    #~ plt.show()
+
+
+
+def test_auto_cross_correlograms():
+    # check if cross correlogram is the same as autocorrelogram
+    # by removing n spike in bin zeros
+    # this is not the case for numpy method
+    
+    methods = ['numpy']
+    #~ methods = []
+    if HAVE_NUMBA:
+        methods.append("numba")
+    print(methods)
+    
+    num_spike = 2000
+    spike_times = np.sort(np.unique(np.random.randint(0, 100000, num_spike)))
+    num_spike = spike_times.size
+    units_dict = {'1': spike_times, '2': spike_times}
+    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=10000.)
+    
+
+    for method in methods:
+        correlograms, bins = compute_correlograms(sorting, window_ms=10., bin_ms=1., method=method)
+        
+        num_half_bins = correlograms.shape[2]  // 2
+
+        cc = correlograms[1, 0, :].copy()
+        ac = correlograms[0, 0, :]
+        
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.plot(bins[:-1], cc, marker='*',  color='red', label='cross-corr')
+        ax.plot(bins[:-1], ac, marker='*', color='green', label='auto-corr')
+        ax.set_title(method)
+        ax.legend()
+        ax.set_ylim(0, np.max(correlograms) * 1.1)
+        plt.show()
+        
+        cc[num_half_bins]  -= num_spike
+        # assert np.array_equal(cc, ac)
+        
+
 
 
 def test_correlograms_extension():
@@ -97,6 +164,10 @@ def test_correlograms_extension():
 
 if __name__ == '__main__':
     #~ test_make_bins()
-    test_compute_correlograms()
+    test_equal_results_correlograms()
+    #~ test_flat_cross_correlogram()
+    #~ test_auto_cross_correlograms()
+    
+    
     #~ test_correlograms_extension()
 

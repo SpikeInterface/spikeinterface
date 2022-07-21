@@ -102,9 +102,6 @@ def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
         Compute the auto-correlogram between -window_size and +window_size (in sampling time).
     bin_size: int
         Size of a bin (in sampling time).
-    sampling_f: float
-        Sampling rate/frequency (in Hz).
-
     Returns
     -------
     tuple (auto_corr, bins)
@@ -149,7 +146,7 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
 def compute_correlograms(waveform_or_sorting_extractor, 
                          load_if_exists=False,
                          window_ms: float = 100.0,
-                         bin_ms: float = 5.0, symmetrize: bool = True,
+                         bin_ms: float = 5.0, symmetrize=None,
                          method: str = "auto"):
     """Compute auto and cross correlograms.
 
@@ -163,9 +160,8 @@ def compute_correlograms(waveform_or_sorting_extractor,
         The window in ms, by default 100.0.
     bin_ms : float, optional
         The bin size in ms, by default 5.0.
-    symmetrize : bool, optional
-        If True, the correlograms are defined in [-window_ms/2, window_ms/2].
-        If False, they are defined in [0, window_ms/2], by default True
+    symmetrize : None
+        Keep for back compatibility. Always True now.
     method : str, optional
         "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
 
@@ -195,13 +191,17 @@ def compute_correlograms(waveform_or_sorting_extractor,
                                      method=method)
 
 
-def _compute_correlograms(sorting, window_ms, bin_ms, symmetrize=True, method="auto"):
+def _compute_correlograms(sorting, window_ms, bin_ms, symmetrize=None, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
     """
     
-    if symmetrize:
-        warnings.warn("symmetrize is deprecated. It will always be True soon.", DeprecationWarning, stacklevel=2)        
+    if symmetrize is not None:
+        if symmetrize:
+            warnings.warn("symmetrize is deprecated. It will always be True soon.", DeprecationWarning, stacklevel=2)        
+        else:
+            raise ValueError('symmetrize is deprecated. It will always be True')
+        
 
     assert method in ("auto", "numba", "numpy")
 
@@ -227,7 +227,10 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     This very elegant implementation is copy from phy package written by Cyrille Rossant.
     https://github.com/cortex-lab/phylib/blob/master/phylib/stats/ccg.py
     
-    Some sligh modification have been made to fit spikeinterface
+    The main modification is way the positive and negative are handle explicitly
+    for rounding reasons.
+    
+    Other some sligh modification have been made to fit spikeinterface
     data model because there are several segments handling in spikeinterface.
     
     Adaptation: Samuel Garcia
@@ -236,9 +239,11 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     num_units = len(sorting.unit_ids)
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
-    num_half_bins = int(window_size / bin_size)
+    num_half_bins = window_size // bin_size
+    num_bins = 2 * num_half_bins
 
-    correlograms = np.zeros((num_units, num_units, num_half_bins), dtype='int64')
+    #~ correlograms = np.zeros((num_units, num_units, num_half_bins), dtype='int64')
+    correlograms = np.zeros((num_units, num_units, num_bins), dtype='int64')
 
     for seg_index in range(num_seg):
         spike_times, spike_labels = spikes[seg_index]
@@ -252,43 +257,50 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
         shift = 1
         while mask[:-shift].any():
             # Number of time samples between spike i and spike i+shift.
-            spike_diff = spike_times[shift:] - spike_times[:len(spike_times) - shift]
+            spike_diff = spike_times[shift:] - spike_times[:-shift]
 
-            # Binarize the delays between spike i and spike i+shift.
-            # the operator // is np.floor_divide
-            spike_diff_b = spike_diff // bin_size
-            # spike_diff_b = np.floor_divide(spike_diff, bin_size).astype('int64')
+            for sign in (-1, 1):
+                # Binarize the delays between spike i and spike i+shift for negative and positive
+                
+                # the operator // is np.floor_divide
+                spike_diff_b = (spike_diff  * sign) // bin_size
+                # spike_diff_b = np.floor_divide(spike_diff * sign, bin_size).astype('int64')
+        
+                # Spikes with no matching spikes are masked.
+                if sign == -1:
+                    mask[:-shift][spike_diff_b < -num_half_bins] = False
+                else:
+                    mask[:-shift][spike_diff_b >= num_half_bins] = False
 
-            # Spikes with no matching spikes are masked.
-            mask[:-shift][spike_diff_b >= num_half_bins] = False
+                # Cache the masked spike delays.
+                #~ m = mask[:-shift].copy()
+                m = mask[:-shift]
+                #~ d = spike_diff_b[m] + num_half_bins
 
-            # Cache the masked spike delays.
-            m = mask[:-shift].copy()
-            d = spike_diff_b[m]
+                # Find the indices in the raveled correlograms array that need
+                # to be incremented, taking into account the spike clusters.
+                indices = np.ravel_multi_index(
+                                                    (spike_labels[:-shift][m],
+                                                     spike_labels[+shift:][m],
+                                                     spike_diff_b[m] + num_half_bins),
+                                               correlograms.shape)
 
-            # Find the indices in the raveled correlograms array that need
-            # to be incremented, taking into account the spike clusters.
-            indices = np.ravel_multi_index((spike_labels[:-shift][m],
-                                            spike_labels[+shift:][m],
-                                            d),
-                                           correlograms.shape)
-
-            # Increment the matching spikes in the correlograms array.
-            bbins = np.bincount(indices)
-            correlograms.ravel()[:len(bbins)] += bbins
+                # Increment the matching spikes in the correlograms array.
+                bbins = np.bincount(indices)
+                correlograms.ravel()[:len(bbins)] += bbins
 
             shift += 1
 
         # Remove ACG peaks.
-        correlograms[np.arange(num_units),
-                     np.arange(num_units),
-                     0] = 0
+        #~ correlograms[np.arange(num_units),
+                     #~ np.arange(num_units),
+                     #~ 0] = 0
 
     # We symmetrize c[i, j, 0].
-    sym = correlograms[..., :][..., ::-1]
-    sym = np.transpose(sym, (1, 0, 2))
-    correlograms = np.dstack((sym, correlograms))
-    correlograms = np.transpose(correlograms, (1, 0, 2))
+    #~ sym = correlograms[..., :][..., ::-1]
+    #~ sym = np.transpose(sym, (1, 0, 2))
+    #~ correlograms = np.dstack((sym, correlograms))
+    #~ correlograms = np.transpose(correlograms, (1, 0, 2))
     return correlograms
 
 
@@ -324,26 +336,35 @@ if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int32, numba.int32), nopython=True,
                 nogil=True, cache=True)
     def _compute_autocorr_numba(spike_times, window_size, bin_size):
-        num_bins = 2 * int(window_size / bin_size)
+        num_half_bins = window_size // bin_size
+        num_bins = 2 * num_half_bins
+        
         auto_corr = np.zeros(num_bins, dtype=np.int64)
 
         for i in range(len(spike_times)):
             for j in range(i+1, len(spike_times)):
                 diff = spike_times[j] - spike_times[i]
-
+                
                 if diff >= window_size:
                     break
 
-                bin = int(diff / bin_size)
-                auto_corr[num_bins//2 - bin - 1] += 1
-                auto_corr[num_bins//2 + bin] += 1
-
+                bin = int(math.floor(diff / bin_size))
+                #~ auto_corr[num_bins//2 - bin - 1] += 1
+                auto_corr[num_half_bins + bin] += 1
+                #~ print(diff, bin, num_half_bins + bin)
+                
+                bin = int(math.floor(-diff / bin_size))
+                #~ bin = diff // bin_size
+                auto_corr[num_half_bins + bin] += 1
+                #~ print(diff, bin, num_half_bins + bin)
+                
         return auto_corr
 
     @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32, numba.int32),
                 nopython=True, nogil=True, cache=True)
     def _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size):
-        num_bins = 2 * int(window_size / bin_size)
+        num_half_bins = window_size // bin_size
+        num_bins = 2 * num_half_bins
 
         cross_corr = np.zeros(num_bins, dtype=np.int64)
 
@@ -359,7 +380,9 @@ if HAVE_NUMBA:
                     break
 
                 bin = int(math.floor(diff / bin_size))
-                cross_corr[num_bins//2 + bin] += 1
+                #~ bin = diff // bin_size
+                cross_corr[num_half_bins + bin] += 1
+                #~ print(diff, bin, num_half_bins + bin)
 
         return cross_corr
 
@@ -371,13 +394,15 @@ if HAVE_NUMBA:
         n_units = correlograms.shape[0]
 
         for i in numba.prange(n_units):
+        #~ for i in range(n_units):
             spike_times1 = spike_times[spike_labels == i]
 
             for j in range(i, n_units):
                 spike_times2 = spike_times[spike_labels == j]
 
                 if i == j:
-                    correlograms[i, j] += _compute_autocorr_numba(spike_times1, window_size, bin_size)
+                    correlograms[i, j, :] += _compute_autocorr_numba(spike_times1, window_size, bin_size)
                 else:
-                    correlograms[i, j] += _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size)
-                    correlograms[j, i] = correlograms[i, j, ::-1]
+                    cc = _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size)
+                    correlograms[i, j, :] += cc
+                    correlograms[j, i, :] += cc[::-1]
