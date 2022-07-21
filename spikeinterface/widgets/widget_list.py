@@ -17,8 +17,8 @@ from .crosscorrelograms import CrossCorrelogramsWidget, plot_crosscorrelograms
 
 # PC related
 
-
 # units on probe
+from .unit_locations import UnitLocationsWidget, plot_unit_locations
 
 # unit summary
 
@@ -32,13 +32,20 @@ from .crosscorrelograms import CrossCorrelogramsWidget, plot_crosscorrelograms
 # amplitudes
 from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
 
+# summary
+from .sorting_summary import SortingSummaryWidget, plot_sorting_summary
+
 
 widget_list = [
     AmplitudeTimeseriesWidget,
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
     TimeseriesWidget,
-    UnitWaveformsWidget,
+    UnitLocationsWidget,
     UnitTemplateWidget,
+    UnitWaveformsWidget,
     UnitWaveformDensityMapWidget,
+    
+    # summary
+    SortingSummaryWidget
 ]

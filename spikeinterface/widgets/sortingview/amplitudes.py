@@ -26,8 +26,10 @@ class AmplitudeTimeseriesPlotter(SortingviewPlotter):
         v_spike_amplitudes = vv.SpikeAmplitudes(
             start_time_sec=0,
             end_time_sec=dp.total_duration,
-            plots=sa_items
+            plots=sa_items,
+            hide_unit_selector=dp.hide_unit_selector
         )
+        self.set_view(v_spike_amplitudes)
 
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:

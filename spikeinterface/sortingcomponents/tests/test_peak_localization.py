@@ -20,9 +20,9 @@ def test_localize_peaks():
     peaks = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=False, progress_bar=False)
-    
+
     list_locations = []
-    
+
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
                                     chunk_size=10000, verbose=True, progress_bar=False)
     assert peaks.size == peak_locations.shape[0]
@@ -36,6 +36,13 @@ def test_localize_peaks():
 
     peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', 
                                     method_kwargs=dict(optimizer='minimize_with_log_penality'),
+                                    n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
+    assert peaks.size == peak_locations.shape[0]
+    list_locations.append(('minimize_with_log_penality', peak_locations))
+
+    peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', 
+                                    method_kwargs=dict(optimizer='minimize_with_log_penality',
+                                    enforce_decrease=True),
                                     n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('minimize_with_log_penality', peak_locations))

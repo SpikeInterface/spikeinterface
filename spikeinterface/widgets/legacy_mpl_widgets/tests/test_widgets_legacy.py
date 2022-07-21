@@ -97,9 +97,9 @@ class TestWidgets(unittest.TestCase):
     def test_principal_component(self):
         sw.plot_principal_component(self._we)
 
-    def test_plot_unit_localization(self):
-        sw.plot_unit_localization(self._we, with_channel_ids=True)
-        sw.plot_unit_localization(self._we, method='monopolar_triangulation')
+    # def test_plot_unit_localization(self):
+    #     sw.plot_unit_localization(self._we, with_channel_ids=True)
+    #     sw.plot_unit_localization(self._we, method='monopolar_triangulation')
 
     # def test_autocorrelograms(self):
     #     unit_ids = self._sorting.unit_ids[:4]

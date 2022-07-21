@@ -17,12 +17,15 @@ class AmplitudeTimeseriesWidget(BaseWidget):
         The segment index (or None if mono-segment)
     compute_kwargs: dict
         Keyword arguments for computing amplitude (if not computed yet)
+    hide_unit_selector : bool
+        For sortingview backend, if True the unit selector is not displayed
     """
     possible_backends = {}
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
-                 segment_index=None, compute_kwargs=None, backend=None, **backend_kwargs):
+                 segment_index=None, compute_kwargs=None, hide_unit_selector=False,
+                 backend=None, **backend_kwargs):
         sorting = waveform_extractor.sorting
         if waveform_extractor.is_extension('spike_amplitudes'):
             sac = waveform_extractor.load_extension('spike_amplitudes')
@@ -54,7 +57,8 @@ class AmplitudeTimeseriesWidget(BaseWidget):
             amplitudes=amplitudes_segment,
             unit_ids=unit_ids,
             spiketrains=spiketrains_segment,
-            total_duration=total_duration
+            total_duration=total_duration,
+            hide_unit_selector=hide_unit_selector
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

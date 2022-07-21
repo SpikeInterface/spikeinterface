@@ -44,7 +44,7 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
     def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # filter metrics dataframe
         unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_isi_hists = self.isi_histograms[np.array(unit_indices), :]
+        new_isi_hists = self.isi_histograms[unit_indices, :]
         np.save(new_waveforms_folder /
                 self.extension_name / 'isi_histograms.npy', new_isi_hists)
         np.save(new_waveforms_folder /

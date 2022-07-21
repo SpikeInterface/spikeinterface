@@ -28,21 +28,28 @@ class UnitWaveformPlotter(MplPlotter):
             if dp.plot_waveforms:
                 wfs = dp.wfs_by_ids[unit_id]
                 if dp.unit_selected_waveforms is not None:
-                    wfs = wfs[dp.unit_selected_waveforms[unit_id], :, chan_inds]
+                    wfs = wfs[dp.unit_selected_waveforms[unit_id]][:, :, chan_inds]
+                elif dp.max_spikes_per_unit is not None:
+                    if len(wfs) > dp.max_spikes_per_unit:
+                        random_idxs = np.random.permutation(len(wfs))[:dp.max_spikes_per_unit]
+                        wfs = wfs[random_idxs][:, :, chan_inds]
+                    else:
+                        wfs = wfs[:, :, chan_inds]
                 else:
                     wfs = wfs[:, :, chan_inds]
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
-                ax.plot(xvectors_flat, wfs_flat, lw=1, alpha=0.3, color=color)
+                ax.plot(xvectors_flat, wfs_flat, lw=dp.lw, alpha=0.3, color=color)
 
             # plot template
             if dp.plot_templates:
                 template = dp.templates[i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
                 if dp.plot_waveforms and dp.plot_templates:
                     color = 'k'
-                ax.plot(xvectors_flat, template.T.flatten(), lw=1, color=color)
+                ax.plot(xvectors_flat, template.T.flatten(), lw=1.5, color=color)
                 template_label = dp.unit_ids[i]
-                ax.set_title(f'template {template_label}')
+                if dp.set_title:
+                    ax.set_title(f'template {template_label}')
 
             # plot channels
             if dp.plot_channels:
