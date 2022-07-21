@@ -39,13 +39,14 @@ class UnitWaveformPlotter(MplPlotter):
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
                 ax.plot(xvectors_flat, wfs_flat, lw=dp.lw, alpha=0.3, color=color)
+                ax.get_lines()[-1].set_label(f"wf {unit_id}")
 
             # plot template
             if dp.plot_templates:
                 template = dp.all_templates[i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
-                if dp.plot_waveforms and dp.plot_templates:
-                    color = 'k'
-                ax.plot(xvectors_flat, template.T.flatten(), lw=1.5, color=color)
+                # if dp.plot_waveforms and dp.plot_templates:
+                #     color = 'k'
+                ax.plot(xvectors_flat, template.T.flatten(), lw=1.5, color=color, label=f"template {unit_id}")
                 template_label = dp.unit_ids[i]
                 if dp.set_title:
                     ax.set_title(f'template {template_label}')
