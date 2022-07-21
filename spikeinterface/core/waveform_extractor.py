@@ -76,8 +76,7 @@ class WaveformExtractor:
                     self._params = json.load(f)
         else:
             # this is in case of in-memory
-            self._memory_objects = {"wfs_arrays": {},
-                                    "sampled_indices": {}}
+            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
 
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -273,7 +272,7 @@ class WaveformExtractor:
             waveform_folder.mkdir()
         else:
             # remove shared objects
-            self._memory_objects
+            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
 
     def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
         """
