@@ -287,9 +287,9 @@ class GroundTruthStudy:
     def concat_all_snr(self):
         snr = []
         for rec_name in self.rec_names:
-            df = self.get_units_snr(rec_name)
+            df = self.get_metrics(rec_name)
             df = df.reset_index()
             snr.append(df)
         snr = pd.concat(snr)
         snr = snr.set_index(['rec_name', 'unit_id'])
-        return snr
+        return snr['snr']
