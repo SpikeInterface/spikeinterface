@@ -21,14 +21,17 @@ import numpy as np
 
 class BenchmarkClustering:
 
-    def __init__(self, mearec_file, method, tmp_folder=None, job_kwargs={}, verbose=True):
+    def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, tmp_folder=None, job_kwargs={}, verbose=True):
         self.mearec_file = mearec_file
         self.method = method
 
         assert method in clustering_methods, "Clustering method should be in %s" %clustering_methods.keys()
 
         self.verbose = verbose
-        self.recording, self.gt_sorting = read_mearec(mearec_file)
+        self.recording = recording
+        self.gt_sorting = gt_sorting
+        self.job_kwargs = job_kwargs
+        self.exhaustive_gt = exhaustive_gt
         self.recording_f = bandpass_filter(self.recording,  dtype='float32')
         self.recording_f = common_reference(self.recording_f)
         self.sampling_rate = self.recording_f.get_sampling_frequency()
@@ -150,7 +153,7 @@ class BenchmarkClustering:
         idx = matches['index1']
         self.sliced_gt_sorting = NumpySorting.from_times_labels(times1[0][idx], times1[1][idx], self.sampling_rate, unit_ids = self.gt_sorting.unit_ids)
 
-        self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering)
+        self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering, exhaustive_gt=self.exhaustive_gt)
 
         for label, sorting in zip(['gt', 'clustering', 'full_gt'], [self.sliced_gt_sorting, self.clustering, self.gt_sorting]): 
 
