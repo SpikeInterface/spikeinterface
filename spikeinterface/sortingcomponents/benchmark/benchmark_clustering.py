@@ -22,7 +22,7 @@ import numpy as np
 class BenchmarkClustering:
 
     def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, tmp_folder=None, job_kwargs={}, verbose=True):
-        self.mearec_file = mearec_file
+
         self.method = method
 
         assert method in clustering_methods, "Clustering method should be in %s" %clustering_methods.keys()
@@ -197,7 +197,7 @@ class BenchmarkClustering:
         self.gt_labels = self.gt_sorting.to_spike_vector()['unit_ind']
 
 
-    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5):
+    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5, show_ellipses=True):
 
         if colors is None:
             from spikeinterface.widgets import get_unit_colors
@@ -236,25 +236,26 @@ class BenchmarkClustering:
             if not np.isfinite([vx, vy, rho]).all():
                 continue
 
-            ell = Ellipse(
-                (0, 0),
-                width=2 * np.sqrt(1 + rho),
-                height=2 * np.sqrt(1 - rho),
-                facecolor=(0, 0, 0, 0),
-                edgecolor=colors[unit_id],
-                linewidth=1,
-            )
-            transform = (
-                transforms.Affine2D()
-                .rotate_deg(45)
-                .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
-                .translate(mean_x, mean_y)
-            )
-            ell.set_transform(transform + ax.transData)
-            ax.add_patch(ell)
+            if show_ellipses:
+                ell = Ellipse(
+                    (0, 0),
+                    width=2 * np.sqrt(1 + rho),
+                    height=2 * np.sqrt(1 - rho),
+                    facecolor=(0, 0, 0, 0),
+                    edgecolor=colors[unit_id],
+                    linewidth=1,
+                )
+                transform = (
+                    transforms.Affine2D()
+                    .rotate_deg(45)
+                    .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
+                    .translate(mean_x, mean_y)
+                )
+                ell.set_transform(transform + ax.transData)
+                ax.add_patch(ell)
 
 
-    def plot_clusters(self, show_probe=True):
+    def plot_clusters(self, show_probe=True, show_ellipses=True):
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
         fig.suptitle(f'Clustering results with {self.method}')
@@ -265,7 +266,7 @@ class BenchmarkClustering:
 
         from spikeinterface.widgets import get_unit_colors
         colors = get_unit_colors(self.gt_sorting)
-        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'], self.gt_sorting, colors, s=1, alpha=0.5, ax=ax)
+        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'], self.gt_sorting, colors, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.set_xlabel('x')
@@ -276,9 +277,10 @@ class BenchmarkClustering:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax)
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
+        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'], self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
+        if self.exhaustive_gt:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
         ax.set_xlabel('x')
         ax.set_yticks([], [])
 
@@ -287,12 +289,13 @@ class BenchmarkClustering:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
         ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
-        self._scatter_clusters(self.positions['x'][~self.noise], self.positions['y'][~self.noise], self.clustering, s=1, alpha=0.5, ax=ax)
+        self._scatter_clusters(self.positions['x'][~self.noise], self.positions['y'][~self.noise], self.clustering, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
         
         ax.set_xlabel('x')
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
-        ax.set_yticks([], [])
+        if self.exhaustive_gt:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.set_yticks([], [])
 
 
     def plot_statistics(self, metric='cosine', annotations=True, detect_threshold=5):
@@ -322,14 +325,14 @@ class BenchmarkClustering:
 
         ax.plot([nb_detectable+0.5, nb_detectable+0.5], [ymin, ymax], 'r')
 
-        import MEArec as mr
-        mearec_recording = mr.load_recordings(self.mearec_file)
-        positions = mearec_recording.template_locations[:]
+        # import MEArec as mr
+        # mearec_recording = mr.load_recordings(self.mearec_file)
+        # positions = mearec_recording.template_locations[:]
 
-        self.found_positions = np.zeros((len(self.labels), 2))
-        for i in range(len(self.labels)):
-            data = self.positions[self.selected_peaks_labels == self.labels[i]]
-            self.found_positions[i] = np.median(data['x']), np.median(data['y'])
+        # self.found_positions = np.zeros((len(self.labels), 2))
+        # for i in range(len(self.labels)):
+        #     data = self.positions[self.selected_peaks_labels == self.labels[i]]
+        #     self.found_positions[i] = np.median(data['x']), np.median(data['y'])
 
         
         unit_ids1 = scores.index.values
@@ -394,7 +397,7 @@ class BenchmarkClustering:
         nb_channels = []
 
         
-        noise_levels = get_noise_levels(self.recording_f)
+        noise_levels = get_noise_levels(self.recording_f, return_scaled=False)
 
         for found, real in zip(unit_ids2, unit_ids1):
             wfs = self.waveforms['clustering'].get_waveforms(found)

@@ -178,7 +178,7 @@ class BenchmarkPeakSelection:
         self.garbage_peaks = self.peaks[garbage_matches]
 
 
-    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5):
+    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5, show_ellipses=True):
 
         if colors is None:
             from spikeinterface.widgets import get_unit_colors
@@ -217,24 +217,25 @@ class BenchmarkPeakSelection:
             if not np.isfinite([vx, vy, rho]).all():
                 continue
 
-            ell = Ellipse(
-                (0, 0),
-                width=2 * np.sqrt(1 + rho),
-                height=2 * np.sqrt(1 - rho),
-                facecolor=(0, 0, 0, 0),
-                edgecolor=colors[unit_id],
-                linewidth=1,
-            )
-            transform = (
-                transforms.Affine2D()
-                .rotate_deg(45)
-                .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
-                .translate(mean_x, mean_y)
-            )
-            ell.set_transform(transform + ax.transData)
-            ax.add_patch(ell)
+            if show_ellipses:
+                ell = Ellipse(
+                    (0, 0),
+                    width=2 * np.sqrt(1 + rho),
+                    height=2 * np.sqrt(1 - rho),
+                    facecolor=(0, 0, 0, 0),
+                    edgecolor=colors[unit_id],
+                    linewidth=1,
+                )
+                transform = (
+                    transforms.Affine2D()
+                    .rotate_deg(45)
+                    .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
+                    .translate(mean_x, mean_y)
+                )
+                ell.set_transform(transform + ax.transData)
+                ax.add_patch(ell)
 
-    def plot_clusters(self, title=None, show_probe=False):
+    def plot_clusters(self, title=None, show_probe=False, show_ellipses=True):
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
         if title is not None:
             fig.suptitle(f'Peak selection results with {title}')
@@ -246,7 +247,7 @@ class BenchmarkPeakSelection:
 
         from spikeinterface.widgets import get_unit_colors
         colors = get_unit_colors(self.gt_sorting)
-        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'],  self.gt_sorting, colors, s=1, alpha=0.5, ax=ax)
+        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'],  self.gt_sorting, colors, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.set_xlabel('x')
@@ -257,9 +258,10 @@ class BenchmarkPeakSelection:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'],  self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax)
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
+        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'],  self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
+        if self.exhaustive_gt:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
         ax.set_xlabel('x')
         ax.set_yticks([], [])
 
@@ -269,11 +271,12 @@ class BenchmarkPeakSelection:
             plot_probe_map(self.recording_f, ax=ax)
 
         ax.scatter(self.garbage_positions['x'], self.garbage_positions['y'],  c='k', s=1, alpha=0.5)
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
+        if self.exhaustive_gt:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.set_yticks([], [])
         ax.set_xlabel('x')
-        ax.set_yticks([], [])
-
+        
 
     def plot_clusters_amplitudes(self, title=None, show_probe=False, clim=(-100, 0), cmap='viridis'):
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
