@@ -2,7 +2,6 @@
 from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import GroundTruthComparison
@@ -20,11 +19,12 @@ import numpy as np
 
 class BenchmarkPeakSelection:
 
-    def __init__(self, mearec_file, job_kwargs={}, tmp_folder=None, verbose=True):
-        self.mearec_file = mearec_file
+    def __init__(self, recording, gt_sorting, exhaustive_gt=True, job_kwargs={}, tmp_folder=None, verbose=True):
         self.verbose = verbose
-        self.recording, self.gt_sorting = read_mearec(mearec_file)
+        self.recording = recording
+        self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
+        self.exhaustive_gt = exhaustive_gt
         self.recording_f = bandpass_filter(self.recording,  dtype='float32')
         self.recording_f = common_reference(self.recording_f)
         self.sampling_rate = self.recording_f.get_sampling_frequency()
@@ -134,7 +134,7 @@ class BenchmarkPeakSelection:
         
         print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 
-        self.comp = GroundTruthComparison(self.gt_sorting, self.sliced_gt_sorting)
+        self.comp = GroundTruthComparison(self.gt_sorting, self.sliced_gt_sorting, exhaustive_gt=self.exhaustive_gt)
 
         for label, sorting in zip(['gt', 'full_gt', 'garbage'], [self.sliced_gt_sorting, self.gt_sorting, self.garbage_sorting]): 
 
@@ -391,6 +391,7 @@ class BenchmarkPeakSelection:
         else:
             distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
+        print(distances)
         ax = axs[0, 1]
         im = ax.imshow(distances, aspect='auto')
         ax.set_title(metric)
@@ -414,7 +415,7 @@ class BenchmarkPeakSelection:
 
         ax = axs[1, 0]
 
-        noise_levels = get_noise_levels(self.recording_f)
+        noise_levels = get_noise_levels(self.recording_f, return_scaled=False)
         snrs = self.peaks['amplitude']/noise_levels[self.peaks['channel_ind']]
         garbage_snrs = self.garbage_peaks['amplitude']/noise_levels[self.garbage_peaks['channel_ind']]
         amin, amax = snrs.min(), snrs.max()
