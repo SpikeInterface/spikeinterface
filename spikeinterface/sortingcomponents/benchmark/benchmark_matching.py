@@ -72,9 +72,9 @@ class BenchmarkMatching:
         ax = axs[1, 0]
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        plot_sorting_performance(self.comp, self.metrics, performance_name='accuracy', metric_name='snr', ax=ax, color='g')
-        plot_sorting_performance(self.comp, self.metrics, performance_name='recall', metric_name='snr', ax=ax, color='b')
-        plot_sorting_performance(self.comp, self.metrics, performance_name='precision', metric_name='snr', ax=ax, color='r')        
+        plot_sorting_performance(self.comp, self.metrics, performance_name='accuracy', metric_name='snr', ax=ax, color='r')
+        plot_sorting_performance(self.comp, self.metrics, performance_name='recall', metric_name='snr', ax=ax, color='g')
+        plot_sorting_performance(self.comp, self.metrics, performance_name='precision', metric_name='snr', ax=ax, color='b')        
         #ax.set_ylim(0.8, 1)
         ax.legend(['accuracy', 'recall', 'precision'])
         
