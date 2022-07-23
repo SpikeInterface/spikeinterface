@@ -55,8 +55,8 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
         If not None shape must be must be (len(unit_ids), len(channel_ids))
     copy: bool
         If True (default), the output shared memory object is copied to a numpy standard array.
-        If False, the shared buffer is returned with the array info.
-
+        If copy=False then wfs_arrays_info is also return. Please keep in mind that wfs_arrays_info 
+        need to be referenced as long as wfs_arrays will be used otherwise it will be very hard to debug.
     {}
     
     Returns

@@ -17,8 +17,7 @@ def generate_recording(
 
     traces_list = []
     for i in range(num_segments):
-        traces = np.random.randn(
-            num_timepoints[i], num_channels).astype('float32')
+        traces = np.random.randn(num_timepoints[i], num_channels).astype('float32')
         times = np.arange(num_timepoints[i]) / sampling_frequency
         traces += np.sin(2 * np.pi * 50 * times)[:, None]
         traces_list.append(traces)
@@ -55,8 +54,7 @@ def generate_sorting(
             if unit_id not in empty_units:
                 #  15 Hz for all units
                 n_spike = int(15. * durations[seg_index])
-                spike_times = np.sort(np.unique(np.random.randint(
-                    0, num_timepoints[seg_index], n_spike)))
+                spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n_spike)))
                 units_dict[unit_id] = spike_times
             else:
                 units_dict[unit_id] = np.array([], dtype=int)
@@ -103,14 +101,14 @@ def generate_snippets(
     sorting = generate_sorting(num_units=num_units,  sampling_frequency=sampling_frequency,
                                durations=durations, empty_units=empty_units)
 
-    nse = snippets_from_sorting(recording=recording, sorting=sorting,
+    snippets = snippets_from_sorting(recording=recording, sorting=sorting,
         nbefore=nbefore, nafter=nafter, wf_folder=wf_folder, **job_kwargs)
     
     if set_probe:
         probe = recording.get_probe()
-        nse = nse.set_probe(probe)
+        snippets = snippets.set_probe(probe)
 
-    return nse, sorting
+    return snippets, sorting
 
 
 if __name__ == '__main__':

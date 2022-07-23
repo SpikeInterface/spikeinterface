@@ -24,18 +24,13 @@ def snippets_from_sorting(recording, sorting, nbefore=20,
     snippets: NumpySnippets
         Snippets extractor created
     """
+
     strains = sorting.get_all_spike_trains()
 
-    peaks_times = np.concatenate([np.sort(s[0]) for s in strains])
-    peak_dtype = [('sample_ind', 'int64'), ('unit_ind',
-                                            'int64'), ('segment_ind', 'int64')]
-    peaks2 = np.zeros(len(peaks_times), dtype=peak_dtype)
-    peaks2['sample_ind'] = peaks_times
-    peaks2['segment_ind'] = np.concatenate(
-        [si+np.zeros(len(s[0])) for si, s in enumerate(strains)])
+    peaks2 = sorting.to_spike_vector()
     peaks2['unit_ind'] = 0
     
-    
+
     if wf_folder is None:
         mode = "shared_memory"
         folder = None

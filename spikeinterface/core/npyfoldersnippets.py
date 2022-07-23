@@ -48,5 +48,5 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         self._bin_kwargs = d['kwargs']
 
 
-read_binary_folder = define_function_from_class(source_class=NpyFolderSnippets, name="read_npy_snippets_folder")
+read_npy_folder = define_function_from_class(source_class=NpyFolderSnippets, name="read_npy_snippets_folder")
 

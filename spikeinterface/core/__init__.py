@@ -22,7 +22,7 @@ from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent, NumpySnip
 from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .npysnippetsextractor import NpySnippetsExtractor
-from .npyfoldersnippets import NpyFolderSnippets
+from .npyfoldersnippets import NpyFolderSnippets, read_npy_folder
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
 from .channelslice import ChannelSliceRecording, ChannelSliceSnippets

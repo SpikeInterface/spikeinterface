@@ -25,8 +25,8 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
             raise ("Filename not compatible with waveclus file.")
 
         sampling_frequency = float(self._getfield("par/sr"))
-        pre = int(self._getfield("par/w_pre"))
-        post = int(self._getfield("par/w_post"))
+        pre = int(self._getfield("par/w_pre")) - 1
+        post = int(self._getfield("par/w_post")) + 1
 
         sp_len = pre + post
 

@@ -74,7 +74,7 @@ def test_BaseSnippets():
 
     seg0_times = sorting.get_all_spike_trains()[0][0]
 
-    assert all(seg0_times==times0)
+    assert np.array_equal(seg0_times, times0)
 
     # dump/load dict
     d = snippets.to_dict()
