@@ -292,4 +292,4 @@ class GroundTruthStudy:
             metrics.append(df)
         metrics = pd.concat(metrics)
         metrics = metrics.set_index(['rec_name', 'unit_id'])
-        return snr['snr']
+        return metrics['snr']
