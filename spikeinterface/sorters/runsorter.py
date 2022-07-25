@@ -378,17 +378,21 @@ def run_sorter_container(
     (parent_folder / 'in_container_params.json').write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
 
+    npz_sorting_path = output_folder / 'in_container_sorting'
+
     # the py script
     if platform.system() == 'Windows':
         # skip C:
         parent_folder_unix = path_to_unix(parent_folder)
         output_folder_unix = path_to_unix(output_folder)
         recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
+        npz_sorting_path_unix = path_to_unix(npz_sorting_path)
     else:
         parent_folder_unix = parent_folder
         output_folder_unix = output_folder
         recording_input_folders_unix = recording_input_folders
-    npz_sorting_path = output_folder_unix / 'in_container_sorting'
+        npz_sorting_path_unix = npz_sorting_path
+
     py_script = f"""
 import json
 from spikeinterface import load_extractor
@@ -410,7 +414,7 @@ if __name__ == '__main__':
          remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
           verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
-    sorting.save_to_folder(folder='{npz_sorting_path}')
+    sorting.save_to_folder(folder='{npz_sorting_path_unix}')
 """
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
