@@ -61,6 +61,9 @@ class BenchmarkClustering:
     def set_positions(self, positions):
         self._positions = positions
 
+    def set_gt_positions(self, gt_positions):
+        self._gt_positions = gt_positions
+
     @property
     def peaks(self):
         if self._peaks is None:
