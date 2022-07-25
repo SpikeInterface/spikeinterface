@@ -279,9 +279,9 @@ class NwbSortingExtractor(BaseSorting):
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
     sampling_frequency: float, optional
         The sampling frequency in Hz (required if no ElectricalSeries is available).
-    samples_for_rate_estimation: int, optional
-        If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
-        to estimate the rate (default 100000)
+    samples_for_rate_estimation: int, optional, default: 100000
+        The number of timestamp samples to use to estimate the rate.
+        Used if 'rate' is not specified in the ElectricalSeries.
     driver: str, optional
         Specify the HDF5 driver. To read from an S3 url, set to "ros3".
 

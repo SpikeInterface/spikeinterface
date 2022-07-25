@@ -127,6 +127,23 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
 
 class SHYBRIDSortingExtractor(BaseSorting):
+    """Load SHYBRID format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the SHYBRID file.
+    sampling_frequency : int
+        The sampling frequency.
+    delimiter : str
+        The delimiter to use for loading the file.
+
+    Returns
+    -------
+    extractor : SHYBRIDSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'SHYBRIDSorting'
     installed = HAVE_SBEX
     is_writable = True

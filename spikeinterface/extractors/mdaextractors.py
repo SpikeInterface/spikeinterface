@@ -127,6 +127,7 @@ class MdaRecordingExtractor(BaseRecording):
 
 
 class MdaRecordingSegment(BaseRecordingSegment):
+
     def __init__(self, diskreadmda, sampling_frequency):
         self._diskreadmda = diskreadmda
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
@@ -156,6 +157,21 @@ class MdaRecordingSegment(BaseRecordingSegment):
 
 
 class MdaSortingExtractor(BaseSorting):
+    """Load MDA format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the MDA file.
+    sampling_frequency : int
+        The sampling frequency.
+
+    Returns
+    -------
+    extractor : MdaRecordingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'MdaSorting'
     installed = True  # check at class level if installed or not
     is_writable = True
