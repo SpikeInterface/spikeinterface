@@ -6,7 +6,9 @@ from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import CollisionGTComparison
-from spikeinterface.widgets import plot_sorting_performance, plot_agreement_matrix, plot_comparison_collision_by_similarity, plot_unit_templates, plot_unit_waveforms
+from spikeinterface.widgets import (plot_sorting_performance,
+    plot_agreement_matrix, plot_comparison_collision_by_similarity,
+    plot_unit_templates, plot_unit_waveforms, plot_gt_performances)
 
 
 import time
@@ -22,10 +24,7 @@ class BenchmarkMatching:
         self.method = method
         self.method_kwargs = method_kwargs
         self.recording, self.gt_sorting = read_mearec(mearec_file)
-        if not self.recording.is_filtered():
-            self.recording_f = bandpass_filter(self.recording,  dtype='float32')
-        else:
-            self.recording_f = self.recording
+        self.recording_f = bandpass_filter(self.recording,  dtype='float32')
         self.recording_f = common_reference(self.recording_f)
         self.sampling_rate = self.recording_f.get_sampling_frequency()
         self.job_kwargs = job_kwargs
@@ -79,7 +78,7 @@ class BenchmarkMatching:
         ax.legend(['accuracy', 'recall', 'precision'])
         
         ax = axs[1, 1]
-        #plot_comparison_average_performance(self.comp, ax=ax, colors=['g', 'b', 'r'])
+        plot_gt_performances(self.comp, ax=ax)
 
         ax = axs[0, 1]
         plot_comparison_collision_by_similarity(self.comp, self.templates, ax=ax, show_legend=True, mode='lines')

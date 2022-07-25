@@ -94,7 +94,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     else:
         assert isinstance(localization_dict, dict)
         assert localization_dict['method'] in dtype_localize_by_method.keys()
-        localization_dict = init_kwargs_dict(localization_dict['method'], localization_dict)
+        localization_dict = init_kwargs_dict(localization_dict['method'], localization_dict, recording)
 
         nbefore = int(localization_dict['ms_before'] * recording.get_sampling_frequency() / 1000.)
         nafter = int(localization_dict['ms_after'] * recording.get_sampling_frequency() / 1000.)

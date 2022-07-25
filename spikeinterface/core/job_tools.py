@@ -294,7 +294,7 @@ class ChunkRecordingExecutor:
             ######## It has to be done to speed up numpy a lot if multicores
             ######## Otherwise, np.dot will be slow. How to do that, up to you
             ######## This is just a suggestion, but here it adds a dependency
-            
+
             # parallel
             with ProcessPoolExecutor(max_workers=n_jobs,
                                      initializer=worker_initializer,

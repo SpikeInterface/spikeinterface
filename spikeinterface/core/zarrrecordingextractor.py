@@ -149,12 +149,6 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         traces = self._timeseries[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
-
-        if self._timeseries.dtype.str.startswith('uint'):
-            exp_idx = self._dtype.find('int') + 3
-            exp = int(self._dtype[exp_idx:])
-            traces = traces.astype('float32') - 2 ** (exp - 1)
-
         return traces
 
 

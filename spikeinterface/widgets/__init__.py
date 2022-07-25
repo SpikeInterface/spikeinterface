@@ -10,10 +10,10 @@ except:
     HAVE_MPL = False
 
 try:
-    import figurl
-    HAVE_FIGURL = True
+    import sortingview
+    HAVE_SV = True
 except:
-    HAVE_FIGURL = False
+    HAVE_SV = False
 
 try:
     import ipywidgets
@@ -24,14 +24,13 @@ except:
 
 # theses import make the Widget.resgister() at import time
 if HAVE_MPL:
-    from .matplotlib import *
+    import spikeinterface.widgets.matplotlib
 
-if HAVE_FIGURL:
-    from .figurl import *
+if HAVE_SV:
+    import spikeinterface.widgets.sortingview
 
 if HAVE_IPYW:
-    from .ipywidgets import *
-
+    import spikeinterface.widgets.ipywidgets
 
 # we keep this to keep compatibility so we have all previous widgets
 # except the one that have been ported that are imported

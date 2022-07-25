@@ -7,8 +7,8 @@ from .probemap import plot_probe_map, ProbeMapWidget
 
 # isi/ccg/acg
 from .isidistribution import plot_isi_distribution, ISIDistributionWidget
-from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
-                           plot_autocorrelograms, AutoCorrelogramsWidget)
+# from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
+#                            plot_autocorrelograms, AutoCorrelogramsWidget)
 
 # peak activity
 from .activity import plot_peak_activity_map, PeakActivityMapWidget
@@ -21,9 +21,9 @@ from .drift import (plot_drift_over_time, DriftOverTimeWidget,
 # waveform/PC related
 # from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
 # from .unitwaveformdensitymap import plot_unit_waveform_density_map, UnitWaveformDensityMapWidget
-from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
+# from .amplitudes import plot_amplitudes_timeseries, plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
-from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
+# from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
 # units on probe
 from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
@@ -47,10 +47,16 @@ from .sortingperformance import plot_sorting_performance
 
 # ground truth study (=comparison over sorter)
 from .gtstudy import (StudyComparisonRunTimesWidget, plot_gt_study_run_times,
-    StudyComparisonUnitCountWidget, plot_gt_study_unit_counts,
+    StudyComparisonUnitCountsWidget, StudyComparisonUnitCountsAveragesWidget, 
+    plot_gt_study_unit_counts, plot_gt_study_unit_counts_averages,
     plot_gt_study_performances, plot_gt_study_performances_averages, StudyComparisonPerformancesWidget,
     StudyComparisonPerformancesAveragesWidget,
     plot_gt_study_performances_by_template_similarity, StudyComparisonPerformancesByTemplateSimilarity,)
+
+# ground truth comparions (=comparison over sorter)
+from .gtcomparison import (plot_gt_performances, plot_gt_performances_averages, ComparisonPerformancesWidget,
+    ComparisonPerformancesAveragesWidget,
+    plot_gt_performances_by_template_similarity, ComparisonPerformancesByTemplateSimilarity,)
 
 # unit summary
 from .unitsummary import plot_unit_summary, UnitSummaryWidget

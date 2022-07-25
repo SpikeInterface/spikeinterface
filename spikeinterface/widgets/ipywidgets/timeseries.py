@@ -22,11 +22,9 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         
         cm = 1 / 2.54
         
-        # width in cm
-        backend_kwargs_ = self.default_backend_kwargs.copy()
-        backend_kwargs_.update(backend_kwargs)
-        width_cm = backend_kwargs_["width_cm"]
-        height_cm = backend_kwargs_["height_cm"]
+        backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        width_cm = backend_kwargs["width_cm"]
+        height_cm = backend_kwargs["height_cm"]
 
         with plt.ioff():
             output = Output(layout=Layout(width=f'{width_cm}cm'))
@@ -134,7 +132,7 @@ class PlotUpdater:
         elif mode =='map':
             layer_keys = [selected_layer]
             recordings = {selected_layer: self.recordings[selected_layer]}
-            clims = self.data_plot["clims"][selected_layer]
+            clims = {selected_layer: self.data_plot["clims"][selected_layer]}
         
         channel_ids = self.data_plot['channel_ids']
         order =  self.data_plot['order']

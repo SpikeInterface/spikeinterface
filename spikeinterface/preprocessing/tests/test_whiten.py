@@ -13,7 +13,7 @@ else:
 
 set_global_tmp_folder(cache_folder)
 
-def test_normalize_by_quantile():
+def test_whiten():
     rec = generate_recording()
 
     rec2 = whiten(rec)
@@ -28,4 +28,4 @@ def test_normalize_by_quantile():
 
 
 if __name__ == '__main__':
-    test_normalize_by_quantile()
+    test_whiten()
