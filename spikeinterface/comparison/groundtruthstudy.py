@@ -289,7 +289,7 @@ class GroundTruthStudy:
         for rec_name in self.rec_names:
             df = self.get_metrics(rec_name)
             df = df.reset_index()
-            snr.append(df)
-        snr = pd.concat(snr)
-        snr = snr.set_index(['rec_name', 'unit_id'])
+            metrics.append(df)
+        metrics = pd.concat(metrics)
+        metrics = metrics.set_index(['rec_name', 'unit_id'])
         return snr['snr']
