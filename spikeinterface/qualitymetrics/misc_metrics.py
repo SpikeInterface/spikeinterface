@@ -258,7 +258,8 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
 
 
-def compute_refrac_period_violations(waveform_extractor, refractory_period: tuple = (0.0, 1.0)):
+def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: float = 1.0,
+                                     censored_period_ms: float=0.0):
     """Calculates the number of refractory period violations.
 
     This is similar (but slightly different) to the ISI violations.
@@ -270,9 +271,11 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period: tupl
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object
-    refractory_period : tuple of 2 floats, optional, default: (0.0, 1.0)
-        This tuple contains the censored period as well as the refractory period (in ms).
-        If there is no censored period, you can leave it at 0.0.
+    refractory_period_ms : float, optional, default: 1.0
+        The period (in ms) where no 2 good spikes can occur.
+    censored_period_ùs : float, optional, default: 0.0
+        The period (in ms) where no 2 spikes can occur (because they are not detected, or
+        because they were removed by another mean).
 
     Returns
     -------
@@ -296,8 +299,8 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period: tupl
     num_segments = sorting.get_num_segments()
     spikes = sorting.get_all_spike_trains(outputs="unit_index")
 
-    t_c = int(round(refractory_period[0] * fs * 1e-3))
-    t_r = int(round(refractory_period[1] * fs * 1e-3))
+    t_c = int(round(censored_period_ms * fs * 1e-3))
+    t_r = int(round(refractory_period_ms * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int32)
 
     for seg_index in range(num_segments):
