@@ -7,6 +7,8 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading from AlphaRS and AlphaLab SnR boards.
 
+    Based on neo.rawio.AlphaOmegaRawIO
+
     Parameters
     ----------
     folder_path: str or Path-like

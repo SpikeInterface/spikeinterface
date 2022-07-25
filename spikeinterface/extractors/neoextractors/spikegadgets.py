@@ -7,7 +7,8 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading *rec files from spikegadgets.
 
-    
+    Based on :py:class:`neo.rawio.SpikeGadgetsRawIO`
+
     Parameters
     ----------
     file_path: str

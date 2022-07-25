@@ -9,9 +9,9 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
     This format is NOT the native MCS format (*.mcd).
     This format is a raw format with an internal binary header exported by the
     "MC_DataTool binary conversion" with the option header selected.
-    
-    Based on :py:class:`neo.rawio.NeuralynxRawIO`
-    
+
+    Based on :py:class:`neo.rawio.RawMCSRawIO`
+
     Parameters
     ----------
     file_path: str

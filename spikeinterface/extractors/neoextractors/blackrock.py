@@ -5,10 +5,10 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading neuralynx folder
-    
-    Based on :py:class:`neo.rawio.NeuralynxRawIO`
-    
+    Class for reading BlackRock data.
+
+    Based on :py:class:`neo.rawio.BlackrockRawIO`
+
     Parameters
     ----------
     file_path: str

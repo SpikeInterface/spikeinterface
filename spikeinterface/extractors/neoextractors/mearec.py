@@ -7,6 +7,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from a MEArec simulated data.
 
+    Based on :py:class:`neo.rawio.MEArecRawIO`
 
     Parameters
     ----------
@@ -27,7 +28,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         probe = pi.read_mearec(file_path)
         self.set_probe(probe, in_place=True)
         self.annotate(is_filtered=True)
-        
+
         if hasattr(self.neo_reader._recgen, "gain_to_uV"):
             self.set_channel_gains(self.neo_reader._recgen.gain_to_uV)
 

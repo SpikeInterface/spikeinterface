@@ -11,9 +11,9 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from Maxwell device.
     It handle MaxOne (old and new format) and MaxTwo.
-    
-    Based on :py:class:`neo.rawio.IntanRawIO`
-    
+
+    Based on :py:class:`neo.rawio.MaxwellRawIO`
+
     Parameters
     ----------
     file_path: str
