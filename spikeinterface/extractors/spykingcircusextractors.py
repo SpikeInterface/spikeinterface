@@ -13,6 +13,19 @@ except ImportError:
 
 
 class SpykingCircusSortingExtractor(BaseSorting):
+    """Load SpykingCircus format data as a recording extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the SpykingCircus folder.
+
+    Returns
+    -------
+    extractor : SpykingCircusSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'SpykingCircusSortingExtractor'
     installed = HAVE_H5PY  # check at class level if installed or not
     is_writable = True

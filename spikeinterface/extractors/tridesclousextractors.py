@@ -10,6 +10,21 @@ except ImportError:
     HAVE_TDC = False
 
 class TridesclousSortingExtractor(BaseSorting):
+    """Load Tridesclous format data as a sorting extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the Tridesclous folder.
+    chan_grp : list, optional
+        The channel group(s) to load.
+
+    Returns
+    -------
+    extractor : TridesclousSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'TridesclousSortingExtractor'
     installed = HAVE_TDC
     is_writable = False

@@ -15,7 +15,8 @@ except:
 
 
 class CompressedBinaryIblExtractor(BaseRecording):
-    """
+    """Load IBL data as an extractor object.
+
     IBL have a custom format - compressed binary with spikeglx meta.
 
     The format is like spikeglx (have a meta file) but contains:
@@ -32,8 +33,8 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
     Returns
     -------
-    recording
-        The recording object.
+    recording : CompressedBinaryIblExtractor
+        The loaded data.
     """
     extractor_name = 'CompressedBinaryIbl'
     has_default_locations = True

@@ -13,27 +13,28 @@ except:
 
 
 class ALFSortingExtractor(BaseSorting):
+    """Load ALF format data as a sorting extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the ALF folder.
+    sampling_frequency : int, optional, default: 30000
+        The sampling frequency.
+
+    Returns
+    -------
+    extractor : ALFSortingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'ALFSorting'
     installed = HAVE_PANDAS
     is_writable = True
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
 
     def __init__(self, folder_path, sampling_frequency=30000):
-        """
-        Class for reading ALF format.
 
-        Parameters
-        ----------
-        folder_path : str or Path
-            Path to the ALF folder.
-        sampling_frequency : int, optional, default: 30000
-            The sampling frequency.
-
-        Returns
-        -------
-        extractor
-            ALFSortingExtractor
-        """
         assert self.installed, self.installation_mesg
         # check correct parent folder:
         self._folder_path = Path(folder_path)

@@ -28,6 +28,21 @@ except ImportError:
 
 # noinspection SpellCheckingInspection
 class KlustaSortingExtractor(BaseSorting):
+    """Load Klusta format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_or_folder_path : str or Path
+        Path to the ALF folder.
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+
+    Returns
+    -------
+    extractor : KlustaSortingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'KlustaSortingExtractor'
     installed = HAVE_H5PY  # check at class level if installed or not
     installation_mesg = "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed

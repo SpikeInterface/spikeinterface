@@ -18,6 +18,19 @@ except ImportError:
 
 
 class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
+    """Load SHYBRID format data as a recording extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the SHYBRID file.
+
+    Returns
+    -------
+    extractor : SHYBRIDRecordingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'SHYBRIDRecording'
     has_default_locations = True
     has_unscaled = False

@@ -13,6 +13,21 @@ except ImportError:
 
 
 class HerdingspikesSortingExtractor(BaseSorting):
+    """Load HerdingSpikes format data as a sorting extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the ALF folder.
+    load_unit_info : bool, optional, default: True
+        Whether to load the unit info from the file.
+
+    Returns
+    -------
+    extractor : HerdingSpikesSortingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'HS2Sorting'
     installed = HAVE_HS2SX  # check at class level if installed or not
     is_writable = True

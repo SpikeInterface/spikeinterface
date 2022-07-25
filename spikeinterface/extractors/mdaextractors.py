@@ -14,6 +14,25 @@ import traceback
 
 
 class MdaRecordingExtractor(BaseRecording):
+    """Load MDA format data as a recording extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the MDA folder.
+    raw_fname: str
+        File name of raw file. Defaults to 'raw.mda'.
+    params_fname: str
+        File name of params file. Defaults to 'params.json'.
+    geom_fname: str
+        File name of geom file. Defaults to 'geom.csv'.
+
+    Returns
+    -------
+    extractor : MdaRecordingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'MdaRecording'
     has_default_locations = True
     has_unscaled = False
@@ -46,8 +65,7 @@ class MdaRecordingExtractor(BaseRecording):
     @staticmethod
     def write_recording(recording, save_path, params=dict(), raw_fname='raw.mda', params_fname='params.json',
                         geom_fname='geom.csv', verbose=True, dtype=None, **job_kwargs):
-        """
-        Write a recording to file in MDA format.
+        """Write a recording to file in MDA format.
 
         Parameters
         ----------

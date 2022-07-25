@@ -14,6 +14,19 @@ except:
 
 
 class YassSortingExtractor(BaseSorting):
+    """Load YASS format data as a sorting extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the ALF folder.
+
+    Returns
+    -------
+    extractor : YassSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'YassExtractor'
     mode = 'folder'
     installed = HAVE_YAML  # check at class level if installed or not

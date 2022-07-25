@@ -45,6 +45,47 @@ def get_electrical_series(nwbfile, electrical_series_name):
 
 
 class NwbRecordingExtractor(BaseRecording):
+    """Load an NWBFile as a RecordingExtractor.
+
+    Parameters
+    ----------
+    file_path: str or Path
+        Path to NWB file or s3 url.
+    electrical_series_name: str, optional
+        The name of the ElectricalSeries. Used if multiple ElectricalSeries are present.
+    load_time_vector: bool, optional, default: False
+        If True, the time vector is loaded to the recording object.
+    samples_for_rate_estimation: int, optional, default: 100000
+        The number of timestamp samples to use to estimate the rate.
+        Used if 'rate' is not specified in the ElectricalSeries.
+    driver: str, optional
+        Specify the HDF5 driver. To read from an S3 url, set to "ros3".
+
+    Returns
+    -------
+    recording : NwbRecordingExtractor
+        The recording extractor for the NWB file.
+
+    Examples
+    --------
+    Run on local file:
+
+    >>> from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
+    >>> rec = NwbRecordingExtractor(s3_url, driver="ros3")
+
+    Run on s3 URL from the DANDI Archive:
+
+    >>> from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
+    >>> from dandi.dandiapi import DandiAPIClient
+    >>>
+    >>> # get s3 path
+    >>> dandiset_id, filepath = "101116", "sub-001/sub-001_ecephys.nwb"
+    >>> with DandiAPIClient("https://api-staging.dandiarchive.org/api") as client:
+    >>>     asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
+    >>>     s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
+    >>>
+    >>> rec = NwbRecordingExtractor(s3_url, driver="ros3")
+    """
 
     extractor_name = 'NwbRecording'
     has_default_locations = True
@@ -56,48 +97,7 @@ class NwbRecordingExtractor(BaseRecording):
 
     def __init__(self, file_path: PathType, electrical_series_name: str = None, load_time_vector: bool = False,
                  samples_for_rate_estimation: int = 100000, driver=None):
-        """
-        Load an NWBFile as a RecordingExtractor.
 
-        Parameters
-        ----------
-        file_path: str or Path
-            Path to NWB file or s3 url.
-        electrical_series_name: str, optional
-            The name of the ElectricalSeries. Used if multiple ElectricalSeries are present.
-        load_time_vector: bool, optional, default: False
-            If True, the time vector is loaded to the recording object.
-        samples_for_rate_estimation: int, optional, default: 100000
-            The number of timestamp samples to use to estimate the rate.
-            Used if 'rate' is not specified in the ElectricalSeries.
-        driver: str, optional
-            Specify the HDF5 driver. To read from an S3 url, set to "ros3".
-
-        Returns
-        -------
-        recording: NwbRecordingExtractor
-            The recording extractor for the NWB file
-
-        Examples
-        --------
-        run on local file
-
-        >>> from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
-        >>> rec = NwbRecordingExtractor(s3_url, driver="ros3")
-
-        run on s3 URL from the DANDI Archive
-
-        >>> from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
-        >>> from dandi.dandiapi import DandiAPIClient
-        >>>
-        >>> # get s3 path
-        >>> dandiset_id, filepath = "101116", "sub-001/sub-001_ecephys.nwb"
-        >>> with DandiAPIClient("https://api-staging.dandiarchive.org/api") as client:
-        >>>     asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
-        >>>     s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
-        >>>
-        >>> rec = NwbRecordingExtractor(s3_url, driver="ros3")
-        """
         self.driver = driver
         check_nwb_install()
         self._file_path = str(file_path)
@@ -269,17 +269,16 @@ class NwbRecordingSegment(BaseRecordingSegment):
 
 
 class NwbSortingExtractor(BaseSorting):
-    """
-    Load an NWBFile as a SortingExtractor.
+    """Load an NWBFile as a SortingExtractor.
 
     Parameters
     ----------
     file_path: str or Path
-        Path to NWB file
+        Path to NWB file.
     electrical_series_name: str, optional
-        The name of the ElectricalSeries (if multiple ElectricalSeries are present)
+        The name of the ElectricalSeries (if multiple ElectricalSeries are present).
     sampling_frequency: float, optional
-        The sampling frequency in Hz (required if no ElectricalSeries is available)
+        The sampling frequency in Hz (required if no ElectricalSeries is available).
     samples_for_rate_estimation: int, optional
         If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
         to estimate the rate (default 100000)
@@ -289,7 +288,7 @@ class NwbSortingExtractor(BaseSorting):
     Returns
     -------
     sorting: NwbSortingExtractor
-        The sorting extractor for the NWB file
+        The sorting extractor for the NWB file.
     """
     extractor_name = 'NwbSorting'
     installed = HAVE_NWB  # check at class level if installed or not

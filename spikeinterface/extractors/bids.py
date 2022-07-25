@@ -12,14 +12,23 @@ import neo
 
 
 def read_bids(folder_path):
-    """
-    This reads an entire BIDS folder and returns a list of recordings with attached Probes.
+    """Load a BIDS folder of data into extractor objects.
 
-    theses files are considered:
+    The following files are considered:
       * _channels.tsv
       * _contacts.tsv
       * _ephys.nwb
       * _probes.tsv
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the BIDS folder.
+
+    Returns
+    -------
+    extractors : list of extractors
+        The loaded data, with attached Probes.
     """
 
     folder_path = Path(folder_path)

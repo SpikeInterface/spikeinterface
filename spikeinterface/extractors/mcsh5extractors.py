@@ -13,20 +13,19 @@ except ImportError:
 
 
 class MCSH5RecordingExtractor(BaseRecording):
-    """
-    Load a MCS H5 file as a recording extractor.
+    """Load a MCS H5 file as a recording extractor.
 
     Parameters
     ----------
     file_path : str or Path
-        The path to the MCS h5 file
+        The path to the MCS h5 file.
     stream_id : int, optional, default: 0
         The stream ID to load.
 
     Returns
     -------
     recording : MCSH5RecordingExtractor
-        The recording extractor for the MCS h5 file.
+        The loaded data.
     """
     extractor_name = 'MCSH5Recording'
     installed = HAVE_MCSH5  # check at class level if installed or not

@@ -7,6 +7,21 @@ from .matlabhelpers import MatlabHelper
 
 
 class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
+    """Load WaveClus format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the WaveClus file.
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
+
+    Returns
+    -------
+    extractor : WaveClusSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = "WaveClusSortingExtractor"
     installation_mesg = ""  # error message when not installed
 
