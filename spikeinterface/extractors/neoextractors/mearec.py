@@ -12,9 +12,9 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     file_path: str
-
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+        The file path to load the recordings from.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
@@ -51,7 +51,8 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
 
 
 def read_mearec(file_path):
-    """
+    """Read a MEArec file.
+
     Parameters
     ----------
     file_path: str or Path

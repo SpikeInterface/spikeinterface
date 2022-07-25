@@ -5,7 +5,7 @@ There are two extractors for data saved by the Open Ephys GUI
   * OpenEphysLegacyRecordingExtractor: reads the original "Open Ephys" data format
   * OpenEphysBinaryRecordingExtractor: reads the new default "Binary" format
 
-See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html 
+See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
 
 """
@@ -37,12 +37,11 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-
-    stream_id: str or None
-        If several stream, specify the one you want.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
-
+        The folder path to load the recordings from.
+    stream_id: str, optional
+        If there are several streams, specify the one you want to load.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysRawIO'
@@ -72,9 +71,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         If several stream, specify the one you want.
     all_annotations: bool  (default False)
         Load exhaustively all annotation from neo.
-        
+
     """
-    
+
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
 
@@ -92,9 +91,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 num_channels_per_adc = 12
             sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
-            self.set_property("inter_sample_shift", sample_shifts)    
-        
-            
+            self.set_property("inter_sample_shift", sample_shifts)
+
+
         self._kwargs .update(dict(folder_path=str(folder_path)))
 
 

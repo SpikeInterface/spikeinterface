@@ -7,22 +7,18 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading from AlphaRS and AlphaLab SnR boards.
 
-    Based on neo.rawio.AlphaOmegaRawIO
+    Based on :py:class:`neo.rawio.AlphaOmegaRawIO`
 
     Parameters
     ----------
     folder_path: str or Path-like
-        The folder containing AlphaOmega recordings.
-    stream_id: str, optional
-        The stream to load. Can be `RAW` (default), `LFP`, `SPK`, `ACC`, `AI` or
-        `UD`
+        The folder path to the AlphaOmega recordings.
     lsx_files: list of strings or None, optional
-        A list of listings files that refers to mpx files to load
-    stream_id: str or None
-        If several stream, specify the one you want.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
-
+        A list of listings files that refers to mpx files to load.
+    stream_id: {'RAW', 'LFP', 'SPK', 'ACC', 'AI', 'UD'}, optional
+        If there are several streams, specify the one you want to load.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
     mode = "folder"
     NeoRawIOClass = "AlphaOmegaRawIO"
