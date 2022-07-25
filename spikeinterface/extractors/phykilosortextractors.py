@@ -7,14 +7,14 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
     """
-    Base SortingExtractor for Phy and Kilosort output folder
+    Base SortingExtractor for Phy and Kilosort output folder.
 
     Parameters
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str (optional)
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     """
     extractor_name = 'BasePhyKilosortSorting'
     installed = False  # check at class level if installed or not
@@ -159,8 +159,8 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     Parameters
     ----------
     folder_path: str or Path
-        Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str (optional)
+        Path to the output Phy folder (containing the params.py).
+    exclude_cluster_groups: list or str, optional
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
     """
     extractor_name = 'BasePhyKilosortSorting'
@@ -179,9 +179,9 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     Parameters
     ----------
     folder_path: str or Path
-        Path to the output Phy folder (containing the params.py)
+        Path to the output Phy folder (containing the params.py).
     keep_good_only: bool
-        If True, only Kilosort-labeled 'good' units are returned
+        If True, only Kilosort-labeled 'good' units are returned.
     """
     extractor_name = 'KiloSortSorting'
 

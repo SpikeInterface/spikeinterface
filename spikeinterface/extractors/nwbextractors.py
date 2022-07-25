@@ -62,14 +62,14 @@ class NwbRecordingExtractor(BaseRecording):
         Parameters
         ----------
         file_path: str or Path
-            Path to NWB file or s3 url
+            Path to NWB file or s3 url.
         electrical_series_name: str, optional
-            The name of the ElectricalSeries (if multiple ElectricalSeries are present)
-        load_time_vector: bool, optional
-            If True, the time vector is loaded to the recording object (default False)
-        samples_for_rate_estimation: int, optional
-            If 'rate' is not specified in the ElectricalSeries, number of timestamps samples to use
-            to estimate the rate (default 100000)
+            The name of the ElectricalSeries. Used if multiple ElectricalSeries are present.
+        load_time_vector: bool, optional, default: False
+            If True, the time vector is loaded to the recording object.
+        samples_for_rate_estimation: int, optional, default: 100000
+            The number of timestamp samples to use to estimate the rate.
+            Used if 'rate' is not specified in the ElectricalSeries.
         driver: str, optional
             Specify the HDF5 driver. To read from an S3 url, set to "ros3".
 
@@ -388,16 +388,16 @@ read_nwb_sorting = define_function_from_class(source_class=NwbSortingExtractor, 
 
 
 def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None):
-    """Reads NWB file into SpikeInterface extractors
+    """Reads NWB file into SpikeInterface extractors.
 
     Parameters
     ----------
     file_path: str or Path
-            Path to NWB file
-    load_recording : bool, optional
-        If True, the recording object is loaded (default True)
-    load_sorting : bool, optional
-        If True, the recording object is loaded (default False)
+        Path to NWB file.
+    load_recording : bool, optional, default: True
+        If True, the recording object is loaded.
+    load_sorting : bool, optional, default: False
+        If True, the recording object is loaded.
     electrical_series_name: str, optional
         The name of the ElectricalSeries (if multiple ElectricalSeries are present)
 
@@ -405,7 +405,7 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     -------
     extractors: extractor or tuple
         Single RecordingExtractor/SortingExtractor or tuple with both
-        (depending on 'load_recording'/'load_sorting') arguments
+        (depending on 'load_recording'/'load_sorting') arguments.
     """
     outputs = ()
     if load_recording:

@@ -64,17 +64,17 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     @staticmethod
     def write_recording(recording, save_path, initial_sorting_fn, dtype='float32', verbose=True,
                         **job_kwargs):
-        """ Convert and save the recording extractor to SHYBRID format
+        """Convert and save the recording extractor to SHYBRID format.
 
         Parameters
         ----------
         recording: RecordingExtractor
-            The recording extractor to be converted and saved
+            The recording extractor to be converted and saved.
         save_path: str
-            Full path to desired target folder
+            Full path to desired target folder.
         initial_sorting_fn: str
             Full path to the initial sorting csv file (can also be generated
-            using write_sorting static method from the SHYBRIDSortingExtractor)
+            using write_sorting static method from the SHYBRIDSortingExtractor).
         dtype: dtype
             Type of the saved data. Default float32.
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
@@ -140,14 +140,14 @@ class SHYBRIDSortingExtractor(BaseSorting):
 
     @staticmethod
     def write_sorting(sorting, save_path):
-        """ Convert and save the sorting extractor to SHYBRID CSV format
+        """Convert and save the sorting extractor to SHYBRID CSV format.
 
-        parameters
+        Parameters
         ----------
         sorting : SortingExtractor
-            The sorting extractor to be converted and saved
+            The sorting extractor to be converted and saved.
         save_path : str
-            Full path to the desired target folder
+            Full path to the desired target folder.
         """
         assert HAVE_SBEX, SHYBRIDSortingExtractor.installation_mesg
         assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"
@@ -192,8 +192,7 @@ read_shybrid_sorting = define_function_from_class(source_class=SHYBRIDSortingExt
 
 
 class GeometryNotLoadedError(Exception):
-    """ Raised when the recording extractor has no associated channel locations
-    """
+    """Raised when the recording extractor has no associated channel locations."""
     pass
 
 

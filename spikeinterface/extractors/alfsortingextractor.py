@@ -25,9 +25,9 @@ class ALFSortingExtractor(BaseSorting):
         Parameters
         ----------
         folder_path : str or Path
-            Path to ALF folder
-        sampling_frequency : int, optional
-            The sampling frequency, by default 30000
+            Path to the ALF folder.
+        sampling_frequency : int, optional, default: 30000
+            The sampling frequency.
 
         Returns
         -------

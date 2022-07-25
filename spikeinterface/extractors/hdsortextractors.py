@@ -18,9 +18,9 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         Parameters
         ----------
         file_path : str or Path
-            Path to HDSort mat file
-        keep_good_only : bool, optional
-            Only keep good units (default True)
+            Path to HDSort mat file.
+        keep_good_only : bool, optional, default: True
+            Whether to only keep good units.
 
         Returns
         -------
