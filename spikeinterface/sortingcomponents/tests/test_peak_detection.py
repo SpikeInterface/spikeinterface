@@ -33,13 +33,13 @@ def test_detect_peaks():
                          chunk_size=10000, verbose=1, progress_bar=False)
 
     # locally_exclusive + localization
-    peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         chunk_size=10000, verbose=1, progress_bar=True,
-                         localization_dict=dict(method='center_of_mass', local_radius_um=150,
-                                                ms_before=0.1, ms_after=0.3),
-                         )
-    assert 'x' in peaks.dtype.fields
+    #~ peaks = detect_peaks(recording, method='locally_exclusive',
+                         #~ peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                         #~ chunk_size=10000, verbose=1, progress_bar=True,
+                         #~ localization_dict=dict(method='center_of_mass', local_radius_um=150,
+                                                #~ ms_before=0.1, ms_after=0.3),
+                         #~ )
+    #~ assert 'x' in peaks.dtype.fields
 
     # DEBUG
     # ~ sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']

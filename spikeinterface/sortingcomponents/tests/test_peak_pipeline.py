@@ -11,7 +11,6 @@ from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, Pe
 
 
 class MyStep(PeakPipelineStep):
-    name = 'abs_amplitude'
     def __init__(self, recording, param0=5.5):
         PeakPipelineStep.__init__(self, recording)
         self.param0 = param0

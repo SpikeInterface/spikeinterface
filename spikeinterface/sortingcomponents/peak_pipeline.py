@@ -38,13 +38,12 @@ class PeakPipelineStep:
         raise NotImplementedError
     
 
-def run_peak_pipeline(recording, peaks, steps, job_kwargs, squeeze_output=True):
+def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name = 'peak_pipeline', squeeze_output=True):
     """
     Run one or several PeakPipelineStep on already detected peaks.
     """
     assert all(isinstance(step, PeakPipelineStep) for step in steps)
 
-    job_name = ' '.join(step.name for step in steps)
     
     if job_kwargs.get('n_jobs', 1) > 1:
         init_args = (

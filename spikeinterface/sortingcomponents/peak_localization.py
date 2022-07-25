@@ -14,32 +14,8 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                         enforce_decrease_shells_ptp)
 
 
-def init_kwargs_dict(method, method_kwargs, recording):
-    """Initialize a dictionary of keyword arguments."""
+from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
 
-    # @charlie : here are the default params per methods
-    if method == 'center_of_mass':
-        method_kwargs_ = dict(local_radius_um=150)
-    elif method == 'monopolar_triangulation':
-        method_kwargs_ = dict(
-            local_radius_um=150,
-            max_distance_um=1000,
-            optimizer='minimize_with_log_penality',
-            enforce_decrease=False, # I put False by default tell me if you prefer True
-            enforce_decrease_radial_parents=None,
-        )
-
-    method_kwargs_.update(method_kwargs)
-    
-    if method == 'monopolar_triangulation' and method_kwargs_["enforce_decrease"]:
-        contact_locations = recording.get_channel_locations()
-        channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < method_kwargs_['local_radius_um']
-        method_kwargs_["enforce_decrease_radial_parents"] = make_radial_order_parents(
-            contact_locations, neighbours_mask
-        )
-
-    return method_kwargs_
 
 
 def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_mass',
@@ -86,109 +62,265 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
     assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
     # handle default method_kwargs
-    contact_locations = recording.get_channel_locations()
-    method_kwargs = init_kwargs_dict(method, method_kwargs, recording)
-
     nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
     nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
 
-    # margin at border for get_trace
-    margin = max(nbefore, nafter)
-
-    # TODO
-    # make a memmap for peaks to avoid serialization
-
-    # and run
-    func = _localize_peaks_chunk
-    init_func = _init_worker_localize_peaks
-    init_args = (recording.to_dict(), peaks, method, method_kwargs, nbefore, nafter, contact_locations, margin)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True,
-                                       job_name='localize peaks', **job_kwargs)
-    peak_locations = processor.run()
-
-    peak_locations = np.concatenate(peak_locations)
-
+    if method == 'center_of_mass':
+        step = LocalizeCenterOfMass(recording, nbefore=nbefore, nafter=nafter, **method_kwargs)
+    elif method == 'monopolar_triangulation':
+        step = LocalizeMonopolarTriangulation(recording, nbefore=nbefore, nafter=nafter, **method_kwargs)
+        
+    peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks', squeeze_output=True)
+    
     return peak_locations
-
 
 localize_peaks.__doc__ = localize_peaks.__doc__.format(_shared_job_kwargs_doc)
 
 
-def _init_worker_localize_peaks(recording, peaks, method, method_kwargs,
-                                nbefore, nafter, contact_locations, margin):
-    """Initialize worker for localizing peaks."""
-
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
-
-    # create a local dict per worker
-    worker_ctx = {}
-    worker_ctx['recording'] = recording
-    worker_ctx['peaks'] = peaks
-    worker_ctx['method'] = method
-    worker_ctx['method_kwargs'] = method_kwargs
-    worker_ctx['nbefore'] = nbefore
-    worker_ctx['nafter'] = nafter
-
-    worker_ctx['contact_locations'] = contact_locations
-    worker_ctx['margin'] = margin
-
-    if method in ('center_of_mass', 'monopolar_triangulation'):
-        # handle sparsity
-        channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < method_kwargs['local_radius_um']
-        worker_ctx['neighbours_mask'] = neighbours_mask
-
-    return worker_ctx
+#################################################
 
 
-def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    """Localize peaks in a chunk of data."""
+#~ def init_kwargs_dict(method, method_kwargs, recording):
+    #~ """Initialize a dictionary of keyword arguments."""
 
-    # recover variables of the worker
-    recording = worker_ctx['recording']
-    peaks = worker_ctx['peaks']
-    method = worker_ctx['method']
-    nbefore = worker_ctx['nbefore']
-    nafter = worker_ctx['nafter']
-    neighbours_mask = worker_ctx['neighbours_mask']
-    contact_locations = worker_ctx['contact_locations']
-    margin = worker_ctx['margin']
+    #~ # @charlie : here are the default params per methods
+    #~ if method == 'center_of_mass':
+        #~ method_kwargs_ = dict(local_radius_um=150)
+    #~ elif method == 'monopolar_triangulation':
+        #~ method_kwargs_ = dict(
+            #~ local_radius_um=150,
+            #~ max_distance_um=1000,
+            #~ optimizer='minimize_with_log_penality',
+            #~ enforce_decrease=False, # I put False by default tell me if you prefer True
+            #~ enforce_decrease_radial_parents=None,
+        #~ )
 
-    # load trace in memory
-    # traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
-    #                               segment_index=segment_index)
-    recording_segment = recording._recording_segments[segment_index]
-    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
-                                                              None, margin, add_zeros=True)
+    #~ method_kwargs_.update(method_kwargs)
+    
+    #~ if method == 'monopolar_triangulation' and method_kwargs_["enforce_decrease"]:
+        #~ contact_locations = recording.get_channel_locations()
+        #~ channel_distance = get_channel_distances(recording)
+        #~ neighbours_mask = channel_distance < method_kwargs_['local_radius_um']
+        #~ method_kwargs_["enforce_decrease_radial_parents"] = make_radial_order_parents(
+            #~ contact_locations, neighbours_mask
+        #~ )
 
-    # get local peaks (sgment + start_frame/end_frame)
-    i0 = np.searchsorted(peaks['segment_ind'], segment_index)
-    i1 = np.searchsorted(peaks['segment_ind'], segment_index + 1)
-    peak_in_segment = peaks[i0:i1]
-    i0 = np.searchsorted(peak_in_segment['sample_ind'], start_frame)
-    i1 = np.searchsorted(peak_in_segment['sample_ind'], end_frame)
-    local_peaks = peak_in_segment[i0:i1]
+    #~ return method_kwargs_
 
-    # make sample index local to traces
-    local_peaks = local_peaks.copy()
-    local_peaks['sample_ind'] -= (start_frame - left_margin)
 
-    if method == 'center_of_mass':
-        peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations,
-                                                       neighbours_mask, nbefore, nafter)
-    elif method == 'monopolar_triangulation':
-        max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
-        optimizer = worker_ctx['method_kwargs']['optimizer']
-        enforce_decrease_radial_parents = worker_ctx['method_kwargs']['enforce_decrease_radial_parents']
+#~ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_mass',
+                   #~ method_kwargs={}, **job_kwargs):
+    #~ """Localize peak (spike) in 2D or 3D depending the method.
+
+    #~ When a probe is 2D then:
+       #~ * X is axis 0 of the probe
+       #~ * Y is axis 1 of the probe
+       #~ * Z is orthogonal to the plane of the probe
+
+    #~ Parameters
+    #~ ----------
+    #~ recording: RecordingExtractor
+        #~ The recording extractor object.
+    #~ peaks: array
+        #~ Peaks array, as returned by detect_peaks() in "compact_numpy" way.
+    #~ ms_before: float
+        #~ The left window, before a peak, in milliseconds.
+    #~ ms_after: float
+        #~ The right window, after a peak, in milliseconds.
+    #~ method: 'center_of_mass' or 'monopolar_triangulation'
+        #~ Method to use.
+    #~ method_kwargs: dict of kwargs method
+        #~ Keyword arguments for the chosen method:
+            #~ 'center_of_mass':
+                #~ * local_radius_um: float
+                    #~ For channel sparsity.
+            #~ 'monopolar_triangulation':
+                #~ * local_radius_um: float
+                    #~ For channel sparsity.
+                #~ * max_distance_um: float, default: 1000
+                    #~ Boundary for distance estimation.
+                #~ * enforce_decrese : None or "radial"
+                    #~ If+how to enforce spatial decreasingness for PTP vectors.
+    #~ {}
+
+    #~ Returns
+    #~ -------
+    #~ peak_locations: ndarray
+        #~ Array with estimated location for each spike.
+        #~ The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
+    #~ """
+    #~ assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
+
+    #~ # handle default method_kwargs
+    #~ contact_locations = recording.get_channel_locations()
+    #~ method_kwargs = init_kwargs_dict(method, method_kwargs, recording)
+
+    #~ nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
+    #~ nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
+
+    #~ # margin at border for get_trace
+    #~ margin = max(nbefore, nafter)
+
+    #~ # TODO
+    #~ # make a memmap for peaks to avoid serialization
+
+    #~ # and run
+    #~ func = _localize_peaks_chunk
+    #~ init_func = _init_worker_localize_peaks
+    #~ init_args = (recording.to_dict(), peaks, method, method_kwargs, nbefore, nafter, contact_locations, margin)
+    #~ processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True,
+                                       #~ job_name='localize peaks', **job_kwargs)
+    #~ peak_locations = processor.run()
+
+    #~ peak_locations = np.concatenate(peak_locations)
+
+    #~ return peak_locations
+
+
+#~ localize_peaks.__doc__ = localize_peaks.__doc__.format(_shared_job_kwargs_doc)
+
+
+#~ def _init_worker_localize_peaks(recording, peaks, method, method_kwargs,
+                                #~ nbefore, nafter, contact_locations, margin):
+    #~ """Initialize worker for localizing peaks."""
+
+    #~ if isinstance(recording, dict):
+        #~ from spikeinterface.core import load_extractor
+        #~ recording = load_extractor(recording)
+
+    #~ # create a local dict per worker
+    #~ worker_ctx = {}
+    #~ worker_ctx['recording'] = recording
+    #~ worker_ctx['peaks'] = peaks
+    #~ worker_ctx['method'] = method
+    #~ worker_ctx['method_kwargs'] = method_kwargs
+    #~ worker_ctx['nbefore'] = nbefore
+    #~ worker_ctx['nafter'] = nafter
+
+    #~ worker_ctx['contact_locations'] = contact_locations
+    #~ worker_ctx['margin'] = margin
+
+    #~ if method in ('center_of_mass', 'monopolar_triangulation'):
+        #~ # handle sparsity
+        #~ channel_distance = get_channel_distances(recording)
+        #~ neighbours_mask = channel_distance < method_kwargs['local_radius_um']
+        #~ worker_ctx['neighbours_mask'] = neighbours_mask
+
+    #~ return worker_ctx
+
+
+#~ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    #~ """Localize peaks in a chunk of data."""
+
+    #~ # recover variables of the worker
+    #~ recording = worker_ctx['recording']
+    #~ peaks = worker_ctx['peaks']
+    #~ method = worker_ctx['method']
+    #~ nbefore = worker_ctx['nbefore']
+    #~ nafter = worker_ctx['nafter']
+    #~ neighbours_mask = worker_ctx['neighbours_mask']
+    #~ contact_locations = worker_ctx['contact_locations']
+    #~ margin = worker_ctx['margin']
+
+    #~ # load trace in memory
+    #~ # traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame,
+    #~ #                               segment_index=segment_index)
+    #~ recording_segment = recording._recording_segments[segment_index]
+    #~ traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
+                                                              #~ None, margin, add_zeros=True)
+
+    #~ # get local peaks (sgment + start_frame/end_frame)
+    #~ i0 = np.searchsorted(peaks['segment_ind'], segment_index)
+    #~ i1 = np.searchsorted(peaks['segment_ind'], segment_index + 1)
+    #~ peak_in_segment = peaks[i0:i1]
+    #~ i0 = np.searchsorted(peak_in_segment['sample_ind'], start_frame)
+    #~ i1 = np.searchsorted(peak_in_segment['sample_ind'], end_frame)
+    #~ local_peaks = peak_in_segment[i0:i1]
+
+    #~ # make sample index local to traces
+    #~ local_peaks = local_peaks.copy()
+    #~ local_peaks['sample_ind'] -= (start_frame - left_margin)
+
+    #~ if method == 'center_of_mass':
+        #~ peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations,
+                                                       #~ neighbours_mask, nbefore, nafter)
+    #~ elif method == 'monopolar_triangulation':
+        #~ max_distance_um = worker_ctx['method_kwargs']['max_distance_um']
+        #~ optimizer = worker_ctx['method_kwargs']['optimizer']
+        #~ enforce_decrease_radial_parents = worker_ctx['method_kwargs']['enforce_decrease_radial_parents']
+        #~ peak_locations = localize_peaks_monopolar_triangulation(
+            #~ traces, local_peaks, contact_locations,
+            #~ neighbours_mask, nbefore, nafter, max_distance_um, optimizer,
+            #~ enforce_decrease_radial_parents=enforce_decrease_radial_parents,
+        #~ )
+
+    #~ return peak_locations
+
+
+
+class LocalizeBase(PeakPipelineStep):
+    def __init__(self, recording, nbefore, nafter, local_radius_um):
+        PeakPipelineStep.__init__(self, recording)
+        
+        self.nbefore = nbefore
+        self.nafter = nafter
+        
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+
+    def get_dtype(self):
+        return self._dtype
+
+    def get_margin(self):
+        return max(self.nbefore, self.nafter)
+
+
+class LocalizeCenterOfMass(LocalizeBase):
+    def __init__(self, recording, nbefore=None, nafter=None, local_radius_um=150):
+        LocalizeBase.__init__(self, recording, nbefore, nafter, local_radius_um)
+        
+
+        self._kwargs = dict(nbefore=nbefore, nafter=nafter, local_radius_um=local_radius_um,)
+        
+        self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+    
+    def compute_buffer(self, traces, peaks):
+        peak_locations = localize_peaks_center_of_mass(traces, peaks, self.contact_locations,
+                                                       self.neighbours_mask, self.nbefore, self.nafter)
+        return peak_locations
+
+class LocalizeMonopolarTriangulation(LocalizeBase):
+    def __init__(self, recording, 
+                        nbefore=None, nafter=None,
+                        local_radius_um=150,
+                        max_distance_um=1000,
+                        optimizer='minimize_with_log_penality',
+                        enforce_decrease=False):
+        LocalizeBase.__init__(self, recording, nbefore, nafter, local_radius_um)
+        self._kwargs = dict(nbefore=nbefore, nafter=nafter, local_radius_um=local_radius_um,
+                                            max_distance_um=max_distance_um, optimizer=optimizer,
+                                            enforce_decrease=enforce_decrease)
+        
+        self.max_distance_um = max_distance_um
+        self.optimizer = optimizer
+        
+        if enforce_decrease:
+            channel_distance = get_channel_distances(recording)
+            neighbours_mask = self.channel_distance < local_radius_um
+            self.enforce_decrease_radial_parents = make_radial_order_parents(self.contact_locations, neighbours_mask)
+        else:
+            self.enforce_decrease_radial_parents = None
+
+        self._dtype = np.dtype(dtype_localize_by_method['monopolar_triangulation'])
+
+    def compute_buffer(self, traces, peaks):
         peak_locations = localize_peaks_monopolar_triangulation(
-            traces, local_peaks, contact_locations,
-            neighbours_mask, nbefore, nafter, max_distance_um, optimizer,
-            enforce_decrease_radial_parents=enforce_decrease_radial_parents,
+            traces, peaks, self.contact_locations,
+            self.neighbours_mask, self.nbefore, self.nafter, self.max_distance_um, self.optimizer,
+            enforce_decrease_radial_parents=self.enforce_decrease_radial_parents,
         )
-
-    return peak_locations
+        return peak_locations
 
 
 def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbours_mask,
