@@ -1,12 +1,12 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import pandas as pd
-
     HAVE_PANDAS = True
 except:
     HAVE_PANDAS = False

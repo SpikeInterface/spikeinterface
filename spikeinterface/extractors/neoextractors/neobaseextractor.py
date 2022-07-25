@@ -1,11 +1,13 @@
 import warnings
+from copy import copy
+from typing import Union, List
 
 import numpy as np
+
+import neo
+
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
-from typing import Union, List
-from copy import copy
-import neo
 
 
 class _NeoBaseExtractor:
@@ -64,7 +66,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         offsets = signal_channels['offset']
 
         units = signal_channels['units']
-        
+
         # mark that units are V, mV or uV
         self.has_non_standard_units = False
         if not np.all(np.isin(units, ['V', 'Volt', 'mV', 'uV'])):
@@ -83,7 +85,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property('gain_to_uV', final_gains)
         self.set_property('offset_to_uV', final_offsets)
         self.set_property('channel_name', signal_channels["name"])
-        
+
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations['blocks'][0]
             # in neo annotation are for every segment!
@@ -91,7 +93,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             # Generally annotation for multi segment are duplicated
             seg_ann = block_ann['segments'][0]
             sig_ann = seg_ann['signals'][self.stream_index]
-            
+
             # scalar annotations
             for k, v in sig_ann.items():
                 if not k.startswith('__'):
@@ -99,12 +101,12 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             # vector array_annotations are channel properties
             for k, values in sig_ann['__array_annotations__'].items():
                 self.set_property(k, values)
-            
+
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
             rec_segment = NeoRecordingSegment(self.neo_reader, segment_index, self.stream_index)
             self.add_recording_segment(rec_segment)
-        
+
         self._kwargs.update(kwargs)
 
 class NeoRecordingSegment(BaseRecordingSegment):

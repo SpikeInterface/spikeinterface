@@ -1,13 +1,12 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-
 try:
     import h5py
-
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False

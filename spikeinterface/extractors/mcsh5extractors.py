@@ -1,12 +1,12 @@
+from pathlib import Path
+
+import numpy as np
+
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-import numpy as np
-from pathlib import Path
-
 try:
     import h5py
-
     HAVE_MCSH5 = True
 except ImportError:
     HAVE_MCSH5 = False

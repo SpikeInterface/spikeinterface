@@ -1,17 +1,17 @@
-from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
+import json
+from pathlib import Path
+
+import numpy as np
 
 from probeinterface import read_prb, write_prb
 
-import json
-import numpy as np
-from pathlib import Path
+from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
 
 try:
     import hybridizer.io as sbio
     import hybridizer.probes as sbprb
     import yaml
-
     HAVE_SBEX = True
 except ImportError:
     HAVE_SBEX = False

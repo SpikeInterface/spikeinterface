@@ -9,6 +9,7 @@ try:
 except ImportError:
     HAVE_TDC = False
 
+
 class TridesclousSortingExtractor(BaseSorting):
     """Load Tridesclous format data as a sorting extractor.
 

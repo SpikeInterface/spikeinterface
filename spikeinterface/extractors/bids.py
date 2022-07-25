@@ -3,12 +3,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .nwbextractors import read_nwb
-from .neoextractors import read_nix
-
+import neo
 from probeinterface import read_BIDS_probe
 
-import neo
+from .nwbextractors import read_nwb
+from .neoextractors import read_nix
 
 
 def read_bids(folder_path):

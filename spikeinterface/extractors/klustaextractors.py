@@ -8,19 +8,17 @@ https://github.com/kwikteam/phy-doc/blob/master/docs/kwik-model.md
 04/08/20
 """
 
+from pathlib import Path
+
 import numpy as np
+
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment,
                                  read_python)
 from spikeinterface.core.core_tools import define_function_from_class
 
-
-import numpy as np
-from pathlib import Path
-
 try:
     import h5py
-
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False

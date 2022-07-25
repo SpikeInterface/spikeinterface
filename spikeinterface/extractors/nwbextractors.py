@@ -1,6 +1,7 @@
 from pathlib import Path
-import numpy as np
 from typing import Union, List
+
+import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
@@ -14,7 +15,6 @@ try:
     from pynwb.ecephys import ElectrodeGroup
     from hdmf.data_utils import DataChunkIterator
     from hdmf.backends.hdf5.h5_utils import H5DataIO
-
     HAVE_NWB = True
 except ModuleNotFoundError:
     HAVE_NWB = False

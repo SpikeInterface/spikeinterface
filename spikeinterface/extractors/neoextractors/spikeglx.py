@@ -1,15 +1,14 @@
-from spikeinterface.core.core_tools import define_function_from_class
-
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-
-import numpy as np
-import probeinterface as pi
-
-import neo
-
 from packaging import version
 
+import numpy as np
+
+import neo
+import probeinterface as pi
+
+from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+
+from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 HAS_NEO_10_2 = version.parse(neo.__version__) >= version.parse("0.10.2")
 

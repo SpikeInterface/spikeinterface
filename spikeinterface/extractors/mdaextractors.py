@@ -1,16 +1,16 @@
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import define_function_from_class
-
-from spikeinterface.core.core_tools import write_binary_recording
-
-from typing import Union, List
-import json
-import numpy as np
-from pathlib import Path
-import struct
 import os
+import json
+import struct
 import tempfile
 import traceback
+from pathlib import Path
+from typing import Union, List
+
+import numpy as np
+
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import write_binary_recording
 
 
 class MdaRecordingExtractor(BaseRecording):

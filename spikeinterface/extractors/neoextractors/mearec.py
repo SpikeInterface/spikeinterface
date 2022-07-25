@@ -1,6 +1,6 @@
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-
 import probeinterface as pi
+
+from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
 class MEArecRecordingExtractor(NeoBaseRecordingExtractor):

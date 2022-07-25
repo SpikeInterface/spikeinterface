@@ -1,10 +1,11 @@
-from spikeinterface import BaseEvent, BaseEventSegment
+import numpy as np
 
+import probeinterface as pi
+
+from spikeinterface import BaseEvent, BaseEventSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
-import probeinterface as pi
-import numpy as np
 
 
 class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):

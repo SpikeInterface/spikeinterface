@@ -1,11 +1,10 @@
 from pathlib import Path
 
-from spikeinterface.core import BaseRecording, BaseRecordingSegment
+import probeinterface as pi
 
+from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 from spikeinterface.core.core_tools import define_function_from_class
-
-import probeinterface as pi
 
 try:
     import mtscomp

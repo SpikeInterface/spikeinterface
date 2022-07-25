@@ -1,7 +1,8 @@
 import numpy as np
-from spikeinterface.extractors import NumpyRecording, NumpySorting
+
 from probeinterface import Probe
-import numpy as np
+
+from spikeinterface.extractors import NumpyRecording, NumpySorting
 
 
 def toy_example(duration=10, num_channels=4, num_units=10,
