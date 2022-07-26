@@ -285,7 +285,7 @@ class GroundTruthStudy:
         return metric['snr']
 
     def concat_all_snr(self):
-        snr = []
+        metrics = []
         for rec_name in self.rec_names:
             df = self.get_metrics(rec_name)
             df = df.reset_index()
