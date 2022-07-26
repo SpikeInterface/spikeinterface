@@ -2,7 +2,7 @@ import pytest
 
 from spikeinterface.core import NumpySorting
 import numpy as np
-from spikeinterface.postprocessing import CurationSorting, MergeUnitsSorting, SplitUnitSorting
+from spikeinterface.curation import CurationSorting, MergeUnitsSorting, SplitUnitSorting
 
 def test_split_merge():
     spikestimes = [{
