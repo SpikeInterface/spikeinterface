@@ -18,18 +18,54 @@ def test_features_from_peaks():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-
+    
+    
+    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
     peaks = detect_peaks(recording, method='by_channel',
                          peak_sign='neg', detect_threshold=5,
-                         chunk_size=10000, verbose=1, progress_bar=False, noise_levels=noise_levels)
+                          noise_levels=noise_levels, **job_kwargs)
 
     # locally_exclusive
-    features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel'])
+    #~ feature_list = ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel']
+    feature_list = ['amplitude', 'ptp', 'com', 'energy']
+    feature_params = {
+        'amplitude' : {'best_channel': True, 'peak_sign': 'neg'},
+        'ptp' : {'best_channel': True},
+        'com' : {'local_radius_um' : 120.},
+        'energy': {'local_radius_um' : 160.},
+    }
+    features = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
 
-    features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel'], {'ptp' : {'ms_before' : 5}})
-    features = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp'], one_feature_per_peak=False)
+    assert isinstance(features, tuple)
+    
+    assert len(features) == len(feature_list)
+   
+    # all features have the same shape[0] as peaks
+    for one_feature in features:
+        assert one_feature.shape[0] == peaks.shape[0]
+    
+    # split feature variable
+    job_kwargs['n_jobs'] = 2
+    amplitude, ptp, com, energy = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
+    assert amplitude.ndim == 1 # because best_channel=True
+    assert ptp.ndim == 1 # because best_channel=True
+    assert com.ndim == 1
+    assert 'x' in com.dtype.fields
+    assert energy.ndim == 1
+    
+    
+    # amplitude and peak to peak with multi channels
+    d = {'best_channel': False}
+    amplitude, ptp, = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp'], feature_params={'amplitude': d, 'ptp' : d}, **job_kwargs)
+    assert amplitude.shape[0] == amplitude.shape[0]
+    assert amplitude.shape[1] == recording.get_num_channels()
+    assert ptp.shape[0] == peaks.shape[0]
+    assert ptp.shape[1] == recording.get_num_channels()
+
+    
 
 if __name__ == '__main__':
     test_features_from_peaks()

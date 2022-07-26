@@ -18,8 +18,29 @@ from ..core import get_chunk_with_margin
 
 
 class PeakPipelineStep:
-    def __init__(self, recording):
+    """
+    A PeakPipelineStep do a computation on local traces, peaks and optionaly waveforms.
+    And return an array with shape[0] == peaks.shape[0]
+    
+    It can be used to compute on the fly and in parrale :
+       * peak location
+       * pca (with pretrain model)
+       * some features : ptp, ...
+    """
+    need_waveforms = False
+    
+    def __init__(self, recording, ms_before=None, ms_after=None):
         self._kwargs = dict()
+        
+        if self.need_waveforms:
+            assert ms_before is not None and ms_after is not None
+            self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
+            self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
+            self._kwargs['ms_before'] = float(ms_before)
+            self._kwargs['ms_after'] = float(ms_after)
+        else:
+            self.nbefore = None
+            self.nafter = None
 
     @classmethod
     def from_dict(cls, recording, kwargs):
@@ -27,14 +48,18 @@ class PeakPipelineStep:
 
     def to_dict(self):
         return self._kwargs
-
+    
+    def get_trace_margin(self):
+        # can optionaly be overwritten
+        if self.need_waveforms:
+            return max(self.nbefore, self.nafter)
+        else:
+            return 0
+    
     def get_dtype(self):
         raise NotImplementedError
     
-    def compute_buffer(self, traces, peaks):
-        raise NotImplementedError
-    
-    def get_margin(self):
+    def compute_buffer(self, traces, peaks, waveforms=None):
         raise NotImplementedError
     
 
@@ -85,7 +110,9 @@ def _init_worker_peak_piepline(recording, peaks, steps):
         steps = [cls.from_dict(recording, kwargs) for cls, kwargs in steps]
         
     
-    max_margin = max(step.get_margin() for step in steps)
+    max_margin = max(step.get_trace_margin() for step in steps)
+    
+    
     
     # create a local dict per worker
     worker_ctx = {}
@@ -93,7 +120,23 @@ def _init_worker_peak_piepline(recording, peaks, steps):
     worker_ctx['peaks'] = peaks
     worker_ctx['steps'] = steps
     worker_ctx['max_margin'] = max_margin
-
+    
+    # check is any waveforms is needed
+    need_waveform = any(step.need_waveforms for step in steps)
+    worker_ctx['need_waveform'] = need_waveform
+    if need_waveform:
+        # check that all step have the same waveform size
+        # TODO we could enhence this by taking ythe max before/after and slice it on the fly
+        nbefore, nafter = None, None
+        for step in steps:
+            if step.need_waveforms:
+                if nbefore is None:
+                    nbefore, nafter = step.nbefore, step.nafter
+                else:
+                    assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore} {step.nbefore}'
+                    assert nafter == step.nafter, f'Step do not have the same nbefore {nafter} {step.nafter}'
+        worker_ctx['nbefore'], worker_ctx['nafter'] = nbefore, nafter
+    
     return worker_ctx
 
 
@@ -119,10 +162,23 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # make sample index local to traces
     local_peaks = local_peaks.copy()
     local_peaks['sample_ind'] -= (start_frame - left_margin)
+    
+    
+    # @pierre @alessio
+    # we extract the waveforms once for all the step!!!!
+    # this avoid every step to do it, we should gain in perfs with this
+    if worker_ctx['need_waveform']:
+        waveforms = traces[local_peaks['sample_ind'][:, None]+np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
+    else:
+        waveforms = None
 
     outs = tuple()
     for step in worker_ctx['steps']:
-        out = step.compute_buffer(traces, local_peaks)
+        if step.need_waveforms:
+            # give the waveforms pre extracted when needed
+            out = step.compute_buffer(traces, local_peaks, waveforms=waveforms)
+        else:
+            out = step.compute_buffer(traces, local_peaks)
         outs += (out, )
 
     return outs

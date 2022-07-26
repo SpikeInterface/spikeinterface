@@ -15,7 +15,7 @@ class MyStep(PeakPipelineStep):
         PeakPipelineStep.__init__(self, recording)
         self.param0 = param0
         
-        self._kwargs = dict(param0=param0)
+        self._kwargs.update(dict(param0=param0))
         self._dtype = np.dtype([('abs_amplitude', recording.get_dtype())])
 
     def get_dtype(self):
@@ -26,8 +26,24 @@ class MyStep(PeakPipelineStep):
         amps['abs_amplitude'] = np.abs(peaks['amplitude'])
         return amps
     
-    def get_margin(self):
+    def get_trace_margin(self):
         return 5
+
+
+class MyStepWithWaveforms(PeakPipelineStep):
+    need_waveforms = True
+    def __init__(self, recording, ms_before=1., ms_after=1.):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
+
+    def get_dtype(self):
+        return np.dtype('float32')
+    
+    def compute_buffer(self, traces, peaks, waveforms):
+        rms_by_channels = np.sum(waveforms ** 2, axis=1)
+        return rms_by_channels
+
+    def get_trace_margin(self):
+        return max(self.nbefore, self.nafter)
 
 
 def test_run_peak_pipeline():
@@ -51,9 +67,11 @@ def test_run_peak_pipeline():
     assert np.allclose(np.abs(peaks['amplitude']), step_one['abs_amplitude'])
     
     # two step
-    steps = [MyStep(recording, param0=5.5), MyStep(recording, param0=3.3)]
+    steps = [MyStep(recording, param0=5.5), MyStepWithWaveforms(recording, ms_before=.5, ms_after=1.)]
     step_one, step_two = run_peak_pipeline(recording, peaks, steps, job_kwargs)
     assert np.allclose(np.abs(peaks['amplitude']), step_one['abs_amplitude'])
+    assert step_two.shape[0] == peaks.shape[0]
+    assert step_two.shape[1] == recording.get_num_channels()
 
 
 
