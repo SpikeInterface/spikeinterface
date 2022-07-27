@@ -1,7 +1,6 @@
 """Sorting components: peak waveform features."""
 import numpy as np
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 
 from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
@@ -27,25 +26,14 @@ def compute_features_from_peaks(
     peaks: array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way.
     feature_list: List of features to be computed.
-        If one_feature_per_peak is True, can be chosen between
-            - amplitude (params: ms_before, ms_after, peak_sign)
-            - ptp (params: ms_before, ms_after)
-            - com (params: ms_before, ms_after, local_radius_um)
-            - dist_com_vs_max_p2p_channel (params: ms_before, ms_after, local_radius_um)
-            - energy (params: ms_before, ms_after, local_radius_um)
-        If one_feature_per_peak is False, can be chosen between
-            - amplitude (params: ms_before, ms_after, peak_sign)
-            - ptp (params: ms_before, ms_after)
-        Note that if all features have common ms_before, ms_after, this is faster not to
-        specify them in these individual dicts
-    one_feature_per_peak: bool
-        If True, we only get one single feature per peak. If False, then values over all
-        channels are returned.
+            - amplitude
+            - ptp
+            - com
+            - energy
     ms_before: float
         The duration in ms before the peak for extracting the features (default 1 ms)
     ms_after: float
         The duration in ms  after the peakfor extracting the features (default 1 ms)
-    smoothing: can be None, or 'savgol'
 
     {}
 
@@ -71,68 +59,67 @@ def compute_features_from_peaks(
     return features
 
 
-
-
 class AmplitudeFeature(PeakPipelineStep):
     need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', best_channel=True):
+    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', all_channel=True):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
-        self.best_channel = best_channel
+        self.all_channel = all_channel
         self.peak_sign = peak_sign
-        self._kwargs.update(dict(best_channel=best_channel, peak_sign=peak_sign))
+        self._kwargs.update(dict(all_channel=all_channel, peak_sign=peak_sign))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
     def compute_buffer(self, traces, peaks, waveforms):
-        if self.best_channel:
-            if self.peak_sign == 'neg':
-                amplitudes = np.min(waveforms, axis=(1, 2))
-            elif self.peak_sign == 'pos':
-                amplitudes = np.max(waveforms, axis=(1, 2))
-            elif self.peak_sign == 'both':
-                amplitudes = np.max(np.abs(waveforms), axis=(1, 2))
-        else:
+        if self.all_channel:
             if self.peak_sign == 'neg':
                 amplitudes = np.min(waveforms, axis=1)
             elif self.peak_sign == 'pos':
                 amplitudes = np.max(waveforms, axis=1)
             elif self.peak_sign == 'both':
                 amplitudes = np.max(np.abs(waveforms, axis=1))
+        else:
+            if self.peak_sign == 'neg':
+                amplitudes = np.min(waveforms, axis=(1, 2))
+            elif self.peak_sign == 'pos':
+                amplitudes = np.max(waveforms, axis=(1, 2))
+            elif self.peak_sign == 'both':
+                amplitudes = np.max(np.abs(waveforms), axis=(1, 2))
         return amplitudes
 
     
 class PeakToPeakFeature(PeakPipelineStep):
     need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1., best_channel=True):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
-        self.best_channel = best_channel
-        self._kwargs = dict(best_channel=best_channel)
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150., all_channel=True):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
+        self.all_channel = all_channel
+        self._kwargs = dict(all_channel=all_channel)
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
     def compute_buffer(self, traces, peaks, waveforms):
-        all_ptps = np.ptp(waveforms, axis=1)
-        if self.best_channel:
-            all_ptps = np.max(all_ptps, axis=1)
-        return all_ptps
+        if self.all_channel:
+            all_ptps = np.ptp(waveforms, axis=1)
+        else:
+            all_ptps = np.zeros(peaks.shape[0])
 
+            for main_chan in np.unique(peaks['channel_ind']):
+                idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+                chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+                wfs = waveforms[idx][:, :, chan_inds]
+                all_ptps[idx] = np.max(np.ptp(wfs, axis=1))
+        return all_ptps
 
 
 class EnergyFeature(PeakPipelineStep):
     need_waveforms = True
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=50.):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
-        self._kwargs = dict(local_radius_um=float(local_radius_um))
-
-        self.local_radius_um = local_radius_um
-        print('local_radius_um', local_radius_um)
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < local_radius_um        
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
 
     def get_dtype(self):
         return np.dtype('float32')

@@ -13,8 +13,9 @@ There is two way for using theses "plugin":
 """
 import numpy as np
 
+from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from ..core import get_chunk_with_margin
+
 
 
 class PeakPipelineStep:
@@ -29,15 +30,29 @@ class PeakPipelineStep:
     """
     need_waveforms = False
     
-    def __init__(self, recording, ms_before=None, ms_after=None):
+    def __init__(self, recording, ms_before=None, ms_after=None, local_radius_um=None):
         self._kwargs = dict()
         
         if self.need_waveforms:
             assert ms_before is not None and ms_after is not None
+
+        if ms_before is not None:
             self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
-            self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
             self._kwargs['ms_before'] = float(ms_before)
+
+        if ms_after is not None:
+            self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
             self._kwargs['ms_after'] = float(ms_after)
+
+        if local_radius_um is not None:
+            # some steps need sparsity mask
+            self._kwargs['local_radius_um'] = float(local_radius_um)
+            self.local_radius_um = local_radius_um
+            self.contact_locations = recording.get_channel_locations()
+            self.channel_distance = get_channel_distances(recording)
+            self.neighbours_mask = self.channel_distance < local_radius_um        
+
+
         else:
             self.nbefore = None
             self.nafter = None
@@ -52,6 +67,8 @@ class PeakPipelineStep:
     def get_trace_margin(self):
         # can optionaly be overwritten
         if self.need_waveforms:
+            return max(self.nbefore, self.nafter)
+        elif self.nbefore is not None:
             return max(self.nbefore, self.nafter)
         else:
             return 0

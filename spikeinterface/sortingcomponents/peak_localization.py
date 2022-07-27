@@ -2,10 +2,8 @@
 
 import numpy as np
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
-from spikeinterface.core.recording_tools import get_channel_distances
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
-from ..core import get_chunk_with_margin
 
 from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                         possible_localization_methods,
@@ -75,30 +73,24 @@ localize_peaks.__doc__ = localize_peaks.__doc__.format(_shared_job_kwargs_doc)
 
 class LocalizeBase(PeakPipelineStep):
     def __init__(self, recording, ms_before, ms_after, local_radius_um):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
-        
-        self._kwargs.update(local_radius_um=float(local_radius_um))
-
-        self.local_radius_um = local_radius_um
-
-        self.contact_locations = recording.get_channel_locations()
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < local_radius_um
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
 
     def get_dtype(self):
         return self._dtype
 
 
-
-
-class LocalizeCenterOfMass(LocalizeBase):
+class LocalizeCenterOfMass(PeakPipelineStep):
     """Localize peaks using the center of mass method."""
     need_waveforms = True
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
-        LocalizeBase.__init__(self, recording, ms_before, ms_after, local_radius_um)
-
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
-    
+
+    def get_dtype(self):
+        return self._dtype
+
     def compute_buffer(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
@@ -115,7 +107,7 @@ class LocalizeCenterOfMass(LocalizeBase):
         return peak_locations
 
 
-class LocalizeMonopolarTriangulation(LocalizeBase):
+class LocalizeMonopolarTriangulation(PeakPipelineStep):
     """Localize peaks using the monopolar triangulation method.
 
     Notes
@@ -123,22 +115,22 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
     This method is from  Julien Boussard, Erdem Varol and Charlie Windolf
     See spikeinterface.postprocessing.unit_localization.
     """    
-    need_waveforms = True
+    need_waveforms = False
     def __init__(self, recording, 
                         ms_before=1., ms_after=1.,
                         local_radius_um=150,
                         max_distance_um=1000,
                         optimizer='minimize_with_log_penality',
                         enforce_decrease=False):
-        LocalizeBase.__init__(self, recording, ms_before, ms_after, local_radius_um)
-        self._kwargs.update(dict(
-                                            max_distance_um=max_distance_um,
-                                            optimizer=optimizer,
-                                            enforce_decrease=enforce_decrease))
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
+        self._kwargs.update(dict(max_distance_um=max_distance_um,
+                                 optimizer=optimizer,
+                                 enforce_decrease=enforce_decrease))
 
         self.max_distance_um = max_distance_um
         self.optimizer = optimizer
-        
+
         if enforce_decrease:
             self.enforce_decrease_radial_parents = make_radial_order_parents(self.contact_locations, self.neighbours_mask)
         else:
@@ -146,7 +138,10 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
 
         self._dtype = np.dtype(dtype_localize_by_method['monopolar_triangulation'])
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def get_dtype(self):
+        return self._dtype
+
+    def compute_buffer(self, traces, peaks):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for i, peak in enumerate(peaks):
@@ -156,7 +151,8 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
             local_contact_locations = self.contact_locations[chan_inds, :]
 
             # wf is (nsample, nchan) - chan is only neighbor
-            wf = waveforms[i, :, :][:, chan_inds]
+            wf = traces[sample_ind - self.nbefore:sample_ind + self.nafter, :][:, chan_inds]
+
             wf_ptp = wf.ptp(axis=0)
             if self.enforce_decrease_radial_parents is not None:
                 enforce_decrease_shells_ptp(
@@ -164,5 +160,5 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
                 )
             peak_locations[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, self.max_distance_um, self.optimizer)
 
-        return peak_locations        
+        return peak_locations
 
