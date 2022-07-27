@@ -9,15 +9,29 @@ class UnitWaveformPlotter(MplPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
+        
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        backend_kwargs["ncols"] = min(dp.ncols, len(dp.unit_ids))
-        backend_kwargs["num_axes"] = dp.num_axes
+
+        if backend_kwargs["axes"] is not None or backend_kwargs["ax"] is not None:
+            if backend_kwargs["axes"] is not None:
+                assert len(backend_kwargs) >= len(dp.units)
+            elif backend_kwargs["ax"] is not None:
+                assert dp.same_axis, "If 'same_axis' is not used, provide as many 'axes' as neurons"
+        else:
+            if dp.same_axis:
+                backend_kwargs["num_axes"] = 1
+                backend_kwargs["ncols"] = None
+            else:
+                backend_kwargs["num_axes"] = len(dp.unit_ids)
+                backend_kwargs["ncols"] = min(dp.ncols, len(dp.unit_ids))
 
         self.make_mpl_figure(**backend_kwargs)
         
         for i, unit_id in enumerate(dp.unit_ids):
-
-            ax = self.axes.flatten()[i]
+            if dp.same_axis:
+                ax = self.ax
+            else:
+                ax = self.axes.flatten()[i]
             color = dp.unit_colors[unit_id]
 
             chan_inds = dp.channel_inds[unit_id]
@@ -39,14 +53,15 @@ class UnitWaveformPlotter(MplPlotter):
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
                 ax.plot(xvectors_flat, wfs_flat, lw=dp.lw, alpha=0.3, color=color)
-                ax.get_lines()[-1].set_label(f"wf {unit_id}")
+                if not dp.plot_templates:
+                    ax.get_lines()[-1].set_label(f"{unit_id}")
 
             # plot template
             if dp.plot_templates:
-                template = dp.all_templates[i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
+                template = dp.templates[i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
                 # if dp.plot_waveforms and dp.plot_templates:
                 #     color = 'k'
-                ax.plot(xvectors_flat, template.T.flatten(), lw=1.5, color=color, label=f"template {unit_id}")
+                ax.plot(xvectors_flat, template.T.flatten(), lw=1.5, color=color, label=unit_id)
                 template_label = dp.unit_ids[i]
                 if dp.set_title:
                     ax.set_title(f'template {template_label}')
