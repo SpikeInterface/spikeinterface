@@ -214,8 +214,7 @@ class BaseSnippetsSegment(BaseSegment):
         BaseSegment.__init__(self)
 
     def get_snippets(self,
-                     indices = None,
-                    end_frame: Union[int, None] = None,
+                    indices = None,
                     channel_indices: Union[List, None] = None,
                     ) -> np.ndarray:
         """
@@ -224,9 +223,7 @@ class BaseSnippetsSegment(BaseSegment):
         Parameters
         ----------
         indexes: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
+            indeces of the snippets to return, or all if None. Defaults to None.
         channel_indices: (Union[List, None], optional)
             Indices of channels to return, or all channels if None. Defaults to None.
 
@@ -253,7 +250,7 @@ class BaseSnippetsSegment(BaseSegment):
         """
         raise NotImplementedError
 
-    def frames_to_indices(start_frame: Union[int, None] = None,
+    def frames_to_indices(self, start_frame: Union[int, None] = None,
                           end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
