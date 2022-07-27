@@ -25,9 +25,8 @@ class PositionAndFeaturesClustering:
     """
     _default_params = {
         "peak_localization_kwargs" : {"method" : "monopolar_triangulation"},
-        "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
-        "tmp_folder" : None,
         "local_radius_um" : 50,
         "max_spikes_per_unit" : 100,
         "ms_before" : 1.5,
@@ -49,23 +48,27 @@ class PositionAndFeaturesClustering:
         nafter = int(params['ms_after'] * fs / 1000.)
         num_samples = nbefore + nafter
 
-        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy']
+        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy', 'std_ptp', 'kurtosis_ptp']
         features_params = {'monopolar' : {'local_radius_um' : params['local_radius_um']},
                            'ptp' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
-                           'energy': {'local_radius_um' : params['local_radius_um']}}
+                           'energy': {'local_radius_um' : params['local_radius_um']},
+                           'std_ptp': {'local_radius_um' : params['local_radius_um']},
+                           'kurtosis_ptp': {'local_radius_um' : params['local_radius_um']}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=params['ms_before'], ms_after=params['ms_after'], **params['job_kwargs'])
 
-        hdbscan_data = np.zeros((len(peaks), 4), dtype=np.float32)
+        hdbscan_data = np.zeros((len(peaks), 6), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]['x']
         hdbscan_data[:, 1] = features_data[0]['y']
         hdbscan_data[:, 2] = features_data[1]
         hdbscan_data[:, 3] = features_data[2]
+        hdbscan_data[:, 4] = features_data[3]
+        hdbscan_data[:, 5] = features_data[4]
 
         preprocessing = QuantileTransformer(output_distribution='uniform')
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
-        
+
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
         peak_labels = clustering[0]

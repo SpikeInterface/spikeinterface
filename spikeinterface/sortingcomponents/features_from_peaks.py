@@ -105,13 +105,47 @@ class PeakToPeakFeature(PeakPipelineStep):
         if self.all_channels:
             all_ptps = np.ptp(waveforms, axis=1)
         else:
-            all_ptps = np.zeros(peaks.shape[0])
-
+            all_ptps = np.zeros(peaks.size)
             for main_chan in np.unique(peaks['channel_ind']):
                 idx, = np.nonzero(peaks['channel_ind'] == main_chan)
                 chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
                 wfs = waveforms[idx][:, :, chan_inds]
                 all_ptps[idx] = np.max(np.ptp(wfs, axis=1))
+        return all_ptps
+
+
+class StdPeakToPeakFeature(PeakToPeakFeature):
+    need_waveforms = True
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
+        PeakToPeakFeature.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um, all_channels=False)
+
+    def compute_buffer(self, traces, peaks, waveforms):
+        all_ptps = np.zeros(peaks.size)
+        for main_chan in np.unique(peaks['channel_ind']):
+            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+            wfs = waveforms[idx][:, :, chan_inds]
+            all_ptps[idx] = np.std(np.ptp(wfs, axis=1), axis=1)
+        return all_ptps
+
+class KurtosisPeakToPeakFeature(PeakToPeakFeature):
+    need_waveforms = True
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
+        PeakToPeakFeature.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um, all_channels=False)
+
+    def compute_buffer(self, traces, peaks, waveforms):
+        if self.all_channels:
+            all_ptps = np.ptp(waveforms, axis=1)
+        else:
+            all_ptps = np.zeros(peaks.size)
+            import scipy
+            for main_chan in np.unique(peaks['channel_ind']):
+                idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+                chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+                wfs = waveforms[idx][:, :, chan_inds]
+                all_ptps[idx] = scipy.stats.kurtosis(np.ptp(wfs, axis=1), axis=1)
         return all_ptps
 
 
@@ -129,8 +163,8 @@ class EnergyFeature(PeakPipelineStep):
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
-            wfs = waveforms[idx]
-            energy[idx] = np.linalg.norm(wfs[:, :, chan_inds], axis=(1, 2)) / chan_inds.size
+            wfs = waveforms[idx][:, :, chan_inds]
+            energy[idx] = np.linalg.norm(wfs, axis=(1, 2)) / chan_inds.size
         return energy
 
 _features_class = {
@@ -139,6 +173,8 @@ _features_class = {
     'center_of_mass' : LocalizeCenterOfMass,
     'monopolar_triangulation' : LocalizeMonopolarTriangulation,
     'energy' : EnergyFeature,
+    'std_ptp' : StdPeakToPeakFeature,
+    'kurtosis_ptp' : KurtosisPeakToPeakFeature
     
 }
 
