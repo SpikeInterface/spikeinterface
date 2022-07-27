@@ -5,7 +5,7 @@ from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 
 from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
 
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
+from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
 
 
 def compute_features_from_peaks(
@@ -61,18 +61,18 @@ def compute_features_from_peaks(
 
 class AmplitudeFeature(PeakPipelineStep):
     need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', all_channel=True):
+    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', all_channels=True):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
-        self.all_channel = all_channel
+        self.all_channels = all_channels
         self.peak_sign = peak_sign
-        self._kwargs.update(dict(all_channel=all_channel, peak_sign=peak_sign))
+        self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
     def compute_buffer(self, traces, peaks, waveforms):
-        if self.all_channel:
+        if self.all_channels:
             if self.peak_sign == 'neg':
                 amplitudes = np.min(waveforms, axis=1)
             elif self.peak_sign == 'pos':
@@ -91,18 +91,18 @@ class AmplitudeFeature(PeakPipelineStep):
     
 class PeakToPeakFeature(PeakPipelineStep):
     need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150., all_channel=True):
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150., all_channels=True):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
-        self.all_channel = all_channel
-        self._kwargs = dict(all_channel=all_channel)
+        self.all_channels = all_channels
+        self._kwargs = dict(all_channels=all_channels)
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
     def compute_buffer(self, traces, peaks, waveforms):
-        if self.all_channel:
+        if self.all_channels:
             all_ptps = np.ptp(waveforms, axis=1)
         else:
             all_ptps = np.zeros(peaks.shape[0])
@@ -136,7 +136,8 @@ class EnergyFeature(PeakPipelineStep):
 _features_class = {
     'amplitude': AmplitudeFeature,
     'ptp' : PeakToPeakFeature,
-    'com' : LocalizeCenterOfMass,
+    'center_of_mass' : LocalizeCenterOfMass,
+    'monopolar_triangulation' : LocalizeMonopolarTriangulation,
     'energy' : EnergyFeature,
     
 }
