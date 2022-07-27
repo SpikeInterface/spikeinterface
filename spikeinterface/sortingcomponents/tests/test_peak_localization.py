@@ -50,33 +50,33 @@ def test_localize_peaks():
 
 
     #DEBUG
-    #~ import MEArec
-    #~ recgen = MEArec.load_recordings(recordings=local_path, return_h5_objects=True,
-    #~ check_suffix=False,
-    #~ load=['recordings', 'spiketrains', 'channel_positions'],
-    #~ load_waveforms=False)
-    #~ soma_positions = np.zeros((len(recgen.spiketrains), 3), dtype='float32')
-    #~ for i, st in enumerate(recgen.spiketrains):
-        #~ soma_positions[i, :] = st.annotations['soma_position']
-    #~ import matplotlib.pyplot as plt
-    #~ import spikeinterface.widgets as sw
-    #~ from probeinterface.plotting import plot_probe
-    #~ for title, peak_locations in list_locations:
-        #~ probe = recording.get_probe()
-        #~ fig, axs = plt.subplots(ncols=2, sharey=True)
-        #~ ax = axs[0]
-        #~ ax.set_title(title)
-        #~ plot_probe(probe, ax=ax)
-        #~ ax.scatter(peak_locations['x'], peak_locations['y'], color='k', s=1, alpha=0.5)
-        #~ ax.set_xlabel('x')
-        #~ ax.set_ylabel('y')
-        #~ #MEArec is "yz" in 2D
-        #~ ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
-        #~ if 'z' in peak_locations.dtype.fields:
-            #~ ax = axs[1]
-            #~ ax.scatter(peak_locations['z'], peak_locations['y'], color='k', s=1, alpha=0.5)
-            #~ ax.set_xlabel('z')
-    #~ plt.show()
+    # import MEArec
+    # recgen = MEArec.load_recordings(recordings=local_path, return_h5_objects=True,
+    # check_suffix=False,
+    # load=['recordings', 'spiketrains', 'channel_positions'],
+    # load_waveforms=False)
+    # soma_positions = np.zeros((len(recgen.spiketrains), 3), dtype='float32')
+    # for i, st in enumerate(recgen.spiketrains):
+    #     soma_positions[i, :] = st.annotations['soma_position']
+    # import matplotlib.pyplot as plt
+    # import spikeinterface.widgets as sw
+    # from probeinterface.plotting import plot_probe
+    # for title, peak_locations in list_locations:
+    #     probe = recording.get_probe()
+    #     fig, axs = plt.subplots(ncols=2, sharey=True)
+    #     ax = axs[0]
+    #     ax.set_title(title)
+    #     plot_probe(probe, ax=ax)
+    #     ax.scatter(peak_locations['x'], peak_locations['y'], color='k', s=1, alpha=0.5)
+    #     ax.set_xlabel('x')
+    #     ax.set_ylabel('y')
+    #     #MEArec is "yz" in 2D
+    #     ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
+    #     if 'z' in peak_locations.dtype.fields:
+    #         ax = axs[1]
+    #         ax.scatter(peak_locations['z'], peak_locations['y'], color='k', s=1, alpha=0.5)
+    #         ax.set_xlabel('z')
+    # plt.show()
 
 
 

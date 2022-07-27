@@ -29,15 +29,15 @@ def test_features_from_peaks():
                           noise_levels=noise_levels, **job_kwargs)
 
     # locally_exclusive
-    #~ feature_list = ['amplitude', 'ptp', 'energy', 'com', 'dist_com_vs_max_ptp_channel']
     feature_list = ['amplitude', 'ptp', 'com', 'energy']
     feature_params = {
-        'amplitude' : {'best_channel': True, 'peak_sign': 'neg'},
-        'ptp' : {'best_channel': True},
+        'amplitude' : {'all_channel': False, 'peak_sign': 'neg'},
+        'ptp' : {'all_channel': False},
         'com' : {'local_radius_um' : 120.},
         'energy': {'local_radius_um' : 160.},
     }
-    features = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
+    features = compute_features_from_peaks(recording, peaks, feature_list,
+                feature_params=feature_params, **job_kwargs)
 
     assert isinstance(features, tuple)
     
@@ -49,17 +49,19 @@ def test_features_from_peaks():
     
     # split feature variable
     job_kwargs['n_jobs'] = 2
-    amplitude, ptp, com, energy = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
-    assert amplitude.ndim == 1 # because best_channel=True
-    assert ptp.ndim == 1 # because best_channel=True
+    amplitude, ptp, com, energy = compute_features_from_peaks(recording, peaks, feature_list,
+                feature_params=feature_params, **job_kwargs)
+    assert amplitude.ndim == 1 # because all_channel=False
+    assert ptp.ndim == 1 # because all_channel=False
     assert com.ndim == 1
     assert 'x' in com.dtype.fields
     assert energy.ndim == 1
     
     
     # amplitude and peak to peak with multi channels
-    d = {'best_channel': False}
-    amplitude, ptp, = compute_features_from_peaks(recording, peaks, ['amplitude', 'ptp'], feature_params={'amplitude': d, 'ptp' : d}, **job_kwargs)
+    d = {'all_channel': True}
+    amplitude, ptp, = compute_features_from_peaks(recording, peaks,
+            ['amplitude', 'ptp'], feature_params={'amplitude': d, 'ptp' : d}, **job_kwargs)
     assert amplitude.shape[0] == amplitude.shape[0]
     assert amplitude.shape[1] == recording.get_num_channels()
     assert ptp.shape[0] == peaks.shape[0]
