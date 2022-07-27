@@ -24,7 +24,7 @@ class PositionAndFeaturesClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "peak_localization_kwargs" : {"method" : "center_of_mass"},
+        "peak_localization_kwargs" : {"method" : "monopolar_triangulation"},
         "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "tmp_folder" : None,
@@ -33,7 +33,6 @@ class PositionAndFeaturesClustering:
         "ms_before" : 1.5,
         "ms_after": 2.5,
         "cleaning": "cosine",
-        "waveform_mode" : "memmap",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
     }
 
