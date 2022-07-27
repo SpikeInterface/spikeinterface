@@ -135,7 +135,6 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclu
         recording = load_extractor(recording)
         
         if pipeline_steps is not None:
-            print(pipeline_steps)
             pipeline_steps = [cls.from_dict(recording, kwargs) for cls, kwargs in pipeline_steps]
 
     # create a local dict per worker
@@ -222,7 +221,6 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
                 out = step.compute_buffer(traces, peaks, waveforms=waveforms)
             else:
                 out = step.compute_buffer(traces, peaks)
-            print(step, out.dtype)
             outs += (out, )
 
     # make absolute sample index

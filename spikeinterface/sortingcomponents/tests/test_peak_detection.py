@@ -37,12 +37,12 @@ def test_detect_peaks():
         PeakToPeakFeature(recording, ms_before=1., ms_after=1., best_channel=True),
         LocalizeCenterOfMass(recording, ms_before=1., ms_after=1., local_radius_um=150.),
     ]
-    peaks, ptp, com = detect_peaks(recording, method='locally_exclusive',
+    peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         pipeline_steps=pipeline_steps)
+                         pipeline_steps=pipeline_steps, **job_kwargs)
     assert peaks.shape[0] == ptp.shape[0]
-    assert peaks.shape[0] == com.shape[0]
-    assert 'x' in com.dtype.fields
+    assert peaks.shape[0] == peak_locations.shape[0]
+    assert 'x' in peak_locations.dtype.fields
     
     
     
