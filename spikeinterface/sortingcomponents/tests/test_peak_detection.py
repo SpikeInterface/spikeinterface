@@ -34,7 +34,7 @@ def test_detect_peaks():
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
     pipeline_steps = [
-        PeakToPeakFeature(recording, ms_before=1., ms_after=1., best_channel=True),
+        PeakToPeakFeature(recording, ms_before=1., ms_after=1., all_channel=False),
         LocalizeCenterOfMass(recording, ms_before=1., ms_after=1., local_radius_um=150.),
     ]
     peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive',
