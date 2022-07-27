@@ -9,8 +9,8 @@ from spikeinterface.core.recording_tools import get_noise_levels, get_channel_di
 
 from ..core import get_chunk_with_margin
 
-from .peak_localization import (dtype_localize_by_method, init_kwargs_dict,
-                                localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation)
+from .peak_pipeline import PeakPipelineStep, get_nbefore_nafter_from_steps
+
 
 try:
     import numba
@@ -23,8 +23,8 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
 
 
 def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                 local_radius_um=50, noise_levels=None, random_chunk_kwargs={},
-                 outputs='numpy_compact', localization_dict=None, **job_kwargs):
+                 local_radius_um=50, noise_levels=None, random_chunk_kwargs={}, pipeline_steps=None,
+                 outputs='numpy_compact', **job_kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
     Parameters
@@ -51,12 +51,9 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     random_chunk_kwargs: dict, optional
         A dict that contain option to randomize chunk for get_noise_levels().
         Only used if noise_levels is None.
-    outputs: 'numpy_compact', 'numpy_split', 'sorting'
-        The type of the output. By default, "numpy_compact" returns an array with complex dtype.
-        In case of 'sorting', each unit corresponds to a recording channel.
-    localization_dict : dict, optional
-        Can optionally do peak localization at the same time as detection.
-        This avoids running `localize_peaks` separately and re-reading the entire dataset.
+    pipeline_steps: None or list[PeakPipelineStep]
+        Optional additional PeakPipelineStep need to computed just after detection time.
+        This avoid reading the recording multiple times.
     {}
 
     Returns
@@ -71,7 +68,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
 
     assert method in ('by_channel', 'locally_exclusive')
     assert peak_sign in ('both', 'neg', 'pos')
-    assert outputs in ('numpy_compact', 'numpy_split', 'sorting')
+
 
     if method == 'locally_exclusive' and not HAVE_NUMBA:
         raise ModuleNotFoundError('"locally_exclusive" need numba which is not installed')
@@ -87,47 +84,58 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         neighbours_mask = channel_distance < local_radius_um
     else:
         neighbours_mask = None
-
-    # deal with margin
-    if localization_dict is None:
-        extra_margin = 0
+    
+    if pipeline_steps is not None:
+        assert all(isinstance(step, PeakPipelineStep ) for step in pipeline_steps)
+        if job_kwargs.get('n_jobs', 1) > 1:
+            pipeline_steps_ = [(step.__class__, step.to_dict()) for step in pipeline_steps]
+        else:
+            pipeline_steps_ = pipeline_steps
+        extra_margin = max(step.get_trace_margin() for step in pipeline_steps)
     else:
-        assert isinstance(localization_dict, dict)
-        assert localization_dict['method'] in dtype_localize_by_method.keys()
-        localization_dict = init_kwargs_dict(localization_dict['method'], localization_dict, recording)
-
-        nbefore = int(localization_dict['ms_before'] * recording.get_sampling_frequency() / 1000.)
-        nafter = int(localization_dict['ms_after'] * recording.get_sampling_frequency() / 1000.)
-        extra_margin = max(nbefore, nafter)
+        pipeline_steps_ = None
+        extra_margin = 0
 
     # and run
     exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
     
+    
+    if job_kwargs.get('n_jobs', 1) > 1:
+        recording_ = recording.to_dict()
+    else:
+        recording_ = recording
+    
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
-    init_args = (recording.to_dict(), method, peak_sign, abs_threholds, exclude_sweep_size,
-                 neighbours_mask, extra_margin, localization_dict)
+    init_args = (recording_, method, peak_sign, abs_threholds, exclude_sweep_size,
+                 neighbours_mask, extra_margin, pipeline_steps_)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='detect peaks', **job_kwargs)
-    peaks = processor.run()
-    peaks = np.concatenate(peaks)
-
-    if outputs == 'numpy_compact':
+    outputs = processor.run()
+    
+    if pipeline_steps is None:
+        peaks = np.concatenate(outputs)
         return peaks
-    elif outputs == 'sorting':
-        return NumpySorting.from_peaks(peaks, sampling_frequency=recording.get_sampling_frequency())
-
+    else:
+        
+        outs_concat = ()
+        for output_step in zip(*outputs):
+            outs_concat += (np.concatenate(output_step, axis=0), )
+        return outs_concat
 
 detect_peaks.__doc__ = detect_peaks.__doc__.format(_shared_job_kwargs_doc)
 
 
 def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclude_sweep_size,
-                              neighbours_mask, extra_margin, localization_dict):
+                              neighbours_mask, extra_margin, pipeline_steps):
     """Initialize a worker for detecting peaks."""
 
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
+        
+        if pipeline_steps is not None:
+            pipeline_steps = [cls.from_dict(recording, kwargs) for cls, kwargs in pipeline_steps]
 
     # create a local dict per worker
     worker_ctx = {}
@@ -138,23 +146,12 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclu
     worker_ctx['exclude_sweep_size'] = exclude_sweep_size
     worker_ctx['neighbours_mask'] = neighbours_mask
     worker_ctx['extra_margin'] = extra_margin
-    worker_ctx['localization_dict'] = localization_dict
-
-    if localization_dict is not None:
-        worker_ctx['contact_locations'] = recording.get_channel_locations()
-        channel_distance = get_channel_distances(recording)
-
-        ms_before = worker_ctx['localization_dict']['ms_before']
-        ms_after = worker_ctx['localization_dict']['ms_after']
-        worker_ctx['localization_dict']['nbefore'] = \
-            int(ms_before * recording.get_sampling_frequency() / 1000.)
-        worker_ctx['localization_dict']['nafter'] = \
-            int(ms_after * recording.get_sampling_frequency() / 1000.)
-
-        # channel sparsity
-        channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < localization_dict['local_radius_um']
-        worker_ctx['localization_dict']['neighbours_mask'] = neighbours_mask
+    worker_ctx['pipeline_steps'] = pipeline_steps
+    
+    if pipeline_steps is not None:
+        worker_ctx['need_waveform'] = any(step.need_waveforms for step in pipeline_steps)
+        if worker_ctx['need_waveform']:
+            worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(pipeline_steps)
 
     return worker_ctx
 
@@ -168,7 +165,8 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     exclude_sweep_size = worker_ctx['exclude_sweep_size']
     method = worker_ctx['method']
     extra_margin = worker_ctx['extra_margin']
-    localization_dict = worker_ctx['localization_dict']
+    pipeline_steps = worker_ctx['pipeline_steps']
+    #~ localization_dict = worker_ctx['localization_dict']
 
     margin = exclude_sweep_size + extra_margin
 
@@ -193,11 +191,11 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         peak_sample_ind += extra_margin
 
     peak_dtype = base_peak_dtype
-    if localization_dict is None:
-        peak_dtype = base_peak_dtype
-    else:
-        method = localization_dict['method']
-        peak_dtype = base_peak_dtype + dtype_localize_by_method[method]
+    #~ if localization_dict is None:
+        #~ peak_dtype = base_peak_dtype
+    #~ else:
+        #~ method = localization_dict['method']
+        #~ peak_dtype = base_peak_dtype + dtype_localize_by_method[method]
 
     peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
 
@@ -207,30 +205,31 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     peaks['amplitude'] = peak_amplitude
     peaks['segment_ind'] = segment_index
 
-    if localization_dict is not None:
-        contact_locations = worker_ctx['contact_locations']
-        neighbours_mask_for_loc = worker_ctx['localization_dict']['neighbours_mask']
-        nbefore = worker_ctx['localization_dict']['nbefore']
-        nafter = worker_ctx['localization_dict']['nafter']
 
-        # TO BE CONTINUED here
-        if localization_dict['method'] == 'center_of_mass':
-            peak_locations = localize_peaks_center_of_mass(traces, peaks, contact_locations,
-                                                           neighbours_mask_for_loc, nbefore, nafter)
+    if pipeline_steps is not None:
 
-        elif localization_dict['method'] == 'monopolar_triangulation':
-            max_distance_um = worker_ctx['localization_dict']['max_distance_um']
-            peak_locations = localize_peaks_monopolar_triangulation(traces, peaks, contact_locations,
-                                                                    neighbours_mask_for_loc, nbefore, nafter,
-                                                                    max_distance_um)
+        if worker_ctx['need_waveform']:
+            waveforms = traces[peaks['sample_ind'][:, None]+np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
+        else:
+            waveforms = None
 
-        for k in peak_locations.dtype.fields:
-            peaks[k] = peak_locations[k]
+        
+        outs = tuple()
+        for step in pipeline_steps:
+            if step.need_waveforms:
+                # give the waveforms pre extracted when needed
+                out = step.compute_buffer(traces, peaks, waveforms=waveforms)
+            else:
+                out = step.compute_buffer(traces, peaks)
+            outs += (out, )
 
     # make absolute sample index
     peaks['sample_ind'] += (start_frame - left_margin)
 
-    return peaks
+    if pipeline_steps is None:
+        return peaks
+    else:
+        return (peaks, ) + outs
 
 
 def detect_peaks_by_channel(traces, peak_sign, abs_threholds, exclude_sweep_size):

@@ -59,19 +59,15 @@ class PositionPTPScaledClustering:
         locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
 
         if d["ptps"] is None:
-            ptps = compute_features_from_peaks(
-                recording,
+            ptps, = compute_features_from_peaks(recording,
                 peaks,
-                ms_before=1,
-                ms_after=1.5,
-                feature_list=["ptp"],
-                one_feature_per_peak=False,
-                **d["job_kwargs"],
-            )[:, :, 0]
+                ['ptp'],
+                feature_params={'ptp' : {'best_channel': False}},
+                **d["job_kwargs"])
         else:
             ptps = d["ptps"]
 
-        maxptps = np.max(ptps, 1)
+        maxptps = np.max(ptps, axis=1)
         logmaxptps = np.log(maxptps)
 
         to_cluster_from = np.hstack((locations, logmaxptps[:, np.newaxis]))
