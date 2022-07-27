@@ -246,7 +246,7 @@ class OldToNewSorting(BaseSorting):
     """
 
     def __init__(self, oldapi_sorting_extractor):
-        BaseSorting.__init__(self, sampling_frequency=float(oldapi_sorting_extractor.get_sampling_frequency())
+        BaseSorting.__init__(self, sampling_frequency=float(oldapi_sorting_extractor.get_sampling_frequency()),
                              unit_ids=oldapi_sorting_extractor.get_unit_ids())
 
         sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)
