@@ -24,11 +24,10 @@ def test_features_from_peaks():
     
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
-    peaks = detect_peaks(recording, method='by_channel',
+    peaks = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5,
                           noise_levels=noise_levels, **job_kwargs)
 
-    # locally_exclusive
     feature_list = ['amplitude', 'ptp', 'com', 'energy']
     feature_params = {
         'amplitude' : {'all_channel': False, 'peak_sign': 'neg'},

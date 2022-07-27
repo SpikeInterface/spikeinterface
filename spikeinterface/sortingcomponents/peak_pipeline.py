@@ -34,7 +34,11 @@ class PeakPipelineStep:
         self._kwargs = dict()
         
         if self.need_waveforms:
-            assert ms_before is not None and ms_after is not None
+            assert ms_before is not None
+            assert ms_after is not None
+
+        self.nbefore = None
+        self.nafter = None
 
         if ms_before is not None:
             self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
@@ -53,9 +57,6 @@ class PeakPipelineStep:
             self.neighbours_mask = self.channel_distance < local_radius_um        
 
 
-        else:
-            self.nbefore = None
-            self.nafter = None
 
     @classmethod
     def from_dict(cls, recording, kwargs):
