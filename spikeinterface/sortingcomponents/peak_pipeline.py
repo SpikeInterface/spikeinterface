@@ -122,20 +122,9 @@ def _init_worker_peak_piepline(recording, peaks, steps):
     worker_ctx['max_margin'] = max_margin
     
     # check is any waveforms is needed
-    need_waveform = any(step.need_waveforms for step in steps)
-    worker_ctx['need_waveform'] = need_waveform
-    if need_waveform:
-        # check that all step have the same waveform size
-        # TODO we could enhence this by taking ythe max before/after and slice it on the fly
-        nbefore, nafter = None, None
-        for step in steps:
-            if step.need_waveforms:
-                if nbefore is None:
-                    nbefore, nafter = step.nbefore, step.nafter
-                else:
-                    assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore} {step.nbefore}'
-                    assert nafter == step.nafter, f'Step do not have the same nbefore {nafter} {step.nafter}'
-        worker_ctx['nbefore'], worker_ctx['nafter'] = nbefore, nafter
+    worker_ctx['need_waveform'] = any(step.need_waveforms for step in steps)
+    if worker_ctx['need_waveform']:
+        worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(steps)
     
     return worker_ctx
 
@@ -183,3 +172,16 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     return outs
 
+
+def get_nbefore_nafter_from_steps(steps):
+    # check that all step have the same waveform size
+    # TODO we could enhence this by taking ythe max before/after and slice it on the fly
+    nbefore, nafter = None, None
+    for step in steps:
+        if step.need_waveforms:
+            if nbefore is None:
+                nbefore, nafter = step.nbefore, step.nafter
+            else:
+                assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore} {step.nbefore}'
+                assert nafter == step.nafter, f'Step do not have the same nbefore {nafter} {step.nafter}'
+    return nbefore, nafter
