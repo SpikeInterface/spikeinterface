@@ -9,7 +9,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = 'spykingcircus2'
 
     _default_params = {
-        'general' : {'ms_before' : 2.5, 'ms_after' : 3.5, 'local_radius_um' : 100},
+        'general' : {'ms_before' : 2.5, 'ms_after' : 2.5, 'local_radius_um' : 100},
         'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'freq_min' : 300, 'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5},
@@ -39,8 +39,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-
-        
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
@@ -81,23 +79,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if verbose:
             print('We kept %d peaks for clustering' %len(selected_peaks))
 
-        ## We localize the CoM of the peaks
-        localization_params = params['localization'].copy()
-        if 'local_radius_um' not in localization_params:
-            localization_params['local_radius_um'] = params['general']['local_radius_um']
-
-        localizations = localize_peaks(recording_f, selected_peaks, method='center_of_mass', 
-            method_kwargs=localization_params, **params['job_kwargs'])
-
         ## We launch a clustering (using hdbscan) relying on positions and features extracted on
         ## the fly from the snippets
         clustering_params = params['clustering'].copy()
         clustering_params.update(params['waveforms'])
-        clustering_params['peak_locations'] = localizations
+        clustering_params.update(params['general'])
         clustering_params['job_kwargs'] = params['job_kwargs']
 
-        if 'local_radius_um' not in clustering_params:
-            clustering_params['local_radius_um'] = params['general']['local_radius_um']
+        print(clustering_params)
 
         labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='position_and_features', 
             method_kwargs=clustering_params)
