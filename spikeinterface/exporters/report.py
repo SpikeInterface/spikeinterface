@@ -80,7 +80,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
 
     # global figures
     fig = plt.figure(figsize=(20, 10))
-    w = sw.plot_unit_localization(we, figure=fig, unit_colors=unit_colors)
+    w = sw.plot_unit_locations(we, figure=fig, unit_colors=unit_colors)
     fig.savefig(output_folder / f'unit_localization.{format}')
     if not show_figures:
         plt.close(fig)

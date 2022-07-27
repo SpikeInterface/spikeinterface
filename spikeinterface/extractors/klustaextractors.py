@@ -8,19 +8,17 @@ https://github.com/kwikteam/phy-doc/blob/master/docs/kwik-model.md
 04/08/20
 """
 
+from pathlib import Path
+
 import numpy as np
+
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment,
                                  read_python)
 from spikeinterface.core.core_tools import define_function_from_class
 
-
-import numpy as np
-from pathlib import Path
-
 try:
     import h5py
-
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
@@ -28,6 +26,21 @@ except ImportError:
 
 # noinspection SpellCheckingInspection
 class KlustaSortingExtractor(BaseSorting):
+    """Load Klusta format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_or_folder_path : str or Path
+        Path to the ALF folder.
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+
+    Returns
+    -------
+    extractor : KlustaSortingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'KlustaSortingExtractor'
     installed = HAVE_H5PY  # check at class level if installed or not
     installation_mesg = "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed

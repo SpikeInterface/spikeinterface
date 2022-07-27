@@ -9,22 +9,20 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from a Biocam file from 3Brain.
 
-    Based on neo.rawio.BiocamRawIO
+    Based on :py:class:`neo.rawio.BiocamRawIO`
 
     Parameters
     ----------
     file_path: str
-
-    mea_pitch: float or None
-    
-    electrode_width: float or None
-
-    stream_id: str or None
-        If several stream, specify the one you want.
+        The file path to load the recordings from.
+    mea_pitch: float, optional
+        The inter-electrode distance (pitch) between electrodes.
+    electrode_width: float, optional
+        Width of the electrodes in um.
+    stream_id: str, optional
+        If there are several streams, specify the one you want to load.
     all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
-
-
+        Load exhaustively all annotations from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'BiocamRawIO'
@@ -43,7 +41,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_probe(probe, in_place=True)
         self.set_property("row", self.get_property("contact_vector")["row"])
         self.set_property("col", self.get_property("contact_vector")["col"])
-        
+
         self._kwargs.update( {'file_path': str(file_path), 'mea_pitch':mea_pitch, 'electrode_width':electrode_width})
 
 
