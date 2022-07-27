@@ -4,7 +4,9 @@ from typing import Union, List
 
 import numpy as np
 
+warnings.filterwarnings("ignore")
 import neo
+warnings.filterwarnings("default")
 
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
