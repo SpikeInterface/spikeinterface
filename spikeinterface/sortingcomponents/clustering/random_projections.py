@@ -28,7 +28,7 @@ class RandomProjectionClustering:
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
-        "nb_projections" : 10
+        "nb_projections" : 10,
         "ms_before" : 2.5,
         "ms_after": 2.5,
         "cleaning": "cosine",
