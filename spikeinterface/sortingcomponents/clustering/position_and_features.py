@@ -24,8 +24,8 @@ class PositionAndFeaturesClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "peak_localization_kwargs" : {"method" : "monopolar_triangulation"},
-        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "peak_localization_kwargs" : {"method" : "center_of_mass"},
+        "hdbscan_kwargs": {"min_cluster_size" : 25,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "local_radius_um" : 50,
         "max_spikes_per_unit" : 100,
@@ -56,7 +56,7 @@ class PositionAndFeaturesClustering:
                            'kurtosis_ptp': {'local_radius_um' : params['local_radius_um']}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
-            ms_before=params['ms_before'], ms_after=params['ms_after'], **params['job_kwargs'])
+            ms_before=1, ms_after=1, **params['job_kwargs'])
 
         hdbscan_data = np.zeros((len(peaks), 6), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]['x']

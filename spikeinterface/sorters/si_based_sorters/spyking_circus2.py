@@ -86,8 +86,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['general'])
         clustering_params['job_kwargs'] = params['job_kwargs']
 
-        print(clustering_params)
-
         labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='position_and_features', 
             method_kwargs=clustering_params)
 
