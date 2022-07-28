@@ -169,6 +169,9 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     else:
         waveforms = None
 
+    #import scipy
+    #waveforms = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
+
     outs = tuple()
     for step in worker_ctx['steps']:
         if step.need_waveforms:
@@ -190,6 +193,6 @@ def get_nbefore_nafter_from_steps(steps):
             if nbefore is None:
                 nbefore, nafter = step.nbefore, step.nafter
             else:
-                assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore}-{step.nbefore}'
-                assert nafter == step.nafter, f'Step do not have the same nbefore {nafter}-{step.nafter}'
+                assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore}: {step.nbefore}'
+                assert nafter == step.nafter, f'Step do not have the same nbefore {nafter}: {step.nafter}'
     return nbefore, nafter

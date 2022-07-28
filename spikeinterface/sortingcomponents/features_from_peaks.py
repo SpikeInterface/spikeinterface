@@ -3,9 +3,10 @@ import numpy as np
 
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 
+from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
+
 from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
 
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
 
 
 def compute_features_from_peaks(
@@ -115,6 +116,29 @@ class PeakToPeakFeature(PeakPipelineStep):
         return all_ptps
 
 
+class RandomProjectionsFeature(PeakPipelineStep):
+    need_waveforms = True
+    def __init__(self, recording, projections, ms_before=1., ms_after=1., local_radius_um=150.):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
+        self.projections = projections
+        self._kwargs = dict(projections=self.projections)
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute_buffer(self, traces, peaks, waveforms):
+        all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
+        for main_chan in np.unique(peaks['channel_ind']):
+            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+            local_projections = self.projections[chan_inds, :]
+            wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
+            all_projections[idx] = np.dot(wf_ptp, local_projections)/(np.sum(wf_ptp, axis=1)[:, np.newaxis])
+        return all_projections
+
+
 class StdPeakToPeakFeature(PeakToPeakFeature):
     need_waveforms = True
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
@@ -178,8 +202,6 @@ _features_class = {
     'monopolar_triangulation' : LocalizeMonopolarTriangulation,
     'energy' : EnergyFeature,
     'std_ptp' : StdPeakToPeakFeature,
-    'kurtosis_ptp' : KurtosisPeakToPeakFeature
+    'kurtosis_ptp' : KurtosisPeakToPeakFeature,
+    'random_projections' : RandomProjectionsFeature
 }
-
-# @pierre this is for you because this features is not usefull
-# TODO : 'dist_com_vs_max_ptp_channel'

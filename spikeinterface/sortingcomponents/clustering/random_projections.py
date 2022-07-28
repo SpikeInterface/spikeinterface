@@ -19,20 +19,20 @@ from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks, EnergyFeature
 
 
-class PositionAndFeaturesClustering:
+class RandomProjectionClustering:
     """
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
+        "nb_projections" : 10
         "ms_before" : 2.5,
         "ms_after": 2.5,
         "cleaning": "cosine",
-        "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
+        "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
     @classmethod
@@ -47,31 +47,15 @@ class PositionAndFeaturesClustering:
         nbefore = int(params['ms_before'] * fs / 1000.)
         nafter = int(params['ms_after'] * fs / 1000.)
         num_samples = nbefore + nafter
+        num_chans = recording.get_num_channels()
 
-        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy', 'std_ptp', 'kurtosis_ptp']
-        features_params = {'monopolar' : {'local_radius_um' : params['local_radius_um']},
-                           'ptp' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
-                           'energy': {'local_radius_um' : params['local_radius_um']},
-                           'std_ptp': {'local_radius_um' : params['local_radius_um']},
-                           'kurtosis_ptp': {'local_radius_um' : params['local_radius_um']}}
+        features_list = ['random_projections']
+        features_params = {'random_projections': {'local_radius_um' : params['local_radius_um'], 'projections' : np.random.randn(num_chans, d['nb_projections'])}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=1, ms_after=1, **params['job_kwargs'])
 
-        hdbscan_data = np.zeros((len(peaks), 6), dtype=np.float32)
-        hdbscan_data[:, 0] = features_data[0]['x']
-        hdbscan_data[:, 1] = features_data[0]['y']
-        hdbscan_data[:, 2] = features_data[1]
-        hdbscan_data[:, 3] = features_data[2]
-        hdbscan_data[:, 4] = features_data[3]
-        hdbscan_data[:, 5] = features_data[4]
-
-        np.save('hdbscan_raw', hdbscan_data)
-
-        preprocessing = QuantileTransformer(output_distribution='uniform')
-        hdbscan_data = preprocessing.fit_transform(hdbscan_data)
-
-        np.save('hdbscan_quantile', hdbscan_data)
+        hdbscan_data = features_data[0]
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
@@ -112,7 +96,6 @@ class PositionAndFeaturesClustering:
 
         if cleaning_method == "cosine":
 
-            num_chans = recording.get_num_channels()
             wfs_arrays = extract_waveforms_to_buffers(recording, spikes, labels, nbefore, nafter,
                          mode='shared_memory', return_scaled=False, folder=None, dtype=recording.get_dtype(),
                          sparsity_mask=None,  copy=True,
