@@ -1,32 +1,33 @@
-from spikeinterface import BaseEvent, BaseEventSegment
+import numpy as np
 
+import probeinterface as pi
+
+from spikeinterface import BaseEvent, BaseEventSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
-import probeinterface as pi
-import numpy as np
 
 
 class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from Maxwell device.
-    It handle MaxOne (old and new format) and MaxTwo.
-    
-    Based on :py:class:`neo.rawio.IntanRawIO`
-    
+    It handles MaxOne (old and new format) and MaxTwo.
+
+    Based on :py:class:`neo.rawio.MaxwellRawIO`
+
     Parameters
     ----------
     file_path: str
-        Path to maxwell h5 file
-    rec_name: str or None
-        When the file contains several blocks (aka recordings) you need to specify the one
-        you want to extract. (rec_name='rec0000')
-    stream_id: str or None
-        If several stream, specify the one you want.
+        The file path to the maxwell h5 file.
+    stream_id: str, optional
+        If there are several streams, specify the one you want to load.
         For MaxTwo when there are several wells at the same time you
-        need to specify stream_id='well000' or 'well0001' or ...
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+        need to specify stream_id='well000' or 'well0001', etc.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
+    rec_name: str, optional
+        When the file contains several blocks (aka recordings) you need to specify the one
+        you want to extract. (rec_name='rec0000').
     """
     mode = 'file'
     NeoRawIOClass = 'MaxwellRawIO'
@@ -52,8 +53,7 @@ _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time",
 
 class MaxwellEventExtractor(BaseEvent):
     """
-    Class for reading TTL events from Maxwell files
-
+    Class for reading TTL events from Maxwell files.
     """
     def __init__(self, file_path):
         import h5py

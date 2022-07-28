@@ -12,8 +12,8 @@ def compute_features_from_peaks(
     recording,
     peaks,
     feature_list=["ptp", ],
-    feature_params = {},
-    ms_before=1., 
+    feature_params={},
+    ms_before=1.,
     ms_after=1.,
     **job_kwargs,
 ):
@@ -42,9 +42,9 @@ def compute_features_from_peaks(
     A tuple of features. Even if there is one feature.
     Every feature have shape[0] == peaks.shape[0].
     dtype and other dim depends on features.
-    
+
     """
-    
+
     steps = []
     for feature_name in feature_list:
         Class = _features_class[feature_name]
@@ -53,9 +53,10 @@ def compute_features_from_peaks(
             params.update(dict(ms_before=ms_before, ms_after=ms_after))
         step = Class(recording, **params)
         steps.append(step)
-    
-    features = run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
-    
+
+    features = run_peak_pipeline(
+        recording, peaks, steps, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
+
     return features
 
 
@@ -88,7 +89,7 @@ class AmplitudeFeature(PeakPipelineStep):
                 amplitudes = np.max(np.abs(waveforms), axis=(1, 2))
         return amplitudes
 
-    
+
 class PeakToPeakFeature(PeakPipelineStep):
     need_waveforms = True
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150., all_channels=True):
@@ -151,6 +152,7 @@ class KurtosisPeakToPeakFeature(PeakToPeakFeature):
 
 class EnergyFeature(PeakPipelineStep):
     need_waveforms = True
+
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=50.):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
@@ -163,9 +165,11 @@ class EnergyFeature(PeakPipelineStep):
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+
             wfs = waveforms[idx][:, :, chan_inds]
             energy[idx] = np.linalg.norm(wfs, axis=(1, 2)) / chan_inds.size
         return energy
+
 
 _features_class = {
     'amplitude': AmplitudeFeature,
@@ -175,8 +179,7 @@ _features_class = {
     'energy' : EnergyFeature,
     'std_ptp' : StdPeakToPeakFeature,
     'kurtosis_ptp' : KurtosisPeakToPeakFeature
-    
 }
 
-#@pierre this is for you because this features is not usefull
+# @pierre this is for you because this features is not usefull
 # TODO : 'dist_com_vs_max_ptp_channel'

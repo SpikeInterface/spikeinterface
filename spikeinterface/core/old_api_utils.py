@@ -170,9 +170,9 @@ class OldToNewRecording(BaseRecording):
     """
 
     def __init__(self, oldapi_recording_extractor):
-        BaseRecording.__init__(self, oldapi_recording_extractor.get_sampling_frequency(),
-                               oldapi_recording_extractor.get_channel_ids(),
-                               oldapi_recording_extractor.get_dtype(return_scaled=False))
+        BaseRecording.__init__(self, sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
+                               channel_ids=oldapi_recording_extractor.get_channel_ids(),
+                               dtype=oldapi_recording_extractor.get_dtype(return_scaled=False))
 
         # set is_dumpable to False to use dumping mechanism of old extractor
         self.is_dumpable = False
@@ -209,7 +209,7 @@ class OldToNewRecordingSegment(BaseRecordingSegment):
         recording extractor from spikeinterface < v0.90
     """
     def __init__(self, oldapi_recording_extractor):
-        BaseRecordingSegment.__init__(self, sampling_frequency=oldapi_recording_extractor.get_sampling_frequency(),
+        BaseRecordingSegment.__init__(self, sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
                                       t_start=None, time_vector=None)
         self._oldapi_recording_extractor = oldapi_recording_extractor
         self._channel_ids = np.array(oldapi_recording_extractor.get_channel_ids())
@@ -246,7 +246,7 @@ class OldToNewSorting(BaseSorting):
     """
 
     def __init__(self, oldapi_sorting_extractor):
-        BaseSorting.__init__(self, sampling_frequency=oldapi_sorting_extractor.get_sampling_frequency(),
+        BaseSorting.__init__(self, sampling_frequency=float(oldapi_sorting_extractor.get_sampling_frequency()),
                              unit_ids=oldapi_sorting_extractor.get_unit_ids())
 
         sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)

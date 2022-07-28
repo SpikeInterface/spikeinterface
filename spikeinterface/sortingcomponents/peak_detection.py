@@ -69,12 +69,13 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     assert method in ('by_channel', 'locally_exclusive')
     assert peak_sign in ('both', 'neg', 'pos')
 
-
     if method == 'locally_exclusive' and not HAVE_NUMBA:
-        raise ModuleNotFoundError('"locally_exclusive" need numba which is not installed')
+        raise ModuleNotFoundError(
+            '"locally_exclusive" need numba which is not installed')
 
     if noise_levels is None:
-        noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        noise_levels = get_noise_levels(
+            recording, return_scaled=False, **random_chunk_kwargs)
 
     abs_threholds = noise_levels * detect_threshold
 
@@ -84,11 +85,13 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         neighbours_mask = channel_distance < local_radius_um
     else:
         neighbours_mask = None
-    
+
     if pipeline_steps is not None:
-        assert all(isinstance(step, PeakPipelineStep ) for step in pipeline_steps)
+        assert all(isinstance(step, PeakPipelineStep)
+                   for step in pipeline_steps)
         if job_kwargs.get('n_jobs', 1) > 1:
-            pipeline_steps_ = [(step.__class__, step.to_dict()) for step in pipeline_steps]
+            pipeline_steps_ = [(step.__class__, step.to_dict())
+                               for step in pipeline_steps]
         else:
             pipeline_steps_ = pipeline_steps
         extra_margin = max(step.get_trace_margin() for step in pipeline_steps)
@@ -97,14 +100,14 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         extra_margin = 0
 
     # and run
-    exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
-    
-    
+    exclude_sweep_size = int(
+        exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
+
     if job_kwargs.get('n_jobs', 1) > 1:
         recording_ = recording.to_dict()
     else:
         recording_ = recording
-    
+
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
     init_args = (recording_, method, peak_sign, abs_threholds, exclude_sweep_size,
@@ -112,16 +115,17 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='detect peaks', **job_kwargs)
     outputs = processor.run()
-    
+
     if pipeline_steps is None:
         peaks = np.concatenate(outputs)
         return peaks
     else:
-        
+
         outs_concat = ()
         for output_step in zip(*outputs):
             outs_concat += (np.concatenate(output_step, axis=0), )
         return outs_concat
+
 
 detect_peaks.__doc__ = detect_peaks.__doc__.format(_shared_job_kwargs_doc)
 
@@ -133,9 +137,10 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclu
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
-        
+
         if pipeline_steps is not None:
-            pipeline_steps = [cls.from_dict(recording, kwargs) for cls, kwargs in pipeline_steps]
+            pipeline_steps = [cls.from_dict(
+                recording, kwargs) for cls, kwargs in pipeline_steps]
 
     # create a local dict per worker
     worker_ctx = {}
@@ -147,11 +152,13 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclu
     worker_ctx['neighbours_mask'] = neighbours_mask
     worker_ctx['extra_margin'] = extra_margin
     worker_ctx['pipeline_steps'] = pipeline_steps
-    
+
     if pipeline_steps is not None:
-        worker_ctx['need_waveform'] = any(step.need_waveforms for step in pipeline_steps)
+        worker_ctx['need_waveform'] = any(
+            step.need_waveforms for step in pipeline_steps)
         if worker_ctx['need_waveform']:
-            worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(pipeline_steps)
+            worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(
+                pipeline_steps)
 
     return worker_ctx
 
@@ -166,13 +173,13 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     method = worker_ctx['method']
     extra_margin = worker_ctx['extra_margin']
     pipeline_steps = worker_ctx['pipeline_steps']
-    #~ localization_dict = worker_ctx['localization_dict']
+    # ~ localization_dict = worker_ctx['localization_dict']
 
     margin = exclude_sweep_size + extra_margin
 
     # load trace in memory
     recording_segment = recording._recording_segments[segment_index]
-    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame, 
+    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
                                                               None, margin, add_zeros=True)
 
     if extra_margin > 0:
@@ -182,21 +189,17 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         trace_detection = traces
 
     if method == 'by_channel':
-        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(trace_detection, peak_sign, abs_threholds, exclude_sweep_size)
+        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(
+            trace_detection, peak_sign, abs_threholds, exclude_sweep_size)
     elif method == 'locally_exclusive':
-        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(trace_detection, peak_sign, abs_threholds, 
-                                                                       exclude_sweep_size, worker_ctx['neighbours_mask'])
+        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(trace_detection, peak_sign, abs_threholds,
+                                                                       exclude_sweep_size, 
+                                                                       worker_ctx['neighbours_mask'])
 
     if extra_margin > 0:
         peak_sample_ind += extra_margin
 
     peak_dtype = base_peak_dtype
-    #~ if localization_dict is None:
-        #~ peak_dtype = base_peak_dtype
-    #~ else:
-        #~ method = localization_dict['method']
-        #~ peak_dtype = base_peak_dtype + dtype_localize_by_method[method]
-
     peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
 
     peaks = np.zeros(peak_sample_ind.size, dtype=peak_dtype)
@@ -205,15 +208,14 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     peaks['amplitude'] = peak_amplitude
     peaks['segment_ind'] = segment_index
 
-
     if pipeline_steps is not None:
 
         if worker_ctx['need_waveform']:
-            waveforms = traces[peaks['sample_ind'][:, None]+np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
+            waveforms = traces[peaks['sample_ind'][:, None] +
+                               np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
         else:
             waveforms = None
 
-        
         outs = tuple()
         for step in pipeline_steps:
             if step.need_waveforms:
@@ -242,7 +244,8 @@ def detect_peaks_by_channel(traces, peak_sign, abs_threholds, exclude_sweep_size
         peak_mask = traces_center > abs_threholds[None, :]
         for i in range(exclude_sweep_size):
             peak_mask &= traces_center > traces[i:i + length, :]
-            peak_mask &= traces_center >= traces[exclude_sweep_size + i + 1:exclude_sweep_size + i + 1 + length, :]
+            peak_mask &= traces_center >= traces[exclude_sweep_size +
+                                                 i + 1:exclude_sweep_size + i + 1 + length, :]
 
     if peak_sign in ('neg', 'both'):
         if peak_sign == 'both':
@@ -251,7 +254,8 @@ def detect_peaks_by_channel(traces, peak_sign, abs_threholds, exclude_sweep_size
         peak_mask = traces_center < -abs_threholds[None, :]
         for i in range(exclude_sweep_size):
             peak_mask &= traces_center < traces[i:i + length, :]
-            peak_mask &= traces_center <= traces[exclude_sweep_size + i + 1:exclude_sweep_size + i + 1 + length, :]
+            peak_mask &= traces_center <= traces[exclude_sweep_size +
+                                                 i + 1:exclude_sweep_size + i + 1 + length, :]
 
         if peak_sign == 'both':
             peak_mask = peak_mask | peak_mask_pos
@@ -307,15 +311,17 @@ if HAVE_NUMBA:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
-                            peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces_center[s, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] > traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces[exclude_sweep_size + s + i + 1, neighbour]
+                            peak_mask[s, chan_ind] &= traces_center[s,
+                                                                    chan_ind] >= traces_center[s, neighbour]
+                        peak_mask[s, chan_ind] &= traces_center[s,
+                                                                chan_ind] > traces[s + i, neighbour]
+                        peak_mask[s, chan_ind] &= traces_center[s,
+                                                                chan_ind] >= traces[exclude_sweep_size + s + i + 1, neighbour]
                         if not peak_mask[s, chan_ind]:
                             break
                     if not peak_mask[s, chan_ind]:
                         break
         return peak_mask
-
 
     @numba.jit(parallel=False)
     def _numba_detect_peak_neg(traces, traces_center, peak_mask, exclude_sweep_size,
@@ -330,9 +336,12 @@ if HAVE_NUMBA:
                         continue
                     for i in range(exclude_sweep_size):
                         if chan_ind != neighbour:
-                            peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces_center[s, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] < traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces[exclude_sweep_size + s + i + 1, neighbour]
+                            peak_mask[s, chan_ind] &= traces_center[s,
+                                                                    chan_ind] <= traces_center[s, neighbour]
+                        peak_mask[s, chan_ind] &= traces_center[s,
+                                                                chan_ind] < traces[s + i, neighbour]
+                        peak_mask[s, chan_ind] &= traces_center[s,
+                                                                chan_ind] <= traces[exclude_sweep_size + s + i + 1, neighbour]
                         if not peak_mask[s, chan_ind]:
                             break
                     if not peak_mask[s, chan_ind]:

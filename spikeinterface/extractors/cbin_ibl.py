@@ -1,11 +1,10 @@
 from pathlib import Path
 
-from spikeinterface.core import BaseRecording, BaseRecordingSegment
+import probeinterface as pi
 
+from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 from spikeinterface.core.core_tools import define_function_from_class
-
-import probeinterface as pi 
 
 try:
     import mtscomp
@@ -15,9 +14,10 @@ except:
 
 
 class CompressedBinaryIblExtractor(BaseRecording):
-    """
-    IBL have a custum format  : compressed binary with spikeglx meta
-    
+    """Load IBL data as an extractor object.
+
+    IBL have a custom format - compressed binary with spikeglx meta.
+
     The format is like spikeglx (have a meta file) but contains:
       * "cbin" file (instead of "bin")
       * "ch" file used by mtscomp for compression info
@@ -25,15 +25,15 @@ class CompressedBinaryIblExtractor(BaseRecording):
     Parameters
     ----------
     folder_path: str or Path
-        Path to ibl folder
-    load_sync_channel: bool default False
-        Load or not the last channel (sync)
-        If not then the probe is load.
+        Path to ibl folder.
+    load_sync_channel: bool, optional, default: False
+        Load or not the last channel (sync).
+        If not then the probe is loaded.
 
     Returns
     -------
-    recording: 
-        The recording object
+    recording : CompressedBinaryIblExtractor
+        The loaded data.
     """
     extractor_name = 'CompressedBinaryIbl'
     has_default_locations = True
@@ -44,8 +44,8 @@ class CompressedBinaryIblExtractor(BaseRecording):
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
 
     def __init__(self, folder_path, load_sync_channel=False):
-        
-        # this work only for futur neo
+
+        # this work only for future neo
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
         assert HAVE_MTSCOMP
@@ -57,11 +57,11 @@ class CompressedBinaryIblExtractor(BaseRecording):
         cbin_file = cbin_files[0]
         ch_file = cbin_file.with_suffix('.ch')
         meta_file = cbin_file.with_suffix('.meta')
-        
+
         # reader
         cbuffer = mtscomp.Reader()
         cbuffer.open(cbin_file, ch_file)
-        
+
         # meta data
         meta = read_meta_file(meta_file)
         info = extract_stream_info(meta_file, meta)
@@ -89,7 +89,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
         # load sample shifts
         imDatPrb_type = probe.annotations["imDatPrb_type"]
-        
+
         if imDatPrb_type < 2:
             num_adcs = 12
         else:
@@ -97,7 +97,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
         sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
         self.set_property("inter_sample_shift", sample_shifts)
-        
+
 
         self._kwargs = {'file_path': str(folder_path.absolute()), 'load_sync_channel': load_sync_channel}
 
@@ -107,7 +107,7 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
         self._cbuffer = cbuffer
         self._load_sync_channel = load_sync_channel
-        
+
     def get_num_samples(self):
         return self._cbuffer.shape[0]
 
@@ -120,7 +120,7 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         traces = self._cbuffer[start_frame:end_frame]
         if not self._load_sync_channel:
             traces = traces[:, :-1]
-            
+
         return traces
 
 

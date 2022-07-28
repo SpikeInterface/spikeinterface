@@ -5,19 +5,18 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 class TdtRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading TDT folder
+    Class for reading TDT folder.
 
     Based on :py:class:`neo.rawio.TdTRawIO`
 
     Parameters
     ----------
     folder_path: str
-        The tdt folder.
-    stream_id: str or None
-        If several stream, specify the one you want.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
-
+        The folder path to the tdt folder.
+    stream_id: str, optional
+        If there are several streams, specify the one you want to load.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
     mode = 'folder'
     NeoRawIOClass = 'TdtRawIO'

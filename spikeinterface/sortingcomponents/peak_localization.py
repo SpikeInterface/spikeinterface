@@ -6,13 +6,13 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
 
 from ..postprocessing.unit_localization import (dtype_localize_by_method,
-                                                        possible_localization_methods,
-                                                        solve_monopolar_triangulation,
-                                                        make_radial_order_parents,
-                                                        enforce_decrease_shells_ptp)
+                                                possible_localization_methods,
+                                                solve_monopolar_triangulation,
+                                                make_radial_order_parents,
+                                                enforce_decrease_shells_ptp)
 
 
-from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
+from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
 
 
 
