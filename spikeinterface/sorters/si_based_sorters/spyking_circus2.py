@@ -2,7 +2,7 @@ from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
     get_noise_levels, extract_waveforms)
-from spikeinterface.preprocessing import bandpass_filter, common_reference
+from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
 
@@ -51,6 +51,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         recording_f = bandpass_filter(recording, **filtering_params)
         if params['common_reference']:
             recording_f = common_reference(recording_f)
+
+        recording_f = zscore(recording_f)
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()

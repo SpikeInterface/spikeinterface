@@ -24,7 +24,7 @@ class PositionAndFeaturesClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "peak_localization_kwargs" : {"method" : "center_of_mass"},
+        "peak_localization_kwargs" : {"method" : "monopolar_triangulation"},
         "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "local_radius_um" : 100,
@@ -64,8 +64,8 @@ class PositionAndFeaturesClustering:
         hdbscan_data[:, 3] = features_data[2]
         hdbscan_data[:, 4] = features_data[3]
 
-        preprocessing = QuantileTransformer(output_distribution='uniform')
-        hdbscan_data = preprocessing.fit_transform(hdbscan_data)
+        #preprocessing = QuantileTransformer(output_distribution='uniform')
+        #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
