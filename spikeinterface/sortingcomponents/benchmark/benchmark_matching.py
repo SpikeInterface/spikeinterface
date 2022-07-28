@@ -2,7 +2,6 @@
 from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import CollisionGTComparison
@@ -19,11 +18,13 @@ import numpy as np
 
 class BenchmarkMatching:
 
-    def __init__(self, mearec_file, method, method_kwargs={}, tmp_folder=None, job_kwargs={}):
-        self.mearec_file = mearec_file
+    def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, method_kwargs={}, tmp_folder=None, job_kwargs={}):
         self.method = method
         self.method_kwargs = method_kwargs
-        self.recording, self.gt_sorting = read_mearec(mearec_file)
+        self.recording = recording
+        self.gt_sorting = gt_sorting
+        self.job_kwargs = job_kwargs
+        self.exhaustive_gt = exhaustive_gt
         self.recording_f = bandpass_filter(self.recording,  dtype='float32')
         self.recording_f = common_reference(self.recording_f)
         self.sampling_rate = self.recording_f.get_sampling_frequency()
@@ -51,7 +52,7 @@ class BenchmarkMatching:
         spikes = find_spikes_from_templates(self.recording_f, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
         self.run_time = time.time() - t_start
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], self.sampling_rate)
-        self.comp = CollisionGTComparison(self.gt_sorting, sorting)
+        self.comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
 
     def plot(self, title=None):
@@ -71,9 +72,9 @@ class BenchmarkMatching:
         ax = axs[1, 0]
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        plot_sorting_performance(self.comp, self.metrics, performance_name='accuracy', metric_name='snr', ax=ax, color='g')
-        plot_sorting_performance(self.comp, self.metrics, performance_name='recall', metric_name='snr', ax=ax, color='b')
-        plot_sorting_performance(self.comp, self.metrics, performance_name='precision', metric_name='snr', ax=ax, color='r')        
+        plot_sorting_performance(self.comp, self.metrics, performance_name='accuracy', metric_name='snr', ax=ax, color='r')
+        plot_sorting_performance(self.comp, self.metrics, performance_name='recall', metric_name='snr', ax=ax, color='g')
+        plot_sorting_performance(self.comp, self.metrics, performance_name='precision', metric_name='snr', ax=ax, color='b')        
         #ax.set_ylim(0.8, 1)
         ax.legend(['accuracy', 'recall', 'precision'])
         
@@ -81,7 +82,8 @@ class BenchmarkMatching:
         plot_gt_performances(self.comp, ax=ax)
 
         ax = axs[0, 1]
-        plot_comparison_collision_by_similarity(self.comp, self.templates, ax=ax, show_legend=True, mode='lines')
+        if self.exhaustive_gt:
+            plot_comparison_collision_by_similarity(self.comp, self.templates, ax=ax, show_legend=True, mode='lines')
 
 def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))

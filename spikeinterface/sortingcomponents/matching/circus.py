@@ -728,7 +728,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         if d['noise_levels'] is None:
             print('CircusPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'])
+            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'], return_scaled=False)
 
         d['abs_threholds'] = d['noise_levels'] * d['detect_threshold']
 
