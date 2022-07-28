@@ -16,7 +16,7 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
-from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks, EnergyFeature
+from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
 
 class PositionAndFeaturesClustering:
@@ -48,30 +48,24 @@ class PositionAndFeaturesClustering:
         nafter = int(params['ms_after'] * fs / 1000.)
         num_samples = nbefore + nafter
 
-        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy', 'std_ptp', 'kurtosis_ptp']
+        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy', 'ptp_lag']
         features_params = {'monopolar' : {'local_radius_um' : params['local_radius_um']},
                            'ptp' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
-                           'energy': {'local_radius_um' : params['local_radius_um']},
-                           'std_ptp': {'local_radius_um' : params['local_radius_um']},
-                           'kurtosis_ptp': {'local_radius_um' : params['local_radius_um']}}
+                           'ptp_lag' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
+                           'energy': {'local_radius_um' : params['local_radius_um']}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=1, ms_after=1, **params['job_kwargs'])
 
-        hdbscan_data = np.zeros((len(peaks), 6), dtype=np.float32)
+        hdbscan_data = np.zeros((len(peaks), 5), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]['x']
         hdbscan_data[:, 1] = features_data[0]['y']
         hdbscan_data[:, 2] = features_data[1]
         hdbscan_data[:, 3] = features_data[2]
         hdbscan_data[:, 4] = features_data[3]
-        hdbscan_data[:, 5] = features_data[4]
-
-        np.save('hdbscan_raw', hdbscan_data)
 
         preprocessing = QuantileTransformer(output_distribution='uniform')
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
-
-        np.save('hdbscan_quantile', hdbscan_data)
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])

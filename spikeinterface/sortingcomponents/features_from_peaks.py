@@ -116,6 +116,37 @@ class PeakToPeakFeature(PeakPipelineStep):
         return all_ptps
 
 
+class PeakToPeakLagsFeature(PeakPipelineStep):
+    need_waveforms = True
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150., all_channels=True):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
+        self.all_channels = all_channels
+        self._kwargs = dict(all_channels=all_channels)
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute_buffer(self, traces, peaks, waveforms):
+        if self.all_channels:
+            all_maxs = np.argmax(waveforms, axis=1)
+            all_mins = np.argmin(waveforms, axis=1)
+            all_lags = all_maxs - all_mins
+        else:
+            all_lags = np.zeros(peaks.size)
+            for main_chan in np.unique(peaks['channel_ind']):
+                idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+                chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+                wfs = waveforms[idx][:, :, chan_inds]
+                maxs = np.argmax(wfs, axis=1)
+                mins = np.argmin(wfs, axis=1)
+                lags = maxs - mins
+                ptps = np.argmax(np.ptp(wfs, axis=1), axis=1)
+                all_lags[idx] = lags[np.arange(len(idx)), ptps]
+        return all_lags
+
+
 class RandomProjectionsFeature(PeakPipelineStep):
     need_waveforms = True
     def __init__(self, recording, projections, ms_before=1., ms_after=1., local_radius_um=150.):
@@ -203,5 +234,6 @@ _features_class = {
     'energy' : EnergyFeature,
     'std_ptp' : StdPeakToPeakFeature,
     'kurtosis_ptp' : KurtosisPeakToPeakFeature,
-    'random_projections' : RandomProjectionsFeature
+    'random_projections' : RandomProjectionsFeature,
+    'ptp_lag' : PeakToPeakLagsFeature
 }

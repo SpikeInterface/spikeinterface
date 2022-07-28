@@ -50,7 +50,9 @@ class RandomProjectionClustering:
         num_chans = recording.get_num_channels()
 
         features_list = ['random_projections']
-        features_params = {'random_projections': {'local_radius_um' : params['local_radius_um'], 'projections' : np.random.randn(num_chans, d['nb_projections'])}}
+        projections = np.random.randn(num_chans, d['nb_projections'])
+        features_params = {'random_projections': {'local_radius_um' : params['local_radius_um'], 
+        'projections' : projections}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=1, ms_after=1, **params['job_kwargs'])
