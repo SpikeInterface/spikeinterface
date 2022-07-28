@@ -9,8 +9,8 @@ try:
 except:
     HAVE_HDBSCAN = False
 
-from spikeinterface.sortingcomponents.peak_waveform_features import (
-    compute_waveform_features_peaks,
+from spikeinterface.sortingcomponents.features_from_peaks import (
+    compute_features_from_peaks,
 )
 
 
@@ -59,17 +59,15 @@ class PositionPTPScaledClustering:
         locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
 
         if d["ptps"] is None:
-            ptps = compute_waveform_features_peaks(
-                recording,
+            ptps, = compute_features_from_peaks(recording,
                 peaks,
-                time_range_list=[(1, 1.5)],
-                feature_list=["ptps"],
-                **d["job_kwargs"],
-            )[:, :, 0]
+                ['ptp'],
+                feature_params={'ptp' : {'all_channel': True}},
+                **d["job_kwargs"])
         else:
             ptps = d["ptps"]
 
-        maxptps = np.max(ptps, 1)
+        maxptps = np.max(ptps, axis=1)
         logmaxptps = np.log(maxptps)
 
         to_cluster_from = np.hstack((locations, logmaxptps[:, np.newaxis]))

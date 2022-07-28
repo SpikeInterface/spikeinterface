@@ -18,8 +18,8 @@ class StudyComparisonRunTimesWidget(BaseWidget):
 
     Parameters
     ----------
-    gt_comparison: GroundTruthComparison
-        The ground truth sorting comparison object
+    study: GroundTruthStudy
+        The study object to consider
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     color:
@@ -64,23 +64,25 @@ def plot_gt_study_run_times(*args, **kwargs):
 plot_gt_study_run_times.__doc__ = StudyComparisonRunTimesWidget.__doc__
 
 
-class StudyComparisonUnitCountWidget(BaseWidget):
+class StudyComparisonUnitCountsAveragesWidget(BaseWidget):
     """
-    Plot run times for a study.
+    Plot averages over found units for a study.
 
     Parameters
     ----------
-    gt_comparison: GroundTruthComparison
-        The ground truth sorting comparison object
+    study: GroundTruthStudy
+        The study object to consider
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     cmap_name
+    log_scale: if the y-axis should be displayed as log scaled
 
     """
-    def __init__(self, study, cmap_name='Set2',  ax=None):
+    def __init__(self, study, cmap_name='Set2', log_scale=False, ax=None):
 
         self.study = study
         self.cmap_name = cmap_name
+        self.log_scale = log_scale
 
         BaseWidget.__init__(self, ax=ax)
 
@@ -121,9 +123,11 @@ class StudyComparisonUnitCountWidget(BaseWidget):
             ax.bar(x, m[col].values, yerr=yerr, width=1/(ncol+2), color=cmap(c), label=clean_labels[c])
 
         ax.legend()
+        if self.log_scale:
+            ax.set_yscale('log')
 
         ax.set_xticks(np.arange(sorter_names.size) + 1)
-        ax.set_xticklabels(sorter_names, rotation=45, ha='left')
+        ax.set_xticklabels(sorter_names, rotation=45)
         ax.set_ylabel('# units')
         ax.set_xlim(0, sorter_names.size + 1)
 
@@ -133,11 +137,93 @@ class StudyComparisonUnitCountWidget(BaseWidget):
 
 
 
-def plot_gt_study_unit_counts(*args, **kwargs):
-    W = StudyComparisonUnitCountWidget(*args, **kwargs)
+class StudyComparisonUnitCountsWidget(BaseWidget):
+    """
+    Plot averages over found units for a study.
+
+    Parameters
+    ----------
+    study: GroundTruthStudy
+        The study object to consider
+    ax: matplotlib ax
+        The ax to be used. If not given a figure is created
+    cmap_name
+    log_scale: if the y-axis should be displayed as log scaled
+
+    """
+    def __init__(self, study, cmap_name='Set2',  log_scale=False, ax=None):
+
+        self.study = study
+        self.cmap_name = cmap_name
+        self.log_scale = log_scale
+
+        num_rec = len(study.rec_names)
+        if ax is None:
+            fig, axes = plt.subplots(ncols=1, nrows=num_rec, squeeze=False)
+        else:
+            axes = np.array([ax]).T
+
+        BaseWidget.__init__(self, axes=axes)
+
+    def plot(self):
+        study = self.study
+        ax = self.ax
+
+        import seaborn as sns
+        study = self.study
+
+        count_units = study.aggregate_count_units()
+        count_units = count_units.reset_index()
+
+        if study.exhaustive_gt:
+            columns = ['num_well_detected', 'num_false_positive',  'num_redundant', 'num_overmerged']
+        else:
+            columns = ['num_well_detected', 'num_redundant', 'num_overmerged']
+
+        ncol = len(columns)
+        cmap = plt.get_cmap(self.cmap_name, 4)
+
+        for r, rec_name in enumerate(study.rec_names):
+            ax = self.axes[r, 0]
+            ax.set_title(rec_name)
+            df = count_units.loc[count_units['rec_name'] == rec_name, :]
+            m = df.groupby('sorter_name')[columns].mean()
+            sorter_names = m.index
+            clean_labels = [col.replace('num_', '').replace('_', ' ').title() for col in columns]
+
+            for c, col in enumerate(columns):
+                x = np.arange(sorter_names.size) + 1 + c / (ncol + 2)
+                ax.bar(x, m[col].values, width=1/(ncol+2), color=cmap(c), label=clean_labels[c])
+        
+            if r == 0:
+                ax.legend()
+
+            if self.log_scale:
+                ax.set_yscale('log')
+    
+            if r == len(study.rec_names) - 1:
+                ax.set_xticks(np.arange(sorter_names.size) + 1)
+                ax.set_xticklabels(sorter_names, rotation=45)
+            ax.set_ylabel('# units')
+            ax.set_xlim(0, sorter_names.size + 1)
+
+        if count_units['num_gt'].unique().size == 1:
+            num_gt = count_units['num_gt'].unique()[0]
+            ax.axhline(num_gt, ls='--', color='k')
+
+
+def plot_gt_study_unit_counts_averages(*args, **kwargs):
+    W = StudyComparisonUnitCountsAveragesWidget(*args, **kwargs)
     W.plot()
     return W
-plot_gt_study_unit_counts.__doc__ = StudyComparisonUnitCountWidget.__doc__
+plot_gt_study_unit_counts_averages.__doc__ = StudyComparisonUnitCountsAveragesWidget.__doc__
+
+
+def plot_gt_study_unit_counts(*args, **kwargs):
+    W = StudyComparisonUnitCountsWidget(*args, **kwargs)
+    W.plot()
+    return W
+plot_gt_study_unit_counts.__doc__ = StudyComparisonUnitCountsWidget.__doc__
 
 
 class StudyComparisonPerformancesWidget(BaseWidget):
@@ -146,8 +232,8 @@ class StudyComparisonPerformancesWidget(BaseWidget):
 
     Parameters
     ----------
-    gt_comparison: GroundTruthComparison
-        The ground truth sorting comparison object
+    study: GroundTruthStudy
+        The study object to consider
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     cmap_name
@@ -159,7 +245,10 @@ class StudyComparisonPerformancesWidget(BaseWidget):
         self.palette = palette
 
         num_rec = len(study.rec_names)
-        fig, axes = plt.subplots(ncols=1, nrows=num_rec, squeeze=False)
+        if ax is None:
+            fig, axes = plt.subplots(ncols=1, nrows=num_rec, squeeze=False)
+        else:
+            axes = np.array([ax]).T
 
         BaseWidget.__init__(self, axes=axes)
 
@@ -171,13 +260,14 @@ class StudyComparisonPerformancesWidget(BaseWidget):
         sns.set_palette(sns.color_palette(self.palette))
 
         perf_by_units = study.aggregate_performance_by_unit()
-        perf_by_units = perf_by_units.reset_index()
+        perf_by_units = perf_by_units.reset_index() 
 
         for r, rec_name in enumerate(study.rec_names):
             ax = self.axes[r, 0]
+            ax.set_title(rec_name)
             df = perf_by_units.loc[perf_by_units['rec_name'] == rec_name, :]
             df = pd.melt(df, id_vars='sorter_name', var_name='Metric', value_name='Score',
-                    value_vars=('accuracy','precision', 'recall'))
+                    value_vars=('accuracy','precision', 'recall')).sort_values('sorter_name')
             sns.swarmplot(data=df, x='sorter_name', y='Score', hue='Metric', dodge=True,
                             s=3, ax=ax) # order=sorter_list,
         #~ ax.set_xticklabels(sorter_names_short, rotation=30, ha='center')
@@ -185,6 +275,10 @@ class StudyComparisonPerformancesWidget(BaseWidget):
 
             ax.set_ylim(0, 1.05)
             ax.set_ylabel(f'Perfs for {rec_name}')
+            if r < len(study.rec_names) - 1:
+                ax.set_xlabel('')
+                ax.set(xticklabels=[])
+
 
 
 
@@ -195,8 +289,8 @@ class StudyComparisonTemplateSimilarityWidget(BaseWidget):
 
     Parameters
     ----------
-    gt_comparison: GroundTruthComparison
-        The ground truth sorting comparison object
+    study: GroundTruthStudy
+        The study object to consider
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     cmap_name
@@ -265,8 +359,8 @@ class StudyComparisonPerformancesAveragesWidget(BaseWidget):
 
     Parameters
     ----------
-    gt_comparison: GroundTruthComparison
-        The ground truth sorting comparison object
+    study: GroundTruthStudy
+        The study object to consider
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     cmap_name
@@ -336,8 +430,8 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
 
     Parameters
     ----------
-    gt_comparison: GroundTruthComparison
-        The ground truth sorting comparison object
+    study: GroundTruthStudy
+        The study object to consider
     ax: matplotlib ax
         The ax to be used. If not given a figure is created
     cmap_name

@@ -13,7 +13,7 @@ import random, string, os
 from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
-from .clustering_tools import remove_duplicates
+from .clustering_tools import remove_duplicates, remove_duplicates_via_matching
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 
@@ -26,12 +26,13 @@ class PositionAndFeaturesClustering:
         "peak_locations" : None,
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
-        "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99, "verbose" : True},
+        "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "tmp_folder" : None,
         "local_radius_um" : 50,
         "max_spikes_per_unit" : 100,
         "ms_before" : 1.5,
         "ms_after": 2.5,
+        "cleaning": "cosine",
         "waveform_mode" : "memmap",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
     }
@@ -117,11 +118,11 @@ class PositionAndFeaturesClustering:
 
         import scipy, sklearn
 
-        hanning_window = np.zeros(nbefore+nafter)
-        hanning_window[:nbefore] = np.hanning(2*nbefore)[:nbefore]
-        hanning_window[nbefore:] = np.hanning(2*nafter)[nafter:]
+        #hanning_window = np.zeros(nbefore+nafter)
+        #hanning_window[:nbefore] = np.hanning(2*nbefore)[:nbefore]
+        #hanning_window[nbefore:] = np.hanning(2*nafter)[nafter:]
 
-        step_window = hanning_window[:, np.newaxis]
+        #step_window = hanning_window[:, np.newaxis]
         #step_window = step_window[:, np.newaxis]
 
         for main_chan, waveforms in wfs_arrays.items():
@@ -132,8 +133,8 @@ class PositionAndFeaturesClustering:
             #closest_channels = idx_sorted[:nb_ptps]
 
             if len(waveforms) > 0:
-                waveforms_filtered = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
-                waveforms = waveforms_filtered*(1 - step_window) + step_window*waveforms
+                #waveforms_filtered = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
+                #waveforms = waveforms_filtered*(1 - step_window) + step_window*waveforms
                 all_ptps = np.ptp(waveforms, axis=1)
                 ptp_channels = channels[np.argmax(np.ptp(waveforms, axis=1), axis=1)]
 
@@ -153,7 +154,6 @@ class PositionAndFeaturesClustering:
 
         best_spikes = {}
         nb_spikes = 0
-        max_spikes_per_unit = 100
 
         all_indices = np.arange(0, peak_labels.size)
 
@@ -185,13 +185,31 @@ class PositionAndFeaturesClustering:
             wf_folder = params['tmp_folder'] / 'dense_snippets'
             wf_folder.mkdir()
 
-        wfs_arrays = extract_waveforms_to_buffers(recording, spikes, labels, nbefore, nafter,
-                     mode=params['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
-                     sparsity_mask=None,  copy=(params['waveform_mode'] == 'shared_memory'),
-                     **params['job_kwargs'])
 
-        print("We found %d raw clusters, starting to clean..." %len(labels))
-        noise_levels = get_noise_levels(recording, return_scaled=False)
-        labels, peak_labels = remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params['cleaning_kwargs'])
+        cleaning_method = params["cleaning"]
+
+        print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
+
+        if cleaning_method == "cosine":
+
+            wfs_arrays = extract_waveforms_to_buffers(recording, spikes, labels, nbefore, nafter,
+                         mode=params['waveform_mode'], return_scaled=False, folder=wf_folder, dtype=recording.get_dtype(),
+                         sparsity_mask=None,  copy=(params['waveform_mode'] == 'shared_memory'),
+                         **params['job_kwargs'])
+
+            noise_levels = get_noise_levels(recording, return_scaled=False)
+            labels, peak_labels = remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params['cleaning_kwargs'])
+
+        elif cleaning_method == "matching":
+            name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
+
+            sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
+            we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
+                ms_after=params['ms_after'], **params['job_kwargs'])
+            labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'])
+            shutil.rmtree(tmp_folder)
+
+        print("We kept %d non-duplicated clusters..." %len(labels))
 
         return labels, peak_labels

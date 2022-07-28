@@ -45,6 +45,7 @@ class FilterRecording(BasePreprocessor):
     dtype: dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
+
     Returns
     -------
     filter_recording: FilterRecording

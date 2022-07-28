@@ -34,8 +34,7 @@ class TemplateSimilarityCalculator(BaseWaveformExtractorExtension):
     def _specific_select_units(self, unit_ids, new_waveforms_folder):
         # filter metrics dataframe
         unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_similarity = self.similarity[np.array(
-            unit_indices), np.array(unit_indices)]
+        new_similarity = self.similarity[unit_indices][:, unit_indices]
         np.save(new_waveforms_folder / self.extension_name / 'similarity.npy',
                 new_similarity)
         

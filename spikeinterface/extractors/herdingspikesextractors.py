@@ -1,18 +1,33 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
-
     HAVE_HS2SX = True
 except ImportError:
     HAVE_HS2SX = False
 
 
 class HerdingspikesSortingExtractor(BaseSorting):
+    """Load HerdingSpikes format data as a sorting extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the ALF folder.
+    load_unit_info : bool, optional, default: True
+        Whether to load the unit info from the file.
+
+    Returns
+    -------
+    extractor : HerdingSpikesSortingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'HS2Sorting'
     installed = HAVE_HS2SX  # check at class level if installed or not
     is_writable = True

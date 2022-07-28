@@ -5,16 +5,16 @@ from .neobaseextractor import NeoBaseRecordingExtractor
 
 class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading Axona RAW format
+    Class for reading Axona RAW format.
 
     Based on :py:class:`neo.rawio.AxonaRawIO`
 
     Parameters
     ----------
     folder_path: str
-        The tdt folder.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+        The folder path to load the recordings from.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
     mode = 'folder'
     NeoRawIOClass = 'AxonaRawIO'

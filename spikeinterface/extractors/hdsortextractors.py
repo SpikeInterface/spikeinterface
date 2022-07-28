@@ -1,32 +1,32 @@
 from pathlib import Path
+
 import numpy as np
 
 from spikeinterface.core import (BaseRecording, BaseSorting,
                                  BaseRecordingSegment, BaseSortingSegment)
 from spikeinterface.core.core_tools import define_function_from_class
-
 from .matlabhelpers import MatlabHelper
 
 
 class HDSortSortingExtractor(MatlabHelper, BaseSorting):
+    """Load HDSort format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to HDSort mat file.
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
+
+    Returns
+    -------
+    extractor : HDSortSortingExtractor
+        The loaded data.
+    """
     extractor_name = "HDSortSortingExtractor"
 
     def __init__(self, file_path, keep_good_only=True):
-        """
-        Class for reading HDSort format.
 
-        Parameters
-        ----------
-        file_path : str or Path
-            Path to HDSort mat file
-        keep_good_only : bool, optional
-            Only keep good units (default True)
-
-        Returns
-        -------
-        extractor
-            HDSortSortingExtractor
-        """
         MatlabHelper.__init__(self, file_path)
 
         if not self._old_style_mat:

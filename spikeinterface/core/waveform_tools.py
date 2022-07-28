@@ -19,7 +19,7 @@ from .core_tools import make_shared_array
 
 def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
                                  mode='memmap', return_scaled=False, folder=None, dtype=None,
-                                 sparsity_mask=None, copy=True, **job_kwargs):
+                                 sparsity_mask=None, copy=False, **job_kwargs):
     """
     Allocate buffers (memmap or or shared memory) and then distribute every waveform into theses buffers.
 
@@ -77,8 +77,8 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
     dtype = np.dtype(dtype)
 
 
-    wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter,
-                        mode=mode, folder=folder, dtype=dtype, sparsity_mask=sparsity_mask)
+    wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode=mode,
+                                                             folder=folder, dtype=dtype, sparsity_mask=sparsity_mask)
     
     distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled,
                                     mode=mode, sparsity_mask=sparsity_mask, **job_kwargs)
@@ -94,8 +94,8 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
         else:
             return wfs_arrays, wfs_arrays_info
 
-extract_waveforms_to_buffers.__doc__ = extract_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
+extract_waveforms_to_buffers.__doc__ = extract_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
 
 def allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=None, dtype=None,

@@ -11,11 +11,12 @@ import matplotlib.pyplot as plt
 
 from spikeinterface import extract_waveforms, download_dataset
 
-from spikeinterface.widgets import HAVE_MPL, HAVE_FIGURL
+from spikeinterface.widgets import HAVE_MPL, HAVE_SV
 
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
+from spikeinterface.preprocessing import scale
 from spikeinterface.postprocessing import compute_spike_amplitudes
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
@@ -52,6 +53,10 @@ class TestWidgets(unittest.TestCase):
         sw.plot_timeseries(self.recording, mode='line', show_channel_ids=True)
         sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True)
         sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True, order_channel_by_depth=True)
+        
+        # multi layer
+        sw.plot_timeseries({'rec0' : self.recording, 'rec1' : scale(self.recording, gain=0.8, offset=0)},
+                    color='r', mode='line', show_channel_ids=True)
 
     def test_plot_unit_waveforms(self):
         w = sw.plot_unit_waveforms(self.we)
@@ -69,6 +74,22 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_waveforms_density_map(self.we, max_channels=5, unit_ids=unit_ids)
         sw.plot_unit_waveforms_density_map(self.we, max_channels=5, same_axis=True, unit_ids=unit_ids)
 
+    def test_autocorrelograms(self):
+        unit_ids = self.sorting.unit_ids[:4]
+        sw.plot_autocorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
+
+    def test_crosscorrelogram(self):
+        unit_ids = self.sorting.unit_ids[:4]
+        sw.plot_crosscorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
+        
+    def test_amplitudes_timeseries(self):
+        sw.plot_amplitudes_timeseries(self.we)
+        unit_ids = self.we.sorting.unit_ids[:4]
+        sw.plot_amplitudes_timeseries(self.we, unit_ids=unit_ids)
+        
+    def test_plot_unit_localization(self):
+        sw.plot_unit_locations(self.we, with_channel_ids=True)
+        sw.plot_unit_locations(self.we, compute_kwargs=dict(method='monopolar_triangulation'))
 
 
 if __name__ == '__main__':
@@ -77,10 +98,10 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
     
-    mytest.test_plot_timeseries()
+    # mytest.test_plot_timeseries()
     
-    mytest.test_plot_unit_waveforms()
-    mytest.test_plot_unit_templates()
+    # mytest.test_plot_unit_waveforms()
+    # mytest.test_plot_unit_templates()
     mytest.test_plot_unit_waveforms_density_map()
 
     plt.show()
