@@ -98,7 +98,7 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name = 'peak_pipe
         init_args = (recording, peaks, steps)
     
     processor = ChunkRecordingExecutor(recording, 
-                        _compute_peak_step_chunk, _init_worker_peak_piepline,
+                        _compute_peak_step_chunk, _init_worker_peak_pipeline,
                         init_args, handle_returns=True, job_name=job_name, **job_kwargs)
 
     outputs = processor.run()
@@ -118,7 +118,7 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name = 'peak_pipe
 
 
 
-def _init_worker_peak_piepline(recording, peaks, steps):
+def _init_worker_peak_pipeline(recording, peaks, steps):
     """Initialize worker for localizing peaks."""
 
     if isinstance(recording, dict):
