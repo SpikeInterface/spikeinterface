@@ -165,7 +165,8 @@ class NwbRecordingExtractor(BaseRecording):
         # Set gains
         self.set_channel_gains(gains)
         # Set offsets
-        self.set_channel_offsets(self._es.offset * 1e6)
+        if hasattr(self._es, "offset"):
+            self.set_channel_offsets(self._es.offset * 1e6)
 
         # Add properties
         properties = dict()
