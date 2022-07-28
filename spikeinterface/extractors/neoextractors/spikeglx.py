@@ -1,15 +1,14 @@
-from spikeinterface.core.core_tools import define_function_from_class
-
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-
-import numpy as np
-import probeinterface as pi
-
-import neo
-
 from packaging import version
 
+import numpy as np
+
+import neo
+import probeinterface as pi
+
+from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+
+from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 HAS_NEO_10_2 = version.parse(neo.__version__) >= version.parse("0.10.2")
 
@@ -23,22 +22,18 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     Contrary to older verion this reader is folder based.
     So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
-    then it has to be specified with stream_id=
+    then it has to be specified with `stream_id`.
 
     Parameters
     ----------
     folder_path: str
-
-    stream_id: str or None
-        stream for instance : 'imec0.ap' 'nidq' or 'imec0.lf'
-    stream_id: str or None
-        If several stream, specify the one you want.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
-
-        
+        The folder path to load the recordings from.
+    stream_id: str, optional
+        If there are several streams, specify the one you want to load.
+        For example, 'imec0.ap' 'nidq' or 'imec0.lf'.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
-
     mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
 
@@ -65,7 +60,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 self.set_probe(probe, in_place=True)
             self.set_probe(probe, in_place=True)
-            
+
             # load num_channels_per_adc depending on probe type
             imDatPrb_type = probe.annotations["imDatPrb_type"]
 

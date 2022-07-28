@@ -6,17 +6,17 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading neuralynx folder
-    
+
     Based on :py:class:`neo.rawio.NeuralynxRawIO`
-    
+
     Parameters
     ----------
     folder_path: str
-        The xml  file.
-    stream_id: str or None
-        If several stream, specify the one you want.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+        The file path to load the recordings from.
+    stream_id: str, optional
+        If there are several streams, specify the one you want to load.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'

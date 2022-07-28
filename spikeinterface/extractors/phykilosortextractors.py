@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment, read_python)
@@ -6,15 +7,16 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
-    """
-    Base SortingExtractor for Phy and Kilosort output folder
+    """Base SortingExtractor for Phy and Kilosort output folder.
 
     Parameters
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str (optional)
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
     """
     extractor_name = 'BasePhyKilosortSorting'
     installed = False  # check at class level if installed or not
@@ -153,15 +155,19 @@ class PhySortingSegment(BaseSortingSegment):
 
 
 class PhySortingExtractor(BasePhyKilosortSortingExtractor):
-    """
-    Base SortingExtractor for Phy and Kilosort output folder
+    """Load Phy format data as a sorting extractor.
 
     Parameters
     ----------
     folder_path: str or Path
-        Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str (optional)
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
+        Path to the output Phy folder (containing the params.py).
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+
+    Returns
+    -------
+    extractor : PhySortingExtractor
+        The loaded data.
     """
     extractor_name = 'BasePhyKilosortSorting'
 
@@ -173,15 +179,22 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
 
 
 class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
-    """
-    SortingExtractor for a Kilosort output folder
+    """Load Kilosort format data as a sorting extractor.
 
     Parameters
     ----------
     folder_path: str or Path
-        Path to the output Phy folder (containing the params.py)
-    keep_good_only: bool
-        If True, only Kilosort-labeled 'good' units are returned
+        Path to the output Phy folder (containing the params.py).
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
+        If True, only Kilosort-labeled 'good' units are returned.
+
+    Returns
+    -------
+    extractor : KiloSortSortingExtractor
+        The loaded data.
     """
     extractor_name = 'KiloSortSorting'
 

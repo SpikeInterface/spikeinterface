@@ -1,32 +1,31 @@
+from pathlib import Path
+
+import numpy as np
+
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-import numpy as np
-from pathlib import Path
-
 try:
     import h5py
-
     HAVE_MCSH5 = True
 except ImportError:
     HAVE_MCSH5 = False
 
 
 class MCSH5RecordingExtractor(BaseRecording):
-    """
-    Load a MCS H5 file as a recording extractor
+    """Load a MCS H5 file as a recording extractor.
 
     Parameters
     ----------
     file_path : str or Path
-        The path to the MCS h5 file
-    stream_id : int, optional
-        The stream ID to load, by default 0
-        
+        The path to the MCS h5 file.
+    stream_id : int, optional, default: 0
+        The stream ID to load.
+
     Returns
     -------
-    recording: MCSH5RecordingExtractor
-        The recording extractor for the MCS h5 file
+    recording : MCSH5RecordingExtractor
+        The loaded data.
     """
     extractor_name = 'MCSH5Recording'
     installed = HAVE_MCSH5  # check at class level if installed or not
@@ -45,17 +44,17 @@ class MCSH5RecordingExtractor(BaseRecording):
                                dtype=mcs_info["dtype"])
 
         self.extra_requirements.append('h5py')
-        
-        recording_segment = MCSH5RecordingSegment(self._rf, stream_id, mcs_info["num_frames"], 
+
+        recording_segment = MCSH5RecordingSegment(self._rf, stream_id, mcs_info["num_frames"],
                                                   sampling_frequency=mcs_info["sampling_frequency"])
         self.add_recording_segment(recording_segment)
-        
+
         # set gain
         self.set_channel_gains(mcs_info["gain"])
-        
+
         # set other properties
         self.set_property("electrode_labels", mcs_info["electrode_labels"])
-        
+
         self._kwargs = {'file_path': str(Path(file_path).absolute()), 'stream_id': stream_id}
 
     def __del__(self):
@@ -63,7 +62,7 @@ class MCSH5RecordingExtractor(BaseRecording):
 
 
 class MCSH5RecordingSegment(BaseRecordingSegment):
-    
+
     def __init__(self, rf, stream_id, num_frames, sampling_frequency):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
         self._rf = rf
@@ -73,10 +72,10 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
 
     def get_num_samples(self):
         return self._num_samples
-    
-    def get_traces(self, 
-                   start_frame=None, 
-                   end_frame=None, 
+
+    def get_traces(self,
+                   start_frame=None,
+                   end_frame=None,
                    channel_indices=None):
 
         if isinstance(channel_indices, slice):
@@ -134,7 +133,7 @@ def openMCSH5File(filename, stream_id):
         (timestep_min, timestep_max)) - timestep_avg) / timestep_avg < 1e-6), 'Time steps vary by more than 1 ppm'
     samplingRate = 1. / timestep_avg
 
-    mcs_info = {"filehandle": rf, "num_frames": nFrames, "sampling_frequency": samplingRate, 
+    mcs_info = {"filehandle": rf, "num_frames": nFrames, "sampling_frequency": samplingRate,
                 "num_channels": nRecCh, "channel_ids": channel_ids, "electrode_labels": electrodeLabels, "gain": gain,
                 "dtype": dtype}
 
