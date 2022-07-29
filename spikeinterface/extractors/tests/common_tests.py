@@ -78,13 +78,10 @@ class RecordingCommonTestSuite(CommonTestSuite):
             elif isinstance(entity, str):
                 path = entity
                 kwargs = {}
-
-            rec = self.ExtractorClass(self.get_full_path(path), **kwargs)
-
+            
             if isinstance(rec, NeoBaseRecordingExtractor):
-                # for neo based also test annotations propagation
-                rec = self.ExtractorClass(local_folder / path, all_annotations=True, **kwargs)
-                
+                rec = self.ExtractorClass(self.get_full_path(path), all_annotations=True, **kwargs)
+
 class SortingCommonTestSuite(CommonTestSuite):
 
     def test_open(self):
