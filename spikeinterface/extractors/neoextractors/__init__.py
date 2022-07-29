@@ -19,3 +19,4 @@ from .biocam import BiocamRecordingExtractor, read_biocam
 from .axona import AxonaRecordingExtractor, read_axona
 from .tdt import TdtRecordingExtractor, read_tdt
 from .alphaomega import AlphaOmegaRecordingExtractor, read_alphaomega, AlphaOmegaEventExtractor, read_alphaomega_event
+from .edf import EDFRecordingExtractor, read_edf
