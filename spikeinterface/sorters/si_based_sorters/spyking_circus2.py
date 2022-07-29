@@ -2,16 +2,16 @@ from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
     get_noise_levels, extract_waveforms)
-from spikeinterface.preprocessing import bandpass_filter, common_reference
+from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     sorter_name = 'spykingcircus2'
 
     _default_params = {
-        'general' : {'ms_before' : 2.5, 'ms_after' : 2.5, 'local_radius_um' : 100},
+        'general' : {'ms_before' : 1.5, 'ms_after' : 2.5, 'local_radius_um' : 100},
         'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
-        'filtering' : {'freq_min' : 300, 'dtype' : 'float32'},
+        'filtering' : {'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5},
         'selection' : {'n_peaks_per_channel' : 5000, 'min_n_peaks' : 20000},
         'localization' : {},
@@ -45,8 +45,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
-        if 'freq_max' not in filtering_params:
-            filtering_params['freq_max'] = 0.95*sampling_rate/2
+        #if 'freq_max' not in filtering_params:
+        #    filtering_params['freq_max'] = 0.95*sampling_rate/2
 
         recording_f = bandpass_filter(recording, **filtering_params)
         if params['common_reference']:
@@ -86,7 +86,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['general'])
         clustering_params['job_kwargs'] = params['job_kwargs']
 
-        labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='position_and_features', 
+        labels, peak_labels = find_cluster_from_peaks(zscore(recording_f), selected_peaks, method='random_projections', 
             method_kwargs=clustering_params)
 
         ## We get the labels for our peaks

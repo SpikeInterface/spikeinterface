@@ -185,6 +185,21 @@ class StdPeakToPeakFeature(PeakToPeakFeature):
             all_ptps[idx] = np.std(np.ptp(wfs, axis=1), axis=1)
         return all_ptps
 
+class GlobalPeakToPeakFeature(PeakToPeakFeature):
+    need_waveforms = True
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
+        PeakToPeakFeature.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um, all_channels=False)
+
+    def compute_buffer(self, traces, peaks, waveforms):
+        all_ptps = np.zeros(peaks.size)
+        for main_chan in np.unique(peaks['channel_ind']):
+            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+            wfs = waveforms[idx][:, :, chan_inds]
+            all_ptps[idx] = np.max(wfs, axis=(1, 2)) - np.min(wfs, axis=(1, 2))
+        return all_ptps
+
 class KurtosisPeakToPeakFeature(PeakToPeakFeature):
     need_waveforms = True
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
@@ -235,5 +250,6 @@ _features_class = {
     'std_ptp' : StdPeakToPeakFeature,
     'kurtosis_ptp' : KurtosisPeakToPeakFeature,
     'random_projections' : RandomProjectionsFeature,
-    'ptp_lag' : PeakToPeakLagsFeature
+    'ptp_lag' : PeakToPeakLagsFeature,
+    'global_ptp' : GlobalPeakToPeakFeature
 }

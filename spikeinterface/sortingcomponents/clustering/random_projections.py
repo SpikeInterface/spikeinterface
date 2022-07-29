@@ -24,12 +24,12 @@ class RandomProjectionClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
         "nb_projections" : 10,
-        "ms_before" : 2.5,
+        "ms_before" : 1.5,
         "ms_after": 2.5,
         "cleaning": "cosine",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
@@ -55,7 +55,7 @@ class RandomProjectionClustering:
         'projections' : projections}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
-            ms_before=1, ms_after=1, **params['job_kwargs'])
+            ms_before=d['ms_before'], ms_after=d['ms_after'], **params['job_kwargs'])
 
         hdbscan_data = features_data[0]
 
@@ -64,7 +64,7 @@ class RandomProjectionClustering:
         peak_labels = clustering[0]
 
         labels = np.unique(peak_labels)
-        labels = labels[labels>=0]
+        labels = labels[labels >= 0]
 
         best_spikes = {}
         nb_spikes = 0
