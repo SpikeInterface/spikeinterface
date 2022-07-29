@@ -78,8 +78,7 @@ class RecordingCommonTestSuite(CommonTestSuite):
             elif isinstance(entity, str):
                 path = entity
                 kwargs = {}
-            
-            if isinstance(rec, NeoBaseRecordingExtractor):
+            if hasattr(self.ExtractorClass , "NeoRawIOClass"):
                 rec = self.ExtractorClass(self.get_full_path(path), all_annotations=True, **kwargs)
 
 class SortingCommonTestSuite(CommonTestSuite):
