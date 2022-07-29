@@ -66,11 +66,8 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
                 assert trace_scaled.dtype == 'float32'
             
-            if isinstance(rec, NeoBaseRecordingExtractor):
-                # for neo based also test annotations propagation
-                rec = self.ExtractorClass(local_folder / path, all_annotations=True, **kwargs)
-                
-    def test_annotations(self):
+                            
+    def test_neo_annotations(self):
         for entity in self.entities:
 
             if isinstance(entity, tuple):
