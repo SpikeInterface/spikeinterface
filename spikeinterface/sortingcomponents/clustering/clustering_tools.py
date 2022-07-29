@@ -587,3 +587,90 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     shutil.rmtree(tmp_folder)
 
     return labels, new_labels
+
+
+def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1):
+    
+    import sklearn
+    templates = np.array(list(wfs_arrays.keys()))
+    nb_templates = len(templates)
+    from spikeinterface.sortingcomponents.clustering.isocut5 import isocut5
+
+    new_labels = peak_labels.copy()
+
+    keep_merging = True
+
+    fused = {}
+    templates = {}
+    similarities = {}
+
+    for i in wfs_arrays.keys():
+        fused[i] = [i]
+        
+    while keep_merging:
+        
+        min_dip = np.inf
+        to_merge = None
+        labels = np.unique(new_labels)
+        labels = labels[labels>=0]
+        
+        for i in labels:
+            if len(fused[i]) > 1:
+                all_data_i = np.vstack([wfs_arrays[c] for c in fused[i]])
+            else:
+                all_data_i = wfs_arrays[i]
+            n_i = len(all_data_i)
+            if n_i > 0:
+                if i in templates:
+                    t_i = templates[i]
+                else:
+                    t_i = np.median(all_data_i, axis=0).flatten()
+                    templates[i] = t_i
+                data_i = all_data_i.reshape(n_i, -1)
+                
+                if i not in similarities:
+                    similarities[i] = {}
+                
+                for j in labels[i+1:]:
+                    if len(fused[j]) > 1:
+                        all_data_j = np.vstack([wfs_arrays[c] for c in fused[j]])
+                    else:
+                        all_data_j = wfs_arrays[j]
+                    n_j = len(all_data_j)
+                    if n_j > 0:
+                        if j in templates:
+                            t_j = templates[j]
+                        else:
+                            t_j = np.median(all_data_j, axis=0).flatten()
+                            templates[j] = t_j
+                        
+                        if j in similarities[i]:
+                            cosine = similarities[i][j]
+                        else:
+                            cosine = sklearn.metrics.pairwise.cosine_similarity(t_i[np.newaxis, :], t_j[np.newaxis, :])[0][0]
+                            similarities[i][j] = cosine
+                        
+                        if cosine > 0.75:
+                            data_j = all_data_j.reshape(n_j, -1)
+                            v = t_i - t_j
+                            pr_i = np.dot(data_i, v)
+                            pr_j = np.dot(data_j, v)
+                            diptest, _ = isocut5(np.concatenate((pr_i, pr_j)))
+                            if diptest < min_dip:
+                                min_dip = diptest
+                                to_merge = [i, j]
+
+        if min_dip < dip_threshold:
+            #print("Merging", to_merge, "with dip", min_dip)
+            fused[to_merge[0]] += [to_merge[1]]
+            mask = new_labels == to_merge[1]
+            new_labels[mask] = to_merge[0]
+            templates.pop(to_merge[0])
+            similarities.pop(to_merge[0])
+        else:
+            keep_merging = False
+
+    labels = np.unique(new_labels)
+    labels = labels[labels>=0]
+
+    return labels, new_labels

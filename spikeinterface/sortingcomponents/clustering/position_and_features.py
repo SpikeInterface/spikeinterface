@@ -13,7 +13,7 @@ import random, string, os
 from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
-from .clustering_tools import remove_duplicates, remove_duplicates_via_matching
+from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
@@ -26,12 +26,12 @@ class PositionAndFeaturesClustering:
     _default_params = {
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
-        "cleaning_kwargs" : {"similar_threshold" : 0.99, "sparsify_threshold" : 0.99},
+        "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
         "ms_before" : 1.5,
         "ms_after": 2.5,
-        "cleaning": "cosine",
+        "cleaning": "dip",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
     }
 
@@ -48,7 +48,7 @@ class PositionAndFeaturesClustering:
         nafter = int(params['ms_after'] * fs / 1000.)
         num_samples = nbefore + nafter
 
-        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy', 'global_ptp', ]
+        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy', 'global_ptp']
         features_params = {'monopolar' : {'local_radius_um' : params['local_radius_um']},
                            'ptp' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
                            'energy': {'local_radius_um' : params['local_radius_um']}, 
@@ -64,8 +64,8 @@ class PositionAndFeaturesClustering:
         hdbscan_data[:, 3] = features_data[2]
         hdbscan_data[:, 4] = features_data[3]
 
-        #preprocessing = QuantileTransformer(output_distribution='uniform')
-        #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
+        preprocessing = QuantileTransformer(output_distribution='uniform')
+        hdbscan_data = preprocessing.fit_transform(hdbscan_data)
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
@@ -115,6 +115,15 @@ class PositionAndFeaturesClustering:
             noise_levels = get_noise_levels(recording, return_scaled=False)
             labels, peak_labels = remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params['cleaning_kwargs'])
 
+        elif cleaning_method == "dip":
+
+            wfs_arrays = extract_waveforms_to_buffers(recording, spikes, labels, nbefore, nafter,
+                         mode='shared_memory', return_scaled=False, folder=None, dtype=recording.get_dtype(),
+                         sparsity_mask=None,  copy=True,
+                         **params['job_kwargs'])
+
+            labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params['cleaning_kwargs'])
+
         elif cleaning_method == "matching":
             name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
@@ -122,7 +131,7 @@ class PositionAndFeaturesClustering:
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
             we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
                 ms_after=params['ms_after'], **params['job_kwargs'])
-            labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'])
+            labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'], **params['cleaning_kwargs'])
             shutil.rmtree(tmp_folder)
 
         print("We kept %d non-duplicated clusters..." %len(labels))

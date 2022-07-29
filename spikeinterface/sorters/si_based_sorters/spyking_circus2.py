@@ -88,7 +88,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['general'])
         clustering_params['job_kwargs'] = params['job_kwargs']
 
-        labels, peak_labels = find_cluster_from_peaks(zscore(recording_f), selected_peaks, method='random_projections', 
+        labels, peak_labels = find_cluster_from_peaks(zscore(recording_f), selected_peaks, method='position_and_features',
             method_kwargs=clustering_params)
 
         ## We get the labels for our peaks
