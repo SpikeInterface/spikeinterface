@@ -14,6 +14,7 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
         The file path to load the recordings from.
     stream_id: str, optional
         If there are several streams, specify the one you want to load.
+        For this neo reader stream are defined by their sampling frequency.
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     """
