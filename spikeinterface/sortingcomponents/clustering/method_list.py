@@ -6,6 +6,7 @@ from .position_and_pca import PositionAndPCAClustering
 from .position_ptp_scaled import PositionPTPScaledClustering
 from .position_and_features import PositionAndFeaturesClustering
 from .random_projections import RandomProjectionClustering
+from .circus import CircusClustering
 
 clustering_methods = {
     "dummy": DummyClustering,
@@ -15,5 +16,6 @@ clustering_methods = {
     "sliding_hdbscan": SlidingHdbscanClustering,
     "sliding_nn": SlidingNNClustering,
     "position_and_features": PositionAndFeaturesClustering,
-    "random_projections": RandomProjectionClustering
+    "random_projections": RandomProjectionClustering,
+    "circus" : CircusClustering
 }
