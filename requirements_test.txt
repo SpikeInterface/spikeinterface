@@ -67,6 +67,9 @@ herdingspikes<=0.3.99
 ## mearec
 mearec
 
+## EDF 
+pyedflib
+
 ## container packages for local testing
 #docker
 #spython
