@@ -52,6 +52,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params['common_reference']:
             recording_f = common_reference(recording_f)
 
+        recording_f = zscore(recording_f)
+
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()
         detection_params.update(params['job_kwargs'])

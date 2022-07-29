@@ -64,8 +64,8 @@ class PositionAndFeaturesClustering:
         hdbscan_data[:, 3] = features_data[2]
         hdbscan_data[:, 4] = features_data[3]
 
-        preprocessing = QuantileTransformer(output_distribution='uniform')
-        hdbscan_data = preprocessing.fit_transform(hdbscan_data)
+        #preprocessing = QuantileTransformer(output_distribution='uniform')
+        #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
