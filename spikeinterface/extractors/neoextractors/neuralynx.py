@@ -46,9 +46,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'
 
-    def __init__(self, folder_path, sampling_frequency=None, all_annotations=False):
+    def __init__(self, folder_path, sampling_frequency=None):
         neo_kwargs = {'dirname': folder_path}
-        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, all_annotations=all_annotations, **neo_kwargs)
+        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
         self._kwargs.update(dict(folder_path=str(folder_path)))
 
 read_neuralynx = define_function_from_class(source_class=NeuralynxRecordingExtractor, name="read_neuralynx")

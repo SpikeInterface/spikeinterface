@@ -144,7 +144,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     # this will depend on each reader
     handle_spike_frame_directly = True
 
-    def __init__(self, sampling_frequency=None, use_natural_unit_ids=False, all_annotations=False, **neo_kwargs):
+    def __init__(self, sampling_frequency=None, use_natural_unit_ids=False, **neo_kwargs):
         _NeoBaseExtractor.__init__(self, **neo_kwargs)
 
         self.use_natural_unit_ids = use_natural_unit_ids
