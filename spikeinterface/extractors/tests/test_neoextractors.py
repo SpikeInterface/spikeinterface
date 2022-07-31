@@ -224,6 +224,11 @@ class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
         "alphaomega/mpx_map_version4",
     ]
 
+class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = EDFRecordingExtractor
+    downloads = ['edf']
+    entities = ['edf/edf+C.edf']
+
 
 if __name__ == '__main__':
     pass

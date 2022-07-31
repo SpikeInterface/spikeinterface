@@ -26,6 +26,7 @@ from .neoextractors import (
     TdtRecordingExtractor, read_tdt,
     AlphaOmegaRecordingExtractor, read_alphaomega,
     AlphaOmegaEventExtractor, read_alphaomega_event,
+    EDFRecordingExtractor, read_edf,
 )
 
 # NWB sorting/recording/event
