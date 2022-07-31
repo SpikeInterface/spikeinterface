@@ -14,6 +14,7 @@ from .neoextractors import (
     read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
     NeuralynxRecordingExtractor, read_neuralynx,
+    NeuralynxSortingExtractor, read_neuralynx_sorting,
     BlackrockRecordingExtractor, read_blackrock,
     MCSRawRecordingExtractor, read_mcsraw,
     Spike2RecordingExtractor, read_spike2,
