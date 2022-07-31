@@ -123,6 +123,15 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
     ]
+class BlackrockSortingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = BlackrockSortingExtractor
+    downloads = ['blackrock']
+    entities = [
+        'blackrock/FileSpec2.3001.nev',
+        "blackrock/blackrock_2_1/l101210-001.nev"
+    ]
+    
+    
 
 
 class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
