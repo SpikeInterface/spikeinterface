@@ -123,7 +123,7 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
     ]
-class BlackrockSortingTest(RecordingCommonTestSuite, unittest.TestCase):
+class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockSortingExtractor
     downloads = ['blackrock']
     entities = [
