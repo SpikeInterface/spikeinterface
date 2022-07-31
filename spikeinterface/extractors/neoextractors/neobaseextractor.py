@@ -15,20 +15,37 @@ class _NeoBaseExtractor:
     installed = True
     is_writable = False
 
-    def __init__(self, **neo_kwargs):
+    def __init__(self, all_annotations=False, **neo_kwargs):
         neoIOclass = eval('neo.rawio.' + self.NeoRawIOClass)
         self.neo_reader = neoIOclass(**neo_kwargs)
         self.neo_reader.parse_header()
 
         assert self.neo_reader.block_count() == 1, \
             'This file is neo multi block spikeinterface support one block only dataset'
+            
+        if all_annotations:
+            block_ann = self.neo_reader.raw_annotations['blocks'][0]
+            # in neo annotation are for every segment!
+            # Here we take only the first segment to annotate the object
+            # Generally annotation for multi segment are duplicated
+            seg_ann = block_ann['segments'][0]
+            sig_ann = seg_ann['signals'][self.stream_index]
+
+            # scalar annotations
+            for k, v in sig_ann.items():
+                if not k.startswith('__'):
+                    self.annotate(k=v)
+            # vector array_annotations are channel properties
+            for k, values in sig_ann['__array_annotations__'].items():
+                self.set_property(k, values)
+
 
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
     def __init__(self, stream_id=None, all_annotations=False, **neo_kwargs):
 
-        _NeoBaseExtractor.__init__(self, **neo_kwargs)
+        _NeoBaseExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
 
         kwargs = dict(all_annotations=all_annotations)
         if stream_id is not None:
@@ -86,21 +103,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property('offset_to_uV', final_offsets)
         self.set_property('channel_name', signal_channels["name"])
 
-        if all_annotations:
-            block_ann = self.neo_reader.raw_annotations['blocks'][0]
-            # in neo annotation are for every segment!
-            # Here we take only the first segment to annotate the object
-            # Generally annotation for multi segment are duplicated
-            seg_ann = block_ann['segments'][0]
-            sig_ann = seg_ann['signals'][self.stream_index]
-
-            # scalar annotations
-            for k, v in sig_ann.items():
-                if not k.startswith('__'):
-                    self.annotate(k=v)
-            # vector array_annotations are channel properties
-            for k, values in sig_ann['__array_annotations__'].items():
-                self.set_property(k, values)
 
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
@@ -144,8 +146,9 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     # this will depend on each reader
     handle_spike_frame_directly = True
 
-    def __init__(self, sampling_frequency=None, use_natural_unit_ids=False, **neo_kwargs):
-        _NeoBaseExtractor.__init__(self, **neo_kwargs)
+    def __init__(self, sampling_frequency=None, use_natural_unit_ids=False, all_annotations=False,  **neo_kwargs):
+        _NeoBaseExtractor.__init__(self,  all_annotations=all_annotations, **neo_kwargs)
+        kwargs = dict(all_annotations=all_annotations)
 
         self.use_natural_unit_ids = use_natural_unit_ids
 
@@ -173,6 +176,9 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             sorting_segment = NeoSortingSegment(self.neo_reader, segment_index,
                                                 self.use_natural_unit_ids, t_start, sampling_frequency)
             self.add_sorting_segment(sorting_segment)
+            
+        self._kwargs.update(kwargs)
+
 
     def _auto_guess_sampling_frequency(self):
         """
