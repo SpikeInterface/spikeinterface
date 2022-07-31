@@ -10,6 +10,7 @@ from .plexon import PlexonRecordingExtractor, read_plexon
 from .neuralynx import NeuralynxRecordingExtractor, read_neuralynx
 from .neuralynx import NeuralynxSortingExtractor, read_neuralynx_sorting
 from .blackrock import BlackrockRecordingExtractor, read_blackrock
+from .blackrock import BlackrockSortingExtractor, read_blackrock_sorting
 from .mscraw import MCSRawRecordingExtractor, read_mcsraw
 from .spike2 import Spike2RecordingExtractor, read_spike2
 from .ced import CedRecordingExtractor, read_ced
