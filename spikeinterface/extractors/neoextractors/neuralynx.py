@@ -40,8 +40,6 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     sampling_frequency: float
         The sampling frequency for the spiking channels. When the signal data is available (.ncs) those files will be 
         used to extract the frequency. Otherwise, the sampling frequency needs to be specified for this extractor.
-    all_annotations: bool, optional, default: False
-        Load exhaustively all annotations from neo. [Not supported yet for Neo Sorting Extractors]
     """
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'
