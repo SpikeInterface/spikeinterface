@@ -8,6 +8,7 @@ from .neuroscope import (NeuroScopeRecordingExtractor, NeuroScopeSortingExtracto
                          read_neuroscope_recording, read_neuroscope_sorting, read_neuroscope)
 from .plexon import PlexonRecordingExtractor, read_plexon
 from .neuralynx import NeuralynxRecordingExtractor, read_neuralynx
+from .neuralynx import NeuralynxSortingExtractor, read_neuralynx_sorting
 from .blackrock import BlackrockRecordingExtractor, read_blackrock
 from .mscraw import MCSRawRecordingExtractor, read_mcsraw
 from .spike2 import Spike2RecordingExtractor, read_spike2

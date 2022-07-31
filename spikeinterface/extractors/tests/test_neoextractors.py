@@ -114,6 +114,13 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'neuralynx/Cheetah_v5.7.4/original_data',
     ]
 
+class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuralynxSortingExtractor
+    downloads = ['neuralynx']
+    entities = [
+        'neuralynx/Cheetah_v5.5.1/original_data',
+        'neuralynx/Cheetah_v5.6.3/original_data',
+    ]
 
 class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockRecordingExtractor
