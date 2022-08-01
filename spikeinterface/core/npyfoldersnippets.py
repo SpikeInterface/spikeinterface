@@ -8,27 +8,27 @@ from .npysnippetsextractor import NpySnippetsExtractor
 from .core_tools import define_function_from_class
 
 
-
 class NpyFolderSnippets(NpySnippetsExtractor):
     """
     NpyFolderSnippets is an internal format used in spikeinterface.
     It is a NpySnippetsExtractor + metadata contained in a folder.
-    
+
     It is created with the function: `snippets.save(format='npy', folder='/myfolder')`
-    
+
     Parameters
     ----------
     folder_path: str or Path
-    
+
     Returns
     -------
     snippets: NpyFolderSnippets
         The snippets
     """
+
     def __init__(self,  folder_path):
-        
+
         folder_path = Path(folder_path)
-        
+
         with open(folder_path / 'npy.json', 'r') as f:
             d = json.load(f)
 
@@ -43,10 +43,9 @@ class NpyFolderSnippets(NpySnippetsExtractor):
 
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
-        
+
         self._kwargs = dict(folder_path=str(folder_path))
         self._bin_kwargs = d['kwargs']
 
 
-read_npy_folder = define_function_from_class(source_class=NpyFolderSnippets, name="read_npy_snippets_folder")
-
+read_npy_snippets_folder = define_function_from_class(source_class=NpyFolderSnippets, name="read_npy_snippets_folder")

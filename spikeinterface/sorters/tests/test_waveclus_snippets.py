@@ -1,4 +1,5 @@
-import os, getpass
+import os
+import getpass
 
 if getpass.getuser() == 'localadmin1':
     waveclus_path = 'F:/GitHub/wave_clus_original/'

@@ -87,15 +87,15 @@ class BaseSnippets(BaseRecordingSnippets):
             return True
 
     def get_frames(self,
-                   indeces=None,
+                   indices=None,
                    segment_index: Union[int, None] = None
                    ):
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
-        return spts.get_frames(indeces)
+        return spts.get_frames(indices)
 
     def get_snippets(self,
-                     indeces=None,
+                     indices=None,
                      segment_index: Union[int, None] = None,
                      channel_ids: Union[List, None] = None,
                      return_scaled=False,
@@ -104,7 +104,7 @@ class BaseSnippets(BaseRecordingSnippets):
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
-        wfs = spts.get_snippets(indeces, channel_indices=channel_indices)
+        wfs = spts.get_snippets(indices, channel_indices=channel_indices)
 
         if return_scaled:
             if not self.has_scaled():
@@ -128,9 +128,9 @@ class BaseSnippets(BaseRecordingSnippets):
 
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
-        indeces = spts.frames_to_indices(start_frame, end_frame)
+        indices = spts.frames_to_indices(start_frame, end_frame)
 
-        return self.get_snippets(indeces, channel_ids=channel_ids, return_scaled=return_scaled)
+        return self.get_snippets(indices, channel_ids=channel_ids, return_scaled=return_scaled)
 
     def _save(self, format='binary', **save_kwargs):
         raise NotImplementedError
@@ -223,7 +223,7 @@ class BaseSnippetsSegment(BaseSegment):
         Parameters
         ----------
         indexes: (Union[int, None], optional)
-            indeces of the snippets to return, or all if None. Defaults to None.
+            indices of the snippets to return, or all if None. Defaults to None.
         channel_indices: (Union[List, None], optional)
             Indices of channels to return, or all channels if None. Defaults to None.
 

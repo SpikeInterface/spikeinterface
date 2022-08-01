@@ -6,6 +6,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
 from typing import List, Union
 
+
 class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
     extractor_name = "WaveClusSnippetsExtractor"
     installation_mesg = ""  # error message when not installed
@@ -14,9 +15,9 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
         file_path = Path(file_path) if isinstance(file_path, str) else file_path
         MatlabHelper.__init__(self, file_path)
         wc_snippets = self._getfield("spikes")
-        #handle both types of waveclus results
-        
-        #the spikes can be in the times_file
+        # handle both types of waveclus results
+
+        # the spikes can be in the times_file
         if file_path.name.startswith('times_'):
             times = self._getfield("cluster_class")[:, 1]
         elif file_path.name.endswith('_spikes.mat'):
@@ -31,16 +32,16 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
         sp_len = pre + post
 
         nchannels = int(wc_snippets.shape[1] / sp_len)
-        #waveclus use: #snippets,#concatenated_samples(sample * nchannels)
-        #spikeinterface use: #snippets,#samples, #nchannels
+        # waveclus use: #snippets,#concatenated_samples(sample * nchannels)
+        # spikeinterface use: #snippets,#samples, #nchannels
         snippets = np.dstack(np.array_split(wc_snippets, nchannels, 1))
 
-        BaseSnippets.__init__(self, sampling_frequency=sampling_frequency, 
-                                nbefore=pre,snippet_len=sp_len, dtype=wc_snippets.dtype,
-                                channel_ids=np.arange(nchannels))
+        BaseSnippets.__init__(self, sampling_frequency=sampling_frequency,
+                              nbefore=pre, snippet_len=sp_len, dtype=wc_snippets.dtype,
+                              channel_ids=np.arange(nchannels))
 
-        
-        snp_segment = WaveClustSnippetsSegment(snippets=snippets, spikesframes=np.round(times*(sampling_frequency/1000)))
+        snp_segment = WaveClustSnippetsSegment(
+            snippets=snippets, spikesframes=np.round(times*(sampling_frequency/1000)))
         self.add_snippets_segment(snp_segment)
 
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
@@ -51,18 +52,19 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
         save_file_path = Path(save_file_path)
         assert save_file_path.name.endswith('_spikes.mat'), 'Waveclus snippets files should end with _spikes.mat'
         frame_to_ms = (snippets_extractor.get_sampling_frequency()/1000)
-        index = np.concatenate([snippets_extractor.get_frames(segment_index=sinx) * frame_to_ms 
+        index = np.concatenate([snippets_extractor.get_frames(segment_index=sinx) * frame_to_ms
                                 for sinx in range(snippets_extractor.get_num_segments())])
-        spikes = np.concatenate([snippets_extractor.get_snippets(segment_index=sinx) * frame_to_ms 
+        spikes = np.concatenate([snippets_extractor.get_snippets(segment_index=sinx) * frame_to_ms
                                 for sinx in range(snippets_extractor.get_num_segments())])
-        spikes = np.swapaxes(spikes,1,2).reshape([spikes.shape[0], spikes.shape[1]*spikes.shape[2]], order='C')
+        spikes = np.swapaxes(spikes, 1, 2).reshape([spikes.shape[0], spikes.shape[1]*spikes.shape[2]], order='C')
         par = dict(sr=snippets_extractor.get_sampling_frequency(),
-                    w_pre=snippets_extractor.nbefore+1, # waveclus includes the peak in the pre samples
-                    w_post=snippets_extractor.nafter-1)
-        MatlabHelper.write_dict_to_mat(mat_file_path=save_file_path, 
-            dict_to_write={'index':index,
-                            'spikes':spikes,
-                            'par':par})
+                   w_pre=snippets_extractor.nbefore+1,  # waveclus includes the peak in the pre samples
+                   w_post=snippets_extractor.nafter-1)
+        MatlabHelper.write_dict_to_mat(mat_file_path=save_file_path,
+                                       dict_to_write={'index': index,
+                                                      'spikes': spikes,
+                                                      'par': par})
+
 
 class WaveClustSnippetsSegment(BaseSnippetsSegment):
     def __init__(self, snippets, spikesframes):
@@ -71,9 +73,9 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
         self._spikestimes = spikesframes
 
     def get_snippets(self,
-                    indices,
-                    channel_indices: Union[List, None] = None,
-                    ) -> np.ndarray:
+                     indices,
+                     channel_indices: Union[List, None] = None,
+                     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
@@ -92,15 +94,15 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
             Array of snippets, num_snippets x num_samples x num_channels
         """
         if indices is None:
-            return self._snippets[:,:,channel_indices]
-        return self._snippets[indices,:,channel_indices]
+            return self._snippets[:, :, channel_indices]
+        return self._snippets[indices, :, channel_indices]
 
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
     def frames_to_indices(self,
-                        start_frame: Union[int, None] = None,
-                        end_frame: Union[int, None] = None):
+                          start_frame: Union[int, None] = None,
+                          end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
 
@@ -125,14 +127,14 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
             endi = self._spikestimes.shape[0]
         else:
             endi = np.searchsorted(self._spikestimes, end_frame, side='left')
-        return slice(init,endi,1)
+        return slice(init, endi, 1)
 
-    def get_frames(self, indeces=None):
+    def get_frames(self, indices=None):
         """Returns the frames of the snippets in this segment
 
         Returns:
             SampleIndex: Number of samples in the segment
         """
-        if indeces is None:
+        if indices is None:
             return self._spikestimes
-        return self._spikestimes[indeces]
+        return self._spikestimes[indices]

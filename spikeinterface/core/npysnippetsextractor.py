@@ -22,17 +22,17 @@ class NpySnippetsExtractor(BaseSnippets):
 
     def __init__(self, file_paths, sampling_frequency, channel_ids=None, nbefore=None,
                  gain_to_uV=None, offset_to_uV=None):
-        
+
         if not isinstance(file_paths, list):
             file_paths = [file_paths]
 
         num_segments = len(file_paths)
-        data = np.load(file_paths[0],mmap_mode='r')
+        data = np.load(file_paths[0], mmap_mode='r')
 
         BaseSnippets.__init__(self, sampling_frequency,  nbefore=nbefore,
                               snippet_len=data['snippet'].shape[1],
                               dtype=data['snippet'].dtype, channel_ids=channel_ids)
-        
+
         for i in range(num_segments):
             snp_segment = NpySnippetsSegment(file_paths[i])
             self.add_snippets_segment(snp_segment)
@@ -42,10 +42,10 @@ class NpySnippetsExtractor(BaseSnippets):
 
         if offset_to_uV is not None:
             self.set_channel_offsets(offset_to_uV)
-        
+
         self._kwargs = {'file_paths': [str(f) for f in file_paths], 'sampling_frequency': sampling_frequency,
-                        'channel_ids': channel_ids, 'nbefore':nbefore,'gain_to_uV': gain_to_uV, 
-                        'offset_to_uV': offset_to_uV }
+                        'channel_ids': channel_ids, 'nbefore': nbefore, 'gain_to_uV': gain_to_uV,
+                        'offset_to_uV': offset_to_uV}
 
     @staticmethod
     def write_snippets(snippets, file_paths, dtype=None):
@@ -66,23 +66,24 @@ class NpySnippetsExtractor(BaseSnippets):
             file_paths = [file_paths]
         if dtype is None:
             dtype = snippets.dtype
-        assert len(file_paths)==snippets.get_num_segments()
-        snippets_t = np.dtype([('frame', np.int64), 
-                    ('snippet', dtype, (snippets.snippet_len, snippets.get_num_channels()))])
-        
+        assert len(file_paths) == snippets.get_num_segments()
+        snippets_t = np.dtype([('frame', np.int64),
+                               ('snippet', dtype, (snippets.snippet_len, snippets.get_num_channels()))])
+
         for i in range(snippets.get_num_segments()):
             n = snippets.get_num_snippets(i)
-            arr = np.empty(n, dtype=snippets_t, order ='F')
+            arr = np.empty(n, dtype=snippets_t, order='F')
             arr['frame'] = snippets.get_frames(segment_index=i)
-            arr['snippet']= snippets.get_snippets(segment_index=i).astype(dtype, copy=False)
-        
+            arr['snippet'] = snippets.get_snippets(segment_index=i).astype(dtype, copy=False)
+
             np.save(file_paths[i], arr)
+
 
 class NpySnippetsSegment(BaseSnippetsSegment):
     def __init__(self, file):
         BaseSnippetsSegment.__init__(self)
 
-        npy = np.load(file,mmap_mode='r')
+        npy = np.load(file, mmap_mode='r')
         self._snippets = npy['snippet']
         self._spikestimes = npy['frame']
 
@@ -108,8 +109,8 @@ class NpySnippetsSegment(BaseSnippetsSegment):
             Array of snippets, num_snippets x num_samples x num_channels
         """
         if indices is None:
-            return self._snippets[:,:,channel_indices]
-        return self._snippets[indices,:,channel_indices]
+            return self._snippets[:, :, channel_indices]
+        return self._snippets[indices, :, channel_indices]
 
     def get_num_snippets(self):
         return self._spikestimes.shape[0]

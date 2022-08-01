@@ -93,10 +93,10 @@ class SnippetsSorterCommonTestSuite:
         snippets_folder = cache_folder / "snippets"
         if snippets_folder.is_dir():
             shutil.rmtree(snippets_folder)
-        
+
         nse = snippets_from_sorting(recording=recording, sorting=sorting_gt,
-            nbefore=20, nafter=44)
-    
+                                    nbefore=20, nafter=44)
+
         self.snippets = nse.save(folder=snippets_folder, verbose=False, format='npy')
         print(self.snippets)
 

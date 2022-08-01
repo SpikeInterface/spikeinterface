@@ -14,6 +14,7 @@ from spikeinterface.extractors import WaveClusSortingExtractor
 from spikeinterface.extractors import WaveClusSnippetsExtractor
 PathType = Union[str, Path]
 
+
 def check_if_installed(waveclus_path: Union[str, None]):
     if waveclus_path is None:
         return False
@@ -113,7 +114,7 @@ class WaveClusSnippetsSorter(BaseSorter):
     def _setup_recording(cls, snippets, output_folder, params, verbose):
         # Generate mat files in the dataset directory
 
-        WaveClusSnippetsExtractor.write_snippets(snippets,output_folder / 'results_spikes.mat')
+        WaveClusSnippetsExtractor.write_snippets(snippets, output_folder / 'results_spikes.mat')
 
         if verbose:
             num_snippets = snippets.get_total_snippets()
@@ -193,7 +194,7 @@ class WaveClusSnippetsSorter(BaseSorter):
             Path object to save `par_input.mat`
         """
         p = params.copy()
-        
+
         par_renames = {'feature_type': 'features'}
         par_input = {}
         for key, value in p.items():
