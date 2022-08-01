@@ -120,7 +120,7 @@ class Mountainsort4Sorter(BaseSorter):
                           verbose=verbose)
         
         # temporary folder
-        if parse(Mountainsort4Sorter.get_sorter_version())  >= parse("1.0.2"):
+        if parse(Mountainsort4Sorter.get_sorter_version())  >= parse("1.0.3"):
             if p["tempdir"] is not None:
                 p["tempdir"] = str(p["tempdir"])
             print(f'using temporary directory {p["tempdir"]}')
