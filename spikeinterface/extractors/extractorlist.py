@@ -42,6 +42,7 @@ from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
+from .waveclussnippetstextractors import WaveClusSnippetsExtractor
 from .yassextractors import YassSortingExtractor, read_yass
 from .combinatoextractors import CombinatoSortingExtractor, read_combinato
 from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous

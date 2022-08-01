@@ -53,13 +53,16 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
         dtype for waveforms buffer
     sparsity_mask: None or array of bool
         If not None shape must be must be (len(unit_ids), len(channel_ids))
-
+    copy: bool
+        If True (default), the output shared memory object is copied to a numpy standard array.
+        If copy=False then wfs_arrays_info is also return. Please keep in mind that wfs_arrays_info 
+        need to be referenced as long as wfs_arrays will be used otherwise it will be very hard to debug.
     {}
     
     Returns
     -------
     wfs_arrays: dict of arrays
-        Arrays for all units (memmap or shared_memmep
+        Arrays for all units (memmap or shared_memmep)
 
     wfs_arrays_info: dict of info
         Optionally return in case of shared_memory if copy=False.
