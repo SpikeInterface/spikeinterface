@@ -14,7 +14,9 @@ from .neoextractors import (
     read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
     NeuralynxRecordingExtractor, read_neuralynx,
+    NeuralynxSortingExtractor, read_neuralynx_sorting,
     BlackrockRecordingExtractor, read_blackrock,
+    BlackrockSortingExtractor, read_blackrock_sorting,
     MCSRawRecordingExtractor, read_mcsraw,
     Spike2RecordingExtractor, read_spike2,
     CedRecordingExtractor, read_ced,
@@ -26,6 +28,7 @@ from .neoextractors import (
     TdtRecordingExtractor, read_tdt,
     AlphaOmegaRecordingExtractor, read_alphaomega,
     AlphaOmegaEventExtractor, read_alphaomega_event,
+    EDFRecordingExtractor, read_edf,
 )
 
 # NWB sorting/recording/event
@@ -39,6 +42,7 @@ from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
+from .waveclussnippetstextractors import WaveClusSnippetsExtractor
 from .yassextractors import YassSortingExtractor, read_yass
 from .combinatoextractors import CombinatoSortingExtractor, read_combinato
 from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous

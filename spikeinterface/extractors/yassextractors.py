@@ -1,19 +1,31 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 from spikeinterface.core.core_tools import define_function_from_class
 
-
 try:
     import yaml
-
     HAVE_YAML = True
 except:
     HAVE_YAML = False
 
 
 class YassSortingExtractor(BaseSorting):
+    """Load YASS format data as a sorting extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the ALF folder.
+
+    Returns
+    -------
+    extractor : YassSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'YassExtractor'
     mode = 'folder'
     installed = HAVE_YAML  # check at class level if installed or not

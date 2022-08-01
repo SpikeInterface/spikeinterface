@@ -8,7 +8,9 @@ from .neuroscope import (NeuroScopeRecordingExtractor, NeuroScopeSortingExtracto
                          read_neuroscope_recording, read_neuroscope_sorting, read_neuroscope)
 from .plexon import PlexonRecordingExtractor, read_plexon
 from .neuralynx import NeuralynxRecordingExtractor, read_neuralynx
+from .neuralynx import NeuralynxSortingExtractor, read_neuralynx_sorting
 from .blackrock import BlackrockRecordingExtractor, read_blackrock
+from .blackrock import BlackrockSortingExtractor, read_blackrock_sorting
 from .mscraw import MCSRawRecordingExtractor, read_mcsraw
 from .spike2 import Spike2RecordingExtractor, read_spike2
 from .ced import CedRecordingExtractor, read_ced
@@ -19,3 +21,4 @@ from .biocam import BiocamRecordingExtractor, read_biocam
 from .axona import AxonaRecordingExtractor, read_axona
 from .tdt import TdtRecordingExtractor, read_tdt
 from .alphaomega import AlphaOmegaRecordingExtractor, read_alphaomega, AlphaOmegaEventExtractor, read_alphaomega_event
+from .edf import EDFRecordingExtractor, read_edf

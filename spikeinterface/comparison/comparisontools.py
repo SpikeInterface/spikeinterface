@@ -728,7 +728,10 @@ def make_collision_events(sorting, delta):
 
             collision_events.append(ce)
 
-    collision_events = np.concatenate(collision_events)
+    if len(collision_events) > 0:
+        collision_events = np.concatenate(collision_events)
+    else:
+        collision_events = np.zeros(0, dtype=dtype)
 
     return collision_events
 

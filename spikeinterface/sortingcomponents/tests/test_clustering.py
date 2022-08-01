@@ -20,15 +20,17 @@ def test_find_cluster_from_peaks():
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     recording, gt_sorting = read_mearec(local_path)
     
+    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
     
     noise_levels = get_noise_levels(recording, return_scaled=False)
     
     peaks = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         chunk_size=10000, verbose=False, progress_bar=False, noise_levels=noise_levels)
+                         verbose=False, noise_levels=noise_levels,
+                         **job_kwargs)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                    chunk_size=10000, verbose=True, progress_bar=False)
+                                                            **job_kwargs)
     
     for method in clustering_methods.keys():
         method_kwargs = {}
