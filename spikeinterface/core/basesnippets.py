@@ -79,12 +79,9 @@ class BaseSnippets(BaseRecordingSnippets):
 
     def get_num_segments(self):
         return len(self._snippets_segments)
-
-    def has_scaled(self):
-        if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
-            return False
-        else:
-            return True
+    
+    def has_scaled_snippets(self):
+        return self.has_scaled()
 
     def get_frames(self,
                    indices=None,

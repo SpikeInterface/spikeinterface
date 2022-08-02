@@ -1,5 +1,5 @@
 # most important extractor are in spikeinterface.core
-from spikeinterface.core import (BinaryRecordingExtractor,
+from spikeinterface.core import (BaseRecording, BaseSorting, BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
 # sorting/recording/event from neo
@@ -127,3 +127,47 @@ event_extractor_full_list = [
     MaxwellEventExtractor,
     AlphaOmegaEventExtractor
 ]
+
+
+def get_recording_extractor_from_name(name: str) -> BaseRecording:
+    """
+    Returns the Recording Extractor class based on its name.
+
+    Parameters
+    ----------
+    name: str
+        The Recording Extractor's name.
+
+    Returns
+    -------
+    recording_extractor: BaseRecording
+        The Recording Extractor class.
+    """
+
+    for recording_extractor in recording_extractor_full_list:
+        if recording_extractor.__name__ == name:
+            return recording_extractor
+
+    raise ValueError(f"Recording extractor '{name}' not found.")
+
+
+def get_sorting_extractor_from_name(name: str) -> BaseSorting:
+    """
+    Returns the Sorting Extractor class based on its name.
+
+    Parameters
+    ----------
+    name: str
+        The Sorting Extractor's name.
+
+    Returns
+    -------
+    sorting_extractor: BaseSorting
+        The Sorting Extractor class.
+    """
+
+    for sorting_extractor in sorting_extractor_full_list:
+        if sorting_extractor.__name__ == name:
+            return sorting_extractor
+
+    raise ValueError(f"Sorting extractor '{name}' not found.")
