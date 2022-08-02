@@ -150,6 +150,9 @@ class BaseRecording(BaseRecordingSnippets):
                 offsets = offsets[channel_indices].astype('float32')
                 traces = traces.astype('float32') * gains + offsets
         return traces
+    
+    def has_scaled_traces(self):
+        return self.has_scaled()
 
     def get_times(self, segment_index=None):
         """
@@ -446,7 +449,7 @@ class BaseRecordingSegment(BaseSegment):
             time_vector /= self.sampling_frequency
             if self.t_start is not None:
                 time_vector += self.t_start
-            return time_vector
+            return time_vector 
 
     def get_times_kwargs(self):
         # useful for other internal RecordingSegment

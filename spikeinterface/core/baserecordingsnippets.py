@@ -56,11 +56,6 @@ class BaseRecordingSnippets(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get('is_filtered', False)
     
-    def has_scaled(self):
-        if self.get_property('gain_to_uV') is None or self.get_property('offset_to_uV') is None:
-            return False
-        else:
-            return True
     
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         raise NotImplementedError
