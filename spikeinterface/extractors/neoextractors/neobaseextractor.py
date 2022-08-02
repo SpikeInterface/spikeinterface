@@ -109,6 +109,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         self._kwargs.update(kwargs)
 
+
 class NeoRecordingSegment(BaseRecordingSegment):
     def __init__(self, neo_reader, segment_index, stream_index):
         sampling_frequency = neo_reader.get_signal_sampling_rate(stream_index=stream_index)

@@ -2,6 +2,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
 
+
 class EDFRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading EDF (European data format) folder.
