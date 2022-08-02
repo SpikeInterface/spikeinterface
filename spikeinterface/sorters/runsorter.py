@@ -565,7 +565,10 @@ if __name__ == '__main__':
                     print('Failed to get result with sorter specific extractor.\n'
                           f'Error Message: {e}\n'
                           'Getting result from in-container saved NpzSortingExtractor')
-                sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
+                try:
+                    sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
+                except FileNotFoundError:
+                    SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
