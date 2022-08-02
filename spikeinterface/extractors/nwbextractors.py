@@ -164,10 +164,17 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Set gains
         self.set_channel_gains(gains)
+        
         # Set offsets
         if hasattr(self._es, "offset"):
-            self.set_channel_offsets(self._es.offset * 1e6)
+            offset = self._es.offset * 1e6
+            self.set_channel_offsets(offset)
+        else:
+            if "offset" in self._nwbfile.electrodes:
+                offset = self._nwbfile.electrodes["offset"] * 1e6
+                self.set_channel_offsets(offset)
 
+        
         # Add properties
         properties = dict()
         for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, self._es.electrodes.data)):
