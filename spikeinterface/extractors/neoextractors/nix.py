@@ -33,5 +33,4 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
         self.extra_requirements.append('nixio')
 
 
-
 read_nix = define_function_from_class(source_class=NixRecordingExtractor, name="read_nix")
