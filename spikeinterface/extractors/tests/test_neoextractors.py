@@ -114,6 +114,13 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'neuralynx/Cheetah_v5.7.4/original_data',
     ]
 
+class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuralynxSortingExtractor
+    downloads = ['neuralynx']
+    entities = [
+        'neuralynx/Cheetah_v5.5.1/original_data',
+        'neuralynx/Cheetah_v5.6.3/original_data',
+    ]
 
 class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockRecordingExtractor
@@ -123,6 +130,15 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
     ]
+class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = BlackrockSortingExtractor
+    downloads = ['blackrock']
+    entities = [
+        'blackrock/FileSpec2.3001.nev',
+        "blackrock/blackrock_2_1/l101210-001.nev"
+    ]
+    
+    
 
 
 class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -223,6 +239,11 @@ class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
     entities = [
         "alphaomega/mpx_map_version4",
     ]
+
+class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = EDFRecordingExtractor
+    downloads = ['edf']
+    entities = ['edf/edf+C.edf']
 
 
 if __name__ == '__main__':

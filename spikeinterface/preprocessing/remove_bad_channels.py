@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core.channelslicerecording import ChannelSliceRecording
+from spikeinterface.core.channelslice import ChannelSliceRecording
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor
