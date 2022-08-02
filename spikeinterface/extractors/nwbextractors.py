@@ -138,11 +138,6 @@ class NwbRecordingExtractor(BaseRecording):
         num_frames = int(self._es.data.shape[0])
         num_channels = len(self._es.electrodes.data)
 
-        # Channels gains - for RecordingExtractor, these are values to cast traces to uV
-        if self._es.channel_conversion is not None:
-            gains = self._es.conversion * self._es.channel_conversion[:] * 1e6
-        else:
-            gains = self._es.conversion * np.ones(num_channels) * 1e6
         # Extractors channel groups must be integers, but Nwb electrodes group_name can be strings
         if 'group_name' in self._nwbfile.electrodes.colnames:
             unique_grp_names = list(np.unique(self._nwbfile.electrodes['group_name'][:]))
@@ -162,9 +157,20 @@ class NwbRecordingExtractor(BaseRecording):
 
         self.extra_requirements.extend(['pandas', 'pynwb', 'hdmf'])
 
-        # If gains are not 1, set has_scaled to True
-        if np.any(gains != 1):
-            self.set_channel_gains(gains)
+        # Channels gains - for RecordingExtractor, these are values to cast traces to uV
+        gains = self._es.conversion * 1e6
+        if self._es.channel_conversion is not None:
+            gains = self._es.conversion * self._es.channel_conversion[:] * 1e6
+
+        # Set gains
+        self.set_channel_gains(gains)
+        
+        # Set offsets
+        offset = self._es.offset if hasattr(self._es, "offset") else 0
+        if offset == 0 and "offset" in self._nwbfile.electrodes:
+            offset = self._nwbfile.electrodes["offset"]
+
+        self.set_channel_offsets(offset * 1e6)
 
         # Add properties
         properties = dict()

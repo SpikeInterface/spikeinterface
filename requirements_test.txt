@@ -78,3 +78,6 @@ pyedflib
 pymde
 torch
 pynndescent
+
+## NWB extractor
+pynwb>=2.1.0
