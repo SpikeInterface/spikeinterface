@@ -203,7 +203,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
 
 class NeoSortingSegment(BaseSortingSegment):
-    def __init__(self, neo_reader, segment_index, use_natural_unit_ids, t_start, _sampling_frequency):
+    def __init__(self, neo_reader, segment_index, use_natural_unit_ids, t_start, sampling_frequency):
         BaseSortingSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
