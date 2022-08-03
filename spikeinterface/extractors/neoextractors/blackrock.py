@@ -38,9 +38,11 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     file_path: str
         The file path to load the recordings from.
     sampling_frequency: float, None by default.
-        The sampling frequency for the spiking channels. When the signal data is available (.ncs) those files will be 
-        used to extract the frequency. Otherwise, the sampling frequency needs to be specified for this extractor.
+        The sampling frequency for the sorting extractor. When the signal data is available (.ncs) those files will be 
+        used to extract the frequency automatically. Otherwise, the sampling frequency needs to be specified for 
+        this extractor to be initialized.
     """
+    
     mode = 'file'
     NeoRawIOClass = 'BlackrockRawIO'
     handle_spike_frame_directly = False
