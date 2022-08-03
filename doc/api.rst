@@ -95,9 +95,46 @@ Non-NEO-based
     .. autofunction:: read_waveclust
     .. autofunction:: read_yass
 
+Low-level classes
+~~~~~~~~~~~~~~~~~
 
+.. automodule:: spikeinterface.extractors
 
-
+    .. autoclass:: AlphaOmegaRecordingExtractor
+    .. autoclass:: AlphaOmegaEventExtractor
+    .. autoclass:: AxonaRecordingExtractor
+    .. autoclass:: BiocamRecordingExtractor
+    .. autoclass:: BlackrockRecordingExtractor
+    .. autoclass:: BlackrockSortingExtractor
+    .. autoclass:: CedRecordingExtractor
+    .. autoclass:: EDFRecordingExtractor
+    .. autoclass:: IntanRecordingExtractor
+    .. autoclass:: MaxwellRecordingExtractor
+    .. autoclass:: MaxwellEventExtractor
+    .. autoclass:: MaxwellEventSegment
+    .. autoclass:: MEArecRecordingExtractor
+    .. autoclass:: MEArecSortingExtractor
+    .. autoclass:: MCSRawRecordingExtractor
+    .. autoclass:: NeoBaseRecordingExtractor
+    .. autoclass:: NeoRecordingSegment
+    .. autoclass:: NeoBaseSortingExtractor
+    .. autoclass:: NeoSortingSegment
+    .. autoclass:: NeoBaseEventExtractor
+    .. autoclass:: NeoEventSegment
+    .. autoclass:: NeuralynxRecordingExtractor
+    .. autoclass:: NeuralynxSortingExtractor
+    .. autoclass:: NeuroScopeRecordingExtractor
+    .. autoclass:: NeuroScopeSortingExtractor
+    .. autoclass:: NeuroScopeSortingSegment
+    .. autoclass:: NixRecordingExtractor
+    .. autoclass:: OpenEphysLegacyRecordingExtractor
+    .. autoclass:: OpenEphysBinaryRecordingExtractor
+    .. autoclass:: OpenEphysBinaryEventExtractor
+    .. autoclass:: PlexonRecordingExtractor
+    .. autoclass:: Spike2RecordingExtractor
+    .. autoclass:: SpikeGadgetsRecordingExtractor
+    .. autoclass:: SpikeGLXRecordingExtractor
+    .. autoclass:: TdtRecordingExtractor
 
 spikeinterface.preprocessing
 ----------------------------
