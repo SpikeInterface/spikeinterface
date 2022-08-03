@@ -177,14 +177,14 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
     def _auto_guess_sampling_frequency(self):
         """
-        When the signal channels are available the sampling rate is set the one with the higher frequency.
+        When the signal channels are available the sampling rate is set that of the channel with the higher frequency.
         
-        Because neo handle spike in times (s or ms) but spikeinterface in frames related to signals spikeinterface 
+        Because neo handle spike in times (s or ms) but spikeinterface in frames related to signals, spikeinterface 
         need the sampling frequency. 
         
-        Internally many format do have have the spike time stamps at the same speed as the signal but at a higher
-        clocks speed. Here in spikeinterface we need spike index to be at the same speed that signal it do not make 
-        sense to have spikes at 50kHz sample when the signal is 10kHz. Neo handle this but not spikeinterface.
+        Internally many format do have the spike timestamps at the same speed as the signal but at a higher
+        clocks speed. Here in spikeinterface we need spike index to be at the same speed that signal, therefore it does
+        not make sense to have spikes at 50kHz when the signal is 10kHz. Neo handle this but not spikeinterface.
 
         In neo spikes can have diffrents sampling rate than signals so conversion from signals frames to times is
         format dependent.
