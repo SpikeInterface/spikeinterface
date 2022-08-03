@@ -43,6 +43,8 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     """
     mode = 'file'
     NeoRawIOClass = 'BlackrockRawIO'
+    handle_spike_frame_directly = False
+
 
     def __init__(self, file_path, sampling_frequency=None):
         neo_kwargs = {'filename': str(file_path)}
