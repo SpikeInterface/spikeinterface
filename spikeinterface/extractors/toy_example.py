@@ -1,7 +1,8 @@
 import numpy as np
-from spikeinterface.extractors import NumpyRecording, NumpySorting
+
 from probeinterface import Probe
-import numpy as np
+
+from spikeinterface.extractors import NumpyRecording, NumpySorting
 
 
 def toy_example(duration=10, num_channels=4, num_units=10,
@@ -10,29 +11,29 @@ def toy_example(duration=10, num_channels=4, num_units=10,
                 contact_spacing_um=40, num_columns=1,
                 spike_times=None, spike_labels=None,
                 score_detection=1, seed=None):
-    '''
-    Creates toy recording and sorting extractors.
+    """
+    Creates a toy recording and sorting extractors.
 
     Parameters
     ----------
     duration: float (or list if multi segment)
-        Duration in s (default 10)
+        Duration in seconds (default 10).
     num_channels: int
-        Number of channels (default 4)
+        Number of channels (default 4).
     num_units: int
-        Number of units (default 10)
+        Number of units (default 10).
     sampling_frequency: float
-        Sampling frequency (default 30000)
-    num_segments: int default 2
-        Number of segments.
+        Sampling frequency (default 30000).
+    num_segments: int
+        Number of segments (default 2).
     spike_times: ndarray (or list of multi segment)
-        spike time in the recording
+        Spike time in the recording.
     spike_labels: ndarray (or list of multi segment)
-        cluster label for each spike time (needs to specified both together)
+        Cluster label for each spike time (needs to specified both together).
     score_detection: int (between 0 and 1)
-        generate the sorting based on a subset of spikes compare with the trace generation
+        Generate the sorting based on a subset of spikes compare with the trace generation.
     seed: int
-        Seed for random initialization
+        Seed for random initialization.
 
     Returns
     -------
@@ -40,7 +41,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
         The output recording extractor.
     sorting: SortingExtractor
         The output sorting extractor.
-    '''
+    """
 
     if isinstance(duration, int):
         duration = float(duration)
@@ -335,24 +336,23 @@ def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampli
 
 
 def synthetize_spike_train(duration, baseline_rate, num_violations, violation_delta=1e-5):
-    """Create a spike train
-    Has uniform inter-spike intervals, except where isis violations occur
+    """Create a spike train. Has uniform inter-spike intervals, except where isis violations occur.
 
     Parameters
     ----------
     duration : float
-        Length of simulated recording (in seconds)
+        Length of simulated recording (in seconds).
     baseline_rate : float
-        Firing rate for 'true' spikes
+        Firing rate for 'true' spikes.
     num_violations : int
-        Number of contaminating spikes
+        Number of contaminating spikes.
     violation_delta : float, optional
-        Temporal offset of contaminating spikes (in seconds), by default 1e-5
+        Temporal offset of contaminating spikes (in seconds), by default 1e-5.
 
     Returns
     -------
-    np.array
-        Array of monotonically increasing spike times
+    spike_train : np.array
+        Array of monotonically increasing spike times.
     """
 
     isis = np.ones((int(duration*baseline_rate),)) / baseline_rate

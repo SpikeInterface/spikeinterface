@@ -2,7 +2,6 @@
 from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-from spikeinterface.extractors import read_mearec
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import GroundTruthComparison
@@ -20,11 +19,12 @@ import numpy as np
 
 class BenchmarkPeakSelection:
 
-    def __init__(self, mearec_file, job_kwargs={}, tmp_folder=None, verbose=True):
-        self.mearec_file = mearec_file
+    def __init__(self, recording, gt_sorting, exhaustive_gt=True, job_kwargs={}, tmp_folder=None, verbose=True):
         self.verbose = verbose
-        self.recording, self.gt_sorting = read_mearec(mearec_file)
+        self.recording = recording
+        self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
+        self.exhaustive_gt = exhaustive_gt
         self.recording_f = bandpass_filter(self.recording,  dtype='float32')
         self.recording_f = common_reference(self.recording_f)
         self.sampling_rate = self.recording_f.get_sampling_frequency()
@@ -134,7 +134,7 @@ class BenchmarkPeakSelection:
         
         print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 
-        self.comp = GroundTruthComparison(self.gt_sorting, self.sliced_gt_sorting)
+        self.comp = GroundTruthComparison(self.gt_sorting, self.sliced_gt_sorting, exhaustive_gt=self.exhaustive_gt)
 
         for label, sorting in zip(['gt', 'full_gt', 'garbage'], [self.sliced_gt_sorting, self.gt_sorting, self.garbage_sorting]): 
 
@@ -178,7 +178,7 @@ class BenchmarkPeakSelection:
         self.garbage_peaks = self.peaks[garbage_matches]
 
 
-    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5):
+    def _scatter_clusters(self, xs, ys, sorting, colors=None, labels=None, ax=None, n_std=2.0, force_black_for=[], s=1, alpha=0.5, show_ellipses=True):
 
         if colors is None:
             from spikeinterface.widgets import get_unit_colors
@@ -217,24 +217,25 @@ class BenchmarkPeakSelection:
             if not np.isfinite([vx, vy, rho]).all():
                 continue
 
-            ell = Ellipse(
-                (0, 0),
-                width=2 * np.sqrt(1 + rho),
-                height=2 * np.sqrt(1 - rho),
-                facecolor=(0, 0, 0, 0),
-                edgecolor=colors[unit_id],
-                linewidth=1,
-            )
-            transform = (
-                transforms.Affine2D()
-                .rotate_deg(45)
-                .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
-                .translate(mean_x, mean_y)
-            )
-            ell.set_transform(transform + ax.transData)
-            ax.add_patch(ell)
+            if show_ellipses:
+                ell = Ellipse(
+                    (0, 0),
+                    width=2 * np.sqrt(1 + rho),
+                    height=2 * np.sqrt(1 - rho),
+                    facecolor=(0, 0, 0, 0),
+                    edgecolor=colors[unit_id],
+                    linewidth=1,
+                )
+                transform = (
+                    transforms.Affine2D()
+                    .rotate_deg(45)
+                    .scale(n_std * np.sqrt(vx), n_std * np.sqrt(vy))
+                    .translate(mean_x, mean_y)
+                )
+                ell.set_transform(transform + ax.transData)
+                ax.add_patch(ell)
 
-    def plot_clusters(self, title=None, show_probe=False):
+    def plot_clusters(self, title=None, show_probe=False, show_ellipses=True):
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
         if title is not None:
             fig.suptitle(f'Peak selection results with {title}')
@@ -246,7 +247,7 @@ class BenchmarkPeakSelection:
 
         from spikeinterface.widgets import get_unit_colors
         colors = get_unit_colors(self.gt_sorting)
-        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'],  self.gt_sorting, colors, s=1, alpha=0.5, ax=ax)
+        self._scatter_clusters(self.gt_positions['x'], self.gt_positions['y'],  self.gt_sorting, colors, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.set_xlabel('x')
@@ -257,9 +258,10 @@ class BenchmarkPeakSelection:
         if show_probe:
             plot_probe_map(self.recording_f, ax=ax)
 
-        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'],  self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax)
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
+        self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'],  self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
+        if self.exhaustive_gt:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
         ax.set_xlabel('x')
         ax.set_yticks([], [])
 
@@ -269,11 +271,12 @@ class BenchmarkPeakSelection:
             plot_probe_map(self.recording_f, ax=ax)
 
         ax.scatter(self.garbage_positions['x'], self.garbage_positions['y'],  c='k', s=1, alpha=0.5)
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
+        if self.exhaustive_gt:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.set_yticks([], [])
         ax.set_xlabel('x')
-        ax.set_yticks([], [])
-
+        
 
     def plot_clusters_amplitudes(self, title=None, show_probe=False, clim=(-100, 0), cmap='viridis'):
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
@@ -391,6 +394,7 @@ class BenchmarkPeakSelection:
         else:
             distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
+        print(distances)
         ax = axs[0, 1]
         im = ax.imshow(distances, aspect='auto')
         ax.set_title(metric)
@@ -414,7 +418,7 @@ class BenchmarkPeakSelection:
 
         ax = axs[1, 0]
 
-        noise_levels = get_noise_levels(self.recording_f)
+        noise_levels = get_noise_levels(self.recording_f, return_scaled=False)
         snrs = self.peaks['amplitude']/noise_levels[self.peaks['channel_ind']]
         garbage_snrs = self.garbage_peaks['amplitude']/noise_levels[self.garbage_peaks['channel_ind']]
         amin, amax = snrs.min(), snrs.max()
