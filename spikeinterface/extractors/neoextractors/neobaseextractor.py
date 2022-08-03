@@ -239,7 +239,7 @@ class NeoSortingSegment(BaseSortingSegment):
             # When handle_spike_frame_directly=True, the extractors handles timestamps as frames
             spike_frames = spike_timestamps
         else:
-            # Conver timestamps to seconds
+            # Convert timestamps to seconds
             spike_times = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype='float64')
             # Re-center to zero for each segment and multiply by frequency to convert seconds to frames
             spike_frames = ((spike_times - self._t_start) * self._sampling_frequency).astype('int64')
