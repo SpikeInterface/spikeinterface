@@ -209,7 +209,7 @@ class NeoSortingSegment(BaseSortingSegment):
         self.segment_index = segment_index
         self.use_natural_unit_ids = use_natural_unit_ids
         self._t_start = t_start
-        self._sampling_frequency = _sampling_frequency
+        self._sampling_frequency = sampling_frequency
 
         self._natural_ids = None
 
