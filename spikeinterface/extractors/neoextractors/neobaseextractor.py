@@ -202,13 +202,13 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
 
 class NeoSortingSegment(BaseSortingSegment):
-    def __init__(self, neo_reader, segment_index, use_natural_unit_ids, t_start, sampling_freq):
+    def __init__(self, neo_reader, segment_index, use_natural_unit_ids, t_start, _sampling_frequency):
         BaseSortingSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.use_natural_unit_ids = use_natural_unit_ids
         self._t_start = t_start
-        self._sampling_freq = sampling_freq
+        self._sampling_frequency = _sampling_frequency
 
         self._natural_ids = None
 
@@ -234,7 +234,7 @@ class NeoSortingSegment(BaseSortingSegment):
             # convert to second second
             spike_times = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype='float64')
             # convert to sample related to recording signals
-            spike_frames = ((spike_times - self._t_start) * self._sampling_freq).astype('int64')
+            spike_frames = ((spike_times - self._t_start) * self._sampling_frequency).astype('int64')
 
         # clip
         if start_frame is not None:
