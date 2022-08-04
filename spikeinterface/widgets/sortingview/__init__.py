@@ -4,4 +4,4 @@ from .crosscorrelograms import CrossCorrelogramsPlotter
 from .timeseries import TimeseriesPlotter
 from .sorting_summary import SortingSummaryPlotter
 from .unit_locations import UnitLocationsPlotter
-from .unit_waveforms import UnitWaveformPlotter
+from .unit_templates import UnitTemplatePlotter

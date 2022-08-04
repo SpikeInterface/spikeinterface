@@ -1,9 +1,9 @@
 from ..base import to_attr
-from ..unit_waveforms import UnitWaveformsWidget
+from ..unit_templates import UnitTemplateWidget
 from .base_sortingview import SortingviewPlotter
 
 
-class UnitWaveformPlotter(SortingviewPlotter):
+class UnitTemplatePlotter(SortingviewPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
 
@@ -46,4 +46,4 @@ class UnitWaveformPlotter(SortingviewPlotter):
         return v_average_waveforms
 
 
-UnitWaveformPlotter.register(UnitWaveformsWidget)
+UnitTemplatePlotter.register(UnitTemplateWidget)

@@ -6,7 +6,7 @@ from .amplitudes import AmplitudeTimeseriesPlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
 from .unit_locations import UnitLocationsPlotter
-from .unit_waveforms import UnitWaveformPlotter
+from .unit_templates import UnitTemplatePlotter
 
 
 class SortingSummaryPlotter(SortingviewPlotter):
@@ -20,8 +20,8 @@ class SortingSummaryPlotter(SortingviewPlotter):
 
         amplitudes_plotter = AmplitudeTimeseriesPlotter()
         v_spike_amplitudes = amplitudes_plotter.do_plot(dp.amplitudes, generate_url=False, backend="sortingview")
-        waveforms_plotter = UnitWaveformPlotter()
-        v_average_waveforms = waveforms_plotter.do_plot(dp.waveforms, generate_url=False, backend="sortingview")
+        template_plotter = UnitTemplatePlotter()
+        v_average_waveforms = template_plotter.do_plot(dp.waveforms, generate_url=False, backend="sortingview")
         xcorrelograms_plotter = CrossCorrelogramsPlotter()
         v_cross_correlograms = xcorrelograms_plotter.do_plot(dp.correlograms, generate_url=False, backend="sortingview")
         unitlocation_plotter = UnitLocationsPlotter()
