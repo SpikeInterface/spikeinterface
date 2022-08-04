@@ -1,3 +1,5 @@
+from typing import Type
+
 # most important extractor are in spikeinterface.core
 from spikeinterface.core import (BaseRecording, BaseSorting, BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
@@ -129,7 +131,7 @@ event_extractor_full_list = [
 ]
 
 
-def get_recording_extractor_from_name(name: str) -> BaseRecording:
+def get_recording_extractor_from_name(name: str) -> Type[BaseRecording]:
     """
     Returns the Recording Extractor class based on its name.
 
@@ -151,7 +153,7 @@ def get_recording_extractor_from_name(name: str) -> BaseRecording:
     raise ValueError(f"Recording extractor '{name}' not found.")
 
 
-def get_sorting_extractor_from_name(name: str) -> BaseSorting:
+def get_sorting_extractor_from_name(name: str) -> Type[BaseSorting]:
     """
     Returns the Sorting Extractor class based on its name.
 
