@@ -31,6 +31,22 @@ def define_function_from_class(source_class, name):
     return reader_func
 
 
+def inspect_function_argument(function, argument):
+    """Inspect if a function has an argument
+
+    Parameters
+    ----------
+    function : callable
+    argument : str
+
+    Returns
+    -------
+    bool
+    """
+    from inspect import signature
+    return argument in signature(function).parameters
+
+
 def read_python(path):
     """Parses python scripts in a dictionary
 

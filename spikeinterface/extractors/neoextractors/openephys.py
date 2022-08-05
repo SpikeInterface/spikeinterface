@@ -20,6 +20,7 @@ from .neobaseextractor import (NeoBaseRecordingExtractor,
                                NeoBaseSortingExtractor,
                                NeoBaseEventExtractor)
 
+from spikeinterface.core.core_tools import inspect_function_argument
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
 
@@ -81,7 +82,20 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'dirname': folder_path}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
 
-        probe = pi.read_openephys(folder_path, raise_error=False)
+        # find stream_name
+        stream_names = self.neo_reader.header['signal_streams']['name']
+        if stream_id is None:
+            stream_index = 0
+        else:
+            stream_index = list(self.neo_reader.header['signal_streams']['id']).index(stream_id)
+        stream_name = stream_names[stream_index]
+
+        # check if stream_name is an available argument
+        if inspect_function_argument(pi.read_openephys, "stream_name"):
+            probe = pi.read_openephys(folder_path, stream_name=stream_name, raise_error=False)
+        else:
+            probe = pi.read_openephys(folder_path, raise_error=False)
+
         if probe is not None:
             self.set_probe(probe, in_place=True)
             probe_name = probe.annotations["probe_name"]

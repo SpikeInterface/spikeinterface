@@ -98,8 +98,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
         sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
         self.set_property("inter_sample_shift", sample_shifts)
 
-
-        self._kwargs = {'file_path': str(folder_path.absolute()), 'load_sync_channel': load_sync_channel}
+        self._kwargs = {'folder_path': str(folder_path.absolute()), 'load_sync_channel': load_sync_channel}
 
 
 class CBinIblRecordingSegment(BaseRecordingSegment):
