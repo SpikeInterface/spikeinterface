@@ -41,6 +41,7 @@ from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
+from .mclustextractors import MClusSortingExtractor, read_mclust
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
 from .waveclussnippetstextractors import WaveClusSnippetsExtractor
 from .yassextractors import YassSortingExtractor, read_yass
@@ -107,6 +108,7 @@ sorting_extractor_full_list = [
 
     KlustaSortingExtractor,
     HDSortSortingExtractor,
+    MClusSortingExtractor,
     WaveClusSortingExtractor,
     YassSortingExtractor,
     CombinatoSortingExtractor,
