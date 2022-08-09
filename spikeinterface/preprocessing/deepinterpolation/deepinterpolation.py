@@ -205,7 +205,6 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
 
 class DeepInterpolatedRecording(BasePreprocessor):
     name = 'deepinterpolate'
-    preferred_mp_context = "spawn"
 
     def __init__(self, recording: BaseRecording, model_path: str,
                  pre_frames: int = 30, post_frames: int = 30, pre_post_omission: int = 1,
@@ -286,6 +285,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
                                                                  disable_tf_logger)
             self.add_recording_segment(recording_segment)
 
+        self._preferred_mp_context = "spawn"
         self._kwargs = dict(recording=recording.to_dict(), model_path=model_path,
                             pre_frames=pre_frames, post_frames=post_frames, pre_post_omission=pre_post_omission,
                             batch_size=batch_size, **random_chunk_kwargs)
