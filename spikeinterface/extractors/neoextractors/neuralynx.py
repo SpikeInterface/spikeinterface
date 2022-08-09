@@ -43,6 +43,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     """
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'
+    handle_spike_frame_directly = False
 
     def __init__(self, folder_path, sampling_frequency=None):
         neo_kwargs = {'dirname': folder_path}
