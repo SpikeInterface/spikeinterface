@@ -27,6 +27,7 @@ SORTER_DOCKER_MAP = dict(
     spykingcircus='spyking-circus',
     spykingcircus2='spyking-circus2',
     tridesclous='tridesclous',
+    yass='yass',
     # Matlab compiled sorters:
     hdsort='hdsort-compiled',
     ironclust='ironclust-compiled',
