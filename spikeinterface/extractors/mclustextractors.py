@@ -6,8 +6,8 @@ from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 from spikeinterface.core.core_tools import define_function_from_class
 
 
-class MClusSortingExtractor(BaseSorting):
-    """Load MClus sorting solution as a sorting extractor.
+class MClustSortingExtractor(BaseSorting):
+    """Load MClust sorting solution as a sorting extractor.
 
     Parameters
     ----------
@@ -20,11 +20,11 @@ class MClusSortingExtractor(BaseSorting):
         unit as the input data.
     Returns
     -------
-    extractor : MClusSortingExtractor
+    extractor : MClustSortingExtractor
         Loaded data.
     """
 
-    extractor_name = "MClusSortingExtractor"
+    extractor_name = "MClustSortingExtractor"
     installation_mesg = ""  # error message when not installed
 
     def __init__(self, folder_path, sampling_frequency, raw_to_sec = None):
@@ -40,7 +40,7 @@ class MClusSortingExtractor(BaseSorting):
                 break
 
         if ext is None:
-            raise Exception("Mclus files not found in path")
+            raise Exception("Mclust files not found in path")
 
         if ext.startswith('raw') and raw_to_sec is None: 
             raise Exception(f"To load files with extension {ext} a raw_to_sec input is required.")
@@ -91,4 +91,4 @@ class MClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_mclust = define_function_from_class(source_class=MClusSortingExtractor, name="read_mclust")
+read_mclust = define_function_from_class(source_class=MClustSortingExtractor, name="read_mclust")
