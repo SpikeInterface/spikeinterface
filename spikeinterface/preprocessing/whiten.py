@@ -4,6 +4,7 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 from ..core import get_random_data_chunks
+from .filter import fix_dtype
 from spikeinterface import ChannelsAggregationRecording
 
 
@@ -23,11 +24,14 @@ class WhitenRecording(BasePreprocessor):
     """
     name = 'whiten'
 
-    def __init__(self, recording, **random_chunk_kwargs):
+    def __init__(self, recording, dtype=None, **random_chunk_kwargs):
+        dtype = fix_dtype(dtype)
+        
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
-
+ 
         # compute whitening matrix
-        M = np.mean(random_data, axis=0)
+        # setting the datatype of the M matrix should be sufficient to change the output datatype
+        M = np.mean(random_data, axis=0, dtype=dtype)
         M = M[None, :]
         data = random_data - M
         AAt = data.T @ data
@@ -35,10 +39,10 @@ class WhitenRecording(BasePreprocessor):
         U, S, Ut = np.linalg.svd(AAt, full_matrices=True)
         W = (U @ np.diag(1 / np.sqrt(S))) @ Ut
 
-        BasePreprocessor.__init__(self, recording)
+        BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = WhitenRecordingSegment(parent_segment, W, M)
+            rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict())
