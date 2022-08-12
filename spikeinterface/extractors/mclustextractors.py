@@ -15,9 +15,12 @@ class MClustSortingExtractor(BaseSorting):
         Path to folder with t files.
     sampling_frequency : sampling frequency
         sampling frequency in Hz.
-    raw_to_sec: float or None
+    sampling_frequency_raw: float or None
         Required to read files with raw formats. In that case, the samples are saved in the same
-        unit as the input data.
+        unit as the input data. Default None
+        Examples: 
+            - If raw time is in tens of ms sampling_frequency_raw=10000 
+            - If raw time is in samples sampling_frequency_raw=sampling_frequency 
     Returns
     -------
     extractor : MClustSortingExtractor
@@ -27,7 +30,7 @@ class MClustSortingExtractor(BaseSorting):
     extractor_name = "MClustSortingExtractor"
     installation_mesg = ""  # error message when not installed
 
-    def __init__(self, folder_path, sampling_frequency, raw_to_sec = None):
+    def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw = None):
         end_header_str = '%%ENDHEADER'
         ext_list = ['t64', 't32', 't', 'raw64','raw32']
         unit_ids = []
@@ -42,8 +45,8 @@ class MClustSortingExtractor(BaseSorting):
         if ext is None:
             raise Exception("Mclust files not found in path")
 
-        if ext.startswith('raw') and raw_to_sec is None: 
-            raise Exception(f"To load files with extension {ext} a raw_to_sec input is required.")
+        if ext.startswith('raw') and sampling_frequency_raw is None: 
+            raise Exception(f"To load files with extension {ext} a sampling_frequency_raw input is required.")
         
         if ext.endswith('64'):
             dataformat='>u8'
@@ -64,7 +67,7 @@ class MClustSortingExtractor(BaseSorting):
             if ext.startswith('t'):
                 times = times/10000
             else:
-                times = times*raw_to_sec
+                times = times/sampling_frequency_raw
             spiketrains[unit] = np.rint(times * sampling_frequency)
 
             
@@ -73,7 +76,7 @@ class MClustSortingExtractor(BaseSorting):
 
         self.add_sorting_segment(MClustSortingSegment(unit_ids, spiketrains))
         self._kwargs = {'folder_path': str(Path(folder_path).absolute()), 'sampling_frequency':sampling_frequency,
-                        'raw_to_sec':raw_to_sec}
+                        'sampling_frequency_raw':sampling_frequency_raw}
 
 
 class MClustSortingSegment(BaseSortingSegment):
