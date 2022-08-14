@@ -24,14 +24,16 @@ class WhitenRecording(BasePreprocessor):
     """
     name = 'whiten'
 
-    def __init__(self, recording, dtype=None, **random_chunk_kwargs):
-        dtype = fix_dtype(dtype)
+    def __init__(self, recording, dtype="float32", **random_chunk_kwargs):
         
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
- 
+        random_data_dtype = random_data.dtype
+        # if uint --> force float32
+        if random_data_dtype.kind == "u":
+            random_data = random_data.astype("float32")
+            
         # compute whitening matrix
-        # setting the datatype of the M matrix should be sufficient to change the output datatype
-        M = np.mean(random_data, axis=0, dtype=dtype)
+        M = np.mean(random_data, axis=0)
         M = M[None, :]
         data = random_data - M
         AAt = data.T @ data
@@ -50,16 +52,22 @@ class WhitenRecording(BasePreprocessor):
 
 
 class WhitenRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, W, M):
+    def __init__(self, parent_recording_segment, W, M, dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.W = W
         self.M = M
+        self.dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+        traces_dtype = traces_chunk.dtype
+        # if uint --> force int
+        if traces_dtype.kind == "u":
+            traces_chunk = traces_chunk.astype("float32")
+            
         whiten_traces = (traces - self.M) @ self.W
         whiten_traces = whiten_traces[:, channel_indices]
-        return whiten_traces
+        return whiten_traces.astype(self.dtype)
 
 
 # The by property should be handled externally
