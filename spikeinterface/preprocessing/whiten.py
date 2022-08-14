@@ -60,7 +60,7 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
-        traces_dtype = traces_chunk.dtype
+        traces_dtype = traces.dtype
         # if uint --> force int
         if traces_dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
