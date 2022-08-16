@@ -123,6 +123,8 @@ test = [
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
     
+    ## hs-detction for sortingcomponents
+    "hs-detection",
 ]
 
 
