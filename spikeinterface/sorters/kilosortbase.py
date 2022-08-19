@@ -154,6 +154,8 @@ class KilosortBase:
             else:
                 shell_cmd = f'''
                     #!/bin/bash
+                    export MATLAB_SHELL='/usr/bin/bash'
+                    echo "Set Matlab shell to $MATLAB_SHELL"
                     cd "{output_folder}"
                     matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
                 '''
