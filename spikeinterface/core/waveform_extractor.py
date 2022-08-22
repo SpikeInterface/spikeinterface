@@ -526,7 +526,9 @@ class WaveformExtractor:
         for i, unit_id in enumerate(unit_ids):
             wfs = self.get_waveforms(unit_id, cache=False)
             for mode in modes:
-                if mode == 'median':
+                if len(wfs) == 0:
+                    arr = np.zeros(wfs.shape[1:], dtype=wfs.dtype)
+                elif mode == 'median':
                     arr = np.median(wfs, axis=0)
                 elif mode == 'average':
                     arr = np.average(wfs, axis=0)
