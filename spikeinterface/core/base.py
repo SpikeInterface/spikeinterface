@@ -30,6 +30,7 @@ class BaseExtractor:
     _main_annotations = []
     _main_properties = []
     _main_features = []
+    extra_requirements = []
 
 
     def __init__(self, main_ids):
@@ -53,9 +54,6 @@ class BaseExtractor:
         self._features = {}
 
         self.is_dumpable = True
-
-        # extractor specific list of pip extra requirements
-        self.extra_requirements = []
         
         # preferred context for multiprocessing
         self._preferred_mp_context = None

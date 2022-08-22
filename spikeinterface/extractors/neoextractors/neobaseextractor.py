@@ -26,6 +26,8 @@ class _NeoBaseExtractor:
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
+    extra_requirements = BaseRecording.extra_requirements + ['neo']
+
     def __init__(self, stream_id=None, all_annotations=False, **neo_kwargs):
 
         _NeoBaseExtractor.__init__(self, **neo_kwargs)
@@ -59,7 +61,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
         dtype = signal_channels['dtype'][0]
         BaseRecording.__init__(self, sampling_frequency, chan_ids, dtype)
-        self.extra_requirements.append('neo')
 
         # find the gain to uV
         gains = signal_channels['gain']
