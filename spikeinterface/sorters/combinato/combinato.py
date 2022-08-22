@@ -135,7 +135,7 @@ class CombinatoSorter(BaseSorter):
         vcFile_h5 = str(output_folder / ('recording.h5'))
         with h5py.File(vcFile_h5, mode='w') as f:
             f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
-            write_to_h5_dataset_format(ScaleRecording(recording), dataset_path='/data', segment_index=0,
+            write_to_h5_dataset_format(ScaleRecording(recording, dtype="float32"), dataset_path='/data', segment_index=0,
                                        file_handle=f, time_axis=0, single_axis=True,
                                        chunk_memory=params['chunk_memory'])
 

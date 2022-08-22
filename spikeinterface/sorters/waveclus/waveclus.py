@@ -161,7 +161,7 @@ class WaveClusSorter(BaseSorter):
                 f.create_dataset(
                     "sr", data=[recording.get_sampling_frequency()], dtype='float32')
                 rec_sliced = ChannelSliceRecording(recording, channel_ids=[id])
-                write_to_h5_dataset_format(ScaleRecording(rec_sliced), dataset_path='/data', segment_index=0,
+                write_to_h5_dataset_format(ScaleRecording(rec_sliced, dtype="float32"), dataset_path='/data', segment_index=0,
                                            file_handle=f, time_axis=0, single_axis=True,
                                            chunk_memory=params['chunk_memory'])
 
