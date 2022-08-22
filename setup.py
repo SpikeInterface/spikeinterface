@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 
+
 def open_requirements(fname):
     with open(fname, mode='r') as f:
         requires = f.read().split('\n')
@@ -13,6 +14,7 @@ extractors_requires = open_requirements('requirements_extractors.txt')
 extras_require = {
     "full": full_requires,
     "extractors": extractors_requires,
+    "ced": ["neo[ced]"],
 }
 
 d = {}
