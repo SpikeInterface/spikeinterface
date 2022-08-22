@@ -26,7 +26,7 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
         self._kwargs.update({'file_path': str(file_path)})
-        self.extra_requirements.append('pyedflib')
+        self.extra_requirements.append('neo[edf]')
 
 
 read_edf = define_function_from_class(source_class=EDFRecordingExtractor, name="read_edf")
