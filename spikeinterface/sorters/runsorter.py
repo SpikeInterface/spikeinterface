@@ -21,6 +21,8 @@ except ModuleNotFoundError:
 REGISTRY = 'spikeinterface'
 
 SORTER_DOCKER_MAP = dict(
+    combinato='combinato',
+    herdingspikes='herdingspikes',
     klusta='klusta',
     mountainsort4='mountainsort4',
     pykilosort='pykilosort',
