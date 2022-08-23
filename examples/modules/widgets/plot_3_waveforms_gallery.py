@@ -65,7 +65,7 @@ sw.plot_unit_probe_map(we, unit_ids=unit_ids)
 # This is your best friend to check over merge
 
 unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_waveform_density_map(we, unit_ids=unit_ids, max_channels=5)
+sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids, max_channels=5)
 
 ##############################################################################
 # plot_amplitudes_distribution()
@@ -86,10 +86,10 @@ sw.plot_amplitudes_timeseries(we)
 sw.plot_units_depth_vs_amplitude(we)
 
 ##############################################################################
-# plot_unit_localization()
+# plot_unit_locations()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_unit_localization(we, method='center_of_mass')
+sw.plot_unit_locations(we)
 
 
 

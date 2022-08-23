@@ -23,9 +23,18 @@ Release notes
 NEW API
 -------
 
-Version 0.94.0
+Version 0.95.0
 ==============
 
+* Add `BaseSnippets` object to handle waveform cutouts
+* Sacrificed `toolkit` in favor of: `preprocessing`, `postprocessing`, `qualitymetrics`, and `curation` modules
+* Major refactoring widget module to allow for multiple backends
+  * `matplotlib`
+  * `ipywidgets`
+  * `sortingview`
+* First implementations of `sortingcomponents`-based sorters:
+  * `spykingcircus2`
+  * `tridesclous2`
 
 
 Version 0.94.0

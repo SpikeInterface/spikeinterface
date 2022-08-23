@@ -1,12 +1,12 @@
 .. _release0.95.0:
 
-SpikeInterface 0.94.0 release notes
+SpikeInterface 0.95.0 release notes
 -----------------------------------
 
 31th August 2022
 
 
-Main change:
+Main changes:
  
  * Add `BaseSnippets` object to handle waveform cutouts (https://github.com/SpikeInterface/spikeinterface/pull/764)
  * Sacrificed `toolkit` in favor of: `preprocessing`, `postprocessing`, `qualitymetrics`, and `curation` modules (https://github.com/SpikeInterface/spikeinterface/pull/745)
@@ -87,7 +87,6 @@ qualitymetrics:
 
  * Improved tests (https://github.com/SpikeInterface/spikeinterface/pull/692)
  * Add sparsity to quality metrics computation (https://github.com/SpikeInterface/spikeinterface/pull/739)
- * 
 
 curation:
  * Add `CurationSortingExtractor` class (https://github.com/SpikeInterface/spikeinterface/pull/612)
