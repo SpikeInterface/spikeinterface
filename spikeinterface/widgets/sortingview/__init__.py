@@ -1,4 +1,4 @@
-from .amplitudes import AmplitudeTimeseriesPlotter
+from .amplitudes import AmplitudePlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
 from .timeseries import TimeseriesPlotter

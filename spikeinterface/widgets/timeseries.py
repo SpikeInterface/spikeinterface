@@ -2,7 +2,7 @@ import numpy as np
 
 from ..core import BaseRecording
 from .base import BaseWidget, define_widget_function_from_class
-from .utils import get_some_colors
+from .utils import get_some_colors, order_channels_by_depth
 
 
 class TimeseriesWidget(BaseWidget):
@@ -57,7 +57,7 @@ class TimeseriesWidget(BaseWidget):
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
                  time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
-                 with_colorbar=True, backend=None, **backend_kwargs):
+                 with_colorbar=True, add_legend=True, backend=None, **backend_kwargs):
         if isinstance(recording, BaseRecording):
             recordings = {'rec': recording}
             rec0 = recording
@@ -82,14 +82,7 @@ class TimeseriesWidget(BaseWidget):
             channel_ids = rec0.channel_ids
 
         if order_channel_by_depth:
-            import scipy.spatial
-            locations = rec0.get_channel_locations()
-            channel_inds = rec0.ids_to_indices(channel_ids)
-            locations = locations[channel_inds, :]
-            origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[None, :]
-            dist = scipy.spatial.distance.cdist(locations, origin, metric='euclidean')
-            dist = dist[:, 0]
-            order = np.argsort(dist)
+            order = order_channels_by_depth(rec0, channel_ids)
         else:
             order = None
 
@@ -107,7 +100,9 @@ class TimeseriesWidget(BaseWidget):
         mode = mode
         cmap = cmap
         
-        times, list_traces, frame_range, order = _get_trace_list(recordings, channel_ids, time_range, order, segment_index)
+        times, list_traces, frame_range, channel_ids = _get_trace_list(recordings, channel_ids, time_range, 
+                                                                       segment_index, order)
+        channel_locations = recordings[list(recordings.keys())[0]].get_channel_locations()
         
         # stat for auto scaling done on the first layer
         traces0 = list_traces[0]
@@ -164,7 +159,9 @@ class TimeseriesWidget(BaseWidget):
 
         plot_data = dict(
             recordings=recordings,
+            segment_index=segment_index,
             channel_ids=channel_ids,
+            channel_locations=channel_locations,
             time_range=time_range,
             frame_range=frame_range,
             times=times,
@@ -179,6 +176,7 @@ class TimeseriesWidget(BaseWidget):
             vspacing=vspacing,
             colors=colors,
             show_channel_ids=show_channel_ids,
+            add_legend=add_legend,
             order_channel_by_depth=order_channel_by_depth,
             order=order,
             tile_size=tile_size,
@@ -191,7 +189,7 @@ class TimeseriesWidget(BaseWidget):
 plot_timeseries = define_widget_function_from_class(TimeseriesWidget, 'plot_timeseries')
 
 
-def _get_trace_list(recordings, channel_ids, time_range, order, segment_index):
+def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
@@ -219,4 +217,4 @@ def _get_trace_list(recordings, channel_ids, time_range, order, segment_index):
 
         list_traces.append(traces)
     
-    return times, list_traces, frame_range, order
+    return times, list_traces, frame_range, channel_ids

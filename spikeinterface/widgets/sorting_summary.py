@@ -1,7 +1,7 @@
 import numpy as np
 
 from .base import BaseWidget, define_widget_function_from_class
-from .widget_list import (CrossCorrelogramsWidget, UnitWaveformsWidget, AmplitudeTimeseriesWidget, UnitLocationsWidget)
+from .widget_list import (CrossCorrelogramsWidget, UnitWaveformsWidget, AmplitudeWidget, UnitLocationsWidget)
 from ..core import WaveformExtractor
 from ..postprocessing import get_template_channel_sparsity, compute_template_similarity
 
@@ -50,8 +50,8 @@ class SortingSummaryWidget(BaseWidget):
         
         amplitudes_kwargs = amplitudes_kwargs if amplitudes_kwargs is not None else {}
         amplitudes_kwargs = amplitudes_kwargs.update(job_kwargs)
-        amps_plot_data = AmplitudeTimeseriesWidget(we, unit_ids=unit_ids, compute_kwargs=amplitudes_kwargs,
-                                                   hide_unit_selector=True).plot_data
+        amps_plot_data = AmplitudeWidget(we, unit_ids=unit_ids, compute_kwargs=amplitudes_kwargs,
+                                         hide_unit_selector=True).plot_data
         
         localization_kwargs = localization_kwargs if localization_kwargs is not None else {}
         locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True,

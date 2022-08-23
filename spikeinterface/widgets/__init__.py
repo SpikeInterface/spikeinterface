@@ -35,7 +35,7 @@ if HAVE_IPYW:
 # we keep this to keep compatibility so we have all previous widgets
 # except the one that have been ported that are imported
 # with "from .widget_list import *" in the first line
-from .legacy_mpl_widgets import *
+from ._legacy_mpl_widgets import *
 
 
 # add backends and kwargs to doc

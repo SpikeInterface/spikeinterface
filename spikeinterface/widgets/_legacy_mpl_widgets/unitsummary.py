@@ -5,9 +5,9 @@ from .basewidget import BaseWidget
 from .utils import get_unit_colors
 
 from .unitprobemap import plot_unit_probe_map
-from .unitwaveformdensitymap import plot_unit_waveform_density_map
-from .amplitudes import plot_amplitudes_timeseries
-from .unitwaveforms import plot_unit_waveforms
+from .unitwaveformdensitymap_ import plot_unit_waveform_density_map
+from .amplitudes_ import plot_amplitudes_timeseries
+from .unitwaveforms_ import plot_unit_waveforms
 from .isidistribution import plot_isi_distribution
 
 

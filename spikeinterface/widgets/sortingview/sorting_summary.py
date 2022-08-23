@@ -2,7 +2,7 @@ from ..base import to_attr
 from ..sorting_summary import SortingSummaryWidget
 from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
-from .amplitudes import AmplitudeTimeseriesPlotter
+from .amplitudes import AmplitudePlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
 from .unit_locations import UnitLocationsPlotter
@@ -18,7 +18,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        amplitudes_plotter = AmplitudeTimeseriesPlotter()
+        amplitudes_plotter = AmplitudePlotter()
         v_spike_amplitudes = amplitudes_plotter.do_plot(dp.amplitudes, generate_url=False, backend="sortingview")
         template_plotter = UnitTemplatePlotter()
         v_average_waveforms = template_plotter.do_plot(dp.waveforms, generate_url=False, backend="sortingview")

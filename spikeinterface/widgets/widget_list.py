@@ -14,11 +14,14 @@ from .crosscorrelograms import CrossCorrelogramsWidget, plot_crosscorrelograms
 
 # drift/motion
 
+# spikes-traces
+from .spikes_on_traces import SpikesOnTracesWidget, plot_spikes_on_traces
 
 # PC related
 
 # units on probe
 from .unit_locations import UnitLocationsWidget, plot_unit_locations
+from .spike_locations import SpikeLocationsWidget, plot_spike_locations
 
 # unit summary
 
@@ -30,16 +33,18 @@ from .unit_locations import UnitLocationsWidget, plot_unit_locations
 # correlogram comparison
 
 # amplitudes
-from .amplitudes import AmplitudeTimeseriesWidget, plot_amplitudes_timeseries
+from .amplitudes import AmplitudeWidget, plot_amplitudes
 
 # summary
 from .sorting_summary import SortingSummaryWidget, plot_sorting_summary
 
 
 widget_list = [
-    AmplitudeTimeseriesWidget,
+    AmplitudeWidget,
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
+    SpikeLocationsWidget, 
+    SpikesOnTracesWidget,
     TimeseriesWidget,
     UnitLocationsWidget,
     UnitTemplateWidget,

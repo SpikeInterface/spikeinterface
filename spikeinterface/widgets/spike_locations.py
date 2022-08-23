@@ -5,12 +5,12 @@ from .base import BaseWidget, define_widget_function_from_class
 from .utils import get_unit_colors
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_unit_locations
+from ..postprocessing import compute_spike_locations
 
 
-class UnitLocationsWidget(BaseWidget):
+class SpikeLocationsWidget(BaseWidget):
     """
-    Plots unit locations.
+    Plots spike locations.
 
     Parameters
     ----------
@@ -30,17 +30,18 @@ class UnitLocationsWidget(BaseWidget):
     possible_backends = {}
 
     def __init__(self, waveform_extractor: Union[WaveformExtractor, BaseSorting], 
-                 unit_ids=None, with_channel_ids=False, compute_kwargs=None, unit_colors=None, 
+                 unit_ids=None, segment_index=None,
+                 with_channel_ids=False, compute_kwargs=None, unit_colors=None, 
                  hide_unit_selector=False, units_in_legend=None,
                  backend=None, **backend_kwargs):
-        if waveform_extractor.is_extension("unit_locations"):
-            ulc = waveform_extractor.load_extension("unit_locations")
-            unit_locations = ulc.get_data(outputs="numpy")
+        if waveform_extractor.is_extension("spike_locations"):
+            slc = waveform_extractor.load_extension("spike_locations")
+            spike_locations = slc.get_data(outputs="by_unit")
         else:
             compute_kwargs = compute_kwargs if compute_kwargs is not None else {}
-            unit_locations = compute_unit_locations(waveform_extractor, 
-                                                    outputs="numpy",
-                                                    **compute_kwargs)
+            spike_locations = compute_spike_locations(waveform_extractor, 
+                                                      outputs="by_unit",
+                                                      **compute_kwargs)
         
         recording = waveform_extractor.recording
         sorting = waveform_extractor.sorting
@@ -48,6 +49,11 @@ class UnitLocationsWidget(BaseWidget):
         channel_ids = recording.channel_ids
         channel_locations = recording.get_channel_locations()
         probegroup = recording.get_probegroup()
+        
+        if sorting.get_num_segments() > 1:
+            assert segment_index is not None, "Specify segment index for multi-segment object"
+        else:
+            segment_index = 0
         
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
@@ -59,7 +65,7 @@ class UnitLocationsWidget(BaseWidget):
             unit_locations = unit_locations[unit_indices]
 
         plot_data = dict(
-            unit_locations=unit_locations,
+            spike_locations=spike_locations[segment_index],
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             unit_colors=unit_colors,
@@ -73,4 +79,4 @@ class UnitLocationsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-plot_unit_locations = define_widget_function_from_class(UnitLocationsWidget, 'plot_unit_locations')
+plot_spike_locations = define_widget_function_from_class(SpikeLocationsWidget, 'plot_spike_locations')

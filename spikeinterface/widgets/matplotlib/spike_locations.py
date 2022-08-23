@@ -4,13 +4,14 @@ from probeinterface.plotting import plot_probe
 import numpy as np
 
 from ..base import to_attr
-from ..unit_locations import UnitLocationsWidget
+from ..spike_locations import SpikeLocationsWidget
 from .base_mpl import MplPlotter
 
 from matplotlib.patches import Ellipse
 from matplotlib.lines import Line2D
 
-class UnitLocationsPlotter(MplPlotter):
+
+class SpikeLocationsPlotter(MplPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
@@ -18,7 +19,7 @@ class UnitLocationsPlotter(MplPlotter):
 
         self.make_mpl_figure(**backend_kwargs)
         
-        unit_locations = dp.unit_locations
+        spike_locations = dp.spike_locations
         
         probegroup = ProbeGroup.from_dict(dp.probegroup_dict)
         probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
@@ -40,27 +41,41 @@ class UnitLocationsPlotter(MplPlotter):
 
         self.ax.set_title('')
 
-        # color = np.array([dp.unit_colors[unit_id] for unit_id in dp.unit_ids])
-        width = height = 10
-        ellipse_kwargs = dict(width=width, height=height, lw=2)
-        
         if dp.units_in_legend is None:
-            labels = dp.unit_ids
-        else:
-            labels = [u if u in dp.units_in_legend else None for u in dp.unit_ids]
-        
-        patches = [Ellipse((unit_locations[i]), color=dp.unit_colors[unit], zorder=3, alpha=0.7, label=labels[i],
-                           **ellipse_kwargs) for i, unit in enumerate(dp.unit_ids)]
-        for p in patches:
-            self.ax.add_patch(p)
+            units_in_legend = dp.unit_ids
+        labels = [u if u in units_in_legend else None for u in dp.unit_ids]
+
+        for i, unit in enumerate(dp.unit_ids):
+            locs = spike_locations[unit]
+            self.ax.scatter(locs["x"], locs["y"], s=2, alpha=0.3,
+                            label=labels[i], zorder=3)
             
         handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
-                          color=dp.unit_colors[unit]) for unit in dp.units_in_legend]
-        labels = dp.units_in_legend
+                          color=dp.unit_colors[unit]) for unit in units_in_legend]
+        labels = units_in_legend
             
         self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)
 
+        # set proper axis limits
+        all_locs = np.concatenate(list(spike_locations.values()))
+        xlims = np.quantile(all_locs["x"], [0.01, 0.99])
+        ylims = np.quantile(all_locs["y"], [0.01, 0.99])
+        
+        ax_xlims = list(self.ax.get_xlim())
+        ax_ylims = list(self.ax.get_ylim())
+        
+        print(xlims, ax_xlims)
+        print(ylims, ax_ylims)
+        
+        ax_xlims[0] = xlims[0] if xlims[0] < ax_xlims[0] else ax_xlims[0]
+        ax_xlims[1] = xlims[1] if xlims[1] > ax_xlims[1] else ax_xlims[1]
+        ax_ylims[0] = ylims[0] if ylims[0] < ax_ylims[0] else ax_ylims[0]
+        ax_ylims[1] = ylims[1] if ylims[1] > ax_ylims[1] else ax_ylims[1]
+        
+        self.ax.set_xlim(ax_xlims)
+        self.ax.set_ylim(ax_ylims)
 
 
-UnitLocationsPlotter.register(UnitLocationsWidget)
+
+SpikeLocationsPlotter.register(SpikeLocationsWidget)
