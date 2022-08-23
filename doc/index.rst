@@ -54,7 +54,7 @@ For more information, please have a look at:
 - A collection of analysis notebook `SpikeInterface Reports <https://spikeinterface.github.io/>`_
 
 
-**Versions**
+**Versions and compatibility**
 
 SpikeInterface get a major release in July 2021 (version 0.90.0)
 

@@ -6,6 +6,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.95.0.rst
   releases/0.94.0.rst
   releases/0.93.0.rst
   releases/0.92.0.rst
@@ -21,6 +22,11 @@ Release notes
 
 NEW API
 -------
+
+Version 0.94.0
+==============
+
+
 
 Version 0.94.0
 ==============
