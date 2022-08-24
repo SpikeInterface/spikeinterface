@@ -5,33 +5,7 @@ from spikeinterface.core import (BaseRecording, BaseSorting, BinaryRecordingExtr
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
 # sorting/recording/event from neo
-from .neoextractors import (
-    MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec,
-    SpikeGLXRecordingExtractor, read_spikeglx,
-    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, 
-    read_openephys, read_openephys_event,
-    IntanRecordingExtractor, read_intan,
-    NeuroScopeRecordingExtractor, read_neuroscope_recording, 
-    NeuroScopeSortingExtractor, read_neuroscope_sorting,
-    read_neuroscope,
-    PlexonRecordingExtractor, read_plexon,
-    NeuralynxRecordingExtractor, read_neuralynx,
-    NeuralynxSortingExtractor, read_neuralynx_sorting,
-    BlackrockRecordingExtractor, read_blackrock,
-    BlackrockSortingExtractor, read_blackrock_sorting,
-    MCSRawRecordingExtractor, read_mcsraw,
-    Spike2RecordingExtractor, read_spike2,
-    CedRecordingExtractor, read_ced,
-    MaxwellRecordingExtractor, read_maxwell, MaxwellEventExtractor, read_maxwell_event,
-    NixRecordingExtractor, read_nix,
-    SpikeGadgetsRecordingExtractor, read_spikegadgets,
-    BiocamRecordingExtractor, read_biocam,
-    AxonaRecordingExtractor, read_axona,
-    TdtRecordingExtractor, read_tdt,
-    AlphaOmegaRecordingExtractor, read_alphaomega,
-    AlphaOmegaEventExtractor, read_alphaomega_event,
-    EDFRecordingExtractor, read_edf,
-)
+from .neoextractors import *
 
 # NWB sorting/recording/event
 from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,

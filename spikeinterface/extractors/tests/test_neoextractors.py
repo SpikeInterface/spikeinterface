@@ -9,13 +9,16 @@ from spikeinterface.extractors import *
 from spikeinterface.extractors.tests.common_tests import (RecordingCommonTestSuite,
                                                           SortingCommonTestSuite, EventCommonTestSuite)
 
-local_folder = get_global_dataset_folder() / 'ephy_testing_data'
+# local_folder = get_global_dataset_folder() / 'ephy_testing_data'
+from pathlib import Path
+local_folder = Path("/home/alessio/Documents/data/gin/ephy_testing_data")
 
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ['mearec']
     entities = ['mearec/mearec_test_10s.h5']
+    neo_funcs = dict(streams=get_mearec_streams, blocks=get_mearec_num_blocks)
 
 
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
@@ -32,6 +35,8 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.lf'}),
         ('spikeglx/Noise4Sam_g0', {'stream_id': 'nidq'}),
     ]
+    neo_funcs = dict(streams=get_spikeglx_streams,
+                     blocks=get_spikeglx_num_blocks)
 
 
 class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -44,6 +49,8 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '0'}),
         ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '1'}),
     ]
+    neo_funcs = dict(streams=get_openephys_streams,
+                     blocks=get_openephys_num_blocks)
 
 
 class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
@@ -60,6 +67,8 @@ class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'openephys/OpenEphys_SampleData_1',
     ]
+    neo_funcs = dict(streams=get_openephys_streams,
+                     blocks=get_openephys_num_blocks)
 
 
 class IntanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -74,6 +83,7 @@ class IntanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('intan/intan_rhs_test_1.rhs', {'stream_id': '4'}),
         ('intan/intan_rhs_test_1.rhs', {'stream_id': '11'}),
     ]
+    neo_funcs = dict(streams=get_intan_streams, blocks=get_intan_num_blocks)
 
 
 class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -82,6 +92,8 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'neuroscope/test1/test1.xml',
     ]
+    neo_funcs = dict(streams=get_neuroscope_streams,
+                     blocks=get_neuroscope_num_blocks)
 
 
 class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
@@ -100,6 +112,7 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'plexon/File_plexon_3.plx',
     ]
+    neo_funcs = dict(streams=get_plexon_streams, blocks=get_plexon_num_blocks)
 
 
 class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -113,6 +126,9 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'neuralynx/Cheetah_v5.6.3/original_data',
         'neuralynx/Cheetah_v5.7.4/original_data',
     ]
+    neo_funcs = dict(streams=get_neuralynx_streams,
+                     blocks=get_neuralynx_num_blocks)
+
 
 class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxSortingExtractor
@@ -122,6 +138,7 @@ class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
         'neuralynx/Cheetah_v5.6.3/original_data',
     ]
 
+
 class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockRecordingExtractor
     downloads = ['blackrock']
@@ -130,6 +147,10 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
     ]
+    neo_funcs = dict(streams=get_blackrock_streams,
+                     blocks=get_blackrock_num_blocks)
+
+
 class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockSortingExtractor
     downloads = ['blackrock']
@@ -137,8 +158,6 @@ class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
         'blackrock/FileSpec2.3001.nev',
         "blackrock/blackrock_2_1/l101210-001.nev"
     ]
-    
-    
 
 
 class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -147,6 +166,7 @@ class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'rawmcs/raw_mcs_with_header_1.raw',
     ]
+    neo_funcs = dict(streams=get_mcsraw_streams, blocks=get_mcsraw_num_blocks)
 
 
 class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -155,6 +175,7 @@ class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         ('tdt/aep_05', {'stream_id': '1'})
     ]
+    neo_funcs = dict(streams=get_tdt_streams, blocks=get_tdt_num_blocks)
 
 
 class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -163,6 +184,7 @@ class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'axona/axona_raw',
     ]
+    neo_funcs = dict(streams=get_axona_streams, blocks=get_axona_num_blocks)
 
 
 class KiloSortSortingTest(SortingCommonTestSuite, unittest.TestCase):
@@ -179,6 +201,7 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
     ]
+    neo_funcs = dict(streams=get_spike2_streams, blocks=get_spike2_num_blocks)
 
 
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -191,6 +214,10 @@ class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
         'spike2/m365_1sec.smrx',
     ]
+    neo_funcs = dict(streams=get_ced_streams, blocks=get_ced_num_blocks)
+
+    get_streams_fun = get_ced_streams
+    get_num_blocks_fun = get_ced_num_blocks
 
 
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -198,8 +225,11 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['maxwell']
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
-        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well000', 'rec_name': 'rec0000'})
+        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5',
+         {'stream_id': 'well000', 'rec_name': 'rec0000'})
     ]
+    neo_funcs = dict(streams=get_maxwell_streams,
+                     blocks=get_maxwell_num_blocks)
 
     def setUp(self):
         from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
@@ -215,6 +245,8 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spikegadgets/20210225_em8_minirec2_ac.rec', {'stream_id': 'trodes'}),
         'spikegadgets/W122_06_09_2019_1_fromSD.rec'
     ]
+    neo_funcs = dict(streams=get_spikegadgets_streams,
+                     blocks=get_spikegadgets_num_blocks)
 
 
 class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -223,6 +255,7 @@ class BiocamRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'biocam/biocam_hw3.0_fw1.6.brw'
     ]
+    neo_funcs = dict(streams=get_biocam_streams, blocks=get_biocam_num_blocks)
 
 
 class AlphaOmegaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -231,6 +264,8 @@ class AlphaOmegaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         "alphaomega/mpx_map_version4",
     ]
+    neo_funcs = dict(streams=get_alphaomega_streams,
+                     blocks=get_alphaomega_num_blocks)
 
 
 class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
@@ -240,15 +275,16 @@ class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
         "alphaomega/mpx_map_version4",
     ]
 
+
 class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = EDFRecordingExtractor
     downloads = ['edf']
     entities = ['edf/edf+C.edf']
+    neo_funcs = dict(streams=get_edf_streams, blocks=get_edf_num_blocks)
 
 
 if __name__ == '__main__':
-    pass
-    # test = MearecRecordingTest()
+    test = MearecRecordingTest()
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
@@ -259,7 +295,7 @@ if __name__ == '__main__':
     # test = PlexonRecordingTest()
     # test = NeuralynxRecordingTest()
     # test = BlackrockRecordingTest()
-    test = MCSRawRecordingTest()
+    # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
     # test = CedRecordingTest()

@@ -1,6 +1,7 @@
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
+from .neo_utils import get_streams, get_num_blocks
 
 
 class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
@@ -16,19 +17,28 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     lsx_files: list of strings or None, optional
         A list of listings files that refers to mpx files to load.
     stream_id: {'RAW', 'LFP', 'SPK', 'ACC', 'AI', 'UD'}, optional
-        If there are several streams, specify the one you want to load.
+        If there are several streams, specify the stream id you want to load.
+    stream_name: str, optional
+        If there are several streams, specify the stream name you want to load.
+    block_index: int, optional
+        If there are several blocks, specify the block index you want to load.
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     """
     mode = "folder"
     NeoRawIOClass = "AlphaOmegaRawIO"
 
-    def __init__(self, folder_path, lsx_files=None, stream_id="RAW",  all_annotations=False):
+    def __init__(self, folder_path, lsx_files=None, stream_id="RAW", 
+                 stream_name=None, block_index=None, all_annotations=False):
         neo_kwargs = {
             "dirname": str(folder_path),
             "lsx_files": lsx_files,
         }
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
+                                           stream_name=stream_name,
+                                           block_index=block_index,
+                                           all_annotations=all_annotations,
+                                           **neo_kwargs)
         self._kwargs.update(dict(folder_path=str(folder_path), lsx_files=lsx_files))
 
 
@@ -47,3 +57,47 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
 
 read_alphaomega = define_function_from_class(source_class=AlphaOmegaRecordingExtractor, name="read_alphaomega")
 read_alphaomega_event = define_function_from_class(source_class=AlphaOmegaEventExtractor, name="read_alphaomega_event")
+
+
+def get_alphaomega_streams(folder_path, lsx_files=None):
+    """Return available NEO streams
+
+    Parameters
+    ----------
+    folder_path : str
+        The folder path to load the recordings from.
+
+    Returns
+    -------
+    list
+        List of stream names
+    list
+        List of stream IDs
+    """
+    raw_class = AlphaOmegaRecordingExtractor.NeoRawIOClass
+    neo_kwargs = {
+            "dirname": str(folder_path),
+            "lsx_files": lsx_files,
+        }
+    return get_streams(raw_class, **neo_kwargs)
+
+
+def get_alphaomega_num_blocks(folder_path, lsx_files=None):
+    """Return number of NEO blocks
+
+    Parameters
+    ----------
+    folder_path : str
+        The folder path to load the recordings from.
+
+    Returns
+    -------
+    int
+        Number of NEO blocks
+    """
+    raw_class = AlphaOmegaRecordingExtractor.NeoRawIOClass
+    neo_kwargs = {
+            "dirname": str(folder_path),
+            "lsx_files": lsx_files,
+        }
+    return get_num_blocks(raw_class, **neo_kwargs)

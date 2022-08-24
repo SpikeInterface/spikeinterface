@@ -1,6 +1,7 @@
 import probeinterface as pi
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from .neo_utils import get_streams, get_num_blocks
 
 
 class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
@@ -19,9 +20,14 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
 
-    def __init__(self, file_path, all_annotations=False):
+    def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None,
+                 all_annotations=False):
         neo_kwargs = {'filename': str(file_path)}
-        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(self, 
+                                           stream_id=stream_id,
+                                           stream_name=stream_name,
+                                           block_index=block_index,
+                                           all_annotations=all_annotations, **neo_kwargs)
 
         self.extra_requirements.append('mearec')
 
@@ -68,3 +74,41 @@ def read_mearec(file_path):
     recording = MEArecRecordingExtractor(file_path)
     sorting = MEArecSortingExtractor(file_path)
     return recording, sorting
+
+
+def get_mearec_streams(file_path):
+    """Return available NEO streams
+
+    Parameters
+    ----------
+    file_path : str
+        The file path to load the recordings from.
+
+    Returns
+    -------
+    list
+        List of stream names
+    list
+        List of stream IDs
+    """
+    raw_class = MEArecRecordingExtractor.NeoRawIOClass
+    neo_kwargs = {'filename': str(file_path)}
+    return get_streams(raw_class, **neo_kwargs)
+
+
+def get_mearec_num_blocks(file_path):
+    """Return number of NEO blocks
+
+    Parameters
+    ----------
+    file_path : str
+        The file path to load the recordings from.
+
+    Returns
+    -------
+    int
+        Number of NEO blocks
+    """
+    raw_class = MEArecRecordingExtractor.NeoRawIOClass
+    neo_kwargs = {'filename': str(file_path)}
+    return get_num_blocks(raw_class, **neo_kwargs)

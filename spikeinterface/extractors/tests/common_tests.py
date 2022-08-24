@@ -31,8 +31,16 @@ class RecordingCommonTestSuite(CommonTestSuite):
             elif isinstance(entity, str):
                 path = entity
                 kwargs = {}
+                
+            # test streams and blocks retrieval
+            full_path = self.get_full_path(path)
+            stream_names, stream_ids = self.neo_funcs["streams"](full_path)
+            nblocks = self.neo_funcs["blocks"](full_path)
+            
+            print(f"Extractor name {self.ExtractorClass.__name__}")
+            print(f"Num blocks: {nblocks}, Stream names: {stream_names}, Stream IDs: {stream_ids}")
 
-            rec = self.ExtractorClass(self.get_full_path(path), **kwargs)
+            rec = self.ExtractorClass(full_path, **kwargs)
             # print(rec)
 
             assert hasattr(rec, 'extra_requirements')
