@@ -1,7 +1,13 @@
 function hdsort_master(outputFolder, hdsortPath)
     try
-        % prepare for kilosort execution
-        addpath(genpath(hdsortPath));
+        if nargin > 1
+            % prepare for hdsort matlab execution
+            addpath(genpath(hdsortPath));
+        else
+            % Running in compiled mode:
+            % cding to outputFolder is needed to save output files in the correct place
+            cd(fullfile(outputFolder))
+        end
 
         %% Load sorter configs and params
         load(fullfile(outputFolder, 'configsParams.mat'))

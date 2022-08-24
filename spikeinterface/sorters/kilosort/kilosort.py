@@ -27,7 +27,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
     """Kilosort Sorter object."""
 
     sorter_name: str = 'kilosort'
-    compiled_name: str = 'ks_compiled'
+    compiled_name: str = 'kilosort_master'
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
     requires_locations = False
     requires_gpu = 'nvidia-optional'
@@ -85,7 +85,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
             return 'unknown'
         else:
             return 'git-' + commit
-        
+
     @classmethod
     def use_gpu(cls, params):
         if 'useGPU' in params:

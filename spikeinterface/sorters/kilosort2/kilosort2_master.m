@@ -2,8 +2,10 @@ function kilosort2_master(fpath, kilosortPath)
     try
         set(groot,'defaultFigureVisible', 'off');
 
-        % prepare for kilosort execution
-        addpath(genpath(kilosortPath));
+        if nargin > 1
+            % prepare for kilosort execution
+            addpath(genpath(kilosortPath));
+        end
 
         % add npy-matlab functions (copied in the output folder)
         addpath(genpath(fpath));
