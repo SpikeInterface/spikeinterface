@@ -1,18 +1,13 @@
 from spikeinterface.core.core_tools import define_function_from_class
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor
 
-try:
-    import nixio
-    HAVE_NIX = True
-except ModuleNotFoundError:
-    HAVE_NIX = False
 
-class NixRecordingExtractor(NeoBaseRecordingExtractor):
+class EDFRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading Nix file
+    Class for reading EDF (European data format) folder.
 
-    Based on :py:class:`neo.rawio.NIXRawIO`
+    Based on :py:class:`neo.rawio.EDFRawIO`
 
     Parameters
     ----------
@@ -20,17 +15,18 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
         The file path to load the recordings from.
     stream_id: str, optional
         If there are several streams, specify the one you want to load.
+        For this neo reader stream are defined by their sampling frequency.
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     """
     mode = 'file'
-    NeoRawIOClass = 'NIXRawIO'
+    NeoRawIOClass = 'EDFRawIO'
 
     def __init__(self, file_path, stream_id=None, all_annotations=False):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
-        self._kwargs.update(dict(file_path=str(file_path), stream_id=stream_id))
-        self.extra_requirements.append('nixio')
+        self._kwargs.update({'file_path': str(file_path)})
+        self.extra_requirements.append('pyedflib')
 
 
-read_nix = define_function_from_class(source_class=NixRecordingExtractor, name="read_nix")
+read_edf = define_function_from_class(source_class=EDFRecordingExtractor, name="read_edf")

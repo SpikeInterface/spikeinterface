@@ -1,5 +1,6 @@
 MEArec>=1.7.1
-pynwb>=1.4
+pynwb>=2.1.0
+pyedflib>=0.1.30
 # nixio>=1.5.0
 # shybrid>=0.4.2
 # pyyaml>=5.4.1  for shybrid

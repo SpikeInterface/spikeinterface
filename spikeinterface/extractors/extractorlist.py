@@ -1,5 +1,7 @@
+from typing import Type
+
 # most important extractor are in spikeinterface.core
-from spikeinterface.core import (BinaryRecordingExtractor,
+from spikeinterface.core import (BaseRecording, BaseSorting, BinaryRecordingExtractor,
                                  NpzSortingExtractor, NumpyRecording, NumpySorting)
 
 # sorting/recording/event from neo
@@ -14,7 +16,9 @@ from .neoextractors import (
     read_neuroscope,
     PlexonRecordingExtractor, read_plexon,
     NeuralynxRecordingExtractor, read_neuralynx,
+    NeuralynxSortingExtractor, read_neuralynx_sorting,
     BlackrockRecordingExtractor, read_blackrock,
+    BlackrockSortingExtractor, read_blackrock_sorting,
     MCSRawRecordingExtractor, read_mcsraw,
     Spike2RecordingExtractor, read_spike2,
     CedRecordingExtractor, read_ced,
@@ -26,6 +30,7 @@ from .neoextractors import (
     TdtRecordingExtractor, read_tdt,
     AlphaOmegaRecordingExtractor, read_alphaomega,
     AlphaOmegaEventExtractor, read_alphaomega_event,
+    EDFRecordingExtractor, read_edf,
 )
 
 # NWB sorting/recording/event
@@ -38,7 +43,9 @@ from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 # sorting extractors in relation with a sorter
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
+from .mclustextractors import MClustSortingExtractor, read_mclust
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
+from .waveclussnippetstextractors import WaveClusSnippetsExtractor
 from .yassextractors import YassSortingExtractor, read_yass
 from .combinatoextractors import CombinatoSortingExtractor, read_combinato
 from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
@@ -103,6 +110,7 @@ sorting_extractor_full_list = [
 
     KlustaSortingExtractor,
     HDSortSortingExtractor,
+    MClustSortingExtractor,
     WaveClusSortingExtractor,
     YassSortingExtractor,
     CombinatoSortingExtractor,
@@ -123,3 +131,47 @@ event_extractor_full_list = [
     MaxwellEventExtractor,
     AlphaOmegaEventExtractor
 ]
+
+
+def get_recording_extractor_from_name(name: str) -> Type[BaseRecording]:
+    """
+    Returns the Recording Extractor class based on its name.
+
+    Parameters
+    ----------
+    name: str
+        The Recording Extractor's name.
+
+    Returns
+    -------
+    recording_extractor: BaseRecording
+        The Recording Extractor class.
+    """
+
+    for recording_extractor in recording_extractor_full_list:
+        if recording_extractor.__name__ == name:
+            return recording_extractor
+
+    raise ValueError(f"Recording extractor '{name}' not found.")
+
+
+def get_sorting_extractor_from_name(name: str) -> Type[BaseSorting]:
+    """
+    Returns the Sorting Extractor class based on its name.
+
+    Parameters
+    ----------
+    name: str
+        The Sorting Extractor's name.
+
+    Returns
+    -------
+    sorting_extractor: BaseSorting
+        The Sorting Extractor class.
+    """
+
+    for sorting_extractor in sorting_extractor_full_list:
+        if sorting_extractor.__name__ == name:
+            return sorting_extractor
+
+    raise ValueError(f"Sorting extractor '{name}' not found.")

@@ -26,6 +26,6 @@ def test_s3_nwb():
         assert full_traces.shape == (num_frames, num_chans)
         assert full_traces.dtype == dtype
 
-    if rec.has_scaled_traces():
+    if rec.has_scaled():
         trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
         assert trace_scaled.dtype == 'float32'

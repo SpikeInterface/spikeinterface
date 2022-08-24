@@ -74,7 +74,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if cluster_info is None:
                     cluster_info = new_property
                 else:
-                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id', suffixes=[None,'_repeat'])
+                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id', suffixes=[None, '_repeat'])
 
         # in case no tsv/csv files are found populate cluster info with minimal info
         if cluster_info is None:
@@ -94,8 +94,13 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         if "cluster_id" not in cluster_info.columns:
             assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
-            cluster_info["cluster_id"] = cluster_info["id"]
+            cluster_info.loc[:, "cluster_id"] = cluster_info["id"].values
             del cluster_info["id"]
+
+        # update spike clusters and times values
+        spike_clusters_clean_idxs = np.in1d(spike_clusters, cluster_info["cluster_id"].values).nonzero()[0]
+        spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
+        spike_times_clean = spike_times[spike_clusters_clean_idxs]
 
         if 'si_unit_id' in cluster_info.columns:
             unit_ids = cluster_info["si_unit_id"].values
@@ -105,8 +110,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             else:
                 max_si_unit_id = int(np.nanmax(unit_ids))
 
-            # update spike cluster values
-            spike_clusters_new = np.zeros_like(spike_clusters)
+            spike_clusters_new = np.zeros_like(spike_clusters_clean)
             for i, (phy_id, si_id) in enumerate(zip(cluster_info["cluster_id"].values,
                                                     cluster_info["si_unit_id"].values)):
                 if np.isnan(si_id):
@@ -116,9 +120,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                     new_si_id = si_id
                 unit_ids[i] = new_si_id
 
-                spike_clusters_new[spike_clusters == phy_id] = new_si_id
+                spike_clusters_new[spike_clusters_clean == phy_id] = new_si_id
             unit_ids = unit_ids.astype(int)
-            spike_clusters = spike_clusters_new
+            spike_clusters_clean = spike_clusters_new
             del cluster_info["si_unit_id"]
         else:
             unit_ids = cluster_info["cluster_id"].values
@@ -136,7 +140,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
 
-        self.add_sorting_segment(PhySortingSegment(spike_times, spike_clusters))
+        self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
 
 class PhySortingSegment(BaseSortingSegment):

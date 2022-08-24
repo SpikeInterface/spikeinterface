@@ -298,7 +298,7 @@ class WaveformExtractor:
 
         if return_scaled:
             # check if has scaled values:
-            if not self.recording.has_scaled_traces():
+            if not self.recording.has_scaled():
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 
@@ -526,7 +526,9 @@ class WaveformExtractor:
         for i, unit_id in enumerate(unit_ids):
             wfs = self.get_waveforms(unit_id, cache=False)
             for mode in modes:
-                if mode == 'median':
+                if len(wfs) == 0:
+                    arr = np.zeros(wfs.shape[1:], dtype=wfs.dtype)
+                elif mode == 'median':
                     arr = np.median(wfs, axis=0)
                 elif mode == 'average':
                     arr = np.average(wfs, axis=0)

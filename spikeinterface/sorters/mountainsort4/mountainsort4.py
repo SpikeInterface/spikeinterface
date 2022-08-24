@@ -120,10 +120,13 @@ class Mountainsort4Sorter(BaseSorter):
                           verbose=verbose)
         
         # temporary folder
-        if parse(Mountainsort4Sorter.get_sorter_version())  >= parse("1.0.2"):
+        ms4_version = Mountainsort4Sorter.get_sorter_version()
+
+        if ms4_version != "unknown" and parse(ms4_version) >= parse("1.0.3"):
             if p["tempdir"] is not None:
                 p["tempdir"] = str(p["tempdir"])
-            print(f'using temporary directory {p["tempdir"]}')
+            if verbose:
+                print(f'Using temporary directory {p["tempdir"]}')
             ms4_params.update(tempdir=p['tempdir'])
 
         # Check location no more needed done in basesorter
