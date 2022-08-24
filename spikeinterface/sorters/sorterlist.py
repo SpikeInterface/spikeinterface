@@ -95,7 +95,7 @@ def get_default_sorter_params(sorter_name_or_class):
 
 
 def get_default_params(sorter_name_or_class):
-    warnings.warn("Use get_sorter_default_params() function instead", 
+    warnings.warn("Use get_default_sorter_params() function instead", 
                   category=DeprecationWarning)
     return get_default_sorter_params(sorter_name_or_class)
 
