@@ -295,7 +295,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     if not HAVE_NUMBA:
         print("Error: numba is not installed.")
         print("compute_refrac_period_violations cannot run without numba.")
-        return 0
+        return None
 
 
     recording = waveform_extractor.recording
