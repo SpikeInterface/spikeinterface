@@ -301,6 +301,7 @@ if __name__ == '__main__':
     # test = CedRecordingTest()
     # test = MaxwellRecordingTest()
     # test = SpikeGadgetsRecordingTest()
+    test = NeuroScopeSortingTest()
 
     test.setUp()
     test.test_open()

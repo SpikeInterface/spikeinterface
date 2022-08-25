@@ -18,8 +18,6 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream id you want to load.
     stream_name: str, optional
         If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks, specify the block index you want to load.
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     """
@@ -57,21 +55,3 @@ def get_tdt_streams(folder_path):
     raw_class = TdtRecordingExtractor.NeoRawIOClass
     neo_kwargs = {'dirname': str(folder_path)}
     return get_streams(raw_class, **neo_kwargs)
-
-
-def get_tdt_num_blocks(folder_path):
-    """Return number of NEO blocks
-
-    Parameters
-    ----------
-    folder_path : str
-        The folder path to load the recordings from.
-
-    Returns
-    -------
-    int
-        Number of NEO blocks
-    """
-    raw_class = TdtRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'dirname': str(folder_path)}
-    return get_num_blocks(raw_class, **neo_kwargs)

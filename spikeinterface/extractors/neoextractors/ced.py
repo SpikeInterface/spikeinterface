@@ -28,11 +28,10 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
     mode = 'file'
     NeoRawIOClass = 'CedRawIO'
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
-                                           block_index=block_index,
                                            all_annotations=all_annotations,
                                            **neo_kwargs)
         self._kwargs.update(dict(file_path=str(file_path)))
@@ -61,21 +60,3 @@ def get_ced_streams(file_path):
     raw_class = CedRecordingExtractor.NeoRawIOClass
     neo_kwargs = {'filename': str(file_path)}
     return get_streams(raw_class, **neo_kwargs)
-
-
-def get_ced_num_blocks(file_path):
-    """Return number of NEO blocks
-
-    Parameters
-    ----------
-    file_path : str
-        The file path to load the recordings from.
-
-    Returns
-    -------
-    int
-        Number of NEO blocks
-    """
-    raw_class = CedRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'filename': str(file_path)}
-    return get_num_blocks(raw_class, **neo_kwargs)

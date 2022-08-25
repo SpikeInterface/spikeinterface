@@ -18,8 +18,6 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream id you want to load.
     stream_name: str, optional
         If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks, specify the block index you want to load.
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     """
@@ -30,7 +28,6 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
-                                           block_index=block_index,
                                            all_annotations=all_annotations,
                                            **neo_kwargs)
         self._kwargs.update({'file_path': str(file_path)})
@@ -80,21 +77,3 @@ def get_blackrock_streams(file_path):
     raw_class = BlackrockRecordingExtractor.NeoRawIOClass
     neo_kwargs = {'filename': str(file_path)}
     return get_streams(raw_class, **neo_kwargs)
-
-
-def get_blackrock_num_blocks(file_path):
-    """Return number of NEO blocks
-
-    Parameters
-    ----------
-    file_path : str
-        The file path to load the recordings from.
-
-    Returns
-    -------
-    int
-        Number of NEO blocks
-    """
-    raw_class = BlackrockRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'filename': str(file_path)}
-    return get_num_blocks(raw_class, **neo_kwargs)

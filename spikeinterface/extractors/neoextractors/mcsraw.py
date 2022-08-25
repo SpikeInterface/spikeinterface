@@ -59,21 +59,3 @@ def get_mcsraw_streams(file_path):
     raw_class = MCSRawRecordingExtractor.NeoRawIOClass
     neo_kwargs = {'filename': str(file_path)}
     return get_streams(raw_class, **neo_kwargs)
-
-
-def get_mcsraw_num_blocks(file_path):
-    """Return number of NEO blocks
-
-    Parameters
-    ----------
-    file_path : str
-        The file path to load the recordings from.
-
-    Returns
-    -------
-    int
-        Number of NEO blocks
-    """
-    raw_class = MCSRawRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'filename': str(file_path)}
-    return get_num_blocks(raw_class, **neo_kwargs)

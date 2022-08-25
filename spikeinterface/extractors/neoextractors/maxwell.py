@@ -26,12 +26,10 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         need to specify stream_id='well000' or 'well0001', etc.
     stream_name: str, optional
         If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks, specify the block index you want to load.
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     rec_name: str, optional
-        When the file contains several blocks (aka recordings) you need to specify the one
+        When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
     """
     mode = 'file'
@@ -140,21 +138,3 @@ def get_maxwell_streams(file_path, rec_name=None):
     raw_class = MaxwellRecordingExtractor.NeoRawIOClass
     neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
     return get_streams(raw_class, **neo_kwargs)
-
-
-def get_maxwell_num_blocks(file_path, rec_name=None):
-    """Return number of NEO blocks
-
-    Parameters
-    ----------
-    file_path : str
-        The file path to load the recordings from.
-
-    Returns
-    -------
-    int
-        Number of NEO blocks
-    """
-    raw_class = MaxwellRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
-    return get_num_blocks(raw_class, **neo_kwargs)
