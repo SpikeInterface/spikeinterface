@@ -89,7 +89,6 @@ class NwbRecordingExtractor(BaseRecording):
 
     extractor_name = 'NwbRecording'
     has_default_locations = True
-    has_unscaled = False
     installed = HAVE_NWB  # check at class level if installed or not
     is_writable = True
     mode = 'file'
