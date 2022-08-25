@@ -30,8 +30,8 @@ class ALFSortingExtractor(BaseSorting):
 
     extractor_name = 'ALFSorting'
     installed = HAVE_PANDAS
-    is_writable = True
-    installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
+    installation_mesg = "To use the ALF extractors, install pandas: \n\n pip install pandas\n\n"
+    name = "alf"
 
     def __init__(self, folder_path, sampling_frequency=30000):
 

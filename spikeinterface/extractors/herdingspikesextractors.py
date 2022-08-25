@@ -30,9 +30,9 @@ class HerdingspikesSortingExtractor(BaseSorting):
 
     extractor_name = 'HS2Sorting'
     installed = HAVE_HS2SX  # check at class level if installed or not
-    is_writable = True
     mode = 'file'
     installation_mesg = "To use the HS2SortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    name = "herdingspikes"
 
     def __init__(self, file_path, load_unit_info=True):
         assert self.installed, self.installation_mesg

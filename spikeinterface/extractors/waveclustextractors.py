@@ -24,7 +24,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
     """
 
     extractor_name = "WaveClusSortingExtractor"
-    installation_mesg = ""  # error message when not installed
+    name = "waveclus"
 
     def __init__(self, file_path, keep_good_only=True):
         MatlabHelper.__init__(self, file_path)
@@ -63,4 +63,4 @@ class WaveClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_waveclust = define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclust")
+read_waveclus = define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclus")

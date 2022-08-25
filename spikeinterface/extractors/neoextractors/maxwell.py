@@ -6,7 +6,6 @@ from spikeinterface import BaseEvent, BaseEventSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
-from .neo_utils import get_streams, get_num_blocks
 
 
 class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
@@ -34,10 +33,12 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     """
     mode = 'file'
     NeoRawIOClass = 'MaxwellRawIO'
+    name = "maxwell"
+    has_default_locations = True
 
     def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, 
                  all_annotations=False, rec_name=None):
-        neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
+        neo_kwargs = self.map_to_neo_kwargs(file_path, rec_name)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            block_index=block_index,
@@ -55,6 +56,10 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_property("electrode", self.get_property("contact_vector")["electrode"])
         self._kwargs.update(dict(file_path=str(file_path), rec_name=rec_name))
 
+    @classmethod
+    def map_to_neo_kwargs(cls, file_path, rec_name=None):
+        neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
+        return neo_kwargs
 
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
 
@@ -63,6 +68,8 @@ class MaxwellEventExtractor(BaseEvent):
     """
     Class for reading TTL events from Maxwell files.
     """
+    name = "maxwell"
+
     def __init__(self, file_path):
         import h5py
         self.file_path = file_path
@@ -118,23 +125,3 @@ class MaxwellEventSegment(BaseEventSegment):
 
 read_maxwell = define_function_from_class(source_class=MaxwellRecordingExtractor, name="read_maxwell")
 read_maxwell_event = define_function_from_class(source_class=MaxwellEventExtractor, name="read_maxwell_event")
-
-
-def get_maxwell_streams(file_path, rec_name=None):
-    """Return available NEO streams
-
-    Parameters
-    ----------
-    file_path : str
-        The file path to load the recordings from.
-
-    Returns
-    -------
-    list
-        List of stream names
-    list
-        List of stream IDs
-    """
-    raw_class = MaxwellRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
-    return get_streams(raw_class, **neo_kwargs)

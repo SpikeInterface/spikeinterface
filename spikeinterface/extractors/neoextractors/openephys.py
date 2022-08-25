@@ -19,7 +19,6 @@ import probeinterface as pi
 from .neobaseextractor import (NeoBaseRecordingExtractor,
                                NeoBaseSortingExtractor,
                                NeoBaseEventExtractor)
-from .neo_utils import get_streams, get_num_blocks
 
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
@@ -50,15 +49,21 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     """
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysRawIO'
+    name = "openephyslegacy"
 
     def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id,
                                            stream_name=stream_name,
                                            block_index=block_index,
                                            all_annotations=all_annotations, 
                                            **neo_kwargs)
         self._kwargs.update(dict(folder_path=str(folder_path)))
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
 
 
 class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
@@ -86,12 +91,13 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotation from neo.
 
     """
-
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
+    name = "openephys"
+    has_default_locations = True
 
     def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            block_index=block_index,
@@ -113,6 +119,11 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs .update(dict(folder_path=str(folder_path)))
 
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
+
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     """
@@ -132,10 +143,16 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     """
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
+    name = "openephys"
 
     def __init__(self, folder_path):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseEventExtractor.__init__(self, **neo_kwargs)
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
 
 
 def read_openephys(folder_path, **kwargs):
@@ -191,52 +208,3 @@ def read_openephys_event(folder_path, **kwargs):
         # format = 'binary'
         event = OpenEphysBinaryEventExtractor(folder_path, **kwargs)
     return event
-
-
-def _get_raw_class_and_kwargs(folder_path):
-    neo_kwargs = {'dirname': str(folder_path)}
-    # auto guess format
-    files = [str(f) for f in Path(folder_path).iterdir()]
-    if np.any([f.endswith('continuous') for f in files]):
-        #  format = 'legacy'
-        raw_class = OpenEphysLegacyRecordingExtractor.NeoRawIOClass
-    else:
-        # format = 'binary'
-        raw_class = OpenEphysBinaryRecordingExtractor.NeoRawIOClass
-    return raw_class, neo_kwargs
-
-
-def get_openephys_streams(folder_path):
-    """Return available NEO streams
-
-    Parameters
-    ----------
-    folder_path : str
-        The folder path to load the recordings from.
-
-    Returns
-    -------
-    list
-        List of stream names
-    list
-        List of stream IDs
-    """
-    raw_class, neo_kwargs = _get_raw_class_and_kwargs(folder_path)
-    return get_streams(raw_class, **neo_kwargs)
-
-
-def get_openephys_num_blocks(folder_path):
-    """Return number of NEO blocks
-
-    Parameters
-    ----------
-    folder_path : str
-        The folder path to load the recordings from.
-
-    Returns
-    -------
-    int
-        Number of NEO blocks
-    """
-    raw_class, neo_kwargs = _get_raw_class_and_kwargs(folder_path)
-    return get_num_blocks(raw_class, **neo_kwargs)

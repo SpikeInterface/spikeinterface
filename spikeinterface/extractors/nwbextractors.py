@@ -94,6 +94,7 @@ class NwbRecordingExtractor(BaseRecording):
     is_writable = True
     mode = 'file'
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
+    name = "nwb"
 
     def __init__(self, file_path: PathType, electrical_series_name: str = None, load_time_vector: bool = False,
                  samples_for_rate_estimation: int = 100000, driver=None):
@@ -298,9 +299,9 @@ class NwbSortingExtractor(BaseSorting):
     """
     extractor_name = 'NwbSorting'
     installed = HAVE_NWB  # check at class level if installed or not
-    is_writable = True
     mode = 'file'
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
+    name = "nwb"
 
     def __init__(self, file_path: PathType, electrical_series_name: str = None, sampling_frequency: float = None,
                  samples_for_rate_estimation: int = 100000, driver=None):

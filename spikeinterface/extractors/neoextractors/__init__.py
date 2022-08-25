@@ -1,56 +1,75 @@
 from .alphaomega import (AlphaOmegaRecordingExtractor, AlphaOmegaEventExtractor, 
-                         read_alphaomega, read_alphaomega_event,
-                         get_alphaomega_streams)
+                         read_alphaomega, read_alphaomega_event)
 from .axona import (AxonaRecordingExtractor, 
                     read_axona)
 from .biocam import (BiocamRecordingExtractor, 
-                     read_biocam,
-                     get_biocam_streams)
+                     read_biocam)
 from .blackrock import (BlackrockRecordingExtractor, BlackrockSortingExtractor,
-                        read_blackrock, read_blackrock_sorting,
-                        get_blackrock_streams)
+                        read_blackrock, read_blackrock_sorting)
 from .ced import (CedRecordingExtractor, 
-                  read_ced, 
-                  get_ced_streams)
+                  read_ced)
 from .edf import (EDFRecordingExtractor, 
-                  read_edf,
-                  get_edf_streams)
+                  read_edf)
 from .intan import (IntanRecordingExtractor, 
-                    read_intan, 
-                    get_intan_streams)
+                    read_intan)
 from .maxwell import (MaxwellRecordingExtractor, MaxwellEventExtractor, 
-                      read_maxwell, read_maxwell_event, 
-                      get_maxwell_streams)
+                      read_maxwell, read_maxwell_event)
 from .mearec import (MEArecRecordingExtractor, MEArecSortingExtractor,
                      read_mearec)
 from .mcsraw import (MCSRawRecordingExtractor, 
-                     read_mcsraw, 
-                     get_mcsraw_streams)
+                     read_mcsraw)
 from .neuralynx import (NeuralynxRecordingExtractor, NeuralynxSortingExtractor,
-                        read_neuralynx, read_neuralynx_sorting,
-                        get_neuralynx_streams)
+                        read_neuralynx, read_neuralynx_sorting)
 from .neuroscope import (NeuroScopeRecordingExtractor, NeuroScopeSortingExtractor,
-                         read_neuroscope_recording, read_neuroscope_sorting, read_neuroscope,
-                         get_neuroscope_streams)
+                         read_neuroscope_recording, read_neuroscope_sorting, read_neuroscope)
 from .nix import (NixRecordingExtractor, 
-                  read_nix,
-                  get_nix_streams, get_nix_num_blocks)
+                  read_nix)
 from .openephys import (OpenEphysLegacyRecordingExtractor,
                         OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, 
-                        read_openephys, read_openephys_event,
-                        get_openephys_streams, get_openephys_num_blocks)
+                        read_openephys, read_openephys_event)
 from .plexon import (PlexonRecordingExtractor, 
-                     read_plexon, 
-                     get_plexon_streams)
+                     read_plexon)
 from .spike2 import (Spike2RecordingExtractor, 
-                     read_spike2,
-                     get_spike2_streams)
+                     read_spike2)
 from .spikegadgets import (SpikeGadgetsRecordingExtractor, 
-                           read_spikegadgets,
-                           get_spikegadgets_streams)
+                           read_spikegadgets)
 from .spikeglx import (SpikeGLXRecordingExtractor, 
-                       read_spikeglx, 
-                       get_spikeglx_streams)
+                       read_spikeglx)
 from .tdt import (TdtRecordingExtractor, 
-                  read_tdt,
-                  get_tdt_streams)
+                  read_tdt)
+
+from .neo_utils import get_neo_streams, get_neo_num_blocks
+
+neo_recording_extractors_list = [
+    AlphaOmegaRecordingExtractor,
+    AxonaRecordingExtractor,
+    BiocamRecordingExtractor,
+    BlackrockRecordingExtractor,
+    CedRecordingExtractor,
+    EDFRecordingExtractor,
+    IntanRecordingExtractor,
+    MaxwellRecordingExtractor,
+    MEArecRecordingExtractor,
+    MCSRawRecordingExtractor,
+    NeuralynxRecordingExtractor,
+    NeuroScopeRecordingExtractor,
+    NixRecordingExtractor,
+    OpenEphysBinaryRecordingExtractor,
+    OpenEphysLegacyRecordingExtractor,
+    PlexonRecordingExtractor,
+    Spike2RecordingExtractor,
+    SpikeGadgetsRecordingExtractor,
+    SpikeGLXRecordingExtractor,
+    TdtRecordingExtractor
+]
+
+neo_sorting_extractors_list = [
+    BlackrockSortingExtractor,
+    MEArecSortingExtractor,
+    NeuralynxSortingExtractor
+]
+
+neo_event_extractors_list = [
+    AlphaOmegaEventExtractor,
+    OpenEphysBinaryEventExtractor
+]

@@ -9,7 +9,6 @@ from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-from .neo_utils import get_streams, get_num_blocks
 
 HAS_NEO_10_2 = version.parse(neo.__version__) >= version.parse("0.10.2")
 
@@ -39,10 +38,12 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     """
     mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
+    name = "spikeglx"
+    has_default_locations = True
 
 
     def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         if HAS_NEO_10_2:
             neo_kwargs['load_sync_channel'] = False
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
@@ -80,25 +81,10 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update(dict(folder_path=str(folder_path)))
 
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
+
 
 read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
-
-
-def get_spikeglx_streams(folder_path):
-    """Return available NEO streams
-
-    Parameters
-    ----------
-    folder_path : str
-        The folder path to load the recordings from.
-
-    Returns
-    -------
-    list
-        List of stream names
-    list
-        List of stream IDs
-    """
-    raw_class = SpikeGLXRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'dirname': str(folder_path)}
-    return get_streams(raw_class, **neo_kwargs)

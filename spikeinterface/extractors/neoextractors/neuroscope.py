@@ -8,7 +8,6 @@ from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-from .neo_utils import get_streams, get_num_blocks
 
 try:
     from lxml import etree as et
@@ -40,14 +39,20 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     """
     mode = 'file'
     NeoRawIOClass = 'NeuroScopeRawIO'
+    name = "neuroscope"
 
     def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = {'filename': str(file_path)}
+        neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations, 
                                            **neo_kwargs)
         self._kwargs.update(dict(file_path=str(file_path)))
+
+    @classmethod
+    def map_to_neo_kwargs(cls, file_path):
+        neo_kwargs = {'filename': str(file_path)}
+        return neo_kwargs
 
 
 class NeuroScopeSortingExtractor(BaseSorting):
@@ -91,6 +96,7 @@ class NeuroScopeSortingExtractor(BaseSorting):
     extractor_name = "NeuroscopeSortingExtractor"
     installed = HAVE_LXML
     installation_mesg = "Please install lxml to use this extractor!"
+    name = "neuroscope"
 
     def __init__(
         self,
@@ -313,23 +319,3 @@ def read_neuroscope(file_path, stream_id=None, keep_mua_units=False,
         outputs = outputs[0]
 
     return outputs
-
-
-def get_neuroscope_streams(file_path):
-    """Return available NEO streams
-
-    Parameters
-    ----------
-    file_path : str
-        The file path to load the recordings from.
-
-    Returns
-    -------
-    list
-        List of stream names
-    list
-        List of stream IDs
-    """
-    raw_class = NeuroScopeRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'filename': str(file_path)}
-    return get_streams(raw_class, **neo_kwargs)

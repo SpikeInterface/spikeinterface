@@ -3,7 +3,6 @@ import probeinterface as pi
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-from .neo_utils import get_streams, get_num_blocks
 
 
 class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
@@ -29,10 +28,12 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
     """
     mode = 'file'
     NeoRawIOClass = 'BiocamRawIO'
+    name = "biocam"
+    has_default_locations = True
 
     def __init__(self, file_path, mea_pitch=None, electrode_width=None, stream_id=None,
                  stream_name=None, block_index=None, all_annotations=False):
-        neo_kwargs = {'filename': str(file_path)}
+        neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations,
@@ -51,25 +52,9 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update( {'file_path': str(file_path), 'mea_pitch':mea_pitch, 'electrode_width':electrode_width})
 
+    @classmethod
+    def map_to_neo_kwargs(cls, file_path):
+        neo_kwargs = {'filename': str(file_path)}
+        return neo_kwargs
 
 read_biocam = define_function_from_class(source_class=BiocamRecordingExtractor, name="read_biocam")
-
-
-def get_biocam_streams(file_path):
-    """Return available NEO streams
-
-    Parameters
-    ----------
-    file_path : str
-        The file path to load the recordings from.
-
-    Returns
-    -------
-    list
-        List of stream names
-    list
-        List of stream IDs
-    """
-    raw_class = BiocamRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'filename': str(file_path)}
-    return get_streams(raw_class, **neo_kwargs)

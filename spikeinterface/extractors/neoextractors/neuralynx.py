@@ -1,7 +1,6 @@
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
-from .neo_utils import get_streams, get_num_blocks
 
 
 class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
@@ -23,14 +22,20 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     """
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'
+    name = "neuralynx"
 
     def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations, 
                                            **neo_kwargs)
         self._kwargs.update(dict(folder_path=str(folder_path)))
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
 
 
 class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
@@ -50,32 +55,18 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'
     handle_spike_frame_directly = False
+    name = "neuralynx"
 
     def __init__(self, folder_path, sampling_frequency=None):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
         self._kwargs.update(dict(folder_path=str(folder_path)))
 
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
+
+
 read_neuralynx = define_function_from_class(source_class=NeuralynxRecordingExtractor, name="read_neuralynx")
 read_neuralynx_sorting = define_function_from_class(source_class=NeoBaseSortingExtractor, name="read_neuralynx_sorting")
-
-
-
-def get_neuralynx_streams(folder_path):
-    """Return available NEO streams
-
-    Parameters
-    ----------
-    folder_path : str
-        The folder path to load the recordings from.
-
-    Returns
-    -------
-    list
-        List of stream names
-    list
-        List of stream IDs
-    """
-    raw_class = NeuralynxRecordingExtractor.NeoRawIOClass
-    neo_kwargs = {'dirname': str(folder_path)}
-    return get_streams(raw_class, **neo_kwargs)

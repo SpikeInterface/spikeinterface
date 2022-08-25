@@ -35,10 +35,9 @@ class CombinatoSortingExtractor(BaseSorting):
     """
 
     extractor_name = 'CombinatoSortingExtractor'
-    installation_mesg = ""
     installed = HAVE_H5PY
-    is_writable = False
     installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
+    name = "combinato"
 
     def __init__(self, folder_path, sampling_frequency=None, user='simple', det_sign='both', keep_good_only=True):
 

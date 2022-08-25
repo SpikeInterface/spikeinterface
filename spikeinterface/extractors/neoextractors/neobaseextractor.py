@@ -8,12 +8,18 @@ import neo
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
 
-from .neo_utils import get_reader
+
+def get_reader(raw_class, **neo_kwargs):
+    neoIOclass = eval('neo.rawio.' + raw_class)
+    neo_reader = neoIOclass(**neo_kwargs)
+    neo_reader.parse_header()
+
+    return neo_reader
+
 
 class _NeoBaseExtractor:
     NeoRawIOClass = None
-    installed = True
-    is_writable = False
+
 
     def __init__(self, block_index, **neo_kwargs):
         self.neo_reader = get_reader(self.NeoRawIOClass, **neo_kwargs)
@@ -25,9 +31,12 @@ class _NeoBaseExtractor:
             block_index = 0
         self.block_index = block_index
 
+    @classmethod
+    def map_to_neo_kwargs(cls, *args, **kwargs):
+        raise NotImplementedError
+
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
-
     def __init__(self, stream_id=None, stream_name=None, 
                  block_index=None, all_annotations=False, **neo_kwargs):
 
@@ -126,6 +135,24 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             self.add_recording_segment(rec_segment)
 
         self._kwargs.update(kwargs)
+
+
+    @classmethod
+    def get_streams(cls, *args, **kwargs):
+        neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
+        neo_reader = get_reader(cls.NeoRawIOClass, **neo_kwargs)
+
+        stream_channels = neo_reader.header['signal_streams']
+        stream_names = list(stream_channels['name'])
+        stream_ids = list(stream_channels['id'])
+        return stream_names, stream_ids
+
+
+    @classmethod
+    def get_num_blocks(cls, *args, **kwargs):
+        neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
+        neo_reader = get_reader(cls.NeoRawIOClass, **neo_kwargs)
+        return neo_reader.block_count()
 
 
 class NeoRecordingSegment(BaseRecordingSegment):

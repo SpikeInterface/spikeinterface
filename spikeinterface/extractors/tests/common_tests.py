@@ -2,6 +2,7 @@ import numpy as np
 
 from spikeinterface import download_dataset, get_global_dataset_folder
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor
+from spikeinterface.extractors import get_neo_streams, get_neo_num_blocks
 
 gin_repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 local_folder = get_global_dataset_folder() / 'ephy_testing_data'
@@ -34,14 +35,14 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 
             # test streams and blocks retrieval
             full_path = self.get_full_path(path)
-            stream_names, stream_ids = self.neo_funcs["streams"](full_path)
-            nblocks = self.neo_funcs["blocks"](full_path)
+            extractor_name = self.ExtractorClass.name
+            print(f"Extractor name {extractor_name}")
+            nblocks = get_neo_num_blocks(extractor_name, full_path)
+            stream_names, stream_ids = get_neo_streams(extractor_name, full_path)
             
-            print(f"Extractor name {self.ExtractorClass.__name__}")
             print(f"Num blocks: {nblocks}, Stream names: {stream_names}, Stream IDs: {stream_ids}")
 
             rec = self.ExtractorClass(full_path, **kwargs)
-            # print(rec)
 
             assert hasattr(rec, 'extra_requirements')
 
