@@ -2,6 +2,7 @@ from probeinterface import ProbeGroup
 from probeinterface.plotting import plot_probe
 
 import numpy as np
+from spikeinterface.core import waveform_extractor
 
 from ..base import to_attr
 from ..unit_locations import UnitLocationsWidget
@@ -44,19 +45,28 @@ class UnitLocationsPlotter(MplPlotter):
         width = height = 10
         ellipse_kwargs = dict(width=width, height=height, lw=2)
         
-        if dp.units_in_legend is None:
-            labels = dp.unit_ids
+        if dp.plot_all_units:
+            unit_colors = {}
+            unit_ids = dp.all_unit_ids
+            for unit in dp.all_unit_ids:
+                if unit not in dp.unit_ids:
+                    unit_colors[unit] = "gray"
+                else:
+                    unit_colors[unit] = dp.unit_colors[unit]
         else:
-            labels = [u if u in dp.units_in_legend else None for u in dp.unit_ids]
-        
-        patches = [Ellipse((unit_locations[i]), color=dp.unit_colors[unit], zorder=3, alpha=0.7, label=labels[i],
-                           **ellipse_kwargs) for i, unit in enumerate(dp.unit_ids)]
+            unit_ids = dp.unit_ids
+            unit_colors = dp.unit_colors
+        labels = unit_ids
+
+        patches = [Ellipse((unit_locations[unit]), color=unit_colors[unit], 
+                           zorder=5 if unit in dp.unit_ids else 3, 
+                           alpha=0.9 if unit in dp.unit_ids else 0.5, label=labels[i],
+                            **ellipse_kwargs) for i, unit in enumerate(unit_ids)]
         for p in patches:
             self.ax.add_patch(p)
             
         handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
-                          color=dp.unit_colors[unit]) for unit in dp.units_in_legend]
-        labels = dp.units_in_legend
+                          color=unit_colors[unit]) for unit in unit_ids]
             
         self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)

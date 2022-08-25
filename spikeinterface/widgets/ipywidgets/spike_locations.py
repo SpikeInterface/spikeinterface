@@ -9,14 +9,15 @@ from ..base import to_attr
 from .base_ipywidgets import IpywidgetsPlotter
 from .utils import make_unit_controller
 
-from ..unit_locations import UnitLocationsWidget
-from ..matplotlib.unit_locations import UnitLocationsPlotter as MplUnitLocationsPlotter
+from ..spike_locations import SpikeLocationsWidget
+from ..matplotlib.spike_locations import (
+    SpikeLocationsPlotter as MplSpikeLocationsPlotter,
+)
 
 from IPython.display import display
 
 
-class UnitLocationsPlotter(IpywidgetsPlotter):
-
+class SpikeLocationsPlotter(IpywidgetsPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
 
         cm = 1 / 2.54
@@ -33,13 +34,16 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
                 fig = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], 
-                                                            list(data_plot['unit_colors'].keys()),
-                                                            ratios[0] * width_cm, height_cm)
+        unit_widget, unit_controller = make_unit_controller(
+            data_plot["unit_ids"],
+            list(data_plot["unit_colors"].keys()),
+            ratios[0] * width_cm,
+            height_cm,
+        )
 
         self.controller = unit_controller
 
-        mpl_plotter = MplUnitLocationsPlotter()
+        mpl_plotter = MplSpikeLocationsPlotter()
 
         self.updater = PlotUpdater(data_plot, mpl_plotter, fig, self.controller)
         for w in self.controller.values():
@@ -58,8 +62,7 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
             display(self.widget)
 
 
-
-UnitLocationsPlotter.register(UnitLocationsWidget)
+SpikeLocationsPlotter.register(SpikeLocationsWidget)
 
 
 class PlotUpdater:
@@ -78,11 +81,11 @@ class PlotUpdater:
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
-        data_plot['unit_ids'] = unit_ids
-        data_plot['plot_all_units'] = True
+        data_plot["unit_ids"] = unit_ids
+        data_plot["plot_all_units"] = True
 
         backend_kwargs = {}
-        backend_kwargs['figure'] = self.fig
+        backend_kwargs["figure"] = self.fig
 
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
 

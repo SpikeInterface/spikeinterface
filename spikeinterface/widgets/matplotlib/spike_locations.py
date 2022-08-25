@@ -4,7 +4,7 @@ from probeinterface.plotting import plot_probe
 import numpy as np
 
 from ..base import to_attr
-from ..spike_locations import SpikeLocationsWidget
+from ..spike_locations import SpikeLocationsWidget, estimate_axis_lims
 from .base_mpl import MplPlotter
 
 from matplotlib.patches import Ellipse
@@ -40,33 +40,38 @@ class SpikeLocationsPlotter(MplPlotter):
                 poly_contour.set_zorder(1)
 
         self.ax.set_title('')
+        
+        if dp.plot_all_units:
+            unit_colors = {}
+            unit_ids = dp.all_unit_ids
+            for unit in dp.all_unit_ids:
+                if unit not in dp.unit_ids:
+                    unit_colors[unit] = "gray"
+                else:
+                    unit_colors[unit] = dp.unit_colors[unit]
+        else:
+            unit_ids = dp.unit_ids
+            unit_colors = dp.unit_colors
+        labels = unit_ids
 
-        if dp.units_in_legend is None:
-            units_in_legend = dp.unit_ids
-        labels = [u if u in units_in_legend else None for u in dp.unit_ids]
-
-        for i, unit in enumerate(dp.unit_ids):
+        for i, unit in enumerate(unit_ids):
             locs = spike_locations[unit]
-            self.ax.scatter(locs["x"], locs["y"], s=2, alpha=0.3,
-                            label=labels[i], zorder=3)
+            
+            zorder = 5 if unit in dp.unit_ids else 3
+            self.ax.scatter(locs["x"], locs["y"], s=2, alpha=0.3, color=unit_colors[unit],
+                            label=labels[i], zorder=zorder)
             
         handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
-                          color=dp.unit_colors[unit]) for unit in units_in_legend]
-        labels = units_in_legend
+                          color=unit_colors[unit]) for unit in unit_ids]
             
         self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)
 
         # set proper axis limits
-        all_locs = np.concatenate(list(spike_locations.values()))
-        xlims = np.quantile(all_locs["x"], [0.01, 0.99])
-        ylims = np.quantile(all_locs["y"], [0.01, 0.99])
+        xlims, ylims = estimate_axis_lims(spike_locations)
         
         ax_xlims = list(self.ax.get_xlim())
         ax_ylims = list(self.ax.get_ylim())
-        
-        print(xlims, ax_xlims)
-        print(ylims, ax_ylims)
         
         ax_xlims[0] = xlims[0] if xlims[0] < ax_xlims[0] else ax_xlims[0]
         ax_xlims[1] = xlims[1] if xlims[1] > ax_xlims[1] else ax_xlims[1]

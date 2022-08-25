@@ -31,15 +31,15 @@ class UnitLocationsWidget(BaseWidget):
 
     def __init__(self, waveform_extractor: Union[WaveformExtractor, BaseSorting], 
                  unit_ids=None, with_channel_ids=False, compute_kwargs=None, unit_colors=None, 
-                 hide_unit_selector=False, units_in_legend=None,
+                 hide_unit_selector=False, plot_all_units=True,
                  backend=None, **backend_kwargs):
         if waveform_extractor.is_extension("unit_locations"):
             ulc = waveform_extractor.load_extension("unit_locations")
-            unit_locations = ulc.get_data(outputs="numpy")
+            unit_locations = ulc.get_data(outputs="by_unit")
         else:
             compute_kwargs = compute_kwargs if compute_kwargs is not None else {}
             unit_locations = compute_unit_locations(waveform_extractor, 
-                                                    outputs="numpy",
+                                                    outputs="by_unit",
                                                     **compute_kwargs)
         
         recording = waveform_extractor.recording
@@ -54,11 +54,9 @@ class UnitLocationsWidget(BaseWidget):
         
         if unit_ids is None:
             unit_ids = sorting.unit_ids
-        else:
-            unit_indices = sorting.ids_to_indices(unit_ids)
-            unit_locations = unit_locations[unit_indices]
 
         plot_data = dict(
+            all_unit_ids=sorting.unit_ids,
             unit_locations=unit_locations,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
@@ -67,7 +65,7 @@ class UnitLocationsWidget(BaseWidget):
             probegroup_dict=probegroup.to_dict(),
             with_channel_ids=with_channel_ids,
             hide_unit_selector=hide_unit_selector,
-            units_in_legend=units_in_legend
+            plot_all_units=plot_all_units
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

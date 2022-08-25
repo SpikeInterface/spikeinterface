@@ -82,10 +82,10 @@ class TestWidgets(unittest.TestCase):
         unit_ids = self.sorting.unit_ids[:4]
         sw.plot_crosscorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
         
-    def test_amplitudes_timeseries(self):
-        sw.plot_amplitudes_timeseries(self.we)
+    def test_amplitudes(self):
+        sw.plot_amplitudes(self.we)
         unit_ids = self.we.sorting.unit_ids[:4]
-        sw.plot_amplitudes_timeseries(self.we, unit_ids=unit_ids)
+        sw.plot_amplitudes(self.we, unit_ids=unit_ids)
         
     def test_plot_unit_localization(self):
         sw.plot_unit_locations(self.we, with_channel_ids=True)
