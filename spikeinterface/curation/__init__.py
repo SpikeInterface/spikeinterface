@@ -1,5 +1,5 @@
 from .remove_redundant import remove_redundant_units, find_redundant_units
+from .auto_merge import get_potential_auto_merge
 
-from .mergeunitssorting import MergeUnitsSorting
-from .splitunitsorting import SplitUnitSorting
+# manual sorting, 
 from .curationsorting import CurationSorting
