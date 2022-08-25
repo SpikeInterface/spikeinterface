@@ -1,6 +1,7 @@
 """Sorting components: template matching."""
 
 import numpy as np
+import warnings
 
 import scipy.spatial
 
@@ -188,7 +189,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.1*noise_levels
+        is_silent = np.abs(template).max(0) < 0.25*noise_levels
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2
@@ -239,6 +240,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         dense_templates = np.zeros((num_templates, num_samples, num_channels), dtype=np.float32)
         for i in range(num_templates):
             dense_templates[i, :, sparsities[i]] = templates[i].T
+
+
+        test = dense_templates.reshape(num_templates, -1)
+        d['gram'] = test.dot(test.T)
 
         size = 2 * num_samples - 1
 
@@ -335,6 +340,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         min_amplitude, max_amplitude = d['amplitudes']
         sparsities = d['sparsities']
         ignored_ids = d['ignored_ids']
+        gram = d['gram']
 
         if 'cached_fft_kernels' not in d:
             d['cached_fft_kernels'] = {'fshape' : 0}
@@ -417,7 +423,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             M[mb_selection, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
 
             if num_selection >= (M.shape[0] - 1):
-                Z = np.empty((2*M.shape[0], 2*M.shape[1]), dtype=np.float32)
+                Z = np.empty((2*M.shape[0], 2*M.shape[0]), dtype=np.float32)
                 Z[:num_selection, :num_selection] = M[:num_selection, :num_selection]
                 M = Z
 
@@ -428,9 +434,12 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                  check_finite=False)
 
                 v = nrm2(M[mb_selection, :mb_selection]) ** 2
-                if 1 - v <= omp_tol:  # selected atoms are dependent
+                Lkk = gram[best_cluster_ind, best_cluster_ind] - v
+                if Lkk <= omp_tol:  # selected atoms are dependent
                     break
-                M[mb_selection, mb_selection] = np.sqrt(1 - v)
+                M[mb_selection, mb_selection] = np.sqrt(Lkk)
+            else:
+                M[0, 0] = gram[best_cluster_ind, best_cluster_ind]
 
             all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps,
                 lower=True, overwrite_b=False)
@@ -532,22 +541,22 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     _default_params = {
         'peak_sign': 'neg', 
         'exclude_sweep_ms': 0.1,
-        'jitter' : 1, 
-        'detect_threshold': 5, 
+        'jitter_ms' : 0.1, 
+        'detect_threshold': 5,
         'noise_levels': None, 
         'random_chunk_kwargs': {},
         'sparsify_threshold': 0.99,
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.25,
-        'progess_bar_steps' : True,
+        'progess_bar_steps' : False,
         'waveform_extractor': None,
     }
 
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.1*noise_levels
+        is_silent = np.abs(template).max(0) < 0.25*noise_levels
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2
@@ -558,6 +567,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         channel = np.searchsorted(explained_norms, sparsify_threshold)
         active_channels = np.sort(idx[:channel])
         template[:, idx[channel:]] = 0
+        print(len(active_channels))
         return template, active_channels
 
     @classmethod
@@ -741,7 +751,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d['nafter'] = d['waveform_extractor'].nafter
         d['patch_sizes'] = (d['waveform_extractor'].nsamples, d['num_channels'])
         d['sym_patch'] = d['nbefore'] == d['nafter']
-        #d['jitter'] = int(1e-3*d['jitter'] * recording.get_sampling_frequency())
+        d['jitter'] = int(d['jitter_ms'] * recording.get_sampling_frequency() / 1000.)
 
         num_segments = recording.get_num_segments()
         if d['waveform_extractor']._params['max_spikes_per_unit'] is None:
@@ -844,16 +854,16 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             best_peak_chan_ind = peak_chan_ind[peak_index]
 
             peak_data = peak_sample_ind - peak_sample_ind[peak_index]
-            is_valid = np.searchsorted(peak_data, [-neighbor_window, neighbor_window + 1])
-            idx_neighbor = peak_data[is_valid[0]:is_valid[1]] + neighbor_window
+            is_valid_nn = np.searchsorted(peak_data, [-neighbor_window, neighbor_window + 1])
+            idx_neighbor = peak_data[is_valid_nn[0]:is_valid_nn[1]] + neighbor_window
 
             if not best_cluster_ind in cached_overlaps.keys():
                 cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
 
             to_add = -best_amplitude * cached_overlaps[best_cluster_ind][:, idx_neighbor]
 
-            scalar_products[:, is_valid[0]:is_valid[1]] += to_add
-            scalar_products[best_cluster_ind, is_valid[0]:is_valid[1]] = -np.inf
+            scalar_products[:, is_valid_nn[0]:is_valid_nn[1]] += to_add
+            scalar_products[best_cluster_ind, is_valid_nn[0]:is_valid_nn[1]] = -np.inf
 
             spikes['sample_ind'][num_spikes] = best_peak_sample_ind
             spikes['channel_ind'][num_spikes] = best_peak_chan_ind

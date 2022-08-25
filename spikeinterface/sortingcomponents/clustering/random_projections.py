@@ -24,7 +24,7 @@ class RandomProjectionClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "hdbscan_kwargs": {"min_cluster_size" : 100,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
@@ -59,8 +59,8 @@ class RandomProjectionClustering:
 
         hdbscan_data = features_data[0]
 
-        preprocessing = QuantileTransformer(output_distribution='uniform')
-        hdbscan_data = preprocessing.fit_transform(hdbscan_data)
+        #preprocessing = QuantileTransformer(output_distribution='uniform')
+        #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])

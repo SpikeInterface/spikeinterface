@@ -9,7 +9,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = 'spykingcircus2'
 
     _default_params = {
-        'general' : {'ms_before' : 1.5, 'ms_after' : 2.5, 'local_radius_um' : 100},
+        'general' : {'ms_before' : 1.5, 'ms_after' : 1.5, 'local_radius_um' : 100},
         'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5},
@@ -18,7 +18,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'clustering': {},
         'matching':  {},
         'registration' : {},
-        'common_reference': True,
+        'apply_preprocessing': False,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
 
@@ -45,14 +45,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
-        #if 'freq_max' not in filtering_params:
-        #    filtering_params['freq_max'] = 0.95*sampling_rate/2
+        if params['apply_preprocessing']:
+            recording_f = bandpass_filter(recording, **filtering_params)
+            if params['common_reference']:
+                recording_f = common_reference(recording_f)
 
-        recording_f = bandpass_filter(recording, **filtering_params)
-        if params['common_reference']:
-            recording_f = common_reference(recording_f)
+        else:
+            recording_f = recording
 
-        recording_f = zscore(recording_f)
+        recording_f = zscore(recording_f, dtype='float32')
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()
@@ -88,7 +89,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['general'])
         clustering_params['job_kwargs'] = params['job_kwargs']
 
-        labels, peak_labels = find_cluster_from_peaks(zscore(recording_f), selected_peaks, method='circus',
+        labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='random_projections',
             method_kwargs=clustering_params)
 
         ## We get the labels for our peaks
@@ -108,7 +109,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_job_params = params['job_kwargs'].copy()
         matching_job_params['chunk_duration'] = '100ms'
 
-        spikes = find_spikes_from_templates(recording_f, method='circus-omp', 
+        spikes = find_spikes_from_templates(recording_f, method='circus', 
             method_kwargs=matching_params, **matching_job_params)
 
         if verbose:
