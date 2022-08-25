@@ -1,11 +1,20 @@
 import numpy as np
 import scipy.signal
+import scipy.spatial
 
-from ..postprocessing import compute_correlograms
+from ..postprocessing import compute_correlograms, get_template_extremum_channel
+
+# TODO:
+#   * adaptative window p(aka plage) on CC
+#   * template similarity
+#   * 
 
 def get_potential_auto_merge(waveform_extractor,
-                bin_ms=1., window_ms=50., corr_thresh=0.3,
-                
+                minimum_spikes=1000, maximum_distance_um=200.,
+                peak_sign="neg",
+
+                bin_ms=0.25, window_ms=50., corr_thresh=0.3,
+                 correlogram_low_pass = 800.,
                 ):
     """
     Algorithm to find and check potential merges between units.
@@ -22,33 +31,52 @@ def get_potential_auto_merge(waveform_extractor,
     
     we = waveform_extractor
     sorting = we.sorting
+    unit_ids = sorting.unit_ids
+    
+    # pre step : to get fast computation we will not analyse pairs when:
+    #    * not enough spikes for one of theses
+    #    * to far away one from each other
+    n = unit_ids.size
+    pair_mask = np.ones((n, n), dtype='bool')
+    num_spikes = np.array(list(sorting.get_total_num_spikes().values()))
+    to_remove = num_spikes < minimum_spikes
+    pair_mask[to_remove, :] = False
+    pair_mask[:, to_remove] = False
+    # unit positions are estimated rougtly with channel
+    chan_loc = we.recording.get_channel_locations()
+    unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
+    unit_max_chan = list(unit_max_chan.values())
+    unit_locations = chan_loc[unit_max_chan, :]
+    unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric='euclidean')
+    print(unit_distances)
+    print(unit_distances <=maximum_distance_um)
+    pair_mask = pair_mask & (unit_distances <=maximum_distance_um)
+    
+    
+    
+    print('Will check ', np.sum(pair_mask), 'pairs on ', pair_mask.size)
+    
 
-
+    # step 1 : potential auto merge by correlogram
     correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method='numba')
-    #~ print(correlograms.shape)
-    #~ import matplotlib.pyplot as plt
-    
-    #~ for i in range(correlograms.shape[0]):
-        #~ fig, ax = plt.subplots()
-        #~ ax.plot(correlograms[i, i, :])
-        #~ plt.show()
-    
-    corr_diff = compute_correlogram_diff(sorting, correlograms, bins)
-    
-    print(corr_diff)
+    corr_diff = compute_correlogram_diff(sorting, correlograms, bins,
+                                    correlogram_low_pass=correlogram_low_pass,  pair_mask=pair_mask)
     ind1, ind2 = np.nonzero(corr_diff  < corr_thresh)
-    potential_merges_cc = list(zip(ind1, ind2))
-    print(potential_merges_cc)
+    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
+    print(potential_merges)
     
+    # step 2 : check if potential merge with CC also have template similarity
+    # TODO
     
-    potential_merges = potential_merges_cc
+    # step 3 : validate the potential merges with CC increase the contamination quality metrics
+    # TODO
     
     return potential_merges
 
 
-def compute_correlogram_diff(sorting, correlograms, bins, pair_mask=None):
+def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=800., pair_mask=None):
     """
-    Original Author : Aurelien Wyngaard
+    Original author: Aurelien Wyngaard ( lussac)
     
     Parameters
     ----------
@@ -81,7 +109,7 @@ def compute_correlogram_diff(sorting, correlograms, bins, pair_mask=None):
     num_spikes = sorting.get_total_num_spikes()
     
     # smooth correlogram by low pass filter
-    correlogram_low_pass = 300.
+    print('ici', bin_ms, 1e3 / bin_ms, (1e3 / bin_ms /2))
     b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
     correlograms_smooth = scipy.signal.filtfilt(b, a, correlograms, axis=2)
     
@@ -130,7 +158,7 @@ def compute_correlogram_diff(sorting, correlograms, bins, pair_mask=None):
                 ax.plot(bins2, correlograms_smooth[unit_ind2, unit_ind2, :], color='r')
                 
                 
-                ax.set_title(f'{unit_id1} {unit_id2}')
+                ax.set_title(f'{unit_id1}[{num1}] {unit_id2}[{num2}]')
                 ax = axs[1]
                 ax.plot(bins2, correlograms[unit_ind1, unit_ind2, :], color='g')
                 ax = axs[2]
