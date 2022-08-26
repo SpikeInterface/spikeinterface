@@ -1,37 +1,16 @@
 from typing import Type
 
 # most important extractor are in spikeinterface.core
-from spikeinterface.core import (BaseRecording, BaseSorting, BinaryRecordingExtractor,
-                                 NpzSortingExtractor, NumpyRecording, NumpySorting)
+from spikeinterface.core import (BaseRecording, BaseSorting,
+                                 BinaryRecordingExtractor, NumpyRecording,
+                                 NpzSortingExtractor, NumpySorting,
+                                 NpySnippetsExtractor)
 
 # sorting/recording/event from neo
-from .neoextractors import (
-    MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec,
-    SpikeGLXRecordingExtractor, read_spikeglx,
-    OpenEphysLegacyRecordingExtractor, OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, 
-    read_openephys, read_openephys_event,
-    IntanRecordingExtractor, read_intan,
-    NeuroScopeRecordingExtractor, read_neuroscope_recording, 
-    NeuroScopeSortingExtractor, read_neuroscope_sorting,
-    read_neuroscope,
-    PlexonRecordingExtractor, read_plexon,
-    NeuralynxRecordingExtractor, read_neuralynx,
-    NeuralynxSortingExtractor, read_neuralynx_sorting,
-    BlackrockRecordingExtractor, read_blackrock,
-    BlackrockSortingExtractor, read_blackrock_sorting,
-    MCSRawRecordingExtractor, read_mcsraw,
-    Spike2RecordingExtractor, read_spike2,
-    CedRecordingExtractor, read_ced,
-    MaxwellRecordingExtractor, read_maxwell, MaxwellEventExtractor, read_maxwell_event,
-    NixRecordingExtractor, read_nix,
-    SpikeGadgetsRecordingExtractor, read_spikegadgets,
-    BiocamRecordingExtractor, read_biocam,
-    AxonaRecordingExtractor, read_axona,
-    TdtRecordingExtractor, read_tdt,
-    AlphaOmegaRecordingExtractor, read_alphaomega,
-    AlphaOmegaEventExtractor, read_alphaomega_event,
-    EDFRecordingExtractor, read_edf,
-)
+from .neoextractors import *
+
+# non-NEO objects implemented in neo folder
+from .neoextractors import NeuroScopeSortingExtractor, MaxwellEventExtractor
 
 # NWB sorting/recording/event
 from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
@@ -44,8 +23,7 @@ from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .mclustextractors import MClustSortingExtractor, read_mclust
-from .waveclustextractors import WaveClusSortingExtractor, read_waveclust
-from .waveclussnippetstextractors import WaveClusSnippetsExtractor
+from .waveclustextractors import WaveClusSortingExtractor, read_waveclus
 from .yassextractors import YassSortingExtractor, read_yass
 from .combinatoextractors import CombinatoSortingExtractor, read_combinato
 from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
@@ -57,6 +35,10 @@ from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor
 # sorting in relation with simulator
 from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
                                 read_shybrid_recording, read_shybrid_sorting)
+
+# snippers
+from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclus_snippets
+
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
@@ -71,33 +53,11 @@ recording_extractor_full_list = [
     NumpyRecording,
     SHYBRIDRecordingExtractor,
     MdaRecordingExtractor,
-
-    # neo based
-    MEArecRecordingExtractor,
-    SpikeGLXRecordingExtractor,
-    OpenEphysLegacyRecordingExtractor,
-    OpenEphysBinaryRecordingExtractor,
-    IntanRecordingExtractor,
-    NeuroScopeRecordingExtractor,
-    PlexonRecordingExtractor,
-    NeuralynxRecordingExtractor,
-    BlackrockRecordingExtractor,
-    MCSRawRecordingExtractor,
-    Spike2RecordingExtractor,
-    CedRecordingExtractor,
-    MaxwellRecordingExtractor,
-    NixRecordingExtractor,
-    NwbRecordingExtractor,
-    SpikeGadgetsRecordingExtractor,
-    BiocamRecordingExtractor,
-    AxonaRecordingExtractor,
-    TdtRecordingExtractor,
-    AlphaOmegaRecordingExtractor,
-
     # others
     CompressedBinaryIblExtractor,
     MCSH5RecordingExtractor
 ]
+recording_extractor_full_list += neo_recording_extractors_list
 
 sorting_extractor_full_list = [
     NpzSortingExtractor,
@@ -121,16 +81,24 @@ sorting_extractor_full_list = [
     PhySortingExtractor,
     NwbSortingExtractor,
     NeuroScopeSortingExtractor,
-
-    # neo based
-    MEArecSortingExtractor
 ]
+sorting_extractor_full_list += neo_sorting_extractors_list
 
 event_extractor_full_list = [
-    OpenEphysBinaryEventExtractor,
-    MaxwellEventExtractor,
-    AlphaOmegaEventExtractor
+    MaxwellEventExtractor
 ]
+event_extractor_full_list += neo_event_extractors_list
+
+snippets_extractor_full_list = [
+    NpySnippetsExtractor,
+    WaveClusSnippetsExtractor
+]
+
+
+recording_extractor_full_dict = {recext.name: recext for recext in recording_extractor_full_list}
+sorting_extractor_full_dict = {recext.name: recext for recext in sorting_extractor_full_list}
+snippets_extractor_full_dict = {recext.name: recext for recext in snippets_extractor_full_list}
+
 
 
 def get_recording_extractor_from_name(name: str) -> Type[BaseRecording]:

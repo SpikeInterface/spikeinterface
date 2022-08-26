@@ -15,10 +15,9 @@ class NpzSortingExtractor(BaseSorting):
     """
 
     extractor_name = 'NpzSortingExtractor'
-    installed = True  # depend only on numpy
-    installation_mesg = "Always installed"
     is_writable = True
     mode = 'file'
+    name = "npz"
 
     def __init__(self, file_path):
 
