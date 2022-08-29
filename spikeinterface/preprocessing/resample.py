@@ -57,7 +57,6 @@ class ResampleRecording(BasePreprocessor):
         self._sampling_frequency = resample_rate
         # fix_dtype not always returns the str, make sure it does
         dtype = fix_dtype(recording, dtype).str
-        self.dtype = dtype
         # Ensure that the requested resample rate is doable:
         if skip_checks:
             assert check_nyquist(recording, resample_rate), \
