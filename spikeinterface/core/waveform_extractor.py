@@ -50,7 +50,7 @@ class WaveformExtractor:
 
     """
     extensions = []
-    def __init__(self, recording, sorting, folder):
+    def __init__(self, recording, sorting, folder=None):
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             "The recording and sorting objects must have the same number of segments!"
         np.testing.assert_almost_equal(recording.get_sampling_frequency(),
@@ -62,16 +62,21 @@ class WaveformExtractor:
 
         self.recording = recording
         self.sorting = sorting
-        self.folder = Path(folder)
 
         # cache in memory
         self._waveforms = {}
         self._template_cache = {}
         self._params = {}
 
-        if (self.folder / 'params.json').is_file():
-            with open(str(self.folder / 'params.json'), 'r') as f:
-                self._params = json.load(f)
+        self.folder = folder
+        if self.folder is not None:
+            self.folder = Path(self.folder)
+            if (self.folder / 'params.json').is_file():
+                with open(str(self.folder / 'params.json'), 'r') as f:
+                    self._params = json.load(f)
+        else:
+            # this is in case of in-memory
+            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
 
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -103,25 +108,27 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def create(cls, recording, sorting, folder, remove_if_exists=False,
+    def create(cls, recording, sorting, folder, mode="folder", remove_if_exists=False,
                use_relative_path=False):
-        folder = Path(folder)
-        if folder.is_dir():
-            if remove_if_exists:
-                shutil.rmtree(folder)
-            else:
-                raise FileExistsError('Folder already exists')
-        folder.mkdir(parents=True)
-        
-        if use_relative_path:
-            relative_to = folder
-        else:
-            relative_to = None
+        assert mode in ("folder", "memory")
+        if mode == "folder":
+            folder = Path(folder)
+            if folder.is_dir():
+                if remove_if_exists:
+                    shutil.rmtree(folder)
+                else:
+                    raise FileExistsError('Folder already exists')
+            folder.mkdir(parents=True)
 
-        if recording.is_dumpable:
-            recording.dump(folder / 'recording.json', relative_to=relative_to)
-        if sorting.is_dumpable:
-            sorting.dump(folder / 'sorting.json', relative_to=relative_to)
+            if use_relative_path:
+                relative_to = folder
+            else:
+                relative_to = None
+
+            if recording.is_dumpable:
+                recording.dump(folder / 'recording.json', relative_to=relative_to)
+            if sorting.is_dumpable:
+                sorting.dump(folder / 'sorting.json', relative_to=relative_to)
 
         return cls(recording, sorting, folder)
 
@@ -179,6 +186,8 @@ class WaveformExtractor:
         exists: bool
             Whether the extension exists or not
         """
+        if self.folder is None:
+            raise Exception("Extensions are not available for in-memory WaveforExtractor objects")
         ext_class = self.get_extension_class(extension_name)
         ext_folder = self.folder / ext_class.extension_name
         params_file = ext_folder / 'params.json'
@@ -251,15 +260,19 @@ class WaveformExtractor:
         self._template_cache = {}
         self._params = {}
 
-        waveform_folder = self.folder / 'waveforms'
-        if waveform_folder.is_dir():
-            shutil.rmtree(waveform_folder)
-        for mode in _possible_template_modes:
-            template_file = self.folder / f'templates_{mode}.npy'
-            if template_file.is_file():
-                template_file.unlink()
+        if self.folder is not None:
+            waveform_folder = self.folder / 'waveforms'
+            if waveform_folder.is_dir():
+                shutil.rmtree(waveform_folder)
+            for mode in _possible_template_modes:
+                template_file = self.folder / f'templates_{mode}.npy'
+                if template_file.is_file():
+                    template_file.unlink()
 
-        waveform_folder.mkdir()
+            waveform_folder.mkdir()
+        else:
+            # remove shared objects
+            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
 
     def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
         """
@@ -285,7 +298,7 @@ class WaveformExtractor:
 
         if return_scaled:
             # check if has scaled values:
-            if not self.recording.has_scaled_traces():
+            if not self.recording.has_scaled():
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 
@@ -304,10 +317,11 @@ class WaveformExtractor:
             return_scaled=return_scaled,
             dtype=dtype.str)
 
-        (self.folder / 'params.json').write_text(
-            json.dumps(check_json(self._params), indent=4), encoding='utf8')
+        if self.folder is not None:
+            (self.folder / 'params.json').write_text(
+                json.dumps(check_json(self._params), indent=4), encoding='utf8')
         
-    def select_units(self, unit_ids, new_folder):
+    def select_units(self, unit_ids, new_folder=None):
         """
         Filters units by creating a new waveform extractor object in a new folder.
         
@@ -325,34 +339,46 @@ class WaveformExtractor:
         we :  WaveformExtractor
             The newly create waveform extractor with the selected units
         """
-        new_folder = Path(new_folder)
-        assert not new_folder.is_dir(), f"{new_folder} already exists!"
-        new_folder.mkdir(parents=True)
-        
         sorting = self.sorting.select_units(unit_ids)
-        # create new waveform extractor folder
-        shutil.copyfile(self.folder / "params.json", 
-                        new_folder / "params.json")
-        shutil.copyfile(self.folder / "recording.json",
-                        new_folder / "recording.json")
-        sorting.dump(new_folder / 'sorting.json', relative_to=None)
+
+        if self.folder is not None:
+            assert new_folder is not None, "Please specify 'new_folder'"
+            new_folder = Path(new_folder)
+            assert not new_folder.is_dir(), f"{new_folder} already exists!"
+            new_folder.mkdir(parents=True)
+
+            # create new waveform extractor folder
+            shutil.copyfile(self.folder / "params.json",
+                            new_folder / "params.json")
+            shutil.copyfile(self.folder / "recording.json",
+                            new_folder / "recording.json")
+            sorting.dump(new_folder / 'sorting.json', relative_to=None)
+
+            # create and populate waveforms folder
+            new_waveforms_folder = new_folder / "waveforms"
+            new_waveforms_folder.mkdir()
         
-        # create and populate waveforms folder
-        new_waveforms_folder = new_folder / "waveforms"
-        new_waveforms_folder.mkdir()
-        
-        waveforms_files = [f for f in (self.folder / "waveforms").iterdir() if f.suffix == ".npy"]
-        for unit in sorting.get_unit_ids():
-            for wf_file in waveforms_files:
-                if f"waveforms_{unit}.npy" in wf_file.name or f'sampled_index_{unit}.npy' in wf_file.name:
-                    shutil.copyfile(
-                        wf_file, new_waveforms_folder / wf_file.name)
-        
-        for ext_name in self.get_available_extension_names():
-            ext = self.load_extension(ext_name)
-            ext.select_units(unit_ids, new_folder)
-                    
-        we = WaveformExtractor.load_from_folder(new_folder)
+            waveforms_files = [f for f in (self.folder / "waveforms").iterdir() if f.suffix == ".npy"]
+            for unit in sorting.get_unit_ids():
+                for wf_file in waveforms_files:
+                    if f"waveforms_{unit}.npy" in wf_file.name or f'sampled_index_{unit}.npy' in wf_file.name:
+                        shutil.copyfile(
+                            wf_file, new_waveforms_folder / wf_file.name)
+
+            for ext_name in self.get_available_extension_names():
+                ext = self.load_extension(ext_name)
+                ext.select_units(unit_ids, new_folder)
+
+            we = WaveformExtractor.load_from_folder(new_folder)
+        else:
+            sorting = self.sorting.select_units(unit_ids)
+            we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory")
+            we.set_params(**self._params)
+            # copy memory objects
+            for unit_id in unit_ids:
+                we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
+                we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
+
         return we
             
 
@@ -407,16 +433,19 @@ class WaveformExtractor:
 
         wfs = self._waveforms.get(unit_id, None)
         if wfs is None:
-            waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
-            if not waveform_file.is_file():
-                raise Exception('Waveforms not extracted yet: '
-                                'please do WaveformExtractor.run_extract_waveforms() first')
-            if memmap:
-                wfs = np.load(str(waveform_file), mmap_mode="r")
+            if self.folder is not None:
+                waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
+                if not waveform_file.is_file():
+                    raise Exception('Waveforms not extracted yet: '
+                                    'please do WaveformExtractor.run_extract_waveforms() first')
+                if memmap:
+                    wfs = np.load(str(waveform_file), mmap_mode="r")
+                else:
+                    wfs = np.load(waveform_file)
+                if cache:
+                    self._waveforms[unit_id] = wfs
             else:
-                wfs = np.load(waveform_file)
-            if cache:
-                self._waveforms[unit_id] = wfs
+                wfs = self._memory_objects["wfs_arrays"][unit_id]
 
         if sparsity is not None:
             assert unit_id in sparsity, f"Sparsity for unit {unit_id} is not in the sparsity dictionary!"
@@ -443,8 +472,11 @@ class WaveformExtractor:
         sampled_indices: np.array
             The sampled indices
         """
-        sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
-        sampled_index = np.load(sampled_index_file)
+        if self.folder is not None:
+            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
+            sampled_index = np.load(sampled_index_file)
+        else:
+            sampled_index = self._memory_objects["sampled_indices"][unit_id]
         return sampled_index
 
     def get_waveforms_segment(self, segment_index, unit_id, sparsity=None):
@@ -494,7 +526,9 @@ class WaveformExtractor:
         for i, unit_id in enumerate(unit_ids):
             wfs = self.get_waveforms(unit_id, cache=False)
             for mode in modes:
-                if mode == 'median':
+                if len(wfs) == 0:
+                    arr = np.zeros(wfs.shape[1:], dtype=wfs.dtype)
+                elif mode == 'median':
                     arr = np.median(wfs, axis=0)
                 elif mode == 'average':
                     arr = np.average(wfs, axis=0)
@@ -507,8 +541,9 @@ class WaveformExtractor:
 
         for mode in modes:
             templates = self._template_cache[mode]
-            template_file = self.folder / f'templates_{mode}.npy'
-            np.save(template_file, templates)
+            if self.folder is not None:
+                template_file = self.folder / f'templates_{mode}.npy'
+                np.save(template_file, templates)
 
     def get_all_templates(self, unit_ids=None, mode='average'):
         """
@@ -636,15 +671,16 @@ class WaveformExtractor:
                 sampled_index[pos:pos + inds.size]['segment_index'] = segment_index
                 pos += inds.size
 
-            sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
-            np.save(sampled_index_file, sampled_index)
+            if self.folder is not None:
+                sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
+                np.save(sampled_index_file, sampled_index)
+            else:
+                self._memory_objects["sampled_indices"][unit_id] = sampled_index
 
         return selected_spikes
 
     def run_extract_waveforms(self, seed=None, **job_kwargs):
         p = self._params
-        sampling_frequency = self.recording.get_sampling_frequency()
-        num_chans = self.recording.get_num_channels()
         nbefore = self.nbefore
         nafter = self.nafter
         return_scaled = self.return_scaled
@@ -679,11 +715,19 @@ class WaveformExtractor:
             spikes.append(spikes_)
         spikes = np.concatenate(spikes)
 
-        wf_folder = self.folder / 'waveforms'
+        if self.folder is not None:
+            wf_folder = self.folder / 'waveforms'
+            mode = "memmap"
+            copy = False
+        else:
+            wf_folder = None
+            mode = "shared_memory"
+            copy = True
         wfs_arrays = extract_waveforms_to_buffers(self.recording, spikes, unit_ids, nbefore, nafter,
-                                mode='memmap', return_scaled=return_scaled, folder=wf_folder, dtype=p['dtype'],
-                                sparsity_mask=None,  copy=False, **job_kwargs)        
-
+                                                  mode=mode, return_scaled=return_scaled, folder=wf_folder,
+                                                  dtype=p['dtype'], sparsity_mask=None, copy=copy, **job_kwargs)
+        if self.folder is None:
+            self._memory_objects["wfs_arrays"] = wfs_arrays
 
 
 def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None, seed=None):
@@ -731,14 +775,11 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
     return selected_spikes
 
 
-
-
-def extract_waveforms(recording, sorting, folder,
-                      load_if_exists=False,
+def extract_waveforms(recording, sorting, folder=None,
+                      mode='folder', load_if_exists=False,
                       precompute_template=('average', ),
                       ms_before=3., ms_after=4.,
                       max_spikes_per_unit=500,
-                      unselect_spike_on_border=True,
                       overwrite=False,
                       return_scaled=True,
                       dtype=None,
@@ -755,8 +796,11 @@ def extract_waveforms(recording, sorting, folder,
         The recording object
     sorting: Sorting
         The sorting object
-    folder: str or Path
+    folder: str or Path or None
         The folder where waveforms are cached
+    mode: str
+        "folder" (default) or "memory". The "folder" argument must be specified in case of mode "folder".
+        If "memory" is used, the waveforms are stored in RAM. Use this option carefully!
     load_if_exists: bool
         If True and waveforms have already been extracted in the specified folder, they are loaded
         and not recomputed.
@@ -792,20 +836,22 @@ def extract_waveforms(recording, sorting, folder,
         The WaveformExtractor object
 
     """
-    folder = Path(folder)
-    assert not (overwrite and load_if_exists), "Use either 'overwrite=True' or 'load_if_exists=True'"
-    if overwrite and folder.is_dir():
-        shutil.rmtree(folder)
-    if load_if_exists and folder.is_dir():
-        we = WaveformExtractor.load_from_folder(folder)
-    else:
-        we = WaveformExtractor.create(recording, sorting, folder, use_relative_path=use_relative_path)
-        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
-                      return_scaled=return_scaled)
-        we.run_extract_waveforms(seed=seed, **job_kwargs)
+    if mode == "folder":
+        assert folder is not None
+        folder = Path(folder)
+        assert not (overwrite and load_if_exists), "Use either 'overwrite=True' or 'load_if_exists=True'"
+        if overwrite and folder.is_dir():
+            shutil.rmtree(folder)
+        if load_if_exists and folder.is_dir():
+            we = WaveformExtractor.load_from_folder(folder)
+            return we
+    we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path)
+    we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
+                  return_scaled=return_scaled)
+    we.run_extract_waveforms(seed=seed, **job_kwargs)
 
-        if precompute_template is not None:
-            we.precompute_templates(modes=precompute_template)
+    if precompute_template is not None:
+        we.precompute_templates(modes=precompute_template)
 
     return we
 

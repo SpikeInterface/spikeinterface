@@ -16,32 +16,40 @@ def test_localize_peaks():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-
+    
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, verbose=False, progress_bar=True)
+    
     peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         chunk_size=10000, verbose=False, progress_bar=False)
-    
+                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1, 
+                         **job_kwargs)
+
     list_locations = []
-    
-    peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                    chunk_size=10000, verbose=True, progress_bar=False)
+
+    peak_locations = localize_peaks(recording, peaks, method='center_of_mass', **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('com', peak_locations))
 
     peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation',
                                     method_kwargs=dict(optimizer='least_square'),
-                                    n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
+                                    **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('least_square', peak_locations))
 
     peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', 
                                     method_kwargs=dict(optimizer='minimize_with_log_penality'),
-                                    n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
+                                    **job_kwargs)
+    assert peaks.size == peak_locations.shape[0]
+    list_locations.append(('minimize_with_log_penality', peak_locations))
+
+    peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', 
+                                    method_kwargs=dict(optimizer='minimize_with_log_penality',
+                                    enforce_decrease=True),
+                                    **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('minimize_with_log_penality', peak_locations))
 
 
-    # DEBUG
+    #DEBUG
     # import MEArec
     # recgen = MEArec.load_recordings(recordings=local_path, return_h5_objects=True,
     # check_suffix=False,
@@ -62,7 +70,7 @@ def test_localize_peaks():
     #     ax.scatter(peak_locations['x'], peak_locations['y'], color='k', s=1, alpha=0.5)
     #     ax.set_xlabel('x')
     #     ax.set_ylabel('y')
-    #     # MEArec is "yz" in 2D
+    #     #MEArec is "yz" in 2D
     #     ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
     #     if 'z' in peak_locations.dtype.fields:
     #         ax = axs[1]

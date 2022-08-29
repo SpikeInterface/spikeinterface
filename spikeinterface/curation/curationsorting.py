@@ -13,11 +13,11 @@ class CurationSorting():
     parent_sorting: Recording
         The recording object
     properties_policy: str
-        Policy used to propagate propierties after split and merge operation. If 'keep' the properties will be
-        pass to the new units (if the original units have the same value). If 'remove' the new units will have 
+        Policy used to propagate properties after split and merge operation. If 'keep' the properties will be
+        passed to the new units (if the original units have the same value). If 'remove' the new units will have 
         an empty value for all the properties. Default: 'keep'
     make_graph: bool
-        True to keep a networksx graph with the curation history
+        True to keep a networkx graph with the curation history
     Returns
     -------
     sorting: Sorting
@@ -134,11 +134,11 @@ class CurationSorting():
         self._add_new_stage(new_sorting, edges)        
 
     def redo_avaiable(self):
-        #usefull function for a gui
+        #useful function for a gui
         return self._sorting_stages_i < len(self._sorting_stages)
     
     def undo_avaiable(self):
-        #usefull function for a gui
+        #useful function for a gui
         return self._sorting_stages_i > 0
 
     def undo(self):
@@ -164,7 +164,7 @@ class CurationSorting():
 
     @property
     def sorting(self):
-        return self._sorting_stages[self._sorting_stages_i]
+        return self.current_sorting
 
     @property
     def current_sorting(self):

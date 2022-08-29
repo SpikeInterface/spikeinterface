@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
@@ -7,8 +8,23 @@ from .matlabhelpers import MatlabHelper
 
 
 class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
+    """Load WaveClus format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the WaveClus file.
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
+
+    Returns
+    -------
+    extractor : WaveClusSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = "WaveClusSortingExtractor"
-    installation_mesg = ""  # error message when not installed
+    name = "waveclus"
 
     def __init__(self, file_path, keep_good_only=True):
         MatlabHelper.__init__(self, file_path)
@@ -47,4 +63,4 @@ class WaveClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_waveclust = define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclust")
+read_waveclus = define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclus")

@@ -29,17 +29,21 @@ class BaseWidget:
         # every widgets must prepare a dict "plot_data" in the init
         self.plot_data = plot_data
         self.backend = backend
-        
-        # delegated to one of the plotter
-        self.do_plot(backend, **backend_kwargs)
+        self.backend_kwargs = backend_kwargs
 
-    def do_plot(self, backend, **backend_kwargs):
+        
+    def check_backend(self, backend, **backend_kwargs):
         if backend is None:
             backend = get_default_plotter_backend()
-    
-        assert backend in self.possible_backends, f'Backend {backend} not supported for this widget'    
+        assert backend in self.possible_backends, (f"{backend} backend not available! Available backends are: "
+                                                   f"{list(self.possible_backends.keys())}")
+        return backend, backend_kwargs
+
+    def do_plot(self, backend, **backend_kwargs):
+        backend, backend_kwargs = self.check_backend(backend, **backend_kwargs)
         plotter = self.possible_backends[backend]()
         plotter.do_plot(self.plot_data, **backend_kwargs)
+        self.plotter = plotter
 
     @classmethod
     def register_backend(cls, backend_plotter):
@@ -88,10 +92,8 @@ def define_widget_function_from_class(widget_class, name):
     @copy_signature(widget_class)
     def widget_func(*args, **kwargs):
         W = widget_class(*args, **kwargs)
-        # @alessio @jeremy @jeff
-        # function return the widget itself
-        # we could return something else if needed  as we discussed
-        return W
+        W.do_plot(W.backend, **W.backend_kwargs)
+        return W.plotter
 
     widget_func.__doc__ = widget_class.__doc__
     widget_func.__name__ = name

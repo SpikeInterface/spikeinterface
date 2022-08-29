@@ -135,7 +135,7 @@ class UnitWaveformsWidget(BaseWidget):
             if self._plot_waveforms:
                 wfs = we.get_waveforms(unit_id)
                 if self.unit_selected_waveforms is not None:
-                    wfs = wfs[self.unit_selected_waveforms[unit_id], :, chan_inds]
+                    wfs = wfs[self.unit_selected_waveforms[unit_id]][:, :, chan_inds]
                 else:
                     wfs = wfs[:, :, chan_inds]
                 wfs = wfs * y_scale + y_offset[None, :, chan_inds]

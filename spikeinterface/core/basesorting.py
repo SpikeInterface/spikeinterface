@@ -58,16 +58,18 @@ class BaseSorting(BaseExtractor):
     ):
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
-        spike_train = segment.get_unit_spike_train(
+        spike_frames = segment.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
         if return_times:
             if self.has_recording():
                 times = self.get_times(segment_index=segment_index)
-                return times[spike_train]
+                return times[spike_frames]
             else:
-                return spike_train / self.get_sampling_frequency()
+                t_start = segment._t_start if segment._t_start is not None else 0
+                spike_times =  spike_frames / self.get_sampling_frequency()
+                return t_start + spike_times
         else:
-            return spike_train
+            return spike_frames
 
     def register_recording(self, recording):
         assert np.isclose(self.get_sampling_frequency(),
@@ -130,6 +132,24 @@ class BaseSorting(BaseExtractor):
         values = self.get_property(key)
         v = values[self.id_to_index(unit_id)]
         return v
+
+    def get_total_num_spikes(self):
+        """
+        Get total number of spikes for each unit across segments.
+
+        Returns
+        -------
+        dict
+            Dictionary with unit_ids as key and number of spikes as values
+        """
+        num_spikes = {}
+        for unit_id in self.unit_ids:
+            n = 0
+            for segment_index in range(self.get_num_segments()):
+                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                n += st.size
+            num_spikes[unit_id] = n
+        return num_spikes
 
     def select_units(self, unit_ids, renamed_unit_ids=None):
         """
@@ -277,7 +297,8 @@ class BaseSortingSegment(BaseSegment):
     Abstract class representing several units and relative spiketrain inside a segment.
     """
 
-    def __init__(self):
+    def __init__(self, t_start=None):
+        self._t_start = t_start
         BaseSegment.__init__(self)
 
     def get_unit_spike_train(

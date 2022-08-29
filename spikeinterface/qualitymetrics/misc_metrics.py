@@ -9,6 +9,7 @@ Implementations here have been refactored to support the multi-segment API of sp
 
 from collections import namedtuple
 
+import math
 import numpy as np
 import warnings
 import scipy.ndimage
@@ -18,6 +19,12 @@ from ..postprocessing import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
 )
+
+try:
+    import numba
+    HAVE_NUMBA = True
+except ModuleNotFoundError as err:
+    HAVE_NUMBA = False
 
 
 def compute_num_spikes(waveform_extractor, **kwargs):
@@ -122,7 +129,7 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     return presence_ratio
 
 
-def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
+def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum", **kwargs):
     """Compute signal to noise ratio.
 
     Parameters
@@ -131,20 +138,26 @@ def compute_snrs(waveform_extractor, peak_sign='neg', **kwargs):
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the template to compute best channels.
+    peak_mode: {'extremum', 'at_index'}
+        How to compute the amplitude.
+        Extremum takes the maxima/minima
+        At_index takes the value at t=0
 
     Returns
     -------
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
+    assert peak_sign in ("neg", "pos", "both")
+    assert peak_mode in ("extremum", "at_index")
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     channel_ids = recording.channel_ids
 
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-    unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign)
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
+    unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
     return_scaled = waveform_extractor.return_scaled
     noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **kwargs)
 
@@ -251,6 +264,77 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
 
 
+def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: float = 1.0,
+                                     censored_period_ms: float=0.0):
+    """Calculates the number of refractory period violations.
+
+    This is similar (but slightly different) to the ISI violations.
+    The key difference being that the violations are not only computed on consecutive spikes.
+
+    This is required for some formulas (e.g. the ones from Llobet & Wyngaard 2022).
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object
+    refractory_period_ms : float, optional, default: 1.0
+        The period (in ms) where no 2 good spikes can occur.
+    censored_period_ùs : float, optional, default: 0.0
+        The period (in ms) where no 2 spikes can occur (because they are not detected, or
+        because they were removed by another mean).
+
+    Returns
+    -------
+    TODO
+
+    Reference
+    ---------
+    [1] Llobet & Wyngaard (2022) BioRxiv
+    """
+
+    if not HAVE_NUMBA:
+        print("Error: numba is not installed.")
+        print("compute_refrac_period_violations cannot run without numba.")
+        return None
+
+
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    fs = sorting.get_sampling_frequency()
+    num_units = len(sorting.unit_ids)
+    num_segments = sorting.get_num_segments()
+    spikes = sorting.get_all_spike_trains(outputs="unit_index")
+
+    t_c = int(round(censored_period_ms * fs * 1e-3))
+    t_r = int(round(refractory_period_ms * fs * 1e-3))
+    nb_rp_violations = np.zeros((num_units), dtype=np.int32)
+
+    for seg_index in range(num_segments):
+        _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
+                                     spikes[seg_index][1].astype(np.int32), t_c, t_r)
+
+    if num_segments == 1:
+        T = recording.get_num_frames()
+    else:
+        T = 0
+        for segment_idx in range(num_segments):
+            T += recording.get_num_frames(segment_idx)
+
+    nb_violations = {}
+    contamination = {}
+
+    for i, unit_id in enumerate(sorting.unit_ids):
+        nb_violations[unit_id] = n_v = nb_rp_violations[i]
+        N = len(sorting.get_unit_spike_train(unit_id))
+        D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
+        contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
+
+    res = namedtuple("rp_violations", ['rp_violations', 'contamination'])
+
+    return res(nb_violations, contamination)
+
+
+
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
                               num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
@@ -326,3 +410,34 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         all_fraction_missing[unit_id] = fraction_missing
 
     return all_fraction_missing
+
+
+if HAVE_NUMBA:
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    def _compute_nb_violations_numba(spike_train, t_r):
+        n_v = 0
+        N = len(spike_train)
+
+        for i in range(N):
+            for j in range(i+1, N):
+                diff = spike_train[j] - spike_train[i]
+
+                if diff > t_r:
+                    break
+
+                # if diff < t_c:
+                #     continue
+
+                n_v += 1
+
+        return n_v
+
+    @numba.jit((numba.int32[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
+               nopython=True, nogil=True, cache=True, parallel=True)
+    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
+        n_units = len(nb_rp_violations)
+
+        for i in numba.prange(n_units):
+            spike_train = spike_trains[spike_clusters == i]
+            n_v = _compute_nb_violations_numba(spike_train, t_r)
+            nb_rp_violations[i] += n_v

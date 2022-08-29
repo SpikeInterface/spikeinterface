@@ -3,6 +3,7 @@ import os
 import sys
 import datetime
 from copy import deepcopy
+import gc
 
 import numpy as np
 from tqdm import tqdm
@@ -384,8 +385,7 @@ def make_shared_array(shape, dtype):
         raise Exception('SharedMemory is available only for python>=3.8')
 
     dtype = np.dtype(dtype)
-    # nbytes = shape[0] * shape[1] * dtype.itemsize
-    nbytes = np.prod(shape) * dtype.itemsize
+    nbytes = int(np.prod(shape) * dtype.itemsize)
     shm = SharedMemory(name=None, create=True, size=nbytes)
     arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
     arr[:] = 0
@@ -461,7 +461,7 @@ write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_j
 
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
                                time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M',
-                               verbose=False, auto_cast_uint=True):
+                               verbose=False, auto_cast_uint=True, return_scaled=False):
     """
     Save the traces of a recording extractor in an h5 dataset.
 
@@ -494,6 +494,9 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         If True, output is verbose (when chunks are used)
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    return_scaled : bool, optional
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are dumped to uV, by default False
     """
     import h5py
     # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
@@ -535,7 +538,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
-        traces = recording.get_traces(cast_unsigned=cast_unsigned)
+        traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
         if dtype is not None:
             traces = traces.astype(dtype_file)
         if time_axis == 1:
@@ -558,7 +561,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
             traces = recording.get_traces(segment_index=segment_index,
                                           start_frame=i * chunk_size,
                                           end_frame=min((i + 1) * chunk_size, num_frames),
-                                          cast_unsigned=cast_unsigned)
+                                          cast_unsigned=cast_unsigned, return_scaled=return_scaled)
             chunk_frames = traces.shape[0]
             if dtype is not None:
                 traces = traces.astype(dtype_file)
@@ -700,6 +703,10 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
                                   cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
+
+    # fix memory leak by forcing garbage collection
+    del traces
+    gc.collect()
 
 
 def determine_cast_unsigned(recording, dtype):

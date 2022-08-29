@@ -1,7 +1,8 @@
-import numpy as np
 import warnings
 from pathlib import Path
 from typing import Union, Optional
+
+import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 from spikeinterface.core.core_tools import define_function_from_class
@@ -10,7 +11,6 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 try:
     from lxml import etree as et
-
     HAVE_LXML = True
 except ImportError:
     HAVE_LXML = False
@@ -29,19 +29,30 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     file_path: str
-        The xml file.
-    stream_id: str or None
-        If several stream, specify the one you want.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+        The file path to load the recordings from.
+    stream_id: str, optional
+        If there are several streams, specify the stream id you want to load.
+    stream_name: str, optional
+        If there are several streams, specify the stream name you want to load.
+    all_annotations: bool, optional, default: False
+        Load exhaustively all annotations from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'NeuroScopeRawIO'
+    name = "neuroscope"
 
-    def __init__(self, file_path, stream_id=None, all_annotations=False):
-        neo_kwargs = {'filename': str(file_path)}
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
+        neo_kwargs = self.map_to_neo_kwargs(file_path)
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
+                                           stream_name=stream_name,
+                                           all_annotations=all_annotations, 
+                                           **neo_kwargs)
         self._kwargs.update(dict(file_path=str(file_path)))
+
+    @classmethod
+    def map_to_neo_kwargs(cls, file_path):
+        neo_kwargs = {'filename': str(file_path)}
+        return neo_kwargs
 
 
 class NeuroScopeSortingExtractor(BaseSorting):
@@ -68,10 +79,10 @@ class NeuroScopeSortingExtractor(BaseSorting):
     folder_path : str
         Optional. Path to the collection of .res and .clu text files. Will auto-detect format.
     resfile_path : PathType
-        Optional. Path to a particular .res text file. If given, only the single .res file 
+        Optional. Path to a particular .res text file. If given, only the single .res file
         (and the respective .clu file) are loaded
     clufile_path : PathType
-        Optional. Path to a particular .clu text file. If given, only the single .clu file 
+        Optional. Path to a particular .clu text file. If given, only the single .clu file
         (and the respective .res file) are loaded
     keep_mua_units : bool
         Optional. Whether or not to return sorted spikes from multi-unit activity. Defaults to True.
@@ -85,6 +96,7 @@ class NeuroScopeSortingExtractor(BaseSorting):
     extractor_name = "NeuroscopeSortingExtractor"
     installed = HAVE_LXML
     installation_mesg = "Please install lxml to use this extractor!"
+    name = "neuroscope"
 
     def __init__(
         self,
@@ -264,9 +276,9 @@ def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType
     return xml_file_path
 
 
-read_neuroscope_recording = define_function_from_class(source_class=NeuroScopeRecordingExtractor, 
+read_neuroscope_recording = define_function_from_class(source_class=NeuroScopeRecordingExtractor,
                                                    name="read_neuroscope_recording")
-read_neuroscope_sorting = define_function_from_class(source_class=NeuroScopeSortingExtractor, 
+read_neuroscope_sorting = define_function_from_class(source_class=NeuroScopeSortingExtractor,
                                                  name="read_neuroscope_sorting")
 
 

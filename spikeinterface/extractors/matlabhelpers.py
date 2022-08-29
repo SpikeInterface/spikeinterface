@@ -1,24 +1,22 @@
-from collections import deque
 from pathlib import Path
+from collections import deque
+
 import numpy as np
 
 try:
     import h5py
-
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
 
 try:
     from scipy.io.matlab import loadmat, savemat
-
     HAVE_LOADMAT = True
 except ImportError:
     HAVE_LOADMAT = False
 
 try:
     import hdf5storage
-
     HAVE_HDF5STORAGE = True
 except ImportError:
     HAVE_HDF5STORAGE = False
@@ -29,7 +27,6 @@ HAVE_MAT = HAVE_H5PY & HAVE_LOADMAT
 class MatlabHelper:
     extractor_name = "MATSortingExtractor"
     installed = HAVE_MAT  # check at class level if installed or not
-    is_writable = False
     mode = "file"
     installation_mesg = "To use the MATSortingExtractor install h5py and scipy: " \
                         "\n\n pip install h5py scipy\n\n"  # error message when not installed

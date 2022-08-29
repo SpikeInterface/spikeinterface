@@ -18,6 +18,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
     
     When a redundant pair is found, there are several strategy to choice which one the best:
        * 'minimum_shift'
+       * 'highest_amplitude'
        * 'max_spikes'
 
     Parameters
@@ -42,12 +43,18 @@ def remove_redundant_units(sorting_or_waveform_extractor,
             'highest_amplitude': keep the unit with the best amplitude on un shifted max.
     peak_sign: str  ('neg', 'pos', 'both')
         Used when remove_strategy='highest_amplitude'
+
+    Returns
+    -------
+    BaseSorting
+        Sorting object without redundant units
     """
     
     if isinstance(sorting_or_waveform_extractor, WaveformExtractor):
         sorting = sorting_or_waveform_extractor.sorting
         we = sorting_or_waveform_extractor
     else:
+        assert not align, "The 'align' option is only available when a waveform extractor is used as input"
         sorting = sorting_or_waveform_extractor
         we = None
 
@@ -61,9 +68,9 @@ def remove_redundant_units(sorting_or_waveform_extractor,
         sorting_aligned = sorting
 
     redundant_unit_pairs = find_redundant_units(sorting_aligned, 
-                                              delta_time=delta_time,
-                                              agreement_threshold=agreement_threshold,
-                                              duplicate_threshold=duplicate_threshold)
+                                                delta_time=delta_time,
+                                                agreement_threshold=agreement_threshold,
+                                                duplicate_threshold=duplicate_threshold)
     
     remove_unit_ids = []
 
@@ -91,6 +98,13 @@ def remove_redundant_units(sorting_or_waveform_extractor,
                 remove_unit_ids.append(u1)
             else:
                 remove_unit_ids.append(u2)
+    elif remove_strategy == "max_spikes":
+        num_spikes = sorting.get_total_num_spikes()
+        for u1, u2 in redundant_unit_pairs:
+            if num_spikes[u1] < num_spikes[u2]:
+                remove_unit_ids.append(u1)
+            else:
+                remove_unit_ids.append(u2)
     elif remove_strategy == 'with_metrics':
         # TODO
         # @aurelien @alessio
@@ -98,7 +112,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
         # this will be implemented in a futur PR by the first who need it!
         raise NotImplementedError()
     else:
-        raise ValueError(f'remove_strategy : {remove_strategy}')
+        raise ValueError(f'remove_strategy : {remove_strategy} is not implemented!')
 
     sorting_clean = sorting.remove_units(remove_unit_ids)
 

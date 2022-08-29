@@ -5,7 +5,7 @@ import time
 import pytest
 from pathlib import Path
 
-from spikeinterface.core import set_global_tmp_folder
+from spikeinterface.core import load_extractor
 from spikeinterface.extractors import toy_example
 from spikeinterface.sorters import run_sorters, run_sorter_by_property, collect_sorting_outputs
 
@@ -16,18 +16,31 @@ else:
     cache_folder = Path("cache_folder") / "sorters"
 
 
+def setup_module():
+    rec, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
+    for i in range(4):
+        rec_folder = cache_folder / f'toy_rec_{i}'
+        if rec_folder.is_dir():
+            shutil.rmtree(rec_folder)
+        
+        if i % 2 == 0:
+            rec.set_channel_groups(["0"] * 4 + ["1"] * 4)
+        else:
+            rec.set_channel_groups([0] * 4 + [1] * 4)
+        
+        rec.save(folder=rec_folder)
+        
+        
+
+
 def test_run_sorters_with_list():
     working_folder = cache_folder / 'test_run_sorters_list'
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
 
-    rec0, _ = toy_example(num_channels=4, duration=30, seed=0, num_segments=1)
-    rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
-
     # make dumpable
-    set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec0')
-    rec1 = rec1.save(name='rec1')
+    rec0 = load_extractor(cache_folder / 'toy_rec_0')
+    rec1 = load_extractor(cache_folder / 'toy_rec_1')
 
     recording_list = [rec0, rec1]
     sorter_list = ['tridesclous']
@@ -37,38 +50,29 @@ def test_run_sorters_with_list():
 
 
 def test_run_sorter_by_property():
-    working_folder1 = cache_folder / 'test_run_sorter_by_property1'
+    working_folder1 = cache_folder / 'test_run_sorter_by_property_1'
     if working_folder1.is_dir():
         shutil.rmtree(working_folder1)
-    working_folder2 = cache_folder / 'test_run_sorter_by_property2'
+
+    working_folder2 = cache_folder / 'test_run_sorter_by_property_2'
     if working_folder2.is_dir():
         shutil.rmtree(working_folder2)
-
-    rec0, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
-    rec0.set_channel_groups(["0"] * 4 + ["1"] * 4)
+    
+    rec0 = load_extractor(cache_folder / 'toy_rec_0')
     rec0_by = rec0.split_by("group")
     group_names0 = list(rec0_by.keys())
 
-    # make dumpable
-    set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec000')
     sorter_name = 'tridesclous'
-
     sorting0 = run_sorter_by_property(sorter_name, rec0, "group", working_folder1,
                                       engine='loop', verbose=False)
     assert "group" in sorting0.get_property_keys()
     assert all([g in group_names0 for g in sorting0.get_property("group")])
     
-    rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
-    rec1.set_channel_groups([0] * 4 + [1] * 4)
+    rec1 = load_extractor(cache_folder / 'toy_rec_1')
     rec1_by = rec1.split_by("group")
     group_names1 = list(rec1_by.keys())
 
-    # make dumpable
-    set_global_tmp_folder(cache_folder)
-    rec1 = rec1.save(name='rec001')
     sorter_name = 'tridesclous'
-
     sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder2,
                                       engine='loop', verbose=False)
     assert "group" in sorting1.get_property_keys()
@@ -79,15 +83,10 @@ def test_run_sorters_with_dict():
     working_folder = cache_folder / 'test_run_sorters_dict'
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
-
-    rec0, _ = toy_example(num_channels=4, duration=30, seed=0, num_segments=1)
-    rec1, _ = toy_example(num_channels=8, duration=30, seed=0, num_segments=1)
-
-    # make dumpable
-    set_global_tmp_folder(cache_folder)
-    rec0 = rec0.save(name='rec00')
-    rec1 = rec1.save(name='rec01')
-
+    
+    rec0 = load_extractor(cache_folder / 'toy_rec_0')
+    rec1 = load_extractor(cache_folder / 'toy_rec_1')
+    
     recording_dict = {'toy_tetrode': rec0, 'toy_octotrode': rec1}
 
     sorter_list = ['tridesclous', 'spykingcircus']
@@ -109,7 +108,7 @@ def test_run_sorters_with_dict():
     print(results)
 
     shutil.rmtree(working_folder / 'toy_tetrode' / 'tridesclous')
-    run_sorters(sorter_list, recording_dict, working_folder,
+    run_sorters(sorter_list, recording_dict, working_folder/'by_dict',
                 engine='loop', sorter_params=sorter_params,
                 with_output=False,
                 mode_if_folder_exists='keep')
@@ -122,18 +121,15 @@ def test_run_sorters_joblib():
         shutil.rmtree(working_folder)
 
     recording_dict = {}
-    for i in range(8):
-        rec, _ = toy_example(num_channels=4, duration=30,
-                             seed=0, num_segments=1)
-        # make dumpable
-        rec = rec.save(folder=cache_folder / f'rec_{i}')
+    for i in range(4):
+        rec = load_extractor(cache_folder / f'toy_rec_{i}')
         recording_dict[f'rec_{i}'] = rec
 
     sorter_list = ['tridesclous', ]
 
     # joblib
     t0 = time.perf_counter()
-    run_sorters(sorter_list, recording_dict, working_folder,
+    run_sorters(sorter_list, recording_dict, working_folder/'with_joblib',
                 engine='joblib', engine_kwargs={'n_jobs': 4},
                 with_output=False,
                 mode_if_folder_exists='keep')
@@ -147,14 +143,11 @@ def test_run_sorters_dask():
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
 
-    # create recording
     recording_dict = {}
-    for i in range(8):
-        rec, _ = toy_example(num_channels=4, duration=30,
-                             seed=0, num_segments=1)
-        # make dumpable
-        rec = rec.save(name=f'rec_{i}')
+    for i in range(4):
+        rec = load_extractor(cache_folder / f'toy_rec_{i}')
         recording_dict[f'rec_{i}'] = rec
+
 
     sorter_list = ['tridesclous', ]
 
@@ -178,6 +171,33 @@ def test_run_sorters_dask():
     print(t1 - t0)
 
 
+@pytest.mark.skipif(True, reason='This is tested locally')
+def test_run_sorters_slurm():
+    working_folder = cache_folder / 'test_run_sorters_slurm'
+    if working_folder.is_dir():
+        shutil.rmtree(working_folder)
+
+    # create recording
+    recording_dict = {}
+    for i in range(4):
+        rec = load_extractor(cache_folder / f'toy_rec_{i}')
+        recording_dict[f'rec_{i}'] = rec
+
+    sorter_list = ['spykingcircus2', 'tridesclous2', ]
+    
+    tmp_script_folder = working_folder / 'slurm_scripts'
+    tmp_script_folder.mkdir(parents=True)
+    
+    run_sorters(sorter_list, recording_dict, working_folder,
+                engine='slurm',
+                engine_kwargs={
+                    'tmp_script_folder': tmp_script_folder,
+                    'cpus_per_task': 32,
+                    'mem': '32G',
+                    },
+                with_output=False, mode_if_folder_exists='keep')
+
+
 def test_collect_sorting_outputs():
     working_folder = cache_folder / 'test_run_sorters_dict'
     results = collect_sorting_outputs(working_folder)
@@ -191,15 +211,18 @@ def test_sorter_installation():
 
 
 if __name__ == '__main__':
-    #pass
+    # setup_module()
+    pass
     # test_run_sorters_with_list()
 
-    test_run_sorter_by_property()
+    # test_run_sorter_by_property()
 
     # test_run_sorters_with_dict()
 
     # test_run_sorters_joblib()
 
     # test_run_sorters_dask()
+    
+    # test_run_sorters_slurm()
 
     # test_collect_sorting_outputs()

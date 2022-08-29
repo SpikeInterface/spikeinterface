@@ -3,31 +3,37 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import neo
+from probeinterface import read_BIDS_probe
+
 from .nwbextractors import read_nwb
 from .neoextractors import read_nix
 
-from probeinterface import read_BIDS_probe
-
-import neo
-
 
 def read_bids(folder_path):
-    """
-    This read an entire BIDS folder and return a list of recording with
-    there attached Probe.
-    
-    theses files are considered:
+    """Load a BIDS folder of data into extractor objects.
+
+    The following files are considered:
       * _channels.tsv
       * _contacts.tsv
       * _ephys.nwb
       * _probes.tsv
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the BIDS folder.
+
+    Returns
+    -------
+    extractors : list of extractors
+        The loaded data, with attached Probes.
     """
 
     folder_path = Path(folder_path)
 
     recordings = []
     for file_path in folder_path.iterdir():
-        # ~ print(file_path)
 
         bids_name = file_path.stem
 

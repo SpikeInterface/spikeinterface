@@ -33,9 +33,12 @@ class TimeseriesPlotter(SortingviewPlotter):
             img = array_to_image(traces, 
                                  clim=dp.clims[layer_key],
                                  num_timepoints_per_row=dp.num_timepoints_per_row,
-                                 colormap=dp.cmap)
+                                 colormap=dp.cmap,
+                                 scalebar=True,
+                                 sampling_frequency=dp.recordings[layer_key].get_sampling_frequency())
             
             tiled_image.add_layer(layer_key, img)
+        self.set_view(tiled_image)
         
         if backend_kwargs["generate_url"]: 
             if backend_kwargs.get("figlabel") is None:

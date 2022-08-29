@@ -5,7 +5,7 @@ There are two extractors for data saved by the Open Ephys GUI
   * OpenEphysLegacyRecordingExtractor: reads the original "Open Ephys" data format
   * OpenEphysBinaryRecordingExtractor: reads the new default "Binary" format
 
-See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html 
+See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
 
 """
@@ -37,20 +37,33 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-
-    stream_id: str or None
-        If several stream, specify the one you want.
+        The folder path to load the recordings from.
+    stream_id: str, optional
+        If there are several streams, specify the stream id you want to load.
+    stream_name: str, optional
+        If there are several streams, specify the stream name you want to load.
+    block_index: int, optional
+        If there are several blocks (experiments), specify the block index you want to load.
     all_annotations: bool  (default False)
         Load exhaustively all annotation from neo.
-
     """
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysRawIO'
+    name = "openephyslegacy"
 
-    def __init__(self, folder_path, stream_id=None, all_annotations=False):
-        neo_kwargs = {'dirname': folder_path}
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
-        self._kwargs.update(dict(folder_path=str(folder_path), stream_id=stream_id))
+    def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id,
+                                           stream_name=stream_name,
+                                           block_index=block_index,
+                                           all_annotations=all_annotations, 
+                                           **neo_kwargs)
+        self._kwargs.update(dict(folder_path=str(folder_path)))
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
 
 
 class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
@@ -67,20 +80,29 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-
-    stream_id: str or None
-        If several stream, specify the one you want.
+        The folder path to load the recordings from.
+    stream_id: str, optional
+        If there are several streams, specify the stream id you want to load.
+    stream_name: str, optional
+        If there are several streams, specify the stream name you want to load.
+    block_index: int, optional
+        If there are several blocks (experiments), specify the block index you want to load.
     all_annotations: bool  (default False)
         Load exhaustively all annotation from neo.
-        
+
     """
-    
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
+    name = "openephys"
+    has_default_locations = True
 
-    def __init__(self, folder_path, stream_id=None, all_annotations=False):
-        neo_kwargs = {'dirname': folder_path}
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, all_annotations=all_annotations, **neo_kwargs)
+    def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
+                                           stream_name=stream_name,
+                                           block_index=block_index,
+                                           all_annotations=all_annotations, 
+                                           **neo_kwargs)
 
         probe = pi.read_openephys(folder_path, raise_error=False)
         if probe is not None:
@@ -92,10 +114,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 num_channels_per_adc = 12
             sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
-            self.set_property("inter_sample_shift", sample_shifts)    
-        
-            
+            self.set_property("inter_sample_shift", sample_shifts)
+
+
         self._kwargs .update(dict(folder_path=str(folder_path)))
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
 
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
@@ -116,10 +143,16 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     """
     mode = 'folder'
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
+    name = "openephys"
 
     def __init__(self, folder_path):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseEventExtractor.__init__(self, **neo_kwargs)
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {'dirname': str(folder_path)}
+        return neo_kwargs
 
 
 def read_openephys(folder_path, **kwargs):
@@ -130,6 +163,14 @@ def read_openephys(folder_path, **kwargs):
     ----------
     folder_path: str or Path
         Path to openephys folder
+    stream_id: str, optional
+        If there are several streams, specify the stream id you want to load.
+    stream_name: str, optional
+        If there are several streams, specify the stream name you want to load.
+    block_index: int, optional
+        If there are several blocks (experiments), specify the block index you want to load.
+    all_annotations: bool  (default False)
+        Load exhaustively all annotation from neo.
 
     Returns
     -------

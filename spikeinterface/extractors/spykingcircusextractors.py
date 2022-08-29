@@ -1,23 +1,36 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment)
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
-
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
 
 
 class SpykingCircusSortingExtractor(BaseSorting):
+    """Load SpykingCircus format data as a recording extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the SpykingCircus folder.
+
+    Returns
+    -------
+    extractor : SpykingCircusSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'SpykingCircusSortingExtractor'
     installed = HAVE_H5PY  # check at class level if installed or not
-    is_writable = True
     mode = 'folder'
     installation_mesg = "To use the SpykingCircusSortingExtractor install h5py: \n\n pip install h5py\n\n"
+    name = "spykingcircus"
 
     def __init__(self, folder_path):
         assert HAVE_H5PY, self.installation_mesg

@@ -1,5 +1,6 @@
-import copy
 from pathlib import Path
+from tempfile import tempdir
+from packaging.version import parse
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
@@ -24,13 +25,11 @@ class Mountainsort4Sorter(BaseSorter):
         'freq_max': 6000,
         'filter': True,
         'whiten': True,  # Whether to do channel whitening as part of preprocessing
-        # 'curation': False, -- commented this because not implemented in mountainsort4 package (yet?)
-        # 'num_workers': None,
         'num_workers': 1,
         'clip_size': 50,
         'detect_threshold': 3,
         'detect_interval': 10,  # Minimum number of timepoints between events detected on the same channel
-        # 'noise_overlap_threshold': 0.15,  # Use None for no automated curation' -- commented this because not implemented in mountainsort4 package (yet?)
+        'tempdir': None
     }
 
     _params_description = {
@@ -44,12 +43,11 @@ class Mountainsort4Sorter(BaseSorter):
         'freq_max': "Low-pass filter cutoff frequency",
         'filter': "Enable or disable filter",
         'whiten': "Enable or disable whitening",
-        # 'curation': "Enable or disable curation", -- commented this because not implemented in mountainsort4 package (yet?)
         'num_workers': "Number of workers (if None, half of the cpu number is used)",
         'clip_size': "Number of samples per waveform",
         'detect_threshold': "Threshold for spike detection",
         'detect_interval': "Minimum number of timepoints between events detected on the same channel",
-        # 'noise_overlap_threshold': "Noise overlap threshold for automatic curation", -- commented this because not implemented in mountainsort4 package (yet?)
+        'tempdir': "Temporary directory for mountainsort (available for ms4 >= 1.0.2)s"
     }
 
     sorter_description = """Mountainsort4 is a fully automatic density-based spike sorter using the isosplit clustering
@@ -106,33 +104,33 @@ class Mountainsort4Sorter(BaseSorter):
         # Whiten
         if p['whiten']:
             if verbose:
-                print('whitenning')
+                print('whitening')
             recording = whiten(recording=recording)
 
         print('Mountainsort4 use the OLD spikeextractors mapped with NewToOldRecording')
         old_api_recording = NewToOldRecording(recording)
+        
+        ms4_params = dict(recording=old_api_recording,
+                          detect_sign=p['detect_sign'],
+                          adjacency_radius=p['adjacency_radius'],
+                          clip_size=p['clip_size'],
+                          detect_threshold=p['detect_threshold'],
+                          detect_interval=p['detect_interval'],
+                          num_workers=p['num_workers'],
+                          verbose=verbose)
+        
+        # temporary folder
+        ms4_version = Mountainsort4Sorter.get_sorter_version()
+
+        if ms4_version != "unknown" and parse(ms4_version) >= parse("1.0.3"):
+            if p["tempdir"] is not None:
+                p["tempdir"] = str(p["tempdir"])
+            if verbose:
+                print(f'Using temporary directory {p["tempdir"]}')
+            ms4_params.update(tempdir=p['tempdir'])
 
         # Check location no more needed done in basesorter
-        old_api_sorting = mountainsort4.mountainsort4(
-            recording=old_api_recording,
-            detect_sign=p['detect_sign'],
-            adjacency_radius=p['adjacency_radius'],
-            clip_size=p['clip_size'],
-            detect_threshold=p['detect_threshold'],
-            detect_interval=p['detect_interval'],
-            num_workers=p['num_workers'],
-            verbose=verbose
-        )
-
-        # Curate -- commented this because not implemented in mountainsort4 package (yet?)
-        # if p['noise_overlap_threshold'] is not None and p['curation'] is True:
-        #     if verbose:
-        #         print('Curating')
-        #     old_api_sorting = mountainsort4.mountainsort4_curation(
-        #         recording=old_api_recording,
-        #         sorting=old_api_sorting,
-        #         noise_overlap_threshold=p['noise_overlap_threshold']
-        #     )
+        old_api_sorting = mountainsort4.mountainsort4(**ms4_params)
 
         # convert sorting to new API and save it
         unit_ids = old_api_sorting.get_unit_ids()
