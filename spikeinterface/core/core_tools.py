@@ -3,6 +3,7 @@ import os
 import sys
 import datetime
 from copy import deepcopy
+import gc
 
 import numpy as np
 from tqdm import tqdm
@@ -702,6 +703,10 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
                                   cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
+
+    # fix memory leak by forcing garbage collection
+    del traces
+    gc.collect()
 
 
 def determine_cast_unsigned(recording, dtype):
