@@ -105,7 +105,8 @@ def synchronize_neuropixel_streams(recording_ref, recording_other):
           The intercept is close to 0 and corresponds to the delta time start
     
     """
-    
+    # This will be done very very soon, I promise.
+    raise NotImplementedError    
     
     synhcro_chan_id = recording_ref.channel_ids[-1]
     trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
@@ -117,18 +118,9 @@ def synchronize_neuropixel_streams(recording_ref, recording_other):
     trig_other = trig_other[:, 0]
     times_other = recording_other.get_times()
     
-    # print(trig_ref.shape, trig_other.shape)
-    print(trig_ref.dtype, trig_other.dtype)
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # ax.plot(times_ref, trig_ref)
+    # ax.plot(times_other, trig_other)
+    # plt.show()
 
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    ax.plot(times_ref, trig_ref)
-    ax.plot(times_other, trig_other)
-    plt.show()
-
-    
-    
-    
-    
-    
-    
