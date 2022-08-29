@@ -5,12 +5,14 @@ import numpy as np
 import neo
 import probeinterface as pi
 
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+
+
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
-HAS_NEO_10_2 = version.parse(neo.__version__) >= version.parse("0.10.2")
 
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
@@ -28,6 +30,9 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path: str
         The folder path to load the recordings from.
+    load_sync_channel: bool dafult False
+        Load or not the last channel used for synchronization.
+        If True, then the probe is not loaded because one more channel
     stream_id: str, optional
         If there are several streams, specify the stream id you want to load.
         For example, 'imec0.ap' 'nidq' or 'imec0.lf'.
@@ -41,18 +46,17 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     name = "spikeglx"
     has_default_locations = True
 
-
-    def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        if HAS_NEO_10_2:
-            neo_kwargs['load_sync_channel'] = False
+    def __init__(self, folder_path, load_sync_channel=False, stream_id=None, stream_name=None, all_annotations=False):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel=load_sync_channel)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations,
                                            **neo_kwargs)
 
-        # ~ # open the corresponding stream probe
-        if HAS_NEO_10_2 and "nidq" not in self.stream_id:
+
+        # open the corresponding stream probe for LF and AP
+        # if load_sync_channel=False
+        if "nidq" not in self.stream_id and not load_sync_channel:
             signals_info_dict = {
                 e["stream_name"]: e for e in self.neo_reader.signals_info_list
             }
@@ -79,11 +83,11 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
             self.set_property("inter_sample_shift", sample_shifts)
 
-        self._kwargs.update(dict(folder_path=str(folder_path)))
+        self._kwargs.update(dict(folder_path=str(folder_path), load_sync_channel=load_sync_channel))
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {'dirname': str(folder_path)}
+    def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False):
+        neo_kwargs = {'dirname': str(folder_path), 'load_sync_channel': load_sync_channel}
         return neo_kwargs
 
 

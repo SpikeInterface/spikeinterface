@@ -29,6 +29,7 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['spikeglx']
     entities = [
         ('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.ap'}),
+        ('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.ap', 'load_sync_channel': True}),
         ('spikeglx/Noise4Sam_g0', {'stream_id': 'imec0.lf'}),
         ('spikeglx/Noise4Sam_g0', {'stream_id': 'nidq'}),
     ]
@@ -251,10 +252,11 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    test = MearecRecordingTest()
     # test = MearecSortingTest()
+    test = SpikeGLXRecordingTest()
+    # test = OpenEphysBinaryRecordingTest()
     # test = SpikeGLXRecordingTest()
-    test = OpenEphysBinaryRecordingTest()
+    # test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
@@ -262,7 +264,7 @@ if __name__ == '__main__':
     # test = PlexonRecordingTest()
     # test = NeuralynxRecordingTest()
     # test = BlackrockRecordingTest()
-    # test = MCSRawRecordingTest()
+    # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
     # test = CedRecordingTest()

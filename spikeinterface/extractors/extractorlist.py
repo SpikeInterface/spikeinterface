@@ -42,7 +42,7 @@ from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclu
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
-from .neuropixels_utils import get_neuropixels_channel_groups, get_neuropixels_sample_shifts
+
 
 ########################################
 
