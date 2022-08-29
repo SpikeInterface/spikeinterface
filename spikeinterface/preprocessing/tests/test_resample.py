@@ -208,8 +208,8 @@ def test_resample_by_chunks():
                 # The signals look quite similar, with error that are small enough
                 # But, when using signal.resample, the last edge becomes too noisy
                 
-                #~ assert error_mean / rms < 0.01
-                #~ assert error_max / rms < 0.05
+                assert error_mean / rms < 0.01
+                assert error_max / rms < 0.05
                 
                 if DEBUG:
                     fig, axs = plt.subplots(nrows=2, sharex=True)
