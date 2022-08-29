@@ -95,14 +95,14 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
 
 def synchronize_neuropixel_streams(recording_ref, recording_other):
     """
-    Use latest synchro channel from spikeglx or openephys neuropixel to synchronize
+    Use the last "sync" channel from spikeglx or openephys neuropixels to synchronize
     recordings.
     
     Method used :
       1. detect pulse times on both streams.
-      2. make a linear regression from other to ref.
-          The slope is near 1 and correspond to sample rate corection
-          The intersept is near 0 and correspond to delta time start
+      2. make a linear regression from 'other' to 'ref'.
+          The slope is nclose to 1 and corresponds to the sample rate correction
+          The intercept is close to 0 and corresponds to the delta time start
     
     """
     
