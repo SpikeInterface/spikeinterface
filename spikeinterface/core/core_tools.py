@@ -460,7 +460,7 @@ write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_j
 
 def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
                                time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M',
-                               verbose=False, auto_cast_uint=True):
+                               verbose=False, auto_cast_uint=True, return_scaled=False):
     """
     Save the traces of a recording extractor in an h5 dataset.
 
@@ -493,6 +493,9 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
         If True, output is verbose (when chunks are used)
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    return_scaled : bool, optional
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are dumped to uV, by default False
     """
     import h5py
     # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
@@ -534,7 +537,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
     chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
-        traces = recording.get_traces(cast_unsigned=cast_unsigned)
+        traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
         if dtype is not None:
             traces = traces.astype(dtype_file)
         if time_axis == 1:
@@ -557,7 +560,7 @@ def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path
             traces = recording.get_traces(segment_index=segment_index,
                                           start_frame=i * chunk_size,
                                           end_frame=min((i + 1) * chunk_size, num_frames),
-                                          cast_unsigned=cast_unsigned)
+                                          cast_unsigned=cast_unsigned, return_scaled=return_scaled)
             chunk_frames = traces.shape[0]
             if dtype is not None:
                 traces = traces.astype(dtype_file)
