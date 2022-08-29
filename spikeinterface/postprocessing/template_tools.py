@@ -4,7 +4,7 @@ import numpy.lib.recfunctions as rfn
 from ..core import get_channel_distances, get_noise_levels
 
 
-def get_template_amplitudes(waveform_extractor, peak_sign="neg", mode="extremum"):
+def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: str = "extremum"):
     """
     Get amplitude per channel for each unit.
 
@@ -54,7 +54,7 @@ def get_template_amplitudes(waveform_extractor, peak_sign="neg", mode="extremum"
     return peak_values
 
 
-def get_template_extremum_channel(waveform_extractor, peak_sign="neg", outputs="id"):
+def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mode: str = "extremum", outputs: str = "id"):
     """
     Compute the channel with the extremum peak for each unit.
 
@@ -64,6 +64,9 @@ def get_template_extremum_channel(waveform_extractor, peak_sign="neg", outputs="
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
+        'extremum':  max or min
+        'at_index': take value at spike index
     outputs: str
         * 'id': channel id
         * 'index': channel index
@@ -74,10 +77,14 @@ def get_template_extremum_channel(waveform_extractor, peak_sign="neg", outputs="
         Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
         as values
     """
+    assert peak_sign in ("both", "neg", "pos")
+    assert mode in ("extremum", "at_index")
+    assert outputs in ("id", "index")
+
     unit_ids = waveform_extractor.sorting.unit_ids
     channel_ids = waveform_extractor.recording.channel_ids
 
-    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign)
+    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode=mode)
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
@@ -205,7 +212,7 @@ def get_template_channel_sparsity(
         return sparsity_with_index
 
 
-def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign="neg"):
+def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str = "neg"):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -250,7 +257,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign="neg"
     return shifts
 
 
-def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg"):
+def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", mode: str = "at_index"):
     """
     Computes amplitudes on the best channel.
 
@@ -260,26 +267,35 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign="neg"):
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
+    mode: str
+        Where the amplitude is computed
+        'extremum':  max or min
+        'at_index': take value at spike index
 
     Returns
     -------
     amplitudes: dict
         Dictionary with unit ids as keys and amplitudes as values
     """
+    assert peak_sign in ("both", "neg", "pos")
+    assert mode in ("extremum", "at_index")
     unit_ids = waveform_extractor.sorting.unit_ids
 
     before = waveform_extractor.nbefore
 
     extremum_channels_ids = get_template_extremum_channel(
-        waveform_extractor, peak_sign=peak_sign
+        waveform_extractor, peak_sign=peak_sign, mode=mode
+    )
+
+    extremum_amplitudes = get_template_amplitudes(
+        waveform_extractor, peak_sign=peak_sign, mode=mode
     )
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
-        template = waveform_extractor.get_template(unit_id, mode="average")
-        chan_id = extremum_channels_ids[unit_id]
-        chan_ind = waveform_extractor.recording.id_to_index(chan_id)
-        unit_amplitudes[unit_id] = template[before, chan_ind]
+        channel_id = extremum_channels_ids[unit_id]
+        best_channel = waveform_extractor.recording.id_to_index(channel_id)
+        unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes
 

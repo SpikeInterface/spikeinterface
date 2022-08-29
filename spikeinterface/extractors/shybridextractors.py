@@ -1,31 +1,44 @@
-from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
+import json
+from pathlib import Path
+
+import numpy as np
 
 from probeinterface import read_prb, write_prb
 
-import json
-import numpy as np
-from pathlib import Path
+from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
 
 try:
     import hybridizer.io as sbio
     import hybridizer.probes as sbprb
     import yaml
-
     HAVE_SBEX = True
 except ImportError:
     HAVE_SBEX = False
 
 
 class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
+    """Load SHYBRID format data as a recording extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the SHYBRID file.
+
+    Returns
+    -------
+    extractor : SHYBRIDRecordingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'SHYBRIDRecording'
     has_default_locations = True
-    has_unscaled = False
     installed = HAVE_SBEX  # check at class level if installed or not
     is_writable = True
     mode = 'folder'
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID and pyyaml: " \
                         "\n\n pip install shybrid pyyaml\n\n"
+    name = "shybrid"
 
     def __init__(self, file_path):
         # load params file related to the given shybrid recording
@@ -64,17 +77,17 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     @staticmethod
     def write_recording(recording, save_path, initial_sorting_fn, dtype='float32', verbose=True,
                         **job_kwargs):
-        """ Convert and save the recording extractor to SHYBRID format
+        """Convert and save the recording extractor to SHYBRID format.
 
         Parameters
         ----------
         recording: RecordingExtractor
-            The recording extractor to be converted and saved
+            The recording extractor to be converted and saved.
         save_path: str
-            Full path to desired target folder
+            Full path to desired target folder.
         initial_sorting_fn: str
             Full path to the initial sorting csv file (can also be generated
-            using write_sorting static method from the SHYBRIDSortingExtractor)
+            using write_sorting static method from the SHYBRIDSortingExtractor).
         dtype: dtype
             Type of the saved data. Default float32.
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
@@ -114,10 +127,28 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
 
 class SHYBRIDSortingExtractor(BaseSorting):
+    """Load SHYBRID format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the SHYBRID file.
+    sampling_frequency : int
+        The sampling frequency.
+    delimiter : str
+        The delimiter to use for loading the file.
+
+    Returns
+    -------
+    extractor : SHYBRIDSortingExtractor
+        Loaded data.
+    """
+
     extractor_name = 'SHYBRIDSorting'
     installed = HAVE_SBEX
     is_writable = True
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
+    name = "shybrid"
 
     def __init__(self, file_path, sampling_frequency, delimiter=','):
         assert self.installed, self.installation_mesg
@@ -140,14 +171,14 @@ class SHYBRIDSortingExtractor(BaseSorting):
 
     @staticmethod
     def write_sorting(sorting, save_path):
-        """ Convert and save the sorting extractor to SHYBRID CSV format
+        """Convert and save the sorting extractor to SHYBRID CSV format.
 
-        parameters
+        Parameters
         ----------
         sorting : SortingExtractor
-            The sorting extractor to be converted and saved
+            The sorting extractor to be converted and saved.
         save_path : str
-            Full path to the desired target folder
+            Full path to the desired target folder.
         """
         assert HAVE_SBEX, SHYBRIDSortingExtractor.installation_mesg
         assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"
@@ -192,8 +223,7 @@ read_shybrid_sorting = define_function_from_class(source_class=SHYBRIDSortingExt
 
 
 class GeometryNotLoadedError(Exception):
-    """ Raised when the recording extractor has no associated channel locations
-    """
+    """Raised when the recording extractor has no associated channel locations."""
     pass
 
 

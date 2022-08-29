@@ -12,7 +12,7 @@ def init_kwargs_dict(method, method_kwargs):
     return method_kwargs_
 
 
-def estimate_motion(recording, peaks, peak_locations=None,
+def estimate_motion(recording, peaks, peak_locations,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
                     method='decentralized_registration', method_kwargs={},
                     non_rigid_kwargs=None, output_extra_check=False, progress_bar=False,
@@ -20,17 +20,14 @@ def estimate_motion(recording, peaks, peak_locations=None,
     """
     Estimate motion given peaks and their localization.
 
-    Location of peaks can be be included in peaks or given separately in 'peak_locations' argument.
-
     Parameters
     ----------
     recording: RecordingExtractor
         The recording extractor
     peaks: numpy array
         Peak vector (complex dtype)
-        It can also contain the x/y/z fields
     peak_locations: numpy array
-        If not already contained in 'peaks', the x/y/z field of spike location
+        Complex dtype with 'x', 'y', 'z' fields
     direction: 'x', 'y', 'z'
         Dimension on which the motion is estimated
     bin_duration_s: float
@@ -92,7 +89,7 @@ def estimate_motion(recording, peaks, peak_locations=None,
         if verbose:
             print('Computing motion histogram')
         motion_histogram, temporal_hist_bins, spatial_hist_bins = make_motion_histogram(recording, peaks,
-                                                                                        peak_locations=peak_locations,
+                                                                                        peak_locations, direction=direction,
                                                                                         bin_duration_s=bin_duration_s,
                                                                                         bin_um=bin_um,
                                                                                         margin_um=margin_um)
@@ -194,24 +191,12 @@ def estimate_motion(recording, peaks, peak_locations=None,
         return motion, temporal_bins, spatial_bins
 
 
-def get_location_from_fields(peaks_or_locations):
-    dims = [dim for dim in ('x', 'y', 'z') if dim in peaks_or_locations.dtype.fields]
-    peak_locations = np.zeros((peaks_or_locations.size, len(dims)), dtype='float64')
-    for i, dim in enumerate(dims):
-        peak_locations[:, i] = peaks_or_locations[dim]
-    return peak_locations
-
-
-def make_motion_histogram(recording, peaks, peak_locations=None,
+def make_motion_histogram(recording, peaks, peak_locations,
                           weight_with_amplitude=False, direction='y',
                           bin_duration_s=1., bin_um=2., margin_um=50):
     """
     Generate motion histogram
     """
-    if peak_locations is None:
-        peak_locations = get_location_from_fields(peaks)
-    else:
-        peak_locations = get_location_from_fields(peak_locations)
 
     fs = recording.get_sampling_frequency()
     num_sample = recording.get_num_samples(segment_index=0)
@@ -230,7 +215,7 @@ def make_motion_histogram(recording, peaks, peak_locations=None,
 
     arr = np.zeros((peaks.size, 2), dtype='float64')
     arr[:, 0] = peaks['sample_ind']
-    arr[:, 1] = peak_locations[:, dim]
+    arr[:, 1] = peak_locations[direction]
 
     if weight_with_amplitude:
         weights = np.abs(peaks['amplitude'])

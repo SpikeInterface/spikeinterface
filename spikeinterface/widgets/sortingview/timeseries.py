@@ -38,6 +38,7 @@ class TimeseriesPlotter(SortingviewPlotter):
                                  sampling_frequency=dp.recordings[layer_key].get_sampling_frequency())
             
             tiled_image.add_layer(layer_key, img)
+        self.set_view(tiled_image)
         
         if backend_kwargs["generate_url"]: 
             if backend_kwargs.get("figlabel") is None:

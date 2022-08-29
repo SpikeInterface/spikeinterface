@@ -16,7 +16,7 @@ class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ['mearec']
     entities = ['mearec/mearec_test_10s.h5']
-
+    neo_funcs = dict()
 
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecSortingExtractor
@@ -116,6 +116,15 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuralynxSortingExtractor
+    downloads = ['neuralynx']
+    entities = [
+        'neuralynx/Cheetah_v5.5.1/original_data',
+        'neuralynx/Cheetah_v5.6.3/original_data',
+    ]
+
+
 class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockRecordingExtractor
     downloads = ['blackrock']
@@ -123,6 +132,15 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'blackrock/FileSpec2.3001.ns5',
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
+    ]
+
+
+class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = BlackrockSortingExtractor
+    downloads = ['blackrock']
+    entities = [
+        'blackrock/FileSpec2.3001.nev',
+        "blackrock/blackrock_2_1/l101210-001.nev"
     ]
 
 
@@ -183,7 +201,8 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ['maxwell']
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
-        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5', {'stream_id': 'well000', 'rec_name': 'rec0000'})
+        ('maxwell/MaxTwo_data/Network/000028/data.raw.h5',
+         {'stream_id': 'well000', 'rec_name': 'rec0000'})
     ]
 
     def setUp(self):
@@ -226,11 +245,17 @@ class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
     ]
 
 
+class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = EDFRecordingExtractor
+    downloads = ['edf']
+    entities = ['edf/edf+C.edf']
+
+
 if __name__ == '__main__':
-    pass
-    # test = MearecRecordingTest()
     # test = MearecSortingTest()
     test = SpikeGLXRecordingTest()
+    # test = OpenEphysBinaryRecordingTest()
+    # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = OpenEphysBinaryEventTest()
@@ -245,6 +270,7 @@ if __name__ == '__main__':
     # test = CedRecordingTest()
     # test = MaxwellRecordingTest()
     # test = SpikeGadgetsRecordingTest()
+    # test = NeuroScopeSortingTest()
 
     test.setUp()
     test.test_open()

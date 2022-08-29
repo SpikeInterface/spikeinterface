@@ -29,7 +29,7 @@ class Mountainsort4Sorter(BaseSorter):
         'clip_size': 50,
         'detect_threshold': 3,
         'detect_interval': 10,  # Minimum number of timepoints between events detected on the same channel
-        'tmpdir': None
+        'tempdir': None
     }
 
     _params_description = {
@@ -47,7 +47,7 @@ class Mountainsort4Sorter(BaseSorter):
         'clip_size': "Number of samples per waveform",
         'detect_threshold': "Threshold for spike detection",
         'detect_interval': "Minimum number of timepoints between events detected on the same channel",
-        'tmpdir': "Temporary directory for mountainsort (available for ms4 >= 1.0.2"
+        'tempdir': "Temporary directory for mountainsort (available for ms4 >= 1.0.2)s"
     }
 
     sorter_description = """Mountainsort4 is a fully automatic density-based spike sorter using the isosplit clustering
@@ -120,9 +120,13 @@ class Mountainsort4Sorter(BaseSorter):
                           verbose=verbose)
         
         # temporary folder
-        if parse(mountainsort4.__version__) >= parse("1.0.2"):
+        ms4_version = Mountainsort4Sorter.get_sorter_version()
+
+        if ms4_version != "unknown" and parse(ms4_version) >= parse("1.0.3"):
             if p["tempdir"] is not None:
                 p["tempdir"] = str(p["tempdir"])
+            if verbose:
+                print(f'Using temporary directory {p["tempdir"]}')
             ms4_params.update(tempdir=p['tempdir'])
 
         # Check location no more needed done in basesorter

@@ -77,6 +77,8 @@ class SortingSummaryPlotter(SortingviewPlotter):
                 ]
             )
 
+        self.set_view(v_summary)
+
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
                 label = "SpikeInterface - SortingSummary"

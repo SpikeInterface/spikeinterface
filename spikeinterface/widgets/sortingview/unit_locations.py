@@ -43,6 +43,8 @@ class UnitLocationsPlotter(SortingviewPlotter):
         else:
             view = v_unit_locations
 
+        self.set_view(view)
+
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
                 label = "SpikeInterface - UnitLocations"

@@ -1,24 +1,43 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-
 try:
     import h5py
-
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
 
 
 class CombinatoSortingExtractor(BaseSorting):
+    """Load Combinato format data as a sorting extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the Combinato folder.
+    sampling_frequency : int, optional, default: 30000
+        The sampling frequency.
+    user : str
+        The username that ran the sorting. Defaults to 'simple'.
+    det_sign : {'both', 'pos', 'neg'}
+        Which sign was used for detection.
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
+
+    Returns
+    -------
+    extractor : CombinatoSortingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'CombinatoSortingExtractor'
-    installation_mesg = ""
     installed = HAVE_H5PY
-    is_writable = False
     installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
+    name = "combinato"
 
     def __init__(self, folder_path, sampling_frequency=None, user='simple', det_sign='both', keep_good_only=True):
 

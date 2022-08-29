@@ -9,6 +9,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion, make_motion_histogram,
                                               compute_pairwise_displacement, compute_global_displacement)
 
+from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
 repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 remote_path = 'mearec/mearec_test_10s.h5'
@@ -26,17 +27,16 @@ def setup_module():
     recording = MEArecRecordingExtractor(local_path)
     
     cache_folder.mkdir(parents=True, exist_ok=True)
-    print(cache_folder)
-    
+
     # detect and localize
-    peaks = detect_peaks(recording,
+    peaks, peak_locations = detect_peaks(recording,
                          method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=1, progress_bar=True,
-                         localization_dict=dict(method='center_of_mass', local_radius_um=150,
-                                                ms_before=0.1, ms_after=0.3),
+                        pipeline_steps = [LocalizeCenterOfMass(recording, ms_before=0.1, ms_after=0.3, local_radius_um=150.)]
                          )
-    np.save(cache_folder / 'mearec_detected_peaks.npy', peaks)
+    np.save(cache_folder / 'mearec_peaks.npy', peaks)
+    np.save(cache_folder / 'mearec_peak_locations.npy', peak_locations)
 
 
 def test_motion_functions():
@@ -44,11 +44,12 @@ def test_motion_functions():
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
 
-    peaks = np.load(cache_folder / 'mearec_detected_peaks.npy')
+    peaks = np.load(cache_folder / 'mearec_peaks.npy')
+    peak_locations = np.load(cache_folder / 'mearec_peak_locations.npy')
 
     bin_um = 2
     motion_histogram, temporal_bins, spatial_bins = make_motion_histogram(
-        recording, peaks, bin_um=bin_um)
+        recording, peaks, peak_locations, bin_um=bin_um)
     # print(motion_histogram.shape, temporal_bins.size, spatial_bins.size)
     
     # conv + gradient_descent
@@ -94,12 +95,13 @@ def test_estimate_motion_rigid():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-    print(recording)
-    peaks = np.load(cache_folder / 'mearec_detected_peaks.npy')
+    
+    peaks = np.load(cache_folder / 'mearec_peaks.npy')
+    peak_locations = np.load(cache_folder / 'mearec_peak_locations.npy')
 
     motions = []
     for conv_engine in ("numpy", "torch"):
-        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations=None,
+        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations,
                                                                            direction='y', bin_duration_s=1., bin_um=10., 
                                                                            margin_um=5,
                                                                            method='decentralized_registration', 
@@ -140,12 +142,13 @@ def test_estimate_motion_non_rigid():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-    print(recording)
-    peaks = np.load(cache_folder / 'mearec_detected_peaks.npy')
+    
+    peaks = np.load(cache_folder / 'mearec_peaks.npy')
+    peak_locations = np.load(cache_folder / 'mearec_peak_locations.npy')
 
     motions = []
     for conv_engine in ("numpy", "torch"):
-        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations=None,
+        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations=peak_locations,
                                                                            direction='y', bin_duration_s=1., bin_um=10., 
                                                                            margin_um=5,
                                                                            method='decentralized_registration', 

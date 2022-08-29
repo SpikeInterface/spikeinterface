@@ -1,8 +1,8 @@
 import os, getpass
 
 if getpass.getuser() == 'samuel':
-    kilosort_path = '/home/samuel/Documents/SpikeInterface/wave_clus/'
-    os.environ["WAVECLUS_PATH"] = kilosort_path
+    waveclus_path = '/home/samuel/Documents/SpikeInterface/wave_clus/'
+    os.environ["WAVECLUS_PATH"] = waveclus_path
 
 import unittest
 import pytest

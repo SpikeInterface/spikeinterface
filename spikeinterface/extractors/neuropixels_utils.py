@@ -2,9 +2,8 @@ import numpy as np
 
 
 def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
-
     """
-    Calculates the relative sampling phase of each channel that results 
+    Calculates the relative sampling phase of each channel that results
     from Neuropixels ADC multiplexing.
 
     This information is needed to perform the preprocessing.phase_shift operation.
@@ -12,24 +11,23 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
     See https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
     for the original implementation.
 
-    Params
-    ======
-
-    num_channels : The total number of channels in a recording. 
+    Parameters
+    ----------
+    num_channels : int, optional, default: 384
+        The total number of channels in a recording.
         All currently available Neuropixels variants have 384 channels.
-
-    num_channels_per_adc : The number channels per ADCs on the probe
-        Neuropixels 1.0 probes have 12 ADCs
-        Neuropixels 2.0 probes have 16 ADCs
-
+    num_channels_per_adc : int, optional, default: 12
+        The number of channels per ADC on the probe.
+        Neuropixels 1.0 probes have 12 ADCs.
+        Neuropixels 2.0 probes have 16 ADCs.
 
     Returns
-    =======
-    sample_shifts : The relative phase (from 0-1) of each channel
-   
+    -------
+    sample_shifts : ndarray
+        The relative phase (from 0-1) of each channel
     """
 
-    adc_indices = np.floor(np.arange(num_channels) / 
+    adc_indices = np.floor(np.arange(num_channels) /
                            (num_channels_per_adc * 2)) * 2 + np.mod(np.arange(num_channels), 2)
 
     sample_shifts = np.zeros_like(adc_indices)
@@ -41,7 +39,6 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
 
 
 def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
-    
     """
     Returns groups of simultaneously sampled channels on a Neuropixels probe.
 
@@ -51,7 +48,7 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
     |||         |||
     ...         ...
     26 27       2 3
-    24 25       2 3 
+    24 25       2 3
     22 23       0 1
     ...         ...
     2 3         0 1
@@ -62,34 +59,33 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
     This information is needed to perform the preprocessing.common_reference operation
     on channels that are sampled synchronously.
 
-    Params
-    ======
-
-    num_channels : The total number of channels in a recording. 
+    Parameters
+    ----------
+    num_channels : int, optional, default: 384
+        The total number of channels in a recording.
         All currently available Neuropixels variants have 384 channels.
-
-    num_adcs : The total number of ADCs on the probe
-        Neuropixels 1.0 probes have 12 ADCs
-        Neuropixels 2.0 probes have 16 ADCs
-        
+    num_channels_per_adc : int, optional, default: 12
+        The number of channels per ADC on the probe.
+        Neuropixels 1.0 probes have 12 ADCs.
+        Neuropixels 2.0 probes have 16 ADCs.
 
     Returns
-    =======
-    groups : A list of lists of simultaneously sampled channel indices
-   
+    -------
+    groups : list
+        A list of lists of simultaneously sampled channel indices
     """
 
     groups = []
 
     for i in range(num_channels_per_adc):
-        
+
         groups.append(
             list(
                 np.sort(np.concatenate([np.arange(i*2, num_channels, num_channels_per_adc*2),
                                         np.arange(i*2+1, num_channels, num_channels_per_adc*2)]))
             )
         )
-        
+
     return groups
 
 

@@ -67,6 +67,9 @@ herdingspikes<=0.3.99
 ## mearec
 mearec
 
+## EDF 
+pyedflib
+
 ## container packages for local testing
 #docker
 #spython
@@ -75,3 +78,6 @@ mearec
 pymde
 torch
 pynndescent
+
+## NWB extractor
+pynwb>=2.1.0
