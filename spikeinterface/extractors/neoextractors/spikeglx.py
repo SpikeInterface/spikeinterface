@@ -29,6 +29,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
+        The folder path to load the recordings from.
     load_sync_channel: bool dafult False
         Load or not the last channel used for synchronization.
         If True, then the probe is not loaded because one more channel
