@@ -22,7 +22,7 @@ function kilosort3_master(fpath, kilosortPath)
         % run data registration
         if isfield(ops, 'do_correction')
             do_correction = ops.do_correction;
-        else 
+        else
             do_correction = 1;
         end
 
