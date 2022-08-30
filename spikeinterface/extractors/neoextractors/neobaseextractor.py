@@ -197,9 +197,14 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
         self.use_natural_unit_ids = use_natural_unit_ids
-
         if sampling_frequency is None:
-            sampling_frequency = self._auto_guess_sampling_frequency()
+            sampling_frequency, stream_id = self._auto_guess_sampling_frequency()
+        
+        # Get the stream index corresponding to the extracted frequency
+        stream_index = None
+        if stream_id is not None:
+            stream_index = np.where(self.neo_reader.header["signal_streams"]["id"] == stream_id)[0][0]
+
 
         spike_channels = self.neo_reader.header['spike_channels']
 
@@ -217,7 +222,12 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             if self.handle_spike_frame_directly:
                 t_start = None
             else:
-                t_start = self.neo_reader.get_signal_t_start(self.block_index, segment_index)
+                t_start = self.neo_reader.get_signal_t_start(block_index=self.block_index, 
+                                                            seg_index=segment_index, 
+                                                            stream_index=stream_index
+                                                            )
+
+
 
             sorting_segment = NeoSortingSegment(self.neo_reader, self.block_index, segment_index,
                                                 self.use_natural_unit_ids, t_start, 
@@ -226,29 +236,28 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
     def _auto_guess_sampling_frequency(self):
         """
-        Because neo handle spike in times (s or ms) but spikeinterface in frames related to signals.
-        spikeinterface need so the sampling frequency.
-        Getting the sampling rate in for psike is quite tricky because in neo
-        spike are handle in s or ms
-        internally many format do have have the spike time stamps
-        at the same speed as the signal but at a higher clocks speed.
-        here in spikeinterface we need spike index to be at the same speed
-        that signal it do not make sens to have spikes at 50kHz sample
-        when the sig is 10kHz.
-        neo handle this but not spieinterface
+        When the signal channels are available the sampling rate is set that of the channel with the higher frequency
+        and the corresponding stream_id from which the frequency was extracted.
+        
+        Because neo handle spike in times (s or ms) but spikeinterface in frames related to signals, spikeinterface 
+        need the sampling frequency. 
+        
+        Internally many format do have the spike timestamps at the same speed as the signal but at a higher
+        clocks speed. Here in spikeinterface we need spike index to be at the same speed that signal, therefore it does
+        not make sense to have spikes at 50kHz when the signal is 10kHz. Neo handle this but not spikeinterface.
 
-        In neo spikes can have diffrents sampling rate than signals so conversion from
-        signals frames to times is format dependent
+        In neo spikes can have diffrents sampling rate than signals so conversion from signals frames to times is
+        format dependent.
         """
 
         # here the generic case
         #  all channels are in the same neo group so
         sig_channels = self.neo_reader.header['signal_channels']
-        assert sig_channels.size > 0, 'sampling_frequqency is not given and it is hard to guess it'
-        sampling_frequency = np.max(sig_channels['sampling_rate'])
-
-        #  print('_auto_guess_sampling_frequency', sampling_frequency)
-        return sampling_frequency
+        assert sig_channels.size > 0, 'sampling_frequency could not be inferred from the signals, set it manually'
+        argmax = np.argmax(sig_channels['sampling_rate'])
+        sampling_frequency = sig_channels[argmax]["sampling_rate"]
+        stream_id = sig_channels[argmax]["stream_id"]
+        return sampling_frequency, stream_id
 
 
 class NeoSortingSegment(BaseSortingSegment):
@@ -280,12 +289,12 @@ class NeoSortingSegment(BaseSortingSegment):
                                                                 seg_index=self.segment_index,
                                                                 spike_channel_index=unit_index)
         if self._t_start is None:
-            # because handle_spike_frame_directly=True
+            # When handle_spike_frame_directly=True, the extractors handles timestamps as frames
             spike_frames = spike_timestamps
         else:
-            # convert to second second
+            # Convert timestamps to seconds
             spike_times = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype='float64')
-            # convert to sample related to recording signals
+            # Re-center to zero for each segment and multiply by frequency to convert seconds to frames
             spike_frames = ((spike_times - self._t_start) * self._sampling_frequency).astype('int64')
 
         # clip
