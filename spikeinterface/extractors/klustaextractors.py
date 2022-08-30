@@ -44,8 +44,8 @@ class KlustaSortingExtractor(BaseSorting):
     extractor_name = 'KlustaSortingExtractor'
     installed = HAVE_H5PY  # check at class level if installed or not
     installation_mesg = "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
-    is_writable = True
     mode = 'file_or_folder'
+    name = "klusta"
 
     default_cluster_groups = {0: 'Noise', 1: 'MUA', 2: 'Good', 3: 'Unsorted'}
 

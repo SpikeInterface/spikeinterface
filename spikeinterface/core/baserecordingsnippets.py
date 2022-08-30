@@ -16,6 +16,7 @@ class BaseRecordingSnippets(BaseExtractor):
     """
     Mixin that handles all probe and channel operations
     """
+    has_default_locations = False
 
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
@@ -134,6 +135,7 @@ class BaseRecordingSnippets(BaseExtractor):
         inds = arr['device_channel_indices']
         order = np.argsort(inds)
         inds = inds[order]
+
         # check
         if np.max(list(inds) + [0]) >= self.get_num_channels():
             raise ValueError(
@@ -146,7 +148,7 @@ class BaseRecordingSnippets(BaseExtractor):
         if in_place:
             if not np.array_equal(new_channel_ids, self.get_channel_ids()):
                 raise Exception(
-                    'set_proce(inplace=True) must have all channel indices')
+                    'set_probe(inplace=True) must have all channel indices')
             sub_recording = self
         else:
             if np.array_equal(new_channel_ids, self.get_channel_ids()):

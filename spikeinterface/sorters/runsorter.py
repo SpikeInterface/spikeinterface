@@ -21,6 +21,8 @@ except ModuleNotFoundError:
 REGISTRY = 'spikeinterface'
 
 SORTER_DOCKER_MAP = dict(
+    combinato='combinato',
+    herdingspikes='herdingspikes',
     klusta='klusta',
     mountainsort4='mountainsort4',
     pykilosort='pykilosort',
@@ -66,7 +68,7 @@ _common_param_doc = """
         If True, pull the default docker container for the sorter and run the sorter in that container using docker.
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
         If False, the sorter is run locally.
-    singularity_image: bool or str 
+    singularity_image: bool or str
         If True, pull the default docker container for the sorter and run the sorter in that container using 
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
         from Docker Hub.
@@ -98,7 +100,7 @@ def run_sorter(
     Generic function to run a sorter via function approach.
 
     {}
-    
+
     Examples
     --------
     >>> sorting = run_sorter("tridesclous", recording)
@@ -178,17 +180,17 @@ def find_recording_folders(d):
         return p
 
     _ = recursive_path_modifier(d, append_parent_folder, target='path', copy=True)
-    
+
     try: # this will fail if on different drives (Windows)
         base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
     except ValueError:
         base_folders_to_mount = folders_to_mount
-    
+
     # let's not mount root if dries are /home/..., /mnt1/...
     if len(base_folders_to_mount) == 1:
         if len(str(base_folders_to_mount[0])) == 1:
             base_folders_to_mount = folders_to_mount
-    
+
     return base_folders_to_mount
 
 
@@ -244,29 +246,17 @@ class ContainerClient:
             else:
                 if HAS_DOCKER:
                     docker_image = self._get_docker_image(container_image)
-                    if docker_image:
-                        print('Building singularity image from local docker image')
-                        # Save docker image as tar and build singularity image
-                        tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
-                        f = open(tmp_file, 'wb')
-                        try:
-                            for chunk in docker_image.save(chunk_size=100*1024*1024):  # 100 MB
-                                f.write(chunk)
-                            singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file, sudo=False)
-                        except Exception as e:
-                            print(f'Failed to build singularity image from local: {e}')
-                        finally:
-                            # Clean up
-                            f.close()
-                            if os.path.exists(tmp_file):
-                                os.remove(tmp_file)
+                    if docker_image and len(docker_image.tags) > 0:
+                        tag = docker_image.tags[0]
+                        print(f'Building singularity image from local docker image: {tag}')
+                        singularity_image = Client.build(f'docker-daemon://{tag}', sif_file, sudo=False)
                 if not singularity_image:
                     print(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f'docker://{container_image}')
 
             if not Path(singularity_image).exists():
                 raise FileNotFoundError(f'Unable to locate container image {container_image}')
-            
+
             # bin options
             singularity_bind = ','.join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
             options=['--bind', singularity_bind]
@@ -439,11 +429,11 @@ if __name__ == '__main__':
         volumes[si_dev_path] = {'bind': si_dev_path_unix, 'mode': 'ro'}
     else:
         install_si_from_source = False
-        
+
     extra_kwargs = {}
     use_gpu = SorterClass.use_gpu(sorter_params)
     gpu_capability = SorterClass.gpu_capability
-    
+
     if use_gpu:
         if gpu_capability == 'nvidia-required':
             assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
@@ -451,14 +441,14 @@ if __name__ == '__main__':
         elif gpu_capability == 'nvidia-optional':
             if has_nvidia():
                 extra_kwargs['container_requires_gpu'] = True
-            else: 
+            else:
                 if verbose:
                     print(f"{SorterClass.sorter_name} supports GPU, but no GPU is available.\n"
                           f"Running the sorter without GPU")
         else:
             # TODO: make opencl machanism
             raise NotImplementedError("Only nvidia support is available")
-    
+
     container_client = ContainerClient(mode, container_image, volumes, extra_kwargs)
     if verbose:
         print('Starting container')
