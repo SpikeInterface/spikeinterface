@@ -5,10 +5,10 @@ function kilosort3_master(fpath, kilosortPath)
         if nargin > 1
             % prepare for kilosort execution
             addpath(genpath(kilosortPath));
-        end
 
-        % add npy-matlab functions (copied in the output folder)
-        addpath(genpath(fpath));
+            % add npy-matlab functions (copied in the output folder)
+            addpath(genpath(fpath));
+        end
 
         % Load channel map file
         load(fullfile(fpath, 'chanMap.mat'));
