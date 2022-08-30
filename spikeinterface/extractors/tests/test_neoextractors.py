@@ -253,10 +253,10 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 if __name__ == '__main__':
     # test = MearecSortingTest()
-    test = SpikeGLXRecordingTest()
-    # test = OpenEphysBinaryRecordingTest()
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
+    # test = SpikeGLXRecordingTest()
+    test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()

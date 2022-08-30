@@ -123,8 +123,12 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 settings_file = self.neo_reader.folder_structure[record_node]["experiments"][block_index]["settings_file"]
 
-            probe = pi.read_openephys(settings_file=settings_file,
-                                      stream_name=stream_name, raise_error=False)
+            if Path(settings_file).is_file():
+                probe = pi.read_openephys(settings_file=settings_file,
+                                        stream_name=stream_name, raise_error=False)
+            else:
+                probe = None
+
             if probe is not None:
                 self = self.set_probe(probe, in_place=True)
                 probe_name = probe.annotations["probe_name"]
