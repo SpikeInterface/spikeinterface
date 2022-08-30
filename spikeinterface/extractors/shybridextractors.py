@@ -33,12 +33,12 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
     extractor_name = 'SHYBRIDRecording'
     has_default_locations = True
-    has_unscaled = False
     installed = HAVE_SBEX  # check at class level if installed or not
     is_writable = True
     mode = 'folder'
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID and pyyaml: " \
                         "\n\n pip install shybrid pyyaml\n\n"
+    name = "shybrid"
 
     def __init__(self, file_path):
         # load params file related to the given shybrid recording
@@ -148,6 +148,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
     installed = HAVE_SBEX
     is_writable = True
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
+    name = "shybrid"
 
     def __init__(self, file_path, sampling_frequency, delimiter=','):
         assert self.installed, self.installation_mesg

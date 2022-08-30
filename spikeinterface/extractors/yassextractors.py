@@ -29,10 +29,8 @@ class YassSortingExtractor(BaseSorting):
     extractor_name = 'YassExtractor'
     mode = 'folder'
     installed = HAVE_YAML  # check at class level if installed or not
-
-    has_default_locations = False
-    is_writable = False
     installation_mesg = "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"  # error message when not installed
+    name = "yass"
 
     def __init__(self, folder_path):
         assert HAVE_YAML, self.installation_mesg

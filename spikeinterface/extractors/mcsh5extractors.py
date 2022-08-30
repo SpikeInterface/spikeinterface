@@ -29,9 +29,9 @@ class MCSH5RecordingExtractor(BaseRecording):
     """
     extractor_name = 'MCSH5Recording'
     installed = HAVE_MCSH5  # check at class level if installed or not
-    is_writable = False
     mode = 'file'
     installation_mesg = "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    name = "mcsh5"
 
     def __init__(self, file_path, stream_id=0):
         assert self.installed, self.installation_mesg

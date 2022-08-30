@@ -31,12 +31,12 @@ class ZarrRecordingExtractor(BaseRecording):
     recording: ZarrRecordingExtractor
         The recording Extractor
     """
-    extractor_name = 'ZarrRecordingExtractor'
-    has_default_locations = False
+    extractor_name = 'ZarrRecording'
     installed = HAVE_ZARR  # check at class level if installed or not
     mode = 'file'
     # error message when not installed
     installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
+    name = "zarr"
 
     def __init__(self, root_path: Union[Path, str], storage_options=None):
         assert self.installed, self.installation_mesg

@@ -14,11 +14,10 @@ class NpySnippetsExtractor(BaseSnippets):
     All spike are store in two columns maner index+labels
     """
 
-    extractor_name = 'NpySnippetsExtractor'
-    installed = True  # depend only on numpy
-    installation_mesg = "Always installed"
+    extractor_name = 'NpySnippets'
     is_writable = True
     mode = 'file'
+    name = "npy"
 
     def __init__(self, file_paths, sampling_frequency, channel_ids=None, nbefore=None,
                  gain_to_uV=None, offset_to_uV=None):

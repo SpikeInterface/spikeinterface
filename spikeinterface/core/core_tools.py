@@ -3,6 +3,7 @@ import os
 import sys
 import datetime
 from copy import deepcopy
+import gc
 
 import numpy as np
 from tqdm import tqdm
@@ -703,6 +704,10 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
 
+    # fix memory leak by forcing garbage collection
+    del traces
+    gc.collect()
+
 
 def determine_cast_unsigned(recording, dtype):
     recording_dtype = np.dtype(recording.get_dtype())
@@ -782,3 +787,13 @@ def recursive_path_modifier(d, func, target='path', copy=True):
                 else:
                     raise ValueError(
                         f'{k} key for path  must be str or list[str]')
+
+
+def recursive_key_finder(d, key):
+    # Find all values for a key on a dictionary, even if nested
+    for k, v in d.items():
+        if isinstance(v, dict):
+            yield from recursive_key_finder(v, key)
+        else:
+            if k == key:
+                yield v
