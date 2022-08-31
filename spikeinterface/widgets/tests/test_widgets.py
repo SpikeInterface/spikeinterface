@@ -1,6 +1,6 @@
 import unittest
 import pytest
-import sys
+import os
 from pathlib import Path
 
 if __name__ != '__main__':
@@ -31,6 +31,9 @@ else:
     cache_folder = Path("cache_folder") / "widgets"
 
 
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
+
+
 class TestWidgets(unittest.TestCase):
     def setUp(self):
         local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
@@ -56,9 +59,13 @@ class TestWidgets(unittest.TestCase):
 
         self.skip_backends = ["ipywidgets"]
 
+        if ON_GITHUB:
+            self.skip_backends.append("sortingview")
+
         self.backend_kwargs = {
             'matplotlib': {},
-            'sortingview': {}
+            'sortingview': {},
+            'ipywidgets': {}
         }
 
         self.gt_comp = sc.compare_sorter_to_ground_truth(self.sorting, self.sorting)
