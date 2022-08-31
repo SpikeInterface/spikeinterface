@@ -27,11 +27,12 @@ class RandomProjectionClustering:
         "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
-        "max_spikes_per_unit" : 200,
+        "max_spikes_per_unit" : 200, 
+        "selection_method" : "closest_to_centroid",
         "nb_projections" : 10,
         "ms_before" : 1.5,
         "ms_after": 2.5,
-        "cleaning": "dip",
+        "cleaning_method": "dip",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
@@ -55,7 +56,7 @@ class RandomProjectionClustering:
         'projections' : projections}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
-            ms_before=1, ms_after=1, **params['job_kwargs'])
+            ms_before=0.5, ms_after=0.5, **params['job_kwargs'])
 
         hdbscan_data = features_data[0]
 
@@ -74,12 +75,18 @@ class RandomProjectionClustering:
 
         all_indices = np.arange(0, peak_labels.size)
 
+        max_spikes = params["max_spikes_per_unit"]
+        selection_method = params['selection_method']
+
         for unit_ind in labels:
             mask = peak_labels == unit_ind
-            data = hdbscan_data[mask]
-            centroid = np.median(data, axis=0)
-            distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
-            best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:params["max_spikes_per_unit"]]]
+            if selection_method == 'closest_to_centroid':
+                data = hdbscan_data[mask]
+                centroid = np.median(data, axis=0)
+                distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
+                best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:max_spikes]]
+            elif selection_method == 'random':
+                best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
             nb_spikes += best_spikes[unit_ind].size
 
         spikes = np.zeros(nb_spikes, dtype=peak_dtype)
@@ -95,7 +102,7 @@ class RandomProjectionClustering:
         spikes['segment_ind'] = peaks[mask]['segment_ind']
         spikes['unit_ind'] = peak_labels[mask]
 
-        cleaning_method = params["cleaning"]
+        cleaning_method = params["cleaning_method"]
 
         print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
 

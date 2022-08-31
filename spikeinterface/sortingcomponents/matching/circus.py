@@ -557,6 +557,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
         is_silent = np.abs(template).max(0) < 0.25*noise_levels
+
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2

@@ -10,7 +10,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         'general' : {'ms_before' : 1.5, 'ms_after' : 1.5, 'local_radius_um' : 100},
-        'waveforms' : { 'max_spikes_per_unit' : 200, 'overwrite' : True},
+        'waveforms' : {'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5},
         'selection' : {'n_peaks_per_channel' : 5000, 'min_n_peaks' : 20000},
@@ -18,7 +18,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'clustering': {},
         'matching':  {},
         'registration' : {},
-        'apply_preprocessing': False,
+        'apply_preprocessing': True,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
 
@@ -47,9 +47,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         filtering_params = params['filtering'].copy()
         if params['apply_preprocessing']:
             recording_f = bandpass_filter(recording, **filtering_params)
-            if params['common_reference']:
-                recording_f = common_reference(recording_f)
-
+            recording_f = common_reference(recording_f)
         else:
             recording_f = recording
 
@@ -95,6 +93,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We get the labels for our peaks
         mask = peak_labels > -1
         sorting = NumpySorting.from_times_labels(selected_peaks['sample_ind'][mask], peak_labels[mask], sampling_rate)
+        sorting = sorting.save(folder=output_folder / "sorting_tmp")
 
         ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()
