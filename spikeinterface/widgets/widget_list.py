@@ -35,6 +35,10 @@ from .spike_locations import SpikeLocationsWidget, plot_spike_locations
 # amplitudes
 from .amplitudes import AmplitudeWidget, plot_amplitudes
 
+# metrics
+from .quality_metrics import QualityMetricsWidget, plot_quality_metrics
+from .template_metrics import TemplateMetricsWidget, plot_template_metrics
+
 # summary
 from .sorting_summary import SortingSummaryWidget, plot_sorting_summary
 
@@ -43,8 +47,10 @@ widget_list = [
     AmplitudeWidget,
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
+    QualityMetricsWidget,
     SpikeLocationsWidget, 
     SpikesOnTracesWidget,
+    TemplateMetricsWidget,
     TimeseriesWidget,
     UnitLocationsWidget,
     UnitTemplateWidget,

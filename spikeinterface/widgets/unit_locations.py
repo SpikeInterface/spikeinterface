@@ -14,12 +14,12 @@ class UnitLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        The object to compute/get crosscorrelograms from
+    waveform_extractor : WaveformExtractor
+        The object to compute/get unit locations from
     unit_ids: list
         List of unit ids.
     with_channel_ids: bool False default
-        add channel ids text on the probe
+        Add channel ids text on the probe
     compute_kwargs : dict or None
         If given, dictionary with keyword arguments for `compute_unit_locations` function
     unit_colors :  dict or None
@@ -29,9 +29,9 @@ class UnitLocationsWidget(BaseWidget):
     """
     possible_backends = {}
 
-    def __init__(self, waveform_extractor: Union[WaveformExtractor, BaseSorting], 
-                 unit_ids=None, with_channel_ids=False, compute_kwargs=None, unit_colors=None, 
-                 hide_unit_selector=False, plot_all_units=True,
+    def __init__(self, waveform_extractor: WaveformExtractor, 
+                 unit_ids=None, with_channel_ids=False, compute_kwargs=None, 
+                 unit_colors=None, hide_unit_selector=False, plot_all_units=True,
                  backend=None, **backend_kwargs):
         if waveform_extractor.is_extension("unit_locations"):
             ulc = waveform_extractor.load_extension("unit_locations")
