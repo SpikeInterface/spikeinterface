@@ -5,6 +5,7 @@ from .quality_metrics import QualityMetricsPlotter
 from .spike_locations import SpikeLocationsPlotter
 from .spikes_on_traces import SpikesOnTracesPlotter
 from .template_metrics import TemplateMetricsPlotter
+from .template_similarity import TemplateSimilarityPlotter
 from .timeseries import TimeseriesPlotter
 from .unit_locations import UnitLocationsPlotter
 from .unit_templates import UnitTemplateWidget

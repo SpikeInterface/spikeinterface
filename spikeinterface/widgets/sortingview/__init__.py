@@ -5,6 +5,7 @@ from .quality_metrics import QualityMetricsPlotter
 from .sorting_summary import SortingSummaryPlotter
 from .spike_locations import SortingviewPlotter
 from .template_metrics import TemplateMetricsPlotter
+from .template_similarity import TemplateSimilarityPlotter
 from .timeseries import TimeseriesPlotter
 from .unit_locations import UnitLocationsPlotter
 from .unit_templates import UnitTemplatePlotter

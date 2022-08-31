@@ -39,6 +39,9 @@ from .amplitudes import AmplitudeWidget, plot_amplitudes
 from .quality_metrics import QualityMetricsWidget, plot_quality_metrics
 from .template_metrics import TemplateMetricsWidget, plot_template_metrics
 
+# similarity
+from .template_similarity import TemplateSimilarityWidget, plot_template_similarity
+
 # summary
 from .sorting_summary import SortingSummaryWidget, plot_sorting_summary
 

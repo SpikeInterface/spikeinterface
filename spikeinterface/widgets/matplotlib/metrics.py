@@ -9,9 +9,6 @@ class MetricsPlotter(MplPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
         metrics = dp.metrics
-        if dp.skip_metrics is not None:
-            selected_metrics = [m for m in metrics.columns if m not in dp.skip_metrics]
-            metrics = metrics[selected_metrics]
         num_metrics = len(metrics.columns)
 
         if 'figsize' not in backend_kwargs:
