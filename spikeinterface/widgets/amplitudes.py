@@ -5,7 +5,7 @@ from ..core.waveform_extractor import WaveformExtractor
 from ..postprocessing import compute_spike_amplitudes
 
 
-class AmplitudeWidget(BaseWidget):
+class AmplitudesWidget(BaseWidget):
     """
     Plots spike amplitudes
 
@@ -73,4 +73,4 @@ class AmplitudeWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-plot_amplitudes = define_widget_function_from_class(AmplitudeWidget, 'plot_amplitudes')
+plot_amplitudes = define_widget_function_from_class(AmplitudesWidget, 'plot_amplitudes')

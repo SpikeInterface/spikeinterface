@@ -5,6 +5,11 @@ on:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
+# set up test bucket for sortingview
+env:
+  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
 jobs:
   build-and-test:
     name: Test on (${{ matrix.os }})

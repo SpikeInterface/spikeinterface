@@ -134,7 +134,7 @@ class PlotUpdater:
                 self.mpl_plotter.ax.axis("off")
         else:
             if hide_axis:
-                for ax in self.mpl_plotter.axes:
+                for ax in np.ravel(self.mpl_plotter.axes):
                     ax.axis("off")
 
         # update probe plot

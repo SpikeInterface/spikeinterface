@@ -1,11 +1,11 @@
 import numpy as np
 
 from ..base import to_attr
-from ..amplitudes import AmplitudeWidget
+from ..amplitudes import AmplitudesWidget
 from .base_sortingview import SortingviewPlotter
 
 
-class AmplitudePlotter(SortingviewPlotter):
+class AmplitudesPlotter(SortingviewPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
@@ -39,4 +39,4 @@ class AmplitudePlotter(SortingviewPlotter):
         return v_spike_amplitudes
         
 
-AmplitudePlotter.register(AmplitudeWidget)
+AmplitudesPlotter.register(AmplitudesWidget)

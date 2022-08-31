@@ -1,7 +1,8 @@
 import numpy as np
 
 from .base import BaseWidget, define_widget_function_from_class
-from .widget_list import (CrossCorrelogramsWidget, UnitWaveformsWidget, AmplitudeWidget, UnitLocationsWidget)
+from .widget_list import (AmplitudesWidget, CrossCorrelogramsWidget, TemplateSimilarityWidget, 
+                          UnitLocationsWidget, UnitTemplatesWidget,)
 from ..core import WaveformExtractor
 from ..postprocessing import get_template_channel_sparsity, compute_template_similarity
 
@@ -18,10 +19,10 @@ class SortingSummaryWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
-                 sparsity=None, sparsity_kwargs={}, 
+                 sparsity=None, sparsity_kwargs=None,
                  correlograms_kwargs=None, amplitudes_kwargs=None, 
-                 similarity_kwargs=None, job_kwargs=None,
-                 localization_kwargs=None,
+                 localization_kwargs=None, template_similarity_kwargs=None, 
+                 job_kwargs=None,
                  backend=None, **backend_kwargs):
         we = waveform_extractor
         recording = we.recording
@@ -42,7 +43,7 @@ class SortingSummaryWidget(BaseWidget):
         job_kwargs = job_kwargs if job_kwargs is not None else {}
         
         # use other widgets to generate data (except for similarity)
-        waveforms_plot_data = UnitWaveformsWidget(we, unit_ids=unit_ids, sparsity=sparsity).plot_data
+        template_plot_data = UnitTemplatesWidget(we, unit_ids=unit_ids, sparsity=sparsity).plot_data
         
         correlograms_kwargs = correlograms_kwargs if correlograms_kwargs is not None else {}
         ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True,
@@ -50,30 +51,23 @@ class SortingSummaryWidget(BaseWidget):
         
         amplitudes_kwargs = amplitudes_kwargs if amplitudes_kwargs is not None else {}
         amplitudes_kwargs = amplitudes_kwargs.update(job_kwargs)
-        amps_plot_data = AmplitudeWidget(we, unit_ids=unit_ids, compute_kwargs=amplitudes_kwargs,
-                                         hide_unit_selector=True).plot_data
+        amps_plot_data = AmplitudesWidget(we, unit_ids=unit_ids, compute_kwargs=amplitudes_kwargs,
+                                          hide_unit_selector=True).plot_data
         
         localization_kwargs = localization_kwargs if localization_kwargs is not None else {}
         locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True,
                                              compute_kwargs=localization_kwargs).plot_data
 
-        if we.is_extension("similarity"):
-            ccc = we.load_extension("similarity")
-            similarity = ccc.get_data()
-            
-        else:
-            similarity_kwargs = similarity_kwargs if similarity_kwargs is not None else {}
-            similarity = compute_template_similarity(we, **similarity_kwargs)
-        unit_indices = sorting.ids_to_indices(unit_ids)
-        similarity = similarity[unit_indices][unit_indices]
-        similarity_plot_data = dict(unit_ids=unit_ids, similarity=similarity)
+        template_similarity_kwargs = template_similarity_kwargs if template_similarity_kwargs is not None else {}
+        sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids, 
+                                                 compute_kwargs=template_similarity_kwargs).plot_data
         
         plot_data = dict(
             unit_ids=unit_ids,
-            waveforms=waveforms_plot_data,
+            templates=template_plot_data,
             correlograms=ccg_plot_data,
             amplitudes=amps_plot_data,
-            similarity=similarity_plot_data,
+            similarity=sim_plot_data,
             unit_locations=locs_plot_data
         )
 

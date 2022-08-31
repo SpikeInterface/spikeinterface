@@ -42,7 +42,7 @@ class TimeseriesPlotter(SortingviewPlotter):
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
                 label = "SpikeInterface - Timeseries"
-            url = view_ts.url(label=label, verbose=False)
+            url = view_ts.url(label=label)
             print(url)
         return view_ts
 

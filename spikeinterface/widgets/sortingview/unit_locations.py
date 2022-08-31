@@ -18,11 +18,11 @@ class UnitLocationsPlotter(SortingviewPlotter):
                      for i_ch, ch in enumerate(channel_ids)}
 
         unit_items = []
-        for ii, unit_id in enumerate(unit_ids):
+        for unit_id in unit_ids:
             unit_items.append(vv.UnitLocationsItem(
                 unit_id=unit_id,
-                x=float(dp.unit_locations[ii][0]),
-                y=float(dp.unit_locations[ii][1])
+                x=float(dp.unit_locations[unit_id][0]),
+                y=float(dp.unit_locations[unit_id][1])
             ))
 
         v_unit_locations = vv.UnitLocations(

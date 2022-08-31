@@ -9,13 +9,13 @@ from ..base import to_attr
 from .base_ipywidgets import IpywidgetsPlotter
 from .utils import make_unit_controller
 
-from ..amplitudes import AmplitudeWidget
-from ..matplotlib.amplitudes import AmplitudePlotter as MplAmplitudePlotter
+from ..amplitudes import AmplitudesWidget
+from ..matplotlib.amplitudes import AmplitudesPlotter as MplAmplitudesPlotter
 
 from IPython.display import display
 
 
-class AmplitudePlotter(IpywidgetsPlotter):
+class AmplitudesPlotter(IpywidgetsPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
 
@@ -39,7 +39,7 @@ class AmplitudePlotter(IpywidgetsPlotter):
 
         plot_histograms = widgets.Checkbox(
             value=data_plot["plot_histograms"],
-            description='plot historgams',
+            description='plot histograms',
             disabled=False,
         )
 
@@ -48,7 +48,7 @@ class AmplitudePlotter(IpywidgetsPlotter):
         self.controller = {"plot_histograms": plot_histograms}
         self.controller.update(unit_controller)
 
-        mpl_plotter = MplAmplitudePlotter()
+        mpl_plotter = MplAmplitudesPlotter()
 
         self.updater = PlotUpdater(data_plot, mpl_plotter, fig, self.controller)
         for w in self.controller.values():
@@ -69,7 +69,7 @@ class AmplitudePlotter(IpywidgetsPlotter):
 
 
 
-AmplitudePlotter.register(AmplitudeWidget)
+AmplitudesPlotter.register(AmplitudesWidget)
 
 
 class PlotUpdater:

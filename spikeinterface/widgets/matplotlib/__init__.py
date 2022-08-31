@@ -1,4 +1,4 @@
-from .amplitudes import AmplitudePlotter
+from .amplitudes import AmplitudesPlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
 from .quality_metrics import QualityMetricsPlotter
@@ -8,6 +8,6 @@ from .template_metrics import TemplateMetricsPlotter
 from .template_similarity import TemplateSimilarityPlotter
 from .timeseries import TimeseriesPlotter
 from .unit_locations import UnitLocationsPlotter
-from .unit_templates import UnitTemplateWidget
+from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms import UnitWaveformPlotter
 from .unit_waveforms_density_map import UnitWaveformDensityMapPlotter
