@@ -88,17 +88,22 @@ class KlustaSorter(BaseSorter):
         write_prb(prb_file, probegroup, radius=p['adjacency_radius'])
 
         # source file
-        if recording.binary_compatible_with(time_axis=0, file_offset=0, file_suffix='.dat'):
+        if recording.binary_compatible_with(time_axis=0, file_offset=0):
             # no copy
             d = recording.get_binary_description()
             raw_filename = str(d['file_paths'][0])
             dtype = str(d['dtype'])
+            if not recording.binary_compatible_with(file_suffix='.dat'):
+                # copy and change suffix
+                print("Binary file is not a .dat file. Making a copy!")
+                shutil.copy(raw_filename, output_folder / "recording.dat")
+                raw_filename = output_folder / "recording.dat"
         else:
             # save binary file (chunk by chunk) into a new file
             raw_filename = output_folder / 'recording.dat'
             dtype = 'int16'
             write_binary_recording(recording, file_paths=[raw_filename], verbose=False, 
-                                   **get_job_kwargs(params, verbose))
+                                   dtype=dtype, **get_job_kwargs(params, verbose))
 
         if p['detect_sign'] < 0:
             detect_sign = 'negative'

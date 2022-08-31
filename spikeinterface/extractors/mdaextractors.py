@@ -35,11 +35,9 @@ class MdaRecordingExtractor(BaseRecording):
 
     extractor_name = 'MdaRecording'
     has_default_locations = True
-    has_unscaled = False
-    installed = True  # check at class level if installed or not
     is_writable = True
     mode = 'folder'
-    installation_mesg = ""  # error message when not installed
+    name = "mda"
 
     def __init__(self, folder_path, raw_fname='raw.mda', params_fname='params.json', geom_fname='geom.csv'):
         folder_path = Path(folder_path)
@@ -173,10 +171,9 @@ class MdaSortingExtractor(BaseSorting):
     """
 
     extractor_name = 'MdaSorting'
-    installed = True  # check at class level if installed or not
     is_writable = True
     mode = 'file'
-    installation_mesg = ""  # error message when not installed
+    name = "mda"
 
     def __init__(self, file_path, sampling_frequency):
         firings = readmda(str(file_path))

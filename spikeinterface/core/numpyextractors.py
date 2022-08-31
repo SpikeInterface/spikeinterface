@@ -21,7 +21,9 @@ class NumpyRecording(BaseRecording):
     channel_ids: list
         An optional list of channel_ids. If None, linear channels are assumed
     """
-    is_writable = False
+    extractor_name = 'Numpy'
+    mode = 'memory'
+    name = "numpy"
 
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
@@ -76,7 +78,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 
 
 class NumpySorting(BaseSorting):
-    is_writable = False
+    name = "numpy"
 
     def __init__(self, sampling_frequency, unit_ids=[]):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
@@ -306,8 +308,6 @@ class NumpySnippets(BaseSnippets):
     channel_ids: list
         An optional list of channel_ids. If None, linear channels are assumed
     """
-
-    is_writable = False
 
     def __init__(self, snippets_list, spikesframes_list, sampling_frequency, nbefore=None, channel_ids=None):
         if isinstance(snippets_list, list):

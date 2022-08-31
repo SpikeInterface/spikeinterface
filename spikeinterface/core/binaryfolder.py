@@ -25,6 +25,11 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
     recording: BinaryFolderRecording
         The recording
     """
+    extractor_name = 'BinaryFolder'
+    has_default_locations = True
+    mode = 'folder'
+    name = "binaryfolder"
+
     def __init__(self,  folder_path):
         
         folder_path = Path(folder_path)
@@ -44,7 +49,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
         
-        self._kwargs = dict(folder_path=str(folder_path))
+        self._kwargs = dict(folder_path=str(folder_path.absolute()))
         self._bin_kwargs = d['kwargs']
 
     def is_binary_compatible(self):
