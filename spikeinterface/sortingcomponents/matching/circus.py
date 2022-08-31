@@ -568,7 +568,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         channel = np.searchsorted(explained_norms, sparsify_threshold)
         active_channels = np.sort(idx[:channel])
         template[:, idx[channel:]] = 0
-        print(len(active_channels))
         return template, active_channels
 
     @classmethod

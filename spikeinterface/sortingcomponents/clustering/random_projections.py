@@ -31,7 +31,7 @@ class RandomProjectionClustering:
         "selection_method" : "closest_to_centroid",
         "nb_projections" : 10,
         "ms_before" : 1.5,
-        "ms_after": 2.5,
+        "ms_after": 1.5,
         "cleaning_method": "dip",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }

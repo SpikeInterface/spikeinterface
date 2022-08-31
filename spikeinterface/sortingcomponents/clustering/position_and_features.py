@@ -29,10 +29,11 @@ class PositionAndFeaturesClustering:
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
+        "selection_method" : "closest_to_centroid",
         "ms_before" : 1.5,
-        "ms_after": 2.5,
-        "cleaning": "dip",
-        "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M"},
+        "ms_after": 1.5,
+        "cleaning_method": "dip",
+        "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
     @classmethod
@@ -48,14 +49,16 @@ class PositionAndFeaturesClustering:
         nafter = int(params['ms_after'] * fs / 1000.)
         num_samples = nbefore + nafter
 
-        features_list = [d["peak_localization_kwargs"]["method"], 'ptp', 'energy', 'global_ptp']
-        features_params = {'monopolar' : {'local_radius_um' : params['local_radius_um']},
+        position_method = d["peak_localization_kwargs"]["method"]
+
+        features_list = [position_method, 'ptp', 'energy', 'global_ptp']
+        features_params = {position_method : {'local_radius_um' : params['local_radius_um']},
                            'ptp' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
                            'energy': {'local_radius_um' : params['local_radius_um']}, 
                            'global_ptp' : {'local_radius_um' : params['local_radius_um']},}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
-            ms_before=1, ms_after=1, **params['job_kwargs'])
+            ms_before=0.5, ms_after=0.5, **params['job_kwargs'])
 
         hdbscan_data = np.zeros((len(peaks), 5), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]['x']
@@ -79,12 +82,18 @@ class PositionAndFeaturesClustering:
 
         all_indices = np.arange(0, peak_labels.size)
 
+        max_spikes = params["max_spikes_per_unit"]
+        selection_method = params['selection_method']
+
         for unit_ind in labels:
             mask = peak_labels == unit_ind
-            data = hdbscan_data[mask]
-            centroid = np.median(data, axis=0)
-            distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
-            best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:params["max_spikes_per_unit"]]]
+            if selection_method == 'closest_to_centroid':
+                data = hdbscan_data[mask]
+                centroid = np.median(data, axis=0)
+                distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
+                best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:max_spikes]]
+            elif selection_method == 'random':
+                best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
             nb_spikes += best_spikes[unit_ind].size
 
         spikes = np.zeros(nb_spikes, dtype=peak_dtype)
@@ -100,7 +109,7 @@ class PositionAndFeaturesClustering:
         spikes['segment_ind'] = peaks[mask]['segment_ind']
         spikes['unit_ind'] = peak_labels[mask]
 
-        cleaning_method = params["cleaning"]
+        cleaning_method = params["cleaning_method"]
 
         print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
 
