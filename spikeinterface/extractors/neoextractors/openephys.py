@@ -108,7 +108,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                                            all_annotations=all_annotations, 
                                            **neo_kwargs)
         # get streams to find correct probe
-        stream_names, stream_ids = self.get_streams(folder_path)
+        stream_names, stream_ids = self.get_streams(folder_path, experiment_names)
         if stream_name is None and stream_id is None:
             stream_name = stream_names[0]
         elif stream_name is None:
@@ -117,15 +117,20 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         # do not load probe for NIDQ stream
         if "NI-DAQmx" not in stream_name:
             # find settings file
-            record_node = stream_name.split("#")[0]
-            if block_index is None:
-                settings_file = self.neo_reader.folder_structure[record_node]["experiments"][0]["settings_file"]
+            if "#" in stream_name:
+                record_node = stream_name.split("#")[0]
             else:
-                settings_file = self.neo_reader.folder_structure[record_node]["experiments"][block_index]["settings_file"]
+                record_node = ''
+            exp_ids = sorted(list(self.neo_reader.folder_structure[record_node]["experiments"].keys()))
+            if block_index is None:
+                exp_id = exp_ids[0]
+            else:
+                exp_id = exp_ids[block_index]
+            settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
 
             if Path(settings_file).is_file():
                 probe = pi.read_openephys(settings_file=settings_file,
-                                        stream_name=stream_name, raise_error=False)
+                                          stream_name=stream_name, raise_error=False)
             else:
                 probe = None
 

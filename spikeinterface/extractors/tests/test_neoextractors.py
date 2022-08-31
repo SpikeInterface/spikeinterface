@@ -18,6 +18,7 @@ class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = ['mearec/mearec_test_10s.h5']
     neo_funcs = dict()
 
+
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecSortingExtractor
     downloads = ['mearec']
