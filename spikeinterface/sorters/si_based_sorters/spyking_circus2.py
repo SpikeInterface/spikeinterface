@@ -93,7 +93,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We get the labels for our peaks
         mask = peak_labels > -1
         sorting = NumpySorting.from_times_labels(selected_peaks['sample_ind'][mask], peak_labels[mask], sampling_rate)
-        sorting = sorting.save(folder=output_folder / "sorting_tmp")
 
         ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()

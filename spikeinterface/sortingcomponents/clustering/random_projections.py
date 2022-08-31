@@ -56,7 +56,7 @@ class RandomProjectionClustering:
         'projections' : projections}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
-            ms_before=0.5, ms_after=0.5, **params['job_kwargs'])
+            ms_before=1, ms_after=1, **params['job_kwargs'])
 
         hdbscan_data = features_data[0]
 

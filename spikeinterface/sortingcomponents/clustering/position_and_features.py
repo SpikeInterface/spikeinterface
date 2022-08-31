@@ -58,7 +58,7 @@ class PositionAndFeaturesClustering:
                            'global_ptp' : {'local_radius_um' : params['local_radius_um']},}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
-            ms_before=0.5, ms_after=0.5, **params['job_kwargs'])
+            ms_before=1, ms_after=1, **params['job_kwargs'])
 
         hdbscan_data = np.zeros((len(peaks), 5), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]['x']

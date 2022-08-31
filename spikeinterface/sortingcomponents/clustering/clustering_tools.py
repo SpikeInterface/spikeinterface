@@ -445,7 +445,7 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
     return clean_peak_labels, peak_sample_shifts
 
 
-def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, similar_threshold=0.975, sparsify_threshold=0.99):
+def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, cosine_threshold=0.975, sparsify_threshold=0.99):
 
     import sklearn
     nb_templates = len(wfs_arrays.keys())
@@ -455,7 +455,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 
         templates[t] = np.median(wfs, axis=0)
 
-        is_silent = templates[t].std(0) < 0.1*noise_levels
+        is_silent = np.abs(templates[t]).max(0) < 0.25*noise_levels
         templates[t, :, is_silent] = 0
 
         channel_norms = np.linalg.norm(templates[t], axis=0)**2
@@ -471,7 +471,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
     for i in range(nb_templates):
         similarities[i, i] = -1
 
-    similar_templates = np.where(similarities > similar_threshold)
+    similar_templates = np.where(similarities > cosine_threshold)
 
     new_labels = peak_labels.copy()
 
@@ -510,7 +510,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
 
     for t in range(len(templates)):
 
-        is_silent = templates[t].std(0) < 0.1*noise_levels
+        is_silent = np.abs(templates[t]).max(0) < 0.25*noise_levels
         templates[t, :, is_silent] = 0
 
         channel_norms = np.linalg.norm(templates[t], axis=0)**2
@@ -589,7 +589,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     return labels, new_labels
 
 
-def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5):
+def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine_threshold=0.75):
     
     import sklearn
     templates = np.array(list(wfs_arrays.keys()))
@@ -650,7 +650,7 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5):
                             cosine = sklearn.metrics.pairwise.cosine_similarity(t_i[np.newaxis, :], t_j[np.newaxis, :])[0][0]
                             similarities[i][j] = cosine
                         
-                        if cosine > 0.75:
+                        if cosine > cosine_threshold:
                             data_j = all_data_j.reshape(n_j, -1)
                             v = t_i - t_j
                             pr_i = np.dot(data_i, v)
