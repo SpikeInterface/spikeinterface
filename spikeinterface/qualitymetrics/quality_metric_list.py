@@ -6,6 +6,7 @@ from .misc_metrics import (
     compute_presence_ratio,
     compute_snrs,
     compute_isi_violations,
+    compute_refrac_period_violations,
     compute_amplitudes_cutoff,
 )
 

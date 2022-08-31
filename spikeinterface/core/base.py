@@ -31,6 +31,10 @@ class BaseExtractor:
     _main_properties = []
     _main_features = []
 
+    installed = True
+    installation_mesg = ""
+    is_writable = False
+
 
     def __init__(self, main_ids):
         # store init kwargs for nested serialisation

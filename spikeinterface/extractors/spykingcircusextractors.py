@@ -28,9 +28,9 @@ class SpykingCircusSortingExtractor(BaseSorting):
 
     extractor_name = 'SpykingCircusSortingExtractor'
     installed = HAVE_H5PY  # check at class level if installed or not
-    is_writable = True
     mode = 'folder'
     installation_mesg = "To use the SpykingCircusSortingExtractor install h5py: \n\n pip install h5py\n\n"
+    name = "spykingcircus"
 
     def __init__(self, folder_path):
         assert HAVE_H5PY, self.installation_mesg
