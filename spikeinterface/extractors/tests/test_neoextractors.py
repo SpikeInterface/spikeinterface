@@ -45,9 +45,12 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('openephysbinary/v0.5.3_two_neuropixels_stream', {'stream_id': '1'}),
         ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '0'}),
         ('openephysbinary/v0.5.x_two_nodes', {'stream_id': '1'}),
-        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream', {'stream_id': '0'}),
-        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream', {'stream_id': '1'}),
-        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream', {'stream_id': '2'}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'stream_id': '0', 'block_index': 0}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'stream_id': '1', 'block_index': 1}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'stream_id': '2', 'block_index': 2}),
     ]
 
 
