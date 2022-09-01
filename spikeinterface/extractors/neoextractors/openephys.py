@@ -81,6 +81,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path: str
         The folder path to load the recordings from.
+    load_sync_channel : bool
+        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
+        If True, the SYNC channel is loaded and can be accessed in the analog signals.
     experiment_name: str, list, or None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
@@ -100,8 +103,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     name = "openephys"
     has_default_locations = True
 
-    def __init__(self, folder_path, experiment_names=None, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, experiment_names)
+    def __init__(self, folder_path, load_sync_channel=False, experiment_names=None,
+                 stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel, experiment_names)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id,
                                            stream_name=stream_name,
                                            block_index=block_index,
@@ -148,8 +152,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, experiment_names=None):
-        neo_kwargs = {'dirname': str(folder_path), 'experiment_names': experiment_names}
+    def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False, experiment_names=None):
+        neo_kwargs = {'dirname': str(folder_path),
+                      'load_sync_channel': load_sync_channel,
+                      'experiment_names': experiment_names}
         return neo_kwargs
 
 

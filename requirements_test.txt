@@ -6,7 +6,7 @@ pytest-cov
 git+https://github.com/SpikeInterface/probeinterface.git
 
 # neo is from master because of several IO (spikeglx, ...)
-git+https://github.com/alejoe91/python-neo.git@openephys_consistency_experiments
+git+https://github.com/NeuralEnsemble/python-neo.git
 
 # tridesclous
 numpy==1.21
