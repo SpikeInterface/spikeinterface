@@ -20,8 +20,6 @@ class SpikeLocationsWidget(BaseWidget):
         List of unit ids.
     with_channel_ids: bool False default
         Add channel ids text on the probe
-    compute_kwargs : dict or None
-        If given, dictionary with keyword arguments for `compute_unit_locations` function
     unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values
     hide_unit_selector : bool
@@ -36,21 +34,15 @@ class SpikeLocationsWidget(BaseWidget):
         unit_ids=None,
         segment_index=None,
         with_channel_ids=False,
-        compute_kwargs=None,
         unit_colors=None,
         hide_unit_selector=False,
         plot_all_units=True,
         backend=None,
         **backend_kwargs
     ):
-        if waveform_extractor.is_extension("spike_locations"):
-            slc = waveform_extractor.load_extension("spike_locations")
-            spike_locations = slc.get_data(outputs="by_unit")
-        else:
-            compute_kwargs = compute_kwargs if compute_kwargs is not None else {}
-            spike_locations = compute_spike_locations(
-                waveform_extractor, outputs="by_unit", **compute_kwargs
-            )
+        self.check_extensions(waveform_extractor, "spike_locations")
+        slc = waveform_extractor.load_extension("spike_locations")
+        spike_locations = slc.get_data(outputs="by_unit")
 
         recording = waveform_extractor.recording
         sorting = waveform_extractor.sorting

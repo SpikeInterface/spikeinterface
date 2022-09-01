@@ -32,20 +32,15 @@ class TemplateMetricsWidget(MetricsBaseWidget):
         unit_ids=None,
         include_metrics=None,
         skip_metrics=None,
-        compute_kwargs=None,
         unit_colors=None,
         hide_unit_selector=False,
         backend=None,
         **backend_kwargs
     ):
-        if waveform_extractor.is_extension("template_metrics"):
-            tmc = waveform_extractor.load_extension("template_metrics")
-            template_metrics = tmc.get_data()
-        else:
-            compute_kwargs = compute_kwargs if compute_kwargs is not None else {}
-            template_metrics = compute_template_metrics(
-                waveform_extractor, **compute_kwargs
-            )
+        self.check_extensions(waveform_extractor, "template_metrics")
+        tmc = waveform_extractor.load_extension("template_metrics")
+        template_metrics = tmc.get_data()
+
         sorting = waveform_extractor.sorting
 
         MetricsBaseWidget.__init__(self, template_metrics, sorting,

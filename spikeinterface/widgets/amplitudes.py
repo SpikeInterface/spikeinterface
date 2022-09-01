@@ -17,8 +17,6 @@ class AmplitudesWidget(BaseWidget):
         List of unit ids.
     segment_index: int
         The segment index (or None if mono-segment)
-    compute_kwargs: dict
-        Keyword arguments for computing amplitude (if not computed yet)
     hide_unit_selector : bool
         For sortingview backend, if True the unit selector is not displayed
     """
@@ -26,17 +24,13 @@ class AmplitudesWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None,
-                 segment_index=None, compute_kwargs=None, hide_unit_selector=False, 
-                 plot_histograms=False, bins=None, backend=None, **backend_kwargs):
+                 segment_index=None, hide_unit_selector=False, plot_histograms=False,
+                 bins=None, backend=None, **backend_kwargs):
         sorting = waveform_extractor.sorting
-        if waveform_extractor.is_extension('spike_amplitudes'):
-            sac = waveform_extractor.load_extension('spike_amplitudes')
-            amplitudes = sac.get_data(outputs='by_unit')
-        else:
-            if compute_kwargs is None:
-                compute_kwargs = {}
-            amplitudes = compute_spike_amplitudes(
-                waveform_extractor, outputs='by_unit', **compute_kwargs)
+        self.check_extensions(waveform_extractor, "spike_amplitudes")
+        sac = waveform_extractor.load_extension('spike_amplitudes')
+        amplitudes = sac.get_data(outputs='by_unit')
+
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids

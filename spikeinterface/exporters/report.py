@@ -4,7 +4,9 @@ import pandas as pd
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 import spikeinterface.widgets as sw
-from spikeinterface.postprocessing import (compute_spike_amplitudes, compute_principal_components, 
+from spikeinterface.postprocessing import (compute_spike_amplitudes,
+                                           compute_principal_components,
+                                           compute_unit_locations,
                                            get_template_extremum_channel, 
                                            get_template_extremum_amplitude)
 from spikeinterface.qualitymetrics import compute_quality_metrics
@@ -75,6 +77,10 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
                                                n_components=5, mode='by_channel_local')
         metrics = compute_quality_metrics(we)
     metrics.to_csv(output_folder / 'quality metrics.csv')
+
+    # pre-compute unit locations
+    if not we.is_extension('unit_locations'):
+        unit_locations = compute_unit_locations(we)
 
     unit_colors = sw.get_unit_colors(sorting)
 

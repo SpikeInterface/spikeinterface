@@ -154,16 +154,12 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_locations(self.we, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_unit_locations(self.we, compute_kwargs=dict(method='monopolar_triangulation'), 
-                                    backend=backend, **self.backend_kwargs[backend])
 
     def test_spike_locations(self):
         possible_backends = list(sw.SpikeLocationsWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_spike_locations(self.we, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_spike_locations(self.we, compute_kwargs=dict(method='monopolar_triangulation'), 
-                                        backend=backend, **self.backend_kwargs[backend])
     
     def test_similarity(self):
         possible_backends = list(sw.TemplateSimilarityWidget.possible_backends.keys())

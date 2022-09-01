@@ -16,8 +16,6 @@ class QualityMetricsWidget(MetricsBaseWidget):
         List of unit ids.
     skip_metrics: list or None
         If given, a list of quality metrics to skip
-    compute_kwargs : dict or None
-        If given, dictionary with keyword arguments for `compute_quality_metrics` function
     unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values
     hide_unit_selector : bool
@@ -32,20 +30,15 @@ class QualityMetricsWidget(MetricsBaseWidget):
         unit_ids=None,
         include_metrics=None,
         skip_metrics=None,
-        compute_kwargs=None,
         unit_colors=None,
         hide_unit_selector=False,
         backend=None,
         **backend_kwargs
     ):
-        if waveform_extractor.is_extension("quality_metrics"):
-            qlc = waveform_extractor.load_extension("quality_metrics")
-            quality_metrics = qlc.get_data()
-        else:
-            compute_kwargs = compute_kwargs if compute_kwargs is not None else {}
-            quality_metrics = compute_quality_metrics(
-                waveform_extractor, **compute_kwargs
-            )
+        self.check_extensions(waveform_extractor, "quality_metrics")
+        qlc = waveform_extractor.load_extension("quality_metrics")
+        quality_metrics = qlc.get_data()
+
         sorting = waveform_extractor.sorting
 
         MetricsBaseWidget.__init__(self, quality_metrics, sorting,

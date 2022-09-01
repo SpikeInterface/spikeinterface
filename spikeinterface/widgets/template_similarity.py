@@ -17,8 +17,6 @@ class TemplateSimilarityWidget(BaseWidget):
         The object to compute/get template similarity from
     unit_ids: list
         List of unit ids.
-    compute_kwargs : dict or None
-        If given, dictionary with keyword arguments for `compute_template_similarity` function
     cmap : Matplotlib colormap
         The matplotlib colormap. Default 'viridis'. (matplotlib backend)
     show_unit_ticks : bool
@@ -29,16 +27,12 @@ class TemplateSimilarityWidget(BaseWidget):
     possible_backends = {}
 
     def __init__(self, waveform_extractor: WaveformExtractor,
-                 unit_ids=None, compute_kwargs=None, cmap='viridis', 
+                 unit_ids=None, cmap='viridis',
                  show_unit_ticks=False, show_colorbar=True,
                  backend=None, **backend_kwargs):
-        if waveform_extractor.is_extension("similarity"):
-            tsc = waveform_extractor.load_extension("similarity")
-            similarity = tsc.get_data()
-        else:
-            compute_kwargs = compute_kwargs if compute_kwargs is not None else {}
-            similarity = compute_template_similarity(waveform_extractor,
-                                                     **compute_kwargs)
+        self.check_extensions(waveform_extractor, "similarity")
+        tsc = waveform_extractor.load_extension("similarity")
+        similarity = tsc.get_data()
 
         sorting = waveform_extractor.sorting
         if unit_ids is None:
