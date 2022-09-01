@@ -1,4 +1,3 @@
-from .base import define_widget_function_from_class
 from .metrics import MetricsBaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..postprocessing import compute_template_metrics
@@ -51,6 +50,3 @@ class TemplateMetricsWidget(MetricsBaseWidget):
                                    backend=backend, **backend_kwargs)
 
 
-plot_template_metrics = define_widget_function_from_class(
-    TemplateMetricsWidget, "plot_template_metrics"
-)

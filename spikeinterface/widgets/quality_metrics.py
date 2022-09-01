@@ -1,4 +1,3 @@
-from .base import define_widget_function_from_class
 from .metrics import MetricsBaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..qualitymetrics import compute_quality_metrics
@@ -49,6 +48,3 @@ class QualityMetricsWidget(MetricsBaseWidget):
                                    backend=backend, **backend_kwargs)
 
 
-plot_quality_metrics = define_widget_function_from_class(
-    QualityMetricsWidget, "plot_quality_metrics"
-)

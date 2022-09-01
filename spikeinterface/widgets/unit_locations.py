@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from .utils import get_unit_colors
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
@@ -64,4 +64,4 @@ class UnitLocationsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-plot_unit_locations = define_widget_function_from_class(UnitLocationsWidget, 'plot_unit_locations')
+

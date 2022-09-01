@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from .timeseries import TimeseriesWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.baserecording import BaseRecording
@@ -105,4 +105,4 @@ class SpikesOnTracesWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-plot_spikes_on_traces = define_widget_function_from_class(SpikesOnTracesWidget, 'plot_spikes_on_traces')
+

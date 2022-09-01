@@ -65,5 +65,3 @@ class SortingSummaryWidget(BaseWidget):
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-
-plot_sorting_summary = define_widget_function_from_class(SortingSummaryWidget, "plot_sorting_summary")
