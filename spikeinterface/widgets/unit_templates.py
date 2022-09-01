@@ -1,5 +1,3 @@
-from .base import define_widget_function_from_class
-
 from .unit_waveforms import UnitWaveformsWidget
 
 class UnitTemplatesWidget(UnitWaveformsWidget):
@@ -13,7 +11,7 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
 
 UnitTemplatesWidget.__doc__ = UnitWaveformsWidget.__doc__
 
-plot_unit_templates = define_widget_function_from_class(UnitTemplatesWidget, 'plot_unit_templates')
+
 
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
 from ..postprocessing import compute_correlograms
@@ -57,4 +57,4 @@ class CrossCorrelogramsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-plot_crosscorrelograms = define_widget_function_from_class(CrossCorrelogramsWidget, 'plot_crosscorrelograms')
+

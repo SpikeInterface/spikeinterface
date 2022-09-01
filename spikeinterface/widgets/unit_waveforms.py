@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.baserecording import BaseRecording
 from ..core.basesorting import BaseSorting
@@ -187,5 +187,3 @@ def get_waveforms_scales(we, templates, channel_locations,
 
     return xvectors, y_scale, y_offset, delta_x
 
-
-plot_unit_waveforms = define_widget_function_from_class(UnitWaveformsWidget, 'plot_unit_waveforms')

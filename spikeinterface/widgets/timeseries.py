@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..core import BaseRecording
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from .utils import get_some_colors, order_channels_by_depth
 
 
@@ -184,9 +184,6 @@ class TimeseriesWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-
-plot_timeseries = define_widget_function_from_class(TimeseriesWidget, 'plot_timeseries')
 
 
 def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None):
