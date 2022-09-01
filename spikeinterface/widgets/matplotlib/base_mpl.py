@@ -75,6 +75,12 @@ class MplPlotter(BackendPlotter):
                     if ncols * nrows > num_axes:
                         for extra_ax in axes.flatten()[num_axes:]:
                             extra_ax.remove()
+                    # make 2D (if ncols or nrows == 1)
+                    if axes.ndim == 1:
+                        if nrows == 1:
+                            axes = axes[None, :]
+                        else:
+                            axes = axes[:, None]
 
         self.figure = figure
         self.ax = ax
