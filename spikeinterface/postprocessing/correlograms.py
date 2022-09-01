@@ -9,15 +9,15 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
     
 
-class CrossCorrelogramsCalculator(BaseWaveformExtractorExtension):
-    """Compute crosscorrelograms of spike trains.
+class CorrelogramsCalculator(BaseWaveformExtractorExtension):
+    """Compute correlograms of spike trains.
     
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
         A waveform extractor object
     """
-    extension_name = 'crosscorrelograms'
+    extension_name = 'correlograms'
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
@@ -65,7 +65,7 @@ class CrossCorrelogramsCalculator(BaseWaveformExtractorExtension):
         return self.ccgs, self.bins
 
 
-WaveformExtractor.register_extension(CrossCorrelogramsCalculator)
+WaveformExtractor.register_extension(CorrelogramsCalculator)
 
 
 def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
@@ -221,11 +221,11 @@ def compute_correlograms(waveform_or_sorting_extractor,
     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
         waveform_extractor = waveform_or_sorting_extractor
         folder = waveform_extractor.folder
-        ext_folder = folder / CrossCorrelogramsCalculator.extension_name
+        ext_folder = folder / CorrelogramsCalculator.extension_name
         if load_if_exists and ext_folder.is_dir():
-            ccc = CrossCorrelogramsCalculator.load_from_folder(folder)
+            ccc = CorrelogramsCalculator.load_from_folder(folder)
         else:
-            ccc = CrossCorrelogramsCalculator(waveform_extractor)
+            ccc = CorrelogramsCalculator(waveform_extractor)
             ccc.set_params(window_ms=window_ms, bin_ms=bin_ms,
                            symmetrize=symmetrize, method=method)
             ccc.run()

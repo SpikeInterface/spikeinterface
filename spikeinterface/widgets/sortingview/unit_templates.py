@@ -1,9 +1,9 @@
 from ..base import to_attr
-from ..unit_waveforms import UnitWaveformsWidget
+from ..unit_templates import UnitTemplatesWidget
 from .base_sortingview import SortingviewPlotter
 
 
-class UnitWaveformPlotter(SortingviewPlotter):
+class UnitTemplatesPlotter(SortingviewPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
 
@@ -17,8 +17,8 @@ class UnitWaveformPlotter(SortingviewPlotter):
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
-            templates_dict[unit]["mean"] = dp.all_templates[u_i].T.astype("float32")[channel_inds[unit]]
-            templates_dict[unit]["std"] = dp.all_stds[u_i].T.astype("float32")[channel_inds[unit]]
+            templates_dict[unit]["mean"] = dp.templates[u_i].T.astype("float32")[channel_inds[unit]]
+            templates_dict[unit]["std"] = dp.template_stds[u_i].T.astype("float32")[channel_inds[unit]]
 
         aw_items = [
             vv.AverageWaveformItem(
@@ -46,4 +46,4 @@ class UnitWaveformPlotter(SortingviewPlotter):
         return v_average_waveforms
 
 
-UnitWaveformPlotter.register(UnitWaveformsWidget)
+UnitTemplatesPlotter.register(UnitTemplatesWidget)

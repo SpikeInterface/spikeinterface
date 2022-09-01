@@ -15,6 +15,9 @@ zarr
 # for widget colors
 distinctipy
 
+# for sortingview backend
+sortingview
+
 # CurtationSorting
 networkx
 
