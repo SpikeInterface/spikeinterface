@@ -37,7 +37,7 @@ def test_WaveformExtractor():
         shutil.rmtree(folder)
 
     for mode in ["folder", "memory"]:
-        if mode is "memory":
+        if mode == "memory":
             wf_folder = None
         else:
             wf_folder = folder

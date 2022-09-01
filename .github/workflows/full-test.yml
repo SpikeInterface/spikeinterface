@@ -155,11 +155,14 @@ jobs:
           pytest -v -m sorters
       - name: Test widgets
         if: steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        env:
+          KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+          KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m widgets
+          pytest -v -s -m widgets
       - name: Test exporters
-        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true'
         run: |
           source ~/test_env/bin/activate
           pytest -v -m exporters

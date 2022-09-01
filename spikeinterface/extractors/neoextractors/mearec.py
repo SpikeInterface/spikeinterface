@@ -18,10 +18,13 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     """
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
+    name = "mearec"
 
     def __init__(self, file_path, all_annotations=False):
-        neo_kwargs = {'filename': str(file_path)}
-        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
+        neo_kwargs = self.map_to_neo_kwargs(file_path)
+        NeoBaseRecordingExtractor.__init__(self, 
+                                           all_annotations=all_annotations,
+                                           **neo_kwargs)
 
         self.extra_requirements.append('mearec')
 
@@ -34,20 +37,31 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update({'file_path': str(file_path)})
 
+    @classmethod
+    def map_to_neo_kwargs(cls, file_path):
+        neo_kwargs = {'filename': str(file_path)}
+        return neo_kwargs
+
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
     handle_spike_frame_directly = False
+    name = "mearec"
 
     def __init__(self, file_path):
-        neo_kwargs = {'filename': str(file_path)}
+        neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseSortingExtractor.__init__(self,
                                          sampling_frequency=None,  # auto guess is correct here
                                          use_natural_unit_ids=True,
                                          **neo_kwargs)
 
         self._kwargs = {'file_path': str(file_path)}
+
+    @classmethod
+    def map_to_neo_kwargs(cls, file_path):
+        neo_kwargs = {'filename': str(file_path)}
+        return neo_kwargs
 
 
 def read_mearec(file_path):

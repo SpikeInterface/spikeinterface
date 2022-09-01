@@ -28,9 +28,9 @@ class TridesclousSortingExtractor(BaseSorting):
 
     extractor_name = 'TridesclousSortingExtractor'
     installed = HAVE_TDC
-    is_writable = False
     mode = 'folder'
     installation_mesg = "To use the TridesclousSortingExtractor install tridesclous: \n\n pip install tridesclous\n\n"  # error message when not installed
+    name = "tridesclous"
 
     def __init__(self, folder_path, chan_grp=None):
         assert self.installed, self.installation_mesg

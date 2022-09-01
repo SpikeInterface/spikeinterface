@@ -9,7 +9,8 @@ from typing import List, Union
 
 class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
     extractor_name = "WaveClusSnippetsExtractor"
-    installation_mesg = ""  # error message when not installed
+    is_writable = True
+    name = "waveclus"
 
     def __init__(self, file_path):
         file_path = Path(file_path) if isinstance(file_path, str) else file_path
@@ -138,3 +139,6 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
         if indices is None:
             return self._spikestimes
         return self._spikestimes[indices]
+
+read_waveclus_snippets = define_function_from_class(source_class=WaveClusSnippetsExtractor,
+                                                    name="read_waveclus_snippets")

@@ -28,7 +28,7 @@ class MClustSortingExtractor(BaseSorting):
     """
 
     extractor_name = "MClustSortingExtractor"
-    installation_mesg = ""  # error message when not installed
+    name = "mclust"
 
     def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw = None):
         end_header_str = '%%ENDHEADER'

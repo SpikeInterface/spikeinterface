@@ -24,6 +24,9 @@ class NpyFolderSnippets(NpySnippetsExtractor):
     snippets: NpyFolderSnippets
         The snippets
     """
+    extractor_name = 'NpyFolderSnippets'
+    mode = 'folder'
+    name = "npyfolder"
 
     def __init__(self,  folder_path):
 
