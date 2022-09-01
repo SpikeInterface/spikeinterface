@@ -74,7 +74,8 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
             # load num_channels_per_adc depending on probe type
             imDatPrb_type = probe.annotations["imDatPrb_type"]
-
+            # imDatPrb_type = probe.annotations["probe_type"]
+            
             if imDatPrb_type == 2:
                 num_channels_per_adc = 16
             else:
