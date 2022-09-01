@@ -30,7 +30,7 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
         else:
             for unit_index, unit_id in enumerate(dp.unit_ids):
                 hist2d = dp.all_hist2d[unit_id]
-                ax = self.axes[unit_index, 0]
+                ax = self.axes[unit_index]
                 im = ax.imshow(hist2d.T, interpolation='nearest',
                     origin='lower', aspect='auto',
                     extent=(0, hist2d.shape[0], dp.bin_min, dp.bin_max), cmap='hot')
@@ -39,7 +39,7 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
             if dp.same_axis:
                 ax = self.ax
             else:
-                ax = self.axes[unit_index, 0]
+                ax = self.axes[unit_index]
             color = dp.unit_colors[unit_id]
             ax.plot(dp.templates_flat[unit_id], color=color, lw=1)
 
@@ -50,7 +50,7 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
                 if unit_index != 0:
                     continue
             else:
-                ax = self.axes[unit_index, 0]
+                ax = self.axes[unit_index]
             chan_inds = dp.channel_inds[unit_id]
             for i, chan_ind in enumerate(chan_inds):
                 if i != 0:

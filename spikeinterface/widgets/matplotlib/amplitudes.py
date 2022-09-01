@@ -20,7 +20,7 @@ class AmplitudesPlotter(MplPlotter):
         self.make_mpl_figure(**backend_kwargs)
         
         if dp.plot_histograms:
-            scatter_ax = self.axes[0, 0]
+            scatter_ax = self.axes[0]
         else:
             scatter_ax = self.ax
         
@@ -36,13 +36,13 @@ class AmplitudesPlotter(MplPlotter):
                     bins = int(len(spiketrains) / 30)
                 else:
                     bins = dp.bins
-                self.axes[0, 1].hist(amps, bins=bins, orientation="horizontal", 
-                                     color=dp.unit_colors[unit_id],
-                                     alpha=0.8)
+                self.axes[1].hist(amps, bins=bins, orientation="horizontal", 
+                                  color=dp.unit_colors[unit_id],
+                                  alpha=0.8)
         
         if dp.plot_histograms:
-            self.axes[0, 1].set_ylim(scatter_ax.get_ylim())
-            self.axes[0, 1].axis("off")
+            self.axes[1].set_ylim(scatter_ax.get_ylim())
+            self.axes[1].axis("off")
             self.figure.tight_layout()
             
         self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),

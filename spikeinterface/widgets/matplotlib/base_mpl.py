@@ -39,7 +39,7 @@ class MplPlotter(BackendPlotter):
             for i in range(num_axes):
                 ax = figure.add_subplot(nrows, ncols, i + 1)
                 axes.append(ax)
-            axes = np.array(axes).reshape(nrows, ncols)
+            axes = np.squeeze(np.array(axes).reshape(nrows, ncols))
         elif ax is not None:
             assert figure is None and axes is None, 'figure/ax/axes : only one of then can be not None'
             figure = ax.get_figure()
@@ -75,12 +75,6 @@ class MplPlotter(BackendPlotter):
                     if ncols * nrows > num_axes:
                         for extra_ax in axes.flatten()[num_axes:]:
                             extra_ax.remove()
-                    # make 2D (if ncols or nrows == 1)
-                    if axes.ndim == 1:
-                        if nrows == 1:
-                            axes = axes[None, :]
-                        else:
-                            axes = axes[:, None]
 
         self.figure = figure
         self.ax = ax
