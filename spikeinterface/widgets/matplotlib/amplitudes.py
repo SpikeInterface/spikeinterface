@@ -10,19 +10,25 @@ class AmplitudesPlotter(MplPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        
-        if dp.plot_histograms:
-            backend_kwargs["num_axes"] = 2
-            backend_kwargs["ncols"] = 2
+
+
+        if backend_kwargs["axes"] is not None:
+            if dp.plot_histograms:
+                assert np.asarray(axes).size == 2
+            else:
+                assert np.asarray(axes).size == 1
+        elif backend_kwargs["ax"] is not None:
+            assert not dp.plot_histograms
         else:
-            backend_kwargs["num_axes"] = None
+            if dp.plot_histograms:
+                backend_kwargs["num_axes"] = 2
+                backend_kwargs["ncols"] = 2
+            else:
+                backend_kwargs["num_axes"] = None
 
         self.make_mpl_figure(**backend_kwargs)
         
-        if dp.plot_histograms:
-            scatter_ax = self.axes[0]
-        else:
-            scatter_ax = self.ax
+        scatter_ax = self.axes.flatten()[0]
         
         for unit_id in dp.unit_ids:
             spiketrains = dp.spiketrains[unit_id]
@@ -41,8 +47,9 @@ class AmplitudesPlotter(MplPlotter):
                                   alpha=0.8)
         
         if dp.plot_histograms:
-            self.axes[1].set_ylim(scatter_ax.get_ylim())
-            self.axes[1].axis("off")
+            ax_hist = self.axes.flatten()[1]
+            ax_hist.set_ylim(scatter_ax.get_ylim())
+            ax_hist.axis("off")
             self.figure.tight_layout()
             
         self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
