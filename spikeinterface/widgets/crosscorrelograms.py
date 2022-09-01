@@ -31,13 +31,9 @@ class CrossCorrelogramsWidget(BaseWidget):
                  backend=None, **backend_kwargs):
         if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
             sorting = waveform_or_sorting_extractor.sorting
-            if waveform_or_sorting_extractor.is_extension("crosscorrelograms"):
-                ccc = waveform_or_sorting_extractor.load_extension("crosscorrelograms")
-                ccgs, bins = ccc.get_data()
-            else:
-                ccgs, bins = compute_correlograms(waveform_or_sorting_extractor,
-                                                  window_ms=window_ms,
-                                                  bin_ms=bin_ms, symmetrize=True)
+            self.check_extensions(waveform_or_sorting_extractor, "correlograms")
+            ccc = waveform_or_sorting_extractor.load_extension("correlograms")
+            ccgs, bins = ccc.get_data()
         else:
             sorting = waveform_or_sorting_extractor
             ccgs, bins = compute_correlograms(sorting,

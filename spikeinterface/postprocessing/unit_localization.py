@@ -102,7 +102,7 @@ def compute_unit_locations(waveform_extractor,
     method: str
         'center_of_mass' / 'monopolar_triangulation'
     outputs: str 
-        'numpy' (default) / 'numpy_dtype' / 'dict'
+        'numpy' (default) / 'by_unit'
     method_kwargs: 
         Other kwargs depending on the method.
 

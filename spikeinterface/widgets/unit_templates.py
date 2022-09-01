@@ -2,7 +2,7 @@ from .base import define_widget_function_from_class
 
 from .unit_waveforms import UnitWaveformsWidget
 
-class UnitTemplateWidget(UnitWaveformsWidget):
+class UnitTemplatesWidget(UnitWaveformsWidget):
     possible_backends = {}
 
 
@@ -11,9 +11,9 @@ class UnitTemplateWidget(UnitWaveformsWidget):
         UnitWaveformsWidget.__init__(self, *args, **kargs)
 
 
-UnitTemplateWidget.__doc__ = UnitWaveformsWidget.__doc__
+UnitTemplatesWidget.__doc__ = UnitWaveformsWidget.__doc__
 
-plot_unit_templates = define_widget_function_from_class(UnitTemplateWidget, 'plot_unit_templates')
+plot_unit_templates = define_widget_function_from_class(UnitTemplatesWidget, 'plot_unit_templates')
 
 
 

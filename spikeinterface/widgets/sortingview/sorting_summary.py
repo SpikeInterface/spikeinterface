@@ -2,11 +2,12 @@ from ..base import to_attr
 from ..sorting_summary import SortingSummaryWidget
 from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
-from .amplitudes import AmplitudeTimeseriesPlotter
+from .amplitudes import AmplitudesPlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
+from .template_similarity import TemplateSimilarityPlotter
 from .unit_locations import UnitLocationsPlotter
-from .unit_waveforms import UnitWaveformPlotter
+from .unit_templates import UnitTemplatesPlotter
 
 
 class SortingSummaryPlotter(SortingviewPlotter):
@@ -18,32 +19,19 @@ class SortingSummaryPlotter(SortingviewPlotter):
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        amplitudes_plotter = AmplitudeTimeseriesPlotter()
+        amplitudes_plotter = AmplitudesPlotter()
         v_spike_amplitudes = amplitudes_plotter.do_plot(dp.amplitudes, generate_url=False, backend="sortingview")
-        waveforms_plotter = UnitWaveformPlotter()
-        v_average_waveforms = waveforms_plotter.do_plot(dp.waveforms, generate_url=False, backend="sortingview")
+        template_plotter = UnitTemplatesPlotter()
+        v_average_waveforms = template_plotter.do_plot(dp.templates, generate_url=False, backend="sortingview")
         xcorrelograms_plotter = CrossCorrelogramsPlotter()
         v_cross_correlograms = xcorrelograms_plotter.do_plot(dp.correlograms, generate_url=False, backend="sortingview")
         unitlocation_plotter = UnitLocationsPlotter()
         v_unit_locations = unitlocation_plotter.do_plot(dp.unit_locations, generate_url=False, backend="sortingview")
+        template_sim_plotter = TemplateSimilarityPlotter()
+        v_unit_similarity = template_sim_plotter.do_plot(dp.similarity, generate_url=False, backend="sortingview")
 
         # unit ids
         v_units_table = generate_unit_table_view(unit_ids)
-
-        # similarity
-        ss_items = []
-        for i1, u1 in enumerate(unit_ids):
-            for i2, u2 in enumerate(unit_ids):
-                ss_items.append(vv.UnitSimilarityScore(
-                    unit_id1=u1,
-                    unit_id2=u2,
-                    similarity=dp.similarity["similarity"][i1, i2].astype("float32")
-                ))
-
-        v_unit_similarity_matrix = vv.UnitSimilarityMatrix(
-            unit_ids=list(unit_ids),
-            similarity_scores=ss_items
-        )
 
         # assemble layout
         v_summary = vv.Box(
@@ -65,7 +53,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
                                         vv.Splitter(
                                             direction='horizontal',
                                             item1=vv.LayoutItem(v_cross_correlograms, stretch=2),
-                                            item2=vv.LayoutItem(v_unit_similarity_matrix, stretch=2)
+                                            item2=vv.LayoutItem(v_unit_similarity, stretch=2)
                                                 )
                                             )
                                         )
