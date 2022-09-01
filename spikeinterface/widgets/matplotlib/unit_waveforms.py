@@ -15,7 +15,7 @@ class UnitWaveformPlotter(MplPlotter):
         if backend_kwargs["axes"] is not None:
             assert len(backend_kwargs) >= len(dp.units)
         elif backend_kwargs["ax"] is not None:
-                assert dp.same_axis, "If 'same_axis' is not used, provide as many 'axes' as neurons"
+            assert dp.same_axis, "If 'same_axis' is not used, provide as many 'axes' as neurons"
         else:
             if dp.same_axis:
                 backend_kwargs["num_axes"] = 1
