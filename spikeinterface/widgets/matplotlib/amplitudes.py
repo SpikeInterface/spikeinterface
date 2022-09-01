@@ -18,6 +18,7 @@ class AmplitudesPlotter(MplPlotter):
             backend_kwargs["num_axes"] = None
 
         self.make_mpl_figure(**backend_kwargs)
+        print(self.axes)
         
         if dp.plot_histograms:
             scatter_ax = self.axes[0, 0]

@@ -79,6 +79,9 @@ class MplPlotter(BackendPlotter):
         self.figure = figure
         self.ax = ax
         # axes is a 2D array of ax
+        if axes.ndim == 1:
+            axes = axes[:, None]
+        print(axes.shape)
         self.axes = axes
         
         if figtitle is not None:

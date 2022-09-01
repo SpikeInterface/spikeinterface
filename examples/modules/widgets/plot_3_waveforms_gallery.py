@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 import spikeinterface as si
 import spikeinterface.extractors as se
+import spikeinterface.postprocessing as spost
 import spikeinterface.widgets as sw
 
 ##############################################################################
@@ -33,6 +34,12 @@ we = si.extract_waveforms(recording, sorting, folder,
     ms_before=1, ms_after=2., max_spikes_per_unit=500,
     n_jobs=1, chunk_size=30000)
 
+# pre-compute postprocessing data
+_ = spost.compute_spike_amplitudes(we)
+_ = spost.compute_unit_locations(we)
+_ = spost.compute_spike_locations(we)
+_ = spost.compute_template_metrics(we)
+
 
 ##############################################################################
 # plot_unit_waveforms()
@@ -50,12 +57,19 @@ unit_ids = sorting.unit_ids
 
 sw.plot_unit_templates(we, unit_ids=unit_ids, ncols=5)
 
-##############################################################################
-# plot_unit_probe_map()
-# ~~~~~~~~~~~~~~~~~~~~~
 
-unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_probe_map(we, unit_ids=unit_ids)
+##############################################################################
+# plot_amplitudes()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+sw.plot_amplitudes(we, plot_histograms=True)
+
+
+##############################################################################
+# plot_unit_locations()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+sw.plot_unit_locations(we)
 
 
 ##############################################################################
@@ -67,6 +81,8 @@ sw.plot_unit_probe_map(we, unit_ids=unit_ids)
 unit_ids = sorting.unit_ids[:4]
 sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids, max_channels=5)
 
+
+
 ##############################################################################
 # plot_amplitudes_distribution()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,22 +90,18 @@ sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids, max_channels=5)
 sw.plot_amplitudes_distribution(we)
 
 ##############################################################################
-# plot_amplitudes_timeseres()
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-sw.plot_amplitudes_timeseries(we)
-
-##############################################################################
 # plot_units_depth_vs_amplitude()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 sw.plot_units_depth_vs_amplitude(we)
 
-##############################################################################
-# plot_unit_locations()
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_unit_locations(we)
+##############################################################################
+# plot_unit_probe_map()
+# ~~~~~~~~~~~~~~~~~~~~~
+
+unit_ids = sorting.unit_ids[:4]
+sw.plot_unit_probe_map(we, unit_ids=unit_ids)
 
 
 
