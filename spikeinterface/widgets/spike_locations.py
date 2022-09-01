@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from .utils import get_unit_colors
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
@@ -91,6 +91,3 @@ def estimate_axis_lims(spike_locations, quantile=0.02):
     return xlims, ylims
 
 
-plot_spike_locations = define_widget_function_from_class(
-    SpikeLocationsWidget, "plot_spike_locations"
-)

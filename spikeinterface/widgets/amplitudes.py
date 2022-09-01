@@ -1,4 +1,4 @@
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from .utils import get_some_colors
 
 from ..core.waveform_extractor import WaveformExtractor
@@ -67,4 +67,4 @@ class AmplitudesWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-plot_amplitudes = define_widget_function_from_class(AmplitudesWidget, 'plot_amplitudes')
+

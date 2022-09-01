@@ -1,8 +1,14 @@
 import numpy as np
 
 from .base import BaseWidget, define_widget_function_from_class
-from .widget_list import (AmplitudesWidget, CrossCorrelogramsWidget, TemplateSimilarityWidget, 
-                          UnitLocationsWidget, UnitTemplatesWidget,)
+
+from .amplitudes import AmplitudesWidget
+from .crosscorrelograms import CrossCorrelogramsWidget
+from .template_similarity import TemplateSimilarityWidget
+from .unit_locations import UnitLocationsWidget
+from .unit_templates import UnitTemplatesWidget
+
+
 from ..core import WaveformExtractor
 from ..postprocessing import get_template_channel_sparsity, compute_template_similarity
 
@@ -65,5 +71,3 @@ class SortingSummaryWidget(BaseWidget):
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-
-plot_sorting_summary = define_widget_function_from_class(SortingSummaryWidget, "plot_sorting_summary")
