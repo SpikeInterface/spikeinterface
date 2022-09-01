@@ -42,7 +42,8 @@ class AmplitudesPlotter(MplPlotter):
                     bins = int(len(spiketrains) / 30)
                 else:
                     bins = dp.bins
-                self.axes[1].hist(amps, bins=bins, orientation="horizontal", 
+                ax_hist = self.axes.flatten()[1]
+                ax_hist.hist(amps, bins=bins, orientation="horizontal", 
                                   color=dp.unit_colors[unit_id],
                                   alpha=0.8)
         
