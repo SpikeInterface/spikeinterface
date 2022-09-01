@@ -32,6 +32,7 @@ else:
 
 
 ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
+KACHERY_CLOUD_SET = bool(os.getenv('KACHERY_CLOUD_CLIENT_ID')) and bool(os.getenv('KACHERY_CLOUD_PRIVATE_KEY'))
 
 
 class TestWidgets(unittest.TestCase):
@@ -59,8 +60,10 @@ class TestWidgets(unittest.TestCase):
 
         self.skip_backends = ["ipywidgets"]
 
-        if ON_GITHUB:
+        if ON_GITHUB and not KACHERY_CLOUD_SET:
             self.skip_backends.append("sortingview")
+
+        print(f"Widgets tests: skipping backends - {self.skip_backends}")
 
         self.backend_kwargs = {
             'matplotlib': {},
