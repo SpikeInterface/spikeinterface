@@ -21,7 +21,7 @@ jobs:
       - name: Get current year-month
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m')"
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: cache-venv
         with:
           path: ~/test_env
@@ -70,7 +70,7 @@ jobs:
         id: vars
         run: |
           echo "::set-output name=HASH_EPHY_DATASET::$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: cache-datasets
         env:
           # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
