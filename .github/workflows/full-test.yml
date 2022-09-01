@@ -31,6 +31,10 @@ jobs:
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}${{ hashFiles('**/requirements_full.txt') }}-${{ hashFiles('**/requirements_extractors.txt') }}-${{ hashFiles('**/requirements_test.txt') }}-${{ steps.date.outputs.date }}
+      - name: Check kachery-cloud settings
+        run: |
+          echo $KACHERY_CLOUD_CLIENT_ID
+          echo $KACHERY_CLOUD_PRIVATE_KEY
       - name: Install dependencies
         run: |
           sudo apt update
@@ -164,7 +168,7 @@ jobs:
           source ~/test_env/bin/activate
           pytest -v -m widgets
       - name: Test exporters
-        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true'
         run: |
           source ~/test_env/bin/activate
           pytest -v -m exporters
