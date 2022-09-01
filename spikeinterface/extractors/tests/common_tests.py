@@ -35,12 +35,9 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 
             # test streams and blocks retrieval
             full_path = self.get_full_path(path)
-            # skip if full_path doesn't exist (e.g. due to changes in GIN and caching)
-            if not full_path.exists():
-                continue
 
             extractor_name = self.ExtractorClass.name
-            print(f"Extractor name {extractor_name}")
+            print(f"Extractor name {extractor_name} - path {full_path}")
             nblocks = get_neo_num_blocks(extractor_name, full_path)
             stream_names, stream_ids = get_neo_streams(extractor_name, full_path)
             

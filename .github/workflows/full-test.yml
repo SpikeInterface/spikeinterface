@@ -132,7 +132,7 @@ jobs:
         if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true'
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m extractors
+          pytest -v -s -m extractors
       - name: Test preprocessing
         if: steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
         run: |
