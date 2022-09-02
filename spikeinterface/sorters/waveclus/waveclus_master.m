@@ -1,5 +1,5 @@
 function waveclus_master(outputFolder, waveclusPath)
-    if nargin > 1
+    if isdeployed
         addpath(genpath(waveclusPath));
     end
 

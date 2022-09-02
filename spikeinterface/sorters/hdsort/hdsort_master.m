@@ -1,6 +1,6 @@
 function hdsort_master(outputFolder, hdsortPath)
     try
-        if nargin > 1
+        if isdeployed
             % prepare for hdsort matlab execution
             addpath(genpath(hdsortPath));
         else
