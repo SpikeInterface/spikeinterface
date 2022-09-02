@@ -189,7 +189,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = np.abs(template).max(0) < 0.25*noise_levels
+        is_silent = template.std(0) < 0.1*noise_levels
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2
@@ -556,7 +556,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = np.abs(template).max(0) < 0.25*noise_levels
+        is_silent = template.std(0) < 0.1*noise_levels
 
         template[:, is_silent] = 0
 
@@ -586,14 +586,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
-
-        d['sparsities'] = {}
         
         for count, unit_id in enumerate(all_units):
                 
-            templates[count], active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'], d['noise_levels'])
-            d['sparsities'][count] = active_channels
-            
+            templates[count], _ = cls._sparsify_template(templates[count], d['sparsify_threshold'], d['noise_levels'])            
             d['norms'][count] = np.linalg.norm(templates[count])
             templates[count] /= d['norms'][count]
 
@@ -799,8 +795,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         neighbor_window = num_samples - 1
         amplitudes = d['amplitudes']
         sym_patch = d['sym_patch']
-        sparsities = d['sparsities']
-        is_dense = d['is_dense']
         
         peak_traces = traces[margin // 2:-margin // 2, :]
         peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(peak_traces, peak_sign, abs_threholds, exclude_sweep_size)

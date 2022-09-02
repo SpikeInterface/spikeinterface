@@ -106,6 +106,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         matching_job_params = params['job_kwargs'].copy()
         matching_job_params['chunk_duration'] = '100ms'
+        matching_job_params['n_jobs'] = 4
 
         spikes = find_spikes_from_templates(recording_f, method='circus', 
             method_kwargs=matching_params, **matching_job_params)
