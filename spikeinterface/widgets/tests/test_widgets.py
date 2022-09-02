@@ -79,6 +79,8 @@ class TestWidgets(unittest.TestCase):
     def test_plot_timeseries(self):
         possible_backends = list(sw.TimeseriesWidget.possible_backends.keys())
         for backend in possible_backends:
+            if ON_GITHUB and backend == "sortingview":
+                continue
             if backend not in self.skip_backends:
                 sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True,
                                 backend=backend, **self.backend_kwargs[backend])
