@@ -28,18 +28,21 @@ class MplPlotter(BackendPlotter):
         """
         figure/ax/axes : only one of then can be not None
         """
-        if figure is not None and num_axes is None:
+        if figure is not None:
             assert ax is None and axes is None, 'figure/ax/axes : only one of then can be not None'
-            ax = figure.add_subplot(111)
-            axes = np.array([[ax]])
-        elif figure is not None and num_axes is not None:
-            assert ncols is not None
-            axes = []
-            nrows = int(np.ceil(num_axes / ncols))
-            for i in range(num_axes):
-                ax = figure.add_subplot(nrows, ncols, i + 1)
-                axes.append(ax)
-            axes = np.array(axes).reshape(nrows, ncols)
+            if  num_axes is None:
+                ax = figure.add_subplot(111)
+                axes = np.array([[ax]])
+            else:
+                assert ncols is not None
+                axes = []
+                nrows = int(np.ceil(num_axes / ncols))
+                axes = np.zeros((nrows, ncols), dtype=object)
+                for i in range(num_axes):
+                    ax = figure.add_subplot(nrows, ncols, i + 1)
+                    r = i // ncols
+                    c = i % ncols
+                    axes[r, c] = ax
         elif ax is not None:
             assert figure is None and axes is None, 'figure/ax/axes : only one of then can be not None'
             figure = ax.get_figure()
@@ -49,8 +52,9 @@ class MplPlotter(BackendPlotter):
             axes = np.asarray(axes)
             figure = axes.flatten()[0].get_figure()
         else:
-            # one fig with one ax
+            # 'figure/ax/axes are all None
             if num_axes is None:
+                # one fig with one ax
                 figure, ax = plt.subplots(figsize=figsize)
                 axes = np.array([[ax]])
             else:
@@ -75,19 +79,10 @@ class MplPlotter(BackendPlotter):
                     if ncols * nrows > num_axes:
                         for extra_ax in axes.flatten()[num_axes:]:
                             extra_ax.remove()
-                    # make 2D (if ncols or nrows == 1)
-                    if axes.ndim == 1:
-                        if nrows == 1:
-                            axes = axes[None, :]
-                        else:
-                            axes = axes[:, None]
 
         self.figure = figure
         self.ax = ax
-        # axes is a 2D array of ax
-        if axes.ndim == 1:
-            axes = axes[:, None]
-        print(axes.shape)
+        # axes is always a 2D array of ax
         self.axes = axes
         
         if figtitle is not None:

@@ -13,6 +13,7 @@ class CrossCorrelogramsPlotter(MplPlotter):
         backend_kwargs["num_axes"] = int(len(dp.unit_ids) ** 2)
 
         self.make_mpl_figure(**backend_kwargs)
+        assert self.axes.ndim == 2
         
         bins = dp.bins
         unit_ids = dp.unit_ids

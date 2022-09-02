@@ -3,11 +3,12 @@
 SpikeInterface 0.95.0 release notes
 -----------------------------------
 
-31th August 2022
+2nd September 2022
 
 
 Main changes:
  
+ * Improved NEO-extractors wrapper to handle multi-blocks and return number of blocks and stream info (https://github.com/SpikeInterface/spikeinterface/pull/909)
  * Add `BaseSnippets` object to handle waveform cutouts (https://github.com/SpikeInterface/spikeinterface/pull/764)
  * Sacrificed `toolkit` in favor of: `preprocessing`, `postprocessing`, `qualitymetrics`, and `curation` modules (https://github.com/SpikeInterface/spikeinterface/pull/745)
  * Major refactoring widget module to allow for multiple backends (https://github.com/SpikeInterface/spikeinterface/pull/686 / https://github.com/SpikeInterface/spikeinterface/pull/786 / )
@@ -32,6 +33,10 @@ core:
  * Add `mp_context` arg to control multiprocessing (https://github.com/SpikeInterface/spikeinterface/pull/781)
  * Option to automatically cast unsigned dtypes in `get_traces` (https://github.com/SpikeInterface/spikeinterface/pull/798)
  * Add mode="memory" for WaveformExtractor (https://github.com/SpikeInterface/spikeinterface/pull/832)
+ * Patch memory leak when saving to Zarr (https://github.com/SpikeInterface/spikeinterface/pull/915)
+ * Add return_scaled in write_to_h5 format (https://github.com/SpikeInterface/spikeinterface/pull/908)
+ * Improved NEO wrapper to handle multi-blocks and return number of blocks and stream info (https://github.com/SpikeInterface/spikeinterface/pull/909)
+ * Update OpenEphys and SpikeGLX for NEO and ProbeInterface releases (https://github.com/SpikeInterface/spikeinterface/pull/916)
 
 extractors:
 
@@ -48,6 +53,7 @@ extractors:
  * Add `EDFRecordingExtractor`, `NeuralynxSortingExtractor`, `BlackrockSortngExtractor` (https://github.com/SpikeInterface/spikeinterface/pull/853 / https://github.com/SpikeInterface/spikeinterface/pull/854 / https://github.com/SpikeInterface/spikeinterface/pull/856)
  * Fix IBL cbin kwargs (https://github.com/SpikeInterface/spikeinterface/pull/873)
  * Add snippets extractors: MClust (https://github.com/SpikeInterface/spikeinterface/pull/879) - WaveClus (https://github.com/SpikeInterface/spikeinterface/pull/764)
+ * Fix Phy reading when unit groups are excluded (https://github.com/SpikeInterface/spikeinterface/pull/876) 
 
 sorters:
 
@@ -65,6 +71,8 @@ sorters:
  * Add `tmpdir` parameter to MS4 (https://github.com/SpikeInterface/spikeinterface/pull/827)
  * Add SLURM launcher (https://github.com/SpikeInterface/spikeinterface/pull/828)
  * Add WaveClus from snippets implementation (https://github.com/SpikeInterface/spikeinterface/pull/764)
+ * Extend docker map to HerdingSpikes and Combinato (https://github.com/SpikeInterface/spikeinterface/pull/891 / https://github.com/SpikeInterface/spikeinterface/pull/889)
+ * Fixes to pykilosort (https://github.com/SpikeInterface/spikeinterface/pull/890)
 
 preprocessing:
 
@@ -72,6 +80,7 @@ preprocessing:
  * Add `operator` to CMR kwargs (https://github.com/SpikeInterface/spikeinterface/pull/634/files)
  * Add `DeepInterpolationRecording` (https://github.com/SpikeInterface/spikeinterface/pull/661)
  * Add `zscore` preprocessing (https://github.com/SpikeInterface/spikeinterface/pull/679)
+ * Enable specification of dtype for whitening (https://github.com/SpikeInterface/spikeinterface/pull/881)
 
 postprocessing:
 
@@ -106,6 +115,8 @@ widgets:
  * Refactor multiple widgets (https://github.com/SpikeInterface/spikeinterface/pull/762 / https://github.com/SpikeInterface/spikeinterface/pull/820)
  * Multi-layer timeseries (https://github.com/SpikeInterface/spikeinterface/pull/783)
  * Add `sorting_summary` widget for sortingview (https://github.com/SpikeInterface/spikeinterface/pull/795)  
+ * Fix generation of docstrings for `plot_` functions (https://github.com/SpikeInterface/spikeinterface/pull/920)
+ * Unify generation of 2d axes in MPL (https://github.com/SpikeInterface/spikeinterface/pull/921)
 
 sortingcomponents:
 

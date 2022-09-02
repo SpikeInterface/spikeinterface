@@ -21,6 +21,7 @@ class MetricsPlotter(MplPlotter):
         all_unit_ids = metrics.index.values
 
         self.make_mpl_figure(**backend_kwargs)
+        assert self.axes.ndim == 2
 
         if dp.unit_ids is None:
             colors = ["gray"] * len(all_unit_ids)

@@ -50,18 +50,5 @@ w_ts = sw.plot_timeseries(recording, mode='map', time_range=(5, 8),
 
 w_el = sw.plot_probe_map(recording)
 
-##############################################################################
-# plot_spectrum()
-# ~~~~~~~~~~~~~~~~
-
-#TODO : @alessio this is for you
-# w_sp = sw.plot_spectrum(recording)
-
-##############################################################################
-# plot_spectrogram()
-# ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#TODO : @alessio this is for you
-#w_spg = sw.plot_spectrogram(recording, channel=0, nfft=2048)
 
 plt.show()
