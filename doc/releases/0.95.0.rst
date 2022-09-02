@@ -8,14 +8,13 @@ SpikeInterface 0.95.0 release notes
 
 Main changes:
  
- * Improved NEO-extractors wrapper to handle multi-blocks and return number of blocks and stream info (https://github.com/SpikeInterface/spikeinterface/pull/909)
  * Add `BaseSnippets` object to handle waveform cutouts (https://github.com/SpikeInterface/spikeinterface/pull/764)
  * Sacrificed `toolkit` in favor of: `preprocessing`, `postprocessing`, `qualitymetrics`, and `curation` modules (https://github.com/SpikeInterface/spikeinterface/pull/745)
  * Major refactoring widget module to allow for multiple backends (https://github.com/SpikeInterface/spikeinterface/pull/686 / https://github.com/SpikeInterface/spikeinterface/pull/786 / )
    * `matplotlib`
    * `ipywidgets`
    * `sortingview`
- * First implementations of `sortingcomponents`-based sorters:
+ * First implementations of (experimental) `sortingcomponents`-based sorters:
    * `spykingcircus2` (https://github.com/SpikeInterface/spikeinterface/pull/787)
    * `tridesclous2` (https://github.com/SpikeInterface/spikeinterface/pull/800)
  

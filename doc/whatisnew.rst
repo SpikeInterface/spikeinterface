@@ -1,3 +1,5 @@
+.. _releasenotes:
+
 =============
 Release notes
 =============
@@ -32,7 +34,7 @@ Version 0.95.0
   * `matplotlib`
   * `ipywidgets`
   * `sortingview`
-* First implementations of `sortingcomponents`-based sorters:
+* First implementations of (experimental) `sortingcomponents`-based sorters:
   * `spykingcircus2`
   * `tridesclous2`
 
