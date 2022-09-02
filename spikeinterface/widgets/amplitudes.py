@@ -51,6 +51,9 @@ class AmplitudesWidget(BaseWidget):
             times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
             times = times / sorting.get_sampling_frequency()
             spiketrains_segment[unit_id] = times
+        
+        if plot_histograms and bins is None:
+            bins = 100
 
         plot_data = dict(
             waveform_extractor=waveform_extractor,
