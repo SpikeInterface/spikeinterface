@@ -12,9 +12,9 @@ from ..postprocessing import compute_correlograms, get_template_extremum_channel
 def get_potential_auto_merge(waveform_extractor,
                 minimum_spikes=1000, maximum_distance_um=200.,
                 peak_sign="neg",
-
                 bin_ms=0.25, window_ms=50., corr_thresh=0.3,
-                 correlogram_low_pass = 800.,
+                correlogram_low_pass = 800., adaptative_window_threshold=0.5,
+                debug_folder=None,
                 ):
     """
     Algorithm to find and check potential merges between units.
@@ -48,19 +48,15 @@ def get_potential_auto_merge(waveform_extractor,
     unit_max_chan = list(unit_max_chan.values())
     unit_locations = chan_loc[unit_max_chan, :]
     unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric='euclidean')
-    print(unit_distances)
-    print(unit_distances <=maximum_distance_um)
     pair_mask = pair_mask & (unit_distances <=maximum_distance_um)
-    
-    
     
     print('Will check ', np.sum(pair_mask), 'pairs on ', pair_mask.size)
     
-
     # step 1 : potential auto merge by correlogram
     correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method='numba')
     corr_diff = compute_correlogram_diff(sorting, correlograms, bins,
-                                    correlogram_low_pass=correlogram_low_pass,  pair_mask=pair_mask)
+                                    correlogram_low_pass=correlogram_low_pass,  adaptative_window_threshold=adaptative_window_threshold, 
+                                    pair_mask=pair_mask)
     ind1, ind2 = np.nonzero(corr_diff  < corr_thresh)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
     print(potential_merges)
@@ -74,7 +70,8 @@ def get_potential_auto_merge(waveform_extractor,
     return potential_merges
 
 
-def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=800., pair_mask=None):
+def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=800., adaptative_window_threshold=0.5,
+            pair_mask=None):
     """
     Original author: Aurelien Wyngaard ( lussac)
     
@@ -86,6 +83,10 @@ def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=
         The 3d array containing all cross and auto corrlogram
     bins: array
         Bins of the correlograms
+    correlogram_low_pass: float
+        low pass filter on correlogram for smoothing
+    adaptative_window_threshold
+        
     pair_mask: None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
@@ -109,13 +110,35 @@ def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=
     num_spikes = sorting.get_total_num_spikes()
     
     # smooth correlogram by low pass filter
-    print('ici', bin_ms, 1e3 / bin_ms, (1e3 / bin_ms /2))
     b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
     correlograms_smooth = scipy.signal.filtfilt(b, a, correlograms, axis=2)
     
+    # find correlogram window for each units
+    win_sizes = np.zeros(n, dtype=int)
+    for unit_ind in range(n):
+        auto_corr = correlograms_smooth[unit_ind, unit_ind, :]
+        thresh = np.max(auto_corr) * adaptative_window_threshold
+        win_size = get_unit_adaptive_window(auto_corr, thresh)
+        win_sizes[unit_ind] = win_size
+        
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        bins2 = bins[:-1] + np.mean(np.diff(bins))
+        ax.plot(bins2, auto_corr)
+        ax.axhline(thresh)
+        ax.axvline(bins2[m - win_size])
+        ax.axvline(bins2[m + win_size])
+        
+        dev = -np.gradient(np.gradient(auto_corr))
+        #~ dev = np.gradient(auto_corr)
+        ax.plot(bins2, dev)
+        
+
+        plt.show()
     
-    #TODO make adaptative window sizes
-    win_sizes = np.ones(n, dtype=int) * 20
+    
+    
+    
     
     corr_diff = np.full((n, n), np.nan, dtype='float64')
     for unit_ind1 in range(n):
@@ -128,7 +151,7 @@ def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=
             
             num1, num2 = num_spikes[unit_id1], num_spikes[unit_id2]
             # Weighted window (larger unit imposes its window).
-            win_size = int(round((num1 * win_sizes[unit_ind1] + num2 * win_sizes[unit_ind2]) / (num1 + num2)))	
+            win_size = int(round((num1 * win_sizes[unit_ind1] + num2 * win_sizes[unit_ind2]) / (num1 + num2)))    
             # Plage of indices where correlograms are inside the window.
             corr_inds = np.arange(m - win_size, m + win_size, dtype=int)
             
@@ -189,6 +212,34 @@ def normalize_correlogram(correlogram: np.ndarray):
     mean = np.mean(correlogram)
     return correlogram if mean == 0 else correlogram / mean
 
+def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
+    """
+    Computes an adaptive window to correlogram (basically corresponds to the first peak).
+    Based on a minimum threshold and minimum of second derivative.
+    If no peak is found over threshold, recomputes with threshold/2.
+
+    Parameters
+    ----------
+    auto_corr (np.ndarray) [time]:
+        Correlogram used for adaptive window. Needs to start at t=0.
+    threshold (float):
+        Minimum threshold of correlogram (all peaks under this threshold is discarded).
+
+    Returns
+    -------
+    unit_window (int):
+        Index at which the adaptive window has been calculated.
+    """
+    if np.sum(np.abs(auto_corr)) == 0:
+        return 20.0
+
+    peaks = scipy.signal.find_peaks(-np.gradient(np.gradient(auto_corr)))[0]
+
+    for peak in peaks:
+        if auto_corr[peak] >= threshold:
+            return peak
+
+    # If none of the peaks crossed the threshold, redo with threshold/2.
+    return _get_unit_adaptive_window(auto_corr, threshold/2)
 
 
-    
