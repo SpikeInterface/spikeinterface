@@ -1,4 +1,4 @@
-name: si_env_py39
+name: si_env
 channels:
   - conda-forge
   - defaults
@@ -7,7 +7,7 @@ dependencies:
   - pip>=21.0
   - mamba
   # numpy 1.22 break numba which break tridesclous
-  - numpy==1.21
+  - numpy<1.22
   - joblib
   - tqdm
   - matplotlib
