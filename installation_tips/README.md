@@ -12,8 +12,8 @@ This environment will install:
  * spyking-circus (not on mac)
  * herdinspikes (not on windows)
 
-kilosort, ironclust and hdsort are matplot based and need to be installed by source.
-klusta do not work anymore with python3.8 you should create a similar environment with python3.6
+Kilosort, Ironclust and HDSort are MATLAB based and need to be installed by source.
+Klusta does not work anymore with python3.8 you should create a similar environment with python3.6
 
 ### Quick installation
 
