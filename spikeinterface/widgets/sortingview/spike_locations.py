@@ -61,7 +61,7 @@ class SpikeLocationsPlotter(SortingviewPlotter):
 
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - UnitLocations"
+                label = "SpikeInterface - SpikeLocations"
             url = view.url(label=label)
             print(url)
         return view
