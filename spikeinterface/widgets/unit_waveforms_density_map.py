@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from .utils import get_unit_colors
 from ..postprocessing import get_template_channel_sparsity
 
@@ -133,5 +133,3 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-
-plot_unit_waveforms_density_map = define_widget_function_from_class(UnitWaveformDensityMapWidget, 'plot_unit_waveforms_density_map')

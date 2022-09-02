@@ -1,10 +1,10 @@
 zarr
+# datalad
 h5py
 pandas
 scipy
 scikit-learn
-matplotlib
-distinctipy
 networkx
-# datalad
-
+distinctipy
+matplotlib
+# sortingview

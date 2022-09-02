@@ -73,11 +73,11 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             self.set_probe(probe, in_place=True)
 
             # load num_channels_per_adc depending on probe type
-            imDatPrb_type = probe.annotations["imDatPrb_type"]
+            ptype = probe.annotations["probe_type"]
 
-            if imDatPrb_type == 2:
+            if ptype in [21, 24]: # NP2.0
                 num_channels_per_adc = 16
-            else:
+            else: # NP1.0
                 num_channels_per_adc = 12
 
             sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)

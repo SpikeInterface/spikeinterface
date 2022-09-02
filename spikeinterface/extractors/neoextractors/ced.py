@@ -35,7 +35,7 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
                                            all_annotations=all_annotations,
                                            **neo_kwargs)
         self._kwargs.update(dict(file_path=str(file_path)))
-        self.extra_requirements.append('sonpy')
+        self.extra_requirements.append('neo[ced]')
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

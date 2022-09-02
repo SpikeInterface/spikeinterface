@@ -246,7 +246,8 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
 
 
 def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_nn, n_neighbors):
-    """Calculates unit contamination based on NearestNeighbors search in PCA space.
+    """
+    Calculates unit contamination based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
@@ -585,7 +586,8 @@ def _subtract_clip_component(clip1, component):
 
 
 def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
-    """Computes the isolation score used for nn_isolation and nn_noise_overlap
+    """
+    Computes the isolation score used for nn_isolation and nn_noise_overlap
 
     Parameters
     ----------
