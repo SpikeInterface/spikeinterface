@@ -1,7 +1,3 @@
-from .widget_list import *
-from .utils import get_some_colors, get_unit_colors, array_to_image
-from .base import set_default_plotter_backend, get_default_plotter_backend
-
 # check if backend are available
 try:
     import matplotlib
@@ -32,31 +28,18 @@ if HAVE_SV:
 if HAVE_IPYW:
     import spikeinterface.widgets.ipywidgets
 
+# when importing widget list backend are already registered
+from .widget_list import *
+
+# general functions
+from .utils import get_some_colors, get_unit_colors, array_to_image
+from .base import set_default_plotter_backend, get_default_plotter_backend
+
+
 # we keep this to keep compatibility so we have all previous widgets
 # except the one that have been ported that are imported
 # with "from .widget_list import *" in the first line
-from .legacy_mpl_widgets import *
+from ._legacy_mpl_widgets import *
 
 
-# add backends and kwargs to doc
-for wcls in widget_list:
-    wcls_doc = wcls.__doc__
-    
-    wcls_doc += """
-    Backends
-    --------
-    
-    backends: str
-    {backends}
-    backend_kwargs: kwargs
-    {backend_kwargs}
-    """
-    backend_str = f"    {list(wcls.possible_backends.keys())}"
-    backend_kwargs_str = ""
-    for backend, backend_plotter in wcls.possible_backends.items():
-        backend_kwargs_desc = backend_plotter.backend_kwargs_desc
-        if len(backend_kwargs_desc) > 0:
-            backend_kwargs_str += f"\n        {backend}:"
-            for bk, bk_dsc in backend_kwargs_desc.items():
-                backend_kwargs_str += f"\n        - {bk}: {bk_dsc}"
-    wcls.__doc__ = wcls_doc.format(backends=backend_str, backend_kwargs=backend_kwargs_str)
+

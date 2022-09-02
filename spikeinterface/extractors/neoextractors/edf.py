@@ -32,7 +32,7 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
                                            all_annotations=all_annotations,
                                            **neo_kwargs)
         self._kwargs.update({'file_path': str(file_path)})
-        self.extra_requirements.append('pyedflib')
+        self.extra_requirements.append('neo[edf]')
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

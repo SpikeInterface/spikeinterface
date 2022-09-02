@@ -150,14 +150,14 @@ def array_to_image(data,
         fontsize = int(0.8 * spacing)
         row_ms = (num_timepoints_per_row / sampling_frequency) * 1000
 
-        font = None
-        if platform.system() == "Linux":
-            font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize)
-        else:
-            try:
+        try:
+            if platform.system() == "Linux":
+                font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize)
+            else:
                 font = ImageFont.truetype("arial.ttf", fontsize)
-            except OSError:
-                print(f"Could not load font to use in scalebar. Scalebar will not be drawn.")
+        except:
+            print(f"Could not load font to use in scalebar. Scalebar will not be drawn.")
+            font = None
 
         if font is not None:
             image = Image.fromarray(output_image)
@@ -175,3 +175,16 @@ def array_to_image(data,
             output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image
+
+
+def order_channels_by_depth(recording, channel_ids):
+    import scipy.spatial
+    locations = recording.get_channel_locations()
+    channel_inds = recording.ids_to_indices(channel_ids)
+    locations = locations[channel_inds, :]
+    origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[None, :]
+    dist = scipy.spatial.distance.cdist(locations, origin, metric='euclidean')
+    dist = dist[:, 0]
+    order = np.argsort(dist)
+
+    return order

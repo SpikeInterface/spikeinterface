@@ -5,7 +5,7 @@ from pathlib import Path
 
 from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
 import spikeinterface.extractors as se
-from spikeinterface.postprocessing import compute_correlograms, CrossCorrelogramsCalculator
+from spikeinterface.postprocessing import compute_correlograms, CorrelogramsCalculator
 
 try:
     import numba
@@ -61,12 +61,12 @@ def test_correlograms_extension():
     correlograms, bins = compute_correlograms(we, method='numpy')
     
     # reload as an extension from we
-    assert CrossCorrelogramsCalculator in we.get_available_extensions()
-    assert we.is_extension('crosscorrelograms')
-    ccc = we.load_extension('crosscorrelograms')
-    assert isinstance(ccc, CrossCorrelogramsCalculator)
+    assert CorrelogramsCalculator in we.get_available_extensions()
+    assert we.is_extension('correlograms')
+    ccc = we.load_extension('correlograms')
+    assert isinstance(ccc, CorrelogramsCalculator)
     assert ccc.ccgs is not None
-    ccc = CrossCorrelogramsCalculator.load_from_folder(folder)
+    ccc = CorrelogramsCalculator.load_from_folder(folder)
     assert ccc.ccgs is not None
 
 

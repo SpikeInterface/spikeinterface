@@ -49,6 +49,20 @@ class BaseWidget:
     def register_backend(cls, backend_plotter):
         cls.possible_backends[backend_plotter.backend] = backend_plotter   
 
+    @staticmethod
+    def check_extensions(waveform_extractor, extensions):
+        if isinstance(extensions, str):
+            extensions = [extensions]
+        error_msg = ""
+        raise_error = False
+        for extension in extensions:
+            if not waveform_extractor.is_extension(extension):
+                raise_error = True
+                error_msg += f"The {extension} waveform extension is required for this widget. " \
+                             f"Run the `compute_{extension}` to compute it.\n"
+        if raise_error:
+            raise Exception(error_msg)
+
 
 class BackendPlotter():
     backend = ''
