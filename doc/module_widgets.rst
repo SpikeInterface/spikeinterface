@@ -1,3 +1,6 @@
+.. _modulewidgets:
+
+
 Widgets module
 ==============
 
