@@ -2,7 +2,7 @@ function kilosort3_master(fpath, kilosortPath)
     try
         set(groot,'defaultFigureVisible', 'off');
 
-        if isdeployed
+        if ~isdeployed
             % prepare for kilosort execution
             addpath(genpath(kilosortPath));
 
