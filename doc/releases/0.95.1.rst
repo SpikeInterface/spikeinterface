@@ -1,0 +1,11 @@
+.. _release0.95.1:
+
+SpikeInterface 0.95.1 release notes
+-----------------------------------
+
+5nth September 2022
+
+
+Minor change:
+ 
+ * WIDGETS: Fix creation of 2D axes when figure is passed (https://github.com/SpikeInterface/spikeinterface/pull/926)

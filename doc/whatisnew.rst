@@ -9,6 +9,7 @@ Release notes
   :maxdepth: 1
 
   releases/0.95.0.rst
+  releases/0.95.0.rst
   releases/0.94.0.rst
   releases/0.93.0.rst
   releases/0.92.0.rst
@@ -24,6 +25,11 @@ Release notes
 
 NEW API
 -------
+
+Version 0.95.1
+==============
+
+* WIDGETS: Fix creation of 2D axes when figure is passed
 
 Version 0.95.0
 ==============
