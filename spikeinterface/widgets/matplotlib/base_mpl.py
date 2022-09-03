@@ -38,11 +38,15 @@ class MplPlotter(BackendPlotter):
                 axes = []
                 nrows = int(np.ceil(num_axes / ncols))
                 axes = np.zeros((nrows, ncols), dtype=object)
-                for i in range(num_axes):
+                for i in range(nrows * ncols):
                     ax = figure.add_subplot(nrows, ncols, i + 1)
                     r = i // ncols
                     c = i % ncols
                     axes[r, c] = ax
+                # remove extra axes
+                if ncols * nrows > num_axes:
+                    for extra_ax in axes.flatten()[num_axes:]:
+                        extra_ax.remove()
         elif ax is not None:
             assert figure is None and axes is None, 'figure/ax/axes : only one of then can be not None'
             figure = ax.get_figure()
