@@ -87,7 +87,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['general'])
         clustering_params['job_kwargs'] = params['job_kwargs']
 
-        labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='position_and_features',
+        labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='random_projections',
             method_kwargs=clustering_params)
 
         ## We get the labels for our peaks
@@ -97,7 +97,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()
         waveforms_params.update(params['job_kwargs'])
-        we = extract_waveforms(recording_f, sorting, output_folder / "waveforms", **waveforms_params)
+        we = extract_waveforms(recording_f, sorting, output_folder / "waveforms", **waveforms_params, return_scaled=False)
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
         matching_params = params['matching'].copy()
@@ -106,9 +106,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         matching_job_params = params['job_kwargs'].copy()
         matching_job_params['chunk_duration'] = '100ms'
-        matching_job_params['n_jobs'] = 4
+        matching_job_params['n_jobs'] = -1
 
-        spikes = find_spikes_from_templates(recording_f, method='circus', 
+        spikes = find_spikes_from_templates(recording_f, method='circus-omp', 
             method_kwargs=matching_params, **matching_job_params)
 
         if verbose:

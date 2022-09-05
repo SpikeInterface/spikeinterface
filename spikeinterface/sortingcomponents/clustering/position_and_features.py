@@ -51,21 +51,19 @@ class PositionAndFeaturesClustering:
 
         position_method = d["peak_localization_kwargs"]["method"]
 
-        features_list = [position_method, 'ptp', 'energy', 'global_ptp']
+        features_list = [position_method, 'ptp', 'energy']
         features_params = {position_method : {'local_radius_um' : params['local_radius_um']},
                            'ptp' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
-                           'energy': {'local_radius_um' : params['local_radius_um']}, 
-                           'global_ptp' : {'local_radius_um' : params['local_radius_um']},}
+                           'energy': {'local_radius_um' : params['local_radius_um']}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=1, ms_after=1, **params['job_kwargs'])
 
-        hdbscan_data = np.zeros((len(peaks), 5), dtype=np.float32)
+        hdbscan_data = np.zeros((len(peaks), 4), dtype=np.float32)
         hdbscan_data[:, 0] = features_data[0]['x']
         hdbscan_data[:, 1] = features_data[0]['y']
         hdbscan_data[:, 2] = features_data[1]
         hdbscan_data[:, 3] = features_data[2]
-        hdbscan_data[:, 4] = features_data[3]
 
         preprocessing = QuantileTransformer(output_distribution='uniform')
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
@@ -139,7 +137,7 @@ class PositionAndFeaturesClustering:
 
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
             we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
-                ms_after=params['ms_after'], **params['job_kwargs'])
+                ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False)
             labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'], **params['cleaning_kwargs'])
             shutil.rmtree(tmp_folder)
 

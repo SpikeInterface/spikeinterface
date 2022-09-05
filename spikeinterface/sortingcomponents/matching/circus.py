@@ -175,7 +175,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         'sparsify_threshold': 0.99,
-        'amplitudes' : [0.6, 1.4],
+        'amplitudes' : [0.5, 1.5],
         'noise_levels': None,
         'random_chunk_kwargs': {},
         'omp_min_sps' : 0.5,
@@ -189,7 +189,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.1*noise_levels
+        is_silent = template.std(0) < 0.25*noise_levels
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2
@@ -241,13 +241,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         for i in range(num_templates):
             dense_templates[i, :, sparsities[i]] = templates[i].T
 
-
-        test = dense_templates.reshape(num_templates, -1)
-        d['gram'] = test.dot(test.T)
-
         size = 2 * num_samples - 1
 
-        all_delays = list(range(num_samples))
+        all_delays = list(range(0, num_samples+1))
 
         overlaps = {}
         
@@ -255,20 +251,18 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             source = dense_templates[:, :delay, :].reshape(num_templates, -1)
             target = dense_templates[:, num_samples-delay:, :].reshape(num_templates, -1)
 
-            if delay > 0:
-                overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
-            else:
-                overlaps[delay] = scipy.sparse.csr_matrix((num_templates, num_templates), dtype=np.float32)
-            
+            overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
+
             if delay < num_samples:
-                overlaps[size - delay-1] = overlaps[delay].T.tocsr()
+                overlaps[size - delay] = overlaps[delay].T.tocsr()
 
         new_overlaps = []
+
         for i in range(num_templates):
             data = [overlaps[j][i, :].T for j in range(size)]
             data = scipy.sparse.hstack(data)
             new_overlaps += [data]
-        
+
         d['overlaps'] = new_overlaps
 
         return d
@@ -340,7 +334,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         min_amplitude, max_amplitude = d['amplitudes']
         sparsities = d['sparsities']
         ignored_ids = d['ignored_ids']
-        gram = d['gram']
 
         if 'cached_fft_kernels' not in d:
             d['cached_fft_kernels'] = {'fshape' : 0}
@@ -434,12 +427,12 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                  check_finite=False)
 
                 v = nrm2(M[mb_selection, :mb_selection]) ** 2
-                Lkk = gram[best_cluster_ind, best_cluster_ind] - v
+                Lkk = 1 - v
                 if Lkk <= omp_tol:  # selected atoms are dependent
                     break
                 M[mb_selection, mb_selection] = np.sqrt(Lkk)
             else:
-                M[0, 0] = gram[best_cluster_ind, best_cluster_ind]
+                M[0, 0] = 1
 
             all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps,
                 lower=True, overwrite_b=False)
@@ -556,7 +549,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.1*noise_levels
+        is_silent = template.std(0) < 0.25*noise_levels
 
         template[:, is_silent] = 0
 
@@ -625,7 +618,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         size = 2 * num_samples - 1
 
-        all_delays = list(range(num_samples))
+        all_delays = list(range(0, num_samples+1))
         if d['progess_bar_steps']:
             all_delays = tqdm(all_delays, desc='[1] compute overlaps')
 
@@ -635,20 +628,18 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             source = dense_templates[:, :delay, :].reshape(num_templates, -1)
             target = dense_templates[:, num_samples-delay:, :].reshape(num_templates, -1)
 
-            if delay > 0:
-                overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
-            else:
-                overlaps[delay] = scipy.sparse.csr_matrix((num_templates, num_templates), dtype=np.float32)
-            
+            overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
+
             if delay < num_samples:
-                overlaps[size - delay-1] = overlaps[delay].T.tocsr()
+                overlaps[size - delay] = overlaps[delay].T.tocsr()
 
         new_overlaps = []
+
         for i in range(num_templates):
             data = [overlaps[j][i, :].T for j in range(size)]
             data = scipy.sparse.hstack(data)
             new_overlaps += [data]
-        
+
         d['overlaps'] = new_overlaps
 
         return d

@@ -32,8 +32,7 @@ class BenchmarkClustering:
         self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
         self.exhaustive_gt = exhaustive_gt
-        self.recording_f = bandpass_filter(self.recording,  dtype='float32')
-        self.recording_f = common_reference(self.recording_f)
+        self.recording_f = recording
         self.sampling_rate = self.recording_f.get_sampling_frequency()
         self.job_kwargs = job_kwargs
 
@@ -171,7 +170,7 @@ class BenchmarkClustering:
                     print(f"Extracting waveforms for {label}")
 
                 self.waveforms[label] = extract_waveforms(self.recording_f, sorting, tmp_folder, load_if_exists=True,
-                                       ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500,
+                                       ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500, return_scaled=False, 
                                        **self.job_kwargs)
 
                 #self.pcas[label] = compute_principal_components(self.waveforms[label], load_if_exists=True,
