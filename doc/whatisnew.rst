@@ -29,7 +29,8 @@ NEW API
 Version 0.95.1
 ==============
 
-* WIDGETS: Fix creation of 2D axes when figure is passed
+* Widgets: Fix creation of 2D axes when figure is passed
+* Widgets: Add check for matplotlib backend when using ipywidgets
 
 Version 0.95.0
 ==============
