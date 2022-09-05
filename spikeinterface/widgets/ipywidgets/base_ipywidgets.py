@@ -1,5 +1,6 @@
 from spikeinterface.widgets.base import BackendPlotter
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
@@ -18,4 +19,7 @@ class IpywidgetsPlotter(BackendPlotter):
         "display": True
     }
     
-    
+    def __init__(self) -> None:
+        super().__init__()
+        mpl_backend = mpl.get_backend()
+        assert "ipympl" in mpl_backend, ("To use the 'ipywidgets' backend, you have to set %matplotlib widgets")
