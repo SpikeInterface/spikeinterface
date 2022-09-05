@@ -93,36 +93,36 @@ print(extremum_channels_ids)
 # 
 # In SI, we can compute PC scores with the :code:`compute_principal_components` function
 # (which returns a :code:`WaveformPrincipalComponent` object).
-# The pc scores for a unit are retrieved with the :code:`get_components` function and
+# The pc scores for a unit are retrieved with the :code:`get_projections` function and
 # the shape of the pc scores is (n_spikes, n_components, n_channels).
 # Here, we compute PC scores and plot the first and second components of channel 8:
 
 pc = compute_principal_components(we, load_if_exists=True,
-                                     n_components=3, mode='by_channel_local')
+                                  n_components=3, mode='by_channel_local')
 print(pc)
 
 fig, ax = plt.subplots()
 for i, unit_id in enumerate(sorting.unit_ids[:3]):
-    comp = pc.get_components(unit_id)
+    comp = pc.get_projections(unit_id)
     print(comp.shape)
     color = colors[i]
     ax.scatter(comp[:, 0, 8], comp[:, 1, 8], color=color)
 
 ##############################################################################
 # Note that PC scores for all units can be retrieved at once with the
-# `get_all_components()` function:
+# `get_all_projections()` function:
 
-all_labels, all_components = pc.get_all_components()
+all_labels, all_projections = pc.get_all_projections()
 print(all_labels[:40])
 print(all_labels.shape)
-print(all_components.shape)
+print(all_projections.shape)
 
 cmap = plt.get_cmap('Dark2', len(sorting.unit_ids))
 
 fig, ax = plt.subplots()
 for i, unit_id in enumerate(sorting.unit_ids):
     mask = all_labels == unit_id
-    comp = all_components[mask, :, :]
+    comp = all_projections[mask, :, :]
     ax.scatter(comp[:, 0, 8], comp[:, 1, 8], color=cmap(i))
 
 plt.show()

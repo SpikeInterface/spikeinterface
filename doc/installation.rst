@@ -16,6 +16,16 @@ The :code:`[full]` option installs all the extra dependencies for all the differ
 
 Note that if using Z shell (:code:`zsh` - the default shell on mac), you will need to use quotes (:code:`pip install "spikeinterface[full]"`).
 
+
+To install all interactive widget backends, you can use:
+
+.. code-block:: bash
+
+   pip install spikeinterface[full, widgets]
+
+Note that the :code:`[widgets]` option also installs jupyter (and relative dependencies).
+
+
 If you wish to only install the :code:`core` module, without optional dependencies, you can use:
 
 .. code-block:: bash
