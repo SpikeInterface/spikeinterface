@@ -50,7 +50,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         spike_mask = np.in1d(self.spikes['unit_ind'], unit_inds)
         new_location = self.locations[spike_mask]
-        np.save(new_waveforms_folder / 'spike_locations.npy', new_location)
+        np.save(new_waveforms_folder / self.extension_name / 'spike_locations.npy', new_location)
         
     def run(self, **job_kwargs):
         """
