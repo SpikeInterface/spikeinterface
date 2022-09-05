@@ -22,4 +22,4 @@ class IpywidgetsPlotter(BackendPlotter):
     def __init__(self) -> None:
         super().__init__()
         mpl_backend = mpl.get_backend()
-        assert "ipympl" in mpl_backend, ("To use the 'ipywidgets' backend, you have to set %matplotlib widgets")
+        assert "ipympl" in mpl_backend, ("To use the 'ipywidgets' backend, you have to set %matplotlib widget")
