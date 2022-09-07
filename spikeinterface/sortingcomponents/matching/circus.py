@@ -178,7 +178,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'amplitudes' : [0.5, 1.5],
         'noise_levels': None,
         'random_chunk_kwargs': {},
-        'omp_min_sps' : 0.5,
+        'omp_min_sps' : 1,
         'waveform_extractor': None,
         'templates' : None,
         'overlaps' : None,
@@ -189,7 +189,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.25*noise_levels
+        is_silent = template.std(0) < 0.1*noise_levels
         template[:, is_silent] = 0
 
         channel_norms = np.linalg.norm(template, axis=0)**2
@@ -214,7 +214,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         all_units = list(d['waveform_extractor'].sorting.unit_ids)
 
-        templates = waveform_extractor.get_all_templates(mode='median')
+        templates = waveform_extractor.get_all_templates(mode='median').copy()
 
         d['sparsities'] = {}
         d['templates'] = {}
@@ -322,6 +322,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         templates = d['templates']
         num_templates = d['num_templates']
         num_channels = d['num_channels']
+        num_samples = d['num_samples']
         overlaps = d['overlaps']
         margin = d['margin']
         norms = d['norms']
@@ -340,7 +341,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         cached_fft_kernels = d['cached_fft_kernels']
 
-        stop_criteria = omp_min_sps * norms[:, np.newaxis]
+        nb_dense_channels = np.array([len(sparsities[i]) for i in range(num_templates)])
+
+        stop_criteria = omp_min_sps * (norms / np.sqrt(nb_dense_channels*num_samples))[:, np.newaxis]
 
         num_timesteps = len(traces)
         num_peaks = num_timesteps - num_samples + 1
@@ -549,7 +552,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
 
-        is_silent = template.std(0) < 0.25*noise_levels
+        is_silent = template.std(0) < 0.1*noise_levels
 
         template[:, is_silent] = 0
 

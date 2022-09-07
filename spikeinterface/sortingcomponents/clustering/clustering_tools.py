@@ -455,7 +455,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 
         templates[t] = np.median(wfs, axis=0)
 
-        is_silent = templates[t].std(0) < 0.25*noise_levels
+        is_silent = templates[t].std(0) < 0.1*noise_levels
         templates[t, :, is_silent] = 0
 
         channel_norms = np.linalg.norm(templates[t], axis=0)**2
@@ -510,7 +510,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
 
     for t in range(nb_templates):
 
-        is_silent = templates[t].std(0) < 0.25*noise_levels
+        is_silent = templates[t].std(0) < 0.1*noise_levels
         templates[t, :, is_silent] = 0
 
         channel_norms = np.linalg.norm(templates[t], axis=0)**2
@@ -592,8 +592,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
 def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine_threshold=0.75):
     
     import sklearn
-    templates = np.array(list(wfs_arrays.keys()))
-    nb_templates = len(templates)
+
     from spikeinterface.sortingcomponents.clustering.isocut5 import isocut5
 
     new_labels = peak_labels.copy()
