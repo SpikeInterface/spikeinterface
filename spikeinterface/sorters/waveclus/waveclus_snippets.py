@@ -34,6 +34,7 @@ class WaveClusSnippetsSorter(BaseSorter):
     """WaveClus Sorter object."""
 
     sorter_name: str = 'waveclus_snippets'
+    compiled_name = str = 'waveclus_snippets_master'
     waveclus_path: Union[str, None] = os.getenv('WAVECLUS_PATH', None)
     requires_locations = False
 
@@ -150,7 +151,7 @@ class WaveClusSnippetsSorter(BaseSorter):
                 shell_cmd = f'''
                     #!/bin/bash
                     cd "{output_folder}"
-                    matlab -nosplash -nodisplay -log -r "waveclus_master('{output_folder}', '{sorter_path}')"
+                    matlab -nosplash -nodisplay -log -r "waveclus_snippets_master('{output_folder}', '{sorter_path}')"
                 '''
         shell_cmd = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
                                 log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
