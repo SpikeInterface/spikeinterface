@@ -28,7 +28,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     """Kilosort3 Sorter object."""
 
     sorter_name: str = 'kilosort3'
-    compiled_name: str = 'kilosort3_master'
+    compiled_name: str = 'ks3_compiled'
     kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
 

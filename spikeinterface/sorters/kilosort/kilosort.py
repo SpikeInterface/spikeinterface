@@ -27,7 +27,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
     """Kilosort Sorter object."""
 
     sorter_name: str = 'kilosort'
-    compiled_name: str = 'kilosort_master'
+    compiled_name: str = 'ks_compiled'
     kilosort_path: Union[str, None] = os.getenv('KILOSORT_PATH', None)
     requires_locations = False
     requires_gpu = 'nvidia-optional'

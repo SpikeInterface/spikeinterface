@@ -27,7 +27,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
     """Kilosort2 Sorter object."""
 
     sorter_name: str = 'kilosort2'
-    compiled_name: str = 'kilosort2_master'
+    compiled_name: str = 'ks2_compiled'
     kilosort2_path: Union[str, None] = os.getenv('KILOSORT2_PATH', None)
     requires_locations = False
 

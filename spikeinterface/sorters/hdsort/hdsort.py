@@ -35,7 +35,7 @@ class HDSortSorter(BaseSorter):
     """HDSort Sorter object."""
 
     sorter_name: str = 'hdsort'
-    compiled_name: str = 'hdsort_master'
+    compiled_name: str = 'hdsort_compiled'
     hdsort_path: Union[str, None] = os.getenv('HDSORT_PATH', None)
     requires_locations = False
     _default_params = {

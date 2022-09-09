@@ -44,7 +44,7 @@ class WaveClusSorter(BaseSorter):
     """WaveClus Sorter object."""
 
     sorter_name: str = 'waveclus'
-    compiled_name: str = 'waveclus_master'
+    compiled_name: str = 'waveclus_compiled'
     waveclus_path: Union[str, None] = os.getenv('WAVECLUS_PATH', None)
     requires_locations = False
 

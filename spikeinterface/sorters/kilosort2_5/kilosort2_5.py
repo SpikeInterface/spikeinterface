@@ -30,7 +30,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     """Kilosort2.5 Sorter object."""
 
     sorter_name: str = 'kilosort2_5'
-    compiled_name: str = 'kilosort2_5_master'
+    compiled_name: str = 'ks2_5_compiled'
     kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
     requires_locations = False
 
