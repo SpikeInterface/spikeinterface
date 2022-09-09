@@ -304,7 +304,7 @@ class ContainerClient:
             return str(res.output)
         elif self.mode == 'singularity':
             from spython.main import Client
-            options = ['--env', f'PYTHONUSERBASE={self.py_user_base}']
+            options = ['--cleanenv', '--env', f'PYTHONUSERBASE={self.py_user_base}']
             res = Client.execute(self.client_instance, command, options=options)
             if isinstance(res, dict):
                 res = res['message']
