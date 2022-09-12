@@ -1,6 +1,6 @@
 from ..base import to_attr
 from ..unit_templates import UnitTemplatesWidget
-from .base_sortingview import SortingviewPlotter
+from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
 
 class UnitTemplatesPlotter(SortingviewPlotter):
@@ -36,16 +36,28 @@ class UnitTemplatesPlotter(SortingviewPlotter):
             average_waveforms=aw_items,
             channel_locations=locations
         )
-        self.set_view(v_average_waveforms)
+
+        if not dp.hide_unit_selector:
+            v_units_table = generate_unit_table_view(unit_ids)
+
+            view = vv.Box(direction='horizontal',
+                        items=[
+                            vv.LayoutItem(v_units_table, max_size=150),
+                            vv.LayoutItem(v_average_waveforms)
+                        ]
+                    )
+        else:
+            view = v_average_waveforms
+
+        self.set_view(view)
 
         if backend_kwargs["generate_url"]:
             if backend_kwargs.get("figlabel") is None:
                 label = "SpikeInterface - AverageWaveforms"
-            url = v_average_waveforms.url(label=label)
+            url = view.url(label=label)
             print(url)
-        if self.is_notebook() and backend_kwargs["display"]:
-            display(v_average_waveforms.jupyter(height=backend_kwargs["height"]))
-        return v_average_waveforms
+        self.display_view(backend_kwargs)
+        return view
 
 
 UnitTemplatesPlotter.register(UnitTemplatesWidget)

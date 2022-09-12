@@ -38,6 +38,10 @@ class SortingviewPlotter(BackendPlotter):
         except NameError:
             return False
 
+    def display_view(self, backend_kwargs):
+        if self.is_notebook() and backend_kwargs["display"]:
+            display(view.jupyter(height=backend_kwargs["height"]))
+
     def set_view(self, view):
         self.view = view
 

@@ -72,8 +72,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
                 label = "SpikeInterface - SortingSummary"
             url = v_summary.url(label=label)
             print(url)
-        if self.is_notebook() and backend_kwargs["display"]:
-            display(v_summary.jupyter(height=backend_kwargs["height"]))
+        self.display_view(backend_kwargs)
         return v_summary
 
 

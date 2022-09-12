@@ -48,8 +48,7 @@ class TimeseriesPlotter(SortingviewPlotter):
                 label = "SpikeInterface - Timeseries"
             url = view_ts.url(label=label)
             print(url)
-        if self.is_notebook() and backend_kwargs["display"]:
-            display(view_ts.jupyter(height=backend_kwargs["height"]))
+        self.display_view(backend_kwargs)
         return view_ts
 
 

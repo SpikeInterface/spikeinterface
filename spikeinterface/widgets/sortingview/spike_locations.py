@@ -64,6 +64,7 @@ class SpikeLocationsPlotter(SortingviewPlotter):
                 label = "SpikeInterface - SpikeLocations"
             url = view.url(label=label)
             print(url)
+        self.display_view(backend_kwargs)
         return view
 
 

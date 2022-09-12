@@ -54,7 +54,8 @@ class SortingSummaryWidget(BaseWidget):
             assert all(u in sparsity for u in sorting.unit_ids), "Sparsity needs to be defined for all units!"
 
         # use other widgets to generate data (except for similarity)
-        template_plot_data = UnitTemplatesWidget(we, unit_ids=unit_ids, sparsity=sparsity).plot_data
+        template_plot_data = UnitTemplatesWidget(we, unit_ids=unit_ids, sparsity=sparsity,
+                                                 hide_unit_selector=True).plot_data
         ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
         amps_plot_data = AmplitudesWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
         locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data

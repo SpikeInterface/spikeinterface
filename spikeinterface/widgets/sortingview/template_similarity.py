@@ -36,6 +36,7 @@ class TemplateSimilarityPlotter(SortingviewPlotter):
                 label = "SpikeInterface - UnitLocations"
             url = view.url(label=label)
             print(url)
+        self.display_view(backend_kwargs)
         return view
 
 

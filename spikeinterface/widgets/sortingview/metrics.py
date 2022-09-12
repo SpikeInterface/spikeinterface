@@ -78,6 +78,5 @@ class MetricsPlotter(SortingviewPlotter):
                 label = "SpikeInterface - Metrics"
             url = view.url(label=label)
             print(url)
-        if self.is_notebook() and backend_kwargs["display"]:
-            display(view.jupyter(height=backend_kwargs["height"]))
+        self.display_view(backend_kwargs)
         return view
