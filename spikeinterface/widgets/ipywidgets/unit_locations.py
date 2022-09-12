@@ -30,7 +30,7 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
+                fig, ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
         unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], 
@@ -41,7 +41,7 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
 
         mpl_plotter = MplUnitLocationsPlotter()
 
-        self.updater = PlotUpdater(data_plot, mpl_plotter, fig, self.controller)
+        self.updater = PlotUpdater(data_plot, mpl_plotter, ax, self.controller)
         for w in self.controller.values():
             w.observe(self.updater)
 
@@ -63,16 +63,16 @@ UnitLocationsPlotter.register(UnitLocationsWidget)
 
 
 class PlotUpdater:
-    def __init__(self, data_plot, mpl_plotter, fig, controller):
+    def __init__(self, data_plot, mpl_plotter, ax, controller):
         self.data_plot = data_plot
         self.mpl_plotter = mpl_plotter
-        self.fig = fig
+        self.ax = ax
         self.controller = controller
 
         self.next_data_plot = data_plot.copy()
 
     def __call__(self, change):
-        self.fig.clear()
+        self.ax.clear()
 
         unit_ids = self.controller["unit_ids"].value
 
@@ -82,9 +82,9 @@ class PlotUpdater:
         data_plot['plot_all_units'] = True
 
         backend_kwargs = {}
-        backend_kwargs['figure'] = self.fig
+        backend_kwargs['ax'] = self.ax
 
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
-
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+        fig = self.ax.get_figure()
+        fig.canvas.draw()
+        fig.canvas.flush_events()

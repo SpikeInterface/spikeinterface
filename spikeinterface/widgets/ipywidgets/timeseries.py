@@ -82,6 +82,7 @@ class PlotUpdater:
 
         self.recordings = data_plot['recordings']
         self.next_data_plot = data_plot.copy()
+        self.list_traces = None
 
         self.actual_segment_index = self.controller["segment_index"].value
 
@@ -91,6 +92,13 @@ class PlotUpdater:
 
     def __call__(self, change):
         self.ax.clear()
+        
+        # if changing the layer_key, no need to retrieve and process traces
+        retrieve_traces = True
+        if change is not None:
+            for cname, c in self.controller.items():
+                if change["owner"] is c and cname == "layer_key":
+                    retrieve_traces = False
 
         t_start = self.controller["t_start"].value
         window = self.controller["window"].value
@@ -114,34 +122,40 @@ class PlotUpdater:
             t_start = t_stop - window
 
         time_range = np.array([t_start, t_start+window])
-
+        data_plot = self.next_data_plot
+        
+        if retrieve_traces:
+            channel_ids = self.recordings[list(self.recordings.keys())[0]].channel_ids[channel_indices]
+            if self.data_plot['order_channel_by_depth']:
+                order = order_channels_by_depth(self.rec0, channel_ids)
+            else:
+                order = None
+            times, list_traces, frame_range, channel_ids = _get_trace_list(self.recordings, channel_ids, time_range,
+                                                                           segment_index, order)
+            self.list_traces = list_traces
+        else:
+            times = data_plot['times']
+            list_traces = data_plot['list_traces']
+            frame_range = data_plot['frame_range']
+            channel_ids = data_plot['channel_ids']
+            
+        layer_keys = [layer_key]
+        recordings = {layer_key: self.recordings[layer_key]}
+        list_traces_plot = [self.list_traces[list(self.recordings.keys()).index(layer_key)]]
+        
         if mode == 'line':
-            # plot all layer
-            layer_keys = self.data_plot['layer_keys']
-            recordings = self.recordings
             clims = None
         elif mode == 'map':
-            layer_keys = [layer_key]
-            recordings = {layer_key: self.recordings[layer_key]}
             clims = {layer_key: self.data_plot["clims"][layer_key]}
 
-        channel_ids = self.recordings[list(self.recordings.keys())[0]].channel_ids[channel_indices]
-        if self.data_plot['order_channel_by_depth']:
-            order = order_channels_by_depth(self.rec0, channel_ids)
-        else:
-            order = None
-        times, list_traces, frame_range, channel_ids = _get_trace_list(recordings, channel_ids, time_range,
-                                                                       segment_index, order)
-
         # matplotlib next_data_plot dict update at each call
-        data_plot = self.next_data_plot
         data_plot['mode'] = mode
         data_plot['frame_range'] = frame_range
         data_plot['time_range'] = time_range
         data_plot['with_colorbar'] = False
         data_plot['recordings'] = recordings
         data_plot['layer_keys'] = layer_keys
-        data_plot['list_traces'] = list_traces
+        data_plot['list_traces'] = list_traces_plot
         data_plot['times'] = times
         data_plot['clims'] = clims
         data_plot['channel_ids'] = channel_ids
