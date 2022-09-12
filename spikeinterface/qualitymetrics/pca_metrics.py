@@ -657,8 +657,11 @@ def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids,
 
     # metrics
     if 'isolation_distance' in metric_names or 'l_ratio' in metric_names:
-        isolation_distance, l_ratio = mahalanobis_metrics(
-            pcs_flat, labels, unit_id)
+        try:
+            isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
+        except:
+            isolation_distance = np.nan
+            isolation_distance = np.nan
         if 'isolation_distance' in metric_names:
             pc_metrics['isolation_distance'] = isolation_distance
         if 'l_ratio' in metric_names:
@@ -668,25 +671,38 @@ def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids,
         if len(unit_ids) == 1:
             d_prime = np.nan
         else:
-            d_prime = lda_metrics(pcs_flat, labels, unit_id)
+            try:
+                d_prime = lda_metrics(pcs_flat, labels, unit_id)
+            except:
+                d_prime = np.nan
         pc_metrics['d_prime'] = d_prime
 
     if 'nearest_neighbor' in metric_names:
-        nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id,
-                                                              max_spikes_for_nn, n_neighbors)
+        try:
+            nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id,
+                                                                  max_spikes_for_nn, n_neighbors)
+        except:
+            nn_hit_rate = np.nan
+            nn_miss_rate = np.nan
         pc_metrics['nn_hit_rate'] = nn_hit_rate
         pc_metrics['nn_miss_rate'] = nn_miss_rate
 
     if 'nn_isolation' in metric_names:
-        nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
-                                                   min_spikes_for_nn, n_neighbors,
-                                                   n_components, radius_um, seed)
+        try:
+            nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
+                                                       min_spikes_for_nn, n_neighbors,
+                                                       n_components, radius_um, seed)
+        except:
+            nn_isolation = np.nan
         pc_metrics['nn_isolation'] = nn_isolation
 
     if 'nn_noise_overlap' in metric_names:
-        nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
-                                                           min_spikes_for_nn, n_neighbors,
-                                                           n_components, radius_um, seed)
+        try:
+            nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
+                                                               min_spikes_for_nn, n_neighbors,
+                                                               n_components, radius_um, seed)
+        except:
+            nn_noise_overlap = np.nan
         pc_metrics['nn_noise_overlap'] = nn_noise_overlap
 
     return pc_metrics
