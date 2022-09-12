@@ -336,7 +336,6 @@ class NumpySnippets(BaseSnippets):
         BaseSnippets.__init__(self, sampling_frequency,  nbefore=nbefore,
                               snippet_len=snippets_list[0].shape[1], channel_ids=channel_ids,
                               dtype=dtype)
-        self.extra_requirements.append('hdf5storage')
 
         self.is_dumpable = False
 
