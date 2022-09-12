@@ -43,6 +43,8 @@ class UnitTemplatesPlotter(SortingviewPlotter):
                 label = "SpikeInterface - AverageWaveforms"
             url = v_average_waveforms.url(label=label)
             print(url)
+        if self.is_notebook() and backend_kwargs["display"]:
+            display(v_average_waveforms.jupyter(height=backend_kwargs["height"]))
         return v_average_waveforms
 
 

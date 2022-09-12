@@ -10,6 +10,10 @@ from .base_sortingview import SortingviewPlotter
 class TimeseriesPlotter(SortingviewPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
+        try:
+            import pyvips
+        except ImportError:
+            raise ImportError("To use the timeseries in sorting view you need the pyvips package.")
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
@@ -44,6 +48,8 @@ class TimeseriesPlotter(SortingviewPlotter):
                 label = "SpikeInterface - Timeseries"
             url = view_ts.url(label=label)
             print(url)
+        if self.is_notebook() and backend_kwargs["display"]:
+            display(view_ts.jupyter(height=backend_kwargs["height"]))
         return view_ts
 
 

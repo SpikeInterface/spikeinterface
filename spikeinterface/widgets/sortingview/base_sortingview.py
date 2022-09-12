@@ -4,12 +4,16 @@ from spikeinterface.widgets.base import BackendPlotter
 class SortingviewPlotter(BackendPlotter):
     backend = 'sortingview'
     backend_kwargs_desc = {
-        "generate_url": "If True, the figurl URL is generated and printed. Default is True",
-        "figlabel": "The figurl figure label. Default None"
+        "generate_url": "If True, the figurl URL is generated and printed. Default True",
+        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
+        "figlabel": "The figurl figure label. Default None",
+        "height": "The height of the sortingview View in jupyter. Default None"
     }
     default_backend_kwargs = {
         "generate_url": True,
-        "figlabel": None
+        "display": True,
+        "figlabel": None,
+        "height": None
     }
     
     def make_serializable(*args):
@@ -20,6 +24,19 @@ class SortingviewPlotter(BackendPlotter):
         if len(returns) == 1:
             returns = returns[0]
         return returns
+
+    @staticmethod
+    def is_notebook() -> bool:
+        try:
+            shell = get_ipython().__class__.__name__
+            if shell == 'ZMQInteractiveShell':
+                return True   # Jupyter notebook or qtconsole
+            elif shell == 'TerminalInteractiveShell':
+                return False  # Terminal running IPython
+            else:
+                return False  # Other type (?)
+        except NameError:
+            return False
 
     def set_view(self, view):
         self.view = view
