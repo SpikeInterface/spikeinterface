@@ -225,9 +225,10 @@ class ContainerClient:
         volumes: dict
             dict of volumes to bind
         py_user_base: str
-            Python user base folder to set as PYTHONUSERBASE env var
+            Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
+            Prevents from overwriting user's packages when running pip install
         extra_kwargs: dict
-            Threshold parameters used for the "count_units" table.
+            Extra kwargs to start container
         """
         assert mode in ('docker', 'singularity')
         self.mode = mode
@@ -252,11 +253,11 @@ class ContainerClient:
                 container_image,
                 tty=True,
                 volumes=volumes,
-                environment=[f'PYTHONUSERBASE={self.py_user_base}'],
                 **extra_kwargs
             )
 
         elif mode == 'singularity':
+            assert self.py_user_base, 'py_user_base folder must be set in singularity mode'
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
             sif_file = Client._get_filename(container_image)
@@ -463,9 +464,11 @@ if __name__ == '__main__':
             raise NotImplementedError("Only nvidia support is available")
 
     # Creating python user base folder
-    py_user_base_folder = (parent_folder / 'in_container_python_base')
-    py_user_base_folder.mkdir(parents=True, exist_ok=True)
-    py_user_base_unix = path_to_unix(py_user_base_folder)
+    py_user_base_unix = None
+    if mode == 'singularity':
+        py_user_base_folder = (parent_folder / 'in_container_python_base')
+        py_user_base_folder.mkdir(parents=True, exist_ok=True)
+        py_user_base_unix = path_to_unix(py_user_base_folder)
     container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
         print('Starting container')
@@ -548,7 +551,8 @@ if __name__ == '__main__':
     os.remove(parent_folder / 'in_container_recording.json')
     os.remove(parent_folder / 'in_container_params.json')
     os.remove(parent_folder / 'in_container_sorter_script.py')
-    shutil.rmtree(py_user_base_folder)
+    if mode == 'singularity':
+        shutil.rmtree(py_user_base_folder)
 
     # check error
     output_folder = Path(output_folder)
