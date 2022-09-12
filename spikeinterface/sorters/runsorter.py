@@ -215,6 +215,20 @@ class ContainerClient:
       * singularity with  "spython" python package
     """
     def __init__(self, mode, container_image, volumes, py_user_base, extra_kwargs):
+        """
+        Parameters
+        ----------
+        mode: str
+            "docker" or "singularity" strings
+        container_image: str
+            container image name and tag
+        volumes: dict
+            dict of volumes to bind
+        py_user_base: str
+            Python user base folder to set as PYTHONUSERBASE env var
+        extra_kwargs: dict
+            Threshold parameters used for the "count_units" table.
+        """
         assert mode in ('docker', 'singularity')
         self.mode = mode
         self.py_user_base = py_user_base
