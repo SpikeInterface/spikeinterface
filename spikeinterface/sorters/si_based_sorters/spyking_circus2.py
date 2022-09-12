@@ -1,5 +1,8 @@
 from .si_based import ComponentsBasedSorter
 
+import os
+import shutil
+
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
     get_noise_levels, extract_waveforms)
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
@@ -93,6 +96,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We get the labels for our peaks
         mask = peak_labels > -1
         sorting = NumpySorting.from_times_labels(selected_peaks['sample_ind'][mask], peak_labels[mask], sampling_rate)
+        clustering_folder = output_folder / "clustering"
+        if clustering_folder.exists():
+            shutil.rmtree(clustering_folder)
+
+        sorting = sorting.save(folder=clustering_folder)
 
         ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()
@@ -116,7 +124,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## And this is it! We have a spyking circus
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_rate)
-        sorting = sorting.save(folder=output_folder / "sorting")
+        sorting_folder = output_folder / "sorting"
+
+        if sorting_folder.exists():
+            shutil.rmtree(sorting_folder)
+
+        sorting = sorting.save(folder=sorting_folder)
 
         return sorting
 

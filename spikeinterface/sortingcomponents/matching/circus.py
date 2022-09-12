@@ -178,7 +178,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'amplitudes' : [0.5, 1.5],
         'noise_levels': None,
         'random_chunk_kwargs': {},
-        'omp_min_sps' : 0.5,
+        'omp_min_sps' : 0.1,
         'waveform_extractor': None,
         'templates' : None,
         'overlaps' : None,
@@ -304,7 +304,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         sparsities = d['sparsities']
         nb_dense_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
 
-        d['stop_criteria'] =  omp_min_sps * norms[:, np.newaxis]
+        #print(np.sqrt(d['num_channels']*d['num_samples']), norms.mean())
+        d['stop_criteria'] =  omp_min_sps * np.sqrt(d['num_channels']*d['num_samples'])
 
         return d        
 
