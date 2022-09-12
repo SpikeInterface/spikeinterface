@@ -32,6 +32,7 @@ class RandomProjectionClustering:
         "nb_projections" : 10,
         "ms_before" : 1.5,
         "ms_after": 1.5,
+        "random_seed" : 42,
         "cleaning_method": "dip",
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
@@ -51,6 +52,7 @@ class RandomProjectionClustering:
         num_chans = recording.get_num_channels()
 
         features_list = ['random_projections']
+        np.random.seed(d['random_seed'])
         projections = np.random.randn(num_chans, d['nb_projections'])
         features_params = {'random_projections': {'local_radius_um' : params['local_radius_um'], 
         'projections' : projections}}

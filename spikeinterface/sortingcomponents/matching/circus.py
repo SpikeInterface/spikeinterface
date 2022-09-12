@@ -178,7 +178,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'amplitudes' : [0.5, 1.5],
         'noise_levels': None,
         'random_chunk_kwargs': {},
-        'omp_min_sps' : 1,
+        'omp_min_sps' : 0.5,
         'waveform_extractor': None,
         'templates' : None,
         'overlaps' : None,
@@ -299,6 +299,13 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         d['ignored_ids'] = np.array(d['ignored_ids'])
 
+        omp_min_sps = d['omp_min_sps']
+        norms = d['norms']
+        sparsities = d['sparsities']
+        nb_dense_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
+
+        d['stop_criteria'] =  omp_min_sps * norms[:, np.newaxis]
+
         return d        
 
     @classmethod
@@ -329,21 +336,18 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         nbefore = d['nbefore']
         nafter = d['nafter']
         omp_tol = np.finfo(np.float32).eps
-        omp_min_sps = d['omp_min_sps']
         num_samples = d['nafter'] + d['nbefore']
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d['amplitudes']
         sparsities = d['sparsities']
         ignored_ids = d['ignored_ids']
+        stop_criteria = d['stop_criteria']
 
         if 'cached_fft_kernels' not in d:
             d['cached_fft_kernels'] = {'fshape' : 0}
 
         cached_fft_kernels = d['cached_fft_kernels']
 
-        nb_dense_channels = np.array([len(sparsities[i]) for i in range(num_templates)])
-
-        stop_criteria = omp_min_sps * (norms / np.sqrt(nb_dense_channels*num_samples))[:, np.newaxis]
 
         num_timesteps = len(traces)
         num_peaks = num_timesteps - num_samples + 1
@@ -416,12 +420,12 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             if best_cluster_ind not in cached_overlaps.keys():
                 cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
 
-            M[mb_selection, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
-
             if num_selection >= (M.shape[0] - 1):
                 Z = np.empty((2*M.shape[0], 2*M.shape[0]), dtype=np.float32)
                 Z[:num_selection, :num_selection] = M[:num_selection, :num_selection]
                 M = Z
+
+            M[mb_selection, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
 
             if mb_selection > 0:
                 scipy.linalg.solve_triangular(M[:mb_selection, :mb_selection], M[mb_selection, :mb_selection], trans=0,
