@@ -39,8 +39,9 @@ class SortingviewPlotter(BackendPlotter):
             return False
 
     def display_view(self, backend_kwargs):
+        assert self.view is not None, "You need to `set_view()` before display!"
         if self.is_notebook() and backend_kwargs["display"]:
-            display(view.jupyter(height=backend_kwargs["height"]))
+            display(self.view.jupyter(height=backend_kwargs["height"]))
 
     def set_view(self, view):
         self.view = view
