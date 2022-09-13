@@ -661,7 +661,7 @@ def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids,
             isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
         except:
             isolation_distance = np.nan
-            isolation_distance = np.nan
+            l_ratio = np.nan
         if 'isolation_distance' in metric_names:
             pc_metrics['isolation_distance'] = isolation_distance
         if 'l_ratio' in metric_names:
