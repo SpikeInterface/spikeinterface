@@ -197,10 +197,9 @@ def find_recording_folders(d):
 
 def path_to_unix(path):
     path = Path(path)
-    if not platform.system() == 'Windows':
-        return path.as_posix()
-    path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
-    return path_unix
+    if platform.system() == 'Windows':
+        path = Path(str(path)[str(path).find(":") + 1:])
+    return path.as_posix()
 
 
 def windows_extractor_dict_to_unix(d):
