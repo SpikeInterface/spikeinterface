@@ -340,6 +340,7 @@ class WaveformExtractor:
             The newly create waveform extractor with the selected units
         """
         sorting = self.sorting.select_units(unit_ids)
+        unit_indices = self.sorting.ids_to_indices(unit_ids)
 
         if self.folder is not None:
             assert new_folder is not None, "Please specify 'new_folder'"
@@ -364,6 +365,11 @@ class WaveformExtractor:
                     if f"waveforms_{unit}.npy" in wf_file.name or f'sampled_index_{unit}.npy' in wf_file.name:
                         shutil.copyfile(
                             wf_file, new_waveforms_folder / wf_file.name)
+
+            template_files = [f for f in self.folder.iterdir() if "template" in f.name and f.suffix == ".npy"]
+            for tmp_file in template_files:
+                templates_data_sliced = np.load(tmp_file)[unit_indices]
+                np.save(new_waveforms_folder / tmp_file.name, templates_data_sliced)
 
             for ext_name in self.get_available_extension_names():
                 ext = self.load_extension(ext_name)
