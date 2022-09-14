@@ -94,9 +94,9 @@ class WaveformExtractor:
         folder = Path(folder)
         assert folder.is_dir(), f'This folder does not exists {folder}'
         recording = load_extractor(folder / 'recording.json',
-                                       base_folder=folder)
+                                   base_folder=folder)
         sorting = load_extractor(folder / 'sorting.json',
-                                     base_folder=folder)
+                                 base_folder=folder)
         we = cls(recording, sorting, folder)
 
         for mode in _possible_template_modes:
