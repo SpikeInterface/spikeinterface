@@ -51,11 +51,16 @@ class RandomProjectionClustering:
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
 
+        noise_levels = get_noise_levels(recording, return_scaled=False)
+
         features_list = ['random_projections']
         np.random.seed(d['random_seed'])
         projections = np.random.randn(num_chans, d['nb_projections'])
+
+        min_values = 4*noise_levels
+
         features_params = {'random_projections': {'local_radius_um' : params['local_radius_um'], 
-        'projections' : projections}}
+        'projections' : projections, 'min_values' : min_values}}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=1, ms_after=1, **params['job_kwargs'])
@@ -115,7 +120,6 @@ class RandomProjectionClustering:
                          sparsity_mask=None,  copy=True,
                          **params['job_kwargs'])
 
-            noise_levels = get_noise_levels(recording, return_scaled=False)
             labels, peak_labels = remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params['cleaning_kwargs'])
 
         elif cleaning_method == "dip":

@@ -49,6 +49,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
         if params['apply_preprocessing']:
+            #if recording.is_filtered == True:
+            #    print('Looks like the recording is already filtered, check preprocessing!')
             recording_f = bandpass_filter(recording, **filtering_params)
             recording_f = common_reference(recording_f)
         else:

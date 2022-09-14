@@ -305,7 +305,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         nb_dense_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
 
         #print(np.sqrt(d['num_channels']*d['num_samples']), norms.mean())
-        d['stop_criteria'] =  omp_min_sps * np.sqrt(d['num_channels']*d['num_samples'])
+        d['stop_criteria'] =  omp_min_sps * norms[:, np.newaxis] #np.sqrt(d['num_channels']*d['num_samples'])
 
         return d        
 

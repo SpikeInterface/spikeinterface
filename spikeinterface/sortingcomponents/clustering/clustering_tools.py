@@ -589,7 +589,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     return labels, new_labels
 
 
-def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine_threshold=0.75):
+def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.25, cosine_threshold=0.75):
     
     import sklearn
 

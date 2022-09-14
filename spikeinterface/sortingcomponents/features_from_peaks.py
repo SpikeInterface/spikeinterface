@@ -149,10 +149,11 @@ class PeakToPeakLagsFeature(PeakPipelineStep):
 
 class RandomProjectionsFeature(PeakPipelineStep):
     need_waveforms = True
-    def __init__(self, recording, projections, ms_before=1., ms_after=1., local_radius_um=150.):
+    def __init__(self, recording, projections, ms_before=1., ms_after=1., local_radius_um=150., min_values=None):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
         self.projections = projections
+        self.min_values = min_values
         self._kwargs = dict(projections=self.projections)
         self._dtype = recording.get_dtype()
 
@@ -166,6 +167,11 @@ class RandomProjectionsFeature(PeakPipelineStep):
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
             wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
+
+            if self.min_values is not None:
+                indices = np.where(wf_ptp < self.min_values[chan_inds])
+                wf_ptp[indices[0], indices[1]] = 0
+
             all_projections[idx] = np.dot(wf_ptp, local_projections)/(np.sum(wf_ptp, axis=1)[:, np.newaxis])
         return all_projections
 
