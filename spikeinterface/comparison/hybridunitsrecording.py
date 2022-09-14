@@ -38,7 +38,7 @@ class HybridUnitsRecordingSegment(BaseRecordingSegment):
         npz_file = "TODO" # np.savez(file, **spike_trains)
         sorting = NpzSortingExtractor(npz_file)
 
-    self.amplitude_factor = {unit_id: np.random.normal(loc=0.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id)))
+    self.amplitude_factor = {unit_id: np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id)))
                              for unit_id in range(n_units)}
 
 
