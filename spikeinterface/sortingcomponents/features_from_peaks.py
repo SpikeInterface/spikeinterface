@@ -176,6 +176,36 @@ class RandomProjectionsFeature(PeakPipelineStep):
         return all_projections
 
 
+class RandomProjectionsEnergyFeature(PeakPipelineStep):
+    need_waveforms = True
+    def __init__(self, recording, projections, ms_before=1., ms_after=1., local_radius_um=150., min_values=None):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
+        self.projections = projections
+        self.min_values = min_values
+        self._kwargs = dict(projections=self.projections)
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute_buffer(self, traces, peaks, waveforms):
+        all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
+        for main_chan in np.unique(peaks['channel_ind']):
+            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+            local_projections = self.projections[chan_inds, :]
+            energies = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
+            expected = np.sqrt(waveforms.shape[1])
+
+            if self.min_values is not None:
+                indices = np.where(energies < self.min_values[chan_inds]*expected)
+                energies[indices[0], indices[1]] = 0
+
+            all_projections[idx] = np.dot(energies, local_projections)/(np.sum(energies, axis=1)[:, np.newaxis])
+        return all_projections
+
+
 class StdPeakToPeakFeature(PeakToPeakFeature):
     need_waveforms = True
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
@@ -255,7 +285,8 @@ _features_class = {
     'energy' : EnergyFeature,
     'std_ptp' : StdPeakToPeakFeature,
     'kurtosis_ptp' : KurtosisPeakToPeakFeature,
-    'random_projections' : RandomProjectionsFeature,
+    'random_projections_ptp' : RandomProjectionsFeature,
+    'random_projections_energy' : RandomProjectionsEnergyFeature,
     'ptp_lag' : PeakToPeakLagsFeature,
     'global_ptp' : GlobalPeakToPeakFeature
 }

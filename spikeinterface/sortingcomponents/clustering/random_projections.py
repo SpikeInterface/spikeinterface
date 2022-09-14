@@ -29,11 +29,12 @@ class RandomProjectionClustering:
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200, 
         "selection_method" : "closest_to_centroid",
-        "nb_projections" : 10,
+        "nb_projections" : {'ptp' : 5, 'energy' : 5},
         "ms_before" : 1.5,
         "ms_after": 1.5,
         "random_seed" : 42,
         "cleaning_method": "dip",
+        "min_values" : {'ptp' : 2, 'energy' : 0.5},
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
@@ -53,19 +54,31 @@ class RandomProjectionClustering:
 
         noise_levels = get_noise_levels(recording, return_scaled=False)
 
-        features_list = ['random_projections']
         np.random.seed(d['random_seed'])
-        projections = np.random.randn(num_chans, d['nb_projections'])
 
-        min_values = 4*noise_levels
+        features_params = {}
+        features_list = []
 
-        features_params = {'random_projections': {'local_radius_um' : params['local_radius_um'], 
-        'projections' : projections, 'min_values' : min_values}}
+        for proj_type in ['ptp', 'energy']:
+
+            if d['nb_projections'][proj_type] > 0:
+                features_list += [f'random_projections_{proj_type}']
+                if d['min_values'][proj_type] > 0:
+                    min_values = d['min_values'][proj_type]*noise_levels
+                else:
+                    min_values = None
+
+                projections = np.random.randn(num_chans, d['nb_projections'][proj_type])
+                features_params[f'random_projections_{proj_type}'] = {'local_radius_um' : params['local_radius_um'], 
+                                'projections' : projections, 'min_values' : min_values}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=1, ms_after=1, **params['job_kwargs'])
 
-        hdbscan_data = features_data[0]
+        if len(features_data) > 1:
+            hdbscan_data = np.hstack((features_data[0], features_data[1]))
+        else:
+            hdbscan_data = features_data[0]
 
         #preprocessing = QuantileTransformer(output_distribution='uniform')
         #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
