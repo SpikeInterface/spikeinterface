@@ -6,7 +6,7 @@ from spikeinterface.extractors import synthesize_random_firings
 
 class HybridUnitsRecording(BaseRecording):
 
-    def __init__(self, target_recording: BaseRecording, templates: np.ndarray, n_before: Union[int, None] = None,
+    def __init__(self, target_recording: BaseRecording, templates: np.ndarray, n_before: Union[List[int], None] = None,
                  sorting: Union[BaseSorting, None] = None, frequency: float = 10, amplitude_std: float = 0.0,
                  refrac_period: float = 2.0):
         """
@@ -26,7 +26,7 @@ class HybridUnitsRecording(BaseRecording):
 
 class HybridUnitsRecordingSegment(BaseRecordingSegment):
 
-    def __init__(self, target_recording: BaseRecordingSegment, templates: np.ndarray, n_before: Union[int, None] = None,
+    def __init__(self, target_recording: BaseRecordingSegment, templates: np.ndarray, n_before: Union[List[int], None] = None,
                  sorting: Union[BaseSorting, None] = None, frequency: float = 10, amplitude_std: float = 0.0,
                  refrac_period: float = 2.0):
     """
@@ -57,6 +57,20 @@ class HybridUnitsRecordingSegment(BaseRecordingSegment):
                    channel_indices: Union[List, None] = None) -> np.ndarray:
         traces = self.parent_recording.get_traces(start_frame, end_frame)
 
-        # Do stuff.
+        start_frame = 0 if start_frame is None else start_frame
+        end_frame = self.parent_recording.get_num_frames() if end_frame is None else end_frame
+        channel_indices = list(range(len(self.parent_recording.channel_ids))) if channel_indices is None else channels_indices
+
+        spikes, labels = self.sorting.get_all_spike_trains(outputs="unit_index")[0]
+        templates_t = self.templates.shape[1]
+        mask = (spikes > start_frame - templates_t) & (spikes < end_frame + templates_t) # Margins to take into account spikes outside of the frame.
+        spikes = spikes[mask]
+        labels = labels[mask]
+
+        for t, unit_idx in zip(spikes, labels):
+            template = self.templates[unit_idx, :, channels_indices]
+            m = self.n_before[unit_idx]
+
+            # Add template to traces
 
         return traces
