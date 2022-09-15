@@ -28,7 +28,7 @@ class RandomProjectionClustering:
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200, 
-        "selection_method" : "closest_to_centroid",
+        "selection_method" : "random",
         "nb_projections" : {'ptp' : 5, 'energy' : 5},
         "ms_before" : 1.5,
         "ms_after": 1.5,

@@ -29,7 +29,7 @@ class PositionAndFeaturesClustering:
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
-        "selection_method" : "closest_to_centroid",
+        "selection_method" : "random",
         "ms_before" : 1.5,
         "ms_after": 1.5,
         "cleaning_method": "dip",

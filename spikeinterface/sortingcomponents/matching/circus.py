@@ -273,7 +273,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d = cls._default_params.copy()
         d.update(kwargs)
 
-        assert isinstance(d['waveform_extractor'], WaveformExtractor)
+        #assert isinstance(d['waveform_extractor'], WaveformExtractor)
 
         for v in ['sparsify_threshold', 'omp_min_sps']:
             assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
@@ -722,7 +722,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d = cls._default_params.copy()
         d.update(kwargs)
 
-        assert isinstance(d['waveform_extractor'], WaveformExtractor)
+        #assert isinstance(d['waveform_extractor'], WaveformExtractor)
 
         for v in ['sparsify_threshold', 'use_sparse_matrix_threshold']:
             assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
