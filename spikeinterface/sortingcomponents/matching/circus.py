@@ -387,7 +387,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
         idx_lookup = np.arange(scalar_products.size).reshape(num_templates, -1)
 
-        M = np.empty((num_peaks, num_peaks), dtype=np.float32)
+        M = np.zeros((num_peaks, num_peaks), dtype=np.float32)
 
         all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
         final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
@@ -421,9 +421,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             if best_cluster_ind not in cached_overlaps.keys():
                 cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
 
-            if num_selection >= (M.shape[0] - 1):
-                Z = np.empty((2*M.shape[0], 2*M.shape[0]), dtype=np.float32)
-                Z[:num_selection, :num_selection] = M[:num_selection, :num_selection]
+            if mb_selection == M.shape[0]:
+                Z = np.zeros((2*M.shape[0], 2*M.shape[0]), dtype=np.float32)
+                Z[:mb_selection, :mb_selection] = M
                 M = Z
 
             M[mb_selection, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
