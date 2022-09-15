@@ -72,5 +72,18 @@ class HybridUnitsRecordingSegment(BaseRecordingSegment):
             m = self.n_before[unit_idx]
 
             # Add template to traces
+            start_traces = t - m - start_frame
+            end_traces = start_traces + templates_t
+            start_template = 0
+            end_teplate = 0
+
+            if start_traces < 0:
+                start_template = -start_traces
+                start_traces = 0
+            if end_traces > end_frame - start_frame:
+                end_template = end_frame - start_frame - end_traces
+                end_traces = end_frame - start_frame
+
+            traces[start_traces : end_traces] = template[start_template : end_teplate]
 
         return traces
