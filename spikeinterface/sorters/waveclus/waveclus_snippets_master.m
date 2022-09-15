@@ -1,5 +1,7 @@
 function waveclus_snippets_master(outputFolder, waveclusPath)
-    addpath(genpath(waveclusPath));
+    if ~isdeployed
+        addpath(genpath(waveclusPath));
+    end
 
     % par.mat file should contain a variable called par_input
     load(fullfile(outputFolder, 'par_input.mat'));

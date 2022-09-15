@@ -2,15 +2,25 @@ from typing import List, Union
 import warnings
 import numpy as np
 
+from .core_tools import define_function_from_class
 from .basesorting import BaseSorting, BaseSortingSegment
 
 
 class UnitsAggregationSorting(BaseSorting):
     """
-    Class that handles aggregating units from different sortings, e.g. from different channel groups.
+    Aggregates units of multiple sortings into a single sorting object
 
-    Do not use this class directly but use `si.aggregate_units(...)`
+    Parameters
+    ----------
+    sorting_list: list
+        List of BaseSorting objects to aggregate
+    renamed_unit_ids: array-like
+        If given, unit ids are renamed as provided. If None, unit ids are sequential integers.
 
+    Returns
+    -------
+    aggregate_sorting: UnitsAggregationSorting
+        The aggregated sorting object
     """
     def __init__(self, sorting_list, renamed_unit_ids=None):
         unit_map = {}
@@ -67,10 +77,6 @@ class UnitsAggregationSorting(BaseSorting):
             sub_segment = UnitsAggregationSortingSegment(unit_map, parent_segments)
             self.add_sorting_segment(sub_segment)
 
-        if np.any([sort.has_recording() for sort in sorting_list]):
-            warnings.warn(
-                "Cannot propagate registered recording to UnitsAggregationSorting")
-
         self._sortings = sorting_list
         self._kwargs = {'sorting_list': [sort.to_dict() for sort in sorting_list],
                         'renamed_unit_ids': renamed_unit_ids}
@@ -97,20 +103,4 @@ class UnitsAggregationSortingSegment(BaseSortingSegment):
         return times
 
 
-def aggregate_units(sorting_list, renamed_unit_ids=None):
-    """
-    Aggregates units of multiple sortings into a single sorting object
-
-    Parameters
-    ----------
-    sorting_list: list
-        List of BaseSorting objects to aggregate
-    renamed_unit_ids: array-like
-        If given, unit ids are renamed as provided. If None, unit ids are sequential integers.
-
-    Returns
-    -------
-    aggregate_sorting: UnitsAggregationSorting
-        The aggregated sorting object
-    """
-    return UnitsAggregationSorting(sorting_list, renamed_unit_ids)
+aggregate_units = define_function_from_class(UnitsAggregationSorting, "aggregate_units")
