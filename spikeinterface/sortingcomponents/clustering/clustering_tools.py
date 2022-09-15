@@ -602,6 +602,7 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
     fused = {}
     templates = {}
     similarities = {}
+    diptests = {}
     cosine = 0
 
     for i in wfs_arrays.keys():
@@ -630,6 +631,9 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
                 
                 if i not in similarities:
                     similarities[i] = {}
+
+                if i not in diptests:
+                    diptests[i] = {}
                 
                 for j in labels[i+1:]:
                     if len(fused[j]) > 1:
@@ -652,11 +656,17 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
                                 similarities[i][j] = cosine
                         
                         if cosine_threshold is None or cosine > cosine_threshold:
-                            data_j = all_data_j.reshape(n_j, -1)
-                            v = t_i - t_j
-                            pr_i = np.dot(data_i, v)
-                            pr_j = np.dot(data_j, v)
-                            diptest, _ = isocut5(np.concatenate((pr_i, pr_j)))
+
+                            if j in diptests[i]:
+                                diptest = diptests[i]
+                            else:
+                                data_j = all_data_j.reshape(n_j, -1)
+                                v = t_i - t_j
+                                pr_i = np.dot(data_i, v)
+                                pr_j = np.dot(data_j, v)
+                                diptest, _ = isocut5(np.concatenate((pr_i, pr_j)))
+                                diptests[i] = diptest
+
                             if diptest < min_dip:
                                 min_dip = diptest
                                 to_merge = [i, j]
@@ -667,6 +677,7 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
             new_labels[mask] = to_merge[0]
             templates.pop(to_merge[0])
             similarities.pop(to_merge[0])
+            diptests.pop(to_merge[0])
         else:
             keep_merging = False
 
