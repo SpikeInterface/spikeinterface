@@ -300,6 +300,23 @@ class BenchmarkClustering:
             ax.set_yticks([], [])
 
 
+    def plot_found_clusters(self, show_probe=True, show_ellipses=True):
+
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 10))
+        fig.suptitle(f'Clustering results with {self.method}')
+        ax.set_title('Found clusters')
+        if show_probe:
+            plot_probe_map(self.recording_f, ax=ax)
+        ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
+        self._scatter_clusters(self.positions['x'][~self.noise], self.positions['y'][~self.noise], self.clustering, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
+        
+        ax.set_xlabel('x')
+        if self.exhaustive_gt:
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.set_yticks([], [])
+
+
     def plot_statistics(self, metric='cosine', annotations=True, detect_threshold=5):
 
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))

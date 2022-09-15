@@ -589,7 +589,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     return labels, new_labels
 
 
-def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine_threshold=0.75):
+def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine_threshold=None):
     
     import sklearn
 
@@ -602,6 +602,7 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine
     fused = {}
     templates = {}
     similarities = {}
+    cosine = 0
 
     for i in wfs_arrays.keys():
         fused[i] = [i]
@@ -643,13 +644,14 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine
                             t_j = np.median(all_data_j, axis=0).flatten()
                             templates[j] = t_j
                         
-                        if j in similarities[i]:
-                            cosine = similarities[i][j]
-                        else:
-                            cosine = sklearn.metrics.pairwise.cosine_similarity(t_i[np.newaxis, :], t_j[np.newaxis, :])[0][0]
-                            similarities[i][j] = cosine
+                        if cosine_threshold is not None:
+                            if j in similarities[i]:
+                                cosine = similarities[i][j]
+                            else:
+                                cosine = sklearn.metrics.pairwise.cosine_similarity(t_i[np.newaxis, :], t_j[np.newaxis, :])[0][0]
+                                similarities[i][j] = cosine
                         
-                        if cosine > cosine_threshold:
+                        if cosine_threshold is None or cosine > cosine_threshold:
                             data_j = all_data_j.reshape(n_j, -1)
                             v = t_i - t_j
                             pr_i = np.dot(data_i, v)
@@ -660,7 +662,6 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=0.5, cosine
                                 to_merge = [i, j]
 
         if min_dip < dip_threshold:
-            #print("Merging", to_merge, "with dip", min_dip)
             fused[to_merge[0]] += [to_merge[1]]
             mask = new_labels == to_merge[1]
             new_labels[mask] = to_merge[0]

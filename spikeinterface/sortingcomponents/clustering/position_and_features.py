@@ -25,7 +25,7 @@ class PositionAndFeaturesClustering:
     """
     _default_params = {
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
-        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
@@ -124,10 +124,10 @@ class PositionAndFeaturesClustering:
 
         elif cleaning_method == "dip":
 
-            wfs_arrays = extract_waveforms_to_buffers(recording, spikes, labels, nbefore, nafter,
-                         mode='shared_memory', return_scaled=False, folder=None, dtype=recording.get_dtype(),
-                         sparsity_mask=None,  copy=True,
-                         **params['job_kwargs'])
+            wfs_arrays = {}
+            for label in labels:
+                mask = label == peak_labels
+                wfs_arrays[label] = hdbscan_data[mask]
 
             labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params['cleaning_kwargs'])
 
