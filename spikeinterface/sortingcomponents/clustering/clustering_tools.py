@@ -658,14 +658,14 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
                         if cosine_threshold is None or cosine > cosine_threshold:
 
                             if j in diptests[i]:
-                                diptest = diptests[i]
+                                diptest = diptests[i][j]
                             else:
                                 data_j = all_data_j.reshape(n_j, -1)
                                 v = t_i - t_j
                                 pr_i = np.dot(data_i, v)
                                 pr_j = np.dot(data_j, v)
                                 diptest, _ = isocut5(np.concatenate((pr_i, pr_j)))
-                                diptests[i] = diptest
+                                diptests[i][j] = diptest
 
                             if diptest < min_dip:
                                 min_dip = diptest
