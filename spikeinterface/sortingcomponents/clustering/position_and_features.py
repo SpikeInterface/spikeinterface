@@ -25,7 +25,7 @@ class PositionAndFeaturesClustering:
     """
     _default_params = {
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
-        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,

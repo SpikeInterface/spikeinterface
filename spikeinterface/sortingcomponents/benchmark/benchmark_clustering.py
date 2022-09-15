@@ -225,6 +225,7 @@ class BenchmarkClustering:
                 means[unit_id] = x_mean, y_mean
                 covs[unit_id] = xycov
                 ax.annotate(unit_id, (x_mean, y_mean))
+                ax.scatter([x_mean], [y_mean], s=50, c='k')
             else:
                 ax.scatter(xk, yk, s=s, color='k', alpha=alpha, marker=".")
 
@@ -312,8 +313,6 @@ class BenchmarkClustering:
         
         ax.set_xlabel('x')
         if self.exhaustive_gt:
-            ax.set_xlim(xlim)
-            ax.set_ylim(ylim)
             ax.set_yticks([], [])
 
 
