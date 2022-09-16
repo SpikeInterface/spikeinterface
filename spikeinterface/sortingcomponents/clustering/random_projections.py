@@ -156,7 +156,14 @@ class RandomProjectionClustering:
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
             we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
                 ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False)
-            labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'], **params['cleaning_kwargs'])
+
+            cleaning_matching_params = params['job_kwargs'].copy()
+            cleaning_matching_params['chunk_duration'] = '100ms'
+            cleaning_matching_params['n_jobs'] = -1
+            cleaning_matching_params['verbose'] = False
+            cleaning_matching_params['progress_bar'] = False
+
+            labels, peak_labels = remove_duplicates_via_matching(we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **params['cleaning_kwargs'])
             shutil.rmtree(tmp_folder)
 
         print("We kept %d non-duplicated clusters..." %len(labels))

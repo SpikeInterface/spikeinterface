@@ -489,7 +489,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 
 
 
-def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_threshold=0.99, method_kwargs={}, job_kwargs={}):
+def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=0.99, method_kwargs={}, job_kwargs={}):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels 
@@ -500,7 +500,6 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     import string, random, shutil, os
     from pathlib import Path
 
-    noise_levels = get_noise_levels(waveform_extractor.recording, return_scaled=False)
     templates = waveform_extractor.get_all_templates(mode='median').copy()
     nb_templates = len(templates)
     duration = waveform_extractor.nbefore + waveform_extractor.nafter
@@ -553,7 +552,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
 
     for i in range(nb_templates):
         method_kwargs.update({'ignored_ids' : ignore_ids + [i]})
-        spikes, computed = find_spikes_from_templates(recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True)
+        spikes, computed = find_spikes_from_templates(recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs)
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
