@@ -541,23 +541,25 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     recording = BinaryRecordingExtractor(tmp_filename, num_chan=num_chans, sampling_frequency=fs, dtype='float32')
     recording.annotate(is_filtered=True)
 
+    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
+    half_marging = margin//2
+
+    chunk_size = duration + margin
+
     method_kwargs.update({'waveform_extractor' : waveform_extractor, 
                           'noise_levels' : noise_levels,
                           'amplitudes' : [0.9, 1.1],
                           'sparsify_threshold' : 1,
-                          'omp_min_sps' : 0})
+                          'omp_min_sps' : 0.1,
+                          'fft_size' : chunk_size})
 
     ignore_ids = []
     similar_templates = [[], []]
-
-    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
 
     for i in range(nb_templates):
 
         t_start = padding + i*duration
         t_stop = padding + (i+1)*duration
-
-        half_marging = margin//2
 
         sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
 
@@ -566,7 +568,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
-                              'sparsities' : computed['sparsities']})
+                              'sparsities' : computed['sparsities'],
+                              'cached_fft_kernels' : computed['cached_fft_kernels']})
         valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:

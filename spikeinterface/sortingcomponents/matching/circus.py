@@ -183,7 +183,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'templates' : None,
         'overlaps' : None,
         'norms' : None,
-        'ignored_ids' : []
+        'ignored_ids' : [],
+        'fft_size' : None
     }
 
     @classmethod
@@ -208,18 +209,15 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         waveform_extractor = d['waveform_extractor']
         num_samples = d['num_samples']
         num_channels = d['num_channels']
-        num_templates = d['num_templates']
-
-        d['norms'] = np.zeros(num_templates, dtype=np.float32)
-
-        all_units = list(d['waveform_extractor'].sorting.unit_ids)
+        num_templates = len(d['waveform_extractor'].sorting.unit_ids)
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
 
         d['sparsities'] = {}
         d['templates'] = {}
+        d['norms'] = np.zeros(num_templates, dtype=np.float32)
 
-        for count, unit_id in enumerate(all_units):
+        for count in range(num_templates):
                 
             template, active_channels = cls._sparsify_template(templates[count], d['sparsify_threshold'], d['noise_levels'])
             d['sparsities'][count] = active_channels
@@ -284,7 +282,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()
         d['num_samples'] = d['waveform_extractor'].nsamples
-        d['num_templates'] = len(d['waveform_extractor'].sorting.unit_ids)
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
 
@@ -294,6 +291,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             for key in ['norms', 'sparsities']:
                 assert d[key] is not None, "If templates are provided, %d should also be there" %key
 
+        d['num_templates'] = len(d['templates'])
+
         if d['overlaps'] is None: 
             d = cls._prepare_overlaps(d)
 
@@ -302,9 +301,21 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         omp_min_sps = d['omp_min_sps']
         norms = d['norms']
         sparsities = d['sparsities']
-        #nb_dense_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
-        #print(np.sqrt(d['num_channels']*d['num_samples']), norms.mean())
-        d['stop_criteria'] =  omp_min_sps * norms[:, np.newaxis] #np.sqrt(d['num_channels']*d['num_samples'])
+
+        d['stop_criteria'] = omp_min_sps * norms[:, np.newaxis] #np.sqrt(d['num_channels']*d['num_samples'])
+
+        if d['fft_size'] is not None and 'cached_fft_kernels' not in d:
+            d['cached_fft_kernels'] = {'fshape' : 0}
+
+            dummy_filter = np.empty((d['num_channels'], d['num_samples']), dtype=np.float32)
+            dummy_traces = np.empty((d['num_channels'], d['fft_size']), dtype=np.float32)
+
+            fshape, axes = get_scipy_shape(dummy_filter, dummy_traces, axes=1)
+
+            for i in range(d['num_templates']):
+                kernel_filter = np.ascontiguousarray(d['templates'][i][::-1].T)
+                d['cached_fft_kernels'].update({i : sp_fft.rfftn(kernel_filter, fshape, axes=axes)})
+                d['cached_fft_kernels']['fshape'] = fshape[0]
 
         return d        
 
@@ -345,8 +356,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         if 'cached_fft_kernels' not in d:
             d['cached_fft_kernels'] = {'fshape' : 0}
 
-        cached_fft_kernels = d['cached_fft_kernels']
 
+        cached_fft_kernels = d['cached_fft_kernels']
 
         num_timesteps = len(traces)
         num_peaks = num_timesteps - num_samples + 1

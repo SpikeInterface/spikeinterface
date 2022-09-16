@@ -24,8 +24,8 @@ class RandomProjectionClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, 
-                            "min_samples" : 5, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 25,  "allow_single_cluster" : True, 
+                            "min_samples" : 15, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200, 
@@ -44,6 +44,7 @@ class RandomProjectionClustering:
         assert HAVE_HDBSCAN, 'twisted clustering need hdbscan to be installed'
 
         d = params
+        verbose = d['job_kwargs']['verbose']
 
         peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
 
@@ -129,7 +130,8 @@ class RandomProjectionClustering:
 
         cleaning_method = params["cleaning_method"]
 
-        print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
+        if verbose:
+            print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
 
@@ -166,6 +168,7 @@ class RandomProjectionClustering:
             labels, peak_labels = remove_duplicates_via_matching(we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **params['cleaning_kwargs'])
             shutil.rmtree(tmp_folder)
 
-        print("We kept %d non-duplicated clusters..." %len(labels))
+        if verbose:
+            print("We kept %d non-duplicated clusters..." %len(labels))
 
         return labels, peak_labels
