@@ -331,7 +331,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         num_channels = d['num_channels']
         num_samples = d['num_samples']
         overlaps = d['overlaps']
-        margin = d['margin']
         norms = d['norms']
         nbefore = d['nbefore']
         nafter = d['nafter']

@@ -550,14 +550,24 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     ignore_ids = []
     similar_templates = [[], []]
 
+    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
+
     for i in range(nb_templates):
+
+        t_start = padding + i*duration
+        t_stop = padding + (i+1)*duration
+
+        half_marging = margin//2
+
+        sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
+
         method_kwargs.update({'ignored_ids' : ignore_ids + [i]})
-        spikes, computed = find_spikes_from_templates(recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs)
+        spikes, computed = find_spikes_from_templates(sub_recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs)
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
                               'sparsities' : computed['sparsities']})
-        valid = (spikes['sample_ind'] > padding + i*duration) * (spikes['sample_ind'] < padding + (i+1)*duration)
+        valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
                 j = spikes[valid]['cluster_ind'][0]
@@ -567,7 +577,7 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
                     similar_templates[1] += [i]
                     similar_templates[0] += [j]
             elif np.sum(valid) > 1:
-                similar_templates[0] += [-1]
+                similar_templates[0] += [-1]    
                 ignore_ids += [i]
                 similar_templates[1] += [i]
 
