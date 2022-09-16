@@ -31,10 +31,10 @@ dependencies:
     - ephyviewer
     - neo>=0.11
     - elephant>=0.10.0
-    - probeinterface>=0.2.10
+    - probeinterface>=0.2.11
     - MEArec>=1.8
     - spikeinterface[full, widgets]
     - spikeinterface-gui
     - tridesclous>=1.6.5
-    - phy==2.0b5
+    # - phy==2.0b5
     - mountainsort4>=1.0.0
