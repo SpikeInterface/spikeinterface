@@ -8,7 +8,8 @@ dependencies:
   - mamba
   # numpy 1.22 break numba which break tridesclous
   - numpy<1.22
-  - joblib
+  # joblib 1.2 is breaking hdbscan
+  - joblib=1.1
   - tqdm
   - matplotlib
   - h5py
