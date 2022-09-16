@@ -24,8 +24,7 @@ class RandomProjectionClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "hdbscan_kwargs": {"min_cluster_size" : 25,  "allow_single_cluster" : True, 
-                            "min_samples" : 15, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200, 
@@ -34,7 +33,7 @@ class RandomProjectionClustering:
         "ms_before" : 1.5,
         "ms_after": 1.5,
         "random_seed" : 42,
-        "cleaning_method": "matching",
+        "cleaning_method": "dip",
         "min_values" : {'ptp' : 2, 'energy' : 0.5},
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
