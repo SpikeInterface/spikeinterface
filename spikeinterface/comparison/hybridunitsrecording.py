@@ -24,6 +24,7 @@ class HybridUnitsRecording(BaseRecording):
         self.add_recording_segment(recording_segment)
 
 
+
 class HybridUnitsRecordingSegment(BaseRecordingSegment):
 
     def __init__(self, target_recording: BaseRecordingSegment, templates: np.ndarray, n_before: Union[List[int], None] = None,
@@ -61,7 +62,7 @@ class HybridUnitsRecordingSegment(BaseRecordingSegment):
         end_frame = self.parent_recording.get_num_frames() if end_frame is None else end_frame
         channel_indices = list(range(len(self.parent_recording.channel_ids))) if channel_indices is None else channels_indices
 
-        spikes, labels = self.sorting.get_all_spike_trains(outputs="unit_index")[0]
+        spikes, labels = self.sorting.get_all_spike_trains(outputs="unit_index")[0] # TODO: spike_vector + put that in __init__ (parallelization).
         templates_t = self.templates.shape[1]
         mask = (spikes > start_frame - templates_t) & (spikes < end_frame + templates_t) # Margins to take into account spikes outside of the frame.
         spikes = spikes[mask]
@@ -84,6 +85,6 @@ class HybridUnitsRecordingSegment(BaseRecordingSegment):
                 end_template = end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
-            traces[start_traces : end_traces] = template[start_template : end_teplate]
+            traces[start_traces : end_traces] = template[start_template : end_teplate] # multiplicator
 
         return traces
