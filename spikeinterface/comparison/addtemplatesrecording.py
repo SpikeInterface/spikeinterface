@@ -16,7 +16,7 @@ class AddTemplatesRecording(BaseRecording):
 
     def __init__(self, sorting: BaseSorting, templates: np.ndarray, nbefore: Union[List[int], None] = None,
                  amplitude_factor: Union[Dict[List[float]], None] = None,
-                 target_recording: Union[BaseRecording, None] = None, t_max: Union[int, None] = None) -> None:
+                 target_recording: Union[BaseRecording, None] = None, t_max: Union[List[int], None] = None) -> None:
         
         n_units = len(sorting.unit_ids)
         assert len(templates) == unit_ids
@@ -36,12 +36,16 @@ class AddTemplatesRecording(BaseRecording):
             assert t_max is not None, "AddTemplatesRecording.t_max has to be set of target_recording is None."
             target_recording = None # TODO: Make recording containing only 0.
 
+        if t_max is None:
+
+
         self.spike_vector = sorting.to_spike_vector()
 
         for segment_index in range(sorting.get_num_segments()):
             spikes = spike_vector[spike_vector['segment_ind'] == segment_index]
             target_recording_segment = None if target_recording is None else target_recording._recording_segments[segment_index]
-            recording_segment = AddTemplatesRecordingSegment(spikes, templates, nbefore, amplitude_factor, target_recording_segment)
+            recording_segment = AddTemplatesRecordingSegment(spikes, templates, nbefore, amplitude_factor,
+                                                             target_recording_segment, t_max[segment_index])
 
             self.add_recording_segment(recording_segment)
 
@@ -57,7 +61,8 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
     templates: np.ndarray
     nbefore: List[int]
     amplitude_factor: Dict[List[float]]
-    target_recording: Union[BaseRecordingSegment]
+    target_recording: Union[BaseRecordingSegment, None] = None
+    t_max: int
 
     # def __init__(self, spike_vector: np.ndarray, templates: np.ndarray, nbefore: List[int],
     #              amplitude_factor: Dict[List[float]], target_recording: Union[BaseRecordingSegment, None] = None) -> None:
@@ -70,11 +75,16 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None,
                    channel_indices: Union[List, None] = None) -> np.ndarray:
-        races = self.parent_recording.get_traces(start_frame, end_frame)
-
+        n_channels = self.templates.shape[1]
         start_frame = 0 if start_frame is None else start_frame
-        end_frame = self.parent_recording.get_num_frames() if end_frame is None else end_frame
-        channel_indices = list(range(len(self.parent_recording.channel_ids))) if channel_indices is None else channels_indices
+        end_frame = self.t_max if end_frame is None else end_frame
+
+        if self.parent_recording is not None:
+            traces = self.parent_recording.get_traces(start_frame, end_frame)
+        else:
+            traces = np.zeros([t_max, n_templates], dtype=np.int16)
+        
+        channel_indices = list(range(n_templates)) if channel_indices is None else channels_indices
 
         for spike in self.spike_vector:
             t = spike['sample_ind']
