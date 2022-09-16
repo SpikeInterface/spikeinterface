@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 
@@ -15,7 +15,7 @@ class AddTemplatesRecording(BaseRecording):
     """
 
     def __init__(self, sorting: BaseSorting, templates: np.ndarray, nbefore: Union[List[int], None] = None,
-                 amplitude_factor: Union[Dict[List[float]], None] = None,
+                 amplitude_factor: Union[List[List[float]], None] = None,
                  target_recording: Union[BaseRecording, None] = None, t_max: Union[List[int], None] = None) -> None:
         
         n_units = len(sorting.unit_ids)
@@ -27,7 +27,7 @@ class AddTemplatesRecording(BaseRecording):
             assert len(nbefore) == n_units
 
         if amplitude_factor is None:
-            amplitude_factor = {unit_id: [1.0]*len(sorting.get_unit_spike_train(unit_id)) for unit_id in sorting.unit_ids}
+            amplitude_factor = [[1.0]*len(sorting.get_unit_spike_train(unit_ind)) for unit_ind in range(len(sorting.unit_ids))]
 
         if target_recording is not None:
             assert target_recording.get_num_segments() == sorting.get_num_segments()
@@ -37,7 +37,10 @@ class AddTemplatesRecording(BaseRecording):
             target_recording = None # TODO: Make recording containing only 0.
 
         if t_max is None:
-
+            if target_recording is None:
+                pass # TODO
+            else:
+                t_max = [target_recording.get_num_frames(segment_index) for segment_index in range(sorting.get_num_segments())]
 
         self.spike_vector = sorting.to_spike_vector()
 
@@ -60,12 +63,12 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
     spike_vector: np.ndarray
     templates: np.ndarray
     nbefore: List[int]
-    amplitude_factor: Dict[List[float]]
+    amplitude_factor: List[List[float]]
     target_recording: Union[BaseRecordingSegment, None] = None
     t_max: int
 
     # def __init__(self, spike_vector: np.ndarray, templates: np.ndarray, nbefore: List[int],
-    #              amplitude_factor: Dict[List[float]], target_recording: Union[BaseRecordingSegment, None] = None) -> None:
+    #              amplitude_factor: List[List[float]], target_recording: Union[BaseRecordingSegment, None] = None) -> None:
 
     #     self.spike_vector = spike_vector
     #     self.templates = templates
@@ -106,6 +109,6 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
                 end_template = end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
-            traces[start_traces : end_traces] = template[start_template : end_teplate] # multiplicator
+            traces[start_traces : end_traces] = template[start_template : end_teplate] * self.amplitude_factor[unit_ind]
 
         return traces
