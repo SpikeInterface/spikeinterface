@@ -497,6 +497,7 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     from spikeinterface.core import NumpySorting
     from spikeinterface.core import extract_waveforms
     from spikeinterface.core import get_global_tmp_folder
+    from spikeinterface.sortingcomponents.matching.circus import get_scipy_shape
     import string, random, shutil, os
     from pathlib import Path
 
@@ -544,14 +545,19 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
     half_marging = margin//2
 
-    chunk_size = duration + margin
+    chunk_size = duration + 3*margin
+
+    dummy_filter = np.empty((num_chans, duration), dtype=np.float32)
+    dummy_traces = np.empty((num_chans, chunk_size), dtype=np.float32)
+
+    fshape, axes = get_scipy_shape(dummy_filter, dummy_traces, axes=1)
 
     method_kwargs.update({'waveform_extractor' : waveform_extractor, 
                           'noise_levels' : noise_levels,
                           'amplitudes' : [0.9, 1.1],
                           'sparsify_threshold' : 1,
                           'omp_min_sps' : 0.1,
-                          'fft_size' : chunk_size})
+                          'fft_size' : fshape[0]})
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -568,8 +574,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
-                              'sparsities' : computed['sparsities'],
-                              'cached_fft_kernels' : computed['cached_fft_kernels']})
+                              'sparsities' : computed['sparsities']})
+                              #'cached_fft_kernels' : computed['cached_fft_kernels']})
         valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:

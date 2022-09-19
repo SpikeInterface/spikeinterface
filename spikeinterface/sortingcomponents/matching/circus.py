@@ -376,18 +376,20 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         for i in range(num_templates):
 
-            if i not in cached_fft_kernels or flagged_chunk:
-                kernel_filter = np.ascontiguousarray(templates[i][::-1].T)
-                cached_fft_kernels.update({i : sp_fft.rfftn(kernel_filter, fshape, axes=axes)})
-                cached_fft_kernels['fshape'] = fshape[0]
+            if i not in ignored_ids:
 
-            fft_cache.update({'mask' : sparsities[i], 'template' : cached_fft_kernels[i]})
+                if i not in cached_fft_kernels or flagged_chunk:
+                    kernel_filter = np.ascontiguousarray(templates[i][::-1].T)
+                    cached_fft_kernels.update({i : sp_fft.rfftn(kernel_filter, fshape, axes=axes)})
+                    cached_fft_kernels['fshape'] = fshape[0]
 
-            convolution = fftconvolve_with_cache(dummy_filter, dummy_traces, fft_cache, axes=1, mode='valid')
-            if len(convolution) > 0:
-                scalar_products[i] = convolution.sum(0)
-            else:
-                scalar_products[i] = 0
+                fft_cache.update({'mask' : sparsities[i], 'template' : cached_fft_kernels[i]})
+
+                convolution = fftconvolve_with_cache(dummy_filter, dummy_traces, fft_cache, axes=1, mode='valid')
+                if len(convolution) > 0:
+                    scalar_products[i] = convolution.sum(0)
+                else:
+                    scalar_products[i] = 0
 
         if len(ignored_ids) > 0:
             scalar_products[ignored_ids] = -np.inf
