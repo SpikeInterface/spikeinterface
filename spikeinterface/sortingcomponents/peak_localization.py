@@ -63,7 +63,7 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
         step = LocalizeCenterOfMass(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
     elif method == 'monopolar_triangulation':
         step = LocalizeMonopolarTriangulation(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
-        
+    
     peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks', squeeze_output=True)
     
     return peak_locations

@@ -28,11 +28,11 @@ def test_features_from_peaks():
                          peak_sign='neg', detect_threshold=5,
                           noise_levels=noise_levels, **job_kwargs)
 
-    feature_list = ['amplitude', 'ptp', 'com', 'energy']
+    feature_list = ['amplitude', 'ptp', 'center_of_mass', 'energy']
     feature_params = {
-        'amplitude' : {'all_channel': False, 'peak_sign': 'neg'},
-        'ptp' : {'all_channel': False},
-        'com' : {'local_radius_um' : 120.},
+        'amplitude' : {'all_channels': False, 'peak_sign': 'neg'},
+        'ptp' : {'all_channels': False},
+        'center_of_mass' : {'local_radius_um' : 120.},
         'energy': {'local_radius_um' : 160.},
     }
     features = compute_features_from_peaks(recording, peaks, feature_list,
@@ -50,15 +50,15 @@ def test_features_from_peaks():
     job_kwargs['n_jobs'] = 2
     amplitude, ptp, com, energy = compute_features_from_peaks(recording, peaks, feature_list,
                 feature_params=feature_params, **job_kwargs)
-    assert amplitude.ndim == 1 # because all_channel=False
-    assert ptp.ndim == 1 # because all_channel=False
+    assert amplitude.ndim == 1 # because all_channels=False
+    assert ptp.ndim == 1 # because all_channels=False
     assert com.ndim == 1
     assert 'x' in com.dtype.fields
     assert energy.ndim == 1
     
     
     # amplitude and peak to peak with multi channels
-    d = {'all_channel': True}
+    d = {'all_channels': True}
     amplitude, ptp, = compute_features_from_peaks(recording, peaks,
             ['amplitude', 'ptp'], feature_params={'amplitude': d, 'ptp' : d}, **job_kwargs)
     assert amplitude.shape[0] == amplitude.shape[0]
