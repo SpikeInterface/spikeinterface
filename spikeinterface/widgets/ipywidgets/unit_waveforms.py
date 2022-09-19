@@ -67,7 +67,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
 
         mpl_plotter = MplUnitWaveformPlotter()
 
-        self.updater = PlotUpdater(data_plot, mpl_plotter, fig_wf, fig_probe, self.controller)
+        self.updater = PlotUpdater(data_plot, mpl_plotter, fig_wf, ax_probe, self.controller)
         for w in self.controller.values():
             w.observe(self.updater)
 
