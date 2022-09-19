@@ -6,6 +6,10 @@ Welcome to SpikeInterface's documentation!
   :scale: 100 %
   :align: center
 
+.. image:: images/overview.png
+  :scale: 100 %
+  :align: center
+
 
 Spikeinterface is a Python module designed to improve the accessibility, reliability, and reproducibility
 of spike sorting and all its associated computations.

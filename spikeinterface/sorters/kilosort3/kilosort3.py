@@ -197,7 +197,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         ops['scaleproc'] = 200.0  # int16 scaling of whitened data
         ops['nPCs'] = params['nPCs']  # how many PCs to project the spikes into
         ops['useRAM'] = 0.0  # not yet available
-        
+
         # drift correction
         ops['do_correction'] = params['do_correction']
 

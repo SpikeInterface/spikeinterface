@@ -81,8 +81,14 @@ class TimeseriesWidget(BaseWidget):
         if channel_ids is None:
             channel_ids = rec0.channel_ids
 
+        if "location" in rec0.get_property_keys():
+            channel_locations = rec0.get_channel_locations()
+        else:
+            channel_locations = None
+
         if order_channel_by_depth:
-            order = order_channels_by_depth(rec0, channel_ids)
+            if channel_locations is not None:
+                order = order_channels_by_depth(rec0, channel_ids)
         else:
             order = None
 
@@ -102,7 +108,6 @@ class TimeseriesWidget(BaseWidget):
         
         times, list_traces, frame_range, channel_ids = _get_trace_list(recordings, channel_ids, time_range, 
                                                                        segment_index, order)
-        channel_locations = recordings[list(recordings.keys())[0]].get_channel_locations()
         
         # stat for auto scaling done on the first layer
         traces0 = list_traces[0]
