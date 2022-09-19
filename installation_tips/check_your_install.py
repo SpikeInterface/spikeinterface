@@ -85,11 +85,13 @@ if __name__ == '__main__':
         ('Run tridesclous', run_tridesclous),
         ('Open spikeinterface-gui', open_sigui),
         ('Export to phy', export_to_phy),
-        ('Open phy', open_phy),
+        # phy is removed from the env because it force a pip install PyQt5
+        # which break the conda env
+        # ('Open phy', open_phy),
     ]
 
     if platform.system() == "Windows":
-        steps.insert(3, ('Run spykingcircus', run_spykingcircus))
+        # steps.insert(3, ('Run spykingcircus', run_spykingcircus))
     elif platform.system() == "Darwin":
         steps.insert(3, ('Run herdingspikes', run_herdingspikes))
     else:
