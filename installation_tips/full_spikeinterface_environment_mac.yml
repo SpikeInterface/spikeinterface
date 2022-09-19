@@ -7,7 +7,8 @@ dependencies:
   - pip>=21.0
   # numpy 1.21 break numba which break tridesclous
   - numpy<1.22
-  - joblib
+  # joblib 1.2 is breaking hdbscan
+  - joblib=1.1
   - tqdm
   - matplotlib
   - h5py
@@ -31,10 +32,10 @@ dependencies:
     - ephyviewer
     - neo>=0.11
     - elephant>=0.10.0
-    - probeinterface>=0.2.10
+    - probeinterface>=0.2.11
     - MEArec>=1.8
     - spikeinterface[full, widgets]
     - spikeinterface-gui
-    - tridesclous>=1.6.5
-    - phy==2.0b5
+    - tridesclous>=1.6.6.1
+    # - phy==2.0b5
     - mountainsort4>=1.0.0

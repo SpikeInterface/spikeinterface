@@ -35,7 +35,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
                 plt.show()
             output2 = widgets.Output()
             with output2:
-                fig_probe = plt.figure(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
+                fig_probe, ax_probe = plt.sublplots(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
         unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.sorting.unit_ids,
@@ -67,7 +67,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
 
         mpl_plotter = MplUnitWaveformPlotter()
 
-        self.updater = PlotUpdater(data_plot, mpl_plotter, fig_wf, fig_probe, self.controller)
+        self.updater = PlotUpdater(data_plot, mpl_plotter, fig_wf, ax_probe, self.controller)
         for w in self.controller.values():
             w.observe(self.updater)
 
@@ -91,11 +91,11 @@ UnitWaveformPlotter.register(UnitWaveformsWidget)
 
 
 class PlotUpdater:
-    def __init__(self, data_plot, mpl_plotter, fig_wf, fig_probe, controller):
+    def __init__(self, data_plot, mpl_plotter, fig_wf, ax_probe, controller):
         self.data_plot = data_plot
         self.mpl_plotter = mpl_plotter
         self.fig_wf = fig_wf
-        self.fig_probe = fig_probe
+        self.ax_probe = ax_probe
         self.controller = controller
 
         self.we = data_plot['waveform_extractor']
@@ -103,7 +103,7 @@ class PlotUpdater:
 
     def __call__(self, change):
         self.fig_wf.clear()
-        self.fig_probe.clear()
+        self.ax_probe.clear()
 
         unit_ids = self.controller["unit_ids"].value
         same_axis = self.controller["same_axis"].value
@@ -134,25 +134,26 @@ class PlotUpdater:
                 self.mpl_plotter.ax.axis("off")
         else:
             if hide_axis:
-                for ax in np.ravel(self.mpl_plotter.axes):
+                for i in range(len(unit_ids)):
+                    ax = self.mpl_plotter.axes.flatten()[i]
                     ax.axis("off")
 
         # update probe plot
-        ax = self.fig_probe.add_subplot()
         channel_locations = self.we.recording.get_channel_locations()
-        ax.plot(channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray",
-                markersize=2, alpha=0.5)
-        ax.axis("off")
-        ax.axis("equal")
+        self.ax_probe.plot(channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray",
+                           markersize=2, alpha=0.5)
+        self.ax_probe.axis("off")
+        self.ax_probe.axis("equal")
 
         for unit in unit_ids:
-            ax.plot(channel_locations[self.next_data_plot['channel_inds'][unit], 0],
-                    channel_locations[self.next_data_plot['channel_inds'][unit], 1],
-                    ls="", marker="o", markersize=3,
-                    color=self.next_data_plot['unit_colors'][unit])
-        ax.set_xlim(np.min(channel_locations[:, 0])-10, np.max(channel_locations[:, 0])+10)
+            self.ax_probe.plot(channel_locations[self.next_data_plot['channel_inds'][unit], 0],
+                               channel_locations[self.next_data_plot['channel_inds'][unit], 1],
+                               ls="", marker="o", markersize=3,
+                               color=self.next_data_plot['unit_colors'][unit])
+        self.ax_probe.set_xlim(np.min(channel_locations[:, 0])-10, np.max(channel_locations[:, 0])+10)
+        fig_probe = self.ax_probe.get_figure()
 
         self.fig_wf.canvas.draw()
-        self.fig_probe.canvas.draw()
         self.fig_wf.canvas.flush_events()
-        self.fig_probe.canvas.flush_events()
+        fig_probe.canvas.draw()
+        fig_probe.canvas.flush_events()

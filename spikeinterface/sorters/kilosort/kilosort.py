@@ -85,7 +85,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
             return 'unknown'
         else:
             return 'git-' + commit
-        
+
     @classmethod
     def use_gpu(cls, params):
         if 'useGPU' in params:
