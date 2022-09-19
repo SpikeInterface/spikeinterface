@@ -497,7 +497,31 @@ def compute_correlograms_numba(sorting, window_ms: float = 100.0,
 
 def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std: float = 0.5, dt: float = 0.1):
     """
-    TODO
+    Computes several gaussian-filtered auto & cross-correlograms
+    in one course from several clusters.
+
+    This is a "brute force" method using compiled code (numba)
+    to accelerate the computation.
+
+    Implementation: Aurélien Wyngaard
+
+    Parameters
+    ----------
+    sorting: BaseSorting
+        The sorting object for which to compute all correlograms.
+    max_time: float
+        The correlograms are going to be computed between -max_time and +max_time (in ms).
+    gaussian_std: float
+        Standard deviation for the gaussian filter (in ms).
+    dt: float:
+        The delta time for the time axis (in ms).
+
+    Returns
+    -------
+    correlograms: np.ndarray[num_units, num_units, time_axis]:
+        All the gaussian-filtered correlograms.
+    t_axis: np.array[time_axis]
+        The time axis (in ms).
     """
 
     assert HAVE_NUMBA
