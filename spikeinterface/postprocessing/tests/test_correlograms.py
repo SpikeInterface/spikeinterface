@@ -5,7 +5,8 @@ from pathlib import Path
 
 from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
 import spikeinterface.extractors as se
-from spikeinterface.postprocessing import compute_correlograms, CorrelogramsCalculator
+from spikeinterface.postprocessing import compute_correlograms, CorrelogramsCalculator, compute_gaussian_correlograms
+from spikeinterface.postprocessing.correlograms import _compute_autocorr_gaussian
 
 try:
     import numba
@@ -68,6 +69,30 @@ def test_correlograms_extension():
     assert ccc.ccgs is not None
     ccc = CorrelogramsCalculator.load_from_folder(folder)
     assert ccc.ccgs is not None
+
+
+def test_compute_autocorr_gaussian():
+    if not HAVE_NUMBA:
+        return
+
+    fs = 30000      # Hz
+    freq = 5        # Hz
+    duration = 3600 # s
+    t_axis = np.arange(-1500, 1501, dtype=np.int32)
+    expectation = duration * freq / fs
+
+    spike_train = np.random.uniform(low=0.0, high=fs*duration, size=duration*freq).astype(np.int64)
+    corr1 = _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std=15)
+    corr2 = _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std=30)
+
+    assert abs(np.mean(corr1) - expectation) < 0.2
+    assert abs(np.mean(corr2) - expectation) < 0.2
+
+
+def test_compute_gaussian_correlograms():
+    recording, sorting = se.toy_example(num_segments=2, num_units=10, duration=100)
+
+    compute_gaussian_correlograms(sorting)
 
 
 if __name__ == '__main__':
