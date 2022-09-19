@@ -22,7 +22,8 @@ from .correlograms import (CorrelogramsCalculator,
                            compute_autocorrelogram_from_spiketrain,
                            compute_crosscorrelogram_from_spiketrain,
                            compute_correlograms,
-                           compute_correlograms_numba, compute_correlograms_numpy)
+                           compute_correlograms_numba, compute_correlograms_numpy,
+                           compute_gaussian_correlograms)
 
 from .isi import (ISIHistogramsCalculator,
                   compute_isi_histograms_from_spiketrain, compute_isi_histograms,

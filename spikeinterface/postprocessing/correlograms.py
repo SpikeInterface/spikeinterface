@@ -144,7 +144,23 @@ def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_tra
 def compute_gaussian_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
                                                      std: int, sampling_f: float, dt: int = 1):
     """
-    TODO
+    Computes the Gaussian-filtered auto-correlogram from a given spike train.
+
+    This implementation only works if you have numba installed, to accelerate the computation time.
+
+    Parameters
+    ----------
+    spike_train: np.ndarray
+        The ordered spike train to compute the auto-correlogram.
+    max_time: int
+        Compute the auto-correlogram between -max_time and +max_time (in sampling time).
+    std: int
+        Standard deviation of the Gaussian (in sampling time).
+    sampling_f: float
+        Sampling rate/frequency (in Hz).
+    dt: int
+        The returned correlogram will have this delta t (in sampling time).
+
     """
     if not HAVE_NUMBA:
         print("Error: numba is not installed.")
@@ -159,7 +175,24 @@ def compute_gaussian_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, 
                                                       max_time: int, std: int, sampling_f: float,
                                                       dt: int = 1):
     """
-    TODO
+    Computes the Gaussian-filtered auto-correlogram from two spike trains.
+
+    This implementation only works if you have numba installed, to accelerate the computation time.
+
+    Parameters
+    ----------
+    spike_train1: np.ndarray
+        The ordered spike train to compare against the second one.
+    spike_train2: np.ndarray
+        The ordered spike train that serves as a reference for the cross-correlogram.
+    max_time: int
+        Compute the auto-correlogram between -max_time and +max_time (in sampling time).
+    std: int
+        Standard deviation of the Gaussian (in sampling time).
+    sampling_f: float
+        Sampling rate/frequency (in Hz).
+    dt: int
+        The returned correlogram will have this delta t (in sampling time).
     """
     if not HAVE_NUMBA:
         print("Error: numba is not installed.")
@@ -219,7 +252,7 @@ if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int32[::1], numba.int32), nopython=True, nogil=True, cache=True)
     def _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std):
         spike_diffs = numba.typed.List()
-        max_t = t_axis[-1] + 3*gaussian_std
+        max_t = t_axis[-1] + 4*gaussian_std
 
         for i in range(len(spike_train)):
             for j in range(i+1, len(spike_train)):
@@ -243,8 +276,8 @@ if HAVE_NUMBA:
                nopython=True, nogil=True, cache=True)
     def _compute_crosscorr_gaussian(spike_train1, spike_train2, t_axis, gaussian_std):
         spike_diffs = numba.typed.List()
-        min_t = t_axis[0] - 3*gaussian_std
-        max_t = t_axis[-1] + 3*gaussian_std
+        min_t = t_axis[0] - 4*gaussian_std
+        max_t = t_axis[-1] + 4*gaussian_std
 
         start_j = 0
         for i in range(len(spike_train1)):
@@ -254,7 +287,7 @@ if HAVE_NUMBA:
                 if diff > -min_t:
                     start_j += 1
                     continue
-                if diff < max_t:
+                if diff < -max_t:
                     break
 
                 spike_diffs.append(diff)
@@ -457,6 +490,31 @@ def compute_correlograms_numba(sorting, window_ms: float = 100.0,
     
     return correlograms, bins
 
+
+def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std: float = 0.5, dt=None):
+    """
+    TODO
+    """
+
+    assert HAVE_NUMBA
+
+    num_units = len(sorting.unit_ids)
+    fs = sorting.get_sampling_frequency()
+
+    max_time = int(round(max_time * fs * 1e-3))
+    gaussian_std = int(round(gaussian_std * fs * 1e-3))
+    dt = 1 if dt is None else int(round(dt * fs * 1e-3))
+    t_axis = np.arange(-max_time, max_time+1, dt, dtype=np.int32)
+
+    spikes = sorting.get_all_spike_trains(outputs='unit_index')
+    correlograms = np.zeros((num_units, num_units, len(t_axis)), dtype=np.float64)
+
+    for seg_index in range(sorting.get_num_segments()):
+        _compute_gaussian_correlograms(correlograms, spikes[seg_index][0].astype(np.int64),
+                                       spikes[seg_index][1].astype(np.int32), t_axis, gaussian_std)
+
+    return correlograms, t_axis*1e-3*fs
+
 if HAVE_NUMBA:
     @numba.jit((numba.int64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32, numba.float32),
                 nopython=True, nogil=True, cache=True, parallel=True)
@@ -473,4 +531,21 @@ if HAVE_NUMBA:
                     correlograms[i, j] += _compute_autocorr_numba(spike_train1, max_time, bin_size, sampling_f)[0]
                 else:
                     correlograms[i, j] += _compute_crosscorr_numba(spike_train1, spike_train2, max_time, bin_size, sampling_f)[0]
+                    correlograms[j, i] = correlograms[i, j, ::-1]
+
+    @numba.jit((numba.float64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32[::1], numba.int32),
+               nopython=True, nogil=True, cache=True, parallel=True)
+    def _compute_gaussian_correlograms(correlograms, spike_trains, spike_clusters, t_axis, gaussian_std):
+        n_units = correlograms.shape[0]
+
+        for i in numba.prange(n_units):
+            spike_train1 = spike_trains[spike_clusters == i]
+
+            for j in range(i, n_units):
+                spike_train2 = spike_trains[spike_clusters == j]
+
+                if i == j:
+                    correlograms[i, j] += _compute_autocorr_gaussian(spike_train1, t_axis, gaussian_std)
+                else:
+                    correlograms[i, j] += _compute_crosscorr_gaussian(spike_train1, spike_train2, t_axis, gaussian_std)
                     correlograms[j, i] = correlograms[i, j, ::-1]
