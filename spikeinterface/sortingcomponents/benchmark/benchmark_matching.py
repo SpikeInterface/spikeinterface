@@ -25,8 +25,7 @@ class BenchmarkMatching:
         self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
         self.exhaustive_gt = exhaustive_gt
-        self.recording_f = bandpass_filter(self.recording,  dtype='float32')
-        self.recording_f = common_reference(self.recording_f)
+        self.recording_f = recording
         self.sampling_rate = self.recording_f.get_sampling_frequency()
         self.job_kwargs = job_kwargs
         self.method_kwargs = method_kwargs
@@ -37,7 +36,7 @@ class BenchmarkMatching:
             self.tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
 
         self.we = extract_waveforms(self.recording_f, self.gt_sorting, self.tmp_folder, load_if_exists=True,
-                                   ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500,
+                                   ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500, return_scaled=False, 
                                    **self.job_kwargs)
 
         self.method_kwargs.update({'waveform_extractor' : self.we})
@@ -174,7 +173,10 @@ def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall'
     fig, axs = plt.subplots(ncols=nb_benchmarks, nrows=nb_benchmarks - 1, figsize=(10, 10))
     for i in range(nb_benchmarks - 1):
         for j in range(nb_benchmarks):
-            ax = axs[i, j]
+            if len(axs.shape) > 1:
+                ax = axs[i, j]
+            else:
+                ax = axs[j]
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_visible(False)
