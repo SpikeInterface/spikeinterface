@@ -302,7 +302,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         norms = d['norms']
         sparsities = d['sparsities']
 
-        d['stop_criteria'] = omp_min_sps * norms[:, np.newaxis] #np.sqrt(d['num_channels']*d['num_samples'])
+        d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_channels']*d['num_samples'])
 
         if d['fft_size'] is not None and 'cached_fft_kernels' not in d:
             d['cached_fft_kernels'] = {'fshape' : 0}
