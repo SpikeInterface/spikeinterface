@@ -142,7 +142,7 @@ def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_tra
 
 
 def compute_gaussian_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
-                                                     std: int, sampling_f: float, dt: int = 1):
+                                                     std: int, sampling_f: float, dt: int = 3):
     """
     Computes the Gaussian-filtered auto-correlogram from a given spike train.
 
@@ -173,7 +173,7 @@ def compute_gaussian_autocorrelogram_from_spiketrain(spike_train: np.ndarray, ma
 
 def compute_gaussian_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_train2: np.ndarray,
                                                       max_time: int, std: int, sampling_f: float,
-                                                      dt: int = 1):
+                                                      dt: int = 3):
     """
     Computes the Gaussian-filtered auto-correlogram from two spike trains.
 
@@ -266,9 +266,11 @@ if HAVE_NUMBA:
 
         spike_diffs = np.asarray(spike_diffs, dtype=np.int32)
         auto_corr = np.zeros(t_axis.shape, dtype=np.float64)
-        for spike_diff in spike_diffs:  # Numpy broadcasting might take too much RAM.
-            d = spike_diff - t_axis
-            auto_corr += np.exp(-d**2/(2*gaussian_std**2)) / (gaussian_std * np.sqrt(2*np.pi))
+        denominator = gaussian_std * np.sqrt(2*np.pi)
+        for i, t in enumerate(t_axis):  # Numpy broadcasting might take too much RAM.
+            spikes = spike_diffs[np.abs(spike_diffs - t) < 5*gaussian_std]
+            d = spikes - t
+            auto_corr[i] = np.sum(np.exp(-d**2/(2*gaussian_std**2)) / denominator)
 
         return auto_corr
 
@@ -294,9 +296,11 @@ if HAVE_NUMBA:
 
         spike_diffs = np.asarray(spike_diffs, dtype=np.int32)
         cross_corr = np.zeros(t_axis.shape, dtype=np.float64)
-        for spike_diff in spike_diffs:  # Numpy broadcasting might take too much RAM.
-            d = spike_diff - t_axis
-            cross_corr += np.exp(-d**2/(2*gaussian_std**2)) / (gaussian_std * np.sqrt(2*np.pi))
+        denominator = gaussian_std * np.sqrt(2*np.pi)
+        for i, t in enumerate(t_axis):  # Numpy broadcasting might take too much RAM.
+            spikes = spike_diffs[np.abs(spike_diffs - t) < 5*gaussian_std]
+            d = spikes - t
+            cross_corr[i] = np.sum(np.exp(-d**2/(2*gaussian_std**2)) / denominator)
 
         return cross_corr
 
@@ -491,7 +495,7 @@ def compute_correlograms_numba(sorting, window_ms: float = 100.0,
     return correlograms, bins
 
 
-def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std: float = 0.5, dt=None):
+def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std: float = 0.5, dt: float = 0.1):
     """
     TODO
     """
@@ -503,7 +507,7 @@ def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std:
 
     max_time = int(round(max_time * fs * 1e-3))
     gaussian_std = int(round(gaussian_std * fs * 1e-3))
-    dt = 1 if dt is None else int(round(dt * fs * 1e-3))
+    dt = int(round(dt * fs * 1e-3))
     t_axis = np.arange(-max_time, max_time+1, dt, dtype=np.int32)
 
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
