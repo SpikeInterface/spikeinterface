@@ -106,7 +106,7 @@ def compute_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: i
 def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_train2: np.ndarray,
                                              max_time: int, bin_size: int, sampling_f: float):
     """
-    Computes the cros-correlogram between two given spike trains.
+    Computes the cross-correlogram between two given spike trains.
 
     This implementation only works if you have numba installed, to accelerate the
     computation time.
@@ -139,6 +139,35 @@ def compute_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_tra
 
     return _compute_crosscorr_numba(spike_train1.astype(np.int64), spike_train2.astype(np.int64),
                                     max_time, bin_size, sampling_f)
+
+
+def compute_gaussian_autocorrelogram_from_spiketrain(spike_train: np.ndarray, max_time: int,
+                                                     std: int, sampling_f: float, dt: int = 1):
+    """
+    TODO
+    """
+    if not HAVE_NUMBA:
+        print("Error: numba is not installed.")
+        print("compute_gaussian_autocorrelogram_from_spiketrain cannot run without numba.")
+        return 0
+
+    t_axis = np.arange(-max_time, max_time+1, dt, dtype=np.int32)
+    return _compute_autocorr_gaussian(spike_train.astype(np.int64), t_axis, std)
+
+
+def compute_gaussian_crosscorrelogram_from_spiketrain(spike_train1: np.ndarray, spike_train2: np.ndarray,
+                                                      max_time: int, std: int, sampling_f: float,
+                                                      dt: int = 1):
+    """
+    TODO
+    """
+    if not HAVE_NUMBA:
+        print("Error: numba is not installed.")
+        print("compute_gaussian_crosscorrelogram_from_spiketrain cannot run without numba.")
+        return 0
+
+    t_axis = np.arange(-max_time, max_time+1, dt, dtype=np.int32)
+    return _compute_crosscorr_gaussian(spike_train1.astype(np.int64), spike_train2.astype(np.int64), t_axis, std)
 
 
 if HAVE_NUMBA:
@@ -186,6 +215,57 @@ if HAVE_NUMBA:
                 cross_corr[n_bins//2 + bin] += 1
 
         return cross_corr, bins
+
+    @numba.jit((numba.int64[::1], numba.int32[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    def _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std):
+        spike_diffs = numba.typed.List()
+        max_t = t_axis[-1] + 3*gaussian_std
+
+        for i in range(len(spike_train)):
+            for j in range(i+1, len(spike_train)):
+                diff = spike_train[j] - spike_train[i]
+
+                if diff > max_t:
+                    break
+
+                spike_diffs.append(diff)
+                spike_diffs.append(-diff)
+
+        spike_diffs = np.asarray(spike_diffs, dtype=np.int32)
+        auto_corr = np.zeros(t_axis.shape, dtype=np.float64)
+        for spike_diff in spike_diffs:  # Numpy broadcasting might take too much RAM.
+            d = spike_diff - t_axis
+            auto_corr += np.exp(-d**2/(2*gaussian_std**2)) / (gaussian_std * np.sqrt(2*np.pi))
+
+        return auto_corr
+
+    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32),
+               nopython=True, nogil=True, cache=True)
+    def _compute_crosscorr_gaussian(spike_train1, spike_train2, t_axis, gaussian_std):
+        spike_diffs = numba.typed.List()
+        min_t = t_axis[0] - 3*gaussian_std
+        max_t = t_axis[-1] + 3*gaussian_std
+
+        start_j = 0
+        for i in range(len(spike_train1)):
+            for j in range(start_j, len(spike_train2)):
+                diff = spike_train1[i] - spike_train2[j]
+
+                if diff > -min_t:
+                    start_j += 1
+                    continue
+                if diff < max_t:
+                    break
+
+                spike_diffs.append(diff)
+
+        spike_diffs = np.asarray(spike_diffs, dtype=np.int32)
+        cross_corr = np.zeros(t_axis.shape, dtype=np.float64)
+        for spike_diff in spike_diffs:  # Numpy broadcasting might take too much RAM.
+            d = spike_diff - t_axis
+            cross_corr += np.exp(-d**2/(2*gaussian_std**2)) / (gaussian_std * np.sqrt(2*np.pi))
+
+        return cross_corr
 
 
 def compute_correlograms(waveform_or_sorting_extractor, 
