@@ -15,7 +15,10 @@ class TimeseriesPlotter(MplPlotter):
         self.make_mpl_figure(**backend_kwargs)
         ax = self.ax
         n = len(dp.channel_ids)
-        y_locs = dp.channel_locations[:, 1]
+        if dp.channel_locations is not None:
+            y_locs = dp.channel_locations[:, 1]
+        else:
+            y_locs = np.arange(n)
         min_y = np.min(y_locs)
         max_y = np.max(y_locs)
 
