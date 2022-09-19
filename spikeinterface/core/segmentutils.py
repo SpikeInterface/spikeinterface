@@ -369,7 +369,7 @@ class SplitSegmentSorting(BaseSorting):
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
 
-        self._kwargs = {'parent_sorting': parent_sorting,
+        self._kwargs = {'parent_sorting': parent_sorting.to_dict(),
                         'recording_list': [recording.to_dict() for recording in recording_list]}
 
 split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name='split_sorting')

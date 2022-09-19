@@ -32,8 +32,7 @@ class BenchmarkClustering:
         self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
         self.exhaustive_gt = exhaustive_gt
-        self.recording_f = bandpass_filter(self.recording,  dtype='float32')
-        self.recording_f = common_reference(self.recording_f)
+        self.recording_f = recording
         self.sampling_rate = self.recording_f.get_sampling_frequency()
         self.job_kwargs = job_kwargs
 
@@ -171,7 +170,7 @@ class BenchmarkClustering:
                     print(f"Extracting waveforms for {label}")
 
                 self.waveforms[label] = extract_waveforms(self.recording_f, sorting, tmp_folder, load_if_exists=True,
-                                       ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500,
+                                       ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500, return_scaled=False, 
                                        **self.job_kwargs)
 
                 #self.pcas[label] = compute_principal_components(self.waveforms[label], load_if_exists=True,
@@ -226,6 +225,7 @@ class BenchmarkClustering:
                 means[unit_id] = x_mean, y_mean
                 covs[unit_id] = xycov
                 ax.annotate(unit_id, (x_mean, y_mean))
+                ax.scatter([x_mean], [y_mean], s=50, c='k')
             else:
                 ax.scatter(xk, yk, s=s, color='k', alpha=alpha, marker=".")
 
@@ -298,6 +298,21 @@ class BenchmarkClustering:
         if self.exhaustive_gt:
             ax.set_xlim(xlim)
             ax.set_ylim(ylim)
+            ax.set_yticks([], [])
+
+
+    def plot_found_clusters(self, show_probe=True, show_ellipses=True):
+
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 10))
+        fig.suptitle(f'Clustering results with {self.method}')
+        ax.set_title('Found clusters')
+        if show_probe:
+            plot_probe_map(self.recording_f, ax=ax)
+        ax.scatter(self.positions['x'][self.noise], self.positions['y'][self.noise], c='k', s=1, alpha=0.1)
+        self._scatter_clusters(self.positions['x'][~self.noise], self.positions['y'][~self.noise], self.clustering, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
+        
+        ax.set_xlabel('x')
+        if self.exhaustive_gt:
             ax.set_yticks([], [])
 
 

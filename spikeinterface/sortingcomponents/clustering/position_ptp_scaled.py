@@ -62,7 +62,7 @@ class PositionPTPScaledClustering:
             ptps, = compute_features_from_peaks(recording,
                 peaks,
                 ['ptp'],
-                feature_params={'ptp' : {'all_channel': True}},
+                feature_params={'ptp' : {'all_channels': True}},
                 **d["job_kwargs"])
         else:
             ptps = d["ptps"]

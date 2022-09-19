@@ -92,11 +92,10 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
         )
     else:
         init_args = (recording, peaks, steps)
-
-    processor = ChunkRecordingExecutor(recording,
-                                       _compute_peak_step_chunk, _init_worker_peak_piepline,
-                                       init_args, handle_returns=True, job_name=job_name, 
-                                       **job_kwargs)
+    
+    processor = ChunkRecordingExecutor(recording, 
+                        _compute_peak_step_chunk, _init_worker_peak_pipeline,
+                        init_args, handle_returns=True, job_name=job_name, **job_kwargs)
 
     outputs = processor.run()
     # outputs is a list of tuple
@@ -114,7 +113,7 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
         return outs_concat
 
 
-def _init_worker_peak_piepline(recording, peaks, steps):
+def _init_worker_peak_pipeline(recording, peaks, steps):
     """Initialize worker for localizing peaks."""
 
     if isinstance(recording, dict):
@@ -170,6 +169,9 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     else:
         waveforms = None
 
+    #import scipy
+    #waveforms = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
+
     outs = tuple()
     for step in worker_ctx['steps']:
         if step.need_waveforms:
@@ -191,6 +193,6 @@ def get_nbefore_nafter_from_steps(steps):
             if nbefore is None:
                 nbefore, nafter = step.nbefore, step.nafter
             else:
-                assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore}-{step.nbefore}'
-                assert nafter == step.nafter, f'Step do not have the same nbefore {nafter}-{step.nafter}'
+                assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore}: {step.nbefore}'
+                assert nafter == step.nafter, f'Step do not have the same nbefore {nafter}: {step.nafter}'
     return nbefore, nafter
