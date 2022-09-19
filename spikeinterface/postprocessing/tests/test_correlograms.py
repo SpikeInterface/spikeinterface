@@ -79,9 +79,9 @@ def test_compute_autocorr_gaussian():
     freq = 5        # Hz
     duration = 3600 # s
     t_axis = np.arange(-1500, 1501, dtype=np.int32)
-    expectation = duration * freq / fs
+    expectation = duration * freq**2 / fs
 
-    spike_train = np.random.uniform(low=0.0, high=fs*duration, size=duration*freq).astype(np.int64)
+    spike_train = np.sort(np.random.uniform(low=0.0, high=fs*duration, size=duration*freq).astype(np.int64))
     corr1 = _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std=15)
     corr2 = _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std=30)
 
