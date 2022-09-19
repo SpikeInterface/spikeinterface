@@ -32,5 +32,5 @@ dependencies:
     - MEArec>=1.8
     - spikeinterface[full, widgets]
     - spikeinterface-gui
-    - tridesclous>=1.6.5
+    - tridesclous>=1.6.6.1
     # - phy==2.0b5
