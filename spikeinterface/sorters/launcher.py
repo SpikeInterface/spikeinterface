@@ -141,6 +141,7 @@ def run_sorter_by_property(sorter_name,
     aggregate_sorting = aggregate_units(sorting_list)
     aggregate_sorting.set_property(
         key=grouping_property, values=grouping_property_values)
+    aggregate_sorting.register_recording(recording)
 
     return aggregate_sorting
 

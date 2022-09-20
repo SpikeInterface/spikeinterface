@@ -2,11 +2,13 @@ function kilosort3_master(fpath, kilosortPath)
     try
         set(groot,'defaultFigureVisible', 'off');
 
-        % prepare for kilosort execution
-        addpath(genpath(kilosortPath));
+        if ~isdeployed
+            % prepare for kilosort execution
+            addpath(genpath(kilosortPath));
 
-        % add npy-matlab functions (copied in the output folder)
-        addpath(genpath(fpath));
+            % add npy-matlab functions (copied in the output folder)
+            addpath(genpath(fpath));
+        end
 
         % Load channel map file
         load(fullfile(fpath, 'chanMap.mat'));
@@ -20,7 +22,7 @@ function kilosort3_master(fpath, kilosortPath)
         % run data registration
         if isfield(ops, 'do_correction')
             do_correction = ops.do_correction;
-        else 
+        else
             do_correction = 1;
         end
 
