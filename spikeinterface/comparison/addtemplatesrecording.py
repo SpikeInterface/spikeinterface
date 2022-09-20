@@ -13,7 +13,7 @@ class AddTemplatesRecording(BaseRecording):
     ----------
     sorting: BaseSorting
         Sorting object containing all the units and their spike train.
-    templates: np.ndarray[n_units, time, n_channels]
+    templates: np.ndarray[n_units, n_samples, n_channels]
         Array containing the templates to inject for all the units.
     nbefore: list[int] | None
         Where is the center of the template for each unit?
