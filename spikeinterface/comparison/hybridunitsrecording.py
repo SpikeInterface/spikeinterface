@@ -1,27 +1,30 @@
 from typing import List, Union
 import numpy as np
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, NpzSortingExtractor
-from spikeinterface.extractors import synthesize_random_firings
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, NumpySorting
+from spikeinterface.comparison import AddTemplatesRecording
+from spikeinterface.extractors.toy_example import synthesize_random_firings
 
 
-class HybridUnitsRecording(BaseRecording):
+class HybridUnitsRecording(AddTemplatesRecording):
 
-    def __init__(self, target_recording: BaseRecording, templates: np.ndarray, n_before: Union[List[int], None] = None,
-                 sorting: Union[BaseSorting, None] = None, frequency: float = 10, amplitude_std: float = 0.0,
-                 refrac_period: float = 2.0):
+    def __init__(self, templates: np.ndarray, target_recording: Union[BaseRecording, None] = None,
+                 n_before: Union[List[int], int, None] = None, frequency: float = 10,
+                 amplitude_std: float = 0.0, refrac_period: float = 2.0):
         """
         TODO
         """
 
-        # Propagate information from the target recording.
-        BaseRecording.__init__(self, target_recording.sampling_frequency, target_recording.channel_ids, target_recording.dtype)
-        target_recording.copy_metadata(self)
+        t_max = target_recording.get_num_frames() # TODO: What if target_recording is None
+        fs = target_recording.sampling_frequency # TODO: What if target_recording is None
+        n_units = len(templates)
 
-        assert target_recording.get_num_segments() == 1 # For now, make things simple with 1 segment.
+        spike_times, spike_labels = synthesize_random_firings(num_units=n_units, sampling_frequency=fs, duration=t_max) # TODO: refrac_period missing
+        spike_trains = {unit_id: spike_times[spike_labels == unit_id] for unit_id in range(n_units)}
+        sorting = NumpySorting.from_dict(spike_trains)
 
-        recording_segment = HybridUnitsRecordingSegment(target_recording._recording_segments[0], templates,
-                                                        n_before, sorting, frequency, amplitude_std, refrac_period)
-        self.add_recording_segment(recording_segment)
+        amplitude_factor = [np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id))) for unit_id in sorting.unit_ids]
+
+        AddTemplatesRecording.__init__(self, sorting, templates, nbefore, amplitude_factor, target_recording, t_max)
 
 
 
@@ -30,28 +33,28 @@ class HybridUnitsRecordingSegment(BaseRecordingSegment):
     def __init__(self, target_recording: BaseRecordingSegment, templates: np.ndarray, n_before: Union[List[int], None] = None,
                  sorting: Union[BaseSorting, None] = None, frequency: float = 10, amplitude_std: float = 0.0,
                  refrac_period: float = 2.0):
-    """
-    TODO
-    """
+        """
+        TODO
+        """
 
-    self.parent_recording = target_recording
-    self.templates = templates
-    n_units = len(templates)
+        self.parent_recording = target_recording
+        self.templates = templates
+        n_units = len(templates)
 
-    if sorting is None: # TODO: Move out of toy_example for better spike train generation.
-        t_max = recording.get_num_frames()
-        fs = recording.get_sampling_frequency()
+        if sorting is None: # TODO: Move out of toy_example for better spike train generation.
+            t_max = recording.get_num_frames()
+            fs = recording.get_sampling_frequency()
 
-        spike_times, spike_labels = synthesize_random_firings(num_units=n_units, sampling_frequency=fs, duration=t_max)
-        spike_trains = {unit_id: spike_times[spike_labels == unit_id] for unit_id in range(n_units)}
+            spike_times, spike_labels = synthesize_random_firings(num_units=n_units, sampling_frequency=fs, duration=t_max)
+            spike_trains = {unit_id: spike_times[spike_labels == unit_id] for unit_id in range(n_units)}
 
-        npz_file = "TODO" # np.savez(file, **spike_trains)
-        sorting = NpzSortingExtractor(npz_file)
-    self.sorting = sorting
+            npz_file = "TODO" # np.savez(file, **spike_trains)
+            sorting = NpzSortingExtractor(npz_file)
+        self.sorting = sorting
 
-    amplitudes = {unit_id: np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id)))
-                  for unit_id in range(n_units)}
-    self.amplitude_factor = np.where(amplitudes < 0, 0, amplitudes)
+        amplitudes = {unit_id: np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id)))
+                      for unit_id in range(n_units)}
+        self.amplitude_factor = np.where(amplitudes < 0, 0, amplitudes)
 
 
     def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None,

@@ -14,7 +14,7 @@ class AddTemplatesRecording(BaseRecording):
         Sorting object containing all the units and their spike train.
     templates: np.ndarray[n_units, n_samples, n_channels]
         Array containing the templates to inject for all the units.
-    nbefore: list[int] | None
+    nbefore: list[int] | int | None
         Where is the center of the template for each unit?
         If None, will default to the highest peak.
     amplitude_factor: list[list[float]] | int | None
@@ -106,26 +106,25 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
         for spike in spike_vector:
             t = spike['sample_ind']
             unit_ind = spike['unit_ind']
-
+            # spike_nb = np.argmax(self.spike_vector[self.spike_vector['unit_ind'] == unit_ind]['sample_ind'] == t)  # TODO: Very slow
             template = self.templates[unit_ind, :, channel_indices]
-            m = self.nbefore[unit_ind]
 
-            # Add template to traces
-            start_traces = t - m - start_frame
-            end_traces = start_traces + self.templates.shape[1]
+            start_traces = t - self.nbefore[unit_ind] - start_frame
+            end_traces = start_traces + template.shape[0]
             if start_traces >= end_frame-start_frame or end_traces <= 0:
                 continue
 
             start_template = 0
-            end_template = self.templates.shape[1]
+            end_template = template.shape[0]
 
             if start_traces < 0:
                 start_template = -start_traces
                 start_traces = 0
             if end_traces > end_frame - start_frame:
-                end_template = self.templates.shape[1] + end_frame - start_frame - end_traces
+                end_template = template.shape[0] + end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
-            traces[start_traces : end_traces] += template[start_template : end_template] # TODO: * self.amplitude_factor[unit_ind]
+            traces[start_traces : end_traces] += template[start_template : end_template]
+            # traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64)* self.amplitude_factor[unit_ind][spike_nb]).astype(self.dtype)
 
         return traces
