@@ -174,7 +174,7 @@ class BaseExtractor:
             it specifies the how the missing values should be filled, by default None.
             The missing_value has to be specified for types int and unsigned int.
         """
-        default_missing_values = {"f": np.nan, "S": "", "U": ""}
+        default_missing_values = {"f": np.nan, "O": None, "S": "", "U": ""}
         
         if values is None:
             if key in self._properties:
