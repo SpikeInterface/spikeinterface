@@ -27,15 +27,20 @@ def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segmen
     chunk_list: np.array
         Array of concatenate chunks per segment
     """
-    # TODO: if segment have differents length make another sampling that dependant on the lneght of the segment
-    # Should be done by chnaging kwargs with total_num_chunks=XXX and total_duration=YYYY
-    # And randomize the number of chunk per segment wieighted by segment duration
+    # TODO: if segment have differents length make another sampling that dependant on the length of the segment
+    # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
+    # And randomize the number of chunk per segment weighted by segment duration
+
+    # check chunk size    
+    for segment_index in range(recording.get_num_segments()):
+        assert chunk_size < recording.get_num_samples(segment_index), (f"chunk_size is greater than the number "
+                                                                        f"of samples for segment index {segment_index}. "
+                                                                        f"Use a smaller chunk_size!")
 
     chunk_list = []
     for segment_index in range(recording.get_num_segments()):
         length = recording.get_num_frames(segment_index)
-        random_starts = np.random.RandomState(seed=seed).randint(0,
-                                                                 length - chunk_size, size=num_chunks_per_segment)
+        random_starts = np.random.RandomState(seed=seed).randint(0, length - chunk_size, size=num_chunks_per_segment)
         for start_frame in random_starts:
             chunk = recording.get_traces(start_frame=start_frame,
                                          end_frame=start_frame + chunk_size,
