@@ -15,4 +15,5 @@ from .collisionstudy import CollisionGTStudy
 from .correlogramstudy import CorrelogramGtStudy
 from .studytools import aggregate_performances_table
 from .addtemplatesrecording import AddTemplatesRecording, AddTemplatesRecordingSegment
+from .hybridspikesrecording import HybridSpikesRecording
 from .hybridunitsrecording import HybridUnitsRecording
