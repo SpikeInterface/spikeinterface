@@ -19,7 +19,7 @@ class HybridSpikesRecording(AddTemplatesRecording):
 
 	# TODO: May be a better way of creating this?		
 	def _generate_injected_sorting(sorting: BaseSorting, t_max: int, max_n_spikes: int,
-								   max_frac_spikes: float, refractory_period: float) -> si.NumpySorting:
+								   max_frac_spikes: float, refractory_period: float) -> NumpySorting:
 		injected_spike_trains = {}
 		t_r = int(round(refractory_period * sorting.get_sampling_frequency() * 1e-3))
 
