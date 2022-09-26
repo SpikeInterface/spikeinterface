@@ -21,6 +21,8 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
             sorting1_name = 'sorting1'
         if sorting2_name is None:
             sorting2_name = 'sorting2'
+        assert sorting1.get_num_segments() == sorting2.get_num_segments(), ("The two sortings must have the same "
+                                                                            "number of segments! ")
 
         BasePairComparison.__init__(self, object1=sorting1, object2=sorting2, 
                                     name1=sorting1_name, name2=sorting2_name,
