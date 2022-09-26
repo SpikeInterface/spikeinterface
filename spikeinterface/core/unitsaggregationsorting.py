@@ -51,22 +51,33 @@ class UnitsAggregationSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
+        annotation_keys = sorting_list[0].get_annotation_keys()
+        for annotation_name in annotation_keys:
+            if not all([annotation_name in sort.get_annotation_keys() for sort in sorting_list]):
+                continue
+
+            annotations = np.array([sort.get_annotation(annotation_name, copy=False) for sort in sorting_list])
+            if np.all(annotations == annotations[0]):
+                self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
+
         property_keys = sorting_list[0].get_property_keys()
         property_dict = {}
         for prop_name in property_keys:
-            if all([prop_name in sort.get_property_keys() for sort in sorting_list]):
-                for i_s, sort in enumerate(sorting_list):
-                    prop_value = sort.get_property(prop_name)
-                    if i_s == 0:
-                        property_dict[prop_name] = prop_value
-                    else:
-                        try:
-                            property_dict[prop_name] = np.concatenate((property_dict[prop_name],
-                                                                       sort.get_property(prop_name)))
-                        except Exception as e:
-                            print(f"Skipping property '{prop_name}' for shape inconsistency")
-                            del property_dict[prop_name]
-                            break
+            if not all([prop_name in sort.get_property_keys() for sort in sorting_list]):
+                continue  # TODO: Set property if missing_value can be inferred.
+
+            for i_s, sort in enumerate(sorting_list):
+                prop_value = sort.get_property(prop_name)
+                if i_s == 0:
+                    property_dict[prop_name] = prop_value
+                else:
+                    try:
+                        property_dict[prop_name] = np.concatenate((property_dict[prop_name],
+                                                                   sort.get_property(prop_name)))
+                    except Exception as e:
+                        print(f"Skipping property '{prop_name}' for shape inconsistency")
+                        del property_dict[prop_name]
+                        break
 
         for prop_name, prop_values in property_dict.items():
             self.set_property(key=prop_name, values=prop_values)

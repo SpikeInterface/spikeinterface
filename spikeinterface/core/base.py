@@ -201,7 +201,7 @@ class BaseExtractor:
         
                     if missing_value is None:
                         if dtype_kind not in default_missing_values.keys():
-                            raise Exception("For values dtypes other than float, string or unicode, the missing value "
+                            raise Exception("For values dtypes other than float, string, object or unicode, the missing value "
                                             "cannot be automatically inferred. Please specify it with the 'missing_value' "
                                             "argument.")
                         else:
