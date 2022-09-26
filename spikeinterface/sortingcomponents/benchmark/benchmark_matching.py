@@ -35,8 +35,8 @@ class BenchmarkMatching:
         if self.tmp_folder is None:
             self.tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
 
-        self.we = extract_waveforms(self.recording_f, self.gt_sorting, self.tmp_folder, load_if_exists=True,
-                                   ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500, return_scaled=False, 
+        self.we = extract_waveforms(self.recording_f, self.gt_sorting, self.tmp_folder, load_if_exists=False,
+                                   ms_before=2.5, ms_after=2.5, max_spikes_per_unit=500, return_scaled=False,
                                    **self.job_kwargs)
 
         self.method_kwargs.update({'waveform_extractor' : self.we})
@@ -48,10 +48,10 @@ class BenchmarkMatching:
 
     def run(self):
         t_start = time.time()
-        spikes = find_spikes_from_templates(self.recording_f, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
+        self.spikes = find_spikes_from_templates(self.recording_f, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
         self.run_time = time.time() - t_start
-        sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], self.sampling_rate)
-        self.comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
+        self.sorting = NumpySorting.from_times_labels(self.spikes['sample_ind'], self.spikes['cluster_ind'], self.sampling_rate)
+        self.comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
 
     def plot(self, title=None):
@@ -82,7 +82,7 @@ class BenchmarkMatching:
 
         ax = axs[0, 1]
         if self.exhaustive_gt:
-            plot_comparison_collision_by_similarity(self.comp, self.templates, ax=ax, show_legend=True, mode='lines')
+            plot_comparison_collision_by_similarity(self.comp, self.templates, ax=ax, show_legend=True, mode='lines', good_only=False)
 
 def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
