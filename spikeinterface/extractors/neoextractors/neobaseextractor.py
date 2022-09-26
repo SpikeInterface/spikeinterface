@@ -307,6 +307,9 @@ class NeoSortingSegment(BaseSortingSegment):
         return spike_frames
 
 
+_neo_event_dtype = np.dtype([("time", "float64"), ("duration", "float64"), ("label", "<U100")])
+
+
 class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
     handle_event_frame_directly = False
 
@@ -317,16 +320,17 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
 
         event_channels = self.neo_reader.header['event_channels']
 
-        channel_ids = event_channels['id']
+        channel_ids = event_channels['name']
 
-        BaseEvent.__init__(self, channel_ids, structured_dtype=False)
+        BaseEvent.__init__(self, channel_ids, structured_dtype=_neo_event_dtype)
 
         nseg = self.neo_reader.segment_count(block_index=0)
         for segment_index in range(nseg):
             if self.handle_event_frame_directly:
                 t_start = None
             else:
-                t_start = self.neo_reader.get_signal_t_start(self.block_index, segment_index)
+                t_start = self.neo_reader.get_signal_t_start(self.block_index, segment_index,
+                                                             stream_index=0)
 
             event_segment = NeoEventSegment(self.neo_reader, self.block_index, segment_index,
                                             t_start)
@@ -342,8 +346,8 @@ class NeoEventSegment(BaseEventSegment):
         self._t_start = t_start
         self._natural_ids = None
 
-    def get_event_times(self, channel_id, start_frame, end_frame):
-        channel_index = list(self.neo_reader.header['event_channels']['id']).index(channel_id)
+    def get_event_times(self, channel_id, start_time, end_time):
+        channel_index = list(self.neo_reader.header['event_channels']['name']).index(channel_id)
 
         event_timestamps, event_duration, event_labels = self.neo_reader.get_event_timestamps(
             block_index=self.block_index,
@@ -351,6 +355,16 @@ class NeoEventSegment(BaseEventSegment):
             event_channel_index=channel_index)
 
         event_times = self.neo_reader.rescale_event_timestamp(event_timestamps,
-                                                              dtype='float64', event_channel_index=channel_index)
-
-        return event_times
+                                                              dtype='float64', 
+                                                              event_channel_index=channel_index)
+        
+        event = np.zeros(len(event_times), dtype=_neo_event_dtype)
+        event["time"] = event_times
+        event["duration"] = event_duration
+        event["label"] = event_labels
+        
+        if start_time is not None:
+            event = event[event["time"] >= start_time]
+        if end_time is not None:
+            event = event[event["time"] < end_time]
+        return event
