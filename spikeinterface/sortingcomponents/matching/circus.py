@@ -272,13 +272,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         new_overlaps = []
 
-        d['gram'] = np.zeros((num_templates, num_templates), dtype=np.float32)
-
         for i in range(num_templates):
             data = [overlaps[j][i, :].T for j in range(size)]
             data = scipy.sparse.hstack(data)
             new_overlaps += [data]
-            d['gram'][i, i] = data[i, num_samples]
 
         d['overlaps'] = new_overlaps
 
@@ -457,12 +454,12 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                      check_finite=False)
 
                 v = nrm2(M[num_selection, :num_selection]) ** 2
-                Lkk = d['gram'][best_cluster_ind, best_cluster_ind] - v
+                Lkk = 1 - v
                 if Lkk <= omp_tol:  # selected atoms are dependent
                     break
                 M[num_selection, num_selection] = np.sqrt(Lkk)
             else:
-                M[0, 0] = d['gram'][best_cluster_ind, best_cluster_ind]
+                M[0, 0] = 1
 
             all_selections[:, num_selection] = [best_cluster_ind, peak_index]
             num_selection += 1
