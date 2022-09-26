@@ -216,7 +216,6 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     peak_shifts = worker_ctx['peak_shifts']
     
     seg_size = recording.get_num_samples(segment_index=segment_index)
-    unit_ids = worker_ctx['sorting'].unit_ids
 
     spike_times, spike_labels = all_spikes[segment_index]
     d = np.diff(spike_times)
@@ -225,8 +224,8 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     i0 = np.searchsorted(spike_times, start_frame)
     i1 = np.searchsorted(spike_times, end_frame, side="right")
     
-    n_spike = i1 - i0
-    amplitudes = np.zeros(n_spike, dtype=recording.get_dtype())
+    n_spikes = i1 - i0
+    amplitudes = np.zeros(n_spikes, dtype=recording.get_dtype())
     
     if i0 != i1:
         # some spike in the chunk
@@ -244,7 +243,7 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
         
         # prevent border accident due to shift
         sample_inds[sample_inds < 0] = 0
-        sample_inds[sample_inds >= seg_size] = seg_size
+        sample_inds[sample_inds >= seg_size] = seg_size - 1
         
         first = np.min(sample_inds)
         last = np.max(sample_inds)
