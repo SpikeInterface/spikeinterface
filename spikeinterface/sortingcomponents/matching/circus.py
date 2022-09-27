@@ -236,6 +236,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             else:
                 template = templates[count]
             template, active_channels = cls._sparsify_template(template, d['sparsify_threshold'], d['noise_levels'])
+            template -= template.mean()
             d['sparsities'][count] = active_channels
             d['norms'][count] = np.linalg.norm(template)
             d['templates'][count] = template[:, active_channels]/d['norms'][count]
@@ -268,7 +269,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
 
             if delay < num_samples:
-                overlaps[size - delay] = overlaps[delay].T.tocsr()
+                overlaps[size - delay + 1] = overlaps[delay].T.tocsr()
 
         new_overlaps = []
 
@@ -435,8 +436,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             if num_selection > 0:
 
                 delta_t = selection[1] - peak_index
-                idx = np.where((delta_t < neighbor_window) & (delta_t >= -num_samples))[0]
-                myline = neighbor_window + delta_t[idx] + 1
+                idx = np.where((delta_t < neighbor_window) & (delta_t > -num_samples))[0]
+                myline = num_samples + delta_t[idx]
 
                 if best_cluster_ind not in cached_overlaps.keys():
                     cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
