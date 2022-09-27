@@ -288,8 +288,8 @@ def test_dummy_objects():
     we = extract_waveforms(recording, sorting, wf_folder,
                            use_relative_path=True)
 
-    shutil.rmtree(cache_folder / "recording_dummy")
-    shutil.rmtree(cache_folder / "sorting_dummy")
+    (cache_folder / "recording_dummy").rename(cache_folder / "recording_dummy2")
+    (cache_folder / "sorting_dummy").rename(cache_folder / "sorting_dummy2")
 
     # move all to a separate folder
     we_loaded = WaveformExtractor.load_from_folder(wf_folder)
@@ -302,8 +302,8 @@ def test_dummy_objects():
 
 
 if __name__ == '__main__':
-    # test_WaveformExtractor()
-    # test_extract_waveforms()
-    # test_sparsity()
-    # test_portability()
+    test_WaveformExtractor()
+    test_extract_waveforms()
+    test_sparsity()
+    test_portability()
     test_dummy_objects()
