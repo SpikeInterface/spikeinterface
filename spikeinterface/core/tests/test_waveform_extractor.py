@@ -5,6 +5,7 @@ import numpy as np
 
 from spikeinterface.core.testing_tools import generate_recording, generate_sorting
 from spikeinterface import WaveformExtractor, extract_waveforms
+from spikeinterface.core.dummy import DummyRecording, DummySorting
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -247,8 +248,62 @@ def test_portability():
         assert np.allclose(wf, wf_loaded)
 
 
+def test_dummy_objects():
+    durations = [30, 40]
+    sampling_frequency = 30000.
+
+    # 2 segments
+    num_channels = 2
+    recording = generate_recording(num_channels=num_channels, durations=durations,
+                                   sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=True)
+    num_units = 15
+    sorting = generate_sorting(
+        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
+
+    # recording and sorting are not dumpable
+    wf_folder = cache_folder / "wf_dummy1"
+
+    # save with relative paths
+    we = extract_waveforms(recording, sorting, wf_folder,
+                           use_relative_path=True)
+
+    # move all to a separate folder
+    we_loaded = WaveformExtractor.load_from_folder(wf_folder)
+
+    assert we_loaded.recording is not None
+    assert we_loaded.sorting is not None
+    print(we_loaded.recording, we_loaded.sorting)
+    assert isinstance(we_loaded.recording, DummyRecording)
+    assert isinstance(we_loaded.sorting, DummySorting)
+
+    # now save and delete saved file
+    recording = recording.save(folder=cache_folder / "recording_dummy")
+    sorting = sorting.save(folder=cache_folder / "sorting_dummy")
+
+    # recording and sorting are not dumpable
+    wf_folder = cache_folder / "wf_dummy2"
+
+    # save with relative paths
+    we = extract_waveforms(recording, sorting, wf_folder,
+                           use_relative_path=True)
+
+    shutil.rmtree(cache_folder / "recording_dummy")
+    shutil.rmtree(cache_folder / "sorting_dummy")
+
+    # move all to a separate folder
+    we_loaded = WaveformExtractor.load_from_folder(wf_folder)
+
+    assert we_loaded.recording is not None
+    assert we_loaded.sorting is not None
+    print(we_loaded.recording, we_loaded.sorting)
+    assert isinstance(we_loaded.recording, DummyRecording)
+    assert isinstance(we_loaded.sorting, DummySorting)
+
+
 if __name__ == '__main__':
-    test_WaveformExtractor()
-    test_extract_waveforms()
-    test_sparsity()
-    test_portability()
+    # test_WaveformExtractor()
+    # test_extract_waveforms()
+    # test_sparsity()
+    # test_portability()
+    test_dummy_objects()

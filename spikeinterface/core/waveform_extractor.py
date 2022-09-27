@@ -9,7 +9,7 @@ from .base import load_extractor
 
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc
-from .dummy import dummy_recording, dummy_sorting
+from .dummy import dummy_recording, dummy_sorting, DummyRecording
 
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 
@@ -62,9 +62,11 @@ class WaveformExtractor:
             np.testing.assert_almost_equal(recording.get_sampling_frequency(),
                                            sorting.get_sampling_frequency(), decimal=2)
 
-            if not recording.is_filtered():
-                raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
-                                'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
+            if not isinstance(recording, DummyRecording):
+                if not recording.is_filtered():
+                    raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
+                                    'If the recording is already filtered, you can also do '
+                                    '`recording.annotate(is_filtered=True)')
         else:
             warn("Recording and Sorting objects will not be available for additional computations!")
 
