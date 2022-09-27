@@ -115,29 +115,15 @@ def check_json(d):
                         v_arr = v_arr.astype('int32')
                     if v_arr.dtype == np.dtype('float64'):
                         v_arr = v_arr.astype('float32')
-                    if len(v_arr.shape) == 1:
-                        if 'int' in str(v_arr.dtype):
-                            v_arr = [int(v_el) for v_el in v_arr]
-                            dc[k] = v_arr
-                        elif 'float' in str(v_arr.dtype):
-                            v_arr = [float(v_el) for v_el in v_arr]
-                            dc[k] = v_arr
-                        elif isinstance(v_arr[0], str):
-                            v_arr = [str(v_el) for v_el in v_arr]
-                            dc[k] = v_arr
+
+                    if v_arr.dtype.kind in ("u", "i", "f", "b", "S", "U"):
+                        if len(v_arr.shape) < 4:
+                            dc[k] = v_arr.tolist()
                         else:
-                            print(f'Skipping field {k}: only 1D arrays of int, float, or str types can be serialized')
-                    elif len(v_arr.shape) == 2:
-                        if 'int' in str(v_arr.dtype):
-                            v_arr = [[int(v_el) for v_el in v_row] for v_row in v_arr]
-                            dc[k] = v_arr
-                        elif 'float' in str(v_arr.dtype):
-                            v_arr = [[float(v_el) for v_el in v_row] for v_row in v_arr]
-                            dc[k] = v_arr
-                        else:
-                            print(f'Skipping field {k}: only 2D arrays of int or float type can be serialized')
+                            print(f"Skipping field {k}: only 1/2/3d arraysc can be serialized")
                     else:
-                        print(f"Skipping field {k}: only 1D and 2D arrays can be serialized")
+                        print(f"Dtype {v_arr.dtype} can't be serialized. Skipping!")
+                        del dc[k]
             else:
                 dc[k] = list(v)
     return dc
