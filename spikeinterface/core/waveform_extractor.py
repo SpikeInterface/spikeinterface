@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
 import json
+from warnings import warn
 
 import numpy as np
 
@@ -8,9 +9,12 @@ from .base import load_extractor
 
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc
+from .dummy import dummy_recording, dummy_sorting
+
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 
 _possible_template_modes = ('average', 'std', 'median')
+
 
 class WaveformExtractor:
     """
@@ -20,11 +24,11 @@ class WaveformExtractor:
     Parameters
     ----------
     recording: Recording
-        The recording object
+        The recording object (or None)
     sorting: Sorting
-        The sorting object
+        The sorting object (or None)
     folder: Path
-        The folder where waveforms are cached
+        The folder where waveforms are cached (or None for memory mode)
 
     Returns
     -------
@@ -51,14 +55,18 @@ class WaveformExtractor:
     """
     extensions = []
     def __init__(self, recording, sorting, folder=None):
-        assert recording.get_num_segments() == sorting.get_num_segments(), \
-            "The recording and sorting objects must have the same number of segments!"
-        np.testing.assert_almost_equal(recording.get_sampling_frequency(),
-                                       sorting.get_sampling_frequency(), decimal=2)
+        if recording is not None and sorting is not None:
+            assert sorting is not None
+            assert recording.get_num_segments() == sorting.get_num_segments(), \
+                "The recording and sorting objects must have the same number of segments!"
+            np.testing.assert_almost_equal(recording.get_sampling_frequency(),
+                                           sorting.get_sampling_frequency(), decimal=2)
 
-        if not recording.is_filtered():
-            raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
-                            'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
+            if not recording.is_filtered():
+                raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
+                                'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
+        else:
+            warn("Recording and Sorting objects will not be available for additional computations!")
 
         self.recording = recording
         self.sorting = sorting
@@ -93,10 +101,23 @@ class WaveformExtractor:
     def load_from_folder(cls, folder):
         folder = Path(folder)
         assert folder.is_dir(), f'This folder does not exists {folder}'
-        recording = load_extractor(folder / 'recording.json',
-                                   base_folder=folder)
-        sorting = load_extractor(folder / 'sorting.json',
-                                 base_folder=folder)
+        try:
+            recording = load_extractor(folder / 'recording.json',
+                                       base_folder=folder)
+        except Exception as e:
+            if (folder / 'recording_dummy.json').is_file():
+                recording = load_extractor(folder / 'recording_dummy.json')
+            else:
+                recording = None
+        try:
+            sorting = load_extractor(folder / 'sorting.json',
+                                     base_folder=folder)
+        except Exception as e:
+            if (folder / 'sorting_dummy.json').is_file():
+                sorting = load_extractor(folder / 'sorting_dummy.json')
+            else:
+                sorting = None
+
         we = cls(recording, sorting, folder)
 
         for mode in _possible_template_modes:
@@ -129,6 +150,12 @@ class WaveformExtractor:
                 recording.dump(folder / 'recording.json', relative_to=relative_to)
             if sorting.is_dumpable:
                 sorting.dump(folder / 'sorting.json', relative_to=relative_to)
+            # dump dummy objects
+            recording_dummy = dummy_recording(recording)
+            sorting_dummy = dummy_sorting(sorting)
+
+            recording_dummy.dump(folder / 'recording_dummy.json')
+            sorting_dummy.dump(folder / 'sorting_dummy.json')
 
         return cls(recording, sorting, folder)
 
@@ -353,6 +380,9 @@ class WaveformExtractor:
                             new_folder / "params.json")
             shutil.copyfile(self.folder / "recording.json",
                             new_folder / "recording.json")
+            if (self.folder / "recording_dummy.json").is_file():
+                shutil.copyfile(self.folder / "recording_dummy.json",
+                                new_folder / "recording_dummy.json")
 
             if use_relative_path:
                 relative_to = new_folder
@@ -360,6 +390,8 @@ class WaveformExtractor:
                 relative_to = None
 
             sorting.dump(new_folder / 'sorting.json', relative_to=relative_to)
+            sorting_dummy = dummy_sorting(sorting)
+            sorting_dummy.dump(new_folder / 'sorting_dummy.json')
 
             # create and populate waveforms folder
             new_waveforms_folder = new_folder / "waveforms"
