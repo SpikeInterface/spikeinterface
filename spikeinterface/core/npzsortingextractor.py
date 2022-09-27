@@ -22,6 +22,7 @@ class NpzSortingExtractor(BaseSorting):
     def __init__(self, file_path):
 
         self.npz_filename = file_path
+        parent_folder = Path(file_path).parent
 
         npz = np.load(file_path)
         num_segment = int(npz['num_segment'][0])
@@ -35,6 +36,9 @@ class NpzSortingExtractor(BaseSorting):
             spike_labels = npz[f'spike_labels_seg{seg_index}']
             sorting_segment = NpzSortingSegment(spike_indexes, spike_labels)
             self.add_sorting_segment(sorting_segment)
+
+        if (parent_folder / "properties").is_dir():
+            self.load_metadata_from_folder(parent_folder)
 
         self._kwargs = {'file_path': str(Path(file_path).absolute())}
 
