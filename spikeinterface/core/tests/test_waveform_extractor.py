@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 import shutil
 import numpy as np
+import platform
 
 from spikeinterface.core.testing_tools import generate_recording, generate_sorting
 from spikeinterface import WaveformExtractor, extract_waveforms
@@ -288,17 +289,18 @@ def test_dummy_objects():
     we = extract_waveforms(recording, sorting, wf_folder,
                            use_relative_path=True)
 
-    (cache_folder / "recording_dummy").rename(cache_folder / "recording_dummy2")
-    (cache_folder / "sorting_dummy").rename(cache_folder / "sorting_dummy2")
+    if platform.system() != "Windows":
+        shutil.rmtree(cache_folder / "recording_dummy")
+        shutil.rmtree(cache_folder / "sorting_dummy")
 
-    # move all to a separate folder
-    we_loaded = WaveformExtractor.load_from_folder(wf_folder)
+        # move all to a separate folder
+        we_loaded = WaveformExtractor.load_from_folder(wf_folder)
 
-    assert we_loaded.recording is not None
-    assert we_loaded.sorting is not None
-    print(we_loaded.recording, we_loaded.sorting)
-    assert isinstance(we_loaded.recording, DummyRecording)
-    assert isinstance(we_loaded.sorting, DummySorting)
+        assert we_loaded.recording is not None
+        assert we_loaded.sorting is not None
+        print(we_loaded.recording, we_loaded.sorting)
+        assert isinstance(we_loaded.recording, DummyRecording)
+        assert isinstance(we_loaded.sorting, DummySorting)
 
 
 if __name__ == '__main__':
