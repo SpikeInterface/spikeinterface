@@ -34,6 +34,7 @@ class RandomProjectionClustering:
         "ms_after": 1.5,
         "random_seed" : 42,
         "cleaning_method": "matching",
+        "shared_memory" : True,
         "min_values" : {'ptp' : 2, 'energy' : 0.5},
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
@@ -150,15 +151,21 @@ class RandomProjectionClustering:
             labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params['cleaning_kwargs'])
 
         elif cleaning_method == "matching":
-            name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
-            if tmp_folder.exists():
-                import shutils
-                shutils.rmtree(tmp_folder)
+
+            if params['shared_memory']:
+                tmp_folder = None
+                mode = 'memory'
+            else:
+                name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
+                if tmp_folder.exists():
+                    import shutils
+                    shutils.rmtree(tmp_folder)
+                mode = 'folder'
 
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
-            we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
-                ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False)
+            we = extract_waveforms(recording, sorting, tmp_folder, ms_before=params['ms_before'], 
+                ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False, mode=mode)
 
             cleaning_matching_params = params['job_kwargs'].copy()
             cleaning_matching_params['chunk_duration'] = '100ms'
@@ -167,7 +174,9 @@ class RandomProjectionClustering:
             cleaning_matching_params['progress_bar'] = False
 
             labels, peak_labels = remove_duplicates_via_matching(we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **params['cleaning_kwargs'])
-            shutil.rmtree(tmp_folder)
+    
+            if tmp_folder is not None:
+                shutil.rmtree(tmp_folder)
 
         if verbose:
             print("We kept %d non-duplicated clusters..." %len(labels))

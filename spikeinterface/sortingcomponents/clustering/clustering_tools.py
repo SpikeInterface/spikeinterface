@@ -529,8 +529,11 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
 
     name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
     tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
-    tmp_folder.mkdir()
+    if tmp_folder.exists():
+        import shutils
+        shutils.rmtree(tmp_folder)
 
+    tmp_folder.mkdir()
     tmp_filename = os.path.join(tmp_folder, 'tmp.raw')
 
     f = open(tmp_filename, 'wb')
@@ -554,12 +557,12 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
 
     method_kwargs.update({'waveform_extractor' : waveform_extractor, 
                           'noise_levels' : noise_levels,
-                          'amplitudes' : [0.9, 1.1],
+                          'amplitudes' : [0.95, 1.05],
                           'sparsify_threshold' : 1,
                           'omp_min_sps' : 0.1,
                           'templates' : None,
-                          'overlaps' : None})
-                          #'fft_size' : fshape[0]})
+                          'overlaps' : None,
+                          'fft_size' : fshape[0]})
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -576,19 +579,17 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
-                              'sparsities' : computed['sparsities']})
-                              #'cached_fft_kernels' : computed['cached_fft_kernels']})
+                              'sparsities' : computed['sparsities'],
+                              'cached_fft_kernels' : computed['cached_fft_kernels']})
         valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
                 j = spikes[valid]['cluster_ind'][0]
-                norm_ratio = method_kwargs['norms'][j] / method_kwargs['norms'][i]
-                if np.abs(norm_ratio - 1) < 0.1:
-                    ignore_ids += [i]
-                    similar_templates[1] += [i]
-                    similar_templates[0] += [j]
+                ignore_ids += [i]
+                similar_templates[1] += [i]
+                similar_templates[0] += [j]
             elif np.sum(valid) > 1:
-                similar_templates[0] += [-1]    
+                similar_templates[0] += [-1]
                 ignore_ids += [i]
                 similar_templates[1] += [i]
 

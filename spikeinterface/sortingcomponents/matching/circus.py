@@ -183,7 +183,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'templates' : None,
         'overlaps' : None,
         'norms' : None,
-        'smoothing_factor' : 0.3,
+        'smoothing_factor' : 0,
         'ignored_ids' : [],
         'fft_size' : None
     }
@@ -236,7 +236,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             else:
                 template = templates[count]
             template, active_channels = cls._sparsify_template(template, d['sparsify_threshold'], d['noise_levels'])
-            template -= template.mean()
             d['sparsities'][count] = active_channels
             d['norms'][count] = np.linalg.norm(template)
             d['templates'][count] = template[:, active_channels]/d['norms'][count]

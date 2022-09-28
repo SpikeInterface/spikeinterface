@@ -12,7 +12,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = 'spykingcircus2'
 
     _default_params = {
-        'general' : {'ms_before' : 1.5, 'ms_after' : 1.5, 'local_radius_um' : 100},
+        'general' : {'ms_before' : 2, 'ms_after' : 2, 'local_radius_um' : 100},
         'waveforms' : {'max_spikes_per_unit' : 200, 'overwrite' : True},
         'filtering' : {'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5},
@@ -22,6 +22,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'matching':  {},
         'registration' : {},
         'apply_preprocessing': True,
+        'shared_memory' : True,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
 
@@ -107,7 +108,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()
         waveforms_params.update(params['job_kwargs'])
-        we = extract_waveforms(recording_f, sorting, output_folder / "waveforms", **waveforms_params, return_scaled=False)
+
+        if params['shared_memory']:
+            mode = 'memory'
+            waveforms_folder = None
+        else:
+            mode = 'folder'
+            waveforms_folder = output_folder / "waveforms"
+
+        we = extract_waveforms(recording_f, sorting, waveforms_folder, mode=mode, **waveforms_params, return_scaled=False)
 
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
         matching_params = params['matching'].copy()
