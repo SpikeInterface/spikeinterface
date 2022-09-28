@@ -30,11 +30,14 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
+                fig, ax = plt.subplots(
+                    figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], 
-                                                            list(data_plot['unit_colors'].keys()),
+        data_plot['unit_ids'] = [data_plot['unit_ids'][0]]
+        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'],
+                                                            list(
+                                                                data_plot['unit_colors'].keys()),
                                                             ratios[0] * width_cm, height_cm)
 
         self.controller = unit_controller
@@ -56,7 +59,6 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
 
         if backend_kwargs["display"]:
             display(self.widget)
-
 
 
 UnitLocationsPlotter.register(UnitLocationsWidget)

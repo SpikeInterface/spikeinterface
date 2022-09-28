@@ -31,8 +31,11 @@ class SpikeLocationsPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
+                fig, ax = plt.subplots(
+                    figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
+
+        data_plot['unit_ids'] = [data_plot['unit_ids'][0]]
 
         unit_widget, unit_controller = make_unit_controller(
             data_plot["unit_ids"],

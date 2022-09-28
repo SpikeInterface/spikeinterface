@@ -18,6 +18,9 @@ class SpikeLocationsWidget(BaseWidget):
         The object to compute/get spike locations from
     unit_ids: list
         List of unit ids.
+    max_spikes_per_unit: int
+        Number of max spikes per unit to display. Use None for all spikes.
+        Default 500.
     with_channel_ids: bool False default
         Add channel ids text on the probe
     unit_colors :  dict or None
@@ -33,6 +36,7 @@ class SpikeLocationsWidget(BaseWidget):
         waveform_extractor: WaveformExtractor,
         unit_ids=None,
         segment_index=None,
+        max_spikes_per_unit=500,
         with_channel_ids=False,
         unit_colors=None,
         hide_unit_selector=False,
@@ -64,10 +68,21 @@ class SpikeLocationsWidget(BaseWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
+        all_spike_locs = spike_locations[segment_index]
+        if max_spikes_per_unit is None:
+            spike_locs = all_spike_locs
+        else:
+            spike_locs = dict()
+            for unit, locs_unit in all_spike_locs.items():
+                if len(locs_unit) > max_spikes_per_unit:
+                    spike_locs[unit] = locs_unit[np.random.permutation(len(locs_unit))[:max_spikes_per_unit]]
+                else:
+                    spike_locs[unit] = locs_unit
+
         plot_data = dict(
             sorting=sorting,
             all_unit_ids=sorting.unit_ids,
-            spike_locations=spike_locations[segment_index],
+            spike_locations=spike_locs,
             segment_index=segment_index,
             unit_ids=unit_ids,
             channel_ids=channel_ids,

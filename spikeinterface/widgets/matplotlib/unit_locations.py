@@ -56,20 +56,20 @@ class UnitLocationsPlotter(MplPlotter):
         else:
             unit_ids = dp.unit_ids
             unit_colors = dp.unit_colors
-        labels = unit_ids
+        labels = dp.unit_ids
 
         patches = [Ellipse((unit_locations[unit]), color=unit_colors[unit], 
                            zorder=5 if unit in dp.unit_ids else 3, 
-                           alpha=0.9 if unit in dp.unit_ids else 0.5, label=labels[i],
+                           alpha=0.9 if unit in dp.unit_ids else 0.5,
                             **ellipse_kwargs) for i, unit in enumerate(unit_ids)]
         for p in patches:
             self.ax.add_patch(p)
-            
         handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
-                          color=unit_colors[unit]) for unit in unit_ids]
+                          color=unit_colors[unit]) for unit in dp.unit_ids]
             
         self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)
+        self.ax.axis("off")
 
 
 
