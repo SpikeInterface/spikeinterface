@@ -34,7 +34,9 @@ class HybridSpikesRecording(AddTemplatesRecording):
 			injected_spike_train = np.delete(injected_spike_train, violations)
 
 			# Remove spikes that violate the refractory period of the real spikes.
-			# TODO
+			min_diff = np.min(np.abs(injected_spike_train[:, None] - spike_train[None, :]), axis=1)  # TODO: Need a better & faster way than this.
+			violations = min_diff < t_r
+			injected_spike_train = injected_spike_train[~violations]
 
 			if len(injected_spike_train) > n_injection:
 				injected_spike_train = np.sort(np.random.choice(injected_spike_train, n_injection, replace=False))
