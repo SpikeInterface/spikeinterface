@@ -4,6 +4,7 @@ from .filter import (FilterRecording, filter,
                      NotchFilterRecording, notch_filter,
                      HighpassFilterRecording, highpass_filter,
                      )
+from .filter_gaussian import (GaussianFilterRecording, gaussian_filter)
 from .normalize_scale import (
     NormalizeByQuantileRecording, normalize_by_quantile,
     ScaleRecording, scale,
