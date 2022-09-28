@@ -34,7 +34,7 @@ class RandomProjectionClustering:
         "ms_after": 1.5,
         "random_seed" : 42,
         "cleaning_method": "matching",
-        "shared_memory" : True,
+        "shared_memory" : False,
         "min_values" : {'ptp' : 2, 'energy' : 0.5},
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }

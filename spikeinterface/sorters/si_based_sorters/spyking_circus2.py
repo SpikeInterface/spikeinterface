@@ -22,7 +22,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'matching':  {},
         'registration' : {},
         'apply_preprocessing': True,
-        'shared_memory' : True,
+        'shared_memory' : False,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
 

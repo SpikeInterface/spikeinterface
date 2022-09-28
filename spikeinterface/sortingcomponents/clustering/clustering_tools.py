@@ -561,8 +561,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
                           'sparsify_threshold' : 1,
                           'omp_min_sps' : 0.1,
                           'templates' : None,
-                          'overlaps' : None,
-                          'fft_size' : fshape[0]})
+                          'overlaps' : None})
+                          #'fft_size' : fshape[0]})
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -579,8 +579,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
-                              'sparsities' : computed['sparsities'],
-                              'cached_fft_kernels' : computed['cached_fft_kernels']})
+                              'sparsities' : computed['sparsities']})
+                              #'cached_fft_kernels' : computed['cached_fft_kernels']})
         valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
