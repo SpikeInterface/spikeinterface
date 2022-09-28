@@ -556,7 +556,9 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
                           'noise_levels' : noise_levels,
                           'amplitudes' : [0.9, 1.1],
                           'sparsify_threshold' : 1,
-                          'omp_min_sps' : 0.1})
+                          'omp_min_sps' : 0.1,
+                          'templates' : None,
+                          'overlaps' : None})
                           #'fft_size' : fshape[0]})
 
     ignore_ids = []

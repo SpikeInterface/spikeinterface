@@ -24,11 +24,11 @@ class RandomProjectionClustering:
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 20,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200, 
-        "selection_method" : "random",
+        "selection_method" : "closest_to_centroid",
         "nb_projections" : {'ptp' : 5, 'energy' : 5},
         "ms_before" : 1.5,
         "ms_after": 1.5,
@@ -83,7 +83,6 @@ class RandomProjectionClustering:
 
         #preprocessing = QuantileTransformer(output_distribution='uniform')
         #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
-
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
@@ -153,6 +152,9 @@ class RandomProjectionClustering:
         elif cleaning_method == "matching":
             name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
+            if tmp_folder.exists():
+                import shutils
+                shutils.rmtree(tmp_folder)
 
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
             we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
