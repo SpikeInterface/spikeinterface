@@ -52,17 +52,17 @@ class SpikeLocationsPlotter(MplPlotter):
         else:
             unit_ids = dp.unit_ids
             unit_colors = dp.unit_colors
-        labels = unit_ids
+        labels = dp.unit_ids
 
         for i, unit in enumerate(unit_ids):
             locs = spike_locations[unit]
             
             zorder = 5 if unit in dp.unit_ids else 3
             self.ax.scatter(locs["x"], locs["y"], s=2, alpha=0.3, color=unit_colors[unit],
-                            label=labels[i], zorder=zorder)
+                            zorder=zorder)
             
         handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
-                          color=unit_colors[unit]) for unit in unit_ids]
+                          color=unit_colors[unit]) for unit in dp.unit_ids]
             
         self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)
@@ -80,7 +80,7 @@ class SpikeLocationsPlotter(MplPlotter):
         
         self.ax.set_xlim(ax_xlims)
         self.ax.set_ylim(ax_ylims)
-
+        self.ax.axis("off")
 
 
 SpikeLocationsPlotter.register(SpikeLocationsWidget)
