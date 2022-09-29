@@ -16,7 +16,7 @@ def estimate_motion(recording, peaks, peak_locations,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
                     method='decentralized_registration', method_kwargs={},
                     non_rigid_kwargs=None, output_extra_check=False, progress_bar=False,
-                    upsample_to_histogram_bin=True, verbose=False):
+                    upsample_to_histogram_bin=None, verbose=False):
     """
     Estimate motion given peaks and their localization.
 
@@ -49,9 +49,12 @@ def estimate_motion(recording, peaks, peak_locations,
     output_extra_check: bool
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-    upsample_to_histogram_bin: bool
+    upsample_to_histogram_bin: bool or None
         If True then upsample the returned motion array to the number of depth bins specified
-        by bin_um
+        by bin_um.
+        When None:
+          * for non rigid case: then automatically True
+          * for rigid (non_rigid_kwargs=None): automatically False
     progress_bar: bool
         Display progress bar or not.
     verbose: bool
@@ -153,7 +156,7 @@ def estimate_motion(recording, peaks, peak_locations,
                 max_displacement_um=method_kwargs.get("max_displacement_um", 1500),
                 corr_threshold=method_kwargs.get("corr_threshold", 0),
                 time_horizon_s=method_kwargs.get("time_horizon_s", None),
-                sampling_frequency=method_kwargs.get("sampling_frequency", None),
+                bin_duration_s=bin_duration_s,
                 progress_bar=False
             )
             if output_extra_check:
@@ -177,7 +180,10 @@ def estimate_motion(recording, peaks, peak_locations,
 
     # replace nan by zeros
     motion[np.isnan(motion)] = 0
-
+    
+    if upsample_to_histogram_bin is None:
+        upsample_to_histogram_bin = non_rigid_kwargs is not None
+    
     if upsample_to_histogram_bin:
         # do upsample
         non_rigid_windows = np.array(non_rigid_windows)
@@ -238,7 +244,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                                   conv_engine='numpy', torch_device=None,
                                   batch_size=1, max_displacement_um=1500,
                                   corr_threshold=0, time_horizon_s=None,
-                                  sampling_frequency=None, progress_bar=False): 
+                                  bin_duration_s=None, progress_bar=False): 
     """
     Compute pairwise displacement
     """
@@ -248,7 +254,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
     pairwise_displacement = np.zeros((size, size), dtype='float32')
 
     if time_horizon_s is not None:
-        band_width = int(np.ceil(time_horizon_s * sampling_frequency))
+        band_width = int(np.ceil(time_horizon_s / bin_duration_s))
     
     if conv_engine == 'torch':
         import torch
