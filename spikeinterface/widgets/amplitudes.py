@@ -1,10 +1,10 @@
 import numpy as np
+from warnings import warn
 
 from .base import BaseWidget
 from .utils import get_some_colors
 
 from ..core.waveform_extractor import WaveformExtractor
-from ..postprocessing import compute_spike_amplitudes
 
 
 class AmplitudesWidget(BaseWidget):
@@ -51,7 +51,9 @@ class AmplitudesWidget(BaseWidget):
             unit_colors = get_some_colors(sorting.unit_ids)
 
         if sorting.get_num_segments() > 1:
-            assert segment_index is not None, "Specify segment index for multi-segment object"
+            if segment_index is None:
+                warn("More than one segment available! Using segment_index 0")
+                segment_index = 0
         else:
             segment_index = 0
         amplitudes_segment = amplitudes[segment_index]
