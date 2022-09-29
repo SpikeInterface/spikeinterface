@@ -11,7 +11,7 @@ class GaussianFilterRecording(BasePreprocessor):
 	TODO
 	"""
 
-	def __init__(self, recording: BaseRecording, band=[300., 6000.], n_iter: int = 2,
+	def __init__(self, recording: BaseRecording, band=[300., 6000.],
 				 order: int = 0, mode: str = "nearest", truncate: float = 4.5):
 		sf = recording.sampling_frequency
 		BasePreprocessor.__init__(self, recording)
@@ -22,18 +22,17 @@ class GaussianFilterRecording(BasePreprocessor):
 
 		for parent_segment in recording._recording_segments:
 			self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, low_sigma, high_sigma,
-																	  n_iter, order, mode, truncate))
+																	   order, mode, truncate))
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 
 	def __init__(self, parent_recording_segment: BaseRecordingSegment, low_sigma: float, high_sigma: float,
-				 n_iter: int = 2, order: int = 0, mode: str = "nearest", truncate: float = 4.5):
+				 order: int = 0, mode: str = "nearest", truncate: float = 4.5):
 		BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
 		self.low_sigma = low_sigma
 		self.high_sigma = high_sigma
-		self.n_iter = n_iter
 		self.order = order
 		self.mode = mode
 		self.truncate = truncate
@@ -46,16 +45,15 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 		dtype = traces.dtype
 		traces = traces.astype(np.float32)
 
-		for n in range(self.n_iter):
-			high_filter = gaussian_filter1d(traces, self.high_sigma, axis=0, order=self.order,
-											mode=self.mode, truncate=self.truncate)
-			low_filter  = gaussian_filter1d(traces, self.low_sigma, axis=0, order=self.order,
-											mode=self.mode, truncate=self.truncate)
-			traces = high_filter - low_filter
+		high_filter = gaussian_filter1d(traces, self.high_sigma, axis=0, order=self.order,
+										mode=self.mode, truncate=self.truncate)
+		low_filter  = gaussian_filter1d(traces, self.low_sigma, axis=0, order=self.order,
+										mode=self.mode, truncate=self.truncate)
+		filtered_traces = high_filter - low_filter
 
 		if right_margin > 0:
-			return traces[left_margin : -right_margin, :].astype(dtype)
+			return filtered_traces[left_margin : -right_margin, :].astype(dtype)
 		else:
-			return traces[left_margin:, :].astype(dtype)
+			return filtered_traces[left_margin:, :].astype(dtype)
 
 gaussian_filter = define_function_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
