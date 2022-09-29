@@ -48,6 +48,9 @@ from .segmentutils import (
     SplitSegmentSorting,
 )
 
+# dummy objects
+from .dummy import dummy_recording, dummy_sorting
+
 # default folder
 from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
                               is_set_global_tmp_folder, reset_global_tmp_folder,

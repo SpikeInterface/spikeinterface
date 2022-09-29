@@ -33,8 +33,6 @@ class CommonReferenceRecording(BasePreprocessor):
         int is expected.
     local_radius: tuple(int, int)
         Use in the local CAR implementation as the selecting annulus (exclude radius, include radius)
-    dtype: str
-        dtype of the returned traces. If None, dtype is maintained
     verbose: bool
         If True, output is verbose
 

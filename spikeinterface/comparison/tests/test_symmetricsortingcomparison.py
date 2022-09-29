@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.extractors import NumpySorting
+from spikeinterface.extractors import NumpySorting, toy_example
 from spikeinterface.comparison import compare_two_sorters
 
 
@@ -20,5 +20,14 @@ def test_compare_two_sorters():
     print(sc.agreement_scores)
 
 
+def test_compare_multi_segment():
+    _, sort = toy_example(num_segments=2)
+
+    cmp_multi = compare_two_sorters(sort, sort)
+
+    assert np.allclose(np.diag(cmp_multi.agreement_scores), np.ones(len(sort.unit_ids)))
+
+
 if __name__ == '__main__':
     test_compare_two_sorters()
+    test_compare_multi_segment()
