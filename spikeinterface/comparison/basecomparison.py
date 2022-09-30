@@ -278,9 +278,11 @@ class MixinSpikeTrainComparison:
         self.delta_frames = None
         
     def set_frames_and_frequency(self, sorting_list):
-        if not np.all(sorting.get_num_segments() == 1 for sorting in sorting_list):
-            raise Exception(
-                'Comparison module work with sorting having num_segments=1')
+        sorting0 = sorting_list[0]
+        # check num segments
+        if not np.all(sorting.get_num_segments() == sorting0.get_num_segments()
+                      for sorting in sorting_list):
+            raise Exception('Sorting objects must have the same number of segments.')
 
         # take sampling frequency from sorting list and test that they are equivalent.
         sampling_freqs = np.array([sorting.get_sampling_frequency()

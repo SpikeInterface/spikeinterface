@@ -7,7 +7,8 @@ import numpy as np
 from spikeinterface import extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import toy_example
 
-from spikeinterface.postprocessing import WaveformPrincipalComponent, compute_principal_components
+from spikeinterface.postprocessing import (WaveformPrincipalComponent, compute_principal_components,
+                                           get_template_channel_sparsity)
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -182,6 +183,73 @@ def test_pca_models_and_project_new():
     assert new_proj.shape == (100, n_components)
 
 
+def test_sparse_principal_components():
+    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms_2seg')
+    unit_ids = we.sorting.unit_ids
+    num_channels = we.recording.get_num_channels()
+    pc = WaveformPrincipalComponent(we)
+
+    sparsity_radius = get_template_channel_sparsity(we, method="radius",
+                                                    radius_um=50)
+    sparsity_best = get_template_channel_sparsity(we, method="best_channels",
+                                                  num_channels=2)
+    sparsities = [sparsity_radius, sparsity_best]
+    print(sparsities)
+
+    for mode in ('by_channel_local', 'by_channel_global'):
+        for sparsity in sparsities:
+            pc.set_params(n_components=5, mode=mode, sparsity=sparsity)
+            print(pc)
+            pc.run()
+            for i, unit_id in enumerate(unit_ids):
+                proj = pc.get_projections(unit_id)
+                # print(comp.shape)
+                assert proj.shape[1:] == (5, 4)
+
+            # import matplotlib.pyplot as plt
+            # plt.ion()
+            # cmap = plt.get_cmap('jet', len(unit_ids))
+            # fig, axs = plt.subplots(nrows=len(unit_ids), ncols=num_channels)
+            # for i, unit_id in enumerate(unit_ids):
+            #     comp = pc.get_projections(unit_id)
+            #     print(comp.shape)
+            #     for chan_ind in range(num_channels):
+            #         ax = axs[i, chan_ind]
+            #         ax.scatter(comp[:, 0, chan_ind], comp[:, 1, chan_ind], color=cmap(i))
+            #         ax.set_title(f"{mode}-{sparsity[unit_id]}")
+            #         if i == 0:
+            #             ax.set_xlabel(f"Ch{chan_ind}")
+            # plt.show()
+
+    for mode in ('concatenated',):
+        # concatenated is only compatible with "best"
+        pc.set_params(n_components=5, mode=mode, sparsity=sparsity_best)
+        print(pc)
+        pc.run()
+        for i, unit_id in enumerate(unit_ids):
+            proj = pc.get_projections(unit_id)
+            assert proj.shape[1] == 5
+            # print(comp.shape)
+
+    all_labels, all_components = pc.get_all_projections()
+
+    # relod as an extension from we
+    assert WaveformPrincipalComponent in we.get_available_extensions()
+    assert we.is_extension('principal_components')
+    pc = we.load_extension('principal_components')
+    assert isinstance(pc, WaveformPrincipalComponent)
+    pc = WaveformPrincipalComponent.load_from_folder(
+        cache_folder / 'toy_waveforms_2seg')
+
+    # import matplotlib.pyplot as plt
+    # cmap = plt.get_cmap('jet', len(unit_ids))
+    # fig, ax = plt.subplots()
+    # for i, unit_id in enumerate(unit_ids):
+    # comp = pca.get_components(unit_id)
+    # print(comp.shape)
+    # ax.scatter(comp[:, 0], comp[:, 1], color=cmap(i))
+    # plt.show()
+
 def test_select_units():
     we = WaveformExtractor.load_from_folder(
         cache_folder / 'toy_waveforms_1seg')
@@ -197,4 +265,5 @@ if __name__ == '__main__':
     setup_module()
     #~ test_WaveformPrincipalComponent()
     #~ test_compute_principal_components_for_all_spikes()
-    test_pca_models_and_project_new()
+    # test_pca_models_and_project_new()
+    test_sparse_principal_components()
