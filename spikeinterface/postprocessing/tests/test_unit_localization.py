@@ -47,9 +47,20 @@ def test_compute_unit_center_of_mass():
     assert we.is_extension('unit_locations')
     ulc = we.load_extension('unit_locations')
     assert isinstance(ulc, UnitLocationsCalculator)
-    assert ulc.unit_locations is not None
+    assert 'unit_locations' in ulc._extension_data
     ulc = UnitLocationsCalculator.load_from_folder(folder)
-    assert ulc.unit_locations is not None
+    assert 'unit_locations' in ulc._extension_data
+
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    locs = compute_unit_locations(we_mem)
+
+    # reload as an extension from we
+    assert UnitLocationsCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('unit_locations')
+    ulc = we_mem.load_extension('unit_locations')
+    assert isinstance(ulc, UnitLocationsCalculator)
+    assert 'unit_locations' in ulc._extension_data
 
 
 def test_compute_monopolar_triangulation():

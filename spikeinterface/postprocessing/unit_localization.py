@@ -46,19 +46,12 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
                       method_kwargs=method_kwargs)
         return params
 
-    def _specific_load_from_folder(self):
-        self.unit_locations = np.load(self.extension_folder / 'unit_locations.npy')
-
-    def _reset(self):
-        self.unit_locations = None
-
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    def _select_extension_data(self, unit_ids):
         unit_inds = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
+        new_unit_location = self._extension_data['unit_locations'][unit_inds]
+        return dict(unit_locations=new_unit_location)
 
-        new_unit_location = self.unit_locations[unit_inds]
-        np.save(new_waveforms_folder / self.extension_name / 'unit_locations.npy', new_unit_location)
-
-    def run(self, **job_kwargs):
+    def _run(self, **job_kwargs):
         method = self._params['method']
         method_kwargs = self._params['method_kwargs']
         
@@ -68,18 +61,30 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
             unit_location = compute_center_of_mass(self.waveform_extractor,  **method_kwargs)
         elif method == 'monopolar_triangulation':
             unit_location = compute_monopolar_triangulation(self.waveform_extractor,  **method_kwargs)
-        self.unit_locations = unit_location
-        np.save(self.extension_folder /
-                'unit_locations.npy', self.unit_locations)
+        self._extension_data['unit_locations'] = unit_location
 
     def get_data(self, outputs='numpy'):
+        """
+        Get the computed unit locations.
+
+        Parameters
+        ----------
+        outputs : str, optional
+            'numpy' or 'by_unit', by default 'numpy'
+
+        Returns
+        -------
+        unit_locations : np.array or dict
+            The unit locations as a Nd array (outputs='numpy') or
+            as a dict with units as key and locations as values.
+        """
         if outputs == 'numpy':
-            return self.unit_locations
+            return self._extension_data['unit_locations']
 
         elif outputs == 'by_unit':
             locations_by_unit = {}
             for unit_ind, unit_id in enumerate(self.waveform_extractor.sorting.unit_ids):
-                locations_by_unit[unit_id] = self.unit_locations[unit_ind]
+                locations_by_unit[unit_id] = self._extension_data['unit_locations'][unit_ind]
             return locations_by_unit
 
 
@@ -111,11 +116,8 @@ def compute_unit_locations(waveform_extractor,
     unit_locations: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
-    folder = waveform_extractor.folder
-    ext_folder = folder / UnitLocationsCalculator.extension_name
-
-    if load_if_exists and ext_folder.is_dir():
-        ulc = UnitLocationsCalculator.load_from_folder(folder)
+    if load_if_exists and waveform_extractor.is_extension(UnitLocationsCalculator.extension_name):
+        ulc = waveform_extractor.load_extension(UnitLocationsCalculator.extension_name)
     else:
         ulc = UnitLocationsCalculator(waveform_extractor)
         ulc.set_params(method=method, method_kwargs=method_kwargs)

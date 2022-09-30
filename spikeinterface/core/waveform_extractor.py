@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 import shutil
 import json
@@ -67,6 +68,7 @@ class WaveformExtractor:
         self._waveforms = {}
         self._template_cache = {}
         self._params = {}
+        self._available_extensions = dict()
 
         self.folder = folder
         if self.folder is not None:
@@ -174,7 +176,7 @@ class WaveformExtractor:
 
     def is_extension(self, extension_name):
         """
-        Check if the extension exists in the folder.
+        Check if the extension exists.
 
         Parameters
         ----------
@@ -186,12 +188,8 @@ class WaveformExtractor:
         exists: bool
             Whether the extension exists or not
         """
-        if self.folder is None:
-            raise Exception("Extensions are not available for in-memory WaveforExtractor objects")
-        ext_class = self.get_extension_class(extension_name)
-        ext_folder = self.folder / ext_class.extension_name
-        params_file = ext_folder / 'params.json'
-        return ext_folder.is_dir() and params_file.is_file()
+        return extension_name in list(self._available_extensions)
+
 
     def load_extension(self, extension_name):
         """
@@ -209,8 +207,11 @@ class WaveformExtractor:
             The loaded instance of the extension
         """
         if self.is_extension(extension_name):
-            ext_class = self.get_extension_class(extension_name)
-            return ext_class.load_from_folder(self.folder)
+            if self.folder is not None:
+                ext_class = self.get_extension_class(extension_name)
+                return ext_class.load_from_folder(self.folder)
+            else:
+                return self._available_extensions[extension_name]
 
     def get_available_extensions(self):
         """
@@ -227,11 +228,11 @@ class WaveformExtractor:
         extensions_in_folder: list
             A list of class of computed extension inthis folder
         """
-        extensions_in_folder = []
+        available_extensions = []
         for extension_class in self.extensions:
             if self.is_extension(extension_class.extension_name):
-                extensions_in_folder.append(extension_class)
-        return extensions_in_folder
+                available_extensions.append(extension_class)
+        return available_extensions
 
     def get_available_extension_names(self):
         """
@@ -331,7 +332,7 @@ class WaveformExtractor:
         ----------
         unit_ids : list or array
             The unit ids to keep in the new WaveformExtractor object
-        new_folder : Path
+        new_folder : Path or None
             The new folder where selected waveforms are copied
             
         Return
@@ -376,11 +377,6 @@ class WaveformExtractor:
             for tmp_file in template_files:
                 templates_data_sliced = np.load(tmp_file)[unit_indices]
                 np.save(new_waveforms_folder / tmp_file.name, templates_data_sliced)
-
-            for ext_name in self.get_available_extension_names():
-                ext = self.load_extension(ext_name)
-                ext.select_units(unit_ids, new_folder)
-
             we = WaveformExtractor.load_from_folder(new_folder)
         else:
             sorting = self.sorting.select_units(unit_ids)
@@ -390,6 +386,11 @@ class WaveformExtractor:
             for unit_id in unit_ids:
                 we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
                 we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
+
+        # finally select extensions data
+        for ext_name in self.get_available_extension_names():
+            ext = self.load_extension(ext_name)
+            ext.select_units(unit_ids, new_waveform_extractor=we)
 
         return we
             
@@ -889,9 +890,9 @@ class BaseWaveformExtractorExtension:
     It also enables any custum computation on top on waveform extractor to be implemented by the user.
     
     An extension needs to inherit from this class and implement some abstract methods:
-      * _specific_load_from_folder
       * _reset
       * _set_params
+      * _run
     
     The subclass must also save to the `self.extension_folder` any file that needs
     to be reloaded when calling `_specific_load_from_folder`
@@ -905,12 +906,20 @@ class BaseWaveformExtractorExtension:
     def __init__(self, waveform_extractor):
         self.waveform_extractor = waveform_extractor
         
-        self.folder = self.waveform_extractor.folder
-        self.extension_folder = self.folder / self.extension_name
+        if self.waveform_extractor.folder is not None:
+            self.folder = self.waveform_extractor.folder
+            self.extension_folder = self.folder / self.extension_name
 
-        if not self.extension_folder.is_dir():
-            self.extension_folder.mkdir()        
+            if not self.extension_folder.is_dir():
+                self.extension_folder.mkdir()
+        else:
+            self.extension_folder = None
+            self.folder = None
+        self._extension_data = dict()
         self._params = None
+
+        # register
+        self.waveform_extractor._available_extensions[self.extension_name] = self
 
     @classmethod
     def load_from_folder(cls, folder):
@@ -932,44 +941,75 @@ class BaseWaveformExtractorExtension:
         # make instance with params
         ext = cls(waveform_extractor)
         ext._params = params
-        ext._specific_load_from_folder()
+        ext._load_extension_data()
 
         return ext
 
-    def _specific_load_from_folder(self):
+    # use load instead
+    def _load_extension_data(self):
+        for ext_data_file in self.extension_folder.iterdir():
+            if ext_data_file.name == 'params.json':
+                continue
+            ext_data_name = ext_data_file.stem
+            if ext_data_file.suffix == '.json':
+                data = json.load(ext_data_file.open('r'))
+            elif ext_data_file.suffix == '.npy':
+                data = np.load(ext_data_file, mmap_mode='r')
+            elif ext_data_file.suffix == '.csv':
+                import pandas as pd
+                data = pd.read_csv(ext_data_file)
+            elif ext_data_file.suffix == '.pkl':
+                data = pickle.load(ext_data_file.open('rb'))
+            self._extension_data[ext_data_name] = data
+
+    def run(self, **kwargs):
+        self._run(**kwargs)
+        self._save()
+
+    def _run(self, **kwargs):
         # must be implemented in subclass
+        # must populate the self._extension_data dictionary
         raise NotImplementedError
-    
+
+    def _save(self):
+        if self.folder is not None:
+            import pandas as pd
+            for ext_data_name, ext_data in self._extension_data.items():
+                if isinstance(ext_data, dict):
+                    with (self.extension_folder / f"{ext_data_name}.json").open('w') as f:
+                        json.dump(ext_data, f)
+                elif isinstance(ext_data, np.ndarray):
+                    np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
+                elif isinstance(ext_data, pd.DataFrame):
+                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv")
+                else:
+                    try:
+                        with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
+                            pickle.dump(ext_data, f)
+                    except:
+                        print(f"Could not save {ext_data_name} as extension data")
+
     def reset(self):
         """
         Reset the waveform extension.
         Delete the sub folder and create a new empty one.
-        """
-        
-        self._reset()
-        
-        if self.extension_folder.is_dir():
-            shutil.rmtree(self.extension_folder)
-        self.extension_folder.mkdir()
+        """        
+        if self.extension_folder is not None:
+            if self.extension_folder.is_dir():
+                shutil.rmtree(self.extension_folder)
+            self.extension_folder.mkdir()
         
         self._params = None
+        self._extension_data = dict()
     
-    def _reset(self):
-        # must be implemented in subclass
-        raise NotImplementedError
-    
-    def select_units(self, unit_ids, new_waveforms_folder):
-        # creaste new extension folder
-        new_ext_folder = new_waveforms_folder / self.extension_name
-        new_ext_folder.mkdir()
-        # copy parameter file
-        shutil.copyfile(self.extension_folder / "params.json",
-                        new_ext_folder / "params.json")
-        # specific files must be copied in subclass
-        self._specific_select_units(unit_ids=unit_ids, 
-                                    new_waveforms_folder=new_waveforms_folder)
+    def select_units(self, unit_ids, new_waveform_extractor):
+        new_extension = self.__class__(new_waveform_extractor)
+        new_extension.set_params(**self._params)
+        new_extension_data = self._select_extension_data(unit_ids=unit_ids)
+        new_extension._extension_data = new_extension_data
+        new_extension.save()
         
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    def _select_extension_data(self, unit_ids):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -980,8 +1020,9 @@ class BaseWaveformExtractorExtension:
         """
         params = self._set_params(**params)
         self._params = params
-        param_file = self.extension_folder / 'params.json'
-        param_file.write_text(json.dumps(check_json(self._params), indent=4), encoding='utf8')
+        if self.extension_folder is not None:
+            param_file = self.extension_folder / 'params.json'
+            param_file.write_text(json.dumps(check_json(self._params), indent=4), encoding='utf8')
     
     def _set_params(self, **params):
         # must be implemented in subclass

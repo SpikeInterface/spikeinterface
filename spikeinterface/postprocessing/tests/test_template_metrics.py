@@ -41,9 +41,9 @@ def test_calculate_template_metrics():
     assert we.is_extension('template_metrics')
     tmc = we.load_extension('template_metrics')
     assert isinstance(tmc, TemplateMetricsCalculator)
-    assert tmc.template_metrics is not None
+    assert 'metrics' in tmc._extension_data
     tmc = TemplateMetricsCalculator.load_from_folder(folder)
-    assert tmc.template_metrics is not None
+    assert 'metrics' in tmc._extension_data
 
     tm_up = compute_template_metrics(we, upsampling_factor=2)
     print(tm_up)
@@ -52,6 +52,17 @@ def test_calculate_template_metrics():
     tm_sparse = compute_template_metrics(we, upsampling_factor=2,
                                                  sparsity=sparsity)
     print(tm_sparse)
+    
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    similarity = compute_template_metrics(we_mem)
+
+    # reload as an extension from we
+    assert TemplateMetricsCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('template_metrics')
+    tsc = we_mem.load_extension('template_metrics')
+    assert isinstance(tsc, TemplateMetricsCalculator)
+    assert 'metrics' in tsc._extension_data
 
 
 if __name__ == '__main__':

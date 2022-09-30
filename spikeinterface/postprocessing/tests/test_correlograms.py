@@ -65,10 +65,20 @@ def test_correlograms_extension():
     assert we.is_extension('correlograms')
     ccc = we.load_extension('correlograms')
     assert isinstance(ccc, CorrelogramsCalculator)
-    assert ccc.ccgs is not None
+    assert 'ccgs' in ccc._extension_data
     ccc = CorrelogramsCalculator.load_from_folder(folder)
-    assert ccc.ccgs is not None
+    assert 'ccgs' in ccc._extension_data
 
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    isis, bins = compute_correlograms(we_mem)
+
+    # reload as an extension from we
+    assert CorrelogramsCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('correlograms')
+    ccc = we.load_extension('correlograms')
+    assert isinstance(ccc, CorrelogramsCalculator)
+    assert 'ccgs' in ccc._extension_data
 
 if __name__ == '__main__':
     test_compute_correlograms()

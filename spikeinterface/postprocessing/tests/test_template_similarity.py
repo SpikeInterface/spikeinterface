@@ -40,9 +40,20 @@ def test_compute_template_similarity():
     assert we.is_extension('similarity')
     tsc = we.load_extension('similarity')
     assert isinstance(tsc, TemplateSimilarityCalculator)
-    assert tsc.similarity is not None
+    assert 'similarity' in tsc._extension_data
     tsc = TemplateSimilarityCalculator.load_from_folder(folder)
-    assert tsc.similarity is not None
+    assert 'similarity' in tsc._extension_data
+    
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    similarity = compute_template_similarity(we_mem)
+
+    # reload as an extension from we
+    assert TemplateSimilarityCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('similarity')
+    tsc = we_mem.load_extension('similarity')
+    assert isinstance(tsc, TemplateSimilarityCalculator)
+    assert 'similarity' in tsc._extension_data
 
 
 def test_check_equal_template_with_distribution_overlap():

@@ -45,9 +45,20 @@ def test_compute_spike_locations():
     assert we.is_extension('spike_locations')
     slc = we.load_extension('spike_locations')
     assert isinstance(slc, SpikeLocationsCalculator)
-    assert slc.locations is not None
+    assert 'spike_locations' in slc._extension_data
     slc = SpikeLocationsCalculator.load_from_folder(folder)
-    assert slc.locations is not None
+    assert 'spike_locations' in slc._extension_data
+
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    locs = compute_spike_locations(we_mem)
+
+    # reload as an extension from we
+    assert SpikeLocationsCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('spike_locations')
+    slc = we_mem.load_extension('spike_locations')
+    assert isinstance(slc, SpikeLocationsCalculator)
+    assert 'spike_locations' in slc._extension_data
 
 
 def test_compute_spike_locations_parallel():

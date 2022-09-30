@@ -63,9 +63,20 @@ def test_isi_histogram_extension():
     assert we.is_extension('isi_histograms')
     isic = we.load_extension('isi_histograms')
     assert isinstance(isic, ISIHistogramsCalculator)
-    assert isic.isi_histograms is not None
+    assert 'isi_histograms' in isic._extension_data
     isic = ISIHistogramsCalculator.load_from_folder(folder)
-    assert isic.isi_histograms is not None
+    assert 'isi_histograms' in isic._extension_data
+
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    isis, bins = compute_isi_histograms(we_mem)
+
+    # reload as an extension from we
+    assert ISIHistogramsCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('isi_histograms')
+    isic = we.load_extension('isi_histograms')
+    assert isinstance(isic, ISIHistogramsCalculator)
+    assert 'isi_histograms' in isic._extension_data
 
 
 if __name__ == '__main__':

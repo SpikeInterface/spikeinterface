@@ -57,9 +57,20 @@ def test_compute_spike_amplitudes():
     assert we_scaled.is_extension('spike_amplitudes')
     sac = we.load_extension('spike_amplitudes')
     assert isinstance(sac, SpikeAmplitudesCalculator)
-    assert sac.amplitudes is not None
+    assert 'amplitude_segment_0' in sac._extension_data
     sac = SpikeAmplitudesCalculator.load_from_folder(folder)
-    assert sac.amplitudes is not None
+    assert 'amplitude_segment_0' in sac._extension_data
+
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    amps = compute_spike_amplitudes(we_mem)
+
+    # reload as an extension from we
+    assert SpikeAmplitudesCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('spike_amplitudes')
+    sac = we_mem.load_extension('spike_amplitudes')
+    assert isinstance(sac, SpikeAmplitudesCalculator)
+    assert 'amplitude_segment_0' in sac._extension_data
 
 
 def test_compute_spike_amplitudes_parallel():

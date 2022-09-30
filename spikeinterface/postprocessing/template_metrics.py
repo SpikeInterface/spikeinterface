@@ -51,18 +51,12 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 
         return params
 
-    def _specific_load_from_folder(self):
-        self.template_metrics = pd.read_csv(self.extension_folder / 'metrics.csv', index_col=0)
-
-    def _reset(self):
-        self.template_metrics = None
-
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
         new_metrics = self.template_metrics.loc[np.array(unit_ids)]
-        new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
+        return dict(metrics=new_metrics)
         
-    def run(self):
+    def _run(self):
         metric_names = self._params['metric_names']
         sparsity = self._params['sparsity']
         peak_sign = self._params['peak_sign']
@@ -119,17 +113,20 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
                                  window_ms=self._params['window_slope_ms'])
                     template_metrics.at[index, metric_name] = value
 
-        self.template_metrics = template_metrics
-        
-        # save to folder
-        template_metrics.to_csv(self.extension_folder / 'metrics.csv')
+        self._extension_data['metrics'] = template_metrics
 
     def get_data(self):
-        """Get the computed metrics."""
-
+        """
+        Get the computed metrics.
+        
+        Returns
+        -------
+        metrics : pd.DataFrame
+            Dataframe with template metrics
+        """
         msg = "Template metrics are not computed. Use the 'run()' function."
-        assert self.template_metrics is not None, msg
-        return self.template_metrics
+        assert self._extension_data['metrics'] is not None, msg
+        return self._extension_data['metrics']
 
 
 
@@ -175,9 +172,8 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
         If 'sparsity' is given, the index is a multi-index (unit_id, channel_id)
     """
     folder = waveform_extractor.folder
-    ext_folder = folder / TemplateMetricsCalculator.extension_name
-    if load_if_exists and ext_folder.is_dir():
-        tmc = TemplateMetricsCalculator.load_from_folder(folder)
+    if load_if_exists and waveform_extractor.is_extension(TemplateMetricsCalculator.extension_name):
+        tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
     else:
         tmc = TemplateMetricsCalculator(waveform_extractor)
         tmc.set_params(metric_names=metric_names, peak_sign=peak_sign,

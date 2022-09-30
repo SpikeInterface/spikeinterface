@@ -24,31 +24,29 @@ class TemplateSimilarityCalculator(BaseWaveformExtractorExtension):
         params = dict(method=method)
 
         return params
-
-    def _specific_load_from_folder(self):
-        self.similarity = np.load(self.extension_folder / 'similarity.npy')
-
-    def _reset(self):
-        self.similarity = None
-
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    
+    def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_similarity = self.similarity[unit_indices][:, unit_indices]
-        np.save(new_waveforms_folder / self.extension_name / 'similarity.npy',
-                new_similarity)
-        
-    def run(self):
+        new_similarity = self._extension_data['similarity'][unit_indices][:, unit_indices]
+        return dict(similarity=new_similarity)
+
+    def _run(self):
         similarity = _compute_template_similarity(self.waveform_extractor, method=self._params['method'])
-        np.save(self.extension_folder / 'similarity.npy', similarity)
-        self.similarity = similarity
+        self._extension_data['similarity'] = similarity
 
     def get_data(self):
-        """Get the computed similarity."""
-
+        """
+        Get the computed similarity.
+        
+        Returns
+        -------
+        similarity : 2d np.array
+            2d matrix with computed similarity values.
+        """
         msg = "Template similarity is not computed. Use the 'run()' function."
-        assert self.similarity is not None, msg
-        return self.similarity
+        assert self._extension_data['similarity'] is not None, msg
+        return self._extension_data['similarity']
 
 
 WaveformExtractor.register_extension(TemplateSimilarityCalculator)
@@ -103,10 +101,8 @@ def compute_template_similarity(waveform_extractor,
         The similarity matrix
     """
     if waveform_extractor_other is None:
-        folder = waveform_extractor.folder
-        ext_folder = folder / TemplateSimilarityCalculator.extension_name
-        if load_if_exists and ext_folder.is_dir():
-            tmc = TemplateSimilarityCalculator.load_from_folder(folder)
+        if load_if_exists and waveform_extractor.is_extension(TemplateSimilarityCalculator.extension_name):
+            tmc = waveform_extractor.load_extension(TemplateSimilarityCalculator.extension_name)
         else:
             tmc = TemplateSimilarityCalculator(waveform_extractor)
             tmc.set_params(method=method)
@@ -200,4 +196,3 @@ def check_equal_template_with_distribution_overlap(waveforms0, waveforms1,
             return equal, final_shift
     else:
         return equal
-

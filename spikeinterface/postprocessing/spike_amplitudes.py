@@ -26,36 +26,19 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         params = dict(peak_sign=str(peak_sign),
                       return_scaled=bool(return_scaled))
         return params        
-        
-    def _specific_load_from_folder(self):
-        recording = self.waveform_extractor.recording
-        sorting = self.waveform_extractor.sorting
-
-        all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
-        self._all_spikes = all_spikes
-
-        self.amplitudes = []
-        for segment_index in range(recording.get_num_segments()):
-            file_amps = self.extension_folder / f'amplitude_segment_{segment_index}.npy'
-            amps_seg = np.load(file_amps)
-            self.amplitudes.append(amps_seg)
-
-    def _reset(self):
-        self.amplitudes = None
     
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    def _select_extension_data(self, unit_ids):
         # load filter and save amplitude files
+        new_extension_data = dict()
         for seg_index in range(self.waveform_extractor.recording.get_num_segments()):
-            amp_file_name = f"amplitude_segment_{seg_index}.npy"
-            amps = np.load(self.extension_folder / amp_file_name)
+            amp_data_name = f"amplitude_segment_{seg_index}"
+            amps = self._extension_data[amp_data_name]
             _, all_labels = self.waveform_extractor.sorting.get_all_spike_trains()[seg_index]
             filtered_idxs = np.in1d(all_labels, np.array(unit_ids)).nonzero()
-            np.save(new_waveforms_folder / self.extension_name /
-                    amp_file_name, amps[filtered_idxs])
-    
+            new_extension_data[amp_data_name] = amps[filtered_idxs]
+        return new_extension_data
         
-    def run(self, **job_kwargs):
-        
+    def _run(self, **job_kwargs):
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -70,7 +53,8 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         peak_shifts = get_template_extremum_channel_peak_shift(we, peak_sign=peak_sign)
         
         # put extremum_channels_index and peak_shifts in vector way
-        extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
+        extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], 
+                                           dtype='int64')
         peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
         
         if return_scaled:
@@ -100,12 +84,23 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             mask = segments == segment_index
             amps_seg = amps[mask]
             self.amplitudes.append(amps_seg)
-            
-            # save to folder
-            file_amps = self.extension_folder / f'amplitude_segment_{segment_index}.npy'
-            np.save(file_amps, amps_seg)
-    
+            self._extension_data[f'amplitude_segment_{segment_index}'] = amps_seg
+
     def get_data(self, outputs='concatenated'):
+        """
+        Get computed spike amplitudes.
+
+        Parameters
+        ----------
+        outputs : str, optional
+            'concatenated' or 'by_unit', by default 'concatenated'
+
+        Returns
+        -------
+        spike_amplitudes : np.array or dict
+            The spike amplitudes as an array (outputs='concatenated') or
+            as a dict with units as key and spike amplitudes as values.
+        """
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -166,11 +161,8 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
             - If 'concatenated' all amplitudes for all spikes and all units are concatenated
             - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
-    folder = waveform_extractor.folder
-    ext_folder = folder / SpikeAmplitudesCalculator.extension_name
-
-    if load_if_exists and ext_folder.is_dir():
-        sac = SpikeAmplitudesCalculator.load_from_folder(folder)
+    if load_if_exists and waveform_extractor.is_extension(SpikeAmplitudesCalculator.extension_name):
+        sac = waveform_extractor.load_extension(SpikeAmplitudesCalculator.extension_name)
     else:
         sac = SpikeAmplitudesCalculator(waveform_extractor)
         sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
