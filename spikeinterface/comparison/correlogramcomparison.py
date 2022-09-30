@@ -20,6 +20,9 @@ class CorrelogramGTComparison(GroundTruthComparison):
         # Force compute labels
         kwargs['compute_labels'] = True
 
+        if gt_sorting.get_num_segments() > 1 or tested_sorting.get_num_segments() > 1:
+            raise NotImplementedError("Correlogram comparison is only available for mono-segment sorting objects")
+
         GroundTruthComparison.__init__(self, gt_sorting, tested_sorting, **kwargs)
 
         self.window_ms = window_ms
