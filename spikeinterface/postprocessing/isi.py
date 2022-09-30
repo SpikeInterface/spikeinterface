@@ -22,10 +22,6 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self.waveform_extractor = waveform_extractor
-        self.isi_histograms = None
-        self.bins = None
-
     def _set_params(self, window_ms: float = 100.0,
                     bin_ms: float = 5.0, method: str = "auto"):
 

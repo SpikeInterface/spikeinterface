@@ -29,11 +29,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self._pca_model = None
-
-    def _specific_load_from_folder(self):
-        self.get_pca_model()
-
     @classmethod
     def create(cls, waveform_extractor):
         pc = WaveformPrincipalComponent(waveform_extractor)
@@ -88,34 +83,34 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         """
         return self._extension_data[f'pca_{unit_id}']
 
-    # TODO
-    def load_pca_model(self):
-        """
-        Load PCA model from folder.
-        """
-        mode = self._params["mode"]
-        if mode == "by_channel_local":
-            pca_model = []
-            for chan_ind, chan_id in enumerate(self.waveform_extractor.recording.channel_ids):
-                pca_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
-                if not pca_file.is_file() and chan_ind == 0:
-                    _ = self._fit_by_channel_local()
-                with open(pca_file, 'rb') as fid:
-                    pca = pickle.load(fid)
-                pca_model.append(pca)
-        elif mode == "by_channel_global":
-            pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
-            if not pca_file.is_file():
-                _ = self._fit_by_channel_global()
-            with open(pca_file, 'rb') as fid:
-                pca_model = pickle.load(fid)
-        elif mode == "concatenated":
-            pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
-            if not pca_file.is_file():
-                _ = self._fit_concatenated()
-            with open(pca_file, 'rb') as fid:
-                pca_model = pickle.load(fid)
-        self._pca_model = pca_model
+    # # TODO
+    # def load_pca_model(self):
+    #     """
+    #     Load PCA model from folder.
+    #     """
+    #     mode = self._params["mode"]
+    #     if mode == "by_channel_local":
+    #         pca_model = []
+    #         for chan_ind, chan_id in enumerate(self.waveform_extractor.recording.channel_ids):
+    #             pca_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
+    #             if not pca_file.is_file() and chan_ind == 0:
+    #                 _ = self._fit_by_channel_local()
+    #             with open(pca_file, 'rb') as fid:
+    #                 pca = pickle.load(fid)
+    #             pca_model.append(pca)
+    #     elif mode == "by_channel_global":
+    #         pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
+    #         if not pca_file.is_file():
+    #             _ = self._fit_by_channel_global()
+    #         with open(pca_file, 'rb') as fid:
+    #             pca_model = pickle.load(fid)
+    #     elif mode == "concatenated":
+    #         pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
+    #         if not pca_file.is_file():
+    #             _ = self._fit_concatenated()
+    #         with open(pca_file, 'rb') as fid:
+    #             pca_model = pickle.load(fid)
+    #     self._pca_model = pca_model
 
     def get_pca_model(self):
         """
@@ -123,13 +118,18 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         Returns
         -------
-        pca_model: PCA object(s)
+        pca_models: PCA object(s)
             * if mode is "by_channel_local", "pca_model" is a list of PCA model by channel
             * if mode is "by_channel_global" or "concatenated", "pca_model" is a single PCA model
         """
-        if self._pca_model is None:
-            self.load_pca_model()
-        return self._pca_model
+        mode = self._params["mode"]
+        if mode == "by_channel_local":
+            pca_models = []
+            for chan_id in self.waveform_extractor.recording.channel_ids:
+                pca_models.append(self._extension_data[f"pca_model_{mode}_{chan_id}"])
+        else:
+            pca_models = self._extension_data[f"pca_model_{mode}"]
+        return pca_models
 
     def get_all_projections(self, channel_ids=None, unit_ids=None, outputs='id'):
         """

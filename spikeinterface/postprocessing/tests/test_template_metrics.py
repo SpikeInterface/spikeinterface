@@ -55,7 +55,7 @@ def test_calculate_template_metrics():
     
     # in-memory
     we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
-    similarity = compute_template_metrics(we_mem)
+    metrics = compute_template_metrics(we_mem)
 
     # reload as an extension from we
     assert TemplateMetricsCalculator in we_mem.get_available_extensions()

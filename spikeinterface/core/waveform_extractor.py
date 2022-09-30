@@ -190,7 +190,6 @@ class WaveformExtractor:
         """
         return extension_name in list(self._available_extensions)
 
-
     def load_extension(self, extension_name):
         """
         Load an extension from its name.
@@ -212,6 +211,20 @@ class WaveformExtractor:
                 return ext_class.load_from_folder(self.folder)
             else:
                 return self._available_extensions[extension_name]
+
+    def delete_extension(self, extension_name):
+        """
+        Deletes an existing extension.
+
+        Parameters
+        ----------
+        extension_name: str
+            The extension name.
+        """
+        assert self.is_extension(extension_name), f"The extension {extension_name} is not available"
+        del self._available_extensions[extension_name]
+        if self.folder is not None and (self.folder / extension_name).is_dir():
+            shutil.rmtree(self.folder / extension_name)
 
     def get_available_extensions(self):
         """
@@ -1007,7 +1020,7 @@ class BaseWaveformExtractorExtension:
         new_extension.set_params(**self._params)
         new_extension_data = self._select_extension_data(unit_ids=unit_ids)
         new_extension._extension_data = new_extension_data
-        new_extension.save()
+        new_extension._save()
         
     def _select_extension_data(self, unit_ids):
         # must be implemented in subclass

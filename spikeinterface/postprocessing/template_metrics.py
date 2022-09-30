@@ -32,9 +32,6 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
-        
-        self.waveform_extractor = waveform_extractor
-        self.template_metrics = None
 
     def _set_params(self, metric_names=None, peak_sign='neg', 
                     upsampling_factor=10, sparsity=None,
@@ -171,7 +168,6 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
         If 'sparsity' is None, the index is the unit_id.
         If 'sparsity' is given, the index is a multi-index (unit_id, channel_id)
     """
-    folder = waveform_extractor.folder
     if load_if_exists and waveform_extractor.is_extension(TemplateMetricsCalculator.extension_name):
         tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
     else:

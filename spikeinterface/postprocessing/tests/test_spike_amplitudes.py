@@ -110,3 +110,4 @@ def test_select_units():
 if __name__ == '__main__':
     test_compute_spike_amplitudes()
     test_compute_spike_amplitudes_parallel()
+    test_select_units()

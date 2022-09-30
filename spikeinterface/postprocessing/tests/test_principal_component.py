@@ -152,9 +152,7 @@ def test_pca_models_and_project_new():
     assert new_proj.shape == (100, n_components, n_channels)
 
     # global
-    if (cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
-        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
-                      "principal_components")
+    we.delete_extension('principal_components')
 
     pc_global = compute_principal_components(we, n_components=n_components,
                                              load_if_exists=True, mode="by_channel_global")
@@ -169,9 +167,7 @@ def test_pca_models_and_project_new():
     assert new_proj.shape == (100, n_components, n_channels)
 
     # concatenated
-    if Path(cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
-        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
-                      "principal_components")
+    we.delete_extension('principal_components')
 
     pc_concatenated = compute_principal_components(we, n_components=n_components,
                                                    load_if_exists=True, mode="concatenated")

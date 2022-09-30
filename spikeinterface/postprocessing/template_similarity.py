@@ -16,9 +16,6 @@ class TemplateSimilarityCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self.waveform_extractor = waveform_extractor
-        self.template_metrics = None
-
     def _set_params(self, method='cosine_similarity'):
 
         params = dict(method=method)

@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 import numpy as np
 
-from spikeinterface import WaveformExtractor, load_extractor
+from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
 from spikeinterface.extractors import toy_example
 
 from spikeinterface.postprocessing import WaveformPrincipalComponent
@@ -72,10 +72,21 @@ def test_compute_quality_metrics():
     assert we.is_extension('quality_metrics')
     qmc = we.load_extension('quality_metrics')
     assert isinstance(qmc, QualityMetricCalculator)
-    assert qmc.quality_metrics is not None
+    assert 'metrics' in qmc._extension_data
     qmc = QualityMetricCalculator.load_from_folder(
         cache_folder / 'toy_waveforms')
-    assert qmc.quality_metrics is not None
+    assert 'metrics' in qmc._extension_data
+
+    # in-memory
+    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
+    metrics = compute_quality_metrics(we_mem)
+
+    # reload as an extension from we
+    assert QualityMetricCalculator in we_mem.get_available_extensions()
+    assert we_mem.is_extension('quality_metrics')
+    qmc = we_mem.load_extension('quality_metrics')
+    assert isinstance(qmc, QualityMetricCalculator)
+    assert 'metrics' in qmc._extension_data
 
 
 def test_compute_quality_metrics_peak_sign():

@@ -37,8 +37,6 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting
 
-        self.quality_metrics = None
-
     def _set_params(self, metric_names=None, sparsity=None, peak_sign='neg',
                     max_spikes_for_nn=2000, n_neighbors=6, seed=None,
                     skip_pc_metrics=False):
@@ -63,18 +61,12 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
         return params
 
-    def _specific_load_from_folder(self):
-        self.quality_metrics = pd.read_csv(self.extension_folder / 'metrics.csv', index_col=0)
-
-    def _reset(self):
-        self.quality_metrics = None
-
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        new_metrics = self.quality_metrics.loc[np.array(unit_ids)]
-        new_metrics.to_csv(new_waveforms_folder / self.extension_name / 'metrics.csv')
+        new_metrics = self._extension_data['metrics'].loc[np.array(unit_ids)]
+        return dict(metrics=new_metrics)
 
-    def run(self, n_jobs, verbose, progress_bar=False):
+    def _run(self, n_jobs, verbose, progress_bar=False):
         """
         Compute quality metrics.
         """
@@ -121,17 +113,21 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 
-        self.quality_metrics = metrics
+        self._extension_data['metrics'] = metrics
 
-        # save to folder
-        metrics.to_csv(self.extension_folder / 'metrics.csv')
 
     def get_data(self):
-        """Get the computed metrics."""
-
+        """
+        Get the computed metrics.
+        
+        Returns
+        -------
+        metrics : pd.DataFrame
+            Dataframe with quality metrics
+        """
         msg = "Quality metrics are not computed. Use the 'run()' function."
-        assert self.quality_metrics is not None, msg
-        return self.quality_metrics
+        assert self._extension_data['metrics'] is not None, msg
+        return self._extension_data['metrics']
 
 
 WaveformExtractor.register_extension(QualityMetricCalculator)
@@ -170,16 +166,13 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
     metrics: pandas.DataFrame
         Data frame with the computed metrics
     """
-
-    folder = waveform_extractor.folder
-    ext_folder = folder / QualityMetricCalculator.extension_name
-    if load_if_exists and ext_folder.is_dir():
-        qmc = QualityMetricCalculator.load_from_folder(folder)
+    if load_if_exists and waveform_extractor.is_extension(QualityMetricCalculator.extension_name):
+        qmc = waveform_extractor.load_extension(QualityMetricCalculator.extension_name)
     else:
         qmc = QualityMetricCalculator(waveform_extractor)
         qmc.set_params(metric_names=metric_names, sparsity=sparsity, 
                        skip_pc_metrics=skip_pc_metrics, **params)
-        qmc.run(n_jobs, verbose, progress_bar=progress_bar)
+        qmc.run(n_jobs=n_jobs, verbose=verbose, progress_bar=progress_bar)
 
     metrics = qmc.get_data()
 

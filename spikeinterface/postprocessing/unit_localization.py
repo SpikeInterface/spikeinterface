@@ -38,8 +38,6 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self.unit_locations = None
-
     def _set_params(self, method='center_of_mass', method_kwargs={}):
 
         params = dict(method=method,
