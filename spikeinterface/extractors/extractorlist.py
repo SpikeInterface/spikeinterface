@@ -53,6 +53,8 @@ recording_extractor_full_list = [
     NumpyRecording,
     SHYBRIDRecordingExtractor,
     MdaRecordingExtractor,
+    NwbRecordingExtractor,
+
     # others
     CompressedBinaryIblExtractor,
     MCSH5RecordingExtractor
