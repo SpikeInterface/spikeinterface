@@ -39,13 +39,14 @@ class AddTemplatesRecording(BaseRecording):
 
         if nbefore is None:
             nbefore = np.argmax(np.max(np.abs(templates), axis=2), axis=1)
-        elif isnumeric(nbefore):
+        elif type(nbefore) == int:
             nbefore = [nbefore]*n_units 
         else:
             assert len(nbefore) == n_units
 
-        if amplitude_factor is None:
-            amplitude_factor = [[1.0]*len(sorting.get_unit_spike_train(unit_id)) for unit_id in sorting.unit_ids]
+        # TODO: Doesn't work for multi-segments
+        # if amplitude_factor is None:
+        #     amplitude_factor = [[1.0]*len(sorting.get_unit_spike_train(unit_id)) for unit_id in sorting.unit_ids]
 
         if parent_recording is not None:
             assert parent_recording.get_num_segments() == sorting.get_num_segments()
@@ -60,10 +61,13 @@ class AddTemplatesRecording(BaseRecording):
 
 
         for segment_index in range(sorting.get_num_segments()):
-            spikes = self.spike_vector[self.spike_vector['segment_ind'] == segment_index]
+            start = np.searchsorted(self.spike_vector['segment_ind'], segment_index, side="left")
+            end = np.searchsorted(self.spike_vector['segment_ind'], segment_index, side="right")
+            spikes = self.spike_vector[start : end]
+
             parent_recording_segment = None if parent_recording is None else parent_recording._recording_segments[segment_index]
             recording_segment = AddTemplatesRecordingSegment(self.sampling_frequency, 0, self.dtype, spikes, templates, nbefore,
-                                                             amplitude_factor, target_recording_segment, t_max[segment_index]) # TODO: t_start should not necessarily be 0.
+                                                             amplitude_factor, parent_recording_segment, t_max[segment_index]) # TODO: t_start should not necessarily be 0.
             self.add_recording_segment(recording_segment)
 
 
@@ -97,9 +101,9 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
             traces = np.zeros([self.t_max, n_channels], dtype=self.dtype)
         
 
-        mask = (self.spike_vector['sample_ind'] > start_frame - self.templates.shape[1]) & \
-               (self.spike_vector['sample_ind'] < end_frame + self.templates.shape[1])
-        spike_vector = self.spike_vector[mask]
+        start = np.searchsorted(self.spike_vector['sample_ind'], start_frame - self.templates.shape[1], side="left")
+        end   = np.searchsorted(self.spike_vector['sample_ind'], end_frame   + self.templates.shape[1], side="right")
+        spike_vector = self.spike_vector[start : end]
 
         for spike in spike_vector:
             t = spike['sample_ind']
