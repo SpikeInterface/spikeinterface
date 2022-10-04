@@ -21,7 +21,6 @@ jobs:
           pip install pytest
           pip install zarr
           pip install setuptools wheel twine
-          pip install -r requirements.txt
           pip install -e .
       - name: Test core with pytest
         run: |

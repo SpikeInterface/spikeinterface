@@ -1,0 +1,111 @@
+[project]
+name = "spikeinterface"
+version = "0.95.1.dev0"
+authors = [
+  { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
+  { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
+]
+description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+
+dependencies = [
+    "numpy",
+    "neo>=0.11",
+    "joblib!=1.2",
+    "tqdm",
+    "probeinterface>=0.2.10",
+]
+
+[tool.setuptools.packages.find]
+where = ["spikeinterface"]
+
+[project.urls]
+"Homepage" = "https://github.com/SpikeInterface/spikeinterface"
+"Bug Tracker" = "https://github.com/SpikeInterface/spikeinterface/issues"
+
+
+[project.optional-dependencies]
+
+extractors = [
+    "MEArec>=1.7.1",
+    "pynwb>=2.1.0",
+    "pyedflib>=0.1.30",
+    # "nixio>=1.5.0",
+    # "shybrid>=0.4.2",
+    # "pyyaml>=5.4.1  for shybrid",
+    "sonpy;python_version>'3.7'",
+    # lxml for neuroscope
+    "lxml",
+]
+
+full = [
+    # "datalad",
+    "h5py",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "networkx",
+    "distinctipy",
+    "matplotlib",
+    # sortingview
+]
+
+widgets = [
+    "ipympl",
+    "ipywidgets",
+    "sortingview",
+]
+
+test = [
+    "pytest",
+    "pytest-cov",
+
+    # zarr is needed for testing
+    "zarr",
+
+    # tridesclous
+    "numpy<1.23",
+    "numba",
+    "hdbscan",
+
+    # for sortingview backend
+    "sortingview",
+
+    # recent datalad need a too recent version for git-annex
+    # so we use an old one here
+    # datalad ==0.14.4
+    "datalad==0.16.2",
+
+    ## install sorters ##
+    "tridesclous>=1.6.6.1",
+
+    ## spyking-circus
+    "spyking-circus",
+
+    ## herdingspikes
+    "herdingspikes<=0.3.99",
+
+
+    ## sliding_nn
+    "pymde",
+    "torch",
+    "pynndescent",
+    
+    # probeinterface and neo from master
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+]
+
+
+
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
