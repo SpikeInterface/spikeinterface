@@ -321,7 +321,7 @@ class WaveformExtractor:
             (self.folder / 'params.json').write_text(
                 json.dumps(check_json(self._params), indent=4), encoding='utf8')
         
-    def select_units(self, unit_ids, new_folder=None):
+    def select_units(self, unit_ids, new_folder=None, use_relative_path=False):
         """
         Filters units by creating a new waveform extractor object in a new folder.
         
@@ -353,7 +353,13 @@ class WaveformExtractor:
                             new_folder / "params.json")
             shutil.copyfile(self.folder / "recording.json",
                             new_folder / "recording.json")
-            sorting.dump(new_folder / 'sorting.json', relative_to=None)
+
+            if use_relative_path:
+                relative_to = new_folder
+            else:
+                relative_to = None
+
+            sorting.dump(new_folder / 'sorting.json', relative_to=relative_to)
 
             # create and populate waveforms folder
             new_waveforms_folder = new_folder / "waveforms"

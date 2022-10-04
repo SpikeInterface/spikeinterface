@@ -102,7 +102,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         else:
             raise FileExistsError(f'{output_folder} already exists')
 
-    output_folder.mkdir()
+    output_folder.mkdir(parents=True)
 
     # save dat file
     if dtype is None:

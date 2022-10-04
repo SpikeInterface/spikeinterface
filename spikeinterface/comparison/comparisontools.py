@@ -77,7 +77,10 @@ def do_count_event(sorting):
         Nb of spike by units.
     """
     unit_ids = sorting.get_unit_ids()
-    ev_counts = np.array([len(sorting.get_unit_spike_train(u)) for u in unit_ids], dtype='int64')
+    ev_counts = np.zeros(len(unit_ids), dtype="int64")
+    for segment_index in range(sorting.get_num_segments()):
+        ev_counts += np.array([len(sorting.get_unit_spike_train(u, segment_index=segment_index)) 
+                               for u in unit_ids], dtype='int64')
     event_counts = pd.Series(ev_counts, index=unit_ids)
     return event_counts
 
@@ -108,7 +111,7 @@ def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, ev
 def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
     """
     Make the match_event_count matrix.
-    Basically it count the match event for all given pair of spike train from
+    Basically it counts the matching events for all given pairs of spike trains from
     sorting1 and sorting2.
 
     Parameters
@@ -130,17 +133,21 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
 
+    match_event_counts = np.zeros((len(unit1_ids), len(unit2_ids)), dtype="int64")
+
     # preload all spiketrains 2 into a list
-    s2_spiketrains = [sorting2.get_unit_spike_train(u2) for u2 in unit2_ids]
+    for segment_index in range(sorting1.get_num_segments()):
+        s2_spiketrains = [sorting2.get_unit_spike_train(u2, segment_index=segment_index) for u2 in unit2_ids]
 
-    match_event_count_lists = Parallel(n_jobs=n_jobs)(delayed(count_match_spikes)(sorting1.get_unit_spike_train(u1),
-                                                                                  s2_spiketrains, delta_frames) for
-                                                      i1, u1 in enumerate(unit1_ids))
+        match_event_count_segment = Parallel(n_jobs=n_jobs)(
+            delayed(count_match_spikes)(sorting1.get_unit_spike_train(u1, segment_index=segment_index), 
+                                        s2_spiketrains, delta_frames) for i1, u1 in enumerate(unit1_ids))
+        match_event_counts += np.array(match_event_count_segment)
 
-    match_event_count = pd.DataFrame(np.array(match_event_count_lists),
-                                     index=unit1_ids, columns=unit2_ids)
+    match_event_counts_df = pd.DataFrame(np.array(match_event_counts),
+                                         index=unit1_ids, columns=unit2_ids)
 
-    return match_event_count
+    return match_event_counts_df
 
 
 def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
@@ -170,8 +177,8 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
 
-    ev_counts1 = np.array([len(sorting1.get_unit_spike_train(u1)) for u1 in unit1_ids], dtype='int64')
-    ev_counts2 = np.array([len(sorting2.get_unit_spike_train(u2)) for u2 in unit2_ids], dtype='int64')
+    ev_counts1 = np.array(list(sorting1.get_total_num_spikes().values()))
+    ev_counts2 = np.array(list(sorting2.get_total_num_spikes().values()))
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
@@ -361,81 +368,86 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
 
     Returns
     -------
-    labels_st1: dict of np.array of str
-        Contain score labels for units of sorting 1
-    labels_st2: dict of np.array of str
-        Contain score labels for units of sorting 2
+    labels_st1: dict of lists of np.array of str
+        Contain score labels for units of sorting 1 for each segment
+    labels_st2: dict of lists of np.array of str
+        Contain score labels for units of sorting 2 for each segment
     """
     unit1_ids = sorting1.get_unit_ids()
     unit2_ids = sorting2.get_unit_ids()
     labels_st1 = dict()
     labels_st2 = dict()
-    N1 = len(unit1_ids)
-    N2 = len(unit2_ids)
 
     # copy spike trains for faster access from extractors with memmapped data
-    sts1 = {u1: sorting1.get_unit_spike_train(u1) for u1 in unit1_ids}
-    sts2 = {u2: sorting2.get_unit_spike_train(u2) for u2 in unit2_ids}
+    num_segments = sorting1.get_num_segments()
+    sts1 = {u1: [sorting1.get_unit_spike_train(u1, seg_index) for seg_index in range(num_segments)] 
+            for u1 in unit1_ids}
+    sts2 = {u2: [sorting2.get_unit_spike_train(u2, seg_index) for seg_index in range(num_segments)] 
+            for u2 in unit2_ids}
 
     for u1 in unit1_ids:
-        lab_st1 = np.array(['UNPAIRED'] * len(sts1[u1]), dtype='<U8')
+        lab_st1 = [np.array(['UNPAIRED'] * len(sts), dtype='<U8') for sts in sts1[u1]]
         labels_st1[u1] = lab_st1
     for u2 in unit2_ids:
-        lab_st2 = np.array(['UNPAIRED'] * len(sts2[u2]), dtype='<U8')
+        lab_st2 = [np.array(['UNPAIRED'] * len(sts), dtype='<U8') for sts in sts2[u2]]
         labels_st2[u2] = lab_st2
 
-    for u1 in unit1_ids:
-        u2 = unit_map12[u1]
-        if u2 != -1:
-            lab_st1 = labels_st1[u1]
-            lab_st2 = labels_st2[u2]
-            mapped_st = sorting2.get_unit_spike_train(u2)
-            times_concat = np.concatenate((sts1[u1], mapped_st))
-            membership = np.concatenate((np.ones(sts1[u1].shape) * 1, np.ones(mapped_st.shape) * 2))
-            indices = times_concat.argsort()
-            times_concat_sorted = times_concat[indices]
-            membership_sorted = membership[indices]
-            diffs = times_concat_sorted[1:] - times_concat_sorted[:-1]
-            inds = np.where((diffs <= delta_frames) & (membership_sorted[:-1] != membership_sorted[1:]))[0]
-            if len(inds) > 0:
-                inds2 = inds[np.where(inds[:-1] + 1 != inds[1:])[0]] + 1
-                inds2 = np.concatenate((inds2, [inds[-1]]))
-                times_matched = times_concat_sorted[inds2]
-                # find and label closest spikes
-                ind_st1 = np.array([np.abs(sts1[u1] - tm).argmin() for tm in times_matched])
-                ind_st2 = np.array([np.abs(mapped_st - tm).argmin() for tm in times_matched])
-                assert (len(np.unique(ind_st1)) == len(ind_st1))
-                assert (len(np.unique(ind_st2)) == len(ind_st2))
-                lab_st1[ind_st1] = 'TP'
-                lab_st2[ind_st2] = 'TP'
-        else:
-            lab_st1 = np.array(['FN'] * len(sts1[u1]))
-            labels_st1[u1] = lab_st1
+    for seg_index in range(num_segments):
+        for u1 in unit1_ids:
+            u2 = unit_map12[u1]
+            sts = sts1[u1][seg_index]
+            if u2 != -1:
+                lab_st1 = labels_st1[u1][seg_index]
+                lab_st2 = labels_st2[u2][seg_index]
+                mapped_st = sorting2.get_unit_spike_train(u2, seg_index)
+                times_concat = np.concatenate((sts, mapped_st))
+                membership = np.concatenate((np.ones(sts.shape) * 1, np.ones(mapped_st.shape) * 2))
+                indices = times_concat.argsort()
+                times_concat_sorted = times_concat[indices]
+                membership_sorted = membership[indices]
+                diffs = times_concat_sorted[1:] - times_concat_sorted[:-1]
+                inds = np.where((diffs <= delta_frames) & (membership_sorted[:-1] != membership_sorted[1:]))[0]
+                if len(inds) > 0:
+                    inds2 = inds[np.where(inds[:-1] + 1 != inds[1:])[0]] + 1
+                    inds2 = np.concatenate((inds2, [inds[-1]]))
+                    times_matched = times_concat_sorted[inds2]
+                    # find and label closest spikes
+                    ind_st1 = np.array([np.abs(sts1[u1] - tm).argmin() for tm in times_matched])
+                    ind_st2 = np.array([np.abs(mapped_st - tm).argmin() for tm in times_matched])
+                    assert (len(np.unique(ind_st1)) == len(ind_st1))
+                    assert (len(np.unique(ind_st2)) == len(ind_st2))
+                    lab_st1[ind_st1] = 'TP'
+                    lab_st2[ind_st2] = 'TP'
+            else:
+                lab_st1 = np.array(['FN'] * len(sts))
+                labels_st1[u1][seg_index] = lab_st1
 
     if label_misclassification:
+        for seg_index in range(num_segments):
+            for u1 in unit1_ids:
+                lab_st1 = labels_st1[u1][seg_index]
+                st1 = sts1[u1][seg_index]
+                for l_gt, lab in enumerate(lab_st1):
+                    if lab == 'UNPAIRED':
+                        for u2 in unit2_ids:
+                            if u2 in unit_map12.values and unit_map12[u1] != -1:
+                                lab_st2 = labels_st2[u2][seg_index]
+                                n_sp = st1[l_gt]
+                                mapped_st = sts2[u2][seg_index]
+                                matches = (np.abs(mapped_st.astype(int) - n_sp) <= delta_frames)
+                                if np.sum(matches) > 0:
+                                    if 'CL' not in lab_st1[l_gt] and 'CL' not in lab_st2[np.where(matches)[0][0]]:
+                                        lab_st1[l_gt] = 'CL_' + str(u1) + '_' + str(u2)
+                                        lab_st2[np.where(matches)[0][0]] = 'CL_' + str(u2) + '_' + str(u1)
+
+    for seg_index in range(num_segments):
         for u1 in unit1_ids:
-            lab_st1 = labels_st1[u1]
-            st1 = sts1[u1]
-            for l_gt, lab in enumerate(lab_st1):
-                if lab == 'UNPAIRED':
-                    for u2 in unit2_ids:
-                        if u2 in unit_map12.values and unit_map12[u1] != -1:
-                            lab_st2 = labels_st2[u2]
-                            n_sp = st1[l_gt]
-                            mapped_st = sts2[u2]
-                            matches = (np.abs(mapped_st.astype(int) - n_sp) <= delta_frames)
-                            if np.sum(matches) > 0:
-                                if 'CL' not in lab_st1[l_gt] and 'CL' not in lab_st2[np.where(matches)[0][0]]:
-                                    lab_st1[l_gt] = 'CL_' + str(u1) + '_' + str(u2)
-                                    lab_st2[np.where(matches)[0][0]] = 'CL_' + str(u2) + '_' + str(u1)
+            lab_st1 = labels_st1[u1][seg_index]
+            lab_st1[lab_st1 == 'UNPAIRED'] = 'FN'
 
-    for u1 in unit1_ids:
-        lab_st1 = labels_st1[u1]
-        lab_st1[lab_st1 == 'UNPAIRED'] = 'FN'
-
-    for u2 in unit2_ids:
-        lab_st2 = labels_st2[u2]
-        lab_st2[lab_st2 == 'UNPAIRED'] = 'FP'
+        for u2 in unit2_ids:
+            lab_st2 = labels_st2[u2][seg_index]
+            lab_st2[lab_st2 == 'UNPAIRED'] = 'FP'
 
     return labels_st1, labels_st2
 
