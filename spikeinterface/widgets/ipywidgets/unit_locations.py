@@ -34,7 +34,7 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
                     figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        data_plot['unit_ids'] = [data_plot['unit_ids'][0]]
+        data_plot['unit_ids'] = data_plot['unit_ids'][:1]
         unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'],
                                                             list(
                                                                 data_plot['unit_colors'].keys()),
