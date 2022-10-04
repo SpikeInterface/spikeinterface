@@ -16,23 +16,25 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
-from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
+from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks, EnergyFeature
 
 
-class PositionAndFeaturesClustering:
+class RandomProjectionClustering:
     """
     hdbscan clustering on peak_locations previously done by localize_peaks()
     """
     _default_params = {
-        "peak_localization_kwargs" : {"method" : "center_of_mass"},
         "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
-        "max_spikes_per_unit" : 200,
+        "max_spikes_per_unit" : 200, 
         "selection_method" : "random",
+        "nb_projections" : {'ptp' : 5, 'energy' : 5},
         "ms_before" : 1.5,
         "ms_after": 1.5,
-        "cleaning_method": "dip",
+        "random_seed" : 42,
+        "cleaning_method": "matching",
+        "min_values" : {'ptp' : 2, 'energy' : 0.5},
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
@@ -41,6 +43,7 @@ class PositionAndFeaturesClustering:
         assert HAVE_HDBSCAN, 'twisted clustering need hdbscan to be installed'
 
         d = params
+        verbose = d['job_kwargs']['verbose']
 
         peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
 
@@ -48,29 +51,46 @@ class PositionAndFeaturesClustering:
         nbefore = int(params['ms_before'] * fs / 1000.)
         nafter = int(params['ms_after'] * fs / 1000.)
         num_samples = nbefore + nafter
+        num_chans = recording.get_num_channels()
 
-        position_method = d["peak_localization_kwargs"]["method"]
+        noise_levels = get_noise_levels(recording, return_scaled=False)
 
-        features_list = [position_method, 'ptp', 'energy']
-        features_params = {position_method : {'local_radius_um' : params['local_radius_um']},
-                           'ptp' : {'all_channels' : False, 'local_radius_um' : params['local_radius_um']},
-                           'energy': {'local_radius_um' : params['local_radius_um']}}
+        np.random.seed(d['random_seed'])
+
+        features_params = {}
+        features_list = []
+
+        for proj_type in ['ptp', 'energy']:
+
+            if d['nb_projections'][proj_type] > 0:
+                features_list += [f'random_projections_{proj_type}']
+                if d['min_values'][proj_type] > 0:
+                    min_values = d['min_values'][proj_type]*noise_levels
+                else:
+                    min_values = None
+
+                projections = np.random.randn(num_chans, d['nb_projections'][proj_type])
+                features_params[f'random_projections_{proj_type}'] = {'local_radius_um' : params['local_radius_um'], 
+                                'projections' : projections, 'min_values' : min_values}
 
         features_data = compute_features_from_peaks(recording, peaks, features_list, features_params, 
             ms_before=1, ms_after=1, **params['job_kwargs'])
 
-        hdbscan_data = np.zeros((len(peaks), 4), dtype=np.float32)
-        hdbscan_data[:, 0] = features_data[0]['x']
-        hdbscan_data[:, 1] = features_data[0]['y']
-        hdbscan_data[:, 2] = features_data[1]
-        hdbscan_data[:, 3] = features_data[2]
+        if len(features_data) > 1:
+            hdbscan_data = np.hstack((features_data[0], features_data[1]))
+        else:
+            hdbscan_data = features_data[0]
 
-        preprocessing = QuantileTransformer(output_distribution='uniform')
-        hdbscan_data = preprocessing.fit_transform(hdbscan_data)
+        #preprocessing = QuantileTransformer(output_distribution='uniform')
+        #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
+
 
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
         peak_labels = clustering[0]
+
+        #np.save('hdbscan_data', hdbscan_data)
+        #np.save('hdbscan_label', peak_labels)
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
@@ -109,17 +129,16 @@ class PositionAndFeaturesClustering:
 
         cleaning_method = params["cleaning_method"]
 
-        print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
+        if verbose:
+            print("We found %d raw clusters, starting to clean with %s..." %(len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
 
-            num_chans = recording.get_num_channels()
             wfs_arrays = extract_waveforms_to_buffers(recording, spikes, labels, nbefore, nafter,
                          mode='shared_memory', return_scaled=False, folder=None, dtype=recording.get_dtype(),
                          sparsity_mask=None,  copy=True,
                          **params['job_kwargs'])
 
-            noise_levels = get_noise_levels(recording, return_scaled=False)
             labels, peak_labels = remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params['cleaning_kwargs'])
 
         elif cleaning_method == "dip":
@@ -138,9 +157,17 @@ class PositionAndFeaturesClustering:
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
             we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
                 ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False)
-            labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'], **params['cleaning_kwargs'])
+
+            cleaning_matching_params = params['job_kwargs'].copy()
+            cleaning_matching_params['chunk_duration'] = '100ms'
+            cleaning_matching_params['n_jobs'] = 1
+            cleaning_matching_params['verbose'] = False
+            cleaning_matching_params['progress_bar'] = False
+
+            labels, peak_labels = remove_duplicates_via_matching(we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **params['cleaning_kwargs'])
             shutil.rmtree(tmp_folder)
 
-        print("We kept %d non-duplicated clusters..." %len(labels))
+        if verbose:
+            print("We kept %d non-duplicated clusters..." %len(labels))
 
         return labels, peak_labels
