@@ -8,6 +8,9 @@ git+https://github.com/SpikeInterface/probeinterface.git
 # neo is from master because of several IO (spikeglx, ...)
 git+https://github.com/NeuralEnsemble/python-neo.git
 
+# joblib
+joblib<1.2
+
 # tridesclous
 numpy==1.21
 numba
@@ -58,7 +61,7 @@ lxml
 pyqt5
 # hdbscan
 loky
-tridesclous>=1.6.4
+tridesclous>=1.6.6.1
 
 # shybrid
 # shybrid

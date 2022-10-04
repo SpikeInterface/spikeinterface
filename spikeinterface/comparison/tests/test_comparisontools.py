@@ -120,20 +120,20 @@ def test_do_score_labels():
                                       [101, 201, 301, ], [0, 0, 5])
     unit_map12 = {0: 0, 1: 5}
     labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12)
-    assert_array_equal(labels_st1[0], ['TP', 'TP', 'FN'])
-    assert_array_equal(labels_st1[1], ['TP', ])
-    assert_array_equal(labels_st2[0], ['TP', 'TP'])
-    assert_array_equal(labels_st2[5], ['TP', ])
+    assert_array_equal(labels_st1[0][0], ['TP', 'TP', 'FN'])
+    assert_array_equal(labels_st1[1][0], ['TP', ])
+    assert_array_equal(labels_st2[0][0], ['TP', 'TP'])
+    assert_array_equal(labels_st2[5][0], ['TP', ])
 
     # match when 2 units fire at same time
     sorting1, sorting2 = make_sorting([100, 100, 200, 200, 300], [0, 1, 0, 1, 0],
                                       [100, 100, 200, 200, 300], [0, 1, 0, 1, 0], )
     unit_map12 = {0: 0, 1: 1}
     labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12)
-    assert_array_equal(labels_st1[0], ['TP', 'TP', 'TP'])
-    assert_array_equal(labels_st1[1], ['TP', 'TP', ])
-    assert_array_equal(labels_st2[0], ['TP', 'TP', 'TP'])
-    assert_array_equal(labels_st2[1], ['TP', 'TP', ])
+    assert_array_equal(labels_st1[0][0], ['TP', 'TP', 'TP'])
+    assert_array_equal(labels_st1[1][0], ['TP', 'TP', ])
+    assert_array_equal(labels_st2[0][0], ['TP', 'TP', 'TP'])
+    assert_array_equal(labels_st2[1][0], ['TP', 'TP', ])
 
 
 def test_compare_spike_trains():
