@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from spikeinterface.extractors import NumpySorting
+from spikeinterface.extractors import NumpySorting, toy_example
 from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
 
 
@@ -62,6 +62,26 @@ def test_compare_multiple_sorters():
     # sw.plot_multicomp_agreement(msc)
     # sw.plot_multicomp_agreement_by_sorter(msc)
     # plt.show()
+
+
+def test_compare_multi_segment():
+    num_segments = 3
+    _, sort = toy_example(num_segments=num_segments)
+
+    cmp_multi = compare_multiple_sorters([sort, sort, sort])
+
+    for k, cmp in cmp_multi.comparisons.items():
+        assert np.allclose(np.diag(cmp.agreement_scores), np.ones(len(sort.unit_ids)))
+
+    sort_agr = cmp_multi.get_agreement_sorting(minimum_agreement_count=num_segments)
+    assert len(sort_agr.unit_ids) == len(sort.unit_ids)
+    assert sort_agr.get_num_segments() == num_segments
+
+    # test that all spike trains from different segments can be retrieved
+    for unit in sort_agr.unit_ids:
+        for seg_index in range(num_segments):
+            st = sort_agr.get_unit_spike_train(unit, seg_index)
+            print(f"Segment {seg_index} unit {unit}: {st}")
 
 
 if __name__ == '__main__':
