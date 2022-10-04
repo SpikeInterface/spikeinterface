@@ -21,7 +21,7 @@ class AmplitudesWidget(BaseWidget):
         The segment index (or None if mono-segment)
     max_spikes_per_unit: int
         Number of max spikes per unit to display. Use None for all spikes.
-        Default 500.
+        Default None.
     hide_unit_selector : bool
         If True the unit selector is not displayed
         (sortingview backend)
@@ -36,7 +36,7 @@ class AmplitudesWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None,
-                 segment_index=None, max_spikes_per_unit=500, hide_unit_selector=False, 
+                 segment_index=None, max_spikes_per_unit=None, hide_unit_selector=False, 
                  plot_histograms=False, bins=None, backend=None, **backend_kwargs):
         sorting = waveform_extractor.sorting
         self.check_extensions(waveform_extractor, "spike_amplitudes")
