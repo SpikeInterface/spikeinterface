@@ -77,9 +77,9 @@ You can also have a look at the [spikeinterface-gui](https://https://github.com/
 
 All documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
-Some usefull tutorials in jupyter notebook format [here](https://github.com/SpikeInterface/spiketutorials).
+Some useful jupyter notebook tutorials can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
 
-There are also some usefull notebooks [on our blog](https://spikeinterface.github.io) for advanced benchmarking or sorting components.
+There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking and sorting components.
 
 
 ## How to install spikeinteface
