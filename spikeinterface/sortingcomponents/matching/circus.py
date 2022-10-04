@@ -183,7 +183,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'templates' : None,
         'overlaps' : None,
         'norms' : None,
-        'smoothing_factor' : 0,
+        'smoothing_factor' : 0.3,
         'ignored_ids' : [],
         'fft_size' : None
     }

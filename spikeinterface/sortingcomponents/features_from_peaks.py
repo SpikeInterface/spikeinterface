@@ -172,7 +172,10 @@ class RandomProjectionsFeature(PeakPipelineStep):
                 indices = np.where(wf_ptp < self.min_values[chan_inds])
                 wf_ptp[indices[0], indices[1]] = 0
 
-            all_projections[idx] = np.dot(wf_ptp, local_projections)/(np.sum(wf_ptp, axis=1)[:, np.newaxis])
+            denom = np.sum(wf_ptp, axis=1)
+            mask = denom != 0
+
+            all_projections[idx[mask]] = np.dot(wf_ptp[mask], local_projections)/(denom[mask][:, np.newaxis])
         return all_projections
 
 
@@ -202,7 +205,10 @@ class RandomProjectionsEnergyFeature(PeakPipelineStep):
                 indices = np.where(energies < self.min_values[chan_inds]*expected)
                 energies[indices[0], indices[1]] = 0
 
-            all_projections[idx] = np.dot(energies, local_projections)/(np.sum(energies, axis=1)[:, np.newaxis])
+            denom = np.sum(energies, axis=1)
+            mask = denom != 0
+
+            all_projections[idx[mask]] = np.dot(energies[mask], local_projections)/(denom[mask][:, np.newaxis])
         return all_projections
 
 
