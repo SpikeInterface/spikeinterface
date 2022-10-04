@@ -19,7 +19,7 @@ class GaussianFilterRecording(BasePreprocessor):
 		for parent_segment in recording._recording_segments:
 			self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, *band))
 
-		self._kwargs = {recording: recording.to_dict(), band: band}
+		self._kwargs = {'recording': recording.to_dict(), 'band': band}
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
