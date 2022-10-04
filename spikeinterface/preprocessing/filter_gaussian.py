@@ -19,6 +19,8 @@ class GaussianFilterRecording(BasePreprocessor):
 		for parent_segment in recording._recording_segments:
 			self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, *band))
 
+		self._kwargs = {recording: recording.to_dict(), band: band}
+
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 
@@ -40,13 +42,13 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 		dtype = traces.dtype
 
 		sf = self.parent_recording_segment.sampling_frequency
-		traces_fft = np.fft.rfft(traces, axis=0)
-		faxis = np.fft.rfftfreq(traces.shape[0], d=1/sf)
+		traces_fft = np.fft.fft(traces, axis=0)
+		faxis = np.fft.fftfreq(traces.shape[0], d=1/sf)
 		gauss_low  = norm.pdf(faxis / self.low_f)  * np.sqrt(2*np.pi)
 		gauss_high = norm.pdf(faxis / self.high_f) * np.sqrt(2*np.pi)
 
 		filtered_fft = traces_fft * (gauss_high - gauss_low)[:, None]
-		filtered_traces = np.fft.irfft(filtered_fft, axis=0)
+		filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))
 
 		if right_margin > 0:
 			return filtered_traces[left_margin : -right_margin, :].astype(dtype)
