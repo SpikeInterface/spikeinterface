@@ -2,6 +2,7 @@ from .si_based import ComponentsBasedSorter
 
 import os
 import shutil
+import numpy as np
 
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
     get_noise_levels, extract_waveforms)
@@ -46,6 +47,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
+        num_channels = recording.get_num_channels()
 
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
@@ -76,10 +78,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
         ## channels as flat as possible
         selection_params = params['selection']
-        selection_params['n_peaks'] = params['selection']['n_peaks_per_channel'] * recording.get_num_channels()
+        selection_params['n_peaks'] = params['selection']['n_peaks_per_channel'] * num_channels
         selection_params['n_peaks'] = max(selection_params['min_n_peaks'], selection_params['n_peaks'])
 
-        noise_levels = get_noise_levels(recording_f, return_scaled=False)
+        noise_levels = np.ones(num_channels, dtype=np.float32)
         selection_params.update({'noise_levels' : noise_levels})
         selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
 
