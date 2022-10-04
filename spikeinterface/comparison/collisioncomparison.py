@@ -48,8 +48,8 @@ class CollisionGTComparison(GroundTruthComparison):
         mask = (self.collision_events['unit_id1'] == gt_unit_id1) & (self.collision_events['unit_id2'] == gt_unit_id2)
         event = self.collision_events[mask]
 
-        score_label1 = self._labels_st1[gt_unit_id1][event['index1']]
-        score_label2 = self._labels_st1[gt_unit_id2][event['index2']]
+        score_label1 = self._labels_st1[gt_unit_id1][0][event['index1']]
+        score_label2 = self._labels_st1[gt_unit_id2][0][event['index2']]
         delta = event['delta_frame']
 
         if reversed:
