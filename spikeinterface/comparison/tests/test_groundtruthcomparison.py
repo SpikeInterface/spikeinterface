@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from spikeinterface.extractors import NumpySorting
+from spikeinterface.extractors import NumpySorting, toy_example
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
 
@@ -138,6 +138,7 @@ def test_get_performance():
     perf = sc.get_performance('pooled_with_average')
     assert perf['accuracy'] == 1.
     assert perf['miss_rate'] == 0.
+
 
 
 if __name__ == '__main__':
