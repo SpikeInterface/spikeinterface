@@ -62,7 +62,7 @@ With SpikeInterface, users can:
 - post-process sorted datasets.
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
-- visualize recordings and spike sorting outputs with sevral ways (matplotlib, sorting view, in jupyter)
+- visualize recordings and spike sorting outputs in sevral ways (matplotlib, sortingview, in jupyter)
 - export report and export to phy
 - offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://https://github.com/SpikeInterface/spikeinterface-gui)
 - have some powerful sorting components to build your own sorter.
