@@ -106,8 +106,21 @@ test = [
 ]
 
 
-
-
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+
+[tool.pytest.ini_options]
+markers = [
+    "core",
+    "extractors",
+    "preprocessing",
+    "postprocessing",
+    "qualitymetrics",
+    "sorters",
+    "comparison",
+    "exporters",
+    "widgets",
+    "sortingcomponents",
+]
