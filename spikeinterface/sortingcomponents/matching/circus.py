@@ -187,7 +187,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         return template, active_channels
 
     @classmethod
-    def _regularize_template(cls, template, stds, smoothing_factor=0.5):
+    def _regularize_template(cls, template, stds, smoothing_factor=0.25):
 
         nb_channels = template.shape[1]
         nb_timesteps = template.shape[0]
@@ -300,8 +300,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         nb_active_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
 
-        d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*nb_active_channels)[:, np.newaxis]
-        #d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*d['num_channels'])
+        #d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*nb_active_channels)[:, np.newaxis]
+        d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*d['num_channels'])
 
         return d        
 
