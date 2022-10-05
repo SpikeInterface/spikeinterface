@@ -27,8 +27,10 @@ dependencies = [
 where = ["spikeinterface"]
 
 [project.urls]
-"Homepage" = "https://github.com/SpikeInterface/spikeinterface"
-"Bug Tracker" = "https://github.com/SpikeInterface/spikeinterface/issues"
+homepage = "https://github.com/SpikeInterface/spikeinterface"
+repository = "https://github.com/SpikeInterface/spikeinterface"
+documentation = "https://spikeinterface.readthedocs.io/"
+changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 
 
 [project.optional-dependencies]
