@@ -143,9 +143,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     https://elifesciences.org/articles/34518
     
     This is an Orthogonal Template Matching algorithm. For speed and 
-    memory optimization, templates are automatically sparsified if the 
-    density of the matrix falls below a given threshold. Signal is
-    convolved with the templates, and as long as some scalar products
+    memory optimization, templates are automatically sparsified. Signal 
+    is convolved with the templates, and as long as some scalar products
     are higher than a given threshold, we use a Cholesky decomposition
     to compute the optimal amplitudes needed to reconstruct the signal.
 
@@ -154,29 +153,22 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     Parameters
     ----------
-    noise_levels: array
-        The noise levels, for every channels
-    random_chunk_kwargs: dict
-        Parameters for computing noise levels, if not provided (sub optimal)
     amplitude: tuple
         (Minimal, Maximal) amplitudes allowed for every template
     omp_min_sps: float
         Stopping criteria of the OMP algorithm, in percentage of the norm
     sparsify_threshold: float
         Templates are sparsified in order to keep only the channels necessary
-        to explain a given fraction of the total norm
-    use_sparse_matrix_threshold: float
-        If density of the templates is below a given threshold, sparse matrix
-        are used (memory efficient)
-    progress_bar_steps: bool
-        In order to display or not steps from the algorithm
+        to explain. ptp limit for considering a channel as silent
+    smoothing_factor: float
+        Templates are smoothed via Spline Interpolation
     -----
     """
 
     _default_params = {
         'sparsify_threshold': 1,
-        'amplitudes' : [0.6, 2],
-        'omp_min_sps' : 0.1,
+        'amplitudes' : [0.6, np.inf],
+        'omp_min_sps' : 0.15,
         'waveform_extractor': None,
         'templates' : None,
         'overlaps' : None,
@@ -306,7 +298,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         norms = d['norms']
         sparsities = d['sparsities']
 
-        d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*d['num_channels'])
+        nb_active_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
+
+        d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*nb_active_channels)[:, np.newaxis]
+        #d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*d['num_channels'])
 
         return d        
 
@@ -380,6 +375,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                     scalar_products[i] = convolution.sum(0)
                 else:
                     scalar_products[i] = 0
+
 
         if len(ignored_ids) > 0:
             scalar_products[ignored_ids] = -np.inf
