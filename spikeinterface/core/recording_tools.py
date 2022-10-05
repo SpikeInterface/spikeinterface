@@ -59,8 +59,6 @@ def get_channel_distances(recording):
     """
     locations = recording.get_channel_locations()
     
-    # import scipy
-    # channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
 
     channel_distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
 
