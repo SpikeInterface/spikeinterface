@@ -509,18 +509,9 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     num_chans = waveform_extractor.recording.get_num_channels()
 
     for t in range(nb_templates):
-
-        is_silent = templates[t].std(0) < 0.1*noise_levels
+        is_silent = templates[t].ptp(0) < 1
         templates[t, :, is_silent] = 0
 
-        channel_norms = np.linalg.norm(templates[t], axis=0)**2
-        total_norm = np.linalg.norm(templates[t])**2
-
-        idx = np.argsort(channel_norms)[::-1]
-        explained_norms = np.cumsum(channel_norms[idx]/total_norm)
-        channel = np.searchsorted(explained_norms, sparsify_threshold)
-        active_channels = np.sort(idx[:channel])
-        templates[t, :, idx[channel:]] = 0
 
     zdata = templates.reshape(nb_templates, -1)
 
