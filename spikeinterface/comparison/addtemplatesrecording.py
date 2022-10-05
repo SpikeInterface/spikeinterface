@@ -98,7 +98,7 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
         if self.parent_recording is not None:
             traces = self.parent_recording.get_traces(start_frame, end_frame, channel_indices)
         else:
-            traces = np.zeros([self.t_max, n_channels], dtype=self.dtype)
+            traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
         
 
         start = np.searchsorted(self.spike_vector['sample_ind'], start_frame - self.templates.shape[1], side="left")
