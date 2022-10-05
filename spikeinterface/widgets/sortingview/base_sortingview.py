@@ -16,6 +16,10 @@ class SortingviewPlotter(BackendPlotter):
         "height": None
     }
     
+    def __init__(self):
+        self.view = None
+        self.url = None
+
     def make_serializable(*args):
         serializable_dict = check_json({i: a for i, a in enumerate(args[1:])})
         returns = ()
@@ -38,13 +42,22 @@ class SortingviewPlotter(BackendPlotter):
         except NameError:
             return False
 
-    def display_view(self, backend_kwargs):
-        assert self.view is not None, "You need to `set_view()` before display!"
+    def handle_display_and_url(self, view, **backend_kwargs):
+        self.set_view(view)
         if self.is_notebook() and backend_kwargs["display"]:
             display(self.view.jupyter(height=backend_kwargs["height"]))
+        if backend_kwargs["generate_url"]:
+            figlabel = backend_kwargs.get("figlabel", self.default_label)
+            url = view.url(label=figlabel)
+            self.set_url(url)
+            print(url)            
 
+    # make view and url accessible by the plotter
     def set_view(self, view):
         self.view = view
+
+    def set_url(self, url):
+        self.url = url
 
 
 def generate_unit_table_view(unit_ids):

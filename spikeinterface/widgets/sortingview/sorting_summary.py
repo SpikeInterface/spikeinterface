@@ -11,6 +11,8 @@ from .unit_templates import UnitTemplatesPlotter
 
 
 class SortingSummaryPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Sorting Summary"
+
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         dp = to_attr(data_plot)
@@ -70,14 +72,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
                 ]
             )
 
-        self.set_view(v_summary)
-
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - SortingSummary"
-            url = v_summary.url(label=label)
-            print(url)
-        self.display_view(backend_kwargs)
+        self.handle_display_and_url(v_summary, **backend_kwargs)
         return v_summary
 
 

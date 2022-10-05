@@ -29,14 +29,8 @@ class CrossCorrelogramsPlotter(SortingviewPlotter):
             cross_correlograms=cc_items,
             hide_unit_selector=dp.hide_unit_selector
         )
-        self.set_view(v_cross_correlograms)
 
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - CrossCorrelograms"
-            url = v_cross_correlograms.url(label=label)
-            print(url)
-        self.display_view(backend_kwargs)
+        self.handle_display_and_url(v_cross_correlograms, **backend_kwargs)
         return v_cross_correlograms
 
 

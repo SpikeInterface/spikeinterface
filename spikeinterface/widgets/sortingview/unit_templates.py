@@ -4,6 +4,8 @@ from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
 
 class UnitTemplatesPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Unit Templates"
+
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
 
@@ -49,14 +51,7 @@ class UnitTemplatesPlotter(SortingviewPlotter):
         else:
             view = v_average_waveforms
 
-        self.set_view(view)
-
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - AverageWaveforms"
-            url = view.url(label=label)
-            print(url)
-        self.display_view(backend_kwargs)
+        self.handle_display_and_url(view, **backend_kwargs)
         return view
 
 
