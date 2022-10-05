@@ -23,8 +23,8 @@ dependencies = [
     "probeinterface>=0.2.10",
 ]
 
-[tool.setuptools.packages.find]
-where = ["spikeinterface"]
+[tool.setuptools.packages]
+find = {}
 
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"
