@@ -321,7 +321,7 @@ class WaveformExtractor:
             (self.folder / 'params.json').write_text(
                 json.dumps(check_json(self._params), indent=4), encoding='utf8')
         
-    def select_units(self, unit_ids, new_folder=None):
+    def select_units(self, unit_ids, new_folder=None, use_relative_path=False):
         """
         Filters units by creating a new waveform extractor object in a new folder.
         
@@ -340,6 +340,7 @@ class WaveformExtractor:
             The newly create waveform extractor with the selected units
         """
         sorting = self.sorting.select_units(unit_ids)
+        unit_indices = self.sorting.ids_to_indices(unit_ids)
 
         if self.folder is not None:
             assert new_folder is not None, "Please specify 'new_folder'"
@@ -352,7 +353,13 @@ class WaveformExtractor:
                             new_folder / "params.json")
             shutil.copyfile(self.folder / "recording.json",
                             new_folder / "recording.json")
-            sorting.dump(new_folder / 'sorting.json', relative_to=None)
+
+            if use_relative_path:
+                relative_to = new_folder
+            else:
+                relative_to = None
+
+            sorting.dump(new_folder / 'sorting.json', relative_to=relative_to)
 
             # create and populate waveforms folder
             new_waveforms_folder = new_folder / "waveforms"
@@ -364,6 +371,11 @@ class WaveformExtractor:
                     if f"waveforms_{unit}.npy" in wf_file.name or f'sampled_index_{unit}.npy' in wf_file.name:
                         shutil.copyfile(
                             wf_file, new_waveforms_folder / wf_file.name)
+
+            template_files = [f for f in self.folder.iterdir() if "template" in f.name and f.suffix == ".npy"]
+            for tmp_file in template_files:
+                templates_data_sliced = np.load(tmp_file)[unit_indices]
+                np.save(new_waveforms_folder / tmp_file.name, templates_data_sliced)
 
             for ext_name in self.get_available_extension_names():
                 ext = self.load_extension(ext_name)
