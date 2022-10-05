@@ -86,6 +86,7 @@ class PlotUpdater:
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
         data_plot["plot_all_units"] = True
+        data_plot['plot_legend'] = True
 
         backend_kwargs = {}
         backend_kwargs["ax"] = self.ax

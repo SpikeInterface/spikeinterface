@@ -74,7 +74,7 @@ class AmplitudesWidget(BaseWidget):
             for unit, st in all_spiketrains.items():
                 amps = all_amplitudes[unit]
                 if len(st) > max_spikes_per_unit:
-                    random_idxs = np.random.permutation(len(st))[:max_spikes_per_unit]
+                    random_idxs = np.random.choice(len(st), size=max_spikes_per_unit, replace=False)
                     spiketrains_to_plot[unit] = st[random_idxs]
                     amplitudes_to_plot[unit] = amps[random_idxs]
                 else:
