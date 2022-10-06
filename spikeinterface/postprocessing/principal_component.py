@@ -268,14 +268,21 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             self._extension_data[f'pca_{unit_id}'] = projection_objects[unit_id]
             
     def get_data(self):
-        """_summary_
+        """
+        Get computed PCA projections.
 
         Returns
         -------
-        _type_
-            _description_
+        all_labels : 1d np.array
+            Array with all spike labels
+        all_projections : 3d array
+            Array with PCA projections (num_spikes, num_components, num_channels)
         """
         return self.get_all_projections()
+
+    @staticmethod
+    def get_extension_function():
+        return compute_principal_components
 
     def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg',
                            **job_kwargs):

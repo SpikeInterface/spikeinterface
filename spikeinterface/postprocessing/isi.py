@@ -59,6 +59,10 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
             self._extension_data['bins'] is not None, msg
         return self._extension_data['isi_histograms'], self._extension_data['bins']
 
+    @staticmethod
+    def get_extension_function():
+        return compute_isi_histograms
+
 
 WaveformExtractor.register_extension(ISIHistogramsCalculator)
 

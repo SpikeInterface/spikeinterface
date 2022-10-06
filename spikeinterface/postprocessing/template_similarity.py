@@ -45,6 +45,10 @@ class TemplateSimilarityCalculator(BaseWaveformExtractorExtension):
         assert self._extension_data['similarity'] is not None, msg
         return self._extension_data['similarity']
 
+    @staticmethod
+    def get_extension_function():
+        return compute_template_similarity
+
 
 WaveformExtractor.register_extension(TemplateSimilarityCalculator)
 

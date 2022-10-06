@@ -85,6 +85,10 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
                 locations_by_unit[unit_id] = self._extension_data['unit_locations'][unit_ind]
             return locations_by_unit
 
+    @staticmethod
+    def get_extension_function():
+        return compute_unit_locations
+
 
 WaveformExtractor.register_extension(UnitLocationsCalculator)
 

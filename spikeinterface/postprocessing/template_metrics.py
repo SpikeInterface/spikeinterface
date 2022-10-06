@@ -125,6 +125,9 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         assert self._extension_data['metrics'] is not None, msg
         return self._extension_data['metrics']
 
+    @staticmethod
+    def get_extension_function():
+        return compute_template_metrics
 
 
 WaveformExtractor.register_extension(TemplateMetricsCalculator)

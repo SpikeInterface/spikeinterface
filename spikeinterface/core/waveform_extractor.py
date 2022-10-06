@@ -1000,7 +1000,7 @@ class BaseWaveformExtractorExtension:
                         with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
                             pickle.dump(ext_data, f)
                     except:
-                        print(f"Could not save {ext_data_name} as extension data")
+                        raise Exception(f"Could not save {ext_data_name} as extension data")
 
     def reset(self):
         """
@@ -1040,5 +1040,11 @@ class BaseWaveformExtractorExtension:
     def _set_params(self, **params):
         # must be implemented in subclass
         # must return a cleaned version of params dict
+        raise NotImplementedError
+
+    @staticmethod
+    def get_extension_function():
+        # must be implemented in subclass
+        # must return extension function
         raise NotImplementedError
 

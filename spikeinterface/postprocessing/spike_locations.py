@@ -94,6 +94,10 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
                     locations_by_unit[segment_index][unit_id] = locations[mask]
             return locations_by_unit
 
+    @staticmethod
+    def get_extension_function():
+        return compute_spike_locations
+
 
 WaveformExtractor.register_extension(SpikeLocationsCalculator)
 

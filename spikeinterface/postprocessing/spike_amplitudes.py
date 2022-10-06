@@ -118,6 +118,10 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                     amplitudes_by_unit[segment_index][unit_id] = amps
             return amplitudes_by_unit
 
+    @staticmethod
+    def get_extension_function():
+        return compute_spike_amplitudes
+
 
 WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
 

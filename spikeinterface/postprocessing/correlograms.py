@@ -60,6 +60,10 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
             self._extension_data['bins'] is not None, msg
         return self._extension_data['ccgs'], self._extension_data['bins']
 
+    @staticmethod
+    def get_extension_function():
+        return compute_correlograms
+
 
 WaveformExtractor.register_extension(CorrelogramsCalculator)
 
