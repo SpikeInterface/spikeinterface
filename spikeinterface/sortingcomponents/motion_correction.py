@@ -3,15 +3,15 @@ import scipy.interpolate
 import sklearn
 from tqdm import tqdm
 
-import sklearn.metrics
+import scipy.spatial
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-try:
-    import numba
-    HAVE_NUMBA = True
-except ImportError:
-    HAVE_NUMBA = False
+# try:
+#     import numba
+#     HAVE_NUMBA = True
+# except ImportError:
+#     HAVE_NUMBA = False
 
 
 def correct_motion_on_peaks(peaks, peak_locations, times,
@@ -95,7 +95,7 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
         Shift over time by channel
         Shape (times.shape[0], channel_location.shape[0])
     """
-    assert HAVE_NUMBA
+    # assert HAVE_NUMBA
     assert times.shape[0] == traces.shape[0]
 
     traces_corrected = np.zeros_like(traces)
@@ -137,9 +137,10 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
         i0 = np.searchsorted(bin_inds, bin_ind, side='left')
         i1 = np.searchsorted(bin_inds, bin_ind, side='right')
         
-        # TODO : find sparse dot
-        traces_corrected[i0:i1] = traces[i0:i1] @ drift_kernel.T
-        
+        # here we use a simple np.matmul even if dirft_kernel can be super sparse.
+        # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
+        # in ChunkRecordingExecutor)
+        traces_corrected[i0:i1] = traces[i0:i1] @ drift_kernel
 
     return traces_corrected
 
@@ -149,49 +150,64 @@ def get_drift_kernel(source_location, target_location, method='idw', num_closest
     # https://www.aspexit.com/spatial-data-interpolation-tin-idw-kriging-block-kriging-co-kriging-what-are-the-differences/
     
     if method == 'idw':
-        distances = sklearn.metrics.pairwise_distances(target_location, source_location, metric='euclidean')
-        drift_kernel = np.zeros((target_location.shape[0], source_location.shape[0]), dtype='float32')
+        distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
+        
+        drift_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float32')
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[c, :])
             chan_closest = ind_sorted[:num_closest]
             dists = distances[c, chan_closest]
             if dists[0] == 0.:
                 # no interpolation the first have zeros distance
-                drift_kernel[c, chan_closest[0]] = 1.
+                drift_kernel[chan_closest[0], c] = 1.
             else:
                 w = 1 / dists
                 w /= np.sum(w)
-                drift_kernel[c, chan_closest] = w
+                drift_kernel[chan_closest, c] = w
+
     elif method == 'kriging':
         # this is an adaptation of  pykilosort implementation by Kush Benga
         # https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L352
-        dist_xx = sklearn.metrics.pairwise_distances(source_location, source_location, metric='euclidean')
+        dist_xx = scipy.spatial.distance.cdist(source_location, source_location, metric='euclidean')
         Kxx = np.exp(-(dist_xx / sigma_um) **p)
 
-        dist_yx = sklearn.metrics.pairwise_distances(target_location, source_location, metric='euclidean')
+        dist_yx = scipy.spatial.distance.cdist(target_location, source_location, metric='euclidean')
         Kyx = np.exp(-(dist_yx / sigma_um) **p)
-        
+
         drift_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
-        
+        drift_kernel = drift_kernel.T.astype('float32').copy()
     else:
         raise ValueError('get_drift_kernel wrong method')
     
     return drift_kernel
 
 
+
+
 # if HAVE_NUMBA:
-#     @numba.jit(parallel=False)
-#     def my_inverse_weighted_distance_interpolation(traces, traces_corrected, closest_chans, weights):
-#         num_sample = traces.shape[0]
-#         num_chan = traces.shape[1]
-#         num_closest = closest_chans.shape[1]
-#         for sample_ind in range(num_sample):
-#             for chan_ind in range(num_chan):
+#     # @numba.jit(parallel=False)
+#     @numba.jit(parallel=True)
+#     def my_sparse_dot(data_in, data_out, sparse_chans, weights):
+#         """
+#         Experimental home made sparse dot.
+#         Faster when use prange but with multiprocessing it is not a good idea.
+#         Custum sparse dot
+#         data_in: num_sample, num_chan_in
+#         data_out: num_sample, num_chan_out
+#         sparse_chans: num_chan_out, num_sparse
+#         weights: num_chan_out, num_sparse
+#         """
+#         num_samples = data_in.shape[0]
+#         num_chan_out = data_out.shape[1]
+#         num_sparse = sparse_chans.shape[1]
+#         # for sample_ind in range(num_samples):
+#         for sample_ind in numba.prange(num_samples):
+#             for out_chan in range(num_chan_out):
 #                 v = 0
-#                 for i in range(num_closest):
-#                     other_chan = closest_chans[chan_ind, i]
-#                     v +=  weights[chan_ind, i] * traces[sample_ind, other_chan]
-#                 traces_corrected[sample_ind, chan_ind] = v
+#                 for i in range(num_sparse):
+#                     in_chan = sparse_chans[out_chan, i]
+#                     v +=  weights[out_chan, i] * data_in[sample_ind, in_chan]
+#                 data_out[sample_ind, out_chan] = v
 
 
 def _get_closest_ind(array, values):
