@@ -2,3 +2,4 @@
 ipympl
 ipywidgets
 sortingview
+figurl-jupyter
