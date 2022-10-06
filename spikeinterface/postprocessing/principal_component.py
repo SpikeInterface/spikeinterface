@@ -1,5 +1,4 @@
 import shutil
-import json
 import pickle
 import warnings
 from pathlib import Path
@@ -8,8 +7,8 @@ from tqdm.auto import tqdm
 import numpy as np
 
 from sklearn.decomposition import IncrementalPCA
+from sklearn.exceptions import NotFittedError
 
-from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 from .template_tools import get_template_channel_sparsity
@@ -210,6 +209,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         mode = p["mode"]
 
         # check waveform shapes
+        # TODO: handle sparse models here
         wfs0 = self.waveform_extractor.get_waveforms(unit_id=self.waveform_extractor.sorting.unit_ids[0])
         assert wfs0.shape[1] == new_waveforms.shape[1], "Mismatch in number of samples between waveforms used to fit" \
                                                         "the pca model and 'new_waveforms"
@@ -420,6 +420,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         if progress_bar:
             units_loop = tqdm(units_loop, desc="Projecting waveforms", total=len(unit_ids))
 
+        project_on_non_fitted = False
         for unit_ind, unit_id in units_loop:
             wfs = we.get_waveforms(unit_id, sparsity=sparsity)
             if sparsity is not None:
@@ -431,8 +432,15 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 continue
             for wf_ind, chan_ind in enumerate(sparse_channel_inds):
                 pca = pca_model[chan_ind]
-                proj = pca.transform(wfs[:, :, wf_ind])
-                projection_memmap[unit_id][:, :, chan_ind] = proj
+                try:
+                    proj = pca.transform(wfs[:, :, wf_ind])
+                    projection_memmap[unit_id][:, :, chan_ind] = proj
+                except NotFittedError as e:
+                    # this could happen if len(wfs) is less then n_comp for a channel
+                    project_on_non_fitted = True
+        if project_on_non_fitted:
+            warnings.warn("Projection attempted on unfitted PCA models. This could be due to a small "
+                          "number of waveforms for a particular unit.")
 
     def _fit_by_channel_global(self, sparsity, progress_bar):
         we = self.waveform_extractor
