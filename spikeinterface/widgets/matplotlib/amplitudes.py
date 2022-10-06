@@ -13,6 +13,7 @@ class AmplitudesPlotter(MplPlotter):
 
 
         if backend_kwargs["axes"] is not None:
+            axes = backend_kwargs["axes"]
             if dp.plot_histograms:
                 assert np.asarray(axes).size == 2
             else:
