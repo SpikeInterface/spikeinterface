@@ -129,6 +129,10 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         assert self._extension_data['metrics'] is not None, msg
         return self._extension_data['metrics']
 
+    @staticmethod
+    def get_extension_function():
+        return compute_quality_metrics
+
 
 WaveformExtractor.register_extension(QualityMetricCalculator)
 
