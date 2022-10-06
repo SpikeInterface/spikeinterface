@@ -10,7 +10,7 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string, os
-from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances
+from spikeinterface.core import get_global_tmp_folder, get_noise_levels, get_channel_distances, get_random_data_chunks
 from sklearn.preprocessing import QuantileTransformer, MaxAbsScaler
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
@@ -29,19 +29,19 @@ class RandomProjectionClustering:
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200, 
         "selection_method" : "closest_to_centroid",
-        "nb_projections" : {'ptp' : 5, 'energy' : 5},
+        "nb_projections" : {'ptp' : 8, 'energy' : 2},
         "ms_before" : 1.5,
         "ms_after": 1.5,
         "random_seed" : 42,
         "cleaning_method": "matching",
         "shared_memory" : False,
-        "min_values" : {'ptp' : 0, 'energy' : 0},
+        "min_values" : {'ptp' : 'auto', 'energy' : 'auto'},
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert HAVE_HDBSCAN, 'twisted clustering need hdbscan to be installed'
+        assert HAVE_HDBSCAN, 'random projections clustering need hdbscan to be installed'
 
         d = params
         verbose = d['job_kwargs']['verbose']
@@ -61,12 +61,26 @@ class RandomProjectionClustering:
         features_params = {}
         features_list = []
 
+        noise_snippets = None
+
         for proj_type in ['ptp', 'energy']:
 
             if d['nb_projections'][proj_type] > 0:
                 features_list += [f'random_projections_{proj_type}']
-                if d['min_values'][proj_type] > 0:
-                    min_values = d['min_values'][proj_type]*noise_levels
+
+                if d['min_values'][proj_type] == 'auto':
+                    if noise_snippets is None:
+                        noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=d["max_spikes_per_unit"], chunk_size=num_samples, seed=42)
+                        noise_snippets = noise_snippets.reshape(d["max_spikes_per_unit"], num_samples, num_chans)
+
+                    if proj_type == 'energy':
+                        data = np.linalg.norm(noise_snippets, axis=1)
+                        min_values = np.median(data, axis=0)
+                    elif proj_type == 'ptp':
+                        data = np.ptp(noise_snippets, axis=1)
+                        min_values = np.median(data, axis=0)
+                elif d['min_values'][proj_type] > 0:
+                    min_values = d['min_values'][proj_type]
                 else:
                     min_values = None
 
@@ -82,15 +96,9 @@ class RandomProjectionClustering:
         else:
             hdbscan_data = features_data[0]
 
-        #preprocessing = QuantileTransformer(output_distribution='uniform')
-        #hdbscan_data = preprocessing.fit_transform(hdbscan_data)
-
         import sklearn
         clustering = hdbscan.hdbscan(hdbscan_data, **d['hdbscan_kwargs'])
         peak_labels = clustering[0]
-
-        #np.save('hdbscan_data', hdbscan_data)
-        #np.save('hdbscan_label', peak_labels)
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]

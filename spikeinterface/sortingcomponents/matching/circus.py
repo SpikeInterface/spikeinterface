@@ -167,8 +167,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     _default_params = {
         'sparsify_threshold': 1,
-        'amplitudes' : [0.6, np.inf],
-        'omp_min_sps' : 0.15,
+        'amplitudes' : [0.6, 2],
+        'omp_min_sps' : 0.1,
         'waveform_extractor': None,
         'templates' : None,
         'overlaps' : None,
@@ -187,13 +187,13 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         return template, active_channels
 
     @classmethod
-    def _regularize_template(cls, template, stds, smoothing_factor=0.25):
+    def _regularize_template(cls, template, smoothing_factor=0.25):
 
         nb_channels = template.shape[1]
         nb_timesteps = template.shape[0]
         xaxis = np.arange(nb_timesteps)
         for i in range(nb_channels):
-            z = scipy.interpolate.UnivariateSpline(xaxis, template[:, i], w=1/stds[:, i])
+            z = scipy.interpolate.UnivariateSpline(xaxis, template[:, i])
             z.set_smoothing_factor(smoothing_factor)
             template[:, i] = z(xaxis)
         return template
@@ -215,8 +215,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
             
             if d['smoothing_factor'] > 0:
-                stds = np.std(waveform_extractor.get_waveforms(unit_id), 0)
-                template = cls._regularize_template(templates[count], stds, d['smoothing_factor'])
+                template = cls._regularize_template(templates[count], d['smoothing_factor'])
             else:
                 template = templates[count]
             template, active_channels = cls._sparsify_template(template, d['sparsify_threshold'])
@@ -418,7 +417,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                     M = Z
 
                 M[num_selection, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
-                
                 scipy.linalg.solve_triangular(M[:num_selection, :num_selection], M[num_selection, :num_selection], trans=0,
                      lower=1,
                      overwrite_b=True,

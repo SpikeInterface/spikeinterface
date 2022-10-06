@@ -489,7 +489,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 
 
 
-def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=0.99, method_kwargs={}, job_kwargs={}):
+def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=1, method_kwargs={}, job_kwargs={}):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels 
@@ -509,9 +509,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     num_chans = waveform_extractor.recording.get_num_channels()
 
     for t in range(nb_templates):
-        is_silent = templates[t].ptp(0) < 1
+        is_silent = templates[t].ptp(0) < sparsify_threshold
         templates[t, :, is_silent] = 0
-
 
     zdata = templates.reshape(nb_templates, -1)
 
@@ -549,7 +548,7 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     method_kwargs.update({'waveform_extractor' : waveform_extractor, 
                           'noise_levels' : noise_levels,
                           'amplitudes' : [0.95, 1.05],
-                          'sparsify_threshold' : 1,
+                          'sparsify_threshold' : sparsify_threshold,
                           'omp_min_sps' : 0.1,
                           'templates' : None,
                           'overlaps' : None})
