@@ -1,6 +1,5 @@
 import unittest
 import pytest
-import shutil
 from pathlib import Path
 import numpy as np
 
@@ -9,8 +8,7 @@ from spikeinterface.extractors import toy_example
 
 from spikeinterface.postprocessing import WaveformPrincipalComponent
 from spikeinterface.preprocessing import scale
-from spikeinterface.qualitymetrics import compute_quality_metrics, QualityMetricCalculator
-from spikeinterface.qualitymetrics.misc_metrics import compute_amplitudes_cutoff, compute_snrs
+from spikeinterface.qualitymetrics import QualityMetricCalculator
 from spikeinterface.postprocessing import get_template_channel_sparsity
 
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
@@ -51,11 +49,11 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                                                            radius_um=50)
         self.we_long = we_long
 
-    def test_compute_quality_metrics(self):
+    def test_metrics(self):
         we = self.we_long
 
         # without PC
-        metrics = compute_quality_metrics(we, metric_names=['snr'])
+        metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'])
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
         # print(metrics)
@@ -64,11 +62,12 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         pca = WaveformPrincipalComponent(we)
         pca.set_params(n_components=5, mode='by_channel_local')
         pca.run()
-        metrics = compute_quality_metrics(we)
+        metrics = self.extension_class.get_extension_function()(we)
         assert 'isolation_distance' in metrics.columns
 
         # with PC - parallel
-        metrics_par = compute_quality_metrics(we, n_jobs=2, verbose=True, progress_bar=True)
+        metrics_par = self.extension_class.get_extension_function()(
+            we, n_jobs=2, verbose=True, progress_bar=True)
         # print(metrics)
         # print(metrics_par)
         for metric_name in metrics.columns:
@@ -76,7 +75,8 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # print(metrics)
 
         # with sparsity
-        metrics_sparse = compute_quality_metrics(we, sparsity=self.sparsity_long, n_jobs=1)
+        metrics_sparse = self.extension_class.get_extension_function()(
+            we, sparsity=self.sparsity_long, n_jobs=1)
         assert 'isolation_distance' in metrics_sparse.columns
         # for metric_name in metrics.columns:
         #     assert np.allclose(metrics[metric_name], metrics_par[metric_name])
@@ -97,9 +97,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         print(we_inv)
 
         # without PC
-        metrics = compute_quality_metrics(
+        metrics = self.extension_class.get_extension_function()(
             we, metric_names=['snr', 'amplitude_cutoff'], peak_sign="neg")
-        metrics_inv = compute_quality_metrics(
+        metrics_inv = self.extension_class.get_extension_function()(
             we_inv, metric_names=['snr', 'amplitude_cutoff'], peak_sign="pos")
         assert np.allclose(metrics["snr"].values,
                            metrics_inv["snr"].values, atol=1e-4)
@@ -110,5 +110,5 @@ if __name__ == '__main__':
     test = QualityMetricsExtensionTest
     test.setUp()
     test.test_extension()
-    test.test_compute_quality_metrics()
+    test.test_metrics()
     test.test_peak_sign()
