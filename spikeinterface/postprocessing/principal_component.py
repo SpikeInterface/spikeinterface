@@ -85,35 +85,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         """
         return self._extension_data[f'pca_{unit_id}']
 
-    # # TODO
-    # def load_pca_model(self):
-    #     """
-    #     Load PCA model from folder.
-    #     """
-    #     mode = self._params["mode"]
-    #     if mode == "by_channel_local":
-    #         pca_model = []
-    #         for chan_ind, chan_id in enumerate(self.waveform_extractor.recording.channel_ids):
-    #             pca_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
-    #             if not pca_file.is_file() and chan_ind == 0:
-    #                 _ = self._fit_by_channel_local()
-    #             with open(pca_file, 'rb') as fid:
-    #                 pca = pickle.load(fid)
-    #             pca_model.append(pca)
-    #     elif mode == "by_channel_global":
-    #         pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
-    #         if not pca_file.is_file():
-    #             _ = self._fit_by_channel_global()
-    #         with open(pca_file, 'rb') as fid:
-    #             pca_model = pickle.load(fid)
-    #     elif mode == "concatenated":
-    #         pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
-    #         if not pca_file.is_file():
-    #             _ = self._fit_concatenated()
-    #         with open(pca_file, 'rb') as fid:
-    #             pca_model = pickle.load(fid)
-    #     self._pca_model = pca_model
-
     def get_pca_model(self):
         """
         Returns the scikit-learn PCA model objects.
