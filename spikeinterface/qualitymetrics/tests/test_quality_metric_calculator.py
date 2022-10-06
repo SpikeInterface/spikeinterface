@@ -1,3 +1,4 @@
+import unittest
 import pytest
 import shutil
 from pathlib import Path
@@ -9,7 +10,10 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.postprocessing import WaveformPrincipalComponent
 from spikeinterface.preprocessing import scale
 from spikeinterface.qualitymetrics import compute_quality_metrics, QualityMetricCalculator
+from spikeinterface.qualitymetrics.misc_metrics import compute_amplitudes_cutoff, compute_snrs
 from spikeinterface.postprocessing import get_template_channel_sparsity
+
+from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -18,114 +22,93 @@ else:
     cache_folder = Path("cache_folder") / "qualitymetrics"
 
 
-def setup_module():
-    for folder_name in ('toy_rec', 'toy_sorting', 'toy_waveforms', 'toy_waveforms_filt',
-                        'toy_waveforms_inv'):
-        if (cache_folder / folder_name).is_dir():
-            shutil.rmtree(cache_folder / folder_name)
+class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = QualityMetricCalculator
+    extension_data_names = ["metrics"]
+    extension_function_kwargs_list = [
+        dict(),
+        dict(n_jobs=2),
+        dict(metric_names=["snr", "firing_rate"])
+    ]
 
-    recording, sorting = toy_example(num_segments=2, num_units=10, duration=300)
-    recording = recording.save(folder=cache_folder / 'toy_rec')
-    sorting = sorting.save(folder=cache_folder / 'toy_sorting')
+    def setUp(self):
+        super().setUp()
+        self.cache_folder = cache_folder
+        recording, sorting = toy_example(num_segments=2, num_units=10, duration=300)
+        if (cache_folder / 'toy_rec_long').is_dir():
+            recording = load_extractor(self.cache_folder / 'toy_rec_long')
+        else:
+            recording = recording.save(folder=self.cache_folder / 'toy_rec_long')
+        if (cache_folder / 'toy_sorting_long').is_dir():
+            sorting = load_extractor(self.cache_folder / 'toy_sorting_long')
+        else:
+            sorting = sorting.save(folder=self.cache_folder / 'toy_sorting_long')
+        we_long = extract_waveforms(recording, sorting,
+                                    self.cache_folder / 'toy_waveforms_long',
+                                    max_spikes_per_unit=None,
+                                    overwrite=True)
+        self.sparsity_long = get_template_channel_sparsity(we_long, method="radius",
+                                                           radius_um=50)
+        self.we_long = we_long
 
-    we = WaveformExtractor.create(
-        recording, sorting, cache_folder / 'toy_waveforms')
-    we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
-    we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+    def test_compute_quality_metrics(self):
+        we = self.we_long
 
+        # without PC
+        metrics = compute_quality_metrics(we, metric_names=['snr'])
+        assert 'snr' in metrics.columns
+        assert 'isolation_distance' not in metrics.columns
+        # print(metrics)
 
-def test_compute_quality_metrics():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
-    print(we)
+        # with PCs
+        pca = WaveformPrincipalComponent(we)
+        pca.set_params(n_components=5, mode='by_channel_local')
+        pca.run()
+        metrics = compute_quality_metrics(we)
+        assert 'isolation_distance' in metrics.columns
 
-    # without PC
-    metrics = compute_quality_metrics(we, metric_names=['snr'])
-    assert 'snr' in metrics.columns
-    assert 'isolation_distance' not in metrics.columns
-    print(metrics)
+        # with PC - parallel
+        metrics_par = compute_quality_metrics(we, n_jobs=2, verbose=True, progress_bar=True)
+        # print(metrics)
+        # print(metrics_par)
+        for metric_name in metrics.columns:
+            assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+        # print(metrics)
 
-    # with PCs
-    pca = WaveformPrincipalComponent(we)
-    pca.set_params(n_components=5, mode='by_channel_local')
-    pca.run()
-    metrics = compute_quality_metrics(we)
-    assert 'isolation_distance' in metrics.columns
-    
-    # with PC - parallel
-    metrics_par = compute_quality_metrics(we, n_jobs=2, verbose=True, progress_bar=True)
-    for metric_name in metrics.columns:
-        assert np.allclose(metrics[metric_name], metrics_par[metric_name])
-    print(metrics)
-    
-    # with sparsity
-    sparsity = get_template_channel_sparsity(we, method="radius", radius_um=20)
-    print(sparsity)
-    # test parallel
-    metrics_sparse = compute_quality_metrics(we, sparsity=sparsity, n_jobs=1)
-    assert 'isolation_distance' in metrics_sparse.columns
-    # for metric_name in metrics.columns:
-    #     assert np.allclose(metrics[metric_name], metrics_par[metric_name])
-    print(metrics_sparse)
+        # with sparsity
+        metrics_sparse = compute_quality_metrics(we, sparsity=self.sparsity_long, n_jobs=1)
+        assert 'isolation_distance' in metrics_sparse.columns
+        # for metric_name in metrics.columns:
+        #     assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+        # print(metrics_sparse)
 
-    # reload as an extension from we
-    assert QualityMetricCalculator in we.get_available_extensions()
-    assert we.is_extension('quality_metrics')
-    qmc = we.load_extension('quality_metrics')
-    assert isinstance(qmc, QualityMetricCalculator)
-    assert 'metrics' in qmc._extension_data
-    qmc = QualityMetricCalculator.load_from_folder(
-        cache_folder / 'toy_waveforms')
-    assert 'metrics' in qmc._extension_data
+    def test_peak_sign(self):
+        we = self.we_long
+        rec = we.recording
+        sort = we.sorting
 
-    # in-memory
-    we_mem = extract_waveforms(we.recording, we.sorting, mode="memory")
-    metrics = compute_quality_metrics(we_mem)
+        # invert recording
+        rec_inv = scale(rec, gain=-1.)
 
-    # reload as an extension from we
-    assert QualityMetricCalculator in we_mem.get_available_extensions()
-    assert we_mem.is_extension('quality_metrics')
-    qmc = we_mem.load_extension('quality_metrics')
-    assert isinstance(qmc, QualityMetricCalculator)
-    assert 'metrics' in qmc._extension_data
+        we_inv = WaveformExtractor.create(
+            rec_inv, sort, self.cache_folder / 'toy_waveforms_inv')
+        we_inv.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
+        we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+        print(we_inv)
 
-
-def test_compute_quality_metrics_peak_sign():
-    rec = load_extractor(cache_folder / 'toy_rec')
-    sort = load_extractor(cache_folder / 'toy_sorting')
-
-    # invert recording
-    rec_inv = scale(rec, gain=-1.)
-
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
-    print(we)
-
-    we_inv = WaveformExtractor.create(
-        rec_inv, sort, cache_folder / 'toy_waveforms_inv')
-    we_inv.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
-    we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
-    print(we_inv)
-
-    # without PC
-    metrics = compute_quality_metrics(
-        we, metric_names=['snr', 'amplitude_cutoff'], peak_sign="neg")
-    metrics_inv = compute_quality_metrics(
-        we_inv, metric_names=['snr', 'amplitude_cutoff'], peak_sign="pos")
-
-    assert np.allclose(metrics["snr"].values, metrics_inv["snr"].values, atol=1e-4)
-    assert np.allclose(metrics["amplitude_cutoff"].values,
-                       metrics_inv["amplitude_cutoff"].values, atol=1e-4)
-
-
-def test_select_units():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
-    qm = compute_quality_metrics(we, load_if_exists=True)
-
-    keep_units = we.sorting.get_unit_ids()[::2]
-    we_filt = we.select_units(keep_units, cache_folder / 'toy_waveforms_filt')
-    assert "quality_metrics" in we_filt.get_available_extension_names()
-
+        # without PC
+        metrics = compute_quality_metrics(
+            we, metric_names=['snr', 'amplitude_cutoff'], peak_sign="neg")
+        metrics_inv = compute_quality_metrics(
+            we_inv, metric_names=['snr', 'amplitude_cutoff'], peak_sign="pos")
+        assert np.allclose(metrics["snr"].values,
+                           metrics_inv["snr"].values, atol=1e-4)
+        assert np.allclose(metrics["amplitude_cutoff"].values,
+                           metrics_inv["amplitude_cutoff"].values, atol=1e-4)
 
 if __name__ == '__main__':
-    setup_module()
-    test_compute_quality_metrics()
-    # test_compute_quality_metrics_peak_sign()
+    test = QualityMetricsExtensionTest
+    test.setUp()
+    test.test_extension()
+    test.test_compute_quality_metrics()
+    test.test_peak_sign()
