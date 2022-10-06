@@ -30,13 +30,15 @@ class UnitLocationsWidget(BaseWidget):
         are plotted in grey. Default True (matplotlib backend)
     plot_legend : bool
         If True, the legend is plotted. Default False (matplotlib backend)
+    hide_axis : bool
+        If True, the axis is set to off. Default False (matplotlib backend)
     """
     possible_backends = {}
 
     def __init__(self, waveform_extractor: WaveformExtractor, 
                  unit_ids=None, with_channel_ids=False,
                  unit_colors=None, hide_unit_selector=False,
-                 plot_all_units=True, plot_legend=False,
+                 plot_all_units=True, plot_legend=False, hide_axis=False,
                  backend=None, **backend_kwargs):
         self.check_extensions(waveform_extractor, "unit_locations")
         ulc = waveform_extractor.load_extension("unit_locations")
@@ -66,7 +68,8 @@ class UnitLocationsWidget(BaseWidget):
             with_channel_ids=with_channel_ids,
             hide_unit_selector=hide_unit_selector,
             plot_all_units=plot_all_units,
-            plot_legend=plot_legend
+            plot_legend=plot_legend,
+            hide_axis=hide_axis
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

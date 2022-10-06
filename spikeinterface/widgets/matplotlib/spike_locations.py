@@ -80,7 +80,8 @@ class SpikeLocationsPlotter(MplPlotter):
         
         self.ax.set_xlim(ax_xlims)
         self.ax.set_ylim(ax_ylims)
-        self.ax.axis("off")
+        if dp.hide_axis:
+            self.ax.axis("off")
 
 
 SpikeLocationsPlotter.register(SpikeLocationsWidget)

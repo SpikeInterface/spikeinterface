@@ -69,7 +69,8 @@ class UnitLocationsPlotter(MplPlotter):
             
         self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)
-        self.ax.axis("off")
+        if dp.hide_axis:
+            self.ax.axis("off")
 
 
 

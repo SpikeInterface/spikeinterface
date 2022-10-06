@@ -32,6 +32,8 @@ class SpikeLocationsWidget(BaseWidget):
         are plotted in grey. Default True (matplotlib backend)
     plot_legend : bool
         If True, the legend is plotted. Default False (matplotlib backend)
+    hide_axis : bool
+        If True, the axis is set to off. Default False (matplotlib backend)
     """
 
     possible_backends = {}
@@ -47,6 +49,7 @@ class SpikeLocationsWidget(BaseWidget):
         hide_unit_selector=False,
         plot_all_units=True,
         plot_legend=False,
+        hide_axis=False,
         backend=None,
         **backend_kwargs
     ):
@@ -99,7 +102,8 @@ class SpikeLocationsWidget(BaseWidget):
             with_channel_ids=with_channel_ids,
             hide_unit_selector=hide_unit_selector,
             plot_all_units=plot_all_units,
-            plot_legend=False
+            plot_legend=plot_legend,
+            hide_axis=hide_axis
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
