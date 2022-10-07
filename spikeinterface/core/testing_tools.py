@@ -37,12 +37,11 @@ def generate_sorting(
         num_units=5,
         sampling_frequency=30000.,  # in Hz
         durations=[10.325, 3.5],  #  in s for 2 segments
-        firing_rate=[15, 15],  # in Hz
+        firing_rate=15,  # in Hz
         empty_units=None,
         refractory_period=1.5  # in ms
 ):
     num_segments = len(durations)
-    assert len(firing_rate) == num_segments
     num_timepoints = [int(sampling_frequency * d) for d in durations]
     t_r = int(round(refractory_period * 1e-3 * sampling_frequency))
 
@@ -56,7 +55,7 @@ def generate_sorting(
         units_dict = {}
         for unit_id in unit_ids:
             if unit_id not in empty_units:
-                n_spikes = int(firing_rate[unit_id] * durations[seg_index])
+                n_spikes = int(firing_rate * durations[seg_index])
                 n = int(n_spikes + 10*np.sqrt(n_spikes))
                 spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n)))
 
