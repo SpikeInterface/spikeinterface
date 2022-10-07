@@ -61,7 +61,7 @@ class WaveformExtractor:
             raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
                             'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
 
-        self.recording = recording
+        self._recording = recording
         self.sorting = sorting
 
         # cache in memory
@@ -82,8 +82,8 @@ class WaveformExtractor:
 
     def __repr__(self):
         clsname = self.__class__.__name__
-        nseg = self.recording.get_num_segments()
-        nchan = self.recording.get_num_channels()
+        nseg = self.get_num_segments()
+        nchan = self.get_num_channels()
         nunits = self.sorting.get_num_units()
         txt = f'{clsname}: {nchan} channels - {nunits} units - {nseg} segments'
         if len(self._params) > 0:
@@ -92,14 +92,18 @@ class WaveformExtractor:
         return txt
 
     @classmethod
-    def load_from_folder(cls, folder):
+    def load_from_folder(cls, folder, without_recording=False):
         folder = Path(folder)
         assert folder.is_dir(), f'This folder does not exists {folder}'
-        recording = load_extractor(folder / 'recording.json',
-                                   base_folder=folder)
+        if without_recording:
+            recording = None
+        else:
+            recording = load_extractor(folder / 'recording.json',
+                                    base_folder=folder)
+
         sorting = load_extractor(folder / 'sorting.json',
                                  base_folder=folder)
-        we = cls(recording, sorting, folder)
+        we = cls(recording, sorting, folder=folder)
 
         for mode in _possible_template_modes:
             # load cached templates
@@ -156,35 +160,53 @@ class WaveformExtractor:
     
     # map some method from recording and sorting
     @property
+    def recording(self):
+        if self._recording is None:
+            raise(ValueError('WaveformExtractor is used in mode "without_recording=True" this operation need the recording'))
+        return self._recording
+
+    @property
     def channel_ids(self):
-        return self.recording.channel_ids
+        if self._recording is not None:
+            return self.recording.channel_ids
+        else:
+            raise NotImplementedError
     
     @property
     def sampling_frequency(self):
-        return self.recording.get_sampling_frequency()
+        if self._recording is not None:
+            return self.recording.get_sampling_frequency()
+        else:
+            raise NotImplementedError
     
     def get_num_channels(self):
-        return self.recording.get_num_channels()
+        if self._recording is not None:
+            return self.recording.get_num_channels()
+        else:
+            raise NotImplementedError
 
     def get_num_segments(self):
-        return self.recording.get_num_segments()
-        # return self.sorting.get_num_segments()
+        return self.sorting.get_num_segments()
 
     def get_probegroup(self):
         return self.recording.get_probegroup()
     
     def get_probe(self):
-        return self.recording.get_probe()
+        if self._recording is not None:
+            return self.recording.get_probe()
+        else:
+            raise NotImplementedError
     
     def get_channel_locations(self):
-        return self.recording.get_channel_locations()
-
+        if self._recording is not None:
+            return self.recording.get_channel_locations()
+        else:
+            raise NotImplementedError
+    
     @property
     def unit_ids(self):
         return self.sorting.unit_ids
     
-
-
     def get_extension_class(self, extension_name):
         """
         Get extension class from name and check if registered.
@@ -441,13 +463,13 @@ class WaveformExtractor:
 
     @property
     def nbefore(self):
-        sampling_frequency = self.recording.get_sampling_frequency()
+        sampling_frequency = self.get_sampling_frequency()
         nbefore = int(self._params['ms_before'] * sampling_frequency / 1000.)
         return nbefore
 
     @property
     def nafter(self):
-        sampling_frequency = self.recording.get_sampling_frequency()
+        sampling_frequency = self.get_sampling_frequency()
         nafter = int(self._params['ms_after'] * sampling_frequency / 1000.)
         return nafter
 
@@ -572,8 +594,8 @@ class WaveformExtractor:
         """
         # TODO : run this in parralel
 
-        unit_ids = self.sorting.unit_ids
-        num_chans = self.recording.get_num_channels()
+        unit_ids = self.unit_ids
+        num_chans = self.get_num_channels()
 
         for mode in modes:
             dtype = self._params['dtype'] if mode == 'median' else np.float32

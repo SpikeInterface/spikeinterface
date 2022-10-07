@@ -57,10 +57,10 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         assert isinstance(d['waveform_extractor'], WaveformExtractor)
         
         we = d['waveform_extractor']
-        unit_ids = we.sorting.unit_ids
-        channel_ids = we.recording.channel_ids
+        unit_ids = we.unit_ids
+        channel_ids = we.channel_ids
         
-        sr = we.recording.get_sampling_frequency()
+        sr = we.get_sampling_frequency()
 
 
         # TODO load as sharedmem
