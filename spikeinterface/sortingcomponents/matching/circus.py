@@ -272,7 +272,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         #assert isinstance(d['waveform_extractor'], WaveformExtractor)
 
-        for v in ['sparsify_threshold', 'omp_min_sps']:
+        for v in ['omp_min_sps']:
             assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
         
         d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()
@@ -408,7 +408,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                 idx = np.where((delta_t < neighbor_window) & (delta_t > -num_samples))[0]
                 myline = num_samples + delta_t[idx]
 
-                if best_cluster_ind not in cached_overlaps.keys():
+                if not best_cluster_ind in cached_overlaps:
                     cached_overlaps[best_cluster_ind] = overlaps[best_cluster_ind].toarray()
 
                 if num_selection == M.shape[0]:
@@ -450,7 +450,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                 tmp_best, tmp_peak = selection[:, i]
                 diff_amp = diff_amplitudes[i]*norms[tmp_best]
                 
-                if not tmp_best in cached_overlaps.keys():
+                if not tmp_best in cached_overlaps:
                     cached_overlaps[tmp_best] = overlaps[tmp_best].toarray()
 
                 if not tmp_peak in neighbors.keys():
@@ -544,7 +544,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'use_sparse_matrix_threshold' : 0.25,
         'progess_bar_steps' : False,
         'waveform_extractor': None,
-        'smoothing_factor' : 0.3
+        'smoothing_factor' : 0.25
     }
 
     @classmethod
@@ -565,7 +565,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         return template, active_channels
 
     @classmethod
-    def _regularize_template(cls, template, smoothing_factor=0.5):
+    def _regularize_template(cls, template, smoothing_factor=0.25):
 
         nb_channels = template.shape[1]
         nb_timesteps = template.shape[0]
