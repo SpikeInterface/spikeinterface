@@ -153,6 +153,37 @@ class WaveformExtractor:
         assert all(extension_class.extension_name != ext.extension_name for ext in cls.extensions), \
             'Extension name already exists'
         cls.extensions.append(extension_class)
+    
+    # map some method from recording and sorting
+    @property
+    def channel_ids(self):
+        return self.recording.channel_ids
+    
+    @property
+    def sampling_frequency(self):
+        return self.recording.get_sampling_frequency()
+    
+    def get_num_channels(self):
+        return self.recording.get_num_channels()
+
+    def get_num_segments(self):
+        return self.recording.get_num_segments()
+        # return self.sorting.get_num_segments()
+
+    def get_probegroup(self):
+        return self.recording.get_probegroup()
+    
+    def get_probe(self):
+        return self.recording.get_probe()
+    
+    def get_channel_locations(self):
+        return self.recording.get_channel_locations()
+
+    @property
+    def unit_ids(self):
+        return self.sorting.unit_ids
+    
+
 
     def get_extension_class(self, extension_name):
         """

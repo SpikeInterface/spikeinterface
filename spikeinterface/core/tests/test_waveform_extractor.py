@@ -235,12 +235,10 @@ def test_portability():
     assert we_loaded.recording is not None
     assert we_loaded.sorting is not None
 
-    assert np.allclose(
-        we.recording.get_channel_ids(), we_loaded.recording.get_channel_ids())
-    assert np.allclose(
-        we.sorting.get_unit_ids(), we_loaded.sorting.get_unit_ids())
+    assert np.allclose(we.channel_ids, we_loaded.recording.channel_ids)
+    assert np.allclose(we.unit_ids(), we_loaded.unit_ids)
 
-    for unit in we.sorting.get_unit_ids():
+    for unit in we.unit_ids:
         wf = we.get_waveforms(unit_id=unit)
         wf_loaded = we_loaded.get_waveforms(unit_id=unit)
 
