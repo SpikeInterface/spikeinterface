@@ -10,6 +10,7 @@ from .base import load_extractor
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
+import probeinterface
 
 _possible_template_modes = ('average', 'std', 'median')
 
@@ -26,7 +27,9 @@ class WaveformExtractor:
         The sorting object
     folder: Path
         The folder where waveforms are cached
-
+    rec_attributes: None or dict
+        When recording is None then a minimal dict with some attributes
+        is needed.
     Returns
     -------
     we: WaveformExtractor
@@ -51,7 +54,7 @@ class WaveformExtractor:
 
     """
     extensions = []
-    def __init__(self, recording, sorting, folder=None):
+    def __init__(self, recording, sorting, folder=None, rec_attributes=None):
         assert recording.get_num_segments() == sorting.get_num_segments(), \
             "The recording and sorting objects must have the same number of segments!"
         np.testing.assert_almost_equal(recording.get_sampling_frequency(),
@@ -60,6 +63,16 @@ class WaveformExtractor:
         if not recording.is_filtered():
             raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
                             'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
+
+        if recording is None:
+            # this is for the mode when recording is not accessible anymore
+            if rec_attributes is None:
+                raise ValueError('WaveformExtractor: if recording is None then rec_attributes must be provied')
+            # some check on minimal attributes
+            for k in ('channel_ids', 'sampling_frequency', 'num_channels', 'probegroup'):
+                if k not in rec_attributes:
+                    raise ValueError(f'Missing key in rec_attributes {k}')
+            self._rec_attributes = rec_attributes
 
         self._recording = recording
         self.sorting = sorting
@@ -94,16 +107,27 @@ class WaveformExtractor:
     @classmethod
     def load_from_folder(cls, folder, without_recording=False):
         folder = Path(folder)
-        assert folder.is_dir(), f'This folder does not exists {folder}'
+        assert folder.is_dir(), f'This waveform folder does not exists {folder}'
+
         if without_recording:
+            # load
             recording = None
+            rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
+            if not rec_attributes_file.exists():
+                raise ValueError('This WaveformExtractor folder was created with oled version of spikeinterface'
+                                 'you cannot use the mode without_recording=True')
+            with open(folder / 'recording_attributes.json', 'r') as f:
+                rec_attributes = json.load(f)
+            # the probe is handle ouside the main json
+            rec_attributes['probegroup'] = probeinterface.read_probeinterface(folder / 'recording_info' / 'probegroup.json')
         else:
             recording = load_extractor(folder / 'recording.json',
                                     base_folder=folder)
+            rec_attributes = None
 
         sorting = load_extractor(folder / 'sorting.json',
                                  base_folder=folder)
-        we = cls(recording, sorting, folder=folder)
+        we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes)
 
         for mode in _possible_template_modes:
             # load cached templates
@@ -135,6 +159,20 @@ class WaveformExtractor:
                 recording.dump(folder / 'recording.json', relative_to=relative_to)
             if sorting.is_dumpable:
                 sorting.dump(folder / 'sorting.json', relative_to=relative_to)
+            
+            # dump some attributes of the recording for the mode without_recording=True at next load
+            rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
+            probegroup_file = folder / 'recording_info' / 'probegroup.json'
+            rec_attributes = dict(
+                channel_ids=recording.channel_ids,
+                sampling_frequency=recording.get_sampling_frequency(),
+                num_channels=recording.get_num_channels(),
+            )
+            rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding='utf8')
+            probeinterface.write_probeinterface(probegroup_file, recording.get_probegroup())
+
+            with open(folder / 'recording_attributes.json', 'w') as f:
+                rec_attributes = json.load(f)
 
         return cls(recording, sorting, folder)
 
@@ -170,38 +208,43 @@ class WaveformExtractor:
         if self._recording is not None:
             return self.recording.channel_ids
         else:
-            raise NotImplementedError
+            return self._rec_attributes['channel_ids']
     
     @property
     def sampling_frequency(self):
         if self._recording is not None:
             return self.recording.get_sampling_frequency()
         else:
-            raise NotImplementedError
-    
+            return self._rec_attributes['sampling_frequency']
+     
     def get_num_channels(self):
         if self._recording is not None:
             return self.recording.get_num_channels()
         else:
-            raise NotImplementedError
+            return self._rec_attributes['num_channels']
 
     def get_num_segments(self):
         return self.sorting.get_num_segments()
 
     def get_probegroup(self):
-        return self.recording.get_probegroup()
+        if self._recording is not None:
+            return self.recording.get_probegroup()
+        else:
+             return self._rec_attributes['probegroup']
     
     def get_probe(self):
-        if self._recording is not None:
-            return self.recording.get_probe()
-        else:
-            raise NotImplementedError
-    
+        probegroup = self.get_probegroup()
+        assert len(probegroup.probes) == 1, 'there are several probe use get_probegroup()'
+        return probegroup.probes[0]
+
     def get_channel_locations(self):
+        # important note : contrary to recording
+        # this give all channel locations, so no kwargs like channel_ids and axes
         if self._recording is not None:
             return self.recording.get_channel_locations()
         else:
-            raise NotImplementedError
+            probe = self.get_probe()
+            return probe.contact_positions
     
     @property
     def unit_ids(self):
