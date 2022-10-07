@@ -206,7 +206,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         num_channels = d['num_channels']
         num_templates = len(d['waveform_extractor'].sorting.unit_ids)
 
-        templates = waveform_extractor.get_all_templates(mode='average').copy()
+        templates = waveform_extractor.get_all_templates(mode='median').copy()
 
         d['sparsities'] = {}
         d['templates'] = {}

@@ -35,7 +35,7 @@ class RandomProjectionClustering:
         "random_seed" : 42,
         "cleaning_method": "matching",
         "shared_memory" : False,
-        "min_values" : {'ptp' : 'auto', 'energy' : 'auto'},
+        "min_values" : {'ptp' : 0, 'energy' : 0},
         "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
@@ -70,8 +70,10 @@ class RandomProjectionClustering:
 
                 if d['min_values'][proj_type] == 'auto':
                     if noise_snippets is None:
-                        noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=d["max_spikes_per_unit"], chunk_size=num_samples, seed=42)
-                        noise_snippets = noise_snippets.reshape(d["max_spikes_per_unit"], num_samples, num_chans)
+                        num_segments = recording.get_num_segments()
+                        num_chunks = 3*d["max_spikes_per_unit"] // num_segments
+                        noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=num_chunks, chunk_size=num_samples, seed=42)
+                        noise_snippets = noise_snippets.reshape(num_chunks, num_samples, num_chans)
 
                     if proj_type == 'energy':
                         data = np.linalg.norm(noise_snippets, axis=1)
