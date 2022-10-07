@@ -41,11 +41,10 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 																  end_frame, channel_indices, self.margin)
 		dtype = traces.dtype
 
-		sf = self.parent_recording_segment.sampling_frequency
+		
 		traces_fft = np.fft.fft(traces, axis=0)
-		faxis = np.fft.fftfreq(traces.shape[0], d=1/sf)
-		gauss_low  = norm.pdf(faxis / self.low_f)  * np.sqrt(2*np.pi)
-		gauss_high = norm.pdf(faxis / self.high_f) * np.sqrt(2*np.pi)
+		gauss_low  = self._create_gaussian(traces.shape[0], self.low_f)
+		gauss_high = self._create_gaussian(traces.shape[0], self.high_f)
 
 		filtered_fft = traces_fft * (gauss_high - gauss_low)[:, None]
 		filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))
@@ -54,5 +53,18 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 			return filtered_traces[left_margin : -right_margin, :].astype(dtype)
 		else:
 			return filtered_traces[left_margin:, :].astype(dtype)
+
+	def _create_gaussian(self, N: int, cutoff_f: float):
+		sf = self.parent_recording_segment.sampling_frequency
+		faxis = np.fft.fftfreq(N, d=1/sf)
+
+		if cutoff_f > sf / 8:  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
+			sigma = sf / (2*np.pi * cutoff_f)
+			limit = int(round(6*sigma)) + 1
+			xaxis = np.arange(-limit, limit+1) / sigma
+			gaussian = norm.pdf(xaxis) / sigma
+			return np.abs(np.fft.fft(gaussian, n=N))
+		else:
+			return norm.pdf(faxis / cutoff_f) * np.sqrt(2*np.pi)
 
 gaussian_filter = define_function_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
