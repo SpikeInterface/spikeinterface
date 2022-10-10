@@ -25,7 +25,7 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, window_ms: float = 100.0,
-                    bin_ms: float = 5.0, symmetrize: bool = False,
+                    bin_ms: float = 5.0, symmetrize=None,
                     method: str = "auto"):
 
         params = dict(window_ms=window_ms, bin_ms=bin_ms, 
@@ -169,6 +169,9 @@ def compute_correlograms(waveform_or_sorting_extractor,
     -------
     ccgs : np.array
         Correlograms with shape (num_units, num_units, num_bins)
+        The diagonal of ccgs is the auto correlogram.
+        ccgs[A, B, :] is the symetrie of ccgs[B, A, :]
+        ccgs[A, B, :] have to be read as the histogram of spiketimesA - spiketimesB
     bins :  np.array
         The bin edges in ms
     """
@@ -302,16 +305,6 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
 
             shift += 1
 
-        # Remove ACG peaks.
-        #~ correlograms[np.arange(num_units),
-                     #~ np.arange(num_units),
-                     #~ 0] = 0
-
-    # We symmetrize c[i, j, 0].
-    #~ sym = correlograms[..., :][..., ::-1]
-    #~ sym = np.transpose(sym, (1, 0, 2))
-    #~ correlograms = np.dstack((sym, correlograms))
-    #~ correlograms = np.transpose(correlograms, (1, 0, 2))
     return correlograms
 
 
