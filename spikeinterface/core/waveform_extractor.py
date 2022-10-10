@@ -14,6 +14,7 @@ import probeinterface
 
 _possible_template_modes = ('average', 'std', 'median')
 
+
 class WaveformExtractor:
     """
     Class to extract waveform on paired Recording-Sorting objects.
@@ -55,24 +56,24 @@ class WaveformExtractor:
     """
     extensions = []
     def __init__(self, recording, sorting, folder=None, rec_attributes=None):
-        assert recording.get_num_segments() == sorting.get_num_segments(), \
-            "The recording and sorting objects must have the same number of segments!"
-        np.testing.assert_almost_equal(recording.get_sampling_frequency(),
-                                       sorting.get_sampling_frequency(), decimal=2)
-
-        if not recording.is_filtered():
-            raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
-                            'If the recording is already filtered, you can also do `recording.annotate(is_filtered=True)')
-
         if recording is None:
             # this is for the mode when recording is not accessible anymore
             if rec_attributes is None:
                 raise ValueError('WaveformExtractor: if recording is None then rec_attributes must be provied')
-            # some check on minimal attributes
-            for k in ('channel_ids', 'sampling_frequency', 'num_channels', 'probegroup'):
+            # some check on minimal attributes (probegroup is not mandatory)
+            for k in ('channel_ids', 'sampling_frequency', 'num_channels'):
                 if k not in rec_attributes:
                     raise ValueError(f'Missing key in rec_attributes {k}')
             self._rec_attributes = rec_attributes
+        else:
+            assert recording.get_num_segments() == sorting.get_num_segments(), \
+                "The recording and sorting objects must have the same number of segments!"
+            np.testing.assert_almost_equal(recording.get_sampling_frequency(),
+                                           sorting.get_sampling_frequency(), decimal=2)
+            if not recording.is_filtered():
+                raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
+                                'If the recording is already filtered, you can also do '
+                                '`recording.annotate(is_filtered=True)')
 
         self._recording = recording
         self.sorting = sorting
@@ -116,14 +117,21 @@ class WaveformExtractor:
             if not rec_attributes_file.exists():
                 raise ValueError('This WaveformExtractor folder was created with oled version of spikeinterface'
                                  'you cannot use the mode without_recording=True')
-            with open(folder / 'recording_attributes.json', 'r') as f:
+            with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
             # the probe is handle ouside the main json
-            rec_attributes['probegroup'] = probeinterface.read_probeinterface(folder / 'recording_info' / 'probegroup.json')
+            probegroup_file = folder / 'recording_info' / 'probegroup.json'
+            if probegroup_file.is_file():
+                rec_attributes['probegroup'] = probeinterface.read_probeinterface(probegroup_file)
+            else:
+                rec_attributes['probegroup'] = None
         else:
-            recording = load_extractor(folder / 'recording.json',
-                                    base_folder=folder)
-            rec_attributes = None
+            try:
+                recording = load_extractor(folder / 'recording.json',
+                                        base_folder=folder)
+                rec_attributes = None
+            except:
+                raise Exception("The recording could not be loaded. You can use the `without_recording=True` argument")
 
         sorting = load_extractor(folder / 'sorting.json',
                                  base_folder=folder)
@@ -162,16 +170,21 @@ class WaveformExtractor:
             
             # dump some attributes of the recording for the mode without_recording=True at next load
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
-            probegroup_file = folder / 'recording_info' / 'probegroup.json'
+            rec_attributes_file.parent.mkdir()
             rec_attributes = dict(
                 channel_ids=recording.channel_ids,
                 sampling_frequency=recording.get_sampling_frequency(),
                 num_channels=recording.get_num_channels(),
             )
-            rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding='utf8')
-            probeinterface.write_probeinterface(probegroup_file, recording.get_probegroup())
+            rec_attributes_file.write_text(
+                json.dumps(check_json(rec_attributes), indent=4),
+                encoding='utf8'
+            )
+            if recording.get_probegroup() is not None:
+                probegroup_file = folder / 'recording_info' / 'probegroup.json'
+                probeinterface.write_probeinterface(probegroup_file, recording.get_probegroup())
 
-            with open(folder / 'recording_attributes.json', 'w') as f:
+            with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
 
         return cls(recording, sorting, folder)
@@ -200,7 +213,8 @@ class WaveformExtractor:
     @property
     def recording(self):
         if self._recording is None:
-            raise(ValueError('WaveformExtractor is used in mode "without_recording=True" this operation need the recording'))
+            raise ValueError('WaveformExtractor is used in mode "without_recording=True" '
+                             'this operation need the recording')
         return self._recording
 
     @property
@@ -230,11 +244,11 @@ class WaveformExtractor:
         if self._recording is not None:
             return self.recording.get_probegroup()
         else:
-             return self._rec_attributes['probegroup']
+            return self._rec_attributes['probegroup']
     
     def get_probe(self):
         probegroup = self.get_probegroup()
-        assert len(probegroup.probes) == 1, 'there are several probe use get_probegroup()'
+        assert len(probegroup.probes) == 1, 'There are several probes. Use `get_probegroup()`'
         return probegroup.probes[0]
 
     def get_channel_locations(self):
@@ -243,12 +257,53 @@ class WaveformExtractor:
         if self._recording is not None:
             return self.recording.get_channel_locations()
         else:
-            probe = self.get_probe()
-            return probe.contact_positions
-    
+            if self.get_probegroup() is not None:
+                # check that multiple probes are non-overlapping
+                all_probes = self.get_probegroup().probes
+                all_positions = []
+                for i in range(len(all_probes)):
+                    probe_i = all_probes[i]
+                    # check that all positions in probe_j are outside probe_i boundaries
+                    x_bounds_i = [np.min(probe_i.contact_positions[:, 0]),
+                                    np.max(probe_i.contact_positions[:, 0])]
+                    y_bounds_i = [np.min(probe_i.contact_positions[:, 1]),
+                                    np.max(probe_i.contact_positions[:, 1])]
+
+                    for j in range(i + 1, len(all_probes)):
+                        probe_j = all_probes[j]
+
+                        if np.any(np.array([x_bounds_i[0] < cp[0] < x_bounds_i[1] and
+                                            y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                                            for cp in probe_j.contact_positions])):
+                            raise Exception(
+                                "Probes are overlapping! Retrieve locations of single probes separately")
+                all_positions = np.vstack(
+                    [probe.contact_positions for probe in all_probes])
+                return all_positions
+            else:
+                raise Exception('There are no channel locations')
+
     @property
     def unit_ids(self):
         return self.sorting.unit_ids
+
+    @property
+    def nbefore(self):
+        nbefore = int(self._params['ms_before'] * self.sampling_frequency / 1000.)
+        return nbefore
+
+    @property
+    def nafter(self):
+        nafter = int(self._params['ms_after'] * self.sampling_frequency / 1000.)
+        return nafter
+
+    @property
+    def nsamples(self):
+        return self.nbefore + self.nafter
+
+    @property
+    def return_scaled(self):
+        return self._params['return_scaled']
     
     def get_extension_class(self, extension_name):
         """
@@ -502,27 +557,6 @@ class WaveformExtractor:
             ext.select_units(unit_ids, new_waveform_extractor=we)
 
         return we
-            
-
-    @property
-    def nbefore(self):
-        sampling_frequency = self.get_sampling_frequency()
-        nbefore = int(self._params['ms_before'] * sampling_frequency / 1000.)
-        return nbefore
-
-    @property
-    def nafter(self):
-        sampling_frequency = self.get_sampling_frequency()
-        nafter = int(self._params['ms_after'] * sampling_frequency / 1000.)
-        return nafter
-
-    @property
-    def nsamples(self):
-        return self.nbefore + self.nafter
-
-    @property
-    def return_scaled(self):
-        return self._params['return_scaled']
 
     def get_waveforms(self, unit_id, with_index=False, cache=False, memmap=True, sparsity=None):
         """
