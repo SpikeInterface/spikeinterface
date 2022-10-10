@@ -300,7 +300,7 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     def _populate_nodes(self):
         for i, we in enumerate(self.object_list):
             session_name = self.name_list[i]
-            for unit_id in we.get_unit_ids():
+            for unit_id in we.unit_ids:
                 node = session_name, unit_id
                 self.graph.add_node(node)
 

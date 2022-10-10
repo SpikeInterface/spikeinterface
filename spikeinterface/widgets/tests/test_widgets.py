@@ -201,6 +201,6 @@ if __name__ == '__main__':
     
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_templates()
+    mytest.test_amplitudes()
 
     plt.show()

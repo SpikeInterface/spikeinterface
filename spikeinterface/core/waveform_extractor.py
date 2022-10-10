@@ -230,6 +230,28 @@ class WaveformExtractor:
             return self.recording.get_sampling_frequency()
         else:
             return self._rec_attributes['sampling_frequency']
+
+    @property
+    def unit_ids(self):
+        return self.sorting.unit_ids
+
+    @property
+    def nbefore(self):
+        nbefore = int(self._params['ms_before'] * self.sampling_frequency / 1000.)
+        return nbefore
+
+    @property
+    def nafter(self):
+        nafter = int(self._params['ms_after'] * self.sampling_frequency / 1000.)
+        return nafter
+
+    @property
+    def nsamples(self):
+        return self.nbefore + self.nafter
+
+    @property
+    def return_scaled(self):
+        return self._params['return_scaled']
      
     def get_num_channels(self):
         if self._recording is not None:
@@ -283,28 +305,14 @@ class WaveformExtractor:
             else:
                 raise Exception('There are no channel locations')
 
-    @property
-    def unit_ids(self):
-        return self.sorting.unit_ids
+    def ids_to_indices(self, channel_ids):
+        if self._recording is not None:
+            return self.recording.ids_to_indices(channel_ids)
+        else:
+            all_channel_ids = self._rec_attributes['channel_ids']
+            indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
+            return indices
 
-    @property
-    def nbefore(self):
-        nbefore = int(self._params['ms_before'] * self.sampling_frequency / 1000.)
-        return nbefore
-
-    @property
-    def nafter(self):
-        nafter = int(self._params['ms_after'] * self.sampling_frequency / 1000.)
-        return nafter
-
-    @property
-    def nsamples(self):
-        return self.nbefore + self.nafter
-
-    @property
-    def return_scaled(self):
-        return self._params['return_scaled']
-    
     def get_extension_class(self, extension_name):
         """
         Get extension class from name and check if registered.
@@ -1100,7 +1108,7 @@ class BaseWaveformExtractorExtension:
                 data = np.load(ext_data_file, mmap_mode='r')
             elif ext_data_file.suffix == '.csv':
                 import pandas as pd
-                data = pd.read_csv(ext_data_file)
+                data = pd.read_csv(ext_data_file, index_col=False)
             elif ext_data_file.suffix == '.pkl':
                 data = pickle.load(ext_data_file.open('rb'))
             self._extension_data[ext_data_name] = data
@@ -1124,7 +1132,7 @@ class BaseWaveformExtractorExtension:
                 elif isinstance(ext_data, np.ndarray):
                     np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
                 elif isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv")
+                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=False)
                 else:
                     try:
                         with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
