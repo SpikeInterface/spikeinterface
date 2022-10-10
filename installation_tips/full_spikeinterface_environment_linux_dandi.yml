@@ -1,4 +1,4 @@
-name: si_env_py39
+name: si_env
 channels:
   - conda-forge
   - defaults
@@ -7,8 +7,9 @@ dependencies:
   - pip>=21.0
   - mamba
   # numpy 1.22 break numba which break tridesclous
-  - numpy==1.21
-  - joblib
+  - numpy<1.22
+  # joblib 1.2 is breaking hdbscan
+  - joblib=1.1
   - tqdm
   - matplotlib
   - h5py
@@ -26,14 +27,16 @@ dependencies:
   - pyqt=5
   - pyqtgraph
   - htop
+  - ipywidgets
+  - ipympl
   - pip:
     - ephyviewer
-    - neo>=0.10.2
+    - neo>=0.11
     - elephant>=0.10.0
-    - probeinterface
-    - MEArec>=1.7.1
-    - spikeinterface[full]
+    - probeinterface>=0.2.11
+    - MEArec>=1.8
+    - spikeinterface[full, widgets]
     - spikeinterface-gui
-    - tridesclous>=1.6.5
+    - tridesclous>=1.6.6.1
     - spyking-circus>=1.1.0
-    - phy==2.0b5
+    # - phy==2.0b5

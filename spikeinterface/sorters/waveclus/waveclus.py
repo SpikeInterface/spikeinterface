@@ -12,7 +12,8 @@ from ..utils import ShellScript
 
 from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.extractors import WaveClusSortingExtractor
-from spikeinterface.core.channelslicerecording import ChannelSliceRecording
+from spikeinterface.core.channelslice import ChannelSliceRecording
+from spikeinterface.preprocessing import ScaleRecording
 
 PathType = Union[str, Path]
 
@@ -162,7 +163,7 @@ class WaveClusSorter(BaseSorter):
                 rec_sliced = ChannelSliceRecording(recording, channel_ids=[id])
                 write_to_h5_dataset_format(rec_sliced, dataset_path='/data', segment_index=0,
                                            file_handle=f, time_axis=0, single_axis=True,
-                                           chunk_memory=params['chunk_memory'])
+                                           chunk_memory=params['chunk_memory'], return_scaled=rec_sliced.has_scaled())
 
         if verbose:
             samplerate = recording.get_sampling_frequency()

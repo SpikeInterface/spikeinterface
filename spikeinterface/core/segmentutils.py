@@ -14,6 +14,8 @@ import numpy as np
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
+from .core_tools import define_function_from_class
+
 from typing import List, Union
 
 
@@ -93,11 +95,7 @@ class ProxyAppendRecordingSegment(BaseRecordingSegment):
         return self.parent_segment.get_traces(*args, **kwargs)
 
 
-def append_recordings(*args, **kwargs):
-    return AppendSegmentRecording(*args, **kwargs)
-
-
-append_recordings.__doc__ == AppendSegmentRecording.__doc__
+append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name='append_segment_recording')
 
 
 class ConcatenateSegmentRecording(BaseRecording):
@@ -214,12 +212,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def concatenate_recordings(*args, **kwargs):
-    return ConcatenateSegmentRecording(*args, **kwargs)
-
-
-concatenate_recordings.__doc__ == ConcatenateSegmentRecording.__doc__
-
+concatenate_recordings = define_function_from_class(source_class=ConcatenateSegmentRecording, name='concatenate_recordings')
 
 class SelectSegmentRecording(BaseRecording):
     """
@@ -275,11 +268,7 @@ def split_recording(recording: BaseRecording):
     return recording_list
 
 
-def select_segment_recording(*args, **kwargs):
-    return SelectSegmentRecording(*args, **kwargs)
-
-
-select_segment_recording.__doc__ = SelectSegmentRecording.__doc__
+select_segment_recording = define_function_from_class(source_class=SelectSegmentRecording, name='select_segment_recording')
 
 
 class AppendSegmentSorting(BaseSorting):
@@ -331,11 +320,7 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
         return self.parent_segment.get_unit_spike_train(*args, **kwargs)
 
 
-def append_sortings(*args, **kwargs):
-    return AppendSegmentSorting(*args, **kwargs)
-
-append_sortings.__doc__ == AppendSegmentSorting.__doc__
-
+append_sortings = define_function_from_class(source_class=AppendSegmentSorting, name='append_sortings')
 
 class SplitSegmentSorting(BaseSorting):
     """Splits a sorting with a single segment to multiple segments
@@ -384,11 +369,7 @@ class SplitSegmentSorting(BaseSorting):
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
 
-        self._kwargs = {'parent_sorting': parent_sorting,
+        self._kwargs = {'parent_sorting': parent_sorting.to_dict(),
                         'recording_list': [recording.to_dict() for recording in recording_list]}
 
-
-def split_sorting(*args, **kwargs):
-    return SplitSegmentSorting(*args, **kwargs)
-
-split_sorting.__doc__ == SplitSegmentSorting.__doc__
+split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name='split_sorting')

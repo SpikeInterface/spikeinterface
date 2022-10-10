@@ -21,12 +21,15 @@ except ModuleNotFoundError:
 REGISTRY = 'spikeinterface'
 
 SORTER_DOCKER_MAP = dict(
+    combinato='combinato',
+    herdingspikes='herdingspikes',
     klusta='klusta',
     mountainsort4='mountainsort4',
     pykilosort='pykilosort',
     spykingcircus='spyking-circus',
     spykingcircus2='spyking-circus2',
     tridesclous='tridesclous',
+    yass='yass',
     # Matlab compiled sorters:
     hdsort='hdsort-compiled',
     ironclust='ironclust-compiled',
@@ -35,6 +38,7 @@ SORTER_DOCKER_MAP = dict(
     kilosort2_5='kilosort2_5-compiled',
     kilosort3='kilosort3-compiled',
     waveclus='waveclus-compiled',
+    waveclus_snippets='waveclus-compiled',
 )
 
 SORTER_DOCKER_MAP = {
@@ -65,7 +69,7 @@ _common_param_doc = """
         If True, pull the default docker container for the sorter and run the sorter in that container using docker.
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
         If False, the sorter is run locally.
-    singularity_image: bool or str 
+    singularity_image: bool or str
         If True, pull the default docker container for the sorter and run the sorter in that container using 
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
         from Docker Hub.
@@ -97,7 +101,7 @@ def run_sorter(
     Generic function to run a sorter via function approach.
 
     {}
-    
+
     Examples
     --------
     >>> sorting = run_sorter("tridesclous", recording)
@@ -177,25 +181,26 @@ def find_recording_folders(d):
         return p
 
     _ = recursive_path_modifier(d, append_parent_folder, target='path', copy=True)
-    
+
     try: # this will fail if on different drives (Windows)
         base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
     except ValueError:
         base_folders_to_mount = folders_to_mount
-    
+
     # let's not mount root if dries are /home/..., /mnt1/...
     if len(base_folders_to_mount) == 1:
         if len(str(base_folders_to_mount[0])) == 1:
             base_folders_to_mount = folders_to_mount
-    
+
     return base_folders_to_mount
 
 
 
 def path_to_unix(path):
     path = Path(path)
-    path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
-    return path_unix
+    if platform.system() == 'Windows':
+        path = Path(str(path)[str(path).find(":") + 1:])
+    return path.as_posix()
 
 
 def windows_extractor_dict_to_unix(d):
@@ -209,9 +214,25 @@ class ContainerClient:
       * docker with "docker" python package
       * singularity with  "spython" python package
     """
-    def __init__(self, mode, container_image, volumes, extra_kwargs):
+    def __init__(self, mode, container_image, volumes, py_user_base, extra_kwargs):
+        """
+        Parameters
+        ----------
+        mode: str
+            "docker" or "singularity" strings
+        container_image: str
+            container image name and tag
+        volumes: dict
+            dict of volumes to bind
+        py_user_base: str
+            Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
+            Prevents from overwriting user's packages when running pip install
+        extra_kwargs: dict
+            Extra kwargs to start container
+        """
         assert mode in ('docker', 'singularity')
         self.mode = mode
+        self.py_user_base = py_user_base
         container_requires_gpu = extra_kwargs.get(
             'container_requires_gpu', None)
 
@@ -229,9 +250,14 @@ class ContainerClient:
                 client.images.pull(container_image)
 
             self.docker_container = client.containers.create(
-                    container_image, tty=True, volumes=volumes, **extra_kwargs)
+                container_image,
+                tty=True,
+                volumes=volumes,
+                **extra_kwargs
+            )
 
         elif mode == 'singularity':
+            assert self.py_user_base, 'py_user_base folder must be set in singularity mode'
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
             sif_file = Client._get_filename(container_image)
@@ -243,32 +269,20 @@ class ContainerClient:
             else:
                 if HAS_DOCKER:
                     docker_image = self._get_docker_image(container_image)
-                    if docker_image:
-                        print('Building singularity image from local docker image')
-                        # Save docker image as tar and build singularity image
-                        tmp_file = sif_file.replace('sif', 'tar').replace(':', '_')
-                        f = open(tmp_file, 'wb')
-                        try:
-                            for chunk in docker_image.save(chunk_size=100*1024*1024):  # 100 MB
-                                f.write(chunk)
-                            singularity_image = Client.build(f'docker-archive://{tmp_file}', sif_file, sudo=False)
-                        except Exception as e:
-                            print(f'Failed to build singularity image from local: {e}')
-                        finally:
-                            # Clean up
-                            f.close()
-                            if os.path.exists(tmp_file):
-                                os.remove(tmp_file)
+                    if docker_image and len(docker_image.tags) > 0:
+                        tag = docker_image.tags[0]
+                        print(f'Building singularity image from local docker image: {tag}')
+                        singularity_image = Client.build(f'docker-daemon://{tag}', sif_file, sudo=False)
                 if not singularity_image:
                     print(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f'docker://{container_image}')
 
             if not Path(singularity_image).exists():
                 raise FileNotFoundError(f'Unable to locate container image {container_image}')
-            
+
             # bin options
             singularity_bind = ','.join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
-            options=['--bind', singularity_bind]
+            options = ['--bind', singularity_bind]
 
             # gpu options
             if container_requires_gpu:
@@ -305,7 +319,8 @@ class ContainerClient:
             return str(res.output)
         elif self.mode == 'singularity':
             from spython.main import Client
-            res = Client.execute(self.client_instance, command)
+            options = ['--cleanenv', '--env', f'PYTHONUSERBASE={self.py_user_base}']
+            res = Client.execute(self.client_instance, command, options=options)
             if isinstance(res, dict):
                 res = res['message']
             return res
@@ -360,8 +375,7 @@ def run_sorter_container(
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
     parent_folder = output_folder.parent.absolute().resolve()
-    if not output_folder.is_dir():
-        output_folder.mkdir(parents=True)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
@@ -378,17 +392,15 @@ def run_sorter_container(
     (parent_folder / 'in_container_params.json').write_text(
         json.dumps(check_json(sorter_params), indent=4), encoding='utf8')
 
+    npz_sorting_path = output_folder / 'in_container_sorting'
+
+    # if in Windows, skip C:
+    parent_folder_unix = path_to_unix(parent_folder)
+    output_folder_unix = path_to_unix(output_folder)
+    recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
+    npz_sorting_path_unix = path_to_unix(npz_sorting_path)
+
     # the py script
-    if platform.system() == 'Windows':
-        # skip C:
-        parent_folder_unix = path_to_unix(parent_folder)
-        output_folder_unix = path_to_unix(output_folder)
-        recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
-    else:
-        parent_folder_unix = parent_folder
-        output_folder_unix = output_folder
-        recording_input_folders_unix = recording_input_folders
-    npz_sorting_path = output_folder_unix / 'in_container_sorting'
     py_script = f"""
 import json
 from spikeinterface import load_extractor
@@ -410,7 +422,7 @@ if __name__ == '__main__':
          remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
           verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
-    sorting.save_to_folder(folder='{npz_sorting_path}')
+    sorting.save_to_folder(folder='{npz_sorting_path_unix}')
 """
     (parent_folder / 'in_container_sorter_script.py').write_text(py_script, encoding='utf8')
 
@@ -427,18 +439,15 @@ if __name__ == '__main__':
         install_si_from_source = True
         # Making sure to get rid of last / or \
         si_dev_path = str(Path(si_dev_path).absolute().resolve())
-        if platform.system() == 'Windows':
-            si_dev_path_unix = path_to_unix(si_dev_path)
-        else:
-            si_dev_path_unix = si_dev_path
+        si_dev_path_unix = path_to_unix(si_dev_path)
         volumes[si_dev_path] = {'bind': si_dev_path_unix, 'mode': 'ro'}
     else:
         install_si_from_source = False
-        
+
     extra_kwargs = {}
     use_gpu = SorterClass.use_gpu(sorter_params)
     gpu_capability = SorterClass.gpu_capability
-    
+
     if use_gpu:
         if gpu_capability == 'nvidia-required':
             assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
@@ -446,15 +455,21 @@ if __name__ == '__main__':
         elif gpu_capability == 'nvidia-optional':
             if has_nvidia():
                 extra_kwargs['container_requires_gpu'] = True
-            else: 
+            else:
                 if verbose:
                     print(f"{SorterClass.sorter_name} supports GPU, but no GPU is available.\n"
                           f"Running the sorter without GPU")
         else:
             # TODO: make opencl machanism
             raise NotImplementedError("Only nvidia support is available")
-    
-    container_client = ContainerClient(mode, container_image, volumes, extra_kwargs)
+
+    # Creating python user base folder
+    py_user_base_unix = None
+    if mode == 'singularity':
+        py_user_base_folder = (parent_folder / 'in_container_python_base')
+        py_user_base_folder.mkdir(parents=True, exist_ok=True)
+        py_user_base_unix = path_to_unix(py_user_base_folder)
+    container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
         print('Starting container')
     container_client.start()
@@ -536,6 +551,8 @@ if __name__ == '__main__':
     os.remove(parent_folder / 'in_container_recording.json')
     os.remove(parent_folder / 'in_container_params.json')
     os.remove(parent_folder / 'in_container_sorter_script.py')
+    if mode == 'singularity':
+        shutil.rmtree(py_user_base_folder)
 
     # check error
     output_folder = Path(output_folder)
@@ -561,7 +578,10 @@ if __name__ == '__main__':
                     print('Failed to get result with sorter specific extractor.\n'
                           f'Error Message: {e}\n'
                           'Getting result from in-container saved NpzSortingExtractor')
-                sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
+                try:
+                    sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
+                except FileNotFoundError:
+                    SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
@@ -685,6 +705,10 @@ def run_waveclus(*args, **kwargs):
 
 
 run_waveclus.__doc__ = _common_run_doc.format('waveclus')
+
+
+def run_waveclus_snippets(*args, **kwargs):
+    return run_sorter('waveclus_snippets', *args, **kwargs)
 
 
 def run_combinato(*args, **kwargs):

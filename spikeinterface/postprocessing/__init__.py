@@ -18,7 +18,7 @@ from .principal_component import WaveformPrincipalComponent, compute_principal_c
 
 from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculator
 
-from .correlograms import (CrossCorrelogramsCalculator,
+from .correlograms import (CorrelogramsCalculator,
                            compute_autocorrelogram_from_spiketrain,
                            compute_crosscorrelogram_from_spiketrain,
                            compute_correlograms,
@@ -34,8 +34,3 @@ from .unit_localization import (compute_unit_locations, UnitLocationsCalculator,
                                 localize_units, compute_center_of_mass)
 
 from .alignsorting import align_sorting, AlignSortingExtractor
-
-# curation utilities
-from .mergeunitssorting import MergeUnitsSorting
-from .splitunitsorting import SplitUnitSorting
-from .curationsorting import CurationSorting

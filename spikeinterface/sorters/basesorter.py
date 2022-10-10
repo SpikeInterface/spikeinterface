@@ -14,7 +14,7 @@ import numpy as np
 
 from joblib import Parallel, delayed
 
-from spikeinterface.core import load_extractor, BaseRecording
+from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.job_tools import job_keys
 from .utils import SpikeSortingError, ShellScript
@@ -102,8 +102,8 @@ class BaseSorter:
             raise Exception(f"The sorter {cls.sorter_name} is not installed."
                             f"Please install it with:  \n{cls.installation_mesg} ")
 
-        if not isinstance(recording, BaseRecording):
-            raise ValueError('recording must be a Recording!!')
+        if not isinstance(recording, BaseRecordingSnippets):
+            raise ValueError('recording must be a Recording or Snippets!!')
 
         if cls.requires_locations:
             locations = recording.get_channel_locations()

@@ -1,9 +1,9 @@
 import numpy as np
 
 from spikeinterface import NumpyRecording, NumpySorting
-
+from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from probeinterface import generate_linear_probe
-
+from spikeinterface.core.snippets_tools import snippets_from_sorting
 
 def generate_recording(
         num_channels=2,
@@ -83,6 +83,37 @@ def create_sorting_npz(num_seg, file_path):
     np.savez(file_path, **d)
 
 
+def generate_snippets(
+        nbefore=20,
+        nafter=44,
+        num_channels=2,
+        wf_folder=None,
+        sampling_frequency=30000.,  # in Hz
+        durations=[10.325, 3.5],  #  in s for 2 segments
+        set_probe=True,
+        ndim=2,
+        num_units=5,
+        empty_units=None, **job_kwargs
+):
+
+    recording = generate_recording(durations=durations, num_channels=num_channels,
+                                   sampling_frequency=sampling_frequency, ndim=ndim,
+                                   set_probe=set_probe)
+
+    sorting = generate_sorting(num_units=num_units,  sampling_frequency=sampling_frequency,
+                               durations=durations, empty_units=empty_units)
+
+    snippets = snippets_from_sorting(recording=recording, sorting=sorting,
+        nbefore=nbefore, nafter=nafter, wf_folder=wf_folder, **job_kwargs)
+    
+    if set_probe:
+        probe = recording.get_probe()
+        snippets = snippets.set_probe(probe)
+
+    return snippets, sorting
+
+
 if __name__ == '__main__':
     print(generate_recording())
     print(generate_sorting())
+    print(generate_snippets())

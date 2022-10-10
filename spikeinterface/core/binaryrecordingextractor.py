@@ -44,12 +44,10 @@ class BinaryRecordingExtractor(BaseRecording):
     recording: BinaryRecordingExtractor
         The recording Extractor
     """
-    extractor_name = 'BinaryRecordingExtractor'
-    has_default_locations = False
-    installed = True  # check at class level if installed or not
+    extractor_name = 'BinaryRecording'
     is_writable = True
     mode = 'file'
-    installation_mesg = ""  # error message when not installed
+    name = "binary"
     
     def __init__(self, file_paths, sampling_frequency, num_chan, dtype, t_starts=None, channel_ids=None,
                  time_axis=0, file_offset=0, gain_to_uV=None, offset_to_uV=None,

@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.baserecording import BaseRecording
 from ..core.basesorting import BaseSorting
@@ -33,28 +33,42 @@ class UnitWaveformsWidget(BaseWidget):
         Create a plot title with the unit number if True.
     plot_channels: bool
         Plot channel locations below traces.
-    axis_equal: bool
-        Equal aspect ratio for x and y axis, to visualize the array geometry to scale.
-    lw: float
-        Line width for the traces.
-    unit_colors: None or dict
-        A dict key is unit_id and value is any color format handled by matplotlib.
-        If None, then the get_unit_colors() is internally used.
     unit_selected_waveforms: None or dict
         A dict key is unit_id and value is the subset of waveforms indices that should be 
-        be displayed
-    show_all_channels: bool
-        Show the whole probe if True, or only selected channels if False
-        The axis to be used. If not given an axis is created
+        be displayed (matplotlib backend)
+    max_spikes_per_unit: int or None
+        If given and unit_selected_waveforms is None, only max_spikes_per_unit random units are
+        displayed per waveform, default 50 (matplotlib backend)
+    axis_equal: bool
+        Equal aspect ratio for x and y axis, to visualize the array geometry to scale.
+    lw_waveforms: float
+        Line width for the waveforms, default 1 (matplotlib backend)
+    lw_templates: float
+        Line width for the templates, default 2 (matplotlib backend)
+    unit_colors: None or dict
+        A dict key is unit_id and value is any color format handled by matplotlib.
+        If None, then the get_unit_colors() is internally used. (matplotlib backend)
+    alpha_waveforms: float
+        Alpha value for waveforms, default 0.5 (matplotlib backend)
+    alpha_templates: float
+        Alpha value for templates, default 1 (matplotlib backend)
+    hide_unit_selector : bool
+        For sortingview backend, if True the unit selector is not displayed
+    same_axis: bool
+        If True, waveforms and templates are diplayed on the same axis, default False (matplotlib backend)
+    x_offset_units: bool
+        In case same_axis is True, this parameter allow to x-offset the waveforms for different units 
+        (recommended for a few units), default False (matlotlib backend)
     """
     possible_backends = {}
 
-    
     def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
                  unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
-                 ncols=5, lw=2, axis_equal=False, unit_selected_waveforms=None,
-                 set_title=True, backend=None, **backend_kwargs):
+                 ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False, unit_selected_waveforms=None,
+                 max_spikes_per_unit=50, set_title=True, same_axis=False, x_offset_units=False,
+                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False,
+                 backend=None, **backend_kwargs):
         we = waveform_extractor
         recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
@@ -73,7 +87,6 @@ class UnitWaveformsWidget(BaseWidget):
         if max_channels is not None:
             assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
 
-        num_axes = len(unit_ids)
         channel_locations = recording.get_channel_locations(channel_ids=channel_ids)
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
@@ -81,8 +94,8 @@ class UnitWaveformsWidget(BaseWidget):
             if radius_um is not None:
                 channel_inds = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=radius_um)
             elif max_channels is not None:
-                channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index', 
-                                                            num_channels=max_channels)
+                channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index',
+                                                             num_channels=max_channels)
             else:
                 # all channels
                 channel_inds = {unit_id: np.arange(recording.get_num_channels()) for unit_id in sorting.unit_ids}
@@ -92,23 +105,24 @@ class UnitWaveformsWidget(BaseWidget):
             channel_inds = {u: recording.ids_to_indices(ids) for u, ids in sparsity.items()}
 
         # get templates
-        all_templates = we.get_all_templates(unit_ids=unit_ids)
-        all_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
-        
-        xvectors, y_scale, y_offset = get_waveforms_scales(
-            waveform_extractor, all_templates, channel_locations)
-        
+        templates = we.get_all_templates(unit_ids=unit_ids)
+        template_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
+
+        xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
+            waveform_extractor, templates, channel_locations, x_offset_units)
+
         wfs_by_ids = {unit_id: we.get_waveforms(unit_id) for unit_id in unit_ids}
 
         plot_data = dict(
+            waveform_extractor=waveform_extractor,
             sampling_frequency=recording.get_sampling_frequency(),
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             sparsity=sparsity,
             unit_colors=unit_colors,
             channel_locations=channel_locations,
-            all_templates=all_templates,
-            all_stds=all_stds,
+            templates=templates,
+            template_stds=template_stds,
             plot_waveforms=plot_waveforms,
             plot_templates=plot_templates,
             plot_channels=plot_channels,
@@ -117,25 +131,33 @@ class UnitWaveformsWidget(BaseWidget):
             max_channels=max_channels,
             unit_selected_waveforms=unit_selected_waveforms,
             axis_equal=axis_equal,
-            lw=lw,
+            max_spikes_per_unit=max_spikes_per_unit,
             xvectors=xvectors,
             y_scale=y_scale,
             y_offset=y_offset,
             channel_inds=channel_inds,
-            num_axes=num_axes,
             wfs_by_ids=wfs_by_ids,
             set_title=set_title,
+            same_axis=same_axis,
+            x_offset_units=x_offset_units,
+            lw_waveforms=lw_waveforms,
+            lw_templates=lw_templates,
+            alpha_waveforms=alpha_waveforms,
+            alpha_templates=alpha_templates,
+            delta_x=delta_x,
+            hide_unit_selector=hide_unit_selector
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-def get_waveforms_scales(we, templates, channel_locations):
+def get_waveforms_scales(we, templates, channel_locations,
+                         x_offset_units=False):
     """
     Return scales and x_vector for templates plotting
     """
     wf_max = np.max(templates)
-    wf_min = np.max(templates)
+    wf_min = np.min(templates)
 
     x_chans = np.unique(channel_locations[:, 0])
     if x_chans.size > 1:
@@ -156,12 +178,15 @@ def get_waveforms_scales(we, templates, channel_locations):
 
     xvect = delta_x * (np.arange(we.nsamples) - we.nbefore) / we.nsamples * 0.7
 
-    xvectors = channel_locations[:, 0][None, :] + xvect[:, None]
+    if x_offset_units:
+        ch_locs = channel_locations
+        ch_locs[:, 0] *= len(templates)
+    else:
+        ch_locs = channel_locations
+
+    xvectors = ch_locs[:, 0][None, :] + xvect[:, None]
     # put nan for discontinuity
     xvectors[-1, :] = np.nan
 
-    return xvectors, y_scale, y_offset
-
-
-plot_unit_waveforms = define_widget_function_from_class(UnitWaveformsWidget, 'plot_unit_waveforms')
+    return xvectors, y_scale, y_offset, delta_x
 

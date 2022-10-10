@@ -4,6 +4,7 @@ from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
 
 class UnitLocationsPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Unit Locations"
 
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
@@ -18,11 +19,11 @@ class UnitLocationsPlotter(SortingviewPlotter):
                      for i_ch, ch in enumerate(channel_ids)}
 
         unit_items = []
-        for ii, unit_id in enumerate(unit_ids):
+        for unit_id in unit_ids:
             unit_items.append(vv.UnitLocationsItem(
                 unit_id=unit_id,
-                x=float(dp.unit_locations[ii][0]),
-                y=float(dp.unit_locations[ii][1])
+                x=float(dp.unit_locations[unit_id][0]),
+                y=float(dp.unit_locations[unit_id][1])
             ))
 
         v_unit_locations = vv.UnitLocations(
@@ -43,11 +44,7 @@ class UnitLocationsPlotter(SortingviewPlotter):
         else:
             view = v_unit_locations
 
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - UnitLocations"
-            url = view.url(label=label)
-            print(url)
+        self.handle_display_and_url(view, **backend_kwargs)
         return view
 
 

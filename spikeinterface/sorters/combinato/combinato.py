@@ -8,6 +8,7 @@ from ..utils import ShellScript
 from spikeinterface.core import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
 from spikeinterface.extractors import CombinatoSortingExtractor
+from spikeinterface.preprocessing import ScaleRecording
 
 try:
     import h5py
@@ -136,7 +137,7 @@ class CombinatoSorter(BaseSorter):
             f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
             write_to_h5_dataset_format(recording, dataset_path='/data', segment_index=0,
                                        file_handle=f, time_axis=0, single_axis=True,
-                                       chunk_memory=params['chunk_memory'])
+                                       chunk_memory=params['chunk_memory'], return_scaled=True)
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):

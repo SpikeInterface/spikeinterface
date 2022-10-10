@@ -1,8 +1,8 @@
-from ..unit_templates import UnitTemplateWidget
+from ..unit_templates import UnitTemplatesWidget
 from .unit_waveforms import UnitWaveformPlotter
 
 
-class UnitTemplatePlotter(UnitWaveformPlotter):
+class UnitTemplatesPlotter(UnitWaveformPlotter):
     pass
 
-UnitWaveformPlotter.register(UnitTemplateWidget)
+UnitTemplatesPlotter.register(UnitTemplatesWidget)

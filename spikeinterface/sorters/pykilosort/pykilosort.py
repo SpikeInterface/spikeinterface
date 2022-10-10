@@ -74,7 +74,6 @@ class PyKilosortSorter(BaseSorter):
         "do_whitening": 'whether or not to whiten data, if disabled channels are individually z-scored',
         "fs": "sample rate",
         "probe": 'data type of raw data',
-        "n_channels": 'number of channels in the data recording',
         "data_dtype": 'data type of raw data',
         "save_temp_files": "keep temporary files created while running",
         "fshigh": "high pass filter frequency",
@@ -146,7 +145,7 @@ class PyKilosortSorter(BaseSorter):
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
-        
+
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # saved by setup recording
             dat_path = output_folder / 'recording.dat'
@@ -166,15 +165,13 @@ class PyKilosortSorter(BaseSorter):
         ks_probe.xcoords = locations[:, 0]
         ks_probe.ycoords = locations[:, 1]
 
-
         run(
             dat_path,
-            params=params,
-            probe=ks_probe,
             dir_path=output_folder,
-            n_channels=num_chans,
-            dtype=recording.get_dtype(),
-            sample_rate=recording.get_sampling_frequency(),
+            probe=ks_probe,
+            data_dtype=str(recording.get_dtype()),
+            fs=recording.get_sampling_frequency(),
+            **params,
         )
 
     @classmethod
@@ -183,7 +180,6 @@ class PyKilosortSorter(BaseSorter):
         with (output_folder / 'spikeinterface_params.json').open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', False)
-        sorting = KiloSortSortingExtractor(folder_path=output_folder / "output", 
+        sorting = KiloSortSortingExtractor(folder_path=output_folder / "output",
                                            keep_good_only=keep_good_only)
         return sorting
-    

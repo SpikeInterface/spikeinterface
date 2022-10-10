@@ -4,6 +4,7 @@ from .base_sortingview import SortingviewPlotter
 
 
 class CrossCorrelogramsPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Cross Correlograms"
 
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
@@ -30,11 +31,7 @@ class CrossCorrelogramsPlotter(SortingviewPlotter):
             hide_unit_selector=dp.hide_unit_selector
         )
 
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - CrossCorrelograms"
-            url = v_cross_correlograms.url(label=label)
-            print(url)
+        self.handle_display_and_url(v_cross_correlograms, **backend_kwargs)
         return v_cross_correlograms
 
 

@@ -5,6 +5,11 @@ from pathlib import Path
 import shutil
 import numpy as np
 import json
+import tempfile
+import os
+import stat
+import subprocess
+import sys
 
 from spikeinterface.core import load_extractor, aggregate_units
 from spikeinterface.core.core_tools import check_json
@@ -40,7 +45,7 @@ def _run_one(arg_list):
 
 
 
-_implemented_engine = ('loop', 'joblib', 'dask')
+_implemented_engine = ('loop', 'joblib', 'dask', 'slurm')
 
 
 def run_sorter_by_property(sorter_name,
@@ -136,6 +141,7 @@ def run_sorter_by_property(sorter_name,
     aggregate_sorting = aggregate_units(sorting_list)
     aggregate_sorting.set_property(
         key=grouping_property, values=grouping_property_values)
+    aggregate_sorting.register_recording(recording)
 
     return aggregate_sorting
 
@@ -281,28 +287,81 @@ def run_sorters(sorter_list,
 
         for task in tasks:
             task.result()
-            
-    # dump spikeinterface_job.json
-    for rec_name, recording in recording_dict.items():
-        for sorter_name in sorter_list:
-            output_folder = working_folder / str(rec_name) / sorter_name
-            with open(output_folder / "spikeinterface_job.json", "w") as f:
-                dump_dict = {"rec_name": rec_name,
-                             "sorter_name": sorter_name,
-                             "engine": engine}
-                if engine != "dask":
-                    dump_dict.update({"engine_kwargs": engine_kwargs})
-                json.dump(check_json(dump_dict), f)
+    
+    elif engine == 'slurm':
+        # generate python script for slurm
+        tmp_script_folder = engine_kwargs.get('tmp_script_folder', None)
+        if tmp_script_folder is None:
+            tmp_script_folder = tempfile.mkdtemp(prefix='spikeinterface_slurm_')
+        tmp_script_folder = Path(tmp_script_folder)
+        cpus_per_task = engine_kwargs.get('cpus_per_task', 1)
+        mem = engine_kwargs.get('mem', '1G')
+
+        for i, task_args in enumerate(task_args_list):
+            script_name = tmp_script_folder / f'si_script_{i}.py'
+            with open(script_name, 'w') as f:
+                arg_list_txt = '(\n'
+                for j, arg in enumerate(task_args):
+                    arg_list_txt += '\t'
+                    if j !=1:
+                        if isinstance(arg, str):
+                            arg_list_txt += f'"{arg}"'
+                        elif isinstance(arg, Path):
+                            arg_list_txt += f'"{str(arg.absolute())}"'
+                        else:
+                            arg_list_txt += f'{arg}'
+                    else:
+                        arg_list_txt += 'recording'
+                    arg_list_txt += ',\r'
+                arg_list_txt += ')'
+                
+                recording_dict = task_args[1]
+                slurm_script = _slurm_script.format(python=sys.executable, recording_dict=recording_dict, arg_list_txt=arg_list_txt)
+                f.write(slurm_script)
+                os.fchmod(f.fileno(), mode = stat.S_IRWXU)
+                
+                print(slurm_script)
+
+            subprocess.Popen(['sbatch', str(script_name.absolute()), f'-cpus-per-task={cpus_per_task}', f'-mem={mem}'] )
+
+    non_blocking_engine = ('loop', 'joblib')
+    if engine in non_blocking_engine:
+        # dump spikeinterface_job.json
+        # only for non blocking engine
+        for rec_name, recording in recording_dict.items():
+            for sorter_name in sorter_list:
+                output_folder = working_folder / str(rec_name) / sorter_name
+                with open(output_folder / "spikeinterface_job.json", "w") as f:
+                    dump_dict = {"rec_name": rec_name,
+                                 "sorter_name": sorter_name,
+                                 "engine": engine}
+                    if engine != "dask":
+                        dump_dict.update({"engine_kwargs": engine_kwargs})
+                    json.dump(check_json(dump_dict), f)
 
     if with_output:
-        if engine == 'dask':
-            print('Warning!! With engine="dask" you cannot have directly output results\n'
+        if engine not in non_blocking_engine:
+            print(f'Warning!! With engine="{engine}" you cannot have directly output results\n'
                   'Use : run_sorters(..., with_output=False)\n'
                   'And then: results = collect_sorting_outputs(output_folders)')
             return
 
         results = collect_sorting_outputs(working_folder)
         return results
+
+
+
+_slurm_script = """#! {python}
+from numpy import array
+from spikeinterface.sorters.launcher import _run_one
+
+recording = {recording_dict}
+
+arg_list = {arg_list_txt}
+
+_run_one(arg_list)
+"""
+
 
 
 def is_log_ok(output_folder):

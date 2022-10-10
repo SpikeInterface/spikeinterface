@@ -1,26 +1,43 @@
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import define_function_from_class
-
-from spikeinterface.core.core_tools import write_binary_recording
-
-from typing import Union, List
-import json
-import numpy as np
-from pathlib import Path
-import struct
 import os
+import json
+import struct
 import tempfile
 import traceback
+from pathlib import Path
+from typing import Union, List
+
+import numpy as np
+
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import write_binary_recording
 
 
 class MdaRecordingExtractor(BaseRecording):
+    """Load MDA format data as a recording extractor.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the MDA folder.
+    raw_fname: str
+        File name of raw file. Defaults to 'raw.mda'.
+    params_fname: str
+        File name of params file. Defaults to 'params.json'.
+    geom_fname: str
+        File name of geom file. Defaults to 'geom.csv'.
+
+    Returns
+    -------
+    extractor : MdaRecordingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'MdaRecording'
     has_default_locations = True
-    has_unscaled = False
-    installed = True  # check at class level if installed or not
     is_writable = True
     mode = 'folder'
-    installation_mesg = ""  # error message when not installed
+    name = "mda"
 
     def __init__(self, folder_path, raw_fname='raw.mda', params_fname='params.json', geom_fname='geom.csv'):
         folder_path = Path(folder_path)
@@ -46,27 +63,27 @@ class MdaRecordingExtractor(BaseRecording):
     @staticmethod
     def write_recording(recording, save_path, params=dict(), raw_fname='raw.mda', params_fname='params.json',
                         geom_fname='geom.csv', verbose=True, dtype=None, **job_kwargs):
-        """
-        Writes recording to file in MDA format.
+        """Write a recording to file in MDA format.
 
         Parameters
         ----------
         recording: RecordingExtractor
-            The recording extractor to be saved
+            The recording extractor to be saved.
         save_path: str or Path
-            The folder in which the Mda files are saved
+            The folder to save the Mda files.
         params: dictionary
-            Dictionary with optional parameters to save metadata. Sampling frequency is appended to this dictionary.
+            Dictionary with optional parameters to save metadata.
+            Sampling frequency is appended to this dictionary.
         raw_fname: str
-            File name of raw file (default raw.mda)
+            File name of raw file. Defaults to 'raw.mda'.
         params_fname: str
-            File name of params file (default params.json)
+            File name of params file. Defaults to 'params.json'.
         geom_fname: str
-            File name of geom file (default geom.csv)
+            File name of geom file. Defaults to 'geom.csv'.
         dtype: dtype
-            dtype to be used. If None dtype is same as recording traces.
+            Data type to be used. If None dtype is same as recording traces.
         verbose: bool
-            If True, output is verbose
+            If True, output is verbose.
         **job_kwargs:
             Use by job_tools modules to set:
                 * chunk_size or chunk_memory, or total_memory
@@ -108,6 +125,7 @@ class MdaRecordingExtractor(BaseRecording):
 
 
 class MdaRecordingSegment(BaseRecordingSegment):
+
     def __init__(self, diskreadmda, sampling_frequency):
         self._diskreadmda = diskreadmda
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
@@ -137,11 +155,25 @@ class MdaRecordingSegment(BaseRecordingSegment):
 
 
 class MdaSortingExtractor(BaseSorting):
+    """Load MDA format data as a sorting extractor.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the MDA file.
+    sampling_frequency : int
+        The sampling frequency.
+
+    Returns
+    -------
+    extractor : MdaRecordingExtractor
+        The loaded data.
+    """
+
     extractor_name = 'MdaSorting'
-    installed = True  # check at class level if installed or not
     is_writable = True
     mode = 'file'
-    installation_mesg = ""  # error message when not installed
+    name = "mda"
 
     def __init__(self, file_path, sampling_frequency):
         firings = readmda(str(file_path))

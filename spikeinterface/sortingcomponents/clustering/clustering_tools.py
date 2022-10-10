@@ -445,7 +445,7 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
     return clean_peak_labels, peak_sample_shifts
 
 
-def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, similar_threshold=0.975, sparsify_threshold=0.99):
+def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, cosine_threshold=0.975, sparsify_threshold=0.99):
 
     import sklearn
     nb_templates = len(wfs_arrays.keys())
@@ -471,7 +471,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
     for i in range(nb_templates):
         similarities[i, i] = -1
 
-    similar_templates = np.where(similarities > similar_threshold)
+    similar_templates = np.where(similarities > cosine_threshold)
 
     new_labels = peak_labels.copy()
 
@@ -489,7 +489,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 
 
 
-def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_threshold=0.99, method_kwargs={}, job_kwargs={}):
+def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=0.99, method_kwargs={}, job_kwargs={}):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels 
@@ -497,10 +497,10 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     from spikeinterface.core import NumpySorting
     from spikeinterface.core import extract_waveforms
     from spikeinterface.core import get_global_tmp_folder
+    from spikeinterface.sortingcomponents.matching.circus import get_scipy_shape
     import string, random, shutil, os
     from pathlib import Path
 
-    noise_levels = get_noise_levels(waveform_extractor.recording, return_scaled=False)
     templates = waveform_extractor.get_all_templates(mode='median').copy()
     nb_templates = len(templates)
     duration = waveform_extractor.nbefore + waveform_extractor.nafter
@@ -508,7 +508,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     fs = waveform_extractor.recording.get_sampling_frequency()
     num_chans = waveform_extractor.recording.get_num_channels()
 
-    for t in range(len(templates)):
+    for t in range(nb_templates):
 
         is_silent = templates[t].std(0) < 0.1*noise_levels
         templates[t, :, is_silent] = 0
@@ -542,23 +542,41 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     recording = BinaryRecordingExtractor(tmp_filename, num_chan=num_chans, sampling_frequency=fs, dtype='float32')
     recording.annotate(is_filtered=True)
 
+    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
+    half_marging = margin//2
+
+    chunk_size = duration + 3*margin
+
+    dummy_filter = np.empty((num_chans, duration), dtype=np.float32)
+    dummy_traces = np.empty((num_chans, chunk_size), dtype=np.float32)
+
+    fshape, axes = get_scipy_shape(dummy_filter, dummy_traces, axes=1)
+
     method_kwargs.update({'waveform_extractor' : waveform_extractor, 
                           'noise_levels' : noise_levels,
                           'amplitudes' : [0.9, 1.1],
                           'sparsify_threshold' : 1,
-                          'omp_min_sps' : 0})
+                          'omp_min_sps' : 0.1})
+                          #'fft_size' : fshape[0]})
 
     ignore_ids = []
     similar_templates = [[], []]
 
     for i in range(nb_templates):
+
+        t_start = padding + i*duration
+        t_stop = padding + (i+1)*duration
+
+        sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
+
         method_kwargs.update({'ignored_ids' : ignore_ids + [i]})
-        spikes, computed = find_spikes_from_templates(recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True)
+        spikes, computed = find_spikes_from_templates(sub_recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs)
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
                               'sparsities' : computed['sparsities']})
-        valid = (spikes['sample_ind'] > padding + i*duration) * (spikes['sample_ind'] < padding + (i+1)*duration)
+                              #'cached_fft_kernels' : computed['cached_fft_kernels']})
+        valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
                 j = spikes[valid]['cluster_ind'][0]
@@ -568,7 +586,7 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
                     similar_templates[1] += [i]
                     similar_templates[0] += [j]
             elif np.sum(valid) > 1:
-                similar_templates[0] += [-1]
+                similar_templates[0] += [-1]    
                 ignore_ids += [i]
                 similar_templates[1] += [i]
 
@@ -585,5 +603,103 @@ def remove_duplicates_via_matching(waveform_extractor, peak_labels, sparsify_thr
     labels = labels[labels>=0]
 
     shutil.rmtree(tmp_folder)
+
+    return labels, new_labels
+
+
+def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_threshold=None):
+    
+    import sklearn
+
+    from spikeinterface.sortingcomponents.clustering.isocut5 import isocut5
+
+    new_labels = peak_labels.copy()
+
+    keep_merging = True
+
+    fused = {}
+    templates = {}
+    similarities = {}
+    diptests = {}
+    cosine = 0
+
+    for i in wfs_arrays.keys():
+        fused[i] = [i]
+        
+    while keep_merging:
+        
+        min_dip = np.inf
+        to_merge = None
+        labels = np.unique(new_labels)
+        labels = labels[labels>=0]
+        
+        for i in labels:
+            if len(fused[i]) > 1:
+                all_data_i = np.vstack([wfs_arrays[c] for c in fused[i]])
+            else:
+                all_data_i = wfs_arrays[i]
+            n_i = len(all_data_i)
+            if n_i > 0:
+                if i in templates:
+                    t_i = templates[i]
+                else:
+                    t_i = np.median(all_data_i, axis=0).flatten()
+                    templates[i] = t_i
+                data_i = all_data_i.reshape(n_i, -1)
+                
+                if i not in similarities:
+                    similarities[i] = {}
+
+                if i not in diptests:
+                    diptests[i] = {}
+                
+                for j in labels[i+1:]:
+                    if len(fused[j]) > 1:
+                        all_data_j = np.vstack([wfs_arrays[c] for c in fused[j]])
+                    else:
+                        all_data_j = wfs_arrays[j]
+                    n_j = len(all_data_j)
+                    if n_j > 0:
+                        if j in templates:
+                            t_j = templates[j]
+                        else:
+                            t_j = np.median(all_data_j, axis=0).flatten()
+                            templates[j] = t_j
+                        
+                        if cosine_threshold is not None:
+                            if j in similarities[i]:
+                                cosine = similarities[i][j]
+                            else:
+                                cosine = sklearn.metrics.pairwise.cosine_similarity(t_i[np.newaxis, :], t_j[np.newaxis, :])[0][0]
+                                similarities[i][j] = cosine
+                        
+                        if cosine_threshold is None or cosine > cosine_threshold:
+
+                            if j in diptests[i]:
+                                diptest = diptests[i][j]
+                            else:
+                                data_j = all_data_j.reshape(n_j, -1)
+                                v = t_i - t_j
+                                pr_i = np.dot(data_i, v)
+                                pr_j = np.dot(data_j, v)
+                                diptest, _ = isocut5(np.concatenate((pr_i, pr_j)))
+                                diptests[i][j] = diptest
+
+                            if diptest < min_dip:
+                                min_dip = diptest
+                                to_merge = [i, j]
+
+        if min_dip < dip_threshold:
+            fused[to_merge[0]] += [to_merge[1]]
+            mask = new_labels == to_merge[1]
+            new_labels[mask] = to_merge[0]
+            templates.pop(to_merge[0])
+            similarities.pop(to_merge[0])
+            diptests.pop(to_merge[0])
+        else:
+            keep_merging = False
+
+    labels = np.unique(new_labels)
+    labels = labels[labels>=0]
 
     return labels, new_labels

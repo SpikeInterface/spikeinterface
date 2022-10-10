@@ -58,16 +58,18 @@ class BaseSorting(BaseExtractor):
     ):
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
-        spike_train = segment.get_unit_spike_train(
+        spike_frames = segment.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
         if return_times:
             if self.has_recording():
                 times = self.get_times(segment_index=segment_index)
-                return times[spike_train]
+                return times[spike_frames]
             else:
-                return spike_train / self.get_sampling_frequency()
+                t_start = segment._t_start if segment._t_start is not None else 0
+                spike_times =  spike_frames / self.get_sampling_frequency()
+                return t_start + spike_times
         else:
-            return spike_train
+            return spike_frames
 
     def register_recording(self, recording):
         assert np.isclose(self.get_sampling_frequency(),
@@ -115,6 +117,10 @@ class BaseSorting(BaseExtractor):
             save_path = folder / 'sorting_cached.npz'
             NpzSortingExtractor.write_sorting(self, save_path)
             cached = NpzSortingExtractor(save_path)
+            cached.dump(folder / 'npz.json', relative_to=folder)
+
+            from .npzfolder import NpzFolderSorting
+            cached = NpzFolderSorting(folder_path=folder)
             if self.has_recording():
                 warnings.warn(
                     "The registered recording will not be persistent on disk, but only available in memory")
@@ -295,7 +301,8 @@ class BaseSortingSegment(BaseSegment):
     Abstract class representing several units and relative spiketrain inside a segment.
     """
 
-    def __init__(self):
+    def __init__(self, t_start=None):
+        self._t_start = t_start
         BaseSegment.__init__(self)
 
     def get_unit_spike_train(

@@ -1,11 +1,12 @@
 import numpy as np
 
 from ..base import to_attr
-from ..amplitudes import AmplitudeTimeseriesWidget
+from ..amplitudes import AmplitudesWidget
 from .base_sortingview import SortingviewPlotter
 
 
-class AmplitudeTimeseriesPlotter(SortingviewPlotter):
+class AmplitudesPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Amplitudes"
 
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
@@ -30,12 +31,8 @@ class AmplitudeTimeseriesPlotter(SortingviewPlotter):
             hide_unit_selector=dp.hide_unit_selector
         )
 
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - SpikeAmplitudes"
-            url = v_spike_amplitudes.url(label=label)
-            print(url)
+        self.handle_display_and_url(v_spike_amplitudes, **backend_kwargs)
         return v_spike_amplitudes
         
 
-AmplitudeTimeseriesPlotter.register(AmplitudeTimeseriesWidget)
+AmplitudesPlotter.register(AmplitudesWidget)

@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import numpy as np
 
 from spikeinterface.core import (BaseSorting, BaseSortingSegment, read_python)
@@ -6,21 +7,22 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
-    """
-    Base SortingExtractor for Phy and Kilosort output folder
+    """Base SortingExtractor for Phy and Kilosort output folder.
 
     Parameters
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str (optional)
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
     """
     extractor_name = 'BasePhyKilosortSorting'
     installed = False  # check at class level if installed or not
-    is_writable = False
     mode = 'folder'
     installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
+    name = "phykilosort"
 
     def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False):
         try:
@@ -72,7 +74,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if cluster_info is None:
                     cluster_info = new_property
                 else:
-                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id', suffixes=[None,'_repeat'])
+                    cluster_info = pd.merge(cluster_info, new_property, on='cluster_id', suffixes=[None, '_repeat'])
 
         # in case no tsv/csv files are found populate cluster info with minimal info
         if cluster_info is None:
@@ -92,8 +94,13 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         if "cluster_id" not in cluster_info.columns:
             assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
-            cluster_info["cluster_id"] = cluster_info["id"]
+            cluster_info.loc[:, "cluster_id"] = cluster_info["id"].values
             del cluster_info["id"]
+
+        # update spike clusters and times values
+        spike_clusters_clean_idxs = np.in1d(spike_clusters, cluster_info["cluster_id"].values).nonzero()[0]
+        spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
+        spike_times_clean = spike_times[spike_clusters_clean_idxs]
 
         if 'si_unit_id' in cluster_info.columns:
             unit_ids = cluster_info["si_unit_id"].values
@@ -103,8 +110,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             else:
                 max_si_unit_id = int(np.nanmax(unit_ids))
 
-            # update spike cluster values
-            spike_clusters_new = np.zeros_like(spike_clusters)
+            spike_clusters_new = np.zeros_like(spike_clusters_clean)
             for i, (phy_id, si_id) in enumerate(zip(cluster_info["cluster_id"].values,
                                                     cluster_info["si_unit_id"].values)):
                 if np.isnan(si_id):
@@ -114,9 +120,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                     new_si_id = si_id
                 unit_ids[i] = new_si_id
 
-                spike_clusters_new[spike_clusters == phy_id] = new_si_id
+                spike_clusters_new[spike_clusters_clean == phy_id] = new_si_id
             unit_ids = unit_ids.astype(int)
-            spike_clusters = spike_clusters_new
+            spike_clusters_clean = spike_clusters_new
             del cluster_info["si_unit_id"]
         else:
             unit_ids = cluster_info["cluster_id"].values
@@ -134,7 +140,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
 
-        self.add_sorting_segment(PhySortingSegment(spike_times, spike_clusters))
+        self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
 
 class PhySortingSegment(BaseSortingSegment):
@@ -153,17 +159,22 @@ class PhySortingSegment(BaseSortingSegment):
 
 
 class PhySortingExtractor(BasePhyKilosortSortingExtractor):
-    """
-    Base SortingExtractor for Phy and Kilosort output folder
+    """Load Phy format data as a sorting extractor.
 
     Parameters
     ----------
     folder_path: str or Path
-        Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str (optional)
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"])
+        Path to the output Phy folder (containing the params.py).
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+
+    Returns
+    -------
+    extractor : PhySortingExtractor
+        The loaded data.
     """
-    extractor_name = 'BasePhyKilosortSorting'
+    extractor_name = 'PhySorting'
+    name = "phy"
 
     def __init__(self, folder_path, exclude_cluster_groups=None):
         BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
@@ -173,17 +184,25 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
 
 
 class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
-    """
-    SortingExtractor for a Kilosort output folder
+    """Load Kilosort format data as a sorting extractor.
 
     Parameters
     ----------
     folder_path: str or Path
-        Path to the output Phy folder (containing the params.py)
-    keep_good_only: bool
-        If True, only Kilosort-labeled 'good' units are returned
+        Path to the output Phy folder (containing the params.py).
+    exclude_cluster_groups: list or str, optional
+        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+    keep_good_only : bool, optional, default: True
+        Whether to only keep good units.
+        If True, only Kilosort-labeled 'good' units are returned.
+
+    Returns
+    -------
+    extractor : KiloSortSortingExtractor
+        The loaded data.
     """
     extractor_name = 'KiloSortSorting'
+    name = "kilosort"
 
     def __init__(self, folder_path, keep_good_only=False):
         BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups=None,

@@ -4,6 +4,7 @@ from .base_sortingview import SortingviewPlotter
 
 
 class AutoCorrelogramsPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Auto Correlograms"
 
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
@@ -28,11 +29,7 @@ class AutoCorrelogramsPlotter(SortingviewPlotter):
             autocorrelograms=ac_items
         )
 
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - AutoCorrelograms"
-            url = v_autocorrelograms.url(label=label)
-            print(url)
+        self.handle_display_and_url(v_autocorrelograms, **backend_kwargs)
         return v_autocorrelograms
 
 
