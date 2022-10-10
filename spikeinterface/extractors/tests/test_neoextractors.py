@@ -3,7 +3,7 @@ import unittest
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset, get_global_dataset_folder
+from spikeinterface import get_global_dataset_folder
 from spikeinterface.extractors import *
 
 from spikeinterface.extractors.tests.common_tests import (RecordingCommonTestSuite,
