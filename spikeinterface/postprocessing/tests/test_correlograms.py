@@ -64,18 +64,21 @@ def _test_correlograms(sorting, window_ms, bin_ms, methods):
             ref_correlograms = correlograms
             ref_bins = bins
         else:
-            import matplotlib.pyplot as plt
-            for i in range(ref_correlograms.shape[1]):
-                for j in range(ref_correlograms.shape[1]):
-                    fig, ax = plt.subplots()
-                    ax.plot(bins[:-1], ref_correlograms[i, j, :], color='green', label='numpy')
-                    ax.plot(bins[:-1], correlograms[i, j, :], color='red', label=method)
-                    ax.legend()
-                    ax.set_title(f'{i} {j}')
-                    plt.show()
+            #~ import matplotlib.pyplot as plt
+            #~ for i in range(ref_correlograms.shape[1]):
+                #~ for j in range(ref_correlograms.shape[1]):
+                    #~ fig, ax = plt.subplots()
+                    #~ ax.plot(bins[:-1], ref_correlograms[i, j, :], color='green', label='numpy')
+                    #~ ax.plot(bins[:-1], correlograms[i, j, :], color='red', label=method)
+                    #~ ax.legend()
+                    #~ ax.set_title(f'{i} {j}')
+                    #~ plt.show()
+            
+            # This should be True but numpy and numba version some small diff that need to be investigated!!
+            # assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
+            
+            assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
-            #~ assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
-            #~ assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 
 def test_equal_results_correlograms():
