@@ -1,8 +1,15 @@
 pytest
 pytest-cov
 
-# some version are forced because of
-# numba and hdbscan and numpy internal API
+
+# probeinterface from master
+git+https://github.com/SpikeInterface/probeinterface.git
+
+# neo is from master because of several IO (spikeglx, ...)
+git+https://github.com/NeuralEnsemble/python-neo.git
+
+# joblib
+joblib<1.2
 
 # tridesclous
 numpy==1.21
@@ -15,11 +22,12 @@ zarr
 # for widget colors
 distinctipy
 
+# for sortingview backend
+sortingview
+
 # CurtationSorting
 networkx
 
-# neo is from master because of several IO (spikeglx, ...)
-git+https://github.com/NeuralEnsemble/python-neo.git
 
 # recent datalad need a too recent version for git-annex
 # so we use an old one here
@@ -53,7 +61,7 @@ lxml
 pyqt5
 # hdbscan
 loky
-tridesclous>=1.6.4
+tridesclous>=1.6.6.1
 
 # shybrid
 # shybrid

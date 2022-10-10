@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-from .base import BaseWidget, define_widget_function_from_class
+from .base import BaseWidget
 from .utils import get_unit_colors
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
@@ -14,33 +14,36 @@ class UnitLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
-        The object to compute/get crosscorrelograms from
+    waveform_extractor : WaveformExtractor
+        The object to compute/get unit locations from
     unit_ids: list
         List of unit ids.
     with_channel_ids: bool False default
-        add channel ids text on the probe
-    compute_kwargs : dict or None
-        If given, dictionary with keyword arguments for `compute_unit_locations` function
+        Add channel ids text on the probe
     unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values
     hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed
+        If True, the unit selector is not displayed.
+        Default False (sortingview backend)
+    plot_all_units : bool
+        If True, all units are plotted. The unselected ones (not in unit_ids),
+        are plotted in grey. Default True (matplotlib backend)
+    plot_legend : bool
+        If True, the legend is plotted. Default False (matplotlib backend)
+    hide_axis : bool
+        If True, the axis is set to off. Default False (matplotlib backend)
     """
     possible_backends = {}
 
-    def __init__(self, waveform_extractor: Union[WaveformExtractor, BaseSorting], 
-                 unit_ids=None, with_channel_ids=False, compute_kwargs=None, unit_colors=None, hide_unit_selector=False,
+    def __init__(self, waveform_extractor: WaveformExtractor, 
+                 unit_ids=None, with_channel_ids=False,
+                 unit_colors=None, hide_unit_selector=False,
+                 plot_all_units=True, plot_legend=False, hide_axis=False,
                  backend=None, **backend_kwargs):
-        if waveform_extractor.is_extension("unit_locations"):
-            ulc = waveform_extractor.load_extension("unit_locations")
-            unit_locations = ulc.get_data(outputs="numpy")
-        else:
-            compute_kwargs = compute_kwargs if compute_kwargs is not None else {}
-            unit_locations = compute_unit_locations(waveform_extractor, 
-                                                    outputs="numpy",
-                                                    **compute_kwargs)
-        
+        self.check_extensions(waveform_extractor, "unit_locations")
+        ulc = waveform_extractor.load_extension("unit_locations")
+        unit_locations = ulc.get_data(outputs="by_unit")
+
         recording = waveform_extractor.recording
         sorting = waveform_extractor.sorting
         
@@ -53,11 +56,9 @@ class UnitLocationsWidget(BaseWidget):
         
         if unit_ids is None:
             unit_ids = sorting.unit_ids
-        else:
-            unit_indices = sorting.ids_to_indices(unit_ids)
-            unit_locations = unit_locations[unit_indices]
 
         plot_data = dict(
+            all_unit_ids=sorting.unit_ids,
             unit_locations=unit_locations,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
@@ -65,10 +66,13 @@ class UnitLocationsWidget(BaseWidget):
             channel_locations=channel_locations,
             probegroup_dict=probegroup.to_dict(),
             with_channel_ids=with_channel_ids,
-            hide_unit_selector=hide_unit_selector
+            hide_unit_selector=hide_unit_selector,
+            plot_all_units=plot_all_units,
+            plot_legend=plot_legend,
+            hide_axis=hide_axis
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-plot_unit_locations = define_widget_function_from_class(UnitLocationsWidget, 'plot_unit_locations')
+

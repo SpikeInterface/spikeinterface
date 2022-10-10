@@ -15,8 +15,7 @@ from tqdm.auto import tqdm
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 
-_shared_job_kwargs_doc = \
-    """**job_kwargs: keyword arguments for parallel processing:
+_shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel processing:
             * chunk_duration or chunk_size or chunk_memory or total_memory
                 - chunk_size: int
                     Number of samples per chunk

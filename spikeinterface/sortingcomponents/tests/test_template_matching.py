@@ -53,7 +53,7 @@ def test_find_spikes_from_templates():
     # metrics = si.compute_quality_metrics(we, metric_names=['snr'], load_if_exists=True, )
 
     # comparisons = {}
-    # for method in template_matching_methods.keys():
+    # for method in matching_methods.keys():
     #     comp = si.compare_sorter_to_ground_truth(gt_sorting, result[method])
     #     comparisons[method] = comp
     #     si.plot_agreement_matrix(comp)

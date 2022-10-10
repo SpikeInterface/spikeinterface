@@ -1,3 +1,5 @@
+.. _releasenotes:
+
 =============
 Release notes
 =============
@@ -6,6 +8,8 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.95.0.rst
+  releases/0.95.0.rst
   releases/0.94.0.rst
   releases/0.93.0.rst
   releases/0.92.0.rst
@@ -21,6 +25,26 @@ Release notes
 
 NEW API
 -------
+
+Version 0.95.1
+==============
+
+* Widgets: Fix creation of 2D axes when figure is passed
+* Widgets: Add check for matplotlib backend when using ipywidgets
+
+Version 0.95.0
+==============
+
+* Add `BaseSnippets` object to handle waveform cutouts
+* Sacrificed `toolkit` in favor of: `preprocessing`, `postprocessing`, `qualitymetrics`, and `curation` modules
+* Major refactoring widget module to allow for multiple backends
+  * `matplotlib`
+  * `ipywidgets`
+  * `sortingview`
+* First implementations of (experimental) `sortingcomponents`-based sorters:
+  * `spykingcircus2`
+  * `tridesclous2`
+
 
 Version 0.94.0
 ==============

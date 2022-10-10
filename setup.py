@@ -9,10 +9,12 @@ def open_requirements(fname):
 install_requires = open_requirements('requirements.txt')
 full_requires = open_requirements('requirements_full.txt')
 extractors_requires = open_requirements('requirements_extractors.txt')
+widgets_requires = open_requirements('requirements_widgets.txt')
 
 extras_require = {
     "full": full_requires,
     "extractors": extractors_requires,
+    "widgets": widgets_requires
 }
 
 d = {}

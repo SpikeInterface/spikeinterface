@@ -24,6 +24,8 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         The loaded data.
     """
     extractor_name = "HDSortSortingExtractor"
+    mode = 'file'
+    name = "hdsort"
 
     def __init__(self, file_path, keep_good_only=True):
 
@@ -245,7 +247,7 @@ def _parse_units(file, _units):
 
 
 def _squeeze_ds(ds):
-    while not isinstance(ds, (int, float, np.integer, np.float)):
+    while not isinstance(ds, (int, float, np.integer)):
         ds = ds[0]
     return ds
 

@@ -20,9 +20,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     """
     extractor_name = 'BasePhyKilosortSorting'
     installed = False  # check at class level if installed or not
-    is_writable = False
     mode = 'folder'
     installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
+    name = "phykilosort"
 
     def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False):
         try:
@@ -173,7 +173,8 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     extractor : PhySortingExtractor
         The loaded data.
     """
-    extractor_name = 'BasePhyKilosortSorting'
+    extractor_name = 'PhySorting'
+    name = "phy"
 
     def __init__(self, folder_path, exclude_cluster_groups=None):
         BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
@@ -201,6 +202,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
         The loaded data.
     """
     extractor_name = 'KiloSortSorting'
+    name = "kilosort"
 
     def __init__(self, folder_path, keep_good_only=False):
         BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups=None,
