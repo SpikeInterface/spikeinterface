@@ -106,17 +106,17 @@ class WaveformExtractor:
         return txt
 
     @classmethod
-    def load_from_folder(cls, folder, without_recording=False):
+    def load_from_folder(cls, folder, with_recording=True):
         folder = Path(folder)
         assert folder.is_dir(), f'This waveform folder does not exists {folder}'
 
-        if without_recording:
+        if not with_recording:
             # load
             recording = None
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
             if not rec_attributes_file.exists():
                 raise ValueError('This WaveformExtractor folder was created with oled version of spikeinterface'
-                                 'you cannot use the mode without_recording=True')
+                                 'you cannot use the mode with_recording=False')
             with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
             # the probe is handle ouside the main json
@@ -168,7 +168,7 @@ class WaveformExtractor:
             if sorting.is_dumpable:
                 sorting.dump(folder / 'sorting.json', relative_to=relative_to)
             
-            # dump some attributes of the recording for the mode without_recording=True at next load
+            # dump some attributes of the recording for the mode with_recording=False at next load
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
             rec_attributes_file.parent.mkdir()
             rec_attributes = dict(
@@ -213,8 +213,8 @@ class WaveformExtractor:
     @property
     def recording(self):
         if self._recording is None:
-            raise ValueError('WaveformExtractor is used in mode "without_recording=True" '
-                             'this operation need the recording')
+            raise ValueError('WaveformExtractor is used in mode "with_recording=False" '
+                             'this operation needs the recording')
         return self._recording
 
     @property

@@ -166,7 +166,7 @@ def test_recordingless():
     # save with relative paths
     we = extract_waveforms(recording, sorting, wf_folder,
                            use_relative_path=True)
-    we_loaded = WaveformExtractor.load_from_folder(wf_folder, without_recording=True)
+    we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
 
     assert isinstance(we.recording, BaseRecording)
     assert we_loaded._recording is None
@@ -178,7 +178,7 @@ def test_recordingless():
     if platform.system() != "Windows":
         shutil.rmtree(cache_folder / "recording1")
 
-        we_loaded = WaveformExtractor.load_from_folder(wf_folder, without_recording=True)
+        we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
 
         assert we_loaded._recording is None
         assert np.array_equal(we.recording.channel_ids, np.array(we_loaded.channel_ids))

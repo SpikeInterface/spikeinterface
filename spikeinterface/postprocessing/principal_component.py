@@ -359,7 +359,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 sparse_channel_ids = sparsity[unit_id]
             else:
                 sparse_channel_ids = channel_ids
-            sparse_channel_inds = we.ids_to_indices(sparse_channel_ids)
+            sparse_channel_inds = we.recording.ids_to_indices(sparse_channel_ids)
             if n_jobs in (0, 1):
                 for wf_ind, chan_ind in enumerate(sparse_channel_inds):
                     pca = pca_models[chan_ind]
@@ -409,7 +409,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 sparse_channel_ids = sparsity[unit_id]
             else:
                 sparse_channel_ids = channel_ids
-            sparse_channel_inds = we.ids_to_indices(sparse_channel_ids)
+            sparse_channel_inds = we.recording.ids_to_indices(sparse_channel_ids)
             if wfs.size == 0:
                 continue
             for wf_ind, chan_ind in enumerate(sparse_channel_inds):
@@ -481,7 +481,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 sparse_channel_ids = sparsity[unit_id]
             else:
                 sparse_channel_ids = channel_ids
-            sparse_channel_inds = we.ids_to_indices(sparse_channel_ids)
+            sparse_channel_inds = we.recording.ids_to_indices(sparse_channel_ids)
             if wfs.size == 0:
                 continue
             for wf_ind, chan_ind in enumerate(sparse_channel_inds):
