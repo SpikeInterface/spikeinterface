@@ -222,14 +222,11 @@ class WaveformExtractor:
         if self._recording is not None:
             return self.recording.channel_ids
         else:
-            return self._rec_attributes['channel_ids']
+            return np.array(self._rec_attributes['channel_ids'])
     
     @property
     def sampling_frequency(self):
-        if self._recording is not None:
-            return self.recording.get_sampling_frequency()
-        else:
-            return self._rec_attributes['sampling_frequency']
+        return self.sorting.get_sampling_frequency()
 
     @property
     def unit_ids(self):

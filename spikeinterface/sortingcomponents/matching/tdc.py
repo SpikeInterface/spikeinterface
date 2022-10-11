@@ -60,7 +60,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         unit_ids = we.unit_ids
         channel_ids = we.channel_ids
         
-        sr = we.get_sampling_frequency()
+        sr = we.sampling_frequency
 
 
         # TODO load as sharedmem
