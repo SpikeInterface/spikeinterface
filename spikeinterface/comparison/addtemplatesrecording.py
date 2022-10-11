@@ -35,7 +35,7 @@ class AddTemplatesRecording(BaseRecording):
         
         n_units = len(sorting.unit_ids)
         assert len(templates) == n_units
-        self.spike_vector = sorting.to_spike_vector()
+        self.spike_vector = sorting.to_spike_vector(count_spike_nb=True)
 
         if nbefore is None:
             nbefore = np.argmax(np.max(np.abs(templates), axis=2), axis=1)
@@ -108,7 +108,6 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
         for spike in spike_vector:
             t = spike['sample_ind']
             unit_ind = spike['unit_ind']
-            # spike_nb = np.argmax(self.spike_vector[self.spike_vector['unit_ind'] == unit_ind]['sample_ind'] == t)  # TODO: Very slow
             template = self.templates[unit_ind, :]
 
             start_traces = t - self.nbefore[unit_ind] - start_frame
@@ -127,6 +126,6 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
                 end_traces = end_frame - start_frame
 
             traces[start_traces : end_traces] += template[start_template : end_template]
-            # traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64)* self.amplitude_factor[unit_ind][spike_nb]).astype(self.dtype)
+            traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64)* self.amplitude_factor[unit_ind][spike['spike_nb']]).astype(self.dtype)
 
         return traces.astype(self.dtype)
