@@ -47,7 +47,9 @@ class SortingviewPlotter(BackendPlotter):
         if self.is_notebook() and backend_kwargs["display"]:
             display(self.view.jupyter(height=backend_kwargs["height"]))
         if backend_kwargs["generate_url"]:
-            figlabel = backend_kwargs.get("figlabel", self.default_label)
+            figlabel = backend_kwargs.get("figlabel")
+            if figlabel is None:
+                figlabel = self.default_label
             url = view.url(label=figlabel)
             self.set_url(url)
             print(url)            
