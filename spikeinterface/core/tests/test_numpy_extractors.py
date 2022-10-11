@@ -70,33 +70,33 @@ def test_NumpyEvent():
     }
     event = NumpyEvent.from_dict(d)
 
-    times = event.get_event_times('trig0')
+    times = event.get_events('trig0')
     assert times[2] == 100
 
-    times = event.get_event_times('trig1')
+    times = event.get_events('trig1')
     assert times[2] == 150
 
     # 2 segments - dtype simple
     event = NumpyEvent.from_dict([d, d])
-    times = event.get_event_times('trig1', segment_index=1)
+    times = event.get_events('trig1', segment_index=1)
     assert times[2] == 150
 
     # 2 segments - dtype structured for one trig
     d = {
         'trig0': np.array([1, 10, 100]),
         'trig1': np.array([1, 50, 150]),
-        'trig3': np.array([(1, 20), (50, 30), (150, 60)], dtype=[('times', 'int64'), ('duration', 'int64')]),
+        'trig3': np.array([(1, 20), (50, 30), (150, 60)], dtype=[('time', 'int64'), ('duration', 'int64')]),
     }
     event = NumpyEvent.from_dict([d, d])
-    times = event.get_event_times('trig1', segment_index=1)
+    times = event.get_events('trig1', segment_index=1)
     assert times[2] == 150
 
-    times = event.get_event_times('trig3', segment_index=1)
+    times = event.get_events('trig3', segment_index=1)
     assert times.dtype.fields is not None
-    assert times['times'][2] == 150
+    assert times['time'][2] == 150
     assert times['duration'][2] == 60
 
-    times = event.get_event_times('trig3', segment_index=1, end_time=100)
+    times = event.get_events('trig3', segment_index=1, end_time=100)
     assert times.size == 2
 
 
