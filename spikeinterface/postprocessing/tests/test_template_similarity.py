@@ -1,71 +1,29 @@
-import pytest
-import shutil
-from pathlib import Path
+import unittest
 
-from spikeinterface import download_dataset, extract_waveforms, WaveformExtractor
-from spikeinterface.extractors import read_mearec
-from spikeinterface.postprocessing import (compute_template_similarity, check_equal_template_with_distribution_overlap,
+from spikeinterface.postprocessing import (check_equal_template_with_distribution_overlap,
                                            TemplateSimilarityCalculator)
 
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
-else:
-    cache_folder = Path("cache_folder") / "postprocessing"
+from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 
-def setup_module():
-    for folder_name in ('mearec_waveforms'):
-        if (cache_folder / folder_name).is_dir():
-            shutil.rmtree(cache_folder / folder_name)
+class SimilarityExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = TemplateSimilarityCalculator
+    extension_data_names = ["similarity"]
 
-    local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
-    recording, sorting = read_mearec(local_path)
-    print(recording)
-    print(sorting)
-
-    we = extract_waveforms(recording, sorting, cache_folder / 'mearec_waveforms',
-                           ms_before=3., ms_after=4., max_spikes_per_unit=500,
-                           load_if_exists=True,
-                           n_jobs=1, chunk_size=30000)
-
-
-def test_compute_template_similarity():
-    folder = cache_folder / 'mearec_waveforms'
-    we = WaveformExtractor.load_from_folder(folder)
-    similarity = compute_template_similarity(we)
-
-    # reload as an extension from we
-    assert TemplateSimilarityCalculator in we.get_available_extensions()
-    assert we.is_extension('similarity')
-    tsc = we.load_extension('similarity')
-    assert isinstance(tsc, TemplateSimilarityCalculator)
-    assert tsc.similarity is not None
-    tsc = TemplateSimilarityCalculator.load_from_folder(folder)
-    assert tsc.similarity is not None
-
-
-def test_check_equal_template_with_distribution_overlap():
-
-    we = WaveformExtractor.load_from_folder(cache_folder / 'mearec_waveforms')
-    
-    
-    for unit_id0 in we.sorting.unit_ids:
-        waveforms0 = we.get_waveforms(unit_id0)
-        for unit_id1 in we.sorting.unit_ids:
-            if unit_id0 == unit_id1:
-                continue
-            waveforms1 = we.get_waveforms(unit_id1)
-            check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
-            
-        
-
-    
-    
-    
+    # extend common test 
+    def test_check_equal_template_with_distribution_overlap(self):
+        we = self.we1
+        for unit_id0 in we.sorting.unit_ids:
+            waveforms0 = we.get_waveforms(unit_id0)
+            for unit_id1 in we.sorting.unit_ids:
+                if unit_id0 == unit_id1:
+                    continue
+                waveforms1 = we.get_waveforms(unit_id1)
+                check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
 
 
 if __name__ == '__main__':
-    #~ setup_module()
-    #~ test_compute_template_similarity()
-    test_check_equal_template_with_distribution_overlap()
+    test = SimilarityExtensionTest
+    test.setUp()
+    test.test_extension()
+    test.test_check_equal_template_with_distribution_overlap()

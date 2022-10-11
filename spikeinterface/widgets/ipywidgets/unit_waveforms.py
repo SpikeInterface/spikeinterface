@@ -35,9 +35,10 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
                 plt.show()
             output2 = widgets.Output()
             with output2:
-                fig_probe, ax_probe = plt.sublplots(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
+                fig_probe, ax_probe = plt.subplots(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
+        data_plot['unit_ids'] = data_plot['unit_ids'][:1]
         unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.sorting.unit_ids,
                                                             ratios[0] * width_cm, height_cm)
 
