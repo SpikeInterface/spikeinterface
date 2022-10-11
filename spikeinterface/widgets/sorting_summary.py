@@ -24,16 +24,15 @@ class SortingSummaryWidget(BaseWidget):
     sparsity: dict or None
         Optional dictionary with sparsity with unit ids as keys and 
         list of channel ids as values.
-    sparsity_kwargs: dict or None
-        Optional dictionary to compute sparsity 
-        (e.g. dict("method": "radius", "radius_um": 100)).
-        See: `si.postprocessing.get_template_channel_sparsity()`
+    max_amplitudes_per_unit: int or None
+        Maximum number of spikes per unit for plotting amplitudes,
+        by default None (all spikes)
     """
     possible_backends = {}
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
-                 sparsity=None, sparsity_kwargs=None,
+                 sparsity=None, max_amplitudes_per_unit=None,
                  backend=None, **backend_kwargs):
         self.check_extensions(waveform_extractor, ['correlograms', 'spike_amplitudes',
                                                   'unit_locations', 'similarity'])
@@ -46,17 +45,16 @@ class SortingSummaryWidget(BaseWidget):
         channel_ids = recording.channel_ids
             
         if sparsity is None:
-            if sparsity_kwargs is not None:
-                sparsity = get_template_channel_sparsity(we, **sparsity_kwargs)
-            else:
-                sparsity = {u: channel_ids for u in sorting.unit_ids}
+            sparsity = {u: channel_ids for u in sorting.unit_ids}
         else:
             assert all(u in sparsity for u in sorting.unit_ids), "Sparsity needs to be defined for all units!"
 
         # use other widgets to generate data (except for similarity)
-        template_plot_data = UnitTemplatesWidget(we, unit_ids=unit_ids, sparsity=sparsity).plot_data
+        template_plot_data = UnitTemplatesWidget(we, unit_ids=unit_ids, sparsity=sparsity,
+                                                 hide_unit_selector=True).plot_data
         ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
-        amps_plot_data = AmplitudesWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
+        amps_plot_data = AmplitudesWidget(we, unit_ids=unit_ids, max_spikes_per_unit=max_amplitudes_per_unit, 
+                                          hide_unit_selector=True).plot_data
         locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
         sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
         

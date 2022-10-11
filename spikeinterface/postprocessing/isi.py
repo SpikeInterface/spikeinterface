@@ -22,10 +22,6 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self.waveform_extractor = waveform_extractor
-        self.isi_histograms = None
-        self.bins = None
-
     def _set_params(self, window_ms: float = 100.0,
                     bin_ms: float = 5.0, method: str = "auto"):
 
@@ -33,37 +29,39 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
 
         return params
 
-    def _specific_load_from_folder(self):
-        self.isi_histograms = np.load(self.extension_folder / 'isi_histograms.npy')
-        self.bins = np.load(self.extension_folder / 'bins.npy')
-
-    def _reset(self):
-        self.isi_histograms = None
-        self.bins = None
-
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_isi_hists = self.isi_histograms[unit_indices, :]
-        np.save(new_waveforms_folder /
-                self.extension_name / 'isi_histograms.npy', new_isi_hists)
-        np.save(new_waveforms_folder /
-                self.extension_name / 'bins.npy', self.bins)
+        new_isi_hists = self._extension_data['isi_histograms'][unit_indices, :]
+        new_bins = self._extension_data['bins']
+        new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
+        return new_extension_data
 
-    def run(self):
+    def _run(self):
         isi_histograms, bins = _compute_isi_histograms(
             self.waveform_extractor.sorting, **self._params)
-        np.save(self.extension_folder / 'isi_histograms.npy', isi_histograms)
-        np.save(self.extension_folder / 'bins.npy', bins)
-        self.isi_histograms = isi_histograms
-        self.bins = bins
+        self._extension_data['isi_histograms'] = isi_histograms
+        self._extension_data['bins'] = bins
 
     def get_data(self):
-        """Get the computed ISI histograms."""
-
+        """
+        Get the computed ISI histograms.
+        
+        Returns
+        -------
+        isi_histograms : np.array
+            2D array with ISI histograms (num_units, num_bins)
+        bins : np.array
+            1D array with bins in ms
+        """
         msg = "ISI histograms are not computed. Use the 'run()' function."
-        assert self.isi_histograms is not None and self.bins is not None, msg
-        return self.isi_histograms, self.bins
+        assert self._extension_data['isi_histograms'] is not None and \
+            self._extension_data['bins'] is not None, msg
+        return self._extension_data['isi_histograms'], self._extension_data['bins']
+
+    @staticmethod
+    def get_extension_function():
+        return compute_isi_histograms
 
 
 WaveformExtractor.register_extension(ISIHistogramsCalculator)
@@ -151,13 +149,10 @@ def compute_isi_histograms(waveform_or_sorting_extractor, load_if_exists=False,
         The bin edges in ms
     """
     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-        waveform_extractor = waveform_or_sorting_extractor
-        folder = waveform_extractor.folder
-        ext_folder = folder / ISIHistogramsCalculator.extension_name
-        if load_if_exists and ext_folder.is_dir():
-            isic = ISIHistogramsCalculator.load_from_folder(folder)
+        if load_if_exists and waveform_or_sorting_extractor.is_extension(ISIHistogramsCalculator.extension_name):
+            isic = waveform_or_sorting_extractor.load_extension(ISIHistogramsCalculator.extension_name)
         else:
-            isic = ISIHistogramsCalculator(waveform_extractor)
+            isic = ISIHistogramsCalculator(waveform_or_sorting_extractor)
             isic.set_params(window_ms=window_ms, bin_ms=bin_ms,
                             method=method)
             isic.run()
