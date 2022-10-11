@@ -15,7 +15,8 @@ class CommonTestSuite:
 
     def setUp(self):
         for remote_path in self.downloads:
-            download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder)
+            download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder,
+                             update_if_exists=True)
 
 
 class RecordingCommonTestSuite(CommonTestSuite):
