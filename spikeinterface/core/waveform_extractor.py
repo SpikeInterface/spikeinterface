@@ -302,7 +302,7 @@ class WaveformExtractor:
             else:
                 raise Exception('There are no channel locations')
 
-    def ids_to_indices(self, channel_ids):
+    def channel_ids_to_indices(self, channel_ids):
         if self._recording is not None:
             return self.recording.ids_to_indices(channel_ids)
         else:
