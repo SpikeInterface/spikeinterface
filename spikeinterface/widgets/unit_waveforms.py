@@ -86,7 +86,7 @@ class UnitWaveformsWidget(BaseWidget):
         if max_channels is not None:
             assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
 
-        channel_locations = we.get_channel_locations(channel_ids=channel_ids)
+        channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if sparsity is None:
