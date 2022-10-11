@@ -320,7 +320,7 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
 
         event_channels = self.neo_reader.header['event_channels']
 
-        channel_ids = event_channels['name']
+        channel_ids = event_channels['id']
 
         BaseEvent.__init__(self, channel_ids, structured_dtype=_neo_event_dtype)
 
