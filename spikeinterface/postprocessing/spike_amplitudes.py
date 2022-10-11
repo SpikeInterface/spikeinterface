@@ -58,7 +58,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         
         if return_scaled:
             # check if has scaled values:
-            if not we.recording.has_scaled_traces():
+            if not recording.has_scaled_traces():
                 print("Setting 'return_scaled' to False")
                 return_scaled = False
 
@@ -78,11 +78,10 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         amps = np.concatenate(amps)
         segments = np.concatenate(segments)
 
-        self.amplitudes = []
+        amplitudes = []
         for segment_index in range(recording.get_num_segments()):
             mask = segments == segment_index
             amps_seg = amps[mask]
-            self.amplitudes.append(amps_seg)
             self._extension_data[f'amplitude_segment_{segment_index}'] = amps_seg
 
     def get_data(self, outputs='concatenated'):
@@ -103,18 +102,21 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
+        all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
         if outputs == 'concatenated':
-            return self.amplitudes
-
+            amplitudes = []
+            for segment_index in range(recording.get_num_segments()):
+                amplitudes.append(self._extension_data[f'amplitude_segment_{segment_index}'])
+            return amplitudes
         elif outputs == 'by_unit':
             amplitudes_by_unit = []
             for segment_index in range(recording.get_num_segments()):
                 amplitudes_by_unit.append({})
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
-                    spike_times, spike_labels = self._all_spikes[segment_index]
+                    _, spike_labels = all_spikes[segment_index]
                     mask = spike_labels == unit_index
-                    amps = self.amplitudes[segment_index][mask]
+                    amps = self._extension_data[f'amplitude_segment_{segment_index}'][mask]
                     amplitudes_by_unit[segment_index][unit_id] = amps
             return amplitudes_by_unit
 
