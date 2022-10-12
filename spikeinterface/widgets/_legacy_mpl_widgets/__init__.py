@@ -59,7 +59,7 @@ from .gtcomparison import (plot_gt_performances, plot_gt_performances_averages, 
     plot_gt_performances_by_template_similarity, ComparisonPerformancesByTemplateSimilarity,)
 
 # unit summary
-from .unitsummary import plot_unit_summary, UnitSummaryWidget
+# from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
 # unit presence
 from .presence import plot_presence, PresenceWidget

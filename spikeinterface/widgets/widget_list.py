@@ -45,6 +45,7 @@ from .template_metrics import TemplateMetricsWidget
 from .template_similarity import TemplateSimilarityWidget
 
 # summary
+from .unit_summary import UnitSummaryWidget
 from .sorting_summary import SortingSummaryWidget
 
 
@@ -62,7 +63,9 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformsWidget,
     UnitWaveformDensityMapWidget,
+    
     # summary
+    UnitSummaryWidget,
     SortingSummaryWidget,
 ]
 
@@ -105,6 +108,5 @@ plot_unit_templates = define_widget_function_from_class(UnitTemplatesWidget, 'pl
 plot_unit_waveforms = define_widget_function_from_class(UnitWaveformsWidget, 'plot_unit_waveforms')
 plot_unit_waveforms_density_map = define_widget_function_from_class(UnitWaveformDensityMapWidget, 'plot_unit_waveforms_density_map')
 
+plot_unit_summary = define_widget_function_from_class(UnitSummaryWidget, "plot_unit_summary")
 plot_sorting_summary = define_widget_function_from_class(SortingSummaryWidget, "plot_sorting_summary")
-
-

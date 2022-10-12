@@ -59,6 +59,8 @@ class UnitWaveformsWidget(BaseWidget):
     x_offset_units: bool
         In case same_axis is True, this parameter allow to x-offset the waveforms for different units 
         (recommended for a few units), default False (matlotlib backend)
+    plot_legend: bool (default True)
+        Display legend.
     """
     possible_backends = {}
 
@@ -67,7 +69,7 @@ class UnitWaveformsWidget(BaseWidget):
                  unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
                  ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False, unit_selected_waveforms=None,
                  max_spikes_per_unit=50, set_title=True, same_axis=False, x_offset_units=False,
-                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False,
+                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False, plot_legend=True,
                  backend=None, **backend_kwargs):
         we = waveform_extractor
         recording: BaseRecording = we.recording
@@ -145,7 +147,8 @@ class UnitWaveformsWidget(BaseWidget):
             alpha_waveforms=alpha_waveforms,
             alpha_templates=alpha_templates,
             delta_x=delta_x,
-            hide_unit_selector=hide_unit_selector
+            hide_unit_selector=hide_unit_selector,
+            plot_legend=plot_legend,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
