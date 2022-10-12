@@ -59,6 +59,14 @@ class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
     downloads = ['openephysbinary']
     entities = [
         'openephysbinary/v0.4.4.1_with_video_tracking',
+        'openephysbinary/v0.5.3_two_neuropixels_stream',
+        'openephysbinary/v0.5.x_two_nodes',
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'block_index': 0}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'block_index': 1}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'block_index': 2}),
     ]
 
 
@@ -263,9 +271,9 @@ if __name__ == '__main__':
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
     # test = SpikeGLXRecordingTest()
-    test = OpenEphysBinaryRecordingTest()
+    # test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
-    # test = OpenEphysBinaryEventTest()
+    test = OpenEphysBinaryEventTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
