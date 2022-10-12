@@ -70,3 +70,6 @@ from .datasets import download_dataset
 
 from .old_api_utils import (create_recording_from_old_extractor, create_sorting_from_old_extractor,
                             create_extractor_from_new_recording, create_extractor_from_new_sorting)
+
+# templates addition
+from .addtemplatesrecording import AddTemplatesRecording, AddTemplatesRecordingSegment

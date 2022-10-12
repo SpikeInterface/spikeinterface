@@ -1,7 +1,6 @@
 from typing import List, Union
 import numpy as np
-from spikeinterface.core import BaseSorting, NumpySorting, WaveformExtractor
-from spikeinterface.comparison import AddTemplatesRecording
+from spikeinterface.core import BaseSorting, NumpySorting, WaveformExtractor, AddTemplatesRecording
 
 
 class HybridSpikesRecording(AddTemplatesRecording):

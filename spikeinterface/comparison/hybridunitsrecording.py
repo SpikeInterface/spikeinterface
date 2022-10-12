@@ -1,7 +1,6 @@
 from typing import List, Union
 import numpy as np
-from spikeinterface.core import BaseRecording, BaseSorting, NumpySorting
-from spikeinterface.comparison import AddTemplatesRecording
+from spikeinterface.core import BaseRecording, BaseSorting, NumpySorting, AddTemplatesRecording
 from spikeinterface.extractors.toy_example import synthesize_random_firings
 
 

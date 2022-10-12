@@ -1,5 +1,4 @@
-from spikeinterface.core import extract_waveforms
-from spikeinterface.comparison import AddTemplatesRecording
+from spikeinterface.core import extract_waveforms, AddTemplatesRecording
 from spikeinterface.extractors import toy_example
 
 

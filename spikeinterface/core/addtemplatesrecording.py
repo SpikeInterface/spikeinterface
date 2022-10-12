@@ -44,9 +44,8 @@ class AddTemplatesRecording(BaseRecording):
         else:
             assert len(nbefore) == n_units
 
-        # TODO: Doesn't work for multi-segments
-        # if amplitude_factor is None:
-        #     amplitude_factor = [[1.0]*len(sorting.get_unit_spike_train(unit_id)) for unit_id in sorting.unit_ids]
+        if amplitude_factor is None:
+            amplitude_factor = [[1.0]*sum([len(sorting.get_unit_spike_train(unit_id, segment_index=seg_index)) for seg_index in range(sorting.get_num_segments())]) for unit_id in sorting.unit_ids]
 
         if parent_recording is not None:
             assert parent_recording.get_num_segments() == sorting.get_num_segments()
@@ -125,7 +124,6 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
                 end_template = template.shape[0] + end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
-            traces[start_traces : end_traces] += template[start_template : end_template]
-            traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64)* self.amplitude_factor[unit_ind][spike['spike_nb']]).astype(self.dtype)
+            traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64) * self.amplitude_factor[unit_ind][spike['spike_nb']]).astype(self.dtype)
 
         return traces.astype(self.dtype)
