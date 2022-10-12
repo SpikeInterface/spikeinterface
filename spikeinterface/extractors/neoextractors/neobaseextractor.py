@@ -324,6 +324,7 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
 
         BaseEvent.__init__(self, channel_ids, structured_dtype=_neo_event_dtype)
 
+        block_index = block_index if block_index is not None else 0
         nseg = self.neo_reader.segment_count(block_index=block_index)
         for segment_index in range(nseg):
             if self.handle_event_frame_directly:
