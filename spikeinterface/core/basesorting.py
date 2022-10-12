@@ -117,6 +117,10 @@ class BaseSorting(BaseExtractor):
             save_path = folder / 'sorting_cached.npz'
             NpzSortingExtractor.write_sorting(self, save_path)
             cached = NpzSortingExtractor(save_path)
+            cached.dump(folder / 'npz.json', relative_to=folder)
+
+            from .npzfolder import NpzFolderSorting
+            cached = NpzFolderSorting(folder_path=folder)
             if self.has_recording():
                 warnings.warn(
                     "The registered recording will not be persistent on disk, but only available in memory")

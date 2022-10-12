@@ -15,7 +15,8 @@ class CommonTestSuite:
 
     def setUp(self):
         for remote_path in self.downloads:
-            download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder)
+            download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder,
+                             update_if_exists=True)
 
 
 class RecordingCommonTestSuite(CommonTestSuite):
@@ -128,6 +129,6 @@ class EventCommonTestSuite(CommonTestSuite):
 
             for segment_index in range(num_seg):
                 for channel_id in channel_ids:
-                    times = event.get_event_times(segment_index=segment_index, channel_id=channel_id)
-                    #  print(channel_id)
-                    #  print(times)
+                    events = event.get_event_times(segment_index=segment_index, channel_id=channel_id)
+                    print(channel_id)
+                    print(events)

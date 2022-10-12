@@ -3,7 +3,7 @@ import numpy as np
 from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.core.recording_tools import (get_random_data_chunks, get_chunk_with_margin,
-                                                 get_closest_channels, get_noise_levels)
+                                                 get_closest_channels, get_channel_distances, get_noise_levels)
 
 
 def test_get_random_data_chunks():
@@ -11,12 +11,14 @@ def test_get_random_data_chunks():
     chunks = get_random_data_chunks(rec, num_chunks_per_segment=50, chunk_size=500, seed=0)
     assert chunks.shape == (50000, 1)
 
+    
 
 def test_get_closest_channels():
     rec = generate_recording(num_channels=32, sampling_frequency=1000., durations=[0.1])
     closest_channels_inds, distances = get_closest_channels(rec)
     closest_channels_inds, distances = get_closest_channels(rec, num_channels=4)
-
+    
+    dist = get_channel_distances(rec)
 
 def test_get_noise_levels():
     rec = generate_recording(num_channels=2, sampling_frequency=1000., durations=[60.])
@@ -83,6 +85,6 @@ def test_get_chunk_with_margin():
     
 
 if __name__ == '__main__':
-    test_get_random_data_chunks()
-    # test_get_closest_channels()
+    # test_get_random_data_chunks()
+    test_get_closest_channels()
     # test_get_noise_levels()

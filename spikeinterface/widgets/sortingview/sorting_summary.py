@@ -11,6 +11,8 @@ from .unit_templates import UnitTemplatesPlotter
 
 
 class SortingSummaryPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Sorting Summary"
+
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         dp = to_attr(data_plot)
@@ -20,15 +22,20 @@ class SortingSummaryPlotter(SortingviewPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         amplitudes_plotter = AmplitudesPlotter()
-        v_spike_amplitudes = amplitudes_plotter.do_plot(dp.amplitudes, generate_url=False, backend="sortingview")
+        v_spike_amplitudes = amplitudes_plotter.do_plot(dp.amplitudes, generate_url=False, 
+                                                        display=False, backend="sortingview")
         template_plotter = UnitTemplatesPlotter()
-        v_average_waveforms = template_plotter.do_plot(dp.templates, generate_url=False, backend="sortingview")
+        v_average_waveforms = template_plotter.do_plot(dp.templates, generate_url=False, 
+                                                       display=False, backend="sortingview")
         xcorrelograms_plotter = CrossCorrelogramsPlotter()
-        v_cross_correlograms = xcorrelograms_plotter.do_plot(dp.correlograms, generate_url=False, backend="sortingview")
+        v_cross_correlograms = xcorrelograms_plotter.do_plot(dp.correlograms, generate_url=False, 
+                                                             display=False, backend="sortingview")
         unitlocation_plotter = UnitLocationsPlotter()
-        v_unit_locations = unitlocation_plotter.do_plot(dp.unit_locations, generate_url=False, backend="sortingview")
+        v_unit_locations = unitlocation_plotter.do_plot(dp.unit_locations, generate_url=False, 
+                                                        display=False, backend="sortingview")
         template_sim_plotter = TemplateSimilarityPlotter()
-        v_unit_similarity = template_sim_plotter.do_plot(dp.similarity, generate_url=False, backend="sortingview")
+        v_unit_similarity = template_sim_plotter.do_plot(dp.similarity, generate_url=False, 
+                                                         display=False, backend="sortingview")
 
         # unit ids
         v_units_table = generate_unit_table_view(unit_ids)
@@ -65,13 +72,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
                 ]
             )
 
-        self.set_view(v_summary)
-
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - SortingSummary"
-            url = v_summary.url(label=label)
-            print(url)
+        self.handle_display_and_url(v_summary, **backend_kwargs)
         return v_summary
 
 
