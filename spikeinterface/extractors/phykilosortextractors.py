@@ -35,12 +35,11 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         phy_folder = Path(folder_path)
 
         spike_times = np.load(phy_folder / 'spike_times.npy')
-        spike_templates = np.load(phy_folder / 'spike_templates.npy')
 
         if (phy_folder / 'spike_clusters.npy').is_file():
             spike_clusters = np.load(phy_folder / 'spike_clusters.npy')
         else:
-            spike_clusters = spike_templates
+            spike_clusters = np.load(phy_folder / 'spike_templates.npy')
 
         clust_id = np.unique(spike_clusters)
         unit_ids = list(clust_id)
