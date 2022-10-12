@@ -347,7 +347,7 @@ class NeoEventSegment(BaseEventSegment):
         self._natural_ids = None
 
     def get_events(self, channel_id, start_time, end_time):
-        channel_index = list(self.neo_reader.header['event_channels']['name']).index(channel_id)
+        channel_index = list(self.neo_reader.header['event_channels']['id']).index(channel_id)
 
         event_timestamps, event_duration, event_labels = self.neo_reader.get_event_timestamps(
             block_index=self.block_index,
