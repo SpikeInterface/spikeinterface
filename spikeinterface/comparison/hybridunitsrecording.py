@@ -6,15 +6,15 @@ from spikeinterface.extractors.toy_example import synthesize_random_firings
 
 class HybridUnitsRecording(AddTemplatesRecording):
 
-    def __init__(self, templates: np.ndarray, target_recording: Union[BaseRecording, None] = None,
+    def __init__(self, templates: np.ndarray, target_recording: BaseRecording,
                  n_before: Union[List[int], int, None] = None, frequency: float = 10,
                  amplitude_std: float = 0.0, refrac_period: float = 2.0):
         """
         TODO
         """
 
-        t_max = target_recording.get_num_frames() # TODO: What if target_recording is None
-        fs = target_recording.sampling_frequency # TODO: What if target_recording is None
+        t_max = target_recording.get_num_frames()
+        fs = target_recording.sampling_frequency
         n_units = len(templates)
 
         # Making the sorting object.

@@ -124,6 +124,6 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
                 end_template = template.shape[0] + end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
-            traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64) * self.amplitude_factor[unit_ind][spike['spike_nb']]).astype(self.dtype)
+            traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64) * self.amplitude_factor[unit_ind][spike['spike_nb']]).astype(traces.dtype)
 
         return traces.astype(self.dtype)

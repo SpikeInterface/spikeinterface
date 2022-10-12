@@ -16,7 +16,8 @@ class HybridSpikesRecording(AddTemplatesRecording):
 		AddTemplatesRecording.__init__(target_sorting, templates, wvf_extractor.nbefore, target_recording=target_recording)
 
 
-	# TODO: May be a better way of creating this?		
+	# TODO: May be a better way of creating this?
+	@staticmethod
 	def _generate_injected_sorting(sorting: BaseSorting, t_max: int, max_n_spikes: int,
 								   max_frac_spikes: float, refractory_period: float) -> NumpySorting:
 		injected_spike_trains = {}
