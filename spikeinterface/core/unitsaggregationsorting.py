@@ -83,6 +83,9 @@ class UnitsAggregationSorting(BaseSorting):
                 if prop_name in sort.get_property_keys():
                     values = sort.get_property(prop_name)
                 else:
+                    if dtype.kind not in BaseExtractor.default_missing_property_values:
+                        del property_dict[prop_name]
+                        break
                     values = np.full(sort.get_num_units(), BaseExtractor.default_missing_property_values[dtype.kind], dtype=dtype)
 
                 try:
