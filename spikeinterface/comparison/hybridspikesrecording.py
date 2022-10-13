@@ -13,6 +13,8 @@ class HybridSpikesRecording(AddTemplatesRecording):
 		injected_sorting = self._generate_injected_sorting(target_sorting, recording.get_num_frames(),
 						   max_n_spikes, max_frac_spikes, refractory_period)
 
+		self.injected_sorting = injected_sorting
+
 		AddTemplatesRecording.__init__(target_sorting, templates, wvf_extractor.nbefore, target_recording=target_recording)
 
 

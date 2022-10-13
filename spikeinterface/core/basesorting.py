@@ -243,7 +243,7 @@ class BaseSorting(BaseExtractor):
             spikes.append((spike_times, spike_labels))
         return spikes
 
-    def to_spike_vector(self, extremum_channel_inds=None, count_spike_nb=False):
+    def to_spike_vector(self, extremum_channel_inds=None):
         """
         Construct a unique structured numpy vector concatenating all spikes 
         with several fields: sample_ind, unit_index, segment_index.
@@ -266,27 +266,6 @@ class BaseSorting(BaseExtractor):
             is given
             
         """
-
-        # Not very pretty to have functions inside functions, what's the best way to do this?
-        # Code from https://stackoverflow.com/questions/40602269/how-to-use-numpy-to-get-the-cumulative-count-by-unique-values-in-linear-time
-        def dfill(a):
-            n = a.size
-            b = np.concatenate([[0], np.where(a[:-1] != a[1:])[0] + 1, [n]])
-            return np.arange(n)[b[:-1].repeat(np.diff(b))]
-
-        def argunsort(s):
-            n = s.size
-            u = np.empty(n, dtype=np.int64)
-            u[s] = np.arange(n)
-            return u
-
-        def cumcount(a):
-            n = a.size
-            s = a.argsort(kind="mergesort")
-            i = argunsort(s)
-            b = a[s]
-            return (np.arange(n) - dfill(b))[i]
-
         spikes_ = self.get_all_spike_trains(outputs='unit_index')
 
         n = np.sum([e[0].size for e in spikes_])
@@ -295,8 +274,6 @@ class BaseSorting(BaseExtractor):
         
         if extremum_channel_inds is not None:
             spike_dtype += [('channel_ind', 'int64')]
-        if count_spike_nb:
-            spike_dtype += [('spike_nb', 'int64')]
         
         
         spikes = np.zeros(n, dtype=spike_dtype)
@@ -314,9 +291,6 @@ class BaseSorting(BaseExtractor):
             ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
             # vector way
             spikes['channel_ind'] = ext_channel_inds[spikes['unit_ind']]
-
-        if count_spike_nb:
-            spikes['spike_nb'] = cumcount(spikes['unit_ind'])
 
 
         return spikes

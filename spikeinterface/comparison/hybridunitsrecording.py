@@ -7,7 +7,7 @@ from spikeinterface.extractors.toy_example import synthesize_random_firings
 class HybridUnitsRecording(AddTemplatesRecording):
 
     def __init__(self, templates: np.ndarray, target_recording: BaseRecording,
-                 n_before: Union[List[int], int, None] = None, frequency: float = 10,
+                 n_before: Union[List[int], int, None] = None, firing_rate: float = 10,
                  amplitude_std: float = 0.0, refrac_period: float = 2.0):
         """
         TODO
