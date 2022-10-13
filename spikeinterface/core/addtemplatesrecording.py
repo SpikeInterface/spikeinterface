@@ -25,8 +25,9 @@ class AddTemplatesRecording(BaseRecording):
     parent_recording: BaseRecording | None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
-    t_max: list[int] | None
-        The number of frames in the recording.
+    num_samples: list[int] | int | None
+        The number of samples in the recording per segment.
+        You can use int for mono-segment objects.
 
     Returns
     -------
@@ -36,7 +37,7 @@ class AddTemplatesRecording(BaseRecording):
 
     def __init__(self, sorting: BaseSorting, templates: np.ndarray, nbefore: Union[List[int], int, None] = None,
                  amplitude_factor: Union[List[List[float]], List[float], float] = 1.0,
-                 parent_recording: Union[BaseRecording, None] = None, t_max: Union[List[int], None] = None) -> None:
+                 parent_recording: Union[BaseRecording, None] = None, num_samples: Union[List[int], None] = None) -> None:
         self._check_templates(templates)
 
         channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
@@ -74,11 +75,14 @@ class AddTemplatesRecording(BaseRecording):
             assert parent_recording.get_num_channels() == templates.shape[2]
             parent_recording.copy_metadata(self)
 
-        if t_max is None:
+        if num_samples is None:
             if parent_recording is None:
-                t_max = [self.spike_vector['sample_ind'][-1] + templates.shape[1]]
+                num_samples = [self.spike_vector['sample_ind'][-1] + templates.shape[1]]
             else:
-                t_max = [parent_recording.get_num_frames(segment_index) for segment_index in range(sorting.get_num_segments())]
+                num_samples = [parent_recording.get_num_frames(segment_index) for segment_index in range(sorting.get_num_segments())]
+        if isinstance(num_samples, int):
+            assert sorting.get_num_segments() == 1
+            num_samples = [num_samples]
 
 
         for segment_index in range(sorting.get_num_segments()):
@@ -87,8 +91,8 @@ class AddTemplatesRecording(BaseRecording):
             spikes = self.spike_vector[start : end]
 
             parent_recording_segment = None if parent_recording is None else parent_recording._recording_segments[segment_index]
-            recording_segment = AddTemplatesRecordingSegment(self.sampling_frequency, 0, self.dtype, spikes, templates, nbefore,
-                                                             amplitude_factor[start:end], parent_recording_segment, t_max[segment_index]) # TODO: t_start should not necessarily be 0.
+            recording_segment = AddTemplatesRecordingSegment(self.sampling_frequency, self.dtype, spikes, templates, nbefore,
+                                                             amplitude_factor[start:end], parent_recording_segment, num_samples[segment_index])
             self.add_recording_segment(recording_segment)
 
 
@@ -104,11 +108,11 @@ class AddTemplatesRecording(BaseRecording):
 
 class AddTemplatesRecordingSegment(BaseRecordingSegment):
 
-    def __init__(self, sampling_frequency: float, t_start: int, dtype, spike_vector: np.ndarray, templates: np.ndarray, nbefore: List[int],
-                 amplitude_factor: List[List[float]], parent_recording_segment: Union[BaseRecordingSegment, None] = None, t_max: Union[int, None] = None) -> None:
+    def __init__(self, sampling_frequency: float, dtype, spike_vector: np.ndarray, templates: np.ndarray, nbefore: List[int],
+                 amplitude_factor: List[List[float]], parent_recording_segment: Union[BaseRecordingSegment, None] = None, num_samples: Union[int, None] = None) -> None:
 
-        BaseRecordingSegment.__init__(self, sampling_frequency, t_start=t_start)
-        assert not (parent_recording_segment is None and t_max is None)
+        BaseRecordingSegment.__init__(self, sampling_frequency, t_start=0 if parent_recording_segment is None else parent_recording_segment.t_start)
+        assert not (parent_recording_segment is None and num_samples is None)
 
         self.dtype = dtype
         self.spike_vector = spike_vector
@@ -116,13 +120,13 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
         self.nbefore = nbefore
         self.amplitude_factor = amplitude_factor
         self.parent_recording = parent_recording_segment
-        self.t_max = parent_recording_segment.get_num_frames() if t_max is None else t_max
+        self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
 
     def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None,
                    channel_indices: Union[List, None] = None) -> np.ndarray:
         n_channels = self.templates.shape[2]
         start_frame = 0 if start_frame is None else start_frame
-        end_frame = self.t_max if end_frame is None else end_frame
+        end_frame = self.num_samples if end_frame is None else end_frame
         channel_indices = list(range(n_channels)) if channel_indices is None else channel_indices
 
         if self.parent_recording is not None:
