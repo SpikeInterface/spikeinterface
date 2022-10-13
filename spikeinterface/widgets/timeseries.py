@@ -215,8 +215,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=No
 
         if order is not None:
             traces = traces[:, order]
-            channel_ids = np.asarray(channel_ids)[order]
-
         list_traces.append(traces)
-    
+    channel_ids = np.asarray(channel_ids)[order]
+
     return times, list_traces, frame_range, channel_ids
