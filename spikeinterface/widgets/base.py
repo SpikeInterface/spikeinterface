@@ -1,4 +1,3 @@
-from argparse import ArgumentError
 import inspect
 
 global default_backend_
