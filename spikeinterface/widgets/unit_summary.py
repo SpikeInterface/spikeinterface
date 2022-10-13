@@ -11,6 +11,8 @@ from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .amplitudes import AmplitudesWidget
 
+from ..postprocessing import get_template_channel_sparsity
+
 
 class UnitSummaryWidget(BaseWidget):
     """
@@ -37,7 +39,7 @@ class UnitSummaryWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(we.sorting)
         
-        
+        sparsity = get_template_channel_sparsity(we, method='radius', outputs='id', radius_um=100.)
         
         if we.is_extension('unit_locations'):
             plot_data_unit_locations = UnitLocationsWidget(we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False).plot_data
@@ -48,7 +50,7 @@ class UnitSummaryWidget(BaseWidget):
             unit_location = None
 
         plot_data_waveforms = UnitWaveformsWidget(we, unit_ids=[unit_id], unit_colors=unit_colors,
-                        plot_templates=True, same_axis=True, plot_legend=False).plot_data
+                        plot_templates=True, same_axis=True, plot_legend=False, sparsity=sparsity).plot_data
         
         plot_data_waveform_density = UnitWaveformDensityMapWidget(we, unit_ids=[unit_id], unit_colors=unit_colors,
                             max_channels=1, plot_templates=True, same_axis=True).plot_data
