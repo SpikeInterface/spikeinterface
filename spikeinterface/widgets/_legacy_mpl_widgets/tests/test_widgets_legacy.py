@@ -83,8 +83,8 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_probe_map(self._we, with_channel_ids=True)
         sw.plot_unit_probe_map(self._we, animated=True)
 
-    def test_plot_units_depth_vs_amplitude(self):
-        sw.plot_units_depth_vs_amplitude(self._we)
+    # def test_plot_units_depth_vs_amplitude(self):
+    #     sw.plot_units_depth_vs_amplitude(self._we)
 
     # def test_amplitudes_timeseries(self):
     #     sw.plot_amplitudes_timeseries(self._we)

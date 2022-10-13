@@ -27,7 +27,7 @@ from .principalcomponent import plot_principal_component
 
 # units on probe
 from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
-from .depthamplitude import plot_units_depth_vs_amplitude
+# from .depthamplitude import plot_units_depth_vs_amplitude
 
 # comparison related
 from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget

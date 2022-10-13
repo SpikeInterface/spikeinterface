@@ -92,7 +92,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(20, 10))
-    sw.plot_units_depth_vs_amplitude(we, ax=ax, unit_colors=unit_colors)
+    sw.plot_unit_depths(we, ax=ax, unit_colors=unit_colors)
     fig.savefig(output_folder / f'units_depth_vs_amplitude.{format}')
     if not show_figures:
         plt.close(fig)
