@@ -27,7 +27,8 @@ class BaseEvent(BaseExtractor):
         if not isinstance(structured_dtype, dict):
             structured_dtype = {chan_id: structured_dtype for chan_id in channel_ids}
         else:
-            assert all(chan_id in structured_dtype for chan_id in channel_ids)
+            assert all(chan_id in structured_dtype for chan_id in channel_ids), \
+                ("Missing some channel_ids from structured_dtype dict keys")
 
         # check dtype fields (if present)
         for _, dtype in structured_dtype.items():
@@ -50,7 +51,6 @@ class BaseEvent(BaseExtractor):
     def channel_ids(self):
         return self._main_ids
 
-    @property
     def get_dtype(self, channel_id):
         return self.structured_dtype[channel_id]
 
