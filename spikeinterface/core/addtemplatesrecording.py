@@ -60,9 +60,9 @@ class AddTemplatesRecording(BaseRecording):
             tmp = np.array([], dtype=np.float32)
 
             for segment_index in range(sorting.get_num_segments()):
-                spike_times = [sorting.get_unit_spike_train(unit_id) for unit_id in sorting.unit_ids]
+                spike_times = [sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids]
                 spike_times = np.concatenate(spike_times)
-                spike_amplitudes = np.concatenate(amplitude_factor)
+                spike_amplitudes = np.concatenate(amplitude_factor[segment_index])
 
                 order = np.argsort(spike_times)
                 tmp = np.append(tmp, spike_amplitudes[order])

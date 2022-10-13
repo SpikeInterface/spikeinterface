@@ -2,6 +2,7 @@ from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, AddTemplatesRecording
 from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.testing_tools import generate_sorting
 from spikeinterface.extractors.toy_example import synthesize_random_firings
 
 
@@ -25,16 +26,16 @@ class HybridUnitsRecording(AddTemplatesRecording):
     def __init__(self, target_recording: BaseRecording, templates: np.ndarray,
                  nbefore: Union[List[int], int, None] = None, firing_rate: float = 10,
                  amplitude_std: float = 0.0, refractory_period_ms: float = 2.0):
-        num_samples = target_recording.get_num_frames()
+        num_samples = [target_recording.get_num_frames(seg_index) for seg_index in range(target_recording.get_num_segments())]
         fs = target_recording.sampling_frequency
         n_units = len(templates)
 
-        # Making the sorting object.
-        spike_times, spike_labels = synthesize_random_firings(num_units=n_units, sampling_frequency=fs, duration=num_samples) # TODO: refrac_period missing
-        spike_trains = {unit_id: spike_times[spike_labels == unit_id] for unit_id in range(n_units)}
-        sorting = NumpySorting.from_dict(spike_trains)
+        sorting = generate_sorting(num_units=len(templates), sampling_frequency=fs,
+                                   durations=[target_recording.get_num_frames(seg_index) / fs for seg_index in range(target_recording.get_num_segments())],
+                                   firing_rate=firing_rate, refractory_period=refractory_period_ms)
 
-        amplitude_factor = [np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id))) for unit_id in sorting.unit_ids]
+        amplitude_factor = [[np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id, segment_index=seg_index))) \
+                            for unit_id in sorting.unit_ids] for seg_index in range(target_recording.get_num_segments())]
 
         AddTemplatesRecording.__init__(self, sorting, templates, nbefore, amplitude_factor, target_recording, num_samples)
 
