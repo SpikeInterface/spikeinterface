@@ -44,8 +44,8 @@ class BaseWidget:
         plotter_kwargs = plotter.default_backend_kwargs
         for k in backend_kwargs:
             if k not in plotter_kwargs:
-                raise Exception(f"{k} is not a valid argument for backend {backend}. "
-                                f"Possible arguments are: {list(plotter_kwargs.keys())}")
+                raise Exception(f"{k} is not a valid plot argument or backend keyword argument. "
+                                f"Possible backend keyword arguments for {backend} are: {list(plotter_kwargs.keys())}")
 
     def do_plot(self, backend, **backend_kwargs):
         backend = self.check_backend(backend)
