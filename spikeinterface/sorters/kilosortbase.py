@@ -1,4 +1,5 @@
 from pathlib import Path
+from warnings import warn
 import json
 import shutil
 import sys
@@ -6,7 +7,7 @@ import sys
 import numpy as np
 import scipy.io
 
-from .utils import ShellScript
+from .utils import ShellScript, get_matlab_shell_name, get_bash_path
 from .basesorter import get_job_kwargs
 from spikeinterface.extractors import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
@@ -152,8 +153,19 @@ class KilosortBase:
                     matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
                 '''
             else:
+                if get_matlab_shell_name() == 'fish':
+                    # Avoid MATLAB's 'copyfile' function failing due to MATLAB using fish as a shell
+                    bash_path = get_bash_path()
+                    warn(f"Avoid Kilosort failing due to MATLAB using 'fish' as a shell: setting `MATLAB_SHELL` env variable to `{bash_path}`.")
+                    matlab_shell_str = f'''
+                    export MATLAB_SHELL="{bash_path}"
+                    echo "Set MATLAB shell to $MATLAB_SHELL"
+                    '''
+                else:
+                    matlab_shell_str = ""
                 shell_cmd = f'''
                     #!/bin/bash
+                    {matlab_shell_str}
                     cd "{output_folder}"
                     matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
                 '''
