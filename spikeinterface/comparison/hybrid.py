@@ -20,7 +20,12 @@ class HybridUnitsRecording(AddTemplatesRecording):
     nbefore: list[int] | int | None
         Where is the center of the template for each unit?
         If None, will default to the highest peak.
-    TODO: Finish this
+    firing_rate: float
+        The firing rate of the injected units (in Hz).
+    amplitude_std: float
+        The standard deviation of the amplitude (centered at 1.0).
+    refractory_period_ms: float
+        The refractory period of the injected spike train (in ms).
     """
 
     def __init__(self, target_recording: BaseRecording, templates: np.ndarray,
