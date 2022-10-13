@@ -76,7 +76,7 @@ class HybridSpikesRecording(AddTemplatesRecording):
 
 
 
-def _generate_injected_sorting(sorting: BaseSorting, t_max: int, max_injected_per_unit: int,
+def generate_injected_sorting(sorting: BaseSorting, t_max: int, max_injected_per_unit: int,
 							   injected_rate: float, refractory_period_ms: float) -> NumpySorting:
 	injected_spike_trains = {}
 	t_r = int(round(refractory_period_ms * sorting.get_sampling_frequency() * 1e-3))
