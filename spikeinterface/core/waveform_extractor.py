@@ -191,7 +191,7 @@ class WaveformExtractor:
         if self.folder is None:
             return extension_name in self._loaded_extensions
         else:
-            return (self.folder / extension_name).is_dir() and (self.folder / extension_name / 'params.json')
+            return (self.folder / extension_name).is_dir() and (self.folder / extension_name / 'params.json').is_file()
 
     def load_extension(self, extension_name):
         """
