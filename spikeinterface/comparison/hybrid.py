@@ -1,18 +1,30 @@
 from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, AddTemplatesRecording
+from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.toy_example import synthesize_random_firings
 
 
 class HybridUnitsRecording(AddTemplatesRecording):
+    """
+    Class for creating a hybrid recording where additional units are added
+    to an existing recording.
 
-    def __init__(self, templates: np.ndarray, target_recording: BaseRecording,
+    Parameters
+    ----------
+    target_recording: BaseRecording
+        Existing recording to add on top of.
+    templates: np.ndarray[n_units, n_samples, n_channels]
+        Array containing the templates to inject for all the units.
+    nbefore: list[int] | int | None
+        Where is the center of the template for each unit?
+        If None, will default to the highest peak.
+    TODO: Finish this
+    """
+
+    def __init__(self, target_recording: BaseRecording, templates: np.ndarray,
                  nbefore: Union[List[int], int, None] = None, firing_rate: float = 10,
                  amplitude_std: float = 0.0, refractory_period_ms: float = 2.0):
-        """
-        TODO
-        """
-
         t_max = target_recording.get_num_frames()
         fs = target_recording.sampling_frequency
         n_units = len(templates)
@@ -29,14 +41,36 @@ class HybridUnitsRecording(AddTemplatesRecording):
 
 
 class HybridSpikesRecording(AddTemplatesRecording):
+	"""
+	Class for creating a hybrid recording where additional spikes are added
+	to already existing units.
 
-	def __init__(self, wvf_extractor: WaveformExtractor, max_injected_per_unit: int = 1000,
-				 injected_rate: float = 0.05, refractory_period_ms: float = 1.5) -> None:
+	Parameters
+	----------
+	wvf_extractor: WaveformExtractor
+		The waveform extractor object of the existing recording.
+	injected_sorting: BaseSorting | None
+		Additional spikes to inject.
+		If None, will generate it.
+	max_injected_per_unit: int
+		If injected_sorting=None, the max number of spikes per unit
+		that is allowed to be injected.
+	injected_rate: float
+		If injected_sorting=None, the max fraction of spikes per
+		unit that is allowed to be injected.
+	refractory_period_ms: float
+		If injected_sorting=None, the injected spikes need to respect
+		this refractory period.
+	"""
+
+	def __init__(self, wvf_extractor: WaveformExtractor, injected_sorting: Union[BaseSorting, None] = None,
+				 max_injected_per_unit: int = 1000, injected_rate: float = 0.05, refractory_period_ms: float = 1.5) -> None:
 		target_recording = wvf_extractor.recording
 		target_sorting = wvf_extractor.sorting
 		templates = wvf_extractor.get_all_templates()
 		self.injected_sorting = _generate_injected_sorting(target_sorting, recording.get_num_frames(),
-														   max_injected_per_unit, injected_rate, refractory_period_ms)
+														   max_injected_per_unit, injected_rate, refractory_period_ms) \
+								if injected_sorting is None else injected_sorting
 
 		AddTemplatesRecording.__init__(self.injected_sorting, templates, wvf_extractor.nbefore, target_recording=target_recording)
 
@@ -70,3 +104,5 @@ def _generate_injected_sorting(sorting: BaseSorting, t_max: int, max_injected_pe
 	return NumpySorting.from_dict(injected_spike_trains)
 
 
+create_hybrid_units_recording = define_function_from_class(source_class=HybridUnitsRecording, name="create_hybrid_units_recording")
+create_hybrid_spikes_recording = define_function_from_class(source_class=HybridSpikesRecording, name="create_hybrid_spikes_recording")

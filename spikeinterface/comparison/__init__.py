@@ -14,4 +14,5 @@ from .groundtruthstudy import GroundTruthStudy
 from .collisionstudy import CollisionGTStudy
 from .correlogramstudy import CorrelogramGtStudy
 from .studytools import aggregate_performances_table
-from .hybrid import HybridSpikesRecording, HybridUnitsRecording
+from .hybrid import (HybridSpikesRecording, HybridUnitsRecording,
+                     create_hybrid_units_recording, create_hybrid_spikes_recording)
