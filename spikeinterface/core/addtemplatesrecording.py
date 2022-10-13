@@ -53,7 +53,7 @@ class AddTemplatesRecording(BaseRecording):
         else:
             assert len(nbefore) == n_units
 
-        if type(amplitude_factor) is float:
+        if isinstance(amplitude_factor, float):
             amplitude_factor = np.array([1.0]*len(self.spike_vector), dtype=np.float32)
         elif len(amplitude_factor) != len(self.spike_vector):  # In this case, it's a list of list for amplitude by unit by spike.
             tmp = np.array([], dtype=np.float32)
