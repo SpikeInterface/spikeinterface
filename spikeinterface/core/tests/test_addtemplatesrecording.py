@@ -1,9 +1,11 @@
 from spikeinterface.core import extract_waveforms, AddTemplatesRecording
-from spikeinterface.extractors import toy_example
+from spikeinterface.core.testing_tools import generate_recording, generate_sorting
 
 
 def test_add_templates_recording():
-	recording, sorting = toy_example(num_segments=2, num_channels=4, num_units=10, duration=50)
+	recording = generate_recording(num_channels = 4)
+	recording.annotate(is_filtered=True)
+	sorting = generate_sorting()
 	wvf_extractor = extract_waveforms(recording, sorting, mode="memory", ms_before=3., ms_after=3.)
 	templates = wvf_extractor.get_all_templates()
 	templates[:, 0] = templates[:, -1] = 0.0  # Go around the check for the edge, this is just testing.
