@@ -36,7 +36,7 @@ class UnitSummaryPlotter(MplPlotter):
         if dp.plot_data_unit_locations is not None:
             ax1 = fig.add_subplot(gs[:2, 0])
             UnitLocationsPlotter().do_plot(dp.plot_data_unit_locations, ax=ax1)
-            x, y = dp.unit_location
+            x, y = dp.unit_location[0], dp.unit_location[1]
             ax1.set_xlim(x - 80, x + 80)
             ax1.set_ylim(y - 250, y + 250)
             ax1.set_xticks([])
