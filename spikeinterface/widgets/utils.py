@@ -175,30 +175,3 @@ def array_to_image(data,
             output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image
-
-
-def order_channels_by_depth(recording, channel_ids=None):
-    """
-    Order channels by depth, by first ordering the x-axis, and then the y-axis.
-
-    Parameters
-    ----------
-    recording : BaseRecording
-        The input recording
-    channel_ids : list/array or None
-        If given, a subset of channels to order locations for
-
-    Returns
-    -------
-    order : np.array
-        Array with sorted indices
-    """
-    locations = recording.get_channel_locations()
-    channel_inds = recording.ids_to_indices(channel_ids)
-    locations = locations[channel_inds, :]
-
-    order_x = np.argsort(locations[:, 0])
-    order_y = np.argsort(locations[order_x, 1])
-    order = order_x[order_y]
-
-    return order

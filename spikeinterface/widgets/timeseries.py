@@ -1,8 +1,8 @@
 import numpy as np
 
-from ..core import BaseRecording
+from ..core import BaseRecording, order_channels_by_depth
 from .base import BaseWidget
-from .utils import get_some_colors, order_channels_by_depth
+from .utils import get_some_colors
 
 
 class TimeseriesWidget(BaseWidget):

@@ -3,12 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets.widgets as widgets
 
+from ...core import order_channels_by_depth
 
 from .base_ipywidgets import IpywidgetsPlotter
 from .utils import make_timeseries_controller, make_channel_controller, make_scale_controller
 
 from ..timeseries import TimeseriesWidget, _get_trace_list
-from ..utils import order_channels_by_depth
 from ..matplotlib.timeseries import TimeseriesPlotter as MplTimeseriesPlotter
 
 from IPython.display import display
