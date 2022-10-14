@@ -80,6 +80,11 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
           restore-keys: |
             ${{ runner.os }}-datasets
+      - name: Check ephy_testing_data files
+        run: |
+          if [ -d "$HOME/spikeinterface_datasets" ]; then
+            find $HOME/spikeinterface_datasets
+          fi
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v17.2

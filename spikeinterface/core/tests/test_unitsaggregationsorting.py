@@ -55,6 +55,27 @@ def test_unitsaggregationsorting():
     assert all(
         unit in renamed_unit_ids for unit in sorting_agg_renamed.get_unit_ids())
 
+    # test annotations
+
+    # matching annotation
+    sorting1.annotate(organ="brain")
+    sorting2.annotate(organ="brain")
+    sorting3.annotate(organ="brain")
+
+    # not matching annotation
+    sorting1.annotate(area="CA1")
+    sorting2.annotate(area="CA2")
+    sorting3.annotate(area="CA3")
+
+    # incomplete annotation
+    sorting1.annotate(date="2022-10-13")
+    sorting2.annotate(date="2022-10-13")
+
+    sorting_agg_prop = aggregate_units([sorting1, sorting2, sorting3])
+    assert sorting_agg_prop.get_annotation('organ') == "brain"
+    assert "area" not in sorting_agg_prop.get_annotation_keys()
+    assert "date" not in sorting_agg_prop.get_annotation_keys()
+
     # test properties
 
     # complete property
@@ -67,13 +88,18 @@ def test_unitsaggregationsorting():
     sorting1.set_property("template", np.zeros((num_units, 20, 50)))
     sorting1.set_property("template", np.zeros((num_units, 2, 10)))
 
-    # incomplete property
+    # incomplete property (str can't be propagated)
     sorting1.set_property("quality", ["good"]*num_units)
     sorting2.set_property("quality", ["bad"]*num_units)
+
+    # incomplete property (object can be propagated)
+    sorting1.set_property("rand", np.random.rand(num_units))
+    sorting2.set_property("rand", np.random.rand(num_units))
 
     sorting_agg_prop = aggregate_units([sorting1, sorting2, sorting3])
     assert "brain_area" in sorting_agg_prop.get_property_keys()
     assert "quality" not in sorting_agg_prop.get_property_keys()
+    assert "rand" in sorting_agg_prop.get_property_keys()
     print(sorting_agg_prop.get_property("brain_area"))
 
 
