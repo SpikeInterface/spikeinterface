@@ -68,7 +68,7 @@ class WaveformExtractor:
         self._waveforms = {}
         self._template_cache = {}
         self._params = {}
-        self._available_extensions = dict()
+        self._loaded_extensions = dict()
 
         self.folder = folder
         if self.folder is not None:
@@ -176,7 +176,7 @@ class WaveformExtractor:
 
     def is_extension(self, extension_name):
         """
-        Check if the extension exists.
+        Check if the extension exists in memory or in the folder.
 
         Parameters
         ----------
@@ -188,7 +188,10 @@ class WaveformExtractor:
         exists: bool
             Whether the extension exists or not
         """
-        return extension_name in list(self._available_extensions)
+        if self.folder is None:
+            return extension_name in self._loaded_extensions
+        else:
+            return (self.folder / extension_name).is_dir() and (self.folder / extension_name / 'params.json').is_file()
 
     def load_extension(self, extension_name):
         """
@@ -205,12 +208,13 @@ class WaveformExtractor:
         ext_instanace: 
             The loaded instance of the extension
         """
-        if self.is_extension(extension_name):
-            if self.folder is not None:
+        if self.folder is not None and extension_name not in self._loaded_extensions:
+            if self.is_extension(extension_name):
                 ext_class = self.get_extension_class(extension_name)
-                return ext_class.load_from_folder(self.folder)
-            else:
-                return self._available_extensions[extension_name]
+                ext = ext_class.load_from_folder(self.folder)
+        if extension_name not in self._loaded_extensions:
+            raise Exception(f'Extension {extension_name} not available')
+        return self._loaded_extensions[extension_name]
 
     def delete_extension(self, extension_name):
         """
@@ -222,35 +226,14 @@ class WaveformExtractor:
             The extension name.
         """
         assert self.is_extension(extension_name), f"The extension {extension_name} is not available"
-        del self._available_extensions[extension_name]
+        del self._loaded_extensions[extension_name]
         if self.folder is not None and (self.folder / extension_name).is_dir():
             shutil.rmtree(self.folder / extension_name)
 
-    def get_available_extensions(self):
-        """
-        Browse persistent extensions in the folder.
-        Return a list of classes.
-        Then instances can be loaded with we.load_extension(extension_name)
-
-        Importante note: extension modules need to be loaded (and so registered)
-        before this call, otherwise extensions will be ignored even if the folder
-        exists.
-
-        Returns
-        -------
-        extensions_in_folder: list
-            A list of class of computed extension inthis folder
-        """
-        available_extensions = []
-        for extension_class in self.extensions:
-            if self.is_extension(extension_class.extension_name):
-                available_extensions.append(extension_class)
-        return available_extensions
-
     def get_available_extension_names(self):
         """
-        Browse persistent extensions in the folder.
-        Return a list of extensions by name.
+        Return a list of loaded or available extension names either in memory or
+        in persistent extension folders.
         Then instances can be loaded with we.load_extension(extension_name)
 
         Importante note: extension modules need to be loaded (and so registered)
@@ -265,8 +248,7 @@ class WaveformExtractor:
         extension_names_in_folder = []
         for extension_class in self.extensions:
             if self.is_extension(extension_class.extension_name):
-                extension_names_in_folder.append(
-                    extension_class.extension_name)
+                extension_names_in_folder.append(extension_class.extension_name)
         return extension_names_in_folder
 
     def _reset(self):
@@ -932,7 +914,7 @@ class BaseWaveformExtractorExtension:
         self._params = None
 
         # register
-        self.waveform_extractor._available_extensions[self.extension_name] = self
+        self.waveform_extractor._loaded_extensions[self.extension_name] = self
 
     @classmethod
     def load_from_folder(cls, folder):
