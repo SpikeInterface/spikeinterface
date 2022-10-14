@@ -212,7 +212,6 @@ class WaveformExtractor:
             if self.is_extension(extension_name):
                 ext_class = self.get_extension_class(extension_name)
                 ext = ext_class.load_from_folder(self.folder, self)
-                self._loaded_extensions[extension_name] = ext
         if extension_name not in self._loaded_extensions:
             raise Exception(f'Extension {extension_name} not available')
         return self._loaded_extensions[extension_name]
@@ -913,6 +912,8 @@ class BaseWaveformExtractorExtension:
             self.folder = None
         self._extension_data = dict()
         self._params = None
+
+        self.waveform_extractor._loaded_extensions[self.extension_name] = self
 
     @classmethod
     def load_from_folder(cls, folder, waveform_extractor=None):
