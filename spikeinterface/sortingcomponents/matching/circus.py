@@ -162,6 +162,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         to explain. ptp limit for considering a channel as silent
     smoothing_factor: float
         Templates are smoothed via Spline Interpolation
+    noise_levels: array
+        The noise levels, for every channels. If None, they will be automatically
+        computed
     -----
     """
 
@@ -173,6 +176,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'templates' : None,
         'overlaps' : None,
         'norms' : None,
+        'random_chunk_kwargs': {},
+        'noise_levels': None, 
         'smoothing_factor' : 0.25,
         'ignored_ids' : []
     }
@@ -279,6 +284,11 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d['num_samples'] = d['waveform_extractor'].nsamples
         d['nbefore'] = d['waveform_extractor'].nbefore
         d['nafter'] = d['waveform_extractor'].nafter
+        d['sampling_frequency'] = d['waveform_extractor'].recording.get_sampling_frequency()
+
+        if d['noise_levels'] is None:
+            print('CircusOMPPeeler : noise should be computed outside')
+            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'], return_scaled=False)
 
         if d['templates'] is None:
             d = cls._prepare_templates(d)
@@ -298,9 +308,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         sparsities = d['sparsities']
 
         nb_active_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
-
-        #d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*nb_active_channels)[:, np.newaxis]
-        d['stop_criteria'] = omp_min_sps * np.sqrt(d['num_samples']*d['num_channels'])
+        d['stop_criteria'] = omp_min_sps * np.sqrt(d['noise_levels'].sum() * d['num_samples'])
 
         return d        
 
@@ -344,6 +352,13 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         cached_fft_kernels = d['cached_fft_kernels']
 
         num_timesteps = len(traces)
+
+        if num_timesteps*1000/d['sampling_frequency'] > 100:
+            import sys
+            print('CircusOMPPeeler is much faster if chunk duration is around 100ms')
+            sys.exit(0)
+
+
         num_peaks = num_timesteps - num_samples + 1
 
         traces = traces.T
@@ -374,7 +389,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                     scalar_products[i] = convolution.sum(0)
                 else:
                     scalar_products[i] = 0
-
 
         if len(ignored_ids) > 0:
             scalar_products[ignored_ids] = -np.inf
