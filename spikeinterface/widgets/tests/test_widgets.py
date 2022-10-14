@@ -197,10 +197,11 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
     
-    # mytest.test_plot_timeseries()
+    mytest.test_plot_timeseries()
     
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
     mytest.test_amplitudes()
+    # mytest.test_plot_unit_templates()
 
     plt.show()
