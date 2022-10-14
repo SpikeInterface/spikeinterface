@@ -351,7 +351,7 @@ class WaveformExtractor:
         if self.folder is not None and extension_name not in self._loaded_extensions:
             if self.is_extension(extension_name):
                 ext_class = self.get_extension_class(extension_name)
-                ext = ext_class.load_from_folder(self.folder)
+                ext = ext_class.load_from_folder(self.folder, self)
         if extension_name not in self._loaded_extensions:
             raise Exception(f'Extension {extension_name} not available')
         return self._loaded_extensions[extension_name]
@@ -1036,7 +1036,7 @@ class BaseWaveformExtractorExtension:
         self.waveform_extractor._loaded_extensions[self.extension_name] = self
 
     @classmethod
-    def load_from_folder(cls, folder):
+    def load_from_folder(cls, folder, waveform_extractor=None):
         """
         Load extension from folder.
         'folder' is the waveform extractor folder.
@@ -1050,7 +1050,8 @@ class BaseWaveformExtractorExtension:
         with open(str(params_file), 'r') as f:
             params = json.load(f)
 
-        waveform_extractor = WaveformExtractor.load_from_folder(folder)
+        if waveform_extractor is None:
+            waveform_extractor = WaveformExtractor.load_from_folder(folder)
         
         # make instance with params
         ext = cls(waveform_extractor)
