@@ -74,7 +74,7 @@ class WaveformExtensionCommonTestSuite:
         for ext_kwargs in extension_function_kwargs_list:
             _ = self.extension_class.get_extension_function()(we, **ext_kwargs)
             # reload as an extension from we
-            assert self.extension_class in we.get_available_extensions()
+            assert self.extension_class.extension_name in we.get_available_extension_names()
             assert self.we1.is_extension(self.extension_class.extension_name)
             ext = self.we1.load_extension(self.extension_class.extension_name)
             assert isinstance(ext, self.extension_class)

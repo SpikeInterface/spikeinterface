@@ -200,3 +200,28 @@ def get_chunk_with_margin(rec_segment, start_frame, end_frame,
             right_margin = margin
 
     return traces_chunk, left_margin, right_margin
+
+
+def order_channels_by_depth(recording, channel_ids=None):
+    """
+    Order channels by depth, by first ordering the x-axis, and then the y-axis.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The input recording
+    channel_ids : list/array or None
+        If given, a subset of channels to order locations for
+
+    Returns
+    -------
+    order : np.array
+        Array with sorted indices
+    """
+    locations = recording.get_channel_locations()
+    channel_inds = recording.ids_to_indices(channel_ids)
+    locations = locations[channel_inds, :]
+
+    order = np.lexsort((locations[:, 0], locations[:, 1]))
+
+    return order
