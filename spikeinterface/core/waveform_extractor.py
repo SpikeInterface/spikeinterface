@@ -254,9 +254,8 @@ class WaveformExtractor:
 
     def get_available_extension_names(self):
         """
-        Give loaded or available in the folder extension classes.
-        by browsing persistent extensions in the folder.
-        Return a list of extensions by name.
+        Return a list of loaded or available extension names either in memory or
+        in persistent extension folders.
         Then instances can be loaded with we.load_extension(extension_name)
 
         Importante note: extension modules need to be loaded (and so registered)
