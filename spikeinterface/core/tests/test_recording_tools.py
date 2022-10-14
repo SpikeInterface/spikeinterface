@@ -3,7 +3,8 @@ import numpy as np
 from spikeinterface.core.testing_tools import generate_recording
 
 from spikeinterface.core.recording_tools import (get_random_data_chunks, get_chunk_with_margin,
-                                                 get_closest_channels, get_channel_distances, get_noise_levels)
+                                                 get_closest_channels, get_channel_distances, get_noise_levels,
+                                                 order_channels_by_depth)
 
 
 def test_get_random_data_chunks():
@@ -82,9 +83,27 @@ def test_get_chunk_with_margin():
     # fig, ax = plt.subplots()
     # ax.plot(traces_windowed[:, 0], color='r', ls='--')
     # plt.show()
-    
+
+
+def test_order_channels_by_depth():
+    rec = generate_recording(num_channels=10, sampling_frequency=1000., durations=[10.], 
+                             set_probe=False)
+    locations = np.zeros((10, 2))
+    locations[:, 1] = np.arange(10) // 2 * 50
+    locations[:, 0] = np.arange(10) % 2* 30
+
+    locations_copy = locations.copy()
+    locations_copy = locations_copy[::-1]
+    rec.set_channel_locations(locations_copy)
+
+    order = order_channels_by_depth(rec)
+
+    assert np.array_equal(locations, locations_copy[order])
+
+
 
 if __name__ == '__main__':
     # test_get_random_data_chunks()
-    test_get_closest_channels()
+    # test_get_closest_channels()
     # test_get_noise_levels()
+    test_order_channels_by_depth()

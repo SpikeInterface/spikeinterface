@@ -45,6 +45,8 @@ class TimeseriesPlotter(SortingviewPlotter):
 
         self.set_view(view_ts)
 
+        # timeseries currently doesn't display on the jupyter backend
+        backend_kwargs["display"] = False
         self.handle_display_and_url(view_ts, **backend_kwargs)
         return view_ts
 
