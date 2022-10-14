@@ -212,7 +212,6 @@ class WaveformExtractor:
             if self.is_extension(extension_name):
                 ext_class = self.get_extension_class(extension_name)
                 ext = ext_class.load_from_folder(self.folder)
-                self._loaded_extensions[extension_name] = ext
         if extension_name not in self._loaded_extensions:
             raise Exception(f'Extension {extension_name} not available')
         return self._loaded_extensions[extension_name]
@@ -231,32 +230,10 @@ class WaveformExtractor:
         if self.folder is not None and (self.folder / extension_name).is_dir():
             shutil.rmtree(self.folder / extension_name)
 
-    # def get_available_extension_classes(self):
-    #     """
-    #     Give loaded or available in the folder extension classes.
-    #     by browsing persistent extensions in the folder.
-    #     Return a list of classes.
-
-    #     Importante note: extension modules need to be loaded (and so registered)
-    #     before this call, otherwise extensions will be ignored even if the folder
-    #     exists.
-
-    #     Returns
-    #     -------
-    #     extensions_in_folder: list
-    #         A list of class of computed extension inthis folder
-    #     """
-    #     available_extensions = []
-    #     for extension_class in self.extensions:
-    #         if self.is_extension(extension_class.extension_name):
-    #             available_extensions.append(extension_class)
-    #     return available_extensions
-
     def get_available_extension_names(self):
         """
-        Give loaded or available in the folder extension classes.
-        by browsing persistent extensions in the folder.
-        Return a list of extensions by name.
+        Return a list of loaded or available extension names either in memory or
+        in persistent extension folders.
         Then instances can be loaded with we.load_extension(extension_name)
 
         Importante note: extension modules need to be loaded (and so registered)
