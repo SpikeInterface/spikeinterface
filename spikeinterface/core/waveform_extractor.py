@@ -212,7 +212,6 @@ class WaveformExtractor:
             if self.is_extension(extension_name):
                 ext_class = self.get_extension_class(extension_name)
                 ext = ext_class.load_from_folder(self.folder)
-                self._loaded_extensions[extension_name] = ext
         if extension_name not in self._loaded_extensions:
             raise Exception(f'Extension {extension_name} not available')
         return self._loaded_extensions[extension_name]
