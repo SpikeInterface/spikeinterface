@@ -1,5 +1,9 @@
+import numpy as np
+from copy import deepcopy
+
 from ...core.core_tools import check_json
 from spikeinterface.widgets.base import BackendPlotter
+
 
 class SortingviewPlotter(BackendPlotter):
     backend = 'sortingview'
@@ -28,6 +32,7 @@ class SortingviewPlotter(BackendPlotter):
         if len(returns) == 1:
             returns = returns[0]
         return returns
+
 
     @staticmethod
     def is_notebook() -> bool:
@@ -62,12 +67,24 @@ class SortingviewPlotter(BackendPlotter):
         self.url = url
 
 
-def generate_unit_table_view(unit_ids):
+def generate_unit_table_view(sorting, unit_properties=None):
     import sortingview.views as vv
-    ut_rows = [
-        vv.UnitsTableRow(unit_id=u, values={})
-        for u in unit_ids
-    ]
-    ut_columns = []
+    if unit_properties is None:
+        ut_columns = []
+        ut_rows = [
+            vv.UnitsTableRow(unit_id=u, values={})
+            for u in sorting.unit_ids
+        ]
+    else:
+        ut_columns = unit_properties
+        ut_rows = []
+        values = {}
+        for prop_name in unit_properties:
+            property_values = sorting.get_property(prop_name)
+            for ui, unit in enumerate(sorting.unit_ids):
+                if np.isnan(property_values[ui]):
+                    continue
+                values[unit] = property_values[ui]
+            
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns)
     return v_units_table

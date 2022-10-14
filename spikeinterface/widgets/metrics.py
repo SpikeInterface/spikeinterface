@@ -47,6 +47,7 @@ class MetricsBaseWidget(BaseWidget):
 
         plot_data = dict(
             metrics=metrics,
+            sorting=sorting,
             unit_ids=unit_ids,
             include_metrics=include_metrics,
             skip_metrics=skip_metrics,

@@ -65,6 +65,7 @@ class SortingSummaryWidget(BaseWidget):
         sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
         
         plot_data = dict(
+            waveform_extractor=waveform_extractor,
             unit_ids=unit_ids,
             templates=template_plot_data,
             correlograms=ccg_plot_data,

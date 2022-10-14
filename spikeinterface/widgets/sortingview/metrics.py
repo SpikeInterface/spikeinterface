@@ -1,4 +1,6 @@
 import numpy as np
+
+from ...core.core_tools import check_json
 from ..base import to_attr
 from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
@@ -32,25 +34,17 @@ class MetricsPlotter(SortingviewPlotter):
 
         units_m = []
         for unit_id in unit_ids:
-            values = metrics.loc[unit_id].to_dict()
-            # make sure values are json serializable
-            values_ser = {}
-            for key, val in values.items():
-                # skip nans
-                if np.isnan(val):
+            values = check_json(metrics.loc[unit_id].to_dict())
+            values_skip_nans = {}
+            for k, v in values.items():
+                if np.isnan(v):
                     continue
-                dtype = type(val)
-                if np.dtype(dtype) == np.int64:
-                    values_ser[key] = int(val)
-                elif np.dtype(dtype) == np.float64:
-                    values_ser[key] = float(val)
-                else:
-                    values_ser[key] = val
-                    
+                values_skip_nans[k] = v
+            
             units_m.append(
                 vv.UnitMetricsGraphUnit(
                     unit_id=unit_id,
-                    values=values_ser
+                    values=values_skip_nans
                 )
             )
         v_metrics = vv.UnitMetricsGraph(
@@ -59,7 +53,7 @@ class MetricsPlotter(SortingviewPlotter):
             )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(unit_ids)
+            v_units_table = generate_unit_table_view(dp.sorting)
 
             view = vv.Box(
                 direction="horizontal",

@@ -38,7 +38,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
                                                          display=False, backend="sortingview")
 
         # unit ids
-        v_units_table = generate_unit_table_view(unit_ids)
+        v_units_table = generate_unit_table_view(dp.sorting.sorting, dp.unit_table_properties)
 
         # assemble layout
         v_summary = vv.Box(
