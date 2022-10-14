@@ -165,25 +165,29 @@ def test_recordingless():
 
     # save with relative paths
     we = extract_waveforms(recording, sorting, wf_folder,
-                           use_relative_path=True)
+                           use_relative_path=True, return_scaled=False)
     we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
 
     assert isinstance(we.recording, BaseRecording)
     assert we_loaded._recording is None
+    with pytest.raises(ValueError):
+        # reccording cannot be accessible
+        rec = we_loaded.recording
+    assert we.sampling_frequency == we_loaded.sampling_frequency
     assert np.array_equal(we.recording.channel_ids, np.array(we_loaded.channel_ids))
     assert np.array_equal(we.recording.get_channel_locations(),
                           np.array(we_loaded.get_channel_locations()))
+    assert we.get_num_channels() == we_loaded.get_num_channels()
+    
+    probe = we_loaded.get_probe()
+    probegroup = we_loaded.get_probegroup()
+    
 
     # delete original recording and rely on rec_attributes
     if platform.system() != "Windows":
         shutil.rmtree(cache_folder / "recording1")
-
         we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
-
         assert we_loaded._recording is None
-        assert np.array_equal(we.recording.channel_ids, np.array(we_loaded.channel_ids))
-        assert np.array_equal(we.recording.get_channel_locations(),
-                              np.array(we_loaded.get_channel_locations()))
 
 
 def test_sparsity():
