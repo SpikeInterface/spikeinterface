@@ -57,7 +57,7 @@ class UnitProbeMapWidget(BaseWidget):
 
     def plot(self):
         we = self.waveform_extractor
-        probe = we.recording.get_probe()
+        probe = we.get_probe()
 
         probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
 

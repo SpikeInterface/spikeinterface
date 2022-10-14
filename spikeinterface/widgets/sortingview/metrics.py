@@ -22,7 +22,6 @@ class MetricsPlotter(SortingviewPlotter):
         metrics_sv = []
         for col in metrics.columns:
             dtype = metrics.iloc[0][col].dtype
-            
             metric = vv.UnitMetricsGraphMetric(
                             key=col,
                             label=col,

@@ -122,14 +122,14 @@ def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
 
 def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
     templates = benchmark.templates
-    nb_units = len(benchmark.we.sorting.unit_ids)
+    nb_units = len(benchmark.we.unit_ids)
     colors = ['r', 'b']
 
     results = {'TP' : {'mean' : [], 'std' : []}, 
                'FN' : {'mean' : [], 'std' : []}}
     
     for i in range(nb_units):
-        unit_id = benchmark.we.sorting.unit_ids[i]
+        unit_id = benchmark.we.unit_ids[i]
         idx_2 = benchmark.we.get_sampled_indices(unit_id)['spike_index']
         wfs = benchmark.we.get_waveforms(unit_id)
         template = benchmark.we.get_template(unit_id)

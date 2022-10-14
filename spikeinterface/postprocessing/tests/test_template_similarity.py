@@ -13,9 +13,9 @@ class SimilarityExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCas
     # extend common test 
     def test_check_equal_template_with_distribution_overlap(self):
         we = self.we1
-        for unit_id0 in we.sorting.unit_ids:
+        for unit_id0 in we.unit_ids:
             waveforms0 = we.get_waveforms(unit_id0)
-            for unit_id1 in we.sorting.unit_ids:
+            for unit_id1 in we.unit_ids:
                 if unit_id0 == unit_id1:
                     continue
                 waveforms1 = we.get_waveforms(unit_id1)
