@@ -43,12 +43,11 @@ class SortingSummaryWidget(BaseWidget):
         self.check_extensions(waveform_extractor, ['correlograms', 'spike_amplitudes',
                                                    'unit_locations', 'similarity'])
         we = waveform_extractor
-        recording = we.recording
         sorting = we.sorting
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
-        channel_ids = recording.channel_ids
+        channel_ids = we.channel_ids
             
         if sparsity is None:
             sparsity = {u: channel_ids for u in sorting.unit_ids}
