@@ -80,7 +80,7 @@ def array_to_image(data,
     Useful for visualizing data before/after preprocessing
 
     Params
-    =======
+    ------
     data : np.array
         2D numpy array
     colormap : str 
@@ -95,7 +95,7 @@ def array_to_image(data,
         Ratio of row spacing to overall channel height
 
     Returns
-    ========
+    -------
     output_image : 3D numpy array
 
     """
@@ -122,7 +122,7 @@ def array_to_image(data,
     scaled_data[scaled_data < clim[0]] = clim[0]
     scaled_data[scaled_data > clim[1]] = clim[1]
     scaled_data = (scaled_data - clim[0]) / np.ptp(clim)
-    a = (cmap(scaled_data.T)[:, :, :3]*255).astype(np.uint8)  # colorize and convert to uint8
+    a = np.flip((cmap(scaled_data.T)[:, :, :3]*255).astype(np.uint8), axis=0)  # colorize and convert to uint8
 
     num_rows = int(np.ceil(num_timepoints / num_timepoints_per_row))
 
@@ -177,14 +177,28 @@ def array_to_image(data,
     return output_image
 
 
-def order_channels_by_depth(recording, channel_ids):
-    import scipy.spatial
+def order_channels_by_depth(recording, channel_ids=None):
+    """
+    Order channels by depth, by first ordering the x-axis, and then the y-axis.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The input recording
+    channel_ids : list/array or None
+        If given, a subset of channels to order locations for
+
+    Returns
+    -------
+    order : np.array
+        Array with sorted indices
+    """
     locations = recording.get_channel_locations()
     channel_inds = recording.ids_to_indices(channel_ids)
     locations = locations[channel_inds, :]
-    origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[None, :]
-    dist = scipy.spatial.distance.cdist(locations, origin, metric='euclidean')
-    dist = dist[:, 0]
-    order = np.argsort(dist)
+
+    order_x = np.argsort(locations[:, 0])
+    order_y = np.argsort(locations[order_x, 1])
+    order = order_x[order_y]
 
     return order

@@ -32,7 +32,7 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(figsize=(ratios[1] * width_cm * cm, height_cm * cm))
+                fig, ax = plt.subplots(figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm))
                 plt.show()
 
         t_start = 0.
@@ -89,6 +89,7 @@ class PlotUpdater:
         self.controller = controller
 
         self.recordings = data_plot['recordings']
+        self.return_scaled = data_plot['return_scaled']
         self.next_data_plot = data_plot.copy()
         self.list_traces = None
 
@@ -153,13 +154,16 @@ class PlotUpdater:
         data_plot = self.next_data_plot
         
         if retrieve_traces:
-            channel_ids = self.recordings[list(self.recordings.keys())[0]].channel_ids[channel_indices]
+            all_channel_ids = self.recordings[list(self.recordings.keys())[0]].channel_ids
+            if self.data_plot["order"] is not None:
+                all_channel_ids = all_channel_ids[self.data_plot["order"]]
+            channel_ids = all_channel_ids[channel_indices]
             if self.data_plot['order_channel_by_depth']:
                 order = order_channels_by_depth(self.rec0, channel_ids)
             else:
                 order = None
             times, list_traces, frame_range, channel_ids = _get_trace_list(self.recordings, channel_ids, time_range,
-                                                                           segment_index, order)
+                                                                           segment_index, order, self.return_scaled)
             self.list_traces = list_traces
         else:
             times = data_plot['times']

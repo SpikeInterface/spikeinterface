@@ -28,6 +28,8 @@ class TimeseriesWidget(BaseWidget):
             * 'line' : classical for low channel count
             * 'map' : for high channel count use color heat map
             * 'auto' : auto switch depending the channel count <32ch
+    return_scaled: bool
+        If True and recording.has_scaled(), it plots the scaled traces. Default False
     cmap: str default 'RdBu'
         matplotlib colormap used in mode 'map'
     show_channel_ids: bool
@@ -55,7 +57,7 @@ class TimeseriesWidget(BaseWidget):
     
 
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
-                 time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
+                 time_range=None, mode='auto', return_scaled=False, cmap='RdBu_r', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
                  with_colorbar=True, add_legend=True, backend=None, **backend_kwargs):
         if isinstance(recording, BaseRecording):
@@ -107,7 +109,7 @@ class TimeseriesWidget(BaseWidget):
         cmap = cmap
         
         times, list_traces, frame_range, channel_ids = _get_trace_list(recordings, channel_ids, time_range, 
-                                                                       segment_index, order)
+                                                                       segment_index, order, return_scaled)
         
         # stat for auto scaling done on the first layer
         traces0 = list_traces[0]
@@ -185,27 +187,29 @@ class TimeseriesWidget(BaseWidget):
             order_channel_by_depth=order_channel_by_depth,
             order=order,
             tile_size=tile_size,
-            num_timepoints_per_row=int(seconds_per_row * fs)
+            num_timepoints_per_row=int(seconds_per_row * fs),
+            return_scaled=return_scaled
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None):
+def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None,
+                    return_scaled=False):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
 
     fs = rec0.get_sampling_frequency()
     
+    if return_scaled:
+        assert all(rec.has_scaled() for rec in recordings.values()), \
+            ("Some recording layers do not have scaled traces. Use `return_scaled=False`")
     frame_range = (time_range * fs).astype('int64')
     a_max = rec0.get_num_frames(segment_index=segment_index)
     frame_range = np.clip(frame_range, 0, a_max)
     time_range = frame_range / fs
     times = np.arange(frame_range[0], frame_range[1]) / fs
-
-    if order is not None:
-        channel_ids = np.array(channel_ids)[order]
 
     list_traces = []
     for rec_name, rec in recordings.items():
@@ -213,11 +217,15 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=No
             segment_index=segment_index,
             channel_ids=channel_ids,
             start_frame=frame_range[0],
-            end_frame=frame_range[1]
+            end_frame=frame_range[1],
+            return_scaled=return_scaled
         )
 
         if order is not None:
             traces = traces[:, order]
         list_traces.append(traces)
+
+    if order is not None:
+        channel_ids = np.array(channel_ids)[order]
 
     return times, list_traces, frame_range, channel_ids
