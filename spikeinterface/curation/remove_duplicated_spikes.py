@@ -34,32 +34,11 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
 		self._duplicated_spikes = {}
 
 		for unit_id in unit_ids:
-			self._duplicated_spikes[unit_id] = self._find_duplicated_spikes(parent_segment.get_unit_spike_train(unit_id), censored_period)
+			self._duplicated_spikes[unit_id] = find_duplicated_spikes(parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None), censored_period)
 
-	@staticmethod
-	def _find_duplicated_spikes(spike_train: np.ndarray, censored_period: int, seed: int = 186472189):
-		"""
-		To ensure no bias is created, a list of duplicated spikes is kept, and one spike is removed
-		iteratively until there are no more duplicated spikes.
-		"""
-
-		rand_state = np.random.get_state()	# Need to store the old state to not seed globally.
-		np.random.seed(seed)				# Need to seed to have the same result for parallelization.
-
-		indices_of_duplicates = np.where(np.diff(spike_train) <= censored_period)[0]
-		indices_of_duplicates = np.unique(np.concatenate((indices_of_duplicates, indices_of_duplicates + 1)))
-		mask = np.ones(len(indices_of_duplicates), dtype=bool)
-
-		while not np.all(np.diff(spike_train[indices_of_duplicates][mask]) > censored_period):
-			index = np.random.randint(low=0, high=len(mask))
-			mask[index] = False
-
-		np.random.set_state(rand_state)
-
-		return indices_of_duplicates[~mask]
 
 	def get_unit_spike_train(self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None) -> np.ndarray:
-		spike_train = self._parent_segment.get_unit_spike_train(unit_id)
+		spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None)
 		spike_train = np.delete(spike_train, self._duplicated_spikes[unit_id])
 
 		if start_frame == None:
@@ -68,9 +47,46 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
 			end_frame = spike_train[-1]
 
 		start = np.searchsorted(spike_train, start_frame, side="left")
-		end   = np.searchsorted(spike_train, start_frame, side="right")
+		end   = np.searchsorted(spike_train, end_frame, side="right")
 
 		return spike_train[start : end]
 
 
 remove_duplicated_spikes = define_function_from_class(source_class=RemoveDuplicatedSpikesSorting, name="remove_duplicated_spikes")
+
+
+def find_duplicated_spikes(spike_train: np.ndarray, censored_period: int, seed: Optional[int] = 186472189) -> np.ndarray:
+	"""
+	Finds the indices where there a spike in considered a duplicate.
+	When two spikes are closer together than the censored period,
+	one of them is randomly taken out.
+
+	Parameters
+	----------
+	spike_train: np.ndarray
+		The spike train on which to look for duplicated spikes.
+	censored_period: int
+		The censored period for duplicates (in sample time).
+	seed: int
+		The random seed for taking out spikes.
+
+	Returns
+	-------
+	indices_of_duplicates: np.ndarray
+		The indices of spikes considered to be duplicates.
+	"""
+
+	rand_state = np.random.get_state()	# Need to store the old state to not seed globally.
+	np.random.seed(seed)				# Need to seed to have the same result for parallelization.
+
+	indices_of_duplicates = np.where(np.diff(spike_train) <= censored_period)[0]
+	indices_of_duplicates = np.unique(np.concatenate((indices_of_duplicates, indices_of_duplicates + 1)))
+	mask = np.ones(len(indices_of_duplicates), dtype=bool)
+
+	while not np.all(np.diff(spike_train[indices_of_duplicates][mask]) > censored_period):
+		index = np.random.randint(low=0, high=len(mask))
+		mask[index] = False
+
+	np.random.set_state(rand_state)
+
+	return indices_of_duplicates[~mask]

@@ -1,7 +1,6 @@
 import numpy as np
 from spikeinterface.core.testing_tools import generate_sorting
-from spikeinterface.curation import remove_duplicated_spikes
-from spikeinterface.curation.remove_duplicated_spikes import RemoveDuplicatedSpikesSortingSegment
+from spikeinterface.curation import remove_duplicated_spikes, find_duplicated_spikes
 
 
 def test_remove_duplicated_spikes() -> None:
@@ -16,10 +15,10 @@ def test_remove_duplicated_spikes() -> None:
 			assert len(sorting.get_unit_spike_train(unit_id, segment_index=segment_index)) >= \
 				   len(new_sorting.get_unit_spike_train(unit_id, segment_index=segment_index))
 
-			assert np.all(np.diff(new_sorting.get_unit_spike_train(unit_id, segment_index=segment_index) > censored_period))
+			assert np.all(np.diff(new_sorting.get_unit_spike_train(unit_id, segment_index=segment_index)) > censored_period)
 
 
 def test_find_duplicated_spikes() -> None:
 	spike_train = np.array([20, 80, 81, 150, 152, 900], dtype=np.int64)
 
-	assert len(RemoveDuplicatedSpikesSortingSegment._find_duplicated_spikes(spike_train, censored_period=5)) == 2
+	assert len(find_duplicated_spikes(spike_train, censored_period=5)) == 2

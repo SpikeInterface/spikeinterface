@@ -235,7 +235,7 @@ class NumpySortingSegment(BaseSortingSegment):
             assert np.all(np.diff(times) >= 0), 'unsorted times'
         self._units_dict = units_dict
 
-    def get_unit_spike_train(self, unit_id, start_frame = None, end_frame = None):
+    def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         times = self._units_dict[unit_id]
         if start_frame is not None:
             times = times[times >= start_frame]
