@@ -28,11 +28,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self._pca_model = None
-
-    def _specific_load_from_folder(self):
-        self.get_pca_model()
-
     @classmethod
     def create(cls, waveform_extractor):
         pc = WaveformPrincipalComponent(waveform_extractor)
@@ -52,9 +47,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 txt += ' - sparse'
         return txt
 
-    def _reset(self):
-        self._pca_model = None
-
     def _set_params(self, n_components=5, mode='by_channel_local',
                     whiten=True, dtype='float32', sparsity=None):
 
@@ -68,21 +60,14 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         
         return params
     
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
-        # populate folder
-        pca_files = [f for f in (
-            self.extension_folder).iterdir() if f.suffix == ".npy"]
-        pca_model_files = [f for f in (
-            self.extension_folder).iterdir() if f.suffix == ".pkl"]
-        for unit in unit_ids:
-            for pca_file in pca_files:
-                if f"pca_{unit}.npy" in pca_file.name:
-                    shutil.copyfile(pca_file, new_waveforms_folder / 
-                                    self.extension_name / pca_file.name)
-        for pca_model_file in pca_model_files:
-            shutil.copyfile(pca_model_file, new_waveforms_folder /
-                            self.extension_name / pca_model_file.name)
-                
+    def _select_extension_data(self, unit_ids):
+        new_extension_data = dict()
+        for unit_id in unit_ids:
+            new_extension_data[f'pca_{unit_id}'] = self._extension_data[f'pca_{unit_id}']
+        for k, v in self._extension_data.items():
+            if "model" in k:
+                new_extension_data[k] = v
+        return new_extension_data
 
     def get_projections(self, unit_id):
         """
@@ -98,37 +83,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         proj: np.array
             The PCA projections (num_waveforms, num_components, num_channels)
         """
-        proj_file = self.extension_folder / f'pca_{unit_id}.npy'
-        proj = np.load(proj_file)
-        return proj
-
-    def load_pca_model(self):
-        """
-        Load PCA model from folder.
-        """
-        mode = self._params["mode"]
-        if mode == "by_channel_local":
-            pca_model = []
-            for chan_ind, chan_id in enumerate(self.waveform_extractor.recording.channel_ids):
-                pca_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
-                if not pca_file.is_file() and chan_ind == 0:
-                    _ = self._fit_by_channel_local()
-                with open(pca_file, 'rb') as fid:
-                    pca = pickle.load(fid)
-                pca_model.append(pca)
-        elif mode == "by_channel_global":
-            pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
-            if not pca_file.is_file():
-                _ = self._fit_by_channel_global()
-            with open(pca_file, 'rb') as fid:
-                pca_model = pickle.load(fid)
-        elif mode == "concatenated":
-            pca_file = self.extension_folder / f"pca_model_{mode}.pkl"
-            if not pca_file.is_file():
-                _ = self._fit_concatenated()
-            with open(pca_file, 'rb') as fid:
-                pca_model = pickle.load(fid)
-        self._pca_model = pca_model
+        return self._extension_data[f'pca_{unit_id}']
 
     def get_pca_model(self):
         """
@@ -136,13 +91,18 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         Returns
         -------
-        pca_model: PCA object(s)
+        pca_models: PCA object(s)
             * if mode is "by_channel_local", "pca_model" is a list of PCA model by channel
             * if mode is "by_channel_global" or "concatenated", "pca_model" is a single PCA model
         """
-        if self._pca_model is None:
-            self.load_pca_model()
-        return self._pca_model
+        mode = self._params["mode"]
+        if mode == "by_channel_local":
+            pca_models = []
+            for chan_id in self.waveform_extractor.recording.channel_ids:
+                pca_models.append(self._extension_data[f"pca_model_{mode}_{chan_id}"])
+        else:
+            pca_models = self._extension_data[f"pca_model_{mode}"]
+        return pca_models
 
     def get_all_projections(self, channel_ids=None, unit_ids=None, outputs='id'):
         """
@@ -238,7 +198,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return projections
 
-    def run(self, n_jobs=1, progress_bar=False):
+    #TODO
+    def _run(self, n_jobs=1, progress_bar=False):
         """
         Compute the PCs on waveforms extacted within the WaveformExtarctor.
         Projections are computed only on the waveforms sampled by the WaveformExtractor.
@@ -253,31 +214,46 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         sparsity = p["sparsity"]
 
         # prepare memmap files with npy
-        projection_memmap = {}
+        projection_objects = {}
         unit_ids = we.sorting.unit_ids
 
         for unit_id in unit_ids:
             n_spike = we.get_waveforms(unit_id).shape[0]
-            projection_file = self.extension_folder / f'pca_{unit_id}.npy'
             if p['mode'] in ('by_channel_local', 'by_channel_global'):
                 shape = (n_spike, p['n_components'], num_chans)
             elif p['mode'] == 'concatenated':
                 shape = (n_spike, p['n_components'])
-            proj = np.zeros(shape, dtype=p['dtype'])
-            np.save(projection_file, proj)
-            comp = np.load(str(projection_file), mmap_mode='r+')
-            projection_memmap[unit_id] = comp
+            proj = np.zeros(shape, dtype=p['dtype'])          
+            projection_objects[unit_id] = proj
 
         # run ...
         if p['mode'] == 'by_channel_local':
-            self._run_by_channel_local(projection_memmap, sparsity, n_jobs, progress_bar)
+            self._run_by_channel_local(projection_objects, sparsity, n_jobs, progress_bar)
         elif p['mode'] == 'by_channel_global':
-            self._run_by_channel_global(projection_memmap, sparsity, n_jobs, progress_bar)
+            self._run_by_channel_global(projection_objects, sparsity, n_jobs, progress_bar)
         elif p['mode'] == 'concatenated':
-            self._run_concatenated(projection_memmap, sparsity, n_jobs, progress_bar)
+            self._run_concatenated(projection_objects, sparsity, n_jobs, progress_bar)
+
+        # add projections to extension data
+        for unit_id in unit_ids:
+            self._extension_data[f'pca_{unit_id}'] = projection_objects[unit_id]
             
     def get_data(self):
+        """
+        Get computed PCA projections.
+
+        Returns
+        -------
+        all_labels : 1d np.array
+            Array with all spike labels
+        all_projections : 3d array
+            Array with PCA projections (num_spikes, num_components, num_channels)
+        """
         return self.get_all_projections()
+
+    @staticmethod
+    def get_extension_function():
+        return compute_principal_components
 
     def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg',
                            **job_kwargs):
@@ -353,16 +329,22 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         channel_ids = we.recording.channel_ids
 
         # there is one PCA per channel for independent fit per channel
-        pca_model = [IncrementalPCA(n_components=p['n_components'], whiten=p['whiten']) for _ in channel_ids]
+        pca_models = [IncrementalPCA(n_components=p['n_components'], whiten=p['whiten']) for _ in channel_ids]
         
         mode = p["mode"]
         pca_model_files = []
+        tmp_folder = Path("tmp")
         for chan_ind, chan_id in enumerate(channel_ids):
-            pca = pca_model[chan_ind]
-            pca_model_file = self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl"
-            with pca_model_file.open("wb") as f:
-                pickle.dump(pca, f)
-            pca_model_files.append(pca_model_file)
+            pca_model = pca_models[chan_ind]
+            if n_jobs > 1:
+                if self.extension_folder is not None:
+                    pca_model_file = self.extension_folder / f"tmp_pca_model_{mode}_{chan_id}.pkl"
+                else:
+                    tmp_folder.mkdir(exist_ok=True)
+                    pca_model_file = tmp_folder / f"tmp_pca_model_{mode}_{chan_id}.pkl"
+                with pca_model_file.open("wb") as f:
+                    pickle.dump(pca_model, f)
+                pca_model_files.append(pca_model_file)
         
         # fit
         units_loop = enumerate(unit_ids)
@@ -380,7 +362,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             sparse_channel_inds = we.recording.ids_to_indices(sparse_channel_ids)
             if n_jobs in (0, 1):
                 for wf_ind, chan_ind in enumerate(sparse_channel_inds):
-                    pca = pca_model[chan_ind]
+                    pca = pca_models[chan_ind]
                     pca.partial_fit(wfs[:, :, wf_ind])
             else:
                 Parallel(n_jobs=n_jobs)(delayed(partial_fit_one_channel)(pca_model_files[chan_ind], wfs[:, :, wf_ind])
@@ -388,19 +370,19 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # reload the models (if n_jobs > 1)
         if n_jobs not in (0, 1):
-            pca_model = []
+            pca_models = []
             for chan_ind, chan_id in enumerate(channel_ids):
                 pca_model_file = pca_model_files[chan_ind]
                 with open(pca_model_file, 'rb') as fid:
-                    pca_model.append(pickle.load(fid))
+                    pca_models.append(pickle.load(fid))
+                pca_model_file.unlink()
 
-        # save
+        # add models to extension data
         for chan_ind, chan_id in enumerate(channel_ids):
-            pca = pca_model[chan_ind]
-            with (self.extension_folder / f"pca_model_{mode}_{chan_id}.pkl").open("wb") as f:
-                pickle.dump(pca, f)
-            
-        return pca_model
+            pca_model = pca_models[chan_ind]
+            self._extension_data[f"pca_model_{mode}_{chan_id}"] = pca_model
+
+        return pca_models
 
     def _run_by_channel_local(self, projection_memmap, sparsity, n_jobs, progress_bar):
         """
@@ -469,12 +451,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # save
         mode = p["mode"]
-        with (self.extension_folder / f"pca_model_{mode}.pkl").open("wb") as f:
-            pickle.dump(pca_model, f)
+        self._extension_data[f"pca_model_{mode}"] = pca_model
 
         return pca_model
 
-    def _run_by_channel_global(self, projection_memmap, sparsity, n_jobs, progress_bar):
+    def _run_by_channel_global(self, projection_objects, sparsity, n_jobs, progress_bar):
         """
         In this mode there is one "fit" for all channels.
         The transform is applied by channel.
@@ -505,7 +486,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 continue
             for wf_ind, chan_ind in enumerate(sparse_channel_inds):
                 proj = pca_model.transform(wfs[:, :, wf_ind])
-                projection_memmap[unit_id][:, :, chan_ind] = proj
+                projection_objects[unit_id][:, :, chan_ind] = proj
                 
     def _fit_concatenated(self, sparsity, progress_bar):
         we = self.waveform_extractor
@@ -531,12 +512,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # save
         mode = p["mode"]
-        with (self.extension_folder / f"pca_model_{mode}.pkl").open("wb") as f:
-            pickle.dump(pca_model, f)
+        self._extension_data[f"pca_model_{mode}"] = pca_model
 
         return pca_model
 
-    def _run_concatenated(self, projection_memmap, sparsity, n_jobs, progress_bar):
+    def _run_concatenated(self, projection_objects, sparsity, n_jobs, progress_bar):
         """
         In this mode the waveforms are concatenated and there is
         a global fit_transform at once.
@@ -558,7 +538,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs = we.get_waveforms(unit_id, sparsity=sparsity)
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
             proj = pca_model.transform(wfs_flat)
-            projection_memmap[unit_id][:, :] = proj
+            projection_objects[unit_id][:, :] = proj
 
 
 def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
@@ -686,11 +666,8 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
     >>> # run for all spikes in the SortingExtractor
     >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
-
-    folder = waveform_extractor.folder
-    ext_folder = folder / WaveformPrincipalComponent.extension_name
-    if load_if_exists and ext_folder.is_dir():
-        pc = WaveformPrincipalComponent.load_from_folder(folder)
+    if load_if_exists and waveform_extractor.is_extension(WaveformPrincipalComponent.extension_name):
+        pc = waveform_extractor.load_extension(WaveformPrincipalComponent.extension_name)
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)
         pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype,

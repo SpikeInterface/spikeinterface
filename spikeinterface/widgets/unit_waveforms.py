@@ -52,6 +52,8 @@ class UnitWaveformsWidget(BaseWidget):
         Alpha value for waveforms, default 0.5 (matplotlib backend)
     alpha_templates: float
         Alpha value for templates, default 1 (matplotlib backend)
+    hide_unit_selector : bool
+        For sortingview backend, if True the unit selector is not displayed
     same_axis: bool
         If True, waveforms and templates are diplayed on the same axis, default False (matplotlib backend)
     x_offset_units: bool
@@ -65,7 +67,7 @@ class UnitWaveformsWidget(BaseWidget):
                  unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
                  ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False, unit_selected_waveforms=None,
                  max_spikes_per_unit=50, set_title=True, same_axis=False, x_offset_units=False,
-                 alpha_waveforms=0.5, alpha_templates=1,
+                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False,
                  backend=None, **backend_kwargs):
         we = waveform_extractor
         recording: BaseRecording = we.recording
@@ -142,7 +144,8 @@ class UnitWaveformsWidget(BaseWidget):
             lw_templates=lw_templates,
             alpha_waveforms=alpha_waveforms,
             alpha_templates=alpha_templates,
-            delta_x=delta_x
+            delta_x=delta_x,
+            hide_unit_selector=hide_unit_selector
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

@@ -181,9 +181,10 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     NeoRawIOClass = 'OpenEphysBinaryRawIO'
     name = "openephys"
 
-    def __init__(self, folder_path):
+    def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseEventExtractor.__init__(self, **neo_kwargs)
+        NeoBaseEventExtractor.__init__(self, block_index=block_index,
+                                       **neo_kwargs)
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
@@ -223,7 +224,7 @@ def read_openephys(folder_path, **kwargs):
     return recording
 
 
-def read_openephys_event(folder_path, **kwargs):
+def read_openephys_event(folder_path, block_index=None):
     """
     Read Open Ephys events from 'binary' format.
 
@@ -231,6 +232,8 @@ def read_openephys_event(folder_path, **kwargs):
     ----------
     folder_path: str or Path
         Path to openephys folder
+    block_index: int, optional
+        If there are several blocks (experiments), specify the block index you want to load.
 
     Returns
     -------
@@ -242,5 +245,5 @@ def read_openephys_event(folder_path, **kwargs):
         raise Exception("Events can be read only from 'binary' format")
     else:
         # format = 'binary'
-        event = OpenEphysBinaryEventExtractor(folder_path, **kwargs)
+        event = OpenEphysBinaryEventExtractor(folder_path, block_index=block_index)
     return event

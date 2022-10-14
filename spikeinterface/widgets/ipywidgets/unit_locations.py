@@ -30,10 +30,12 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
+                fig, ax = plt.subplots(
+                    figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], 
+        data_plot['unit_ids'] = data_plot['unit_ids'][:1]
+        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'],
                                                             list(data_plot['unit_colors'].keys()),
                                                             ratios[0] * width_cm, height_cm)
 
@@ -58,7 +60,6 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
             display(self.widget)
 
 
-
 UnitLocationsPlotter.register(UnitLocationsWidget)
 
 
@@ -80,6 +81,8 @@ class PlotUpdater:
         data_plot = self.next_data_plot
         data_plot['unit_ids'] = unit_ids
         data_plot['plot_all_units'] = True
+        data_plot['plot_legend'] = True
+        data_plot['hide_axis'] = True
 
         backend_kwargs = {}
         backend_kwargs['ax'] = self.ax
