@@ -27,15 +27,21 @@ class SortingSummaryWidget(BaseWidget):
     max_amplitudes_per_unit: int or None
         Maximum number of spikes per unit for plotting amplitudes,
         by default None (all spikes)
+    curation: bool
+        If True, the curation widget is added to the summary, to enable
+        remote curation, by default False (sortingview backend)
+    unit_table_properties: list or None
+        List of properties to be added to the unit table, ny default None
+        (sortingview backend)
     """
     possible_backends = {}
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
-                 sparsity=None, max_amplitudes_per_unit=None,
-                 backend=None, **backend_kwargs):
+                 sparsity=None, max_amplitudes_per_unit=None, curation=False,
+                 unit_table_properties=None, backend=None, **backend_kwargs):
         self.check_extensions(waveform_extractor, ['correlograms', 'spike_amplitudes',
-                                                  'unit_locations', 'similarity'])
+                                                   'unit_locations', 'similarity'])
         we = waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -64,7 +70,9 @@ class SortingSummaryWidget(BaseWidget):
             correlograms=ccg_plot_data,
             amplitudes=amps_plot_data,
             similarity=sim_plot_data,
-            unit_locations=locs_plot_data
+            unit_locations=locs_plot_data,
+            curation=curation,
+            unit_table_properties=unit_table_properties
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
