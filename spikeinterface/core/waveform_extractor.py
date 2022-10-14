@@ -11,6 +11,7 @@ from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 import probeinterface
+from .recording_tools import check_probe_do_not_overlap
 
 _possible_template_modes = ('average', 'std', 'median')
 
@@ -277,27 +278,10 @@ class WaveformExtractor:
             return self.recording.get_channel_locations()
         else:
             if self.get_probegroup() is not None:
-                # check that multiple probes are non-overlapping
                 all_probes = self.get_probegroup().probes
-                all_positions = []
-                for i in range(len(all_probes)):
-                    probe_i = all_probes[i]
-                    # check that all positions in probe_j are outside probe_i boundaries
-                    x_bounds_i = [np.min(probe_i.contact_positions[:, 0]),
-                                    np.max(probe_i.contact_positions[:, 0])]
-                    y_bounds_i = [np.min(probe_i.contact_positions[:, 1]),
-                                    np.max(probe_i.contact_positions[:, 1])]
-
-                    for j in range(i + 1, len(all_probes)):
-                        probe_j = all_probes[j]
-
-                        if np.any(np.array([x_bounds_i[0] < cp[0] < x_bounds_i[1] and
-                                            y_bounds_i[0] < cp[1] < y_bounds_i[1]
-                                            for cp in probe_j.contact_positions])):
-                            raise Exception(
-                                "Probes are overlapping! Retrieve locations of single probes separately")
-                all_positions = np.vstack(
-                    [probe.contact_positions for probe in all_probes])
+                # check that multiple probes are non-overlapping
+                check_probe_do_not_overlap(all_probes)
+                all_positions = np.vstack([probe.contact_positions for probe in all_probes])
                 return all_positions
             else:
                 raise Exception('There are no channel locations')
