@@ -490,7 +490,12 @@ if __name__ == '__main__':
             # TODO later check output
             if install_si_from_source:
                 si_source = 'local machine'
-                cmd = f'pip install {si_dev_path_unix}[full]'
+                # install in local copy of host SI folder in sources/spikeinterface to avoid permission errors
+                cmd = 'mkdir -p sources'
+                res_output = container_client.run_command(cmd)
+                cmd = f'cp -r {si_dev_path_unix} sources'
+                res_output = container_client.run_command(cmd)
+                cmd = f'pip install /sources/spikeinterface[full]'
             else:
                 si_source = 'remote repository'
                 cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
