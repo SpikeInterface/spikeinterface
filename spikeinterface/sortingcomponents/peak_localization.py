@@ -158,7 +158,9 @@ class LocalizeMonopolarTriangulation(PeakPipelineStep):
                 enforce_decrease_shells_ptp(
                     wf_ptp, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True
                 )
-            peak_locations[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, self.max_distance_um, self.optimizer)
+
+            peak_locations[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations,
+                                                              self.max_distance_um, self.optimizer)
 
         return peak_locations
 

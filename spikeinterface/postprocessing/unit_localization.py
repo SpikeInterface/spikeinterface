@@ -163,19 +163,27 @@ def solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_
 
     if optimizer == 'least_square':
         args = (wf_ptp, local_contact_locations)
-        output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
-        return tuple(output['x'])
+        try:
+            output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
+            return tuple(output['x'])
+        except Exception as e:
+            print(f"scipy.optimize.least_squares error: {e}")
+            return (np.nan, np.nan, np.nan, np.nan)
 
     if optimizer == 'minimize_with_log_penality':
         x0 = x0[:3]
         bounds = [(bounds[0][0], bounds[1][0]), (bounds[0][1], bounds[1][1]), (bounds[0][2], bounds[1][2])]
         maxptp = wf_ptp.max()
         args = (wf_ptp, local_contact_locations, maxptp)
-        output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
-        # final alpha
-        q = ptp_at(*output['x'], 1.0, local_contact_locations)
-        alpha = (wf_ptp * q).sum() / np.square(q).sum()
-        return (*output['x'], alpha)
+        try:
+            output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
+            # final alpha
+            q = ptp_at(*output['x'], 1.0, local_contact_locations)
+            alpha = (wf_ptp * q).sum() / np.square(q).sum()
+            return (*output['x'], alpha)
+        except Exception as e:
+            print(f"scipy.optimize.minimize error: {e}")
+            return (np.nan, np.nan, np.nan, np.nan)
 
 
 # ----
@@ -211,8 +219,8 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
     return err
 
 
-def compute_monopolar_triangulation(waveform_extractor, optimizer='least_square', radius_um=50, max_distance_um=1000,
-                                    return_alpha=False):
+def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
+                                    radius_um=50, max_distance_um=1000, return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
