@@ -9,7 +9,7 @@ from ..core.waveform_extractor import WaveformExtractor
 
 class AllAmplitudesDistributionsWidget(BaseWidget):
     """
-    Plots spike amplitudes
+    Plots distributions of amplitudes as violon plot for all or some units.
 
     Parameters
     ----------
@@ -17,7 +17,8 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         The input waveform extractor
     unit_ids: list
         List of unit ids.
-    
+    unit_colors: None or dict
+        Dict of colors
     """
     possible_backends = {}
 
