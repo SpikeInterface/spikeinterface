@@ -124,8 +124,8 @@ pykilosort
 ----------
 
 * Python, requires cuda
-* Url: https://github.com/MouseLand/pykilosort
-* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant
+* Url: https://github.com/int-brain-lab/pykilosort / https://github.com/MouseLand/pykilosort
+* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant, Kush Bunga
 
 * Install the python cuda toolkit. In principle, this should work::
     
@@ -135,11 +135,13 @@ pykilosort
     
     conda install cupy 
 
-* Next, clone and install pykilosort. Note that we support the newer version on the `develop` branch::
+* Next, clone and install pykilosort. Note that we support the newer version on the `develop` branch and the `ibl_prod` version from the IBL fork::
 
     pip install phylib, pypandoc
-    git clone https://github.com/MouseLand/pykilosort
-    git checkout develop
+    # recommended
+    git clone --branch ibl_prod https://github.com/int-brain-lab/pykilosort
+    # or
+    git clone --branch develop https://github.com/MouseLand/pykilosort
     cd pykilosort
     pip install -r requirements.txt
     python setup.py install
