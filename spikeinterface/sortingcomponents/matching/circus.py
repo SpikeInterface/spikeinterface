@@ -354,10 +354,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         num_timesteps = len(traces)
 
         if num_timesteps*1000/d['sampling_frequency'] > 100:
-            import sys
             print('CircusOMPPeeler is much faster if chunk duration is around 100ms')
-            sys.exit(0)
-
 
         num_peaks = num_timesteps - num_samples + 1
 
