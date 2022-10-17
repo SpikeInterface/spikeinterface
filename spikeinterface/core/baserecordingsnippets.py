@@ -8,6 +8,7 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 from .base import BaseExtractor, BaseSegment
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
 from .job_tools import job_keys
+from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
 
@@ -287,27 +288,10 @@ class BaseRecordingSnippets(BaseExtractor):
                 probe = self.get_probe()
                 positions = probe.contact_positions[channel_indices]
             else:
-                # check that multiple probes are non-overlapping
                 all_probes = self.get_probes()
-                all_positions = []
-                for i in range(len(all_probes)):
-                    probe_i = all_probes[i]
-                    # check that all positions in probe_j are outside probe_i boundaries
-                    x_bounds_i = [np.min(probe_i.contact_positions[:, 0]),
-                                  np.max(probe_i.contact_positions[:, 0])]
-                    y_bounds_i = [np.min(probe_i.contact_positions[:, 1]),
-                                  np.max(probe_i.contact_positions[:, 1])]
-
-                    for j in range(i + 1, len(all_probes)):
-                        probe_j = all_probes[j]
-
-                        if np.any(np.array([x_bounds_i[0] < cp[0] < x_bounds_i[1] and
-                                            y_bounds_i[0] < cp[1] < y_bounds_i[1]
-                                            for cp in probe_j.contact_positions])):
-                            raise Exception(
-                                "Probes are overlapping! Retrieve locations of single probes separately")
-                all_positions = np.vstack(
-                    [probe.contact_positions for probe in all_probes])
+                # check that multiple probes are non-overlapping
+                check_probe_do_not_overlap(all_probes)
+                all_positions = np.vstack([probe.contact_positions for probe in all_probes])
                 positions = all_positions[channel_indices]
             return select_axes(positions, axes)
         else:

@@ -22,10 +22,10 @@ class UnitsDepthAmplitudeWidget(BaseWidget):
     def plot(self):
         ax = self.ax
         we = self.we
-        unit_ids = we.sorting.unit_ids
+        unit_ids = we.unit_ids
 
         channels_index = get_template_extremum_channel(we, peak_sign=self.peak_sign, outputs='index')
-        contact_positions = we.recording.get_channel_locations()
+        contact_positions = we.get_channel_locations()
 
         channel_depth = contact_positions[:, self.depth_axis]
         unit_depth = [channel_depth[channels_index[unit_id]] for unit_id in unit_ids]
@@ -37,7 +37,7 @@ class UnitsDepthAmplitudeWidget(BaseWidget):
 
         num_spikes = np.zeros(len(unit_ids))
         for i, unit_id in enumerate(unit_ids):
-            for segment_index in range(we.sorting.get_num_segments()):
+            for segment_index in range(we.get_num_segments()):
                 st = we.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 num_spikes[i] += st.size
 
