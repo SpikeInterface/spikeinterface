@@ -58,7 +58,7 @@ class UnitLocalizationWidget(BaseWidget):
 
     def plot(self):
         we = self.waveform_extractor
-        unit_ids = we.sorting.unit_ids
+        unit_ids = we.unit_ids
 
         if we.is_extension('unit_locations'):
             unit_locations = we.load_extension('unit_locations').get_data()
@@ -66,7 +66,7 @@ class UnitLocalizationWidget(BaseWidget):
             unit_locations = compute_unit_locations(we, method=self.method, **self.method_kwargs)
 
         ax = self.ax
-        probegroup = we.recording.get_probegroup()
+        probegroup = we.get_probegroup()
         probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
         contacts_kargs = dict(alpha=1., edgecolor='k', lw=0.5)
         
