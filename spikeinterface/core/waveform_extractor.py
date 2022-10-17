@@ -106,6 +106,7 @@ class WaveformExtractor:
             txt = txt + f'\n  before:{self.nbefore} after:{self.nafter} n_per_units:{max_spikes_per_unit}'
         return txt
 
+    @classmethod
     def load_from_folder(cls, folder, with_recording=True, sorting=None):
         folder = Path(folder)
         assert folder.is_dir(), f'This waveform folder does not exists {folder}'
