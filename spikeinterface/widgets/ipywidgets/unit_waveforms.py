@@ -39,7 +39,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
                 plt.show()
 
         data_plot['unit_ids'] = data_plot['unit_ids'][:1]
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.sorting.unit_ids,
+        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.unit_ids,
                                                             ratios[0] * width_cm, height_cm)
 
         same_axis_button = widgets.Checkbox(
@@ -140,7 +140,7 @@ class PlotUpdater:
                     ax.axis("off")
 
         # update probe plot
-        channel_locations = self.we.recording.get_channel_locations()
+        channel_locations = self.we.get_channel_locations()
         self.ax_probe.plot(channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray",
                            markersize=2, alpha=0.5)
         self.ax_probe.axis("off")
