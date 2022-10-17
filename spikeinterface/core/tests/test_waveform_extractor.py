@@ -2,9 +2,11 @@ import pytest
 from pathlib import Path
 import shutil
 import numpy as np
+import platform
+
 
 from spikeinterface.core.testing_tools import generate_recording, generate_sorting
-from spikeinterface import WaveformExtractor, extract_waveforms
+from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -141,6 +143,53 @@ def test_extract_waveforms():
     assert np.array_equal(wf_mem, wf3)
 
 
+def test_recordingless():
+    durations = [30, 40]
+    sampling_frequency = 30000.
+
+    # 2 segments
+    num_channels = 2
+    recording = generate_recording(num_channels=num_channels, durations=durations,
+                                   sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=True)
+    num_units = 15
+    sorting = generate_sorting(
+        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
+
+    # now save and delete saved file
+    recording = recording.save(folder=cache_folder / "recording1")
+    sorting = sorting.save(folder=cache_folder / "sorting1")
+
+    # recording and sorting are not dumpable
+    wf_folder = cache_folder / "wf_recordingless"
+
+    # save with relative paths
+    we = extract_waveforms(recording, sorting, wf_folder,
+                           use_relative_path=True, return_scaled=False)
+    we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
+
+    assert isinstance(we.recording, BaseRecording)
+    assert we_loaded._recording is None
+    with pytest.raises(ValueError):
+        # reccording cannot be accessible
+        rec = we_loaded.recording
+    assert we.sampling_frequency == we_loaded.sampling_frequency
+    assert np.array_equal(we.recording.channel_ids, np.array(we_loaded.channel_ids))
+    assert np.array_equal(we.recording.get_channel_locations(),
+                          np.array(we_loaded.get_channel_locations()))
+    assert we.get_num_channels() == we_loaded.get_num_channels()
+    
+    probe = we_loaded.get_probe()
+    probegroup = we_loaded.get_probegroup()
+    
+
+    # delete original recording and rely on rec_attributes
+    if platform.system() != "Windows":
+        shutil.rmtree(cache_folder / "recording1")
+        we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
+        assert we_loaded._recording is None
+
+
 def test_sparsity():
     durations = [30]
     sampling_frequency = 30000.
@@ -235,12 +284,10 @@ def test_portability():
     assert we_loaded.recording is not None
     assert we_loaded.sorting is not None
 
-    assert np.allclose(
-        we.recording.get_channel_ids(), we_loaded.recording.get_channel_ids())
-    assert np.allclose(
-        we.sorting.get_unit_ids(), we_loaded.sorting.get_unit_ids())
+    assert np.allclose(we.channel_ids, we_loaded.recording.channel_ids)
+    assert np.allclose(we.unit_ids, we_loaded.unit_ids)
 
-    for unit in we.sorting.get_unit_ids():
+    for unit in we.unit_ids:
         wf = we.get_waveforms(unit_id=unit)
         wf_loaded = we_loaded.get_waveforms(unit_id=unit)
 
@@ -248,7 +295,8 @@ def test_portability():
 
 
 if __name__ == '__main__':
-    test_WaveformExtractor()
-    test_extract_waveforms()
-    test_sparsity()
-    test_portability()
+    # test_WaveformExtractor()
+    # test_extract_waveforms()
+    # test_sparsity()
+    # test_portability()
+    test_recordingless()

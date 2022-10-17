@@ -54,7 +54,7 @@ def test_get_template_extremum_channel_peak_shift():
     # DEBUG
     # import matplotlib.pyplot as plt
     # extremum_channels_ids = get_template_extremum_channel(we, peak_sign='both')
-    # for unit_id in we.sorting.unit_ids:
+    # for unit_id in we.unit_ids:
     #     chan_id = extremum_channels_ids[unit_id]
     #     chan_ind = we.recording.id_to_index(chan_id)
     #     template = we.get_template(unit_id)
