@@ -36,8 +36,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     def __repr__(self):
         we = self.waveform_extractor
         clsname = self.__class__.__name__
-        nseg = we.recording.get_num_segments()
-        nchan = we.recording.get_num_channels()
+        nseg = we.get_num_segments()
+        nchan = we.get_num_channels()
         txt = f'{clsname}: {nchan} channels - {nseg} segments'
         if len(self._params) > 0:
             mode = self._params['mode']
@@ -210,12 +210,12 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         """
         p = self._params
         we = self.waveform_extractor
-        num_chans = we.recording.get_num_channels()
+        num_chans = we.get_num_channels()
         sparsity = p["sparsity"]
 
         # prepare memmap files with npy
         projection_objects = {}
-        unit_ids = we.sorting.unit_ids
+        unit_ids = we.unit_ids
 
         for unit_id in unit_ids:
             n_spike = we.get_waveforms(unit_id).shape[0]
@@ -288,7 +288,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
         spike_times, spike_labels = all_spikes[0]
 
-        max_channels_per_template = min(max_channels_per_template, we.recording.get_num_channels())
+        max_channels_per_template = min(max_channels_per_template, we.get_num_channels())
 
         best_channels_index = get_template_channel_sparsity(we, outputs="index", peak_sign=peak_sign,
                                                             num_channels=max_channels_per_template)
@@ -325,8 +325,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         p = self._params
 
-        unit_ids = we.sorting.unit_ids
-        channel_ids = we.recording.channel_ids
+        unit_ids = we.unit_ids
+        channel_ids = we.channel_ids
 
         # there is one PCA per channel for independent fit per channel
         pca_models = [IncrementalPCA(n_components=p['n_components'], whiten=p['whiten']) for _ in channel_ids]
@@ -392,8 +392,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         p = self._params
 
-        unit_ids = we.sorting.unit_ids
-        channel_ids = we.recording.channel_ids
+        unit_ids = we.unit_ids
+        channel_ids = we.channel_ids
 
         pca_model = self._fit_by_channel_local(sparsity, n_jobs, progress_bar)
 
@@ -428,8 +428,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         p = self._params
 
-        unit_ids = we.sorting.unit_ids
-        channel_ids = we.recording.channel_ids
+        unit_ids = we.unit_ids
+        channel_ids = we.channel_ids
 
         # there is one unique PCA accross channels
         pca_model = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
@@ -464,8 +464,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         p = self._params
 
-        unit_ids = we.sorting.unit_ids
-        channel_ids = we.recording.channel_ids
+        unit_ids = we.unit_ids
+        channel_ids = we.channel_ids
 
         pca_model = self._fit_by_channel_global(sparsity, progress_bar)
 
@@ -492,10 +492,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         p = self._params
         if sparsity is not None:
-            sparsity0 = sparsity[we.sorting.unit_ids[0]]
+            sparsity0 = sparsity[we.unit_ids[0]]
             assert all(len(chans) == len(sparsity0) for u, chans in sparsity.items()), ("When using sparsity in "
                 "concatenated mode, make sure each unit has the same number of sparse channels")
-        unit_ids = we.sorting.unit_ids
+        unit_ids = we.unit_ids
 
         # there is one unique PCA accross channels
         pca_model = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
@@ -524,7 +524,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         p = self._params
 
-        unit_ids = we.sorting.unit_ids
+        unit_ids = we.unit_ids
 
         # there is one unique PCA accross channels
         pca_model = self._fit_concatenated(sparsity, progress_bar)

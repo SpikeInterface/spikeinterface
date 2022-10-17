@@ -27,14 +27,14 @@ class TimeseriesPlotter(MplPlotter):
 
             for layer_key, traces in zip(dp.layer_keys, dp.list_traces):
                 for i, chan_id in enumerate(dp.channel_ids):
-                    offset = dp.vspacing * (n - 1 - i)
+                    offset = dp.vspacing * i
                     color = dp.colors[layer_key][chan_id]
                     ax.plot(dp.times, offset + traces[:, i], color=color)
                 ax.get_lines()[-1].set_label(layer_key)
 
             if dp.show_channel_ids:
                 ax.set_yticks(np.arange(n) * dp.vspacing)
-                channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])[::-1]
+                channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
             ax.set_xlim(*dp.time_range)
             ax.set_ylim(-dp.vspacing, dp.vspacing * n)
@@ -49,7 +49,7 @@ class TimeseriesPlotter(MplPlotter):
             clim = list(dp.clims.values())[0]
             extent = (dp.time_range[0], dp.time_range[1], min_y, max_y)
             im = ax.imshow(dp.list_traces[0].T, interpolation='nearest',
-                           origin='upper', aspect='auto', extent=extent, cmap=dp.cmap)
+                           origin='lower', aspect='auto', extent=extent, cmap=dp.cmap)
 
             im.set_clim(*clim)
 
@@ -58,7 +58,7 @@ class TimeseriesPlotter(MplPlotter):
 
             if dp.show_channel_ids:
                 ax.set_yticks(np.linspace(min_y, max_y, n) + (max_y - min_y) / n * 0.5)
-                channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])[::-1]
+                channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
 
 TimeseriesPlotter.register(TimeseriesWidget)
