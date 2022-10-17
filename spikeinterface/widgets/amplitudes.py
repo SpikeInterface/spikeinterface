@@ -45,7 +45,6 @@ class AmplitudesWidget(BaseWidget):
         sac = waveform_extractor.load_extension('spike_amplitudes')
         amplitudes = sac.get_data(outputs='by_unit')
 
-
         if unit_ids is None:
             unit_ids = sorting.unit_ids
     

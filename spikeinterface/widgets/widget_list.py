@@ -34,6 +34,7 @@ from .spike_locations import SpikeLocationsWidget
 
 # amplitudes
 from .amplitudes import AmplitudesWidget
+from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 
 # metrics
 from .quality_metrics import QualityMetricsWidget
@@ -52,6 +53,7 @@ from .sorting_summary import SortingSummaryWidget
 
 widget_list = [
     AmplitudesWidget,
+    AllAmplitudesDistributionsWidget,
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
     QualityMetricsWidget,
@@ -95,8 +97,10 @@ for wcls in widget_list:
                 backend_kwargs_str += f"\n        - {bk}: {bk_dsc}"
     wcls.__doc__ = wcls_doc.format(backends=backend_str, backend_kwargs=backend_kwargs_str)
 
+
 # make function for all widgets
 plot_amplitudes = define_widget_function_from_class(AmplitudesWidget, 'plot_amplitudes')
+plot_all_amplitudes_distributions = define_widget_function_from_class(AllAmplitudesDistributionsWidget, 'plot_all_amplitudes_distributions')
 plot_autocorrelograms = define_widget_function_from_class(AutoCorrelogramsWidget, 'plot_autocorrelograms')
 plot_crosscorrelograms = define_widget_function_from_class(CrossCorrelogramsWidget, 'plot_crosscorrelograms')
 plot_quality_metrics = define_widget_function_from_class(QualityMetricsWidget, "plot_quality_metrics")

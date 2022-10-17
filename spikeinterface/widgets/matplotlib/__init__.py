@@ -1,4 +1,5 @@
 from .amplitudes import AmplitudesPlotter
+from .all_amplitudes_distributions import AllAmplitudesDistributionsPlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
 from .quality_metrics import QualityMetricsPlotter
