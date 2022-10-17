@@ -1,7 +1,7 @@
 from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_from_class, check_json
 
 
 class AddTemplatesRecording(BaseRecording):
@@ -38,6 +38,7 @@ class AddTemplatesRecording(BaseRecording):
     def __init__(self, sorting: BaseSorting, templates: np.ndarray, nbefore: Union[List[int], int, None] = None,
                  amplitude_factor: Union[List[List[float]], List[float], float] = 1.0,
                  parent_recording: Union[BaseRecording, None] = None, num_samples: Union[List[int], None] = None) -> None:
+        templates = np.array(templates)
         self._check_templates(templates)
 
         channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
@@ -95,6 +96,18 @@ class AddTemplatesRecording(BaseRecording):
                                                              amplitude_factor[start:end], parent_recording_segment, num_samples[segment_index])
             self.add_recording_segment(recording_segment)
 
+        self._kwargs = {
+            "sorting": sorting.to_dict(),
+            "templates": templates.tolist(),
+            "nbefore": nbefore,
+            "amplitude_factor": amplitude_factor
+        }
+        if parent_recording is None:
+            self._kwargs['num_samples'] = num_samples
+        else:
+            self._kwargs['parent_recording'] = parent_recording.to_dict()
+        self._kwargs = check_json(self._kwargs)
+
 
     @staticmethod
     def _check_templates(templates: np.ndarray):
@@ -124,13 +137,19 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None,
                    channel_indices: Union[List, None] = None) -> np.ndarray:
-        n_channels = self.templates.shape[2]
         start_frame = 0 if start_frame is None else start_frame
         end_frame = self.num_samples if end_frame is None else end_frame
-        channel_indices = list(range(n_channels)) if channel_indices is None else channel_indices
+        channel_indices = list(range(self.templates.shape[2])) if channel_indices is None else channel_indices
+        if isinstance(channel_indices, slice):
+            stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
+            start = channel_indices.start if channel_indices.start is not None else 0
+            step = channel_indices.step if channel_indices.step is not None else 1
+            n_channels = (stop-start) // step
+        else:
+            n_channels = len(channel_indices)
 
         if self.parent_recording is not None:
-            traces = self.parent_recording.get_traces(start_frame, end_frame, channel_indices)
+            traces = self.parent_recording.get_traces(start_frame, end_frame, channel_indices).copy()
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 
@@ -141,7 +160,7 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
             spike = self.spike_vector[i]
             t = spike['sample_ind']
             unit_ind = spike['unit_ind']
-            template = self.templates[unit_ind, :]
+            template = self.templates[unit_ind][:, channel_indices]
 
             start_traces = t - self.nbefore[unit_ind] - start_frame
             end_traces = start_traces + template.shape[0]
@@ -158,8 +177,15 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
                 end_template = template.shape[0] + end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
+            print("--------------")
+            print(channel_indices)
+            print(self.templates[unit_ind, :, :].shape)
+            print(self.templates[unit_ind, :, channel_indices].shape)
             traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64) * self.amplitude_factor[i]).astype(traces.dtype)
 
         return traces.astype(self.dtype)
+
+    def get_num_samples(self) -> int:
+        return self.num_samples
 
 add_templates = define_function_from_class(source_class=AddTemplatesRecording, name="add_templates")
