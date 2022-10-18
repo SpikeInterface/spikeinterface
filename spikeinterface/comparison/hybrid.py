@@ -36,6 +36,11 @@ class HybridUnitsRecording(AddTemplatesRecording):
     injected_sorting_folder: str | Path | None
         If given, the injected sorting is saved to this folder.
         It must be specified if injected_sorting is None or not dumpable.
+
+    Returns
+    -------
+    hybrid_units_recording: HybridUnitsRecording
+        The recording containing real and hybrid units.
     """
 
     def __init__(self, parent_recording: BaseRecording, templates: np.ndarray,
@@ -116,6 +121,11 @@ class HybridSpikesRecording(AddTemplatesRecording):
     injected_sorting_folder: str | Path | None
         If given, the injected sorting is saved to this folder.
         It must be specified if injected_sorting is None or not dumpable.
+
+    Returns
+    -------
+    hybrid_spikes_recording: HybridSpikesRecording:
+        The recording containing units with real and hybrid spikes.
     """
 
     def __init__(self, wvf_extractor: Union[WaveformExtractor, Path], injected_sorting: Union[BaseSorting, None] = None,
