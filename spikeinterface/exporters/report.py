@@ -71,8 +71,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         correlograms, bins = compute_correlograms(we, window_ms=100.0, bin_ms=1.0)
     else:
         correlograms = None
-        print('export_report(): no correlograms exported use compute_correlograms() if you want then')
-
+        print('export_report(): correlograms will not be exported. Use compute_correlograms() if you want to include them.')
 
     # pre-compute unit locations if not done
     if not we.is_extension('unit_locations'):
