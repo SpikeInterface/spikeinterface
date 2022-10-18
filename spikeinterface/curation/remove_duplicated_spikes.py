@@ -3,6 +3,12 @@ import numpy as np
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
+try:
+	import numba
+	HAVE_NUMBA = True
+except ModuleNotFoundError as err:
+	HAVE_NUMBA = False
+
 
 class RemoveDuplicatedSpikesSorting(BaseSorting):
 	"""
@@ -48,13 +54,17 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
 
 		for unit_id in unit_ids:
 			if method == "random":
-				self._duplicated_spikes[unit_id] = find_duplicated_spikes_random(parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None), censored_period)
+				func = find_duplicated_spikes_random
 			elif method == "keep_first":
-				raise NotImplementedError()
+				assert HAVE_NUMBA
+				func = find_duplicated_spikes_keep_first
 			elif method == "keep_last":
-				raise NotImplementedError()
+				assert HAVE_NUMBA
+				func = find_duplicated_spikes_keep_last
 			else:
 				raise ValueError(f"Method '{method}' isn't a valid method for RemoveDuplicatedSpikesSorting.")
+
+			self._duplicated_spikes[unit_id] = func(parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None), censored_period)
 
 
 	def get_unit_spike_train(self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None) -> np.ndarray:
@@ -114,3 +124,36 @@ def find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int,
 	np.random.set_state(rand_state)
 
 	return indices_of_duplicates[~mask]
+
+if HAVE_NUMBA:
+	@numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True, parallel=True)
+	def find_duplicated_spikes_keep_first(spike_train, censored_period):
+		indices_of_duplicates = numba.typed.List()
+		N = len(spike_train)
+
+		for i in range(N-1):
+			if i in indices_of_duplicates:
+				continue
+
+			for j in range(i+1, N):
+				if spike_train[j] - spike_train[i] > censored_period:
+					break
+				indices_of_duplicates.append(j)
+
+		return np.asarray(indices_of_duplicates)
+
+	@numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True, parallel=True)
+	def find_duplicated_spikes_keep_last(spike_train, censored_period):
+		indices_of_duplicates = numba.typed.List()
+		N = len(spike_train)
+
+		for i in range(N-1, 0, -1):
+			if i in indices_of_duplicates:
+				continue
+
+			for j in range(i-1, -1, -1):
+				if spike_train[i] - spike_train[j] > censored_period:
+					break
+				indices_of_duplicates.append(j)
+
+		return np.asarray(indices_of_duplicates)
