@@ -4,156 +4,156 @@ from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
-	import numba
-	HAVE_NUMBA = True
+    import numba
+    HAVE_NUMBA = True
 except ModuleNotFoundError as err:
-	HAVE_NUMBA = False
+    HAVE_NUMBA = False
 
 
 class RemoveDuplicatedSpikesSorting(BaseSorting):
-	"""
-	Class to remove duplicated spikes from the spike trains.
-	Spikes are considered duplicated if they are less than x
-	ms appart where x is the censored period.
+    """
+    Class to remove duplicated spikes from the spike trains.
+    Spikes are considered duplicated if they are less than x
+    ms appart where x is the censored period.
 
-	Parameters
-	----------
-	sorting: BaseSorting
-		The parent sorting.
-	censored_period_ms: float
-		The censored period to consider 2 spikes to be duplicated (in ms).
-	method: str in ("keep_first", "keep_last", "random")
-		Method used to remove the duplicated spikes.
+    Parameters
+    ----------
+    sorting: BaseSorting
+        The parent sorting.
+    censored_period_ms: float
+        The censored period to consider 2 spikes to be duplicated (in ms).
+    method: str in ("keep_first", "keep_last", "random")
+        Method used to remove the duplicated spikes.
 
-	Returns
-	-------
-	sorting_without_duplicated_spikes: Remove_DuplicatedSpikesSorting
-		The sorting without any duplicated spikes.
-	"""
+    Returns
+    -------
+    sorting_without_duplicated_spikes: Remove_DuplicatedSpikesSorting
+        The sorting without any duplicated spikes.
+    """
 
-	def __init__(self, sorting: BaseSorting, censored_period_ms: float = 0.3, method: str = "random") -> None:
-		super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
-		censored_period = int(round(censored_period_ms * 1e-3 * sorting.get_sampling_frequency()))
+    def __init__(self, sorting: BaseSorting, censored_period_ms: float = 0.3, method: str = "random") -> None:
+        super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
+        censored_period = int(round(censored_period_ms * 1e-3 * sorting.get_sampling_frequency()))
 
-		for segment in sorting._sorting_segments:
-			self.add_sorting_segment(RemoveDuplicatedSpikesSortingSegment(segment, censored_period, sorting.unit_ids, method))
+        for segment in sorting._sorting_segments:
+            self.add_sorting_segment(RemoveDuplicatedSpikesSortingSegment(segment, censored_period, sorting.unit_ids, method))
 
-		self._kwargs = {
-			'sorting': sorting.to_dict(),
-			'censored_period_ms': censored_period_ms,
-			'method': method
-		}
+        self._kwargs = {
+            'sorting': sorting.to_dict(),
+            'censored_period_ms': censored_period_ms,
+            'method': method
+        }
 
 
 class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
 
-	def __init__(self, parent_segment: BaseSortingSegment, censored_period: int, unit_ids, method: str) -> None:
-		super().__init__()
-		self._parent_segment = parent_segment
-		self._duplicated_spikes = {}
+    def __init__(self, parent_segment: BaseSortingSegment, censored_period: int, unit_ids, method: str) -> None:
+        super().__init__()
+        self._parent_segment = parent_segment
+        self._duplicated_spikes = {}
 
-		for unit_id in unit_ids:
-			if method == "random":
-				func = find_duplicated_spikes_random
-			elif method == "keep_first":
-				assert HAVE_NUMBA
-				func = find_duplicated_spikes_keep_first
-			elif method == "keep_last":
-				assert HAVE_NUMBA
-				func = find_duplicated_spikes_keep_last
-			else:
-				raise ValueError(f"Method '{method}' isn't a valid method for RemoveDuplicatedSpikesSorting.")
+        for unit_id in unit_ids:
+            if method == "random":
+                func = find_duplicated_spikes_random
+            elif method == "keep_first":
+                assert HAVE_NUMBA
+                func = find_duplicated_spikes_keep_first
+            elif method == "keep_last":
+                assert HAVE_NUMBA
+                func = find_duplicated_spikes_keep_last
+            else:
+                raise ValueError(f"Method '{method}' isn't a valid method for RemoveDuplicatedSpikesSorting.")
 
-			self._duplicated_spikes[unit_id] = func(parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None), censored_period)
+            self._duplicated_spikes[unit_id] = func(parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None), censored_period)
 
 
-	def get_unit_spike_train(self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None) -> np.ndarray:
-		spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None)
-		spike_train = np.delete(spike_train, self._duplicated_spikes[unit_id])
+    def get_unit_spike_train(self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None) -> np.ndarray:
+        spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None)
+        spike_train = np.delete(spike_train, self._duplicated_spikes[unit_id])
 
-		if start_frame == None:
-			start_frame = 0
-		if end_frame == None:
-			end_frame = spike_train[-1]
+        if start_frame == None:
+            start_frame = 0
+        if end_frame == None:
+            end_frame = spike_train[-1]
 
-		start = np.searchsorted(spike_train, start_frame, side="left")
-		end   = np.searchsorted(spike_train, end_frame, side="right")
+        start = np.searchsorted(spike_train, start_frame, side="left")
+        end   = np.searchsorted(spike_train, end_frame, side="right")
 
-		return spike_train[start : end]
+        return spike_train[start : end]
 
 
 remove_duplicated_spikes = define_function_from_class(source_class=RemoveDuplicatedSpikesSorting, name="remove_duplicated_spikes")
 
 
 def find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int, seed: Optional[int] = 186472189) -> np.ndarray:
-	"""
-	Finds the indices where there a spike in considered a duplicate.
-	When two spikes are closer together than the censored period,
-	one of them is randomly taken out.
-	Randomness allows to make sure no bias is generated by always
-	keeping the first or last spike. However, it may not always remove
-	the same number of spikes each time it is called.
+    """
+    Finds the indices where there a spike in considered a duplicate.
+    When two spikes are closer together than the censored period,
+    one of them is randomly taken out.
+    Randomness allows to make sure no bias is generated by always
+    keeping the first or last spike. However, it may not always remove
+    the same number of spikes each time it is called.
 
-	Parameters
-	----------
-	spike_train: np.ndarray
-		The spike train on which to look for duplicated spikes.
-	censored_period: int
-		The censored period for duplicates (in sample time).
-	seed: int
-		The random seed for taking out spikes.
+    Parameters
+    ----------
+    spike_train: np.ndarray
+        The spike train on which to look for duplicated spikes.
+    censored_period: int
+        The censored period for duplicates (in sample time).
+    seed: int
+        The random seed for taking out spikes.
 
-	Returns
-	-------
-	indices_of_duplicates: np.ndarray
-		The indices of spikes considered to be duplicates.
-	"""
+    Returns
+    -------
+    indices_of_duplicates: np.ndarray
+        The indices of spikes considered to be duplicates.
+    """
 
-	rand_state = np.random.get_state()	# Need to store the old state to not seed globally.
-	np.random.seed(seed)				# Need to seed to have the same result for parallelization.
+    rand_state = np.random.get_state()  # Need to store the old state to not seed globally.
+    np.random.seed(seed)                # Need to seed to have the same result for parallelization.
 
-	indices_of_duplicates = np.where(np.diff(spike_train) <= censored_period)[0]
-	indices_of_duplicates = np.unique(np.concatenate((indices_of_duplicates, indices_of_duplicates + 1)))
-	mask = np.ones(len(indices_of_duplicates), dtype=bool)
+    indices_of_duplicates = np.where(np.diff(spike_train) <= censored_period)[0]
+    indices_of_duplicates = np.unique(np.concatenate((indices_of_duplicates, indices_of_duplicates + 1)))
+    mask = np.ones(len(indices_of_duplicates), dtype=bool)
 
-	# While there are still some duplicated spikes detected, remove one of them at random.
-	while not np.all(np.diff(spike_train[indices_of_duplicates][mask]) > censored_period):
-		index = np.random.randint(low=0, high=len(mask))
-		mask[index] = False
+    # While there are still some duplicated spikes detected, remove one of them at random.
+    while not np.all(np.diff(spike_train[indices_of_duplicates][mask]) > censored_period):
+        index = np.random.randint(low=0, high=len(mask))
+        mask[index] = False
 
-	np.random.set_state(rand_state)
+    np.random.set_state(rand_state)
 
-	return indices_of_duplicates[~mask]
+    return indices_of_duplicates[~mask]
 
 if HAVE_NUMBA:
-	@numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True, parallel=True)
-	def find_duplicated_spikes_keep_first(spike_train, censored_period):
-		indices_of_duplicates = numba.typed.List()
-		N = len(spike_train)
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True, parallel=True)
+    def find_duplicated_spikes_keep_first(spike_train, censored_period):
+        indices_of_duplicates = numba.typed.List()
+        N = len(spike_train)
 
-		for i in range(N-1):
-			if i in indices_of_duplicates:
-				continue
+        for i in range(N-1):
+            if i in indices_of_duplicates:
+                continue
 
-			for j in range(i+1, N):
-				if spike_train[j] - spike_train[i] > censored_period:
-					break
-				indices_of_duplicates.append(j)
+            for j in range(i+1, N):
+                if spike_train[j] - spike_train[i] > censored_period:
+                    break
+                indices_of_duplicates.append(j)
 
-		return np.asarray(indices_of_duplicates)
+        return np.asarray(indices_of_duplicates)
 
-	@numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True, parallel=True)
-	def find_duplicated_spikes_keep_last(spike_train, censored_period):
-		indices_of_duplicates = numba.typed.List()
-		N = len(spike_train)
+    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True, parallel=True)
+    def find_duplicated_spikes_keep_last(spike_train, censored_period):
+        indices_of_duplicates = numba.typed.List()
+        N = len(spike_train)
 
-		for i in range(N-1, 0, -1):
-			if i in indices_of_duplicates:
-				continue
+        for i in range(N-1, 0, -1):
+            if i in indices_of_duplicates:
+                continue
 
-			for j in range(i-1, -1, -1):
-				if spike_train[i] - spike_train[j] > censored_period:
-					break
-				indices_of_duplicates.append(j)
+            for j in range(i-1, -1, -1):
+                if spike_train[i] - spike_train[j] > censored_period:
+                    break
+                indices_of_duplicates.append(j)
 
-		return np.asarray(indices_of_duplicates)
+        return np.asarray(indices_of_duplicates)
