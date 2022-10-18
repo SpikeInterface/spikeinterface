@@ -1,3 +1,4 @@
+import math
 from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
@@ -144,7 +145,7 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
             stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
-            n_channels = (stop-start) // step
+            n_channels = math.ceil((stop-start) / step)
         else:
             n_channels = len(channel_indices)
 
@@ -177,10 +178,6 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
                 end_template = template.shape[0] + end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
-            print("--------------")
-            print(channel_indices)
-            print(self.templates[unit_ind, :, :].shape)
-            print(self.templates[unit_ind, :, channel_indices].shape)
             traces[start_traces : end_traces] += (template[start_template : end_template].astype(np.float64) * self.amplitude_factor[i]).astype(traces.dtype)
 
         return traces.astype(self.dtype)

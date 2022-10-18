@@ -1,6 +1,7 @@
+from pathlib import Path
 from typing import List, Union
 import numpy as np
-from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, AddTemplatesRecording
+from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, NpzSortingExtractor, AddTemplatesRecording
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core.testing_tools import generate_sorting
 from spikeinterface.extractors.toy_example import synthesize_random_firings
@@ -13,36 +14,55 @@ class HybridUnitsRecording(AddTemplatesRecording):
 
     Parameters
     ----------
-    target_recording: BaseRecording
+    parent_recording: BaseRecording
         Existing recording to add on top of.
     templates: np.ndarray[n_units, n_samples, n_channels]
         Array containing the templates to inject for all the units.
+    sorting: BaseSorting | None:
+        The sorting for the injected units.
+        If None, will be generated using the following parameters.
     nbefore: list[int] | int | None
         Where is the center of the template for each unit?
         If None, will default to the highest peak.
     firing_rate: float
         The firing rate of the injected units (in Hz).
+    amplitude_factor: np.ndarray | None:
+        The amplitude factor for each spike.
+        If None, will be generated as a gaussian centered at 1.0 and with an std of amplitude_std.
     amplitude_std: float
         The standard deviation of the amplitude (centered at 1.0).
     refractory_period_ms: float
         The refractory period of the injected spike train (in ms).
+    filename: str | Path | None
+        If given, the injected sorting is a NpzSortingExtractor.
+        Filename extension must be '.npz'
     """
 
-    def __init__(self, target_recording: BaseRecording, templates: np.ndarray,
-                 nbefore: Union[List[int], int, None] = None, firing_rate: float = 10,
-                 amplitude_std: float = 0.0, refractory_period_ms: float = 2.0):
-        num_samples = [target_recording.get_num_frames(seg_index) for seg_index in range(target_recording.get_num_segments())]
-        fs = target_recording.sampling_frequency
+    def __init__(self, parent_recording: BaseRecording, templates: np.ndarray, sorting: Union[BaseSorting, None] = None,
+                 nbefore: Union[List[int], int, None] = None, firing_rate: float = 10, amplitude_factor: Union[np.ndarray, None] = None,
+                 amplitude_std: float = 0.0, refractory_period_ms: float = 2.0, filename: Union[str, Path, None] = None,
+                 ):
+        num_samples = [parent_recording.get_num_frames(seg_index) for seg_index in range(parent_recording.get_num_segments())]
+        fs = parent_recording.sampling_frequency
         n_units = len(templates)
 
-        sorting = generate_sorting(num_units=len(templates), sampling_frequency=fs,
-                                   durations=[target_recording.get_num_frames(seg_index) / fs for seg_index in range(target_recording.get_num_segments())],
-                                   firing_rate=firing_rate, refractory_period=refractory_period_ms)
+        if sorting is not None:
+            assert sorting.get_num_units() == n_units
+            assert parent_recording.get_num_segments() == sorting.get_num_segments()
+        else:
+            sorting = generate_sorting(num_units=len(templates), sampling_frequency=fs,
+                                       durations=[parent_recording.get_num_frames(seg_index) / fs for seg_index in range(parent_recording.get_num_segments())],
+                                       firing_rate=firing_rate, refractory_period=refractory_period_ms)
 
-        amplitude_factor = [[np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id, segment_index=seg_index))) \
-                            for unit_id in sorting.unit_ids] for seg_index in range(target_recording.get_num_segments())]
+            if filename != None:
+                NpzSortingExtractor.write_sorting(sorting, filename)
+                sorting = NpzSortingExtractor(filename)
 
-        AddTemplatesRecording.__init__(self, sorting, templates, nbefore, amplitude_factor, target_recording, num_samples)
+        if amplitude_factor is None:
+            amplitude_factor = [[np.random.normal(loc=1.0, scale=amplitude_std, size=len(sorting.get_unit_spike_train(unit_id, segment_index=seg_index))) \
+                                for unit_id in sorting.unit_ids] for seg_index in range(parent_recording.get_num_segments())]
+
+        AddTemplatesRecording.__init__(self, sorting, templates, nbefore, amplitude_factor, parent_recording, num_samples)
 
 
 
@@ -67,10 +87,13 @@ class HybridSpikesRecording(AddTemplatesRecording):
     refractory_period_ms: float
         If injected_sorting=None, the injected spikes need to respect
         this refractory period.
+    filename: str | Path | None
+        If given, the injected sorting is a NpzSortingExtractor.
+        Filename extension must be '.npz'
     """
 
     def __init__(self, wvf_extractor: WaveformExtractor, injected_sorting: Union[BaseSorting, None] = None, unit_ids: Union[List[int], None] = None,
-                 max_injected_per_unit: int = 1000, injected_rate: float = 0.05, refractory_period_ms: float = 1.5) -> None:
+                 max_injected_per_unit: int = 1000, injected_rate: float = 0.05, refractory_period_ms: float = 1.5, filename: Union[str, Path, None] = None) -> None:
         target_recording = wvf_extractor.recording
         target_sorting = wvf_extractor.sorting
         templates = wvf_extractor.get_all_templates()
