@@ -84,8 +84,8 @@ class UnitWaveformPlotter(MplPlotter):
             if dp.plot_channels:
                 # TODO enhance this
                 ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color='k')
-                
-            if dp.same_axis:
+            
+            if dp.same_axis and dp.plot_legend:
                 self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
                                    ncol=5, fancybox=True, shadow=True)
 
