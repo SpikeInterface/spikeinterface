@@ -92,7 +92,7 @@ jobs:
         id: modules-changed
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [[ $file == *"/core/"* ] || [ $file == *"/extractors/neoextractors/neobaseextractor.py" ]]; then
+            if [[ $file == *"/core/"* || $file == *"/extractors/neoextractors/neobaseextractor.py" ]]; then
               echo "Core changed"
               echo "::set-output name=CORE_CHANGED::true"
             fi
