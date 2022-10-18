@@ -148,7 +148,7 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_amplitudes(self.we, backend=backend, **self.backend_kwargs[backend])
-                unit_ids = self.we.sorting.unit_ids[:4]
+                unit_ids = self.we.unit_ids[:4]
                 sw.plot_amplitudes(self.we, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_amplitudes(self.we, unit_ids=unit_ids, plot_histograms=True,
                                    backend=backend, **self.backend_kwargs[backend])
@@ -197,10 +197,11 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUp()
     
-    # mytest.test_plot_timeseries()
+    mytest.test_plot_timeseries()
     
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_templates()
+    mytest.test_amplitudes()
+    # mytest.test_plot_unit_templates()
 
     plt.show()

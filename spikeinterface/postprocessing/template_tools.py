@@ -147,8 +147,8 @@ def get_template_channel_sparsity(
     assert outputs in ("id", "index")
     we = waveform_extractor
 
-    unit_ids = we.sorting.unit_ids
-    channel_ids = we.recording.channel_ids
+    unit_ids = we.unit_ids
+    channel_ids = we.channel_ids
 
     sparsity_with_index = {}
     if method == "best_channels":

@@ -248,7 +248,25 @@ class NumpyEvent(BaseEvent):
     def __init__(self, channel_ids, structured_dtype):
         BaseEvent.__init__(self, channel_ids, structured_dtype)
 
+    @staticmethod
     def from_dict(event_dict_list):
+        """
+        Constructs NumpyEvent from a dictionary
+
+        Parameters
+        ----------
+        event_dict_list : list
+            List of dictionaries with channel_ids as keys and event data as values.
+            Each list element corresponds to an event segment.
+            If values have a simple dtype, they are considered the timestamps.
+            If values have a structured dtype, the have to contain a "times" or "timestamps"
+            field.
+
+        Returns
+        -------
+        NumpyEvent
+            The Event object
+        """
         if isinstance(event_dict_list, dict):
             event_dict_list = [event_dict_list]
 
@@ -256,8 +274,8 @@ class NumpyEvent(BaseEvent):
 
         structured_dtype = {}
         for chan_id in channel_ids:
-            values = event_dict_list[0][chan_id]
-            structured_dtype[chan_id] = values.dtype.fields is not None
+            values = np.array(event_dict_list[0][chan_id])
+            structured_dtype[chan_id] = values.dtype
 
         event = NumpyEvent(channel_ids, structured_dtype)
         for i, event_dict in enumerate(event_dict_list):
@@ -270,26 +288,24 @@ class NumpyEventSegment(BaseEventSegment):
     def __init__(self, event_dict):
         BaseEventSegment.__init__(self)
 
-        # ~ for channel_id, event_array in event_dict.items():
-
         self._event_dict = event_dict
 
-    def get_event_times(self, channel_id, start_time, end_time):
-        times = self._event_dict[channel_id]
-        if times.dtype.fields is None:
-            # no structured dtype
-            if start_time is not None:
-                times = times[times >= start_time]
-            if end_time is not None:
-                times = times[times <= end_time]
+    def get_events(self, channel_id, start_time, end_time):
+        events = self._event_dict[channel_id]
+        if events.dtype.fields is None:
+            times = events
+            # no structured dtype, we assume "times"
         else:
-            filed0 = list(times.dtype.fields)[0]
-            if start_time is not None:
-                times = times[times[filed0] >= start_time]
-            if end_time is not None:
-                times = times[times[filed0] <= end_time]
+            if "time" in events.dtype.names:
+                times = events["time"]
+            else:
+                times = events["timestamp"]
+        if start_time is not None:
+            events = events[times >= start_time]
+        if end_time is not None:
+            events = events[times <= end_time]
+        return events
 
-        return times
 
 class NumpySnippets(BaseSnippets):
     """

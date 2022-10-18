@@ -66,8 +66,8 @@ class UnitLocationsPlotter(MplPlotter):
             self.ax.add_patch(p)
         handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
                           color=unit_colors[unit]) for unit in dp.unit_ids]
-            
-        self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
+        if dp.plot_legend:
+            self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)
         if dp.hide_axis:
             self.ax.axis("off")

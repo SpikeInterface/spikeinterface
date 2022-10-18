@@ -44,10 +44,10 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         we = waveform_extractor
 
         if channel_ids is None:
-            channel_ids = we.recording.channel_ids
+            channel_ids = we.channel_ids
 
         if unit_ids is None:
-            unit_ids = we.sorting.unit_ids
+            unit_ids = we.unit_ids
 
         if unit_colors is None:
             unit_colors = get_unit_colors(we.sorting)
@@ -119,7 +119,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         plot_data = dict(
             unit_ids=unit_ids,
             unit_colors=unit_colors,
-            channel_ids=we.recording.channel_ids,
+            channel_ids=we.channel_ids,
             channel_inds=channel_inds,
             radius_um=radius_um,
             max_channels=max_channels,

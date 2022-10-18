@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 
 from .core_tools import define_function_from_class
+from .base import BaseExtractor
 from .basesorting import BaseSorting, BaseSortingSegment
 
 
@@ -51,23 +52,48 @@ class UnitsAggregationSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        property_keys = sorting_list[0].get_property_keys()
-        property_dict = {}
-        for prop_name in property_keys:
-            if all([prop_name in sort.get_property_keys() for sort in sorting_list]):
-                for i_s, sort in enumerate(sorting_list):
-                    prop_value = sort.get_property(prop_name)
-                    if i_s == 0:
-                        property_dict[prop_name] = prop_value
-                    else:
-                        try:
-                            property_dict[prop_name] = np.concatenate((property_dict[prop_name],
-                                                                       sort.get_property(prop_name)))
-                        except Exception as e:
-                            print(f"Skipping property '{prop_name}' for shape inconsistency")
-                            del property_dict[prop_name]
-                            break
+        annotation_keys = sorting_list[0].get_annotation_keys()
+        for annotation_name in annotation_keys:
+            if not all([annotation_name in sort.get_annotation_keys() for sort in sorting_list]):
+                continue
 
+            annotations = np.array([sort.get_annotation(annotation_name, copy=False) for sort in sorting_list])
+            if np.all(annotations == annotations[0]):
+                self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
+
+        property_keys = {}
+        property_dict = {}
+        deleted_keys = []
+        for sort in sorting_list:
+            for prop_name in sort.get_property_keys():
+                if prop_name in deleted_keys:
+                    continue
+                if prop_name in property_keys:
+                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
+                        print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
+                        del property_keys[prop_name]
+                        deleted_keys.append(prop_name)
+                else:
+                    property_keys[prop_name] = sort.get_property(prop_name).dtype
+        for prop_name in property_keys:
+            dtype = property_keys[prop_name]
+            property_dict[prop_name] = np.array([], dtype=dtype)
+
+            for sort in sorting_list:
+                if prop_name in sort.get_property_keys():
+                    values = sort.get_property(prop_name)
+                else:
+                    if dtype.kind not in BaseExtractor.default_missing_property_values:
+                        del property_dict[prop_name]
+                        break
+                    values = np.full(sort.get_num_units(), BaseExtractor.default_missing_property_values[dtype.kind], dtype=dtype)
+
+                try:
+                    property_dict[prop_name] = np.concatenate((property_dict[prop_name], values))
+                except Exception as e:
+                    print(f"Skipping property '{prop_name}' for shape inconsistency")
+                    del property_dict[prop_name]
+                    break
         for prop_name, prop_values in property_dict.items():
             self.set_property(key=prop_name, values=prop_values)
 
