@@ -123,7 +123,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             # scalar annotations
             for k, v in sig_ann.items():
                 if not k.startswith('__'):
-                    self.annotate(k=v)
+                    self.set_annotation(k, v)
             # vector array_annotations are channel properties
             for k, values in sig_ann['__array_annotations__'].items():
                 self.set_property(k, values)
