@@ -116,6 +116,10 @@ jobs:
               echo "Sorters changed"
               echo "::set-output name=SORTERS_CHANGED::true"
             fi
+            if [[ $file == *"/comparison/"* ]]; then
+              echo "Comparison changed"
+              echo "::set-output name=COMPARISON_CHANGED::true"
+            fi
             if [[ $file == *"/widgets/"* ]]; then
               echo "Widgets changed"
               echo "::set-output name=WIDGETS_CHANGED::true"
@@ -134,32 +138,37 @@ jobs:
           source ~/test_env/bin/activate
           pytest -v -m core
       - name: Test extractors
-        if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -s -m extractors
       - name: Test preprocessing
-        if: steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m preprocessing
       - name: Test postprocessing
-        if: steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m postprocessing
       - name: Test quality metrics
-        if: steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m qualitymetrics
       - name: Test sorters
-        if: steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m sorters
+      - name: Test comparison
+        if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m comparison
       - name: Test widgets
-        if: steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         env:
           KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
           KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
@@ -167,12 +176,12 @@ jobs:
           source ~/test_env/bin/activate
           pytest -v -s -m widgets
       - name: Test exporters
-        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m exporters
       - name: Test sortingcomponents
-        if: steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m sortingcomponents
