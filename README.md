@@ -34,19 +34,19 @@
   </td>
 </tr>
 <tr>
-	<td>Twitter</td>
-	<td>
-		<a href="https://twitter.com/spikeinterface?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @spikeinterface</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-	</td>
-</tr>
-<tr>
 	<td>Codecov</td>
 	<td>
 		<a href="https://codecov.io/github/spikeinterface/spikeinterface">
 		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/master/graphs/badge.svg" alt="codecov" />
 		</a>
 	</td>
-
+</tr>
+<tr>
+	<td>Twitter</td>
+	<td>
+		<a href="https://twitter.com/spikeinterface?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">@spikeinterface
+    </a>
+	</td>
 </tr>
 </table>
 
