@@ -1,5 +1,5 @@
 from .remove_redundant import remove_redundant_units, find_redundant_units
-from .remove_duplicated_spikes import RemoveDuplicatedSpikesSorting, remove_duplicated_spikes, find_duplicated_spikes
+from .remove_duplicated_spikes import RemoveDuplicatedSpikesSorting, remove_duplicated_spikes, find_duplicated_spikes_random
 
 from .mergeunitssorting import MergeUnitsSorting
 from .splitunitsorting import SplitUnitSorting

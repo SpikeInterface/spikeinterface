@@ -21,4 +21,4 @@ def test_remove_duplicated_spikes() -> None:
 def test_find_duplicated_spikes() -> None:
 	spike_train = np.array([20, 80, 81, 150, 152, 900], dtype=np.int64)
 
-	assert len(find_duplicated_spikes(spike_train, censored_period=5)) == 2
+	assert len(find_duplicated_spikes_random(spike_train, censored_period=5)) == 2
