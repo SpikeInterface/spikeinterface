@@ -28,17 +28,15 @@
 <tr>
   <td>Build Status</td>
   <td>
-    <a href="https://travis-ci.org/SpikeInterface/spikeinterface">
-    <img src="https://travis-ci.org/SpikeInterface/spikeinterface.svg?branch=master" alt="travis build status" />
+    <a href="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg">
+    <img src="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg" alt="travis build status" />
     </a>
   </td>
 </tr>
 <tr>
-	<td>Gitter</td>
+	<td>Twitter</td>
 	<td>
-		<a href="https://gitter.im/SpikeInterface/community">
-		<img src="https://badges.gitter.im/SpikeInterface.svg" />
-	</a>
+		<a href="https://twitter.com/spikeinterface?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @spikeinterface</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 	</td>
 </tr>
 <tr>
