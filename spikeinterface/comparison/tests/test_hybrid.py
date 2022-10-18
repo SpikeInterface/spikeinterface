@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from spikeinterface.core import NpzSortingExtractor, extract_waveforms, load_extractor, set_global_tmp_folder
+from spikeinterface.core import WaveformExtractor, extract_waveforms, load_extractor, set_global_tmp_folder, waveform_extractor
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.comparison import create_hybrid_units_recording, create_hybrid_spikes_recording, generate_injected_sorting
 from spikeinterface.extractors import toy_example
@@ -12,25 +12,29 @@ if hasattr(pytest, "global_test_folder"):
 else:
 	cache_folder = Path("cache_folder") / "comparison" / "hybrid"
 
-set_global_tmp_folder(cache_folder)
-cache_folder.mkdir(parents=True, exist_ok=True)
+hybrid_folder = cache_folder / "hybrid"
 
 
-recording, sorting = toy_example(duration=60, num_channels=4, num_units=5,
-								 num_segments=2, average_peak_amplitude=-1000)
-recording = recording.save(folder=cache_folder / "recording")
-recording_f = bandpass_filter(recording, freq_min=300, freq_max=6000)
+def setup_module():
+	hybrid_folder.mkdir(parents=True, exist_ok=True)
+	recording, sorting = toy_example(duration=60, num_channels=4, num_units=5,
+									 num_segments=2, average_peak_amplitude=-1000)
+	recording = bandpass_filter(recording, freq_min=300, freq_max=6000)
+	recording = recording.save(folder=hybrid_folder / "recording")
+	sorting = sorting.save(folder=hybrid_folder / "sorting")
 
-npz_filename = cache_folder / "sorting.npz"
-NpzSortingExtractor.write_sorting(sorting, npz_filename)
-sorting = NpzSortingExtractor(npz_filename)
-
-wvf_extractor = extract_waveforms(recording_f, sorting, folder=cache_folder / "wvf_extractor", ms_before=10., ms_after=10.)
+	wvf_extractor = extract_waveforms(recording, sorting, folder=hybrid_folder / "wvf_extractor",
+									  ms_before=10., ms_after=10.)
 
 
 def test_hybrid_units_recording():
-	hybrid_units_recording = create_hybrid_units_recording(recording_f, wvf_extractor.get_all_templates(),
-														   nbefore=wvf_extractor.nbefore, filename=cache_folder / "hybrid_units.npz")
+	wvf_extractor = WaveformExtractor.load_from_folder(hybrid_folder / "wvf_extractor")
+	recording = wvf_extractor.recording
+	templates = wvf_extractor.get_all_templates()
+	templates[:, 0, :] = 0
+	templates[:, -1, :] = 0
+	hybrid_units_recording = create_hybrid_units_recording(recording, templates, nbefore=wvf_extractor.nbefore,
+														injected_sorting_folder=hybrid_folder / "injected0")
 
 	assert hybrid_units_recording.get_traces(end_frame=600, segment_index=0).shape == (600, 4)
 	assert hybrid_units_recording.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
@@ -47,8 +51,13 @@ def test_hybrid_units_recording():
 
 
 def test_hybrid_spikes_recording():
-	hybrid_spikes_recording = create_hybrid_spikes_recording(wvf_extractor)
-	hybrid_spikes_recording = create_hybrid_spikes_recording(wvf_extractor, unit_ids=sorting.unit_ids[:3], filename=cache_folder / "hybrid_spikes.npz")
+	wvf_extractor = WaveformExtractor.load_from_folder(hybrid_folder / "wvf_extractor")
+	recording = wvf_extractor.recording
+	sorting = wvf_extractor.sorting
+	hybrid_spikes_recording = create_hybrid_spikes_recording(wvf_extractor,
+															 injected_sorting_folder=hybrid_folder / "injected1")
+	hybrid_spikes_recording = create_hybrid_spikes_recording(wvf_extractor, unit_ids=sorting.unit_ids[:3],
+															 injected_sorting_folder=hybrid_folder / "injected2")
 
 	assert hybrid_spikes_recording.get_traces(end_frame=600, segment_index=0).shape == (600, 4)
 	assert hybrid_spikes_recording.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
@@ -65,4 +74,13 @@ def test_hybrid_spikes_recording():
 
 
 def test_generate_injected_sorting():
+	recording = load_extractor(hybrid_folder / "recording")
+	sorting = load_extractor(hybrid_folder / "sorting")
 	injected_sorting = generate_injected_sorting(sorting, [recording.get_num_frames(seg_index) for seg_index in range(recording.get_num_segments())])
+
+
+if __name__ == "__main__":
+    setup_module()
+    test_generate_injected_sorting()
+    test_hybrid_units_recording()
+    test_hybrid_spikes_recording()
