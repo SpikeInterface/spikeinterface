@@ -67,10 +67,10 @@ tridesclous>=1.6.6.1
 # shybrid
 
 ## spyking-circus
-spyking-circus
+# spyking-circus
 
 ## herdingspikes
-herdingspikes<=0.3.99
+# herdingspikes<=0.3.99
 
 ## mearec
 mearec
