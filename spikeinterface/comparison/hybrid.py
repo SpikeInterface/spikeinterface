@@ -89,6 +89,7 @@ class HybridUnitsRecording(AddTemplatesRecording):
             injected_sorting_folder=None
         )
 
+
 class HybridSpikesRecording(AddTemplatesRecording):
     """
     Class for creating a hybrid recording where additional spikes are added

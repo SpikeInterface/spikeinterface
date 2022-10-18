@@ -185,4 +185,5 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self) -> int:
         return self.num_samples
 
+
 add_templates = define_function_from_class(source_class=AddTemplatesRecording, name="add_templates")
