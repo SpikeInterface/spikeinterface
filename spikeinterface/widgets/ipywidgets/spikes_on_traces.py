@@ -35,7 +35,7 @@ class SpikesOnTracesPlotter(IpywidgetsPlotter):
         ts_updater = tsplotter.updater
         
         we = data_plot['waveform_extractor']
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.sorting.unit_ids,
+        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.unit_ids,
                                                             ratios[0] * width_cm, height_cm)
         
         self.controller = ts_updater.controller

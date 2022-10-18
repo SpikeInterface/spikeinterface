@@ -35,7 +35,7 @@ class TemplateSimilarityWidget(BaseWidget):
                  backend=None, **backend_kwargs):
         self.check_extensions(waveform_extractor, "similarity")
         tsc = waveform_extractor.load_extension("similarity")
-        similarity = tsc.get_data()
+        similarity = tsc.get_data().copy()
 
         sorting = waveform_extractor.sorting
         if unit_ids is None:

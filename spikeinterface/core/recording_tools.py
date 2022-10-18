@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, 
                            chunk_size=10000, concatenated=True, seed=0):
     """
@@ -57,11 +56,11 @@ def get_channel_distances(recording):
     """
     Distance between channel pairs
     """
-    # TODO SAM: convert to numpy
-    import scipy
     locations = recording.get_channel_locations()
     
-    channel_distances = scipy.spatial.distance.cdist(locations, locations, metric='euclidean')
+
+    channel_distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
+
     return channel_distances
 
 
@@ -200,3 +199,56 @@ def get_chunk_with_margin(rec_segment, start_frame, end_frame,
             right_margin = margin
 
     return traces_chunk, left_margin, right_margin
+
+
+def order_channels_by_depth(recording, channel_ids=None):
+    """
+    Order channels by depth, by first ordering the x-axis, and then the y-axis.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The input recording
+    channel_ids : list/array or None
+        If given, a subset of channels to order locations for
+
+    Returns
+    -------
+    order : np.array
+        Array with sorted indices
+    """
+    locations = recording.get_channel_locations()
+    channel_inds = recording.ids_to_indices(channel_ids)
+    locations = locations[channel_inds, :]
+
+    order = np.lexsort((locations[:, 0], locations[:, 1]))
+
+    return order
+
+
+def check_probe_do_not_overlap(probes):
+    """
+    When several probes this check that that they do not overlap in space
+    and so channel positions can be safly concatenated.
+    """
+    for i in range(len(probes)):
+        probe_i = probes[i]
+        # check that all positions in probe_j are outside probe_i boundaries
+        x_bounds_i = [np.min(probe_i.contact_positions[:, 0]),
+                      np.max(probe_i.contact_positions[:, 0])]
+        y_bounds_i = [np.min(probe_i.contact_positions[:, 1]),
+                      np.max(probe_i.contact_positions[:, 1])]
+
+        for j in range(i + 1, len(probes)):
+            probe_j = probes[j]
+
+            if np.any(np.array([x_bounds_i[0] < cp[0] < x_bounds_i[1] and
+                                y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                                for cp in probe_j.contact_positions])):
+                raise Exception(
+                    "Probes are overlapping! Retrieve locations of single probes separately")
+
+
+
+
+

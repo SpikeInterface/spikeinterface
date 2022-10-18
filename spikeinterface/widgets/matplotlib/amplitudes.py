@@ -13,6 +13,7 @@ class AmplitudesPlotter(MplPlotter):
 
 
         if backend_kwargs["axes"] is not None:
+            axes = backend_kwargs["axes"]
             if dp.plot_histograms:
                 assert np.asarray(axes).size == 2
             else:
@@ -52,9 +53,11 @@ class AmplitudesPlotter(MplPlotter):
             ax_hist.set_ylim(scatter_ax.get_ylim())
             ax_hist.axis("off")
             self.figure.tight_layout()
-            
-        self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
+        
+        if dp.plot_legend:
+            self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
                            ncol=5, fancybox=True, shadow=True)
+
         scatter_ax.set_xlim(0, dp.total_duration)
         scatter_ax.set_xlabel('Times [s]')
         scatter_ax.set_ylabel(f'Amplitude')

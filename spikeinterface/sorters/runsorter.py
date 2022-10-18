@@ -198,8 +198,9 @@ def find_recording_folders(d):
 
 def path_to_unix(path):
     path = Path(path)
-    path_unix = Path(str(path)[str(path).find(":") + 1:]).as_posix()
-    return path_unix
+    if platform.system() == 'Windows':
+        path = Path(str(path)[str(path).find(":") + 1:])
+    return path.as_posix()
 
 
 def windows_extractor_dict_to_unix(d):
@@ -213,9 +214,25 @@ class ContainerClient:
       * docker with "docker" python package
       * singularity with  "spython" python package
     """
-    def __init__(self, mode, container_image, volumes, extra_kwargs):
+    def __init__(self, mode, container_image, volumes, py_user_base, extra_kwargs):
+        """
+        Parameters
+        ----------
+        mode: str
+            "docker" or "singularity" strings
+        container_image: str
+            container image name and tag
+        volumes: dict
+            dict of volumes to bind
+        py_user_base: str
+            Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
+            Prevents from overwriting user's packages when running pip install
+        extra_kwargs: dict
+            Extra kwargs to start container
+        """
         assert mode in ('docker', 'singularity')
         self.mode = mode
+        self.py_user_base = py_user_base
         container_requires_gpu = extra_kwargs.get(
             'container_requires_gpu', None)
 
@@ -233,9 +250,14 @@ class ContainerClient:
                 client.images.pull(container_image)
 
             self.docker_container = client.containers.create(
-                    container_image, tty=True, volumes=volumes, **extra_kwargs)
+                container_image,
+                tty=True,
+                volumes=volumes,
+                **extra_kwargs
+            )
 
         elif mode == 'singularity':
+            assert self.py_user_base, 'py_user_base folder must be set in singularity mode'
             from spython.main import Client
             # load local image file if it exists, otherwise search dockerhub
             sif_file = Client._get_filename(container_image)
@@ -260,7 +282,7 @@ class ContainerClient:
 
             # bin options
             singularity_bind = ','.join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
-            options=['--bind', singularity_bind]
+            options = ['--bind', singularity_bind]
 
             # gpu options
             if container_requires_gpu:
@@ -297,7 +319,8 @@ class ContainerClient:
             return str(res.output)
         elif self.mode == 'singularity':
             from spython.main import Client
-            res = Client.execute(self.client_instance, command)
+            options = ['--cleanenv', '--env', f'PYTHONUSERBASE={self.py_user_base}']
+            res = Client.execute(self.client_instance, command, options=options)
             if isinstance(res, dict):
                 res = res['message']
             return res
@@ -352,8 +375,7 @@ def run_sorter_container(
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
     parent_folder = output_folder.parent.absolute().resolve()
-    if not output_folder.is_dir():
-        output_folder.mkdir(parents=True)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict()
@@ -372,19 +394,13 @@ def run_sorter_container(
 
     npz_sorting_path = output_folder / 'in_container_sorting'
 
-    # the py script
-    if platform.system() == 'Windows':
-        # skip C:
-        parent_folder_unix = path_to_unix(parent_folder)
-        output_folder_unix = path_to_unix(output_folder)
-        recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
-        npz_sorting_path_unix = path_to_unix(npz_sorting_path)
-    else:
-        parent_folder_unix = parent_folder
-        output_folder_unix = output_folder
-        recording_input_folders_unix = recording_input_folders
-        npz_sorting_path_unix = npz_sorting_path
+    # if in Windows, skip C:
+    parent_folder_unix = path_to_unix(parent_folder)
+    output_folder_unix = path_to_unix(output_folder)
+    recording_input_folders_unix = [path_to_unix(rf) for rf in recording_input_folders]
+    npz_sorting_path_unix = path_to_unix(npz_sorting_path)
 
+    # the py script
     py_script = f"""
 import json
 from spikeinterface import load_extractor
@@ -423,10 +439,7 @@ if __name__ == '__main__':
         install_si_from_source = True
         # Making sure to get rid of last / or \
         si_dev_path = str(Path(si_dev_path).absolute().resolve())
-        if platform.system() == 'Windows':
-            si_dev_path_unix = path_to_unix(si_dev_path)
-        else:
-            si_dev_path_unix = si_dev_path
+        si_dev_path_unix = path_to_unix(si_dev_path)
         volumes[si_dev_path] = {'bind': si_dev_path_unix, 'mode': 'ro'}
     else:
         install_si_from_source = False
@@ -450,7 +463,16 @@ if __name__ == '__main__':
             # TODO: make opencl machanism
             raise NotImplementedError("Only nvidia support is available")
 
-    container_client = ContainerClient(mode, container_image, volumes, extra_kwargs)
+    # Creating python user base folder
+    py_user_base_unix = None
+    if mode == 'singularity':
+        py_user_base_folder = (parent_folder / 'in_container_python_base')
+        py_user_base_folder.mkdir(parents=True, exist_ok=True)
+        py_user_base_unix = path_to_unix(py_user_base_folder)
+        si_source_folder = f"{py_user_base_unix}/sources"
+    else:
+        si_source_folder = "/sources"
+    container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
         print('Starting container')
     container_client.start()
@@ -471,7 +493,12 @@ if __name__ == '__main__':
             # TODO later check output
             if install_si_from_source:
                 si_source = 'local machine'
-                cmd = f'pip install {si_dev_path_unix}[full]'
+                # install in local copy of host SI folder in sources/spikeinterface to avoid permission errors
+                cmd = f'mkdir {si_source_folder}'
+                res_output = container_client.run_command(cmd)
+                cmd = f'cp -r {si_dev_path_unix} {si_source_folder}'
+                res_output = container_client.run_command(cmd)
+                cmd = f'pip install {si_source_folder}/spikeinterface[full]'
             else:
                 si_source = 'remote repository'
                 cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'
@@ -532,6 +559,8 @@ if __name__ == '__main__':
     os.remove(parent_folder / 'in_container_recording.json')
     os.remove(parent_folder / 'in_container_params.json')
     os.remove(parent_folder / 'in_container_sorter_script.py')
+    if mode == 'singularity':
+        shutil.rmtree(py_user_base_folder)
 
     # check error
     output_folder = Path(output_folder)

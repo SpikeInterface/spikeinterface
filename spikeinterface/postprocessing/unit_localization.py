@@ -38,27 +38,18 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        self.unit_locations = None
-
     def _set_params(self, method='center_of_mass', method_kwargs={}):
 
         params = dict(method=method,
                       method_kwargs=method_kwargs)
         return params
 
-    def _specific_load_from_folder(self):
-        self.unit_locations = np.load(self.extension_folder / 'unit_locations.npy')
-
-    def _reset(self):
-        self.unit_locations = None
-
-    def _specific_select_units(self, unit_ids, new_waveforms_folder):
+    def _select_extension_data(self, unit_ids):
         unit_inds = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
+        new_unit_location = self._extension_data['unit_locations'][unit_inds]
+        return dict(unit_locations=new_unit_location)
 
-        new_unit_location = self.unit_locations[unit_inds]
-        np.save(new_waveforms_folder / self.extension_name / 'unit_locations.npy', new_unit_location)
-
-    def run(self, **job_kwargs):
+    def _run(self, **job_kwargs):
         method = self._params['method']
         method_kwargs = self._params['method_kwargs']
         
@@ -68,19 +59,35 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
             unit_location = compute_center_of_mass(self.waveform_extractor,  **method_kwargs)
         elif method == 'monopolar_triangulation':
             unit_location = compute_monopolar_triangulation(self.waveform_extractor,  **method_kwargs)
-        self.unit_locations = unit_location
-        np.save(self.extension_folder /
-                'unit_locations.npy', self.unit_locations)
+        self._extension_data['unit_locations'] = unit_location
 
     def get_data(self, outputs='numpy'):
+        """
+        Get the computed unit locations.
+
+        Parameters
+        ----------
+        outputs : str, optional
+            'numpy' or 'by_unit', by default 'numpy'
+
+        Returns
+        -------
+        unit_locations : np.array or dict
+            The unit locations as a Nd array (outputs='numpy') or
+            as a dict with units as key and locations as values.
+        """
         if outputs == 'numpy':
-            return self.unit_locations
+            return self._extension_data['unit_locations']
 
         elif outputs == 'by_unit':
             locations_by_unit = {}
             for unit_ind, unit_id in enumerate(self.waveform_extractor.sorting.unit_ids):
-                locations_by_unit[unit_id] = self.unit_locations[unit_ind]
+                locations_by_unit[unit_id] = self._extension_data['unit_locations'][unit_ind]
             return locations_by_unit
+
+    @staticmethod
+    def get_extension_function():
+        return compute_unit_locations
 
 
 WaveformExtractor.register_extension(UnitLocationsCalculator)
@@ -111,11 +118,8 @@ def compute_unit_locations(waveform_extractor,
     unit_locations: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
-    folder = waveform_extractor.folder
-    ext_folder = folder / UnitLocationsCalculator.extension_name
-
-    if load_if_exists and ext_folder.is_dir():
-        ulc = UnitLocationsCalculator.load_from_folder(folder)
+    if load_if_exists and waveform_extractor.is_extension(UnitLocationsCalculator.extension_name):
+        ulc = waveform_extractor.load_extension(UnitLocationsCalculator.extension_name)
     else:
         ulc = UnitLocationsCalculator(waveform_extractor)
         ulc.set_params(method=method, method_kwargs=method_kwargs)
@@ -159,19 +163,27 @@ def solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_
 
     if optimizer == 'least_square':
         args = (wf_ptp, local_contact_locations)
-        output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
-        return tuple(output['x'])
+        try:
+            output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
+            return tuple(output['x'])
+        except Exception as e:
+            print(f"scipy.optimize.least_squares error: {e}")
+            return (np.nan, np.nan, np.nan, np.nan)
 
     if optimizer == 'minimize_with_log_penality':
         x0 = x0[:3]
         bounds = [(bounds[0][0], bounds[1][0]), (bounds[0][1], bounds[1][1]), (bounds[0][2], bounds[1][2])]
         maxptp = wf_ptp.max()
         args = (wf_ptp, local_contact_locations, maxptp)
-        output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
-        # final alpha
-        q = ptp_at(*output['x'], 1.0, local_contact_locations)
-        alpha = (wf_ptp * q).sum() / np.square(q).sum()
-        return (*output['x'], alpha)
+        try:
+            output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
+            # final alpha
+            q = ptp_at(*output['x'], 1.0, local_contact_locations)
+            alpha = (wf_ptp * q).sum() / np.square(q).sum()
+            return (*output['x'], alpha)
+        except Exception as e:
+            print(f"scipy.optimize.minimize error: {e}")
+            return (np.nan, np.nan, np.nan, np.nan)
 
 
 # ----
@@ -207,8 +219,8 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
     return err
 
 
-def compute_monopolar_triangulation(waveform_extractor, optimizer='least_square', radius_um=50, max_distance_um=1000,
-                                    return_alpha=False):
+def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
+                                    radius_um=50, max_distance_um=1000, return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
