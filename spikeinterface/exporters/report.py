@@ -53,7 +53,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         spike_amplitudes = compute_spike_amplitudes(we, peak_sign=peak_sign, outputs='by_unit', **job_kwargs)
     else:
         spike_amplitudes = None
-        print('export_report(): no spike_amplitudes exported use compute_spike_amplitudes() if you want then')
+        print('export_report(): spike_amplitudes will not be exported. Use compute_spike_amplitudes() if you want to include them.')
 
     # load or compute quality_metrics
     if we.is_extension('quality_metrics'):
@@ -62,7 +62,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         metrics = compute_quality_metrics(we)
     else:
         metrics = None
-        print('export_report(): no metrics exported use compute_quality_metrics() if you want then')
+        print('export_report(): quality metrics will not be exported. Use compute_quality_metrics() if you want to include them.')
 
     # load or compute correlograms
     if we.is_extension('correlograms'):
