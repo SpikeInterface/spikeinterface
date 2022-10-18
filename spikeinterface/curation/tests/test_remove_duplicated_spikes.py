@@ -1,6 +1,6 @@
 import numpy as np
 from spikeinterface.core.testing_tools import generate_sorting
-from spikeinterface.curation import remove_duplicated_spikes, find_duplicated_spikes
+from spikeinterface.curation import remove_duplicated_spikes, find_duplicated_spikes_random
 
 
 def test_remove_duplicated_spikes() -> None:
