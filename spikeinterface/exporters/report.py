@@ -107,7 +107,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     if not show_figures:
         plt.close(fig)
     
-    if spike_amplitudes:
+    if spike_amplitudes and len(unit_ids) > 100:
         fig = plt.figure(figsize=(20, 10))
         sw.plot_all_amplitudes_distributions(we, figure=fig, unit_colors=unit_colors)
         fig.savefig(output_folder / f'amplitudes_distribution.{format}')
