@@ -81,6 +81,8 @@ class HybridSpikesRecording(AddTemplatesRecording):
     max_injected_per_unit: int
         If injected_sorting=None, the max number of spikes per unit
         that is allowed to be injected.
+    unit_ids: list[int] | None
+        unit_ids to take in the wvf_extractor for spikes injection.
     injected_rate: float
         If injected_sorting=None, the max fraction of spikes per
         unit that is allowed to be injected.
@@ -92,8 +94,11 @@ class HybridSpikesRecording(AddTemplatesRecording):
         Filename extension must be '.npz'
     """
 
-    def __init__(self, wvf_extractor: WaveformExtractor, injected_sorting: Union[BaseSorting, None] = None, unit_ids: Union[List[int], None] = None,
+    def __init__(self, wvf_extractor: Union[WaveformExtractor, Path], injected_sorting: Union[BaseSorting, None] = None, unit_ids: Union[List[int], None] = None,
                  max_injected_per_unit: int = 1000, injected_rate: float = 0.05, refractory_period_ms: float = 1.5, filename: Union[str, Path, None] = None) -> None:
+        if isinstance(wvf_extractor, (Path, str)):
+            wvf_extractor = WaveformExtractor.load_from_folder(wvf_extractor)
+
         target_recording = wvf_extractor.recording
         target_sorting = wvf_extractor.sorting
         templates = wvf_extractor.get_all_templates()
@@ -106,7 +111,17 @@ class HybridSpikesRecording(AddTemplatesRecording):
                                                            max_injected_per_unit, injected_rate, refractory_period_ms) \
                                 if injected_sorting is None else injected_sorting
 
+        if filename != None:
+            NpzSortingExtractor.write_sorting(self.injected_sorting, filename)
+            self.injected_sorting = NpzSortingExtractor(filename)
+
         AddTemplatesRecording.__init__(self, self.injected_sorting, templates, wvf_extractor.nbefore, parent_recording=target_recording)
+
+        self._kwargs = {
+            "wvf_extractor": wvf_extractor.folder,
+            "injected_sorting": self.injected_sorting.to_dict(),
+            "unit_ids": unit_ids
+        }
 
 
 
