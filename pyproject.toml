@@ -23,8 +23,15 @@ dependencies = [
     "probeinterface>=0.2.10",
 ]
 
-[tool.setuptools.packages]
-find = {}
+[build-system]
+requires = ["setuptools>=65.4"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["spikeinterface"]
+package-dir = {"spikeinterface" = "spikeinterface"}
+
+
 
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"
@@ -106,9 +113,7 @@ test = [
 ]
 
 
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+
 
 
 [tool.pytest.ini_options]
