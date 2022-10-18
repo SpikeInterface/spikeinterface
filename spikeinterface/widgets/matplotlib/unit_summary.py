@@ -31,8 +31,14 @@ class UnitSummaryPlotter(MplPlotter):
         
         # and use custum grid spec
         fig = self.figure
-        gs = fig.add_gridspec(3, 4)
-        
+        nrows = 2
+        ncols = 3
+        if dp.plot_data_acc is not None or dp.plot_data_amplitudes is not None:
+            ncols += 1
+        if dp.plot_data_amplitudes is not None:
+            nrows += 1
+        gs = fig.add_gridspec(nrows, ncols)
+
         if dp.plot_data_unit_locations is not None:
             ax1 = fig.add_subplot(gs[:2, 0])
             UnitLocationsPlotter().do_plot(dp.plot_data_unit_locations, ax=ax1)

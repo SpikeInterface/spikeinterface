@@ -216,13 +216,13 @@ if __name__ == '__main__':
     mytest.setUp()
 
     # mytest.test_amplitudes()
-    mytest.test_plot_all_amplitudes_distributions()
+    # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_timeseries()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
-    # mytest.test_plot_unit_summary()
+    mytest.test_plot_unit_summary()
 
     plt.show()
