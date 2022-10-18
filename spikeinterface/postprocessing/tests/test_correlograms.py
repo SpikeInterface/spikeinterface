@@ -72,9 +72,9 @@ def _test_correlograms(sorting, window_ms, bin_ms, methods):
                     #~ ax.set_title(f'{i} {j}')
                     #~ plt.show()
             
-            # This should be True but numpy and numba version some small diff that need to be investigated!!
-            # assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
-            
+            # numba and numyp do not have exactly the same output
+            # assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
+
             assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 
@@ -103,7 +103,7 @@ def test_flat_cross_correlogram():
     
     for method in methods:
         correlograms, bins = compute_correlograms(sorting, window_ms=50., bin_ms=1., method=method)
-        cc = correlograms[1, 0, :].copy()
+        cc = correlograms[0, 1, :].copy()
         m = np.mean(cc)
         assert np.all(cc > (m*0.90))
         assert np.all(cc < (m*1.10))
@@ -182,7 +182,7 @@ def test_detect_injected_correlation():
     spike_times2 = np.sort(spike_times2)
     
     num_injected = spike_times2[::13].size
-    print('num_injected', num_injected)
+    #~ print('num_injected', num_injected)
     
     units_dict = {'1': spike_times1, '2': spike_times2}
     sorting = NumpySorting.from_dict([units_dict], sampling_frequency=sampling_frequency)
@@ -204,21 +204,21 @@ def test_detect_injected_correlation():
         assert np.max(cc_01) > expected_peak_value
         assert np.max(cc_10) > expected_peak_value
         
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
+        #~ import matplotlib.pyplot as plt
+        #~ fig, ax = plt.subplots()
         
-        ax.plot(bins[:-1]+half_bin_ms, cc_01, marker='*',  color='red', label='cross-corr 0>1')
-        ax.plot(bins[:-1]+half_bin_ms, cc_10, marker='*',  color='orange', label='cross-corr 1>0')
-        ax.set_title(method)
-        ax.legend()
-    plt.show()
+        #~ ax.plot(bins[:-1]+half_bin_ms, cc_01, marker='*',  color='red', label='cross-corr 0>1')
+        #~ ax.plot(bins[:-1]+half_bin_ms, cc_10, marker='*',  color='orange', label='cross-corr 1>0')
+        #~ ax.set_title(method)
+        #~ ax.legend()
+    #~ plt.show()
 
 
 
 
 if __name__ == '__main__':
     #~ test_make_bins()
-    #~ test_equal_results_correlograms()
+    test_equal_results_correlograms()
     #~ test_flat_cross_correlogram()
     #~ test_auto_equal_cross_correlograms()
     #~ test_detect_injected_correlation()
