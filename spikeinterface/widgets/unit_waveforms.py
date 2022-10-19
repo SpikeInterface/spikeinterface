@@ -59,6 +59,8 @@ class UnitWaveformsWidget(BaseWidget):
     x_offset_units: bool
         In case same_axis is True, this parameter allow to x-offset the waveforms for different units 
         (recommended for a few units), default False (matlotlib backend)
+    plot_legend: bool (default True)
+        Display legend.
     """
     possible_backends = {}
 
@@ -67,17 +69,16 @@ class UnitWaveformsWidget(BaseWidget):
                  unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
                  ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False, unit_selected_waveforms=None,
                  max_spikes_per_unit=50, set_title=True, same_axis=False, x_offset_units=False,
-                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False,
+                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False, plot_legend=True,
                  backend=None, **backend_kwargs):
         we = waveform_extractor
-        recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
         unit_ids = unit_ids
         if channel_ids is None:
-            channel_ids = recording.get_channel_ids()
+            channel_ids = we.channel_ids
 
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
@@ -87,7 +88,7 @@ class UnitWaveformsWidget(BaseWidget):
         if max_channels is not None:
             assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
 
-        channel_locations = recording.get_channel_locations(channel_ids=channel_ids)
+        channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if sparsity is None:
@@ -98,11 +99,11 @@ class UnitWaveformsWidget(BaseWidget):
                                                              num_channels=max_channels)
             else:
                 # all channels
-                channel_inds = {unit_id: np.arange(recording.get_num_channels()) for unit_id in sorting.unit_ids}
-            sparsity = {u: recording.channel_ids[channel_inds[u]] for u in sorting.unit_ids}
+                channel_inds = {unit_id: np.arange(we.get_num_channels()) for unit_id in sorting.unit_ids}
+            sparsity = {u: we.channel_ids[channel_inds[u]] for u in sorting.unit_ids}
         else:
             assert all(u in sparsity for u in sorting.unit_ids), "sparsity must be provided for all units!"
-            channel_inds = {u: recording.ids_to_indices(ids) for u, ids in sparsity.items()}
+            channel_inds = {u: we.channel_ids_to_indices(ids) for u, ids in sparsity.items()}
 
         # get templates
         templates = we.get_all_templates(unit_ids=unit_ids)
@@ -115,7 +116,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         plot_data = dict(
             waveform_extractor=waveform_extractor,
-            sampling_frequency=recording.get_sampling_frequency(),
+            sampling_frequency=waveform_extractor.sampling_frequency,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             sparsity=sparsity,
@@ -145,7 +146,8 @@ class UnitWaveformsWidget(BaseWidget):
             alpha_waveforms=alpha_waveforms,
             alpha_templates=alpha_templates,
             delta_x=delta_x,
-            hide_unit_selector=hide_unit_selector
+            hide_unit_selector=hide_unit_selector,
+            plot_legend=plot_legend,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

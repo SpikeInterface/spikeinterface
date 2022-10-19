@@ -57,12 +57,11 @@ class SpikeLocationsWidget(BaseWidget):
         slc = waveform_extractor.load_extension("spike_locations")
         spike_locations = slc.get_data(outputs="by_unit")
 
-        recording = waveform_extractor.recording
         sorting = waveform_extractor.sorting
 
-        channel_ids = recording.channel_ids
-        channel_locations = recording.get_channel_locations()
-        probegroup = recording.get_probegroup()
+        channel_ids = waveform_extractor.channel_ids
+        channel_locations = waveform_extractor.get_channel_locations()
+        probegroup = waveform_extractor.get_probegroup()
 
         if sorting.get_num_segments() > 1:
             assert (

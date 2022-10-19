@@ -31,18 +31,19 @@ class AmplitudesWidget(BaseWidget):
     bins : int
         If plot_histogram is True, the number of bins for the amplitude histogram.
         If None (default), this is automatically adjusted.
+    plot_legend: bool (default True)
+        plot or not the legend
     """
     possible_backends = {}
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None,
                  segment_index=None, max_spikes_per_unit=None, hide_unit_selector=False, 
-                 plot_histograms=False, bins=None, backend=None, **backend_kwargs):
+                 plot_histograms=False, bins=None, plot_legend=True, backend=None, **backend_kwargs):
         sorting = waveform_extractor.sorting
         self.check_extensions(waveform_extractor, "spike_amplitudes")
         sac = waveform_extractor.load_extension('spike_amplitudes')
         amplitudes = sac.get_data(outputs='by_unit')
-
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
@@ -96,7 +97,8 @@ class AmplitudesWidget(BaseWidget):
             total_duration=total_duration,
             plot_histograms=plot_histograms,
             bins=bins,
-            hide_unit_selector=hide_unit_selector
+            hide_unit_selector=hide_unit_selector,
+            plot_legend=plot_legend,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

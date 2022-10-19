@@ -69,7 +69,8 @@ class SpikesOnTracesPlotter(MplPlotter):
                     vspacing = dp.timeseries["vspacing"]
                     traces = dp.timeseries["list_traces"][0]
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-we.nbefore, we.nafter) - frame_range[0]
-                    
+                    waveform_idxs = np.clip(waveform_idxs, 0, len(dp.timeseries['times'])-1)
+
                     times = dp.timeseries["times"][waveform_idxs]
                     # discontinuity
                     times[:, -1] = np.nan

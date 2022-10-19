@@ -60,8 +60,8 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 
     def test_sparse(self):
         we = self.we2
-        unit_ids = we.sorting.unit_ids
-        num_channels = we.recording.get_num_channels()
+        unit_ids = we.unit_ids
+        num_channels = we.get_num_channels()
         pc = self.extension_class(we)
 
         sparsity_radius = get_template_channel_sparsity(we, method="radius",
@@ -110,10 +110,10 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         we = self.we1
         if we.is_extension("principal_components"):
             we.delete_extension("principal_components")
-        we_cp = we.select_units(we.sorting.unit_ids, self.cache_folder / 'toy_waveforms_1seg_cp')
+        we_cp = we.select_units(we.unit_ids, self.cache_folder / 'toy_waveforms_1seg_cp')
 
 
-        wfs0 = we.get_waveforms(unit_id=we.sorting.unit_ids[0])
+        wfs0 = we.get_waveforms(unit_id=we.unit_ids[0])
         n_samples = wfs0.shape[1]
         n_channels = wfs0.shape[2]
         n_components = 5
@@ -128,8 +128,8 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         all_pca = pc_local.get_pca_model()
         all_pca_par = pc_local_par.get_pca_model()
 
-        assert len(all_pca) == we.recording.get_num_channels()
-        assert len(all_pca_par) == we.recording.get_num_channels()
+        assert len(all_pca) == we.get_num_channels()
+        assert len(all_pca_par) == we.get_num_channels()
 
         for (pc, pc_par) in zip(all_pca, all_pca_par):
             assert np.allclose(pc.components_, pc_par.components_)

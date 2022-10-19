@@ -47,7 +47,7 @@ class SpikeLocationsPlotter(SortingviewPlotter):
         )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(unit_ids)
+            v_units_table = generate_unit_table_view(dp.sorting)
 
             view = vv.Box(
                 direction="horizontal",

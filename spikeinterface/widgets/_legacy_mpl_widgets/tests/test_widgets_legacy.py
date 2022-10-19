@@ -83,8 +83,8 @@ class TestWidgets(unittest.TestCase):
         sw.plot_unit_probe_map(self._we, with_channel_ids=True)
         sw.plot_unit_probe_map(self._we, animated=True)
 
-    def test_plot_units_depth_vs_amplitude(self):
-        sw.plot_units_depth_vs_amplitude(self._we)
+    # def test_plot_units_depth_vs_amplitude(self):
+    #     sw.plot_units_depth_vs_amplitude(self._we)
 
     # def test_amplitudes_timeseries(self):
     #     sw.plot_amplitudes_timeseries(self._we)
@@ -146,9 +146,9 @@ class TestWidgets(unittest.TestCase):
         metrics = compute_quality_metrics(self._we, metric_names=['snr'])
         sw.plot_sorting_performance(self._gt_comp, metrics, performance_name='accuracy', metric_name='snr')
 
-    def test_plot_unit_summary(self):
-        unit_id = self._sorting.unit_ids[4]
-        sw.plot_unit_summary(self._we, unit_id)
+    #~ def test_plot_unit_summary(self):
+        #~ unit_id = self._sorting.unit_ids[4]
+        #~ sw.plot_unit_summary(self._we, unit_id)
 
 
 if __name__ == '__main__':
