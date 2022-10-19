@@ -28,18 +28,10 @@
 <tr>
   <td>Build Status</td>
   <td>
-    <a href="https://travis-ci.org/SpikeInterface/spikeinterface">
-    <img src="https://travis-ci.org/SpikeInterface/spikeinterface.svg?branch=master" alt="travis build status" />
+    <a href="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg">
+    <img src="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg" alt="travis build status" />
     </a>
   </td>
-</tr>
-<tr>
-	<td>Gitter</td>
-	<td>
-		<a href="https://gitter.im/SpikeInterface/community">
-		<img src="https://badges.gitter.im/SpikeInterface.svg" />
-	</a>
-	</td>
 </tr>
 <tr>
 	<td>Codecov</td>
@@ -48,7 +40,13 @@
 		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/master/graphs/badge.svg" alt="codecov" />
 		</a>
 	</td>
-
+</tr>
+<tr>
+	<td>Twitter</td>
+	<td>
+		<a href="https://twitter.com/spikeinterface?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">@spikeinterface
+    </a>
+	</td>
 </tr>
 </table>
 
