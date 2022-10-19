@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import List, Union
 import numpy as np
-from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, NpzSortingExtractor, AddTemplatesRecording
+from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, NpzSortingExtractor, InjectTemplatesRecording
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core.testing_tools import generate_sorting
 from spikeinterface.extractors.toy_example import synthesize_random_firings
 
 
-class HybridUnitsRecording(AddTemplatesRecording):
+class HybridUnitsRecording(InjectTemplatesRecording):
     """
     Class for creating a hybrid recording where additional units are added
     to an existing recording.
@@ -79,7 +79,7 @@ class HybridUnitsRecording(AddTemplatesRecording):
                                 for unit_id in self.injected_sorting.unit_ids]
                                 for seg_index in range(parent_recording.get_num_segments())]
 
-        AddTemplatesRecording.__init__(
+        InjectTemplatesRecording.__init__(
             self, self.injected_sorting, templates, nbefore, amplitude_factor, parent_recording, num_samples)
 
         self._kwargs = dict(
@@ -95,7 +95,7 @@ class HybridUnitsRecording(AddTemplatesRecording):
         )
 
 
-class HybridSpikesRecording(AddTemplatesRecording):
+class HybridSpikesRecording(InjectTemplatesRecording):
     """
     Class for creating a hybrid recording where additional spikes are added
     to already existing units.
@@ -159,7 +159,7 @@ class HybridSpikesRecording(AddTemplatesRecording):
                 "Provide injected_sorting_folder to injected sorting object"
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 
-        AddTemplatesRecording.__init__(
+        InjectTemplatesRecording.__init__(
             self, self.injected_sorting, templates, wvf_extractor.nbefore, parent_recording=target_recording)
 
         self._kwargs = dict(

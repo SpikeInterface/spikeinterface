@@ -72,4 +72,4 @@ from .old_api_utils import (create_recording_from_old_extractor, create_sorting_
                             create_extractor_from_new_recording, create_extractor_from_new_sorting)
 
 # templates addition
-from .addtemplatesrecording import AddTemplatesRecording, AddTemplatesRecordingSegment, add_templates
+from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates

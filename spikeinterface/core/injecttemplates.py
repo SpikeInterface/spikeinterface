@@ -5,7 +5,7 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from spikeinterface.core.core_tools import define_function_from_class, check_json
 
 
-class AddTemplatesRecording(BaseRecording):
+class InjectTemplatesRecording(BaseRecording):
     """
     Class for creating a recording based on spike timings and templates.
     Can be just the templates or can add to an already existing recording.
@@ -32,7 +32,7 @@ class AddTemplatesRecording(BaseRecording):
 
     Returns
     -------
-    add_templates_recording: AddTemplatesRecording
+    add_templates_recording: InjectTemplatesRecording
         The recording with the templates added.
     """
 
@@ -93,7 +93,7 @@ class AddTemplatesRecording(BaseRecording):
             spikes = self.spike_vector[start : end]
 
             parent_recording_segment = None if parent_recording is None else parent_recording._recording_segments[segment_index]
-            recording_segment = AddTemplatesRecordingSegment(self.sampling_frequency, self.dtype, spikes, templates, nbefore,
+            recording_segment = InjectTemplatesRecordingSegment(self.sampling_frequency, self.dtype, spikes, templates, nbefore,
                                                              amplitude_factor[start:end], parent_recording_segment, num_samples[segment_index])
             self.add_recording_segment(recording_segment)
 
@@ -116,11 +116,11 @@ class AddTemplatesRecording(BaseRecording):
         threshold = 0.01 * max_value
 
         if max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1]))) > threshold:
-            raise Exception("Warning!\nYour templates do not go to 0 on the edges in AddTemplatesRecording.__init__\nPlease make your window bigger.")
+            raise Exception("Warning!\nYour templates do not go to 0 on the edges in InjectTemplatesRecording.__init__\nPlease make your window bigger.")
 
 
 
-class AddTemplatesRecordingSegment(BaseRecordingSegment):
+class InjectTemplatesRecordingSegment(BaseRecordingSegment):
 
     def __init__(self, sampling_frequency: float, dtype, spike_vector: np.ndarray, templates: np.ndarray, nbefore: List[int],
                  amplitude_factor: List[List[float]], parent_recording_segment: Union[BaseRecordingSegment, None] = None, num_samples: Union[int, None] = None) -> None:
@@ -186,4 +186,4 @@ class AddTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-add_templates = define_function_from_class(source_class=AddTemplatesRecording, name="add_templates")
+inject_templates = define_function_from_class(source_class=InjectTemplatesRecording, name="inject_templates")
