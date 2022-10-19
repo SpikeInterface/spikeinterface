@@ -14,15 +14,16 @@ class MetricsPlotter(SortingviewPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         metrics = dp.metrics
+        metric_names = list(metrics.columns)
 
         if dp.unit_ids is None:
             unit_ids = metrics.index.values
         else:
-            unit_ids = dp.uniit_ids
+            unit_ids = dp.unit_ids
         unit_ids = self.make_serializable(unit_ids)
 
         metrics_sv = []
-        for col in metrics.columns:
+        for col in metric_names:
             dtype = metrics.iloc[0][col].dtype
             metric = vv.UnitMetricsGraphMetric(
                             key=col,
@@ -52,14 +53,17 @@ class MetricsPlotter(SortingviewPlotter):
             )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting)
+            if dp.include_metrics_data:
+                for col in metrics.columns:
+                    dp.sorting.set_property(col, metrics[col].values)
+                v_units_table = generate_unit_table_view(dp.sorting, unit_properties=metric_names)
+            else:
+                v_units_table = generate_unit_table_view(dp.sorting)
 
-            view = vv.Box(
+            view = vv.Splitter(
                 direction="horizontal",
-                items=[
-                    vv.LayoutItem(v_units_table, max_size=150),
-                    vv.LayoutItem(v_metrics),
-                ],
+                item1=vv.LayoutItem(v_units_table),
+                item2=vv.LayoutItem(v_metrics)
             )
         else:
             view = v_metrics

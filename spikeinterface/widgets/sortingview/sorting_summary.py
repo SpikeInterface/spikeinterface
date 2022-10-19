@@ -41,16 +41,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
         v_units_table = generate_unit_table_view(dp.waveform_extractor.sorting, 
                                                  dp.unit_table_properties)
 
-        if dp.curation:
-            v_curation = vv.SortingCuration2()
-            v1 = vv.Splitter(
-                direction='vertical',
-                item1=vv.LayoutItem(v_units_table),
-                item2=vv.LayoutItem(v_curation)
-            )
-        else:
-            v1 = v_units_table
-        
+        v1 = v_units_table
         v2 = vv.Splitter(
                     direction='horizontal',
                     item1=vv.LayoutItem(v_unit_locations, stretch=0.2),

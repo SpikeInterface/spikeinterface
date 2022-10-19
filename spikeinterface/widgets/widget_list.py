@@ -25,8 +25,6 @@ from .spikes_on_traces import SpikesOnTracesWidget
 from .unit_locations import UnitLocationsWidget
 from .spike_locations import SpikeLocationsWidget
 
-# unit summary
-
 # unit presence
 
 
@@ -36,6 +34,7 @@ from .spike_locations import SpikeLocationsWidget
 
 # amplitudes
 from .amplitudes import AmplitudesWidget
+from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 
 # metrics
 from .quality_metrics import QualityMetricsWidget
@@ -44,12 +43,17 @@ from .template_metrics import TemplateMetricsWidget
 # similarity
 from .template_similarity import TemplateSimilarityWidget
 
+
+from .unit_depths import UnitDepthsWidget
+
 # summary
+from .unit_summary import UnitSummaryWidget
 from .sorting_summary import SortingSummaryWidget
 
 
 widget_list = [
     AmplitudesWidget,
+    AllAmplitudesDistributionsWidget,
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
     QualityMetricsWidget,
@@ -62,7 +66,10 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformsWidget,
     UnitWaveformDensityMapWidget,
+    UnitDepthsWidget,
+    
     # summary
+    UnitSummaryWidget,
     SortingSummaryWidget,
 ]
 
@@ -90,8 +97,10 @@ for wcls in widget_list:
                 backend_kwargs_str += f"\n        - {bk}: {bk_dsc}"
     wcls.__doc__ = wcls_doc.format(backends=backend_str, backend_kwargs=backend_kwargs_str)
 
+
 # make function for all widgets
 plot_amplitudes = define_widget_function_from_class(AmplitudesWidget, 'plot_amplitudes')
+plot_all_amplitudes_distributions = define_widget_function_from_class(AllAmplitudesDistributionsWidget, 'plot_all_amplitudes_distributions')
 plot_autocorrelograms = define_widget_function_from_class(AutoCorrelogramsWidget, 'plot_autocorrelograms')
 plot_crosscorrelograms = define_widget_function_from_class(CrossCorrelogramsWidget, 'plot_crosscorrelograms')
 plot_quality_metrics = define_widget_function_from_class(QualityMetricsWidget, "plot_quality_metrics")
@@ -104,7 +113,8 @@ plot_unit_locations = define_widget_function_from_class(UnitLocationsWidget, 'pl
 plot_unit_templates = define_widget_function_from_class(UnitTemplatesWidget, 'plot_unit_templates')
 plot_unit_waveforms = define_widget_function_from_class(UnitWaveformsWidget, 'plot_unit_waveforms')
 plot_unit_waveforms_density_map = define_widget_function_from_class(UnitWaveformDensityMapWidget, 'plot_unit_waveforms_density_map')
+plot_unit_depths = define_widget_function_from_class(UnitDepthsWidget, 'plot_unit_depths')
 
+
+plot_unit_summary = define_widget_function_from_class(UnitSummaryWidget, "plot_unit_summary")
 plot_sorting_summary = define_widget_function_from_class(SortingSummaryWidget, "plot_sorting_summary")
-
-

@@ -90,10 +90,10 @@ sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids, max_channels=5)
 sw.plot_amplitudes_distribution(we)
 
 ##############################################################################
-# plot_units_depth_vs_amplitude()
+# plot_units_depths()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-sw.plot_units_depth_vs_amplitude(we)
+sw.plot_units_depths(we)
 
 
 ##############################################################################

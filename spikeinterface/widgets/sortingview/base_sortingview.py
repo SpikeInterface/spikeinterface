@@ -1,5 +1,4 @@
 import numpy as np
-from copy import deepcopy
 
 from ...core.core_tools import check_json
 from spikeinterface.widgets.base import BackendPlotter
@@ -25,7 +24,8 @@ class SortingviewPlotter(BackendPlotter):
         self.url = None
 
     def make_serializable(*args):
-        serializable_dict = check_json({i: a for i, a in enumerate(args[1:])})
+        dict_to_serialize = {int(i): a for i, a in enumerate(args[1:])}
+        serializable_dict = check_json(dict_to_serialize)
         returns = ()
         for i in range(len(args) - 1):
             returns += (serializable_dict[i],)
@@ -79,26 +79,29 @@ def generate_unit_table_view(sorting, unit_properties=None):
         ut_columns = []
         ut_rows = []
         values = {}
+        valid_unit_properties = []
         for prop_name in unit_properties:
             property_values = sorting.get_property(prop_name)
-            val0 = property_values[0]
-            if isinstance(val0, (int, np.integer)):
+            # make dtype available
+            val0 = np.array(property_values[0])
+            if val0.dtype.kind in ("i", "u"):
                 dtype = "int"
-            elif isinstance(val0, float):
-                dtype = "float"
-            elif isinstance(val0, str):
+            elif val0.dtype.kind in ("U", "S"):
                 dtype = "str"
-            elif isinstance(val0, (bool, np.bool_)):
+            elif val0.dtype.kind == "f":
+                dtype = "float"
+            elif val0.dtype.kind == "b":
                 dtype = "bool"
             else:
-                raise Exception
+                print(f"Unsupported dtype {val0.dtype} for property {prop_name}. Skipping")
+                continue
             ut_columns.append(
-                vv.UnitsTableColumn(key=prop_name, label=prop_name,
-                dtype=dtype)
+                vv.UnitsTableColumn(key=prop_name, label=prop_name, dtype=dtype)
             )
+            valid_unit_properties.append(prop_name)
         
         for ui, unit in enumerate(sorting.unit_ids):
-            for prop_name in unit_properties:
+            for prop_name in valid_unit_properties:
                 property_values = sorting.get_property(prop_name)
                 val0 = property_values[0]
                 if np.isnan(property_values[ui]):

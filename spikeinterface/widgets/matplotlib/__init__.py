@@ -1,4 +1,5 @@
 from .amplitudes import AmplitudesPlotter
+from .all_amplitudes_distributions import AllAmplitudesDistributionsPlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
 from .quality_metrics import QualityMetricsPlotter
@@ -11,3 +12,5 @@ from .unit_locations import UnitLocationsPlotter
 from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms import UnitWaveformPlotter
 from .unit_waveforms_density_map import UnitWaveformDensityMapPlotter
+from .unit_depths import UnitDepthsPlotter
+from .unit_summary import UnitSummaryPlotter
