@@ -130,7 +130,11 @@ jobs:
               echo "Sortingcomponents changed"
               echo "::set-output name=SORTINGCOMPONENTS_CHANGED::true"
             fi
-          done 
+          done
+      - name: Test import full
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v spikeinterface/test_import_full.py
       - name: Test core
         run: |
           source ~/test_env/bin/activate
