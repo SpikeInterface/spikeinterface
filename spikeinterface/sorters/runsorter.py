@@ -6,7 +6,7 @@ import platform
 from typing import Optional, Union
 
 from ..core import BaseRecording
-from ..version import version as si_version
+from .. import __version__ as si_version
 from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier
 from .sorterlist import sorter_dict
