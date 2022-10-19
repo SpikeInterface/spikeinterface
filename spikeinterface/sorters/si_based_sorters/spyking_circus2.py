@@ -3,6 +3,7 @@ from .si_based import ComponentsBasedSorter
 import os
 import shutil
 import numpy as np
+import os
 
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
     get_noise_levels, extract_waveforms)
@@ -24,7 +25,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'registration' : {},
         'apply_preprocessing': True,
         'shared_memory' : False,
-        'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
+        'job_kwargs' : {'n_jobs' : os.cpu_count(), 'chunk_duration' : '1s', 'verbose' : False}
     }
 
     @classmethod

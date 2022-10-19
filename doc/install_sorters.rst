@@ -190,6 +190,16 @@ SpykingCircus
         pip install mpi4py
         pip install spyking-circus --no-binary=mpi4py
 
+SpykingCircus2
+--------------
+
+* Python
+* Url: https://spikeinterface.readthedocs.io
+* Authors: Pierre Yger
+* Installation::
+
+        pip install spikeinterface
+
 
 Tridesclous
 -----------
