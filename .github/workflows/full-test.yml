@@ -118,6 +118,7 @@ jobs:
             if [[ $file == *"/curation/"* ]]; then
               echo "Curation changed"
               echo "::set-output name=CURATION_CHANGED::true"
+            fi
             if [[ $file == *"/widgets/"* ]]; then
               echo "Widgets changed"
               echo "::set-output name=WIDGETS_CHANGED::true"
