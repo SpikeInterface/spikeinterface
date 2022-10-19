@@ -27,15 +27,18 @@ dependencies = [
 requires = ["setuptools>=62.0"]
 build-backend = "setuptools.build_meta"
 
-
 [tool.setuptools]
 include-package-data = true
 package-data = {"spikeinterface.sorters" = ["**/*.m", "**/*.prm", "**/*.params", "**/*.yaml"]}
 
+[tool.setuptools.exclude-package-data]
+spikeinterface = ["**/tests/test_*"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["spikeinterface*"]
-exclude = ["*tests.*"]
+namespaces = false
+exclude = ["spikeinterface.*.tests"]
 
 
 [project.urls]
