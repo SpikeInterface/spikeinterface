@@ -125,6 +125,7 @@ markers = [
     "qualitymetrics",
     "sorters",
     "comparison",
+    "curation",
     "exporters",
     "widgets",
     "sortingcomponents",
