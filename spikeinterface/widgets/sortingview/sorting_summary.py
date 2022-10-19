@@ -38,14 +38,20 @@ class SortingSummaryPlotter(SortingviewPlotter):
                                                          display=False, backend="sortingview")
 
         # unit ids
-        v_units_table = generate_unit_table_view(dp.sorting.sorting, dp.unit_table_properties)
+        v_units_table = generate_unit_table_view(dp.waveform_extractor.sorting, 
+                                                 dp.unit_table_properties)
 
-        # assemble layout
-        v_summary = vv.Box(
-            direction='horizontal',
-            items=[
-                vv.LayoutItem(v_units_table, max_size=150),
-                vv.LayoutItem(vv.Splitter(
+        if dp.curation:
+            v_curation = vv.SortingCuration2()
+            v1 = vv.Splitter(
+                direction='vertical',
+                item1=vv.LayoutItem(v_units_table),
+                item2=vv.LayoutItem(v_curation)
+            )
+        else:
+            v1 = v_units_table
+        
+        v2 = vv.Splitter(
                     direction='horizontal',
                     item1=vv.LayoutItem(v_unit_locations, stretch=0.2),
                     item2=vv.LayoutItem(
@@ -68,9 +74,13 @@ class SortingSummaryPlotter(SortingviewPlotter):
                                 )
                             )
                         )
-                    )
-                ]
-            )
+
+        # assemble layout
+        v_summary = vv.Splitter(
+            direction='horizontal',
+            item1=vv.LayoutItem(v1),
+            item2=vv.LayoutItem(v2)
+        )
 
         self.handle_display_and_url(v_summary, **backend_kwargs)
         return v_summary

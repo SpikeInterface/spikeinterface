@@ -76,15 +76,35 @@ def generate_unit_table_view(sorting, unit_properties=None):
             for u in sorting.unit_ids
         ]
     else:
-        ut_columns = unit_properties
+        ut_columns = []
         ut_rows = []
         values = {}
         for prop_name in unit_properties:
             property_values = sorting.get_property(prop_name)
-            for ui, unit in enumerate(sorting.unit_ids):
+            val0 = property_values[0]
+            if isinstance(val0, (int, np.integer)):
+                dtype = "int"
+            elif isinstance(val0, float):
+                dtype = "float"
+            elif isinstance(val0, str):
+                dtype = "str"
+            elif isinstance(val0, (bool, np.bool_)):
+                dtype = "bool"
+            else:
+                raise Exception
+            ut_columns.append(
+                vv.UnitsTableColumn(key=prop_name, label=prop_name,
+                dtype=dtype)
+            )
+        
+        for ui, unit in enumerate(sorting.unit_ids):
+            for prop_name in unit_properties:
+                property_values = sorting.get_property(prop_name)
+                val0 = property_values[0]
                 if np.isnan(property_values[ui]):
                     continue
-                values[unit] = property_values[ui]
+                values[prop_name] = property_values[ui]
+            ut_rows.append(vv.UnitsTableRow(unit_id=unit, values=check_json(values)))
             
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns)
     return v_units_table
