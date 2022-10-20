@@ -2,6 +2,7 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
+import scipy.stats
 
 class InterpolateBadChannels(BasePreprocessor):
     """
@@ -24,12 +25,13 @@ class InterpolateBadChannels(BasePreprocessor):
     p: exponent of the Gaussian kernel. Determines rate of decay
        for distance weightings.
 
-    kriging_distance_um: distance between sequential channels in um.
+    kriging_distance_um: distance between sequential channels in um. If None, will use
+                         the most common distance between y-axis channels.
 
     """
     name = 'interpolate_bad_channels'
 
-    def __init__(self, recording, bad_channel_indexes, p=1.3, kriging_distance_um=20):
+    def __init__(self, recording, bad_channel_indexes, p=1.3, kriging_distance_um=None):
         BasePreprocessor.__init__(self, recording)
 
         self.bad_channel_indexes = bad_channel_indexes
@@ -39,6 +41,12 @@ class InterpolateBadChannels(BasePreprocessor):
 
         x = recording.get_probe().contact_positions[:, 0]
         y = recording.get_probe().contact_positions[:, 1]
+
+        if kriging_distance_um is None:
+            if recording.get_probe().si_units != "um":
+                raise NotImplementedError("Channel spacing units must be in um")
+
+            kriging_distance_um = self.get_reccomended_kriging_distance_um(recording, y)
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(parent_segment,
@@ -54,6 +62,11 @@ class InterpolateBadChannels(BasePreprocessor):
                             p=p,
                             kriging_distance_um=kriging_distance_um)
 
+    def get_reccomended_kriging_distance_um(self, recording, y):
+        """
+        Get the most common distance between channels on the y-axis
+        """
+        return scipy.stats.mode(np.diff(np.unique(y)), keepdims=False)[0]
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 

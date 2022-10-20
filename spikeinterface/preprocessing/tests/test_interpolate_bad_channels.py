@@ -17,6 +17,10 @@ def test_interpolate_bad_channels():
 
     Requires preprocessing scaled values to get close alignment (otherwise
     different on average by ~1.1)
+
+    They are not exactly the same due to minor scaling differences (applying
+    voltage.interpolate_bad_channel() with ibl_channel geometry  to
+    si_scaled_recordin.get_traces(0) is also close to 1e-2.
     """
     # Download and load data
     local_path = si.download_dataset(remote_path='spikeglx/Noise4Sam_g0')
@@ -25,16 +29,16 @@ def test_interpolate_bad_channels():
                                     ignore_warnings=True)
 
     bad_channel_indexes = np.random.choice(si_recording.get_num_channels(),
-                                           50, replace=False)
+                                           100, replace=False)
 
     # interpolate SI
     si_scaled_recording = sipp.ScaleRecording(si_recording,
                                               gain=si_recording.get_property("gain_to_uV"),
                                               offset=si_recording.get_property("offset_to_uV"))
 
-    si_interpolated_recording = sipp.interpolate_bad_channels(si_recording,
+    si_interpolated_recording = sipp.interpolate_bad_channels(si_scaled_recording,
                                                               bad_channel_indexes)
-    si_interpolated = si_interpolated_recording.get_traces(0, return_scaled=True)
+    si_interpolated = si_interpolated_recording.get_traces(0)
 
     # interpolate IBL
     ibl_bad_channel_labels = np.zeros(si_recording.get_num_channels())
@@ -49,7 +53,7 @@ def test_interpolate_bad_channels():
 
     # compare
     assert np.allclose(ibl_interpolated.T*1e6, si_interpolated, 1e-2)
-    is_close = np.isclose(ibl_interpolated.T*1e6, si_interpolated, 1e-6)
+    is_close = np.isclose(ibl_interpolated.T*1e6, si_interpolated, 1e-5)
     assert np.mean(is_close) > 0.999
 
 if __name__ == '__main__':
