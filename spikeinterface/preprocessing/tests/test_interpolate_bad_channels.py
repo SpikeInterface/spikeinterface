@@ -7,7 +7,7 @@ import numpy as np
 try:
     import spikeglx
     import neurodsp.voltage as voltage
-except:  # Catch relevant exception
+except ImportError:
     raise ImportError("Requires ibl-neuropixel dev install (pip install -e .) from inside cloned repo."
                       "https://github.com/int-brain-lab/ibl-neuropixel")
 
