@@ -15,8 +15,6 @@ class InterpolateBadChannels(BasePreprocessor):
     Parameters
     ----------
 
-    data: (num_channels x num_samples) numpy array
-
     bad_channel_indexes: numpy array, indexes of the bad channels to interpolate.
 
     x: numpy array of channel x coordinates.
@@ -76,16 +74,16 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
         traces = traces.copy()
 
-        interpolate_bad_channels(traces,  # TODO: check dims
-                                 self.bad_channel_indexes,
-                                 self.x,
-                                 self.y,
-                                 self.p,
-                                 self.kriging_distance_um)
+        interpolate_bad_channels_ibl(traces,  # TODO: check dims
+                                     self.bad_channel_indexes,
+                                     self.x,
+                                     self.y,
+                                     self.p,
+                                     self.kriging_distance_um)
 
         return traces
 
-def interpolate_bad_channels(data, bad_channel_indexes, x, y, p, kriging_distance_um):
+def interpolate_bad_channels_ibl(traces, bad_channel_indexes, x, y, p, kriging_distance_um):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
     This is based on the distance from the bad channel, as determined from x,y
@@ -97,6 +95,9 @@ def interpolate_bad_channels(data, bad_channel_indexes, x, y, p, kriging_distanc
 
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
+
+    traces: (num_samples x num_channels) numpy array
+
     """
     for i in bad_channel_indexes:
         breakpoint()
@@ -110,9 +111,10 @@ def interpolate_bad_channels(data, bad_channel_indexes, x, y, p, kriging_distanc
         # apply interpolation
         imult = np.where(weights > 0.005)[0]
         if imult.size == 0:
-            data[i, :] = 0
+            traces[:, i] = 0
             continue
-        data[i, :] = np.matmul(weights[imult], data[imult, :])
+        traces[:, i] = np.matmul(traces[:, imult], weights[imult])
+
 
     return
 
