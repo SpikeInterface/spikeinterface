@@ -9,6 +9,12 @@ from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
     get_noise_levels, extract_waveforms)
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
+try:
+    import hdbscan
+    HAVE_HDBSCAN = True
+except:
+    HAVE_HDBSCAN = False
+
 class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     sorter_name = 'spykingcircus2'
@@ -34,6 +40,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, output_folder, params, verbose):
+
+        assert HAVE_HDBSCAN, 'spykingcircus2 needs hdbscan to be installed'
     
         params['job_kwargs']['verbose'] = verbose
         params['job_kwargs']['progress_bar'] = verbose
