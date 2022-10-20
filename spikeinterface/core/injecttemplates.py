@@ -32,8 +32,8 @@ class InjectTemplatesRecording(BaseRecording):
 
     Returns
     -------
-    add_templates_recording: InjectTemplatesRecording
-        The recording with the templates added.
+    injected_recording: InjectTemplatesRecording
+        The recording with the templates injected.
     """
 
     def __init__(self, sorting: BaseSorting, templates: np.ndarray, nbefore: Union[List[int], int, None] = None,
