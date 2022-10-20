@@ -7,12 +7,12 @@ def apply_sortingview_curation(
     uri,
     exclude_labels=None,
     include_labels=None,
-    make_graph=False,
-    properties_policy="keep",
-    verbose=True,
+    verbose=False
 ):
     """
     Apply curation from SortingView manual curation.
+    First, merges (if present) are applied. Then labels are loaded and units
+    are optionally filtered based on exclude_labels and include_labels.
 
     Parameters
     ----------
@@ -20,25 +20,19 @@ def apply_sortingview_curation(
         The sorting object to be curated
     uri : str
         The URI or JOT curation link from sortingview
-    exclude_labels : _type_, optional
-        _description_, by default None
-    include_labels : _type_, optional
-        _description_, by default None
-    make_graph : bool, optional
-        _description_, by default False
-    properties_policy : str, optional
-        _description_, by default 'keep'
+    exclude_labels : list, optional
+        Optional list of labels to exclude (e.g. ["reject", "noise"]).
+        Mutually exclusive with include_labels, by default None
+    include_labels : list, optional
+        Optional list of labels to include (e.g. ["accept"]).
+        Mutually exclusive with exclude_labels,  by default None
     verbose : bool, optional
-
-    Raises
-    ------
-    ImportError
-        _description_
-    Exception
-        _description_
+        If True, output is verbose, by default False
 
     Returns
     -------
+    sorting_curated : BaseSorting
+        The curated sorting
     """
     try:
         import kachery_cloud as kcl
@@ -47,9 +41,7 @@ def apply_sortingview_curation(
             "To apply a SortingView manual curation, you need to have sortingview installed: "
             ">>> pip install sortingview"
         )
-    curation_sorting = CurationSorting(
-        sorting, make_graph=make_graph, properties_policy=properties_policy
-    )
+    curation_sorting = CurationSorting(sorting, make_graph=False, properties_policy="keep")
 
     # get sorting view curation
     try:
@@ -71,9 +63,7 @@ def apply_sortingview_curation(
     for _, labels in labels_dict.items():
         for label in labels:
             if label not in properties:
-                properties[label] = np.zeros(
-                    len(curation_sorting.current_sorting.unit_ids), dtype=bool
-                )
+                properties[label] = np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
 
     for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         labels_unit = []
@@ -88,24 +78,13 @@ def apply_sortingview_curation(
     if include_labels is not None or exclude_labels is not None:
         units_to_remove = []
         unit_ids = curation_sorting.current_sorting.unit_ids
-        assert include_labels or exclude_labels
+        assert include_labels or exclude_labels, "Use either `include_labels` or `exclude_labels` to filter units."
         if include_labels:
             for include_label in include_labels:
-                units_to_remove.extend(
-                    unit_ids[
-                        curation_sorting.current_sorting.get_property(include_label)
-                        == False
-                    ]
-                )
-            units_to_remove = np.unique(units_to_remove)
+                units_to_remove.extend(unit_ids[curation_sorting.current_sorting.get_property(include_label) == False])
         if exclude_labels:
             for exclude_label in exclude_labels:
-                units_to_remove.extend(
-                    unit_ids[
-                        curation_sorting.current_sorting.get_property(exclude_label)
-                        == True
-                    ]
-                )
+                units_to_remove.extend(unit_ids[curation_sorting.current_sorting.get_property(exclude_label) == True])
         units_to_remove = np.unique(units_to_remove)
         curation_sorting.remove_units(units_to_remove)
 
