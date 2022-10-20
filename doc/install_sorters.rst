@@ -204,9 +204,11 @@ are located in the clustering (now using on-the-fly features and less prone to f
 and in the template matching procedure, which is now a full orthogonal matching pursuit, working not
 only at peak times but at all times, recovering more spikes close to noise thresholds.
 
+* Python, requires HDBSCAN
 * Authors: Pierre Yger
 * Installation::
 
+        pip install hdbscan
         pip install spikeinterface
 
 
