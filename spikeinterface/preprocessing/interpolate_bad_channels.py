@@ -1,15 +1,39 @@
+
+# TODO: this assumes 20 um channel separation.
+#       a) is channel separated always same in x, y across probes
+#       b) is channel distance always stored in um
+#       c) should have user specify or calculate directly from probe?
+
+# removed GPU option (cupy install not assumed, add back in?)
+
 def interpolate_bad_channels(data, channel_labels=None, x=None, y=None, p=1.3, kriging_distance_um=20, gpu=False):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
-    The weights applied to neighbouring channels come from an exponential decay function
-    :param data: (nc, ns) np.ndarray
-    :param channel_labels; (nc) np.ndarray: 0: channel is good, 1: dead, 2:noisy, 3: out of the brain
-    :param x: channel x-coordinates, np.ndarray
-    :param y: channel y-coordinates, np.ndarray
-    :param p:
-    :param kriging_distance_um:
-    :param gpu: bool
-    :return:
+    This is based on the distance from the bad channel, as determined from x,y
+    channel coordinates. The weights applied to neighbouring channels come
+    from an exponential decay function.
+
+    Details of the interpolation function (Olivier Winter) used in the IBL pipeline
+    can be found at:
+
+    International Brain Laboratory et al. (2022). Spike sorting pipeline for the
+    International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
+
+    Parameters
+    ----------
+
+    data: (num_channels x num_samples) numpy array
+
+    bad_channel_indexes: numpy array, indexes of the bad channels to interpolate.
+
+    x: numpy array of channel x coordinates.
+
+    y: numpy array of channel y coordinates.
+
+    p: exponent of the Gaussian kernel. Determines rate of decay
+       for distance weightings.
+
+    kriging_distance_um: distance between sequential channels in um.
     """
     if gpu:
         import cupy as gp
