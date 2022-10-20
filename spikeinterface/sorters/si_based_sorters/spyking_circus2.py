@@ -25,7 +25,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'registration' : {},
         'apply_preprocessing': True,
         'shared_memory' : False,
-        'job_kwargs' : {'n_jobs' : os.cpu_count(), 'chunk_duration' : '1s', 'verbose' : False}
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
 
     @classmethod
@@ -38,6 +38,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         params['job_kwargs']['verbose'] = verbose
         params['job_kwargs']['progress_bar'] = verbose
 
+        if "n_jobs" in params["job_kwargs"]:
+            if params["job_kwargs"]["n_jobs"] == -1:
+                params["job_kwargs"]["n_jobs"] = os.cpu_count()
     
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -128,7 +131,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         matching_job_params = params['job_kwargs'].copy()
         matching_job_params['chunk_duration'] = '100ms'
-        matching_job_params['n_jobs'] = os.cpu_count()
 
         spikes = find_spikes_from_templates(recording_f, method='circus-omp', 
             method_kwargs=matching_params, **matching_job_params)

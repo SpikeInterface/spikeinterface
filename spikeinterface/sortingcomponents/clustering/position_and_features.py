@@ -25,7 +25,7 @@ class PositionAndFeaturesClustering:
     """
     _default_params = {
         "peak_localization_kwargs" : {"method" : "center_of_mass"},
-        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : os.cpu_count(), "cluster_selection_method" : "leaf"},
+        "hdbscan_kwargs": {"min_cluster_size" : 50,  "allow_single_cluster" : True, "core_dist_n_jobs" : -1, "cluster_selection_method" : "leaf"},
         "cleaning_kwargs" : {},
         "local_radius_um" : 100,
         "max_spikes_per_unit" : 200,
@@ -33,12 +33,21 @@ class PositionAndFeaturesClustering:
         "ms_before" : 1.5,
         "ms_after": 1.5,
         "cleaning_method": "dip",
-        "job_kwargs" : {"n_jobs" : os.cpu_count(), "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
+        "job_kwargs" : {"n_jobs" : -1, "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
     @classmethod
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, 'twisted clustering need hdbscan to be installed'
+
+
+        if "n_jobs" in params["job_kwargs"]:
+            if params["job_kwargs"]["n_jobs"] == -1:
+                params["job_kwargs"]["n_jobs"] = os.cpu_count()
+
+        if "core_dist_n_jobs" in params["hdbscan_kwargs"]:
+            if params["hdbscan_kwargs"]["core_dist_n_jobs"] == -1:
+                params["hdbscan_kwargs"]["core_dist_n_jobs"] = os.cpu_count()
 
         d = params
 
