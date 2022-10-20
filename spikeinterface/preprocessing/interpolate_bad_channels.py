@@ -74,12 +74,12 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
         traces = traces.copy()
 
-        interpolate_bad_channels_ibl(traces,  # TODO: check dims
-                                     self.bad_channel_indexes,
-                                     self.x,
-                                     self.y,
-                                     self.p,
-                                     self.kriging_distance_um)
+        traces = interpolate_bad_channels_ibl(traces,  # TODO: check dims
+                                              self.bad_channel_indexes,
+                                              self.x,
+                                              self.y,
+                                              self.p,
+                                              self.kriging_distance_um)
 
         return traces
 
@@ -100,7 +100,6 @@ def interpolate_bad_channels_ibl(traces, bad_channel_indexes, x, y, p, kriging_d
 
     """
     for i in bad_channel_indexes:
-        breakpoint()
         # compute the weights to apply to neighbouring traces
         offset = np.abs(x - x[i] + 1j * (y - y[i]))
         weights = np.exp(-(offset / kriging_distance_um) ** p)
@@ -115,7 +114,6 @@ def interpolate_bad_channels_ibl(traces, bad_channel_indexes, x, y, p, kriging_d
             continue
         traces[:, i] = np.matmul(traces[:, imult], weights[imult])
 
-
-    return
+    return traces
 
 interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannels, name='interpolate_bad_channels')
