@@ -6,7 +6,7 @@ import numpy as np
 
 # removed GPU option (cupy install not assumed, add back in?)
 
-def interpolate_bad_channels(data, channel_labels=None, x=None, y=None, p=1.3, kriging_distance_um=20):
+def interpolate_bad_channels(data, bad_channel_indexes, x=None, y=None, p=1.3, kriging_distance_um=20):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
     This is based on the distance from the bad channel, as determined from x,y
@@ -35,14 +35,11 @@ def interpolate_bad_channels(data, channel_labels=None, x=None, y=None, p=1.3, k
 
     kriging_distance_um: distance between sequential channels in um.
     """
-
-    # we interpolate only noisy channels or dead channels (0: good), out of the brain channels are left
-    bad_channels = np.where(np.logical_or(channel_labels == 1, channel_labels == 2))[0]
-    for i in bad_channels:
+    for i in bad_channel_indexes:
         # compute the weights to apply to neighbouring traces
         offset = np.abs(x - x[i] + 1j * (y - y[i]))
         weights = np.exp(-(offset / kriging_distance_um) ** p)
-        weights[bad_channels] = 0
+        weights[bad_channel_indexes] = 0
         weights[weights < 0.005] = 0
         weights = weights / np.sum(weights)
         imult = np.where(weights > 0.005)[0]
