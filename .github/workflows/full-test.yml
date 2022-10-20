@@ -168,6 +168,9 @@ jobs:
           pytest -v -m comparison
       - name: Test curation
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        env:
+          KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+          KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m curation
