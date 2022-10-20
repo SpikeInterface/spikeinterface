@@ -13,7 +13,7 @@ from pprint import pprint
 # First, let's create a toy example:
 # We choose explicitly one segment because many sorters handle only recording with unique segment
 
-recording, sorting_true = se.toy_example(duration=10, seed=0, num_segments=1)
+recording, sorting_true = se.toy_example(duration=60, seed=0, num_segments=1)
 print(recording)
 print(sorting_true)
 

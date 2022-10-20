@@ -46,7 +46,6 @@ For sorted data formats, we currently support:
 
 * **BlackRock** - BlackRockSortingExtractor
 * **Combinato** - CombinatoSortingExtractor
-* **Cell Explorer** - CellExplorerSortingExtractor
 * **Experimental Directory Structure (Exdir)** - ExdirSortingExtractor
 * **HerdingSpikes2** - HS2SortingExtractor
 * **JRClust** - JRCSortingExtractor
