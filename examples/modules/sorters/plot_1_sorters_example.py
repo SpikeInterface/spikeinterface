@@ -5,6 +5,7 @@ Run spike sorting algorithms
 This example shows the basic usage of the :py:mod:`spikeinterface.sorters` module of SpikeInterface
 """
 
+import spikeinterface as si
 import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 from pprint import pprint
@@ -13,7 +14,8 @@ from pprint import pprint
 # First, let's create a toy example:
 # We choose explicitly one segment because many sorters handle only recording with unique segment
 
-recording, sorting_true = se.toy_example(duration=60, seed=0, num_segments=1)
+local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+recording, sorting_true = se.read_mearec(local_path)
 print(recording)
 print(sorting_true)
 
