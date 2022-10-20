@@ -71,6 +71,7 @@ widgets:
   * Fix show_legend flag in locations plots (#1005)
   * Check backend kwargs validity (#1002)
   * Sortingview metrics and unit tables fixes (#1019)
+  * Add sortingview curation widget (#1023)
 
 package:
   * Change setup.py to pyproject.toml (#986)
