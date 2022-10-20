@@ -1,4 +1,4 @@
-
+import numpy as np
 # TODO: this assumes 20 um channel separation.
 #       a) is channel separated always same in x, y across probes
 #       b) is channel distance always stored in um
@@ -6,7 +6,7 @@
 
 # removed GPU option (cupy install not assumed, add back in?)
 
-def interpolate_bad_channels(data, channel_labels=None, x=None, y=None, p=1.3, kriging_distance_um=20, gpu=False):
+def interpolate_bad_channels(data, channel_labels=None, x=None, y=None, p=1.3, kriging_distance_um=20):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
     This is based on the distance from the bad channel, as determined from x,y
@@ -35,28 +35,20 @@ def interpolate_bad_channels(data, channel_labels=None, x=None, y=None, p=1.3, k
 
     kriging_distance_um: distance between sequential channels in um.
     """
-    if gpu:
-        import cupy as gp
-    else:
-        gp = np
-
-    # from ibllib.plots.figures import ephys_bad_channels
-    # ephys_bad_channels(x, 30000, channel_labels[0], channel_labels[1])
 
     # we interpolate only noisy channels or dead channels (0: good), out of the brain channels are left
-    bad_channels = gp.where(np.logical_or(channel_labels == 1, channel_labels == 2))[0]
+    bad_channels = np.where(np.logical_or(channel_labels == 1, channel_labels == 2))[0]
     for i in bad_channels:
         # compute the weights to apply to neighbouring traces
-        offset = gp.abs(x - x[i] + 1j * (y - y[i]))
-        weights = gp.exp(-(offset / kriging_distance_um) ** p)
+        offset = np.abs(x - x[i] + 1j * (y - y[i]))
+        weights = np.exp(-(offset / kriging_distance_um) ** p)
         weights[bad_channels] = 0
         weights[weights < 0.005] = 0
-        weights = weights / gp.sum(weights)
-        imult = gp.where(weights > 0.005)[0]
+        weights = weights / np.sum(weights)
+        imult = np.where(weights > 0.005)[0]
         if imult.size == 0:
             data[i, :] = 0
             continue
-        data[i, :] = gp.matmul(weights[imult], data[imult, :])
-    # from viewephys.gui import viewephys
-    # f = viewephys(data.T, fs=1/30, h=h, title='interp2')
+        data[i, :] = np.matmul(weights[imult], data[imult, :])
+
     return
