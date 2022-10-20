@@ -63,7 +63,7 @@ extractors = [
 ]
 
 full = [
-    # "datalad",
+    "zarr",
     "h5py",
     "pandas",
     "scipy",
@@ -71,7 +71,6 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    # sortingview
 ]
 
 widgets = [
