@@ -33,7 +33,7 @@ def get_potential_auto_merge(waveform_extractor,
     sorting = we.sorting
     unit_ids = sorting.unit_ids
     
-    # pre step : to get fast computation we will not analyse pairs when:
+    # STEP 1 : to get fast computation we will not analyse pairs when:
     #    * not enough spikes for one of theses
     #    * to far away one from each other
     n = unit_ids.size
@@ -42,7 +42,10 @@ def get_potential_auto_merge(waveform_extractor,
     to_remove = num_spikes < minimum_spikes
     pair_mask[to_remove, :] = False
     pair_mask[:, to_remove] = False
-    # unit positions are estimated rougtly with channel
+
+    # STEP 2 : remove contaminated auto corr
+
+    # STEP 3 : unit positions are estimated rougtly with channel
     chan_loc = we.recording.get_channel_locations()
     unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
     unit_max_chan = list(unit_max_chan.values())
@@ -52,7 +55,7 @@ def get_potential_auto_merge(waveform_extractor,
     
     print('Will check ', np.sum(pair_mask), 'pairs on ', pair_mask.size)
     
-    # step 1 : potential auto merge by correlogram
+    # Step 4 : potential auto merge by correlogram
     correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method='numba')
     corr_diff = compute_correlogram_diff(sorting, correlograms, bins,
                                     correlogram_low_pass=correlogram_low_pass,  adaptative_window_threshold=adaptative_window_threshold, 
@@ -61,13 +64,13 @@ def get_potential_auto_merge(waveform_extractor,
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
     print(potential_merges)
     
-    # step 2 : check if potential merge with CC also have template similarity
+    # step 5 : check if potential merge with CC also have template similarity
     # TODO
     
-    # step 3 : validate the potential merges with CC increase the contamination quality metrics
+    # step 6 : validate the potential merges with CC increase the contamination quality metrics
     # TODO
     
-    return potential_merges
+    return potential_merges, corr_diff
 
 
 def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=800., adaptative_window_threshold=0.5,
@@ -121,20 +124,16 @@ def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=
         win_size = get_unit_adaptive_window(auto_corr, thresh)
         win_sizes[unit_ind] = win_size
         
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        bins2 = bins[:-1] + np.mean(np.diff(bins))
-        ax.plot(bins2, auto_corr)
-        ax.axhline(thresh)
-        ax.axvline(bins2[m - win_size])
-        ax.axvline(bins2[m + win_size])
-        
-        dev = -np.gradient(np.gradient(auto_corr))
-        #~ dev = np.gradient(auto_corr)
-        ax.plot(bins2, dev)
-        
-
-        plt.show()
+        # import matplotlib.pyplot as plt
+        # fig, ax = plt.subplots()
+        # bins2 = bins[:-1] + np.mean(np.diff(bins))
+        # ax.plot(bins2, auto_corr)
+        # ax.axhline(thresh)
+        # ax.axvline(bins2[m - win_size])
+        # ax.axvline(bins2[m + win_size])
+        # dev = -np.gradient(np.gradient(auto_corr))
+        # ax.plot(bins2, dev)
+        # plt.show()
     
     
     
@@ -169,28 +168,28 @@ def compute_correlogram_diff(sorting, correlograms, bins,  correlogram_low_pass=
             
             
             # debug
-            corr_thresh = 0.3
-            if w_diff < corr_thresh:
-                import matplotlib.pyplot as plt
-                bins2 = bins[:-1] + np.mean(np.diff(bins))
-                fig, axs = plt.subplots(ncols=3)
-                ax = axs[0]
-                ax.plot(bins2, correlograms[unit_ind1, unit_ind1, :], color='b')
-                ax.plot(bins2, correlograms[unit_ind2, unit_ind2, :], color='r')
-                ax.plot(bins2, correlograms_smooth[unit_ind1, unit_ind1, :], color='b')
-                ax.plot(bins2, correlograms_smooth[unit_ind2, unit_ind2, :], color='r')
+            # corr_thresh = 0.3
+            # if w_diff < corr_thresh:
+            #     import matplotlib.pyplot as plt
+            #     bins2 = bins[:-1] + np.mean(np.diff(bins))
+            #     fig, axs = plt.subplots(ncols=3)
+            #     ax = axs[0]
+            #     ax.plot(bins2, correlograms[unit_ind1, unit_ind1, :], color='b')
+            #     ax.plot(bins2, correlograms[unit_ind2, unit_ind2, :], color='r')
+            #     ax.plot(bins2, correlograms_smooth[unit_ind1, unit_ind1, :], color='b')
+            #     ax.plot(bins2, correlograms_smooth[unit_ind2, unit_ind2, :], color='r')
                 
                 
-                ax.set_title(f'{unit_id1}[{num1}] {unit_id2}[{num2}]')
-                ax = axs[1]
-                ax.plot(bins2, correlograms[unit_ind1, unit_ind2, :], color='g')
-                ax = axs[2]
-                ax.plot(bins2, auto_corr1, color='b')
-                ax.plot(bins2, auto_corr2, color='r')
-                ax.axvline(bins2[m - win_size])
-                ax.axvline(bins2[m + win_size])
-                ax.set_title(f'corr diff {w_diff}')
-                plt.show()
+            #     ax.set_title(f'{unit_id1}[{num1}] {unit_id2}[{num2}]')
+            #     ax = axs[1]
+            #     ax.plot(bins2, correlograms[unit_ind1, unit_ind2, :], color='g')
+            #     ax = axs[2]
+            #     ax.plot(bins2, auto_corr1, color='b')
+            #     ax.plot(bins2, auto_corr2, color='r')
+            #     ax.axvline(bins2[m - win_size])
+            #     ax.axvline(bins2[m + win_size])
+            #     ax.set_title(f'corr diff {w_diff}')
+            #     plt.show()
     
     return corr_diff
 
@@ -233,13 +232,33 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     if np.sum(np.abs(auto_corr)) == 0:
         return 20.0
 
-    peaks = scipy.signal.find_peaks(-np.gradient(np.gradient(auto_corr)))[0]
+    derivative_2 = -np.gradient(np.gradient(auto_corr))
+    peaks = scipy.signal.find_peaks(derivative_2)[0]
 
-    for peak in peaks:
-        if auto_corr[peak] >= threshold:
-            return peak
-
-    # If none of the peaks crossed the threshold, redo with threshold/2.
-    return _get_unit_adaptive_window(auto_corr, threshold/2)
+    keep = auto_corr[peaks] >= threshold
+    peaks = peaks[keep]
+    keep = peaks < (auto_corr.shape[0] // 2)
+    peaks = peaks[keep]
 
 
+ 
+    if peaks.size == 0:
+        # If none of the peaks crossed the threshold, redo with threshold/2.
+        return get_unit_adaptive_window(auto_corr, threshold/2)
+
+    # keep best peak
+    ind = np.argmax(auto_corr[peaks])
+    best_peak = peaks[ind]
+    win_size = auto_corr.shape[0] // 2 - best_peak
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # bins2 = np.arange(auto_corr.size)
+    # ax.plot(bins2, auto_corr, color='b')
+    # ax.axhline(threshold)
+    # ax.scatter(bins2[peaks], auto_corr[peaks], color='orange')
+    # ax.plot(bins2, derivative_2, color='r')
+    # ax.scatter(bins2[peaks], derivative_2[peaks], color='orange')
+    # ax.axvline(bins2[best_peak])
+
+    return win_size
