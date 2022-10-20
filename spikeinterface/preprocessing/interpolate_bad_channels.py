@@ -31,30 +31,36 @@ class InterpolateBadChannels(BasePreprocessor):
     """
     name = 'interpolate_bad_channels'
 
-    def __init__(self, recording):
-        BasePreprocessor.__init__(self, recording, bad_channel_indexes, p=1.3, kriging_distance_um=20)
+    def __init__(self, recording, bad_channel_indexes, p=1.3, kriging_distance_um=20):
+        BasePreprocessor.__init__(self, recording)
 
         self.bad_channel_indexes = bad_channel_indexes
 
-        breakpoint()
+        if recording.get_property('contact_vector') is None:
+            raise ValueError('A probe must be attached to use bad channel interpolation. Use set_probe(...)')
+
+        x = recording.get_probe().contact_positions[:, 0]
+        y = recording.get_probe().contact_positions[:, 1]
 
         for parent_segment in recording._recording_segments:
-            rec_segment = InterpolateBadChannelSegment(parent_segment,
-                                                       bad_channel_indexes,
-                                                       x,
-                                                       y,
-                                                       p,
-                                                       kriging_distance_um)
+            rec_segment = InterpolateBadChannelsSegment(parent_segment,
+                                                        bad_channel_indexes,
+                                                        x,
+                                                        y,
+                                                        p,
+                                                        kriging_distance_um)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), dtype=dtype)
+        self._kwargs = dict(recording=recording.to_dict(),
+                            bad_channel_indexes=bad_channel_indexes,
+                            p=p,
+                            kriging_distance_um=kriging_distance_um)
 
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
-    def __init__(self, parent_recording_segment):
-        BasePreprocessorSegment.__init__(self, parent_recording_segment,
-                                         bad_channel_indexes, x, y, p, kriging_distance_um)
+    def __init__(self, parent_recording_segment, bad_channel_indexes, x, y, p, kriging_distance_um):
+        BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.bad_channel_indexes = bad_channel_indexes
         self.x = x
@@ -93,7 +99,7 @@ def interpolate_bad_channels(data, bad_channel_indexes, x, y, p, kriging_distanc
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
     """
     for i in bad_channel_indexes:
-
+        breakpoint()
         # compute the weights to apply to neighbouring traces
         offset = np.abs(x - x[i] + 1j * (y - y[i]))
         weights = np.exp(-(offset / kriging_distance_um) ** p)
