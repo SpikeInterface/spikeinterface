@@ -68,9 +68,12 @@ class CurationSorting:
         self.max_used_id = self.max_used_id+2
         self._add_new_stage(new_sorting, edges)
 
-    def merge(self,units_to_merge, delta_time_ms=0.4):
+    def merge(self, units_to_merge, new_unit_id=None, delta_time_ms=0.4):
         current_sorting = self._sorting_stages[self._sorting_stages_i]
-        new_unit_id = self._get_unused_id()[0]
+        if new_unit_id is None:
+            new_unit_id = self._get_unused_id()[0]
+        else:
+            assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(parent_sorting=current_sorting, units_to_merge=units_to_merge, 
                 new_unit_id=new_unit_id, delta_time_ms=delta_time_ms, properties_policy=self._properties_policy)
         if self._make_graph:
@@ -82,7 +85,6 @@ class CurationSorting:
             edges = None
         self.max_used_id = self.max_used_id + 1
         self._add_new_stage(new_sorting, edges)
-
 
     def remove_units(self, unit_ids):
         current_sorting = self._sorting_stages[self._sorting_stages_i]
