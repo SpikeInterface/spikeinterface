@@ -43,7 +43,7 @@ class RandomProjectionClustering:
     def main_function(cls, recording, peaks, params):
         assert HAVE_HDBSCAN, 'random projections clustering need hdbscan to be installed'
 
-        verbose = d['job_kwargs']['verbose']
+        
 
         if "n_jobs" in params["job_kwargs"]:
             if params["job_kwargs"]["n_jobs"] == -1:
@@ -53,7 +53,9 @@ class RandomProjectionClustering:
             if params["hdbscan_kwargs"]["core_dist_n_jobs"] == -1:
                 params["hdbscan_kwargs"]["core_dist_n_jobs"] = os.cpu_count()
 
+
         d = params
+        verbose = d['job_kwargs']['verbose']
         
         peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
 
