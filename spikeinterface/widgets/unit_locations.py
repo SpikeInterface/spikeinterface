@@ -59,6 +59,7 @@ class UnitLocationsWidget(BaseWidget):
         plot_data = dict(
             all_unit_ids=sorting.unit_ids,
             unit_locations=unit_locations,
+            sorting=sorting,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             unit_colors=unit_colors,

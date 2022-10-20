@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Get current year-month
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m')"
@@ -25,7 +25,7 @@ jobs:
         id: cache-venv
         with:
           path: ~/test_env
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}${{ hashFiles('**/requirements_full.txt') }}-${{ hashFiles('**/requirements_extractors.txt') }}-${{ hashFiles('**/requirements_test.txt') }}-${{ steps.date.outputs.date }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
       - name: Install dependencies
         run: |
           sudo apt update
@@ -45,14 +45,9 @@ jobs:
           pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
-          # TODO remove it after neo release
-          # because it force some version (numpy/numba/dhdbscan...)
-          pip install numpy==1.20
-          pip install -r requirements_test.txt
-          pip install -r requirements.txt
-          pip install -r requirements_full.txt
-          pip install -r requirements_extractors.txt
-          pip install -e .
+          # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
+          pip install numpy==1.22
+          pip install -e .[test,extractors,full]
       - name: git-annex install
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
@@ -136,7 +131,7 @@ jobs:
               echo "Sortingcomponents changed"
               echo "::set-output name=SORTINGCOMPONENTS_CHANGED::true"
             fi
-          done 
+          done
       - name: Test core
         run: |
           source ~/test_env/bin/activate

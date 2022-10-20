@@ -805,7 +805,7 @@ def _check_if_dumpable(d):
     if np.any([isinstance(v, dict) and 'dumpable' in v.keys() for (k, v) in kwargs.items()]):
         # check nested
         for k, v in kwargs.items():
-            if 'dumpable' in v.keys():
+            if isinstance(v, dict) and 'dumpable' in v.keys():
                 return _check_if_dumpable(v)
     else:
         return d['dumpable']
