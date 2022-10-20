@@ -3,8 +3,6 @@ import numpy as np
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-from ..core import get_random_data_chunks
-
 class InterpolateBadChannels(BasePreprocessor):
     """
     Interpolate bad channels based on weighted distance using linear interpolation.
@@ -38,17 +36,44 @@ class InterpolateBadChannels(BasePreprocessor):
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelSegment(parent_segment,
+                                                       bad_channel_indexes,
                                                        x,
                                                        y,
-                                                       bad_channel_indexes,
                                                        p,
-                                                       kriging_distance)
+                                                       kriging_distance_um)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(), dtype=dtype)
 
 
+class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
+    def __init__(self, parent_recording_segment):
+        BasePreprocessorSegment.__init__(self, parent_recording_segment,
+                                         bad_channel_indexes, x, y, p, kriging_distance_um)
+
+        self.bad_channel_indexes = bad_channel_indexes
+        self.x = x
+        self.y = y
+        self.p = p
+        self.kriging_distance_um = kriging_distance_um
+
+    def get_traces(self, start_frame, end_frame, channel_indices):
+
+        traces = self.parent_recording_segment.get_traces(start_frame,
+                                                          end_frame,
+                                                          slice(None))
+
+        traces = traces.copy()
+
+        interpolate_bad_channels(traces,  # TODO: check dims
+                                 self.bad_channel_indexes,
+                                 self.x,
+                                 self.y,
+                                 self.p,
+                                 self.kriging_distance_um)
+
+        return traces
 
 def interpolate_bad_channels(data, bad_channel_indexes, x, y, p, kriging_distance_um):
     """
@@ -80,3 +105,5 @@ def interpolate_bad_channels(data, bad_channel_indexes, x, y, p, kriging_distanc
         data[i, :] = np.matmul(weights[imult], data[imult, :])
 
     return
+
+interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannels, name="interpolate_bad_channels")
