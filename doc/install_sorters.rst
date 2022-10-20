@@ -190,11 +190,20 @@ SpykingCircus
         pip install mpi4py
         pip install spyking-circus --no-binary=mpi4py
 
-SpykingCircus2
---------------
+SI based spike sorters
+----------------------
 
-* Python
-* Url: https://spikeinterface.readthedocs.io
+Thanks to the sortingcomponents, some spike sorting algorithms can now be fully implemented 
+with spikeinterface. 
+
+SpykingCircus2
+~~~~~~~~~~~~~~
+
+This is a upgraded version of spykingcircus, natively written in spikeinterface. The main differences
+are located in the clustering (now using on-the-fly features and less prone to find noise clusters),
+and in the template matching procedure, which is now a full orthogonal matching pursuit, working not
+only at peak times but at all times, recovering more spikes close to noise thresholds.
+
 * Authors: Pierre Yger
 * Installation::
 
