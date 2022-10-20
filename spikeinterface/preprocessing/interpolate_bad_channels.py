@@ -29,10 +29,14 @@ class InterpolateBadChannels(BasePreprocessor):
     kriging_distance_um: distance between sequential channels in um.
 
     """
+    name = 'interpolate_bad_channels'
+
     def __init__(self, recording):
         BasePreprocessor.__init__(self, recording, bad_channel_indexes, p=1.3, kriging_distance_um=20)
 
         self.bad_channel_indexes = bad_channel_indexes
+
+        breakpoint()
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelSegment(parent_segment,
@@ -106,4 +110,4 @@ def interpolate_bad_channels(data, bad_channel_indexes, x, y, p, kriging_distanc
 
     return
 
-interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannels, name="interpolate_bad_channels")
+interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannels, name='interpolate_bad_channels')
