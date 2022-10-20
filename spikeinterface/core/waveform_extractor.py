@@ -1073,7 +1073,7 @@ class BaseWaveformExtractorExtension:
                 data = np.load(ext_data_file, mmap_mode='r')
             elif ext_data_file.suffix == '.csv':
                 import pandas as pd
-                data = pd.read_csv(ext_data_file, index_col=False)
+                data = pd.read_csv(ext_data_file, index_col=0)
             elif ext_data_file.suffix == '.pkl':
                 data = pickle.load(ext_data_file.open('rb'))
             self._extension_data[ext_data_name] = data
@@ -1097,7 +1097,7 @@ class BaseWaveformExtractorExtension:
                 elif isinstance(ext_data, np.ndarray):
                     np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
                 elif isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=False)
+                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
                 else:
                     try:
                         with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:

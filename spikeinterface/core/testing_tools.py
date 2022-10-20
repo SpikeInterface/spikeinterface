@@ -37,10 +37,13 @@ def generate_sorting(
         num_units=5,
         sampling_frequency=30000.,  # in Hz
         durations=[10.325, 3.5],  #  in s for 2 segments
-        empty_units=None
+        firing_rate=15,  # in Hz
+        empty_units=None,
+        refractory_period=1.5  # in ms
 ):
     num_segments = len(durations)
     num_timepoints = [int(sampling_frequency * d) for d in durations]
+    t_r = int(round(refractory_period * 1e-3 * sampling_frequency))
 
     unit_ids = np.arange(num_units)
 
@@ -52,11 +55,16 @@ def generate_sorting(
         units_dict = {}
         for unit_id in unit_ids:
             if unit_id not in empty_units:
-                #  15 Hz for all units
-                n_spike = int(15. * durations[seg_index])
-                spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n_spike)))
-                keep, = np.nonzero(np.diff(spike_times) > (sampling_frequency * 0.005))
-                spike_times = spike_times[keep]
+                n_spikes = int(firing_rate * durations[seg_index])
+                n = int(n_spikes + 10*np.sqrt(n_spikes))
+                spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n)))
+
+                violations = np.where(np.diff(spike_times) < t_r)[0]
+                spike_times = np.delete(spike_times, violations)
+
+                if len(spike_times) > n_spikes:
+                    spike_times = np.sort(np.random.choice(spike_times, n_spikes, replace=False))
+
                 units_dict[unit_id] = spike_times
             else:
                 units_dict[unit_id] = np.array([], dtype=int)

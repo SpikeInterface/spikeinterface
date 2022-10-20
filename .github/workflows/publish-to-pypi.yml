@@ -20,8 +20,7 @@ jobs:
         run: |
           pip install pytest
           pip install zarr
-          pip install setuptools wheel twine
-          pip install -r requirements.txt
+          pip install setuptools wheel twine build
           pip install -e .
       - name: Test core with pytest
         run: |
@@ -31,5 +30,5 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          python setup.py sdist bdist_wheel
+          python -m build --sdist --wheel
           twine upload dist/*
