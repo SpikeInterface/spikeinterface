@@ -6,7 +6,6 @@ Contain core class:
 And contain also "core extractors" used for caching:
   * BinaryRecordingExtractor
   * NpzSortingExtractor
-
 """
 from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
