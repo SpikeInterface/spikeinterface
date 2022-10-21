@@ -15,7 +15,6 @@ else:
 
 set_global_tmp_folder(cache_folder)
 
-
 # this needs to be run only once
 def generate_sortingview_curation_dataset():
     import spikeinterface.widgets as sw
@@ -38,10 +37,10 @@ def test_sortingview_curation():
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
 
-    jot_uri = "jot://deeVxsBTDxad"
+    jot_uri = "jot://cENcosqWTArO"
     # curation link: 
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://b4b42fd70614829eea046c056cf10953def11c60&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22jot://deeVxsBTDxad%22}
-    sorting_curated_jot = apply_sortingview_curation(sorting, uri=jot_uri)
+    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://1ba03f81e62ec7cb2e3e46898830f92cdf5e026f&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22jot://cENcosqWTArO%22}
+    sorting_curated_jot = apply_sortingview_curation(sorting, uri=jot_uri, verbose=True)
 
     assert len(sorting_curated_jot.unit_ids) == 7
     assert "#0-#1" in sorting_curated_jot.unit_ids
@@ -58,9 +57,9 @@ def test_sortingview_curation():
     assert len(sorting_curated_jot_rejected1.unit_ids) == 4
 
     # curation_link: 
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://b4b42fd70614829eea046c056cf10953def11c60&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22sha1://59feb326204cf61356f1a2eb31f04d8e0177c4f1%22}
+    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://1ba03f81e62ec7cb2e3e46898830f92cdf5e026f&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22sha1://59feb326204cf61356f1a2eb31f04d8e0177c4f1%22}
     sha_uri = "sha1://59feb326204cf61356f1a2eb31f04d8e0177c4f1"
-    sorting_curated_sha = apply_sortingview_curation(sorting, uri=sha_uri)
+    sorting_curated_sha = apply_sortingview_curation(sorting, uri=sha_uri, verbose=True)
 
     assert len(sorting_curated_sha.unit_ids) == 9
     assert "#8-#9" in sorting_curated_sha.unit_ids
