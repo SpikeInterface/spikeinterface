@@ -79,11 +79,6 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
           restore-keys: |
             ${{ runner.os }}-datasets
-      - name: Kachery variables
-        run: |
-          echo "KACHERY VARIABLES"
-          echo "$KACHERY_CLOUD_CLIENT_ID"
-          echo "$KACHERY_CLOUD_PRIVATE_KEY"
       - name: Check ephy_testing_data files
         run: |
           if [ -d "$HOME/spikeinterface_datasets" ]; then
