@@ -489,7 +489,7 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 
 
 
-def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=0.99, method_kwargs={}, job_kwargs={}):
+def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=1, method_kwargs={}, job_kwargs={}):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels 
@@ -509,18 +509,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     num_chans = waveform_extractor.recording.get_num_channels()
 
     for t in range(nb_templates):
-
-        is_silent = templates[t].std(0) < 0.1*noise_levels
+        is_silent = templates[t].ptp(0) < sparsify_threshold
         templates[t, :, is_silent] = 0
-
-        channel_norms = np.linalg.norm(templates[t], axis=0)**2
-        total_norm = np.linalg.norm(templates[t])**2
-
-        idx = np.argsort(channel_norms)[::-1]
-        explained_norms = np.cumsum(channel_norms[idx]/total_norm)
-        channel = np.searchsorted(explained_norms, sparsify_threshold)
-        active_channels = np.sort(idx[:channel])
-        templates[t, :, idx[channel:]] = 0
 
     zdata = templates.reshape(nb_templates, -1)
 
@@ -529,8 +519,11 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
 
     name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
     tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
-    tmp_folder.mkdir()
+    if tmp_folder.exists():
+        import shutils
+        shutils.rmtree(tmp_folder)
 
+    tmp_folder.mkdir()
     tmp_filename = os.path.join(tmp_folder, 'tmp.raw')
 
     f = open(tmp_filename, 'wb')
@@ -554,10 +547,11 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
 
     method_kwargs.update({'waveform_extractor' : waveform_extractor, 
                           'noise_levels' : noise_levels,
-                          'amplitudes' : [0.9, 1.1],
-                          'sparsify_threshold' : 1,
-                          'omp_min_sps' : 0.1})
-                          #'fft_size' : fshape[0]})
+                          'amplitudes' : [0.95, 1.05],
+                          'sparsify_threshold' : sparsify_threshold,
+                          'omp_min_sps' : 0.1,
+                          'templates' : None,
+                          'overlaps' : None})
 
     ignore_ids = []
     similar_templates = [[], []]
@@ -575,18 +569,15 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
                               'sparsities' : computed['sparsities']})
-                              #'cached_fft_kernels' : computed['cached_fft_kernels']})
         valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
                 j = spikes[valid]['cluster_ind'][0]
-                norm_ratio = method_kwargs['norms'][j] / method_kwargs['norms'][i]
-                if np.abs(norm_ratio - 1) < 0.1:
-                    ignore_ids += [i]
-                    similar_templates[1] += [i]
-                    similar_templates[0] += [j]
+                ignore_ids += [i]
+                similar_templates[1] += [i]
+                similar_templates[0] += [j]
             elif np.sum(valid) > 1:
-                similar_templates[0] += [-1]    
+                similar_templates[0] += [-1]
                 ignore_ids += [i]
                 similar_templates[1] += [i]
 
