@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import os
 
 import spikeinterface as si
 from spikeinterface.extractors import read_mearec
@@ -12,6 +13,11 @@ if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
 else:
     cache_folder = Path("cache_folder") / "curation"
+
+
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
+KACHERY_CLOUD_SET = bool(os.getenv('KACHERY_CLOUD_CLIENT_ID')) and bool(os.getenv('KACHERY_CLOUD_PRIVATE_KEY'))
+
 
 set_global_tmp_folder(cache_folder)
 
@@ -32,7 +38,7 @@ def generate_sortingview_curation_dataset():
     # plot_sorting_summary with curation
     w = sw.plot_sorting_summary(we, curation=True, backend="sortingview")
 
-# @pytest.mark.skip("OpenSSL error with Ed25519 private key. Test locally")
+@pytest.mark.skipIf(not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
 def test_sortingview_curation():
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
