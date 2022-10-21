@@ -239,6 +239,12 @@ class BaseExtractor:
     def get_property_keys(self):
         return list(self._properties.keys())
 
+    def delete_property(self, key):
+        if key in self._properties:
+            del self._properties[key]
+        else:
+            raise Exception(f"{key} is not a property key")
+
     def copy_metadata(self, other, only_main=False, ids=None):
         """
         Copy annotations/properties/features to another extractor.
