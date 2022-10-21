@@ -1,6 +1,6 @@
-.. _release0.95.2:
+.. _release0.96.0:
 
-SpikeInterface 0.95.2 release notes
+SpikeInterface 0.96.0 release notes
 -----------------------------------
 
 21st October 2022
