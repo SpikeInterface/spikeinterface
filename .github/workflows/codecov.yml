@@ -10,7 +10,7 @@ jobs:
           python-version: 3.8
       - name: Get current year-month
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m')"
+        run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
       - uses: actions/cache@v2
         id: cache-venv
         with:
@@ -59,7 +59,7 @@ jobs:
         # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
         run: |
-          echo "::set-output name=HASH_EPHY_DATASET::$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v2
         id: cache-datasets
         env:
