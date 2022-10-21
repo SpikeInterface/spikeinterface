@@ -28,18 +28,10 @@
 <tr>
   <td>Build Status</td>
   <td>
-    <a href="https://travis-ci.org/SpikeInterface/spikeinterface">
-    <img src="https://travis-ci.org/SpikeInterface/spikeinterface.svg?branch=master" alt="travis build status" />
+    <a href="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg">
+    <img src="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg" alt="travis build status" />
     </a>
   </td>
-</tr>
-<tr>
-	<td>Gitter</td>
-	<td>
-		<a href="https://gitter.im/SpikeInterface/community">
-		<img src="https://badges.gitter.im/SpikeInterface.svg" />
-	</a>
-	</td>
 </tr>
 <tr>
 	<td>Codecov</td>
@@ -48,7 +40,13 @@
 		<img src="https://codecov.io/gh/spikeinterface/spikeinterface/branch/master/graphs/badge.svg" alt="codecov" />
 		</a>
 	</td>
-
+</tr>
+<tr>
+	<td>Twitter</td>
+	<td>
+		<a href="https://twitter.com/spikeinterface?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">@spikeinterface
+    </a>
+	</td>
 </tr>
 </table>
 
@@ -62,9 +60,9 @@ With SpikeInterface, users can:
 - post-process sorted datasets.
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
-- visualize recordings and spike sorting outputs.
-- export report and export toPhy
-- offer a powerful Qt-based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, in jupyter)
+- export report and export to phy
+- offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://https://github.com/SpikeInterface/spikeinterface-gui)
 - have some powerful sorting components to build your own sorter.
 
 
@@ -75,10 +73,11 @@ You can also have a look at the [spikeinterface-gui](https://https://github.com/
 
 ## Documentation
 
-All documentation for spikeinterface 0.93 can be found [here](https://spikeinterface.readthedocs.io/en/latest/).
+All documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
-Documentation of current API release 0.12.0 is [here](https://spikeinterface.readthedocs.io/en/stable/).
+Some useful jupyter notebook tutorials can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
 
+There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking and sorting components.
 
 
 ## How to install spikeinteface
@@ -86,35 +85,27 @@ Documentation of current API release 0.12.0 is [here](https://spikeinterface.rea
 You can install the new `spikeinterface` version with pip:
 
 ```bash
-pip install spikeinterface
+pip install spikeinterface[full]
 ```
+
+The `[full]` option installs all the extra dependencies for all the different sub-modules. 
+
+To install all interactive widget backends, you can use:
+
+```bash
+ pip install spikeinterface[full, widgets]
+```
+
 
 To get the latest updates, you can install `spikeinterface` from sources:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git
 cd spikeinterface
-python setup.py install (or develop)
+pip install -e .
 cd ..
 ```
 
-## Versions
-
-`spikeinterface` version 0.90 > 0.93:
-
-  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series.
-  * has been first released in July 2021 (0.90.0)
-  * is not a meta-package anymore
-  * it doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets anymore
-
-
-To install the old `spikeinterface` API (version<0.90), you can use pip and point to the old version:
-
-```bash
-pip install spikeinterface==0.13
-```
-
-We strongly recommend using the new version.
 
 ## Citation
 

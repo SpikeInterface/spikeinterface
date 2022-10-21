@@ -5,6 +5,8 @@ from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
 
 class SpikeLocationsPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Spike Locations"
+
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
 
@@ -45,7 +47,7 @@ class SpikeLocationsPlotter(SortingviewPlotter):
         )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(unit_ids)
+            v_units_table = generate_unit_table_view(dp.sorting)
 
             view = vv.Box(
                 direction="horizontal",
@@ -59,11 +61,7 @@ class SpikeLocationsPlotter(SortingviewPlotter):
 
         self.set_view(view)
 
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - SpikeLocations"
-            url = view.url(label=label)
-            print(url)
+        self.handle_display_and_url(view, **backend_kwargs)
         return view
 
 

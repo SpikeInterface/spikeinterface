@@ -85,8 +85,8 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
     we = pca.waveform_extractor
     extremum_channels = get_template_extremum_channel(we)
 
-    unit_ids = we.sorting.unit_ids
-    channel_ids = we.recording.channel_ids
+    unit_ids = we.unit_ids
+    channel_ids = we.channel_ids
 
     # create output dict of dict  pc_metrics['metric_name'][unit_id]
     pc_metrics = {k: {} for k in metric_names}

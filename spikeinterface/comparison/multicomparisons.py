@@ -60,6 +60,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         self.set_frames_and_frequency(self.object_list)
         self._spiketrain_mode = spiketrain_mode
         self._spiketrains = None
+        self._num_segments = sorting_list[0].get_num_segments()
 
         if do_matching:
             self._compute_all()
@@ -84,36 +85,40 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def _populate_spiketrains(self):
         self._spiketrains = []
-        for (unit_id, sg) in zip(self._new_units, self.subgraphs):
-            sorter_unit_ids = self._new_units[unit_id]["unit_ids"]
-            edges = list(sg.edges(data=True))
-            # Append correct spike train
-            if len(sorter_unit_ids.keys()) == 1:
-                self._spiketrains.append(self.object_list[self.name_list.index(
-                    list(sorter_unit_ids.keys())[0])].get_unit_spike_train(list(sorter_unit_ids.values())[0]))
-            else:
-                max_edge = edges[int(np.argmax([d['weight']
-                                     for u, v, d in edges]))]
-                node1, node2, weight = max_edge
-                sorter1, unit1 = node1
-                sorter2, unit2 = node2
-                sp1 = self.object_list[self.name_list.index(
-                    sorter1)].get_unit_spike_train(unit1)
-                sp2 = self.object_list[self.name_list.index(
-                    sorter2)].get_unit_spike_train(unit2)
+        for seg_index in range(self._num_segments):
+            spike_trains_segment = dict()
+            for (unit_id, sg) in zip(self._new_units, self.subgraphs):
+                sorter_unit_ids = self._new_units[unit_id]["unit_ids"]
+                edges = list(sg.edges(data=True))
+                # Append correct spike train
+                if len(sorter_unit_ids.keys()) == 1:
+                    sorting = self.object_list[self.name_list.index(list(sorter_unit_ids.keys())[0])]
+                    unit_id = list(sorter_unit_ids.values())[0]
+                    spike_train = sorting.get_unit_spike_train(unit_id, seg_index)
+                else:
+                    max_edge = edges[int(np.argmax([d['weight']
+                                        for u, v, d in edges]))]
+                    node1, node2, weight = max_edge
+                    sorter1, unit1 = node1
+                    sorter2, unit2 = node2
 
-                if self._spiketrain_mode == 'union':
-                    lab1, lab2 = compare_spike_trains(sp1, sp2)
-                    # add FP to spike train 1 (FP are the only spikes outside the union)
-                    fp_idx2 = np.where(np.array(lab2) == 'FP')[0]
-                    sp_union = np.sort(np.concatenate((sp1, sp2[fp_idx2])))
-                    self._spiketrains.append(list(sp_union))
-                elif self._spiketrain_mode == 'intersection':
-                    lab1, lab2 = compare_spike_trains(sp1, sp2)
-                    # TP are the spikes in the intersection
-                    tp_idx1 = np.where(np.array(lab1) == 'TP')[0]
-                    sp_tp1 = list(np.array(sp1)[tp_idx1])
-                    self._spiketrains.append(sp_tp1)
+                    sorting1 = self.object_list[self.name_list.index(sorter1)]
+                    sorting2 = self.object_list[self.name_list.index(sorter2)]
+                    sp1 = sorting1.get_unit_spike_train(unit1, seg_index)
+                    sp2 = sorting2.get_unit_spike_train(unit2, seg_index)
+                    if self._spiketrain_mode == 'union':
+                        lab1, lab2 = compare_spike_trains(sp1, sp2)
+                        # add FP to spike train 1 (FP are the only spikes outside the union)
+                        fp_idx2 = np.where(np.array(lab2) == 'FP')[0]
+                        spike_train = np.sort(np.concatenate((sp1, sp2[fp_idx2])))
+                    elif self._spiketrain_mode == 'intersection':
+                        lab1, lab2 = compare_spike_trains(sp1, sp2)
+                        # TP are the spikes in the intersection
+                        tp_idx1 = np.where(np.array(lab1) == 'TP')[0]
+                        spike_train = np.array(sp1)[tp_idx1]
+                spike_trains_segment[unit_id] = spike_train
+            self._spiketrains.append(spike_trains_segment)
+
 
     def _do_agreement_matrix(self, minimum_agreement=1):
         sorted_name_list = sorted(self.name_list)
@@ -213,26 +218,26 @@ class AgreementSortingExtractor(BaseSorting):
             unit_ids = list(u for u in self._msc._new_units.keys()
                             if self._msc._new_units[u]['agreement_number'] >= min_agreement_count)
 
-        BaseSorting.__init__(
-            self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+
         if len(unit_ids) > 0:
             for k in ('agreement_number', 'avg_agreement', 'unit_ids'):
                 values = [self._msc._new_units[unit_id][k]
                           for unit_id in unit_ids]
                 self.set_property(k, values, ids=unit_ids)
 
-        sorting_segment = AgreementSortingSegment(multisortingcomparison)
-        self.add_sorting_segment(sorting_segment)
+        for segment_index in range(multisortingcomparison._num_segments):
+            sorting_segment = AgreementSortingSegment(multisortingcomparison._spiketrains[segment_index])
+            self.add_sorting_segment(sorting_segment)
 
 
 class AgreementSortingSegment(BaseSortingSegment):
-    def __init__(self, multisortingcomparison):
+    def __init__(self, spiketrains_segment):
         BaseSortingSegment.__init__(self)
-        self._msc = multisortingcomparison
+        self.spiketrains = spiketrains_segment
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        ind = list(self._msc._new_units.keys()).index(unit_id)
-        spiketrain = np.array(self._msc._spiketrains[ind])
+        spiketrain = self.spiketrains[unit_id]
         if start_frame is not None:
             spiketrain = spiketrain[spiketrain >= start_frame]
         if end_frame is not None:
@@ -295,7 +300,7 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     def _populate_nodes(self):
         for i, we in enumerate(self.object_list):
             session_name = self.name_list[i]
-            for unit_id in we.sorting.get_unit_ids():
+            for unit_id in we.unit_ids:
                 node = session_name, unit_id
                 self.graph.add_node(node)
 

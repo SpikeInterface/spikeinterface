@@ -1,4 +1,4 @@
-import pytest
+import unittest
 import shutil
 from pathlib import Path
 
@@ -7,198 +7,173 @@ import numpy as np
 from spikeinterface import extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import toy_example
 
-from spikeinterface.postprocessing import WaveformPrincipalComponent, compute_principal_components
+from spikeinterface.postprocessing import (WaveformPrincipalComponent, compute_principal_components,
+                                           get_template_channel_sparsity)
+from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
-else:
-    cache_folder = Path("cache_folder") / "postprocessing"
+DEBUG = False
 
+class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = WaveformPrincipalComponent
+    extension_data_names = ["pca_0", "pca_1"]
+    extension_function_kwargs_list = [
+        dict(mode='by_channel_local'),
+        dict(mode='by_channel_local', n_jobs=2),
+        dict(mode='by_channel_global'),
+        dict(mode='concatenated'),
+    ]
 
-def setup_module():
-    for folder_name in ('toy_rec_1seg', 'toy_sorting_1seg', 'toy_waveforms_1seg',
-                        'toy_rec_2seg', 'toy_sorting_2seg', 'toy_waveforms_2seg',
-                        'toy_waveforms_1seg_filt'):
-        if (cache_folder / folder_name).is_dir():
-            shutil.rmtree(cache_folder / folder_name)
+    def test_shapes(self):
+        nchan1 = self.we1.recording.get_num_channels()
+        for mode in ('by_channel_local', 'by_channel_global'):
+            _ = self.extension_class.get_extension_function()(
+                self.we1, mode=mode, n_components=5)
+            pc = self.we1.load_extension(self.extension_class.extension_name)
+            for unit_id in self.we1.sorting.unit_ids:
+                proj = pc.get_projections(unit_id)
+                assert proj.shape[1:] == (5, nchan1)
+        for mode in ('concatenated',):
+            _ = self.extension_class.get_extension_function()(
+                self.we2, mode=mode, n_components=3)
+            pc = self.we2.load_extension(self.extension_class.extension_name)
+            for unit_id in self.we2.sorting.unit_ids:
+                proj = pc.get_projections(unit_id)
+                assert proj.shape[1] == 3
 
-    recording, sorting = toy_example(num_segments=2, num_units=10)
-    recording = recording.save(folder=cache_folder / 'toy_rec_2seg')
-    sorting = sorting.save(folder=cache_folder / 'toy_sorting_2seg')
-    we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms_2seg',
-                           ms_before=3., ms_after=4., max_spikes_per_unit=500,
-                           n_jobs=1, chunk_size=30000)
-
-    recording, sorting = toy_example(
-        num_segments=1, num_units=10, num_channels=12)
-    recording = recording.save(folder=cache_folder / 'toy_rec_1seg')
-    sorting = sorting.save(folder=cache_folder / 'toy_sorting_1seg')
-    we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms_1seg',
-                           ms_before=3., ms_after=4., max_spikes_per_unit=500,
-                           n_jobs=1, chunk_size=30000)
-    shutil.copytree(cache_folder / 'toy_waveforms_1seg', cache_folder / 'toy_waveforms_1seg_cp')
-
-
-def test_WaveformPrincipalComponent():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms_2seg')
-    unit_ids = we.sorting.unit_ids
-    num_channels = we.recording.get_num_channels()
-    pc = WaveformPrincipalComponent(we)
-
-    for mode in ('by_channel_local', 'by_channel_global'):
-        pc.set_params(n_components=5, mode=mode)
+    def test_compute_for_all_spikes(self):
+        we = self.we1
+        pc = self.extension_class.get_extension_function()(we, load_if_exists=True)
         print(pc)
-        pc.run()
-        for i, unit_id in enumerate(unit_ids):
-            proj = pc.get_projections(unit_id)
-            # print(comp.shape)
-            assert proj.shape[1:] == (5, 4)
 
-        # import matplotlib.pyplot as plt
-        # cmap = plt.get_cmap('jet', len(unit_ids))
-        # fig, axs = plt.subplots(ncols=num_channels)
-        # for i, unit_id in enumerate(unit_ids):
-        # comp = pca.get_components(unit_id)
-        # print(comp.shape)
-        # for chan_ind in range(num_channels):
-        # ax = axs[chan_ind]
-        # ax.scatter(comp[:, 0, chan_ind], comp[:, 1, chan_ind], color=cmap(i))
-        # plt.show()
+        pc_file1 = pc.extension_folder / 'all_pc1.npy'
+        pc.run_for_all_spikes(
+            pc_file1, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
+        all_pc1 = np.load(pc_file1)
 
-    for mode in ('concatenated',):
-        pc.set_params(n_components=5, mode=mode)
-        print(pc)
-        pc.run()
-        for i, unit_id in enumerate(unit_ids):
-            proj = pc.get_projections(unit_id)
-            assert proj.shape[1] == 5
-            # print(comp.shape)
+        pc_file2 = pc.extension_folder / 'all_pc2.npy'
+        pc.run_for_all_spikes(
+            pc_file2, max_channels_per_template=7, chunk_size=10000, n_jobs=2)
+        all_pc2 = np.load(pc_file2)
 
-    all_labels, all_components = pc.get_all_projections()
+        assert np.array_equal(all_pc1, all_pc2)
 
-    # relod as an extension from we
-    assert WaveformPrincipalComponent in we.get_available_extensions()
-    assert we.is_extension('principal_components')
-    pc = we.load_extension('principal_components')
-    assert isinstance(pc, WaveformPrincipalComponent)
-    pc = WaveformPrincipalComponent.load_from_folder(
-        cache_folder / 'toy_waveforms_2seg')
+    def test_sparse(self):
+        we = self.we2
+        unit_ids = we.unit_ids
+        num_channels = we.get_num_channels()
+        pc = self.extension_class(we)
 
-    # import matplotlib.pyplot as plt
-    # cmap = plt.get_cmap('jet', len(unit_ids))
-    # fig, ax = plt.subplots()
-    # for i, unit_id in enumerate(unit_ids):
-    # comp = pca.get_components(unit_id)
-    # print(comp.shape)
-    # ax.scatter(comp[:, 0], comp[:, 1], color=cmap(i))
-    # plt.show()
+        sparsity_radius = get_template_channel_sparsity(we, method="radius",
+                                                        radius_um=50)
+        sparsity_best = get_template_channel_sparsity(we, method="best_channels",
+                                                    num_channels=2)
+        sparsities = [sparsity_radius, sparsity_best]
+        print(sparsities)
 
+        for mode in ('by_channel_local', 'by_channel_global'):
+            for sparsity in sparsities:
+                pc.set_params(n_components=5, mode=mode, sparsity=sparsity)
+                pc.run()
+                for i, unit_id in enumerate(unit_ids):
+                    proj = pc.get_projections(unit_id)
+                    assert proj.shape[1:] == (5, 4)
 
-def test_compute_principal_components_for_all_spikes():
-    we = WaveformExtractor.load_from_folder(
-        cache_folder / 'toy_waveforms_1seg')
-    pc = compute_principal_components(we, load_if_exists=True)
-    print(pc)
+                if DEBUG:
+                    import matplotlib.pyplot as plt
+                    plt.ion()
+                    cmap = plt.get_cmap('jet', len(unit_ids))
+                    fig, axs = plt.subplots(nrows=len(unit_ids), ncols=num_channels)
+                    for i, unit_id in enumerate(unit_ids):
+                        comp = pc.get_projections(unit_id)
+                        print(comp.shape)
+                        for chan_ind in range(num_channels):
+                            ax = axs[i, chan_ind]
+                            ax.scatter(comp[:, 0, chan_ind], comp[:, 1, chan_ind], color=cmap(i))
+                            ax.set_title(f"{mode}-{sparsity[unit_id]}")
+                            if i == 0:
+                                ax.set_xlabel(f"Ch{chan_ind}")
+                    plt.show()
 
-    pc_file1 = cache_folder / 'all_pc1.npy'
-    pc.run_for_all_spikes(
-        pc_file1, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
-    all_pc1 = np.load(pc_file1)
+        for mode in ('concatenated',):
+            # concatenated is only compatible with "best"
+            pc.set_params(n_components=5, mode=mode, sparsity=sparsity_best)
+            print(pc)
+            pc.run()
+            for i, unit_id in enumerate(unit_ids):
+                proj = pc.get_projections(unit_id)
+                assert proj.shape[1] == 5
 
-    pc_file2 = cache_folder / 'all_pc2.npy'
-    pc.run_for_all_spikes(
-        pc_file2, max_channels_per_template=7, chunk_size=10000, n_jobs=2)
-    all_pc2 = np.load(pc_file2)
+    def test_project_new(self):
+        from sklearn.decomposition import IncrementalPCA
 
-    assert np.array_equal(all_pc1, all_pc2)
-
-
-def test_pca_models_and_project_new():
-    from sklearn.decomposition import IncrementalPCA
-    if (cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
-        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
-                      "principal_components")
-    we = WaveformExtractor.load_from_folder(
-        cache_folder / 'toy_waveforms_1seg')
-    we_cp = WaveformExtractor.load_from_folder(
-        cache_folder / 'toy_waveforms_1seg_cp')
-
-    wfs0 = we.get_waveforms(unit_id=we.sorting.unit_ids[0])
-    n_samples = wfs0.shape[1]
-    n_channels = wfs0.shape[2]
-    n_components = 5
-
-    # local
-    pc_local = compute_principal_components(we, n_components=n_components,
-                                            load_if_exists=True, mode="by_channel_local")
-    pc_local_par = compute_principal_components(we_cp, n_components=n_components,
-                                                load_if_exists=True, mode="by_channel_local",
-                                                n_jobs=2, progress_bar=True)
-
-    all_pca = pc_local.get_pca_model()
-    all_pca_par = pc_local_par.get_pca_model()
-
-    assert len(all_pca) == we.recording.get_num_channels()
-    assert len(all_pca_par) == we.recording.get_num_channels()
-
-    for (pc, pc_par) in zip(all_pca, all_pca_par):
-        assert np.allclose(pc.components_, pc_par.components_)
-
-    # project
-    new_waveforms = np.random.randn(100, n_samples, n_channels)
-    new_proj = pc_local.project_new(new_waveforms)
-
-    assert new_proj.shape == (100, n_components, n_channels)
-
-    # global
-    if (cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
-        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
-                      "principal_components")
-
-    pc_global = compute_principal_components(we, n_components=n_components,
-                                             load_if_exists=True, mode="by_channel_global")
-
-    all_pca = pc_global.get_pca_model()
-    assert isinstance(all_pca, IncrementalPCA)
-
-    # project
-    new_waveforms = np.random.randn(100, n_samples, n_channels)
-    new_proj = pc_global.project_new(new_waveforms)
-
-    assert new_proj.shape == (100, n_components, n_channels)
-
-    # concatenated
-    if Path(cache_folder / "toy_waveforms_1seg" / "principal_components").is_dir():
-        shutil.rmtree(cache_folder / "toy_waveforms_1seg" /
-                      "principal_components")
-
-    pc_concatenated = compute_principal_components(we, n_components=n_components,
-                                                   load_if_exists=True, mode="concatenated")
-
-    all_pca = pc_concatenated.get_pca_model()
-    assert isinstance(all_pca, IncrementalPCA)
-
-    # project
-    new_waveforms = np.random.randn(100, n_samples, n_channels)
-    new_proj = pc_concatenated.project_new(new_waveforms)
-
-    assert new_proj.shape == (100, n_components)
+        we = self.we1
+        if we.is_extension("principal_components"):
+            we.delete_extension("principal_components")
+        we_cp = we.select_units(we.unit_ids, self.cache_folder / 'toy_waveforms_1seg_cp')
 
 
-def test_select_units():
-    we = WaveformExtractor.load_from_folder(
-        cache_folder / 'toy_waveforms_1seg')
-    pc = compute_principal_components(we, load_if_exists=True)
+        wfs0 = we.get_waveforms(unit_id=we.unit_ids[0])
+        n_samples = wfs0.shape[1]
+        n_channels = wfs0.shape[2]
+        n_components = 5
 
-    keep_units = we.sorting.get_unit_ids()[::2]
-    we_filt = we.select_units(
-        keep_units, cache_folder / 'toy_waveforms_1seg_filt')
-    assert "principal_components" in we_filt.get_available_extension_names()
+        # local
+        pc_local = compute_principal_components(we, n_components=n_components,
+                                                load_if_exists=True, mode="by_channel_local")
+        pc_local_par = compute_principal_components(we_cp, n_components=n_components,
+                                                    load_if_exists=True, mode="by_channel_local",
+                                                    n_jobs=2, progress_bar=True)
+
+        all_pca = pc_local.get_pca_model()
+        all_pca_par = pc_local_par.get_pca_model()
+
+        assert len(all_pca) == we.get_num_channels()
+        assert len(all_pca_par) == we.get_num_channels()
+
+        for (pc, pc_par) in zip(all_pca, all_pca_par):
+            assert np.allclose(pc.components_, pc_par.components_)
+
+        # project
+        new_waveforms = np.random.randn(100, n_samples, n_channels)
+        new_proj = pc_local.project_new(new_waveforms)
+
+        assert new_proj.shape == (100, n_components, n_channels)
+
+        # global
+        we.delete_extension('principal_components')
+        pc_global = compute_principal_components(we, n_components=n_components,
+                                                 load_if_exists=True, mode="by_channel_global")
+
+        all_pca = pc_global.get_pca_model()
+        assert isinstance(all_pca, IncrementalPCA)
+
+        # project
+        new_waveforms = np.random.randn(100, n_samples, n_channels)
+        new_proj = pc_global.project_new(new_waveforms)
+
+        assert new_proj.shape == (100, n_components, n_channels)
+
+        # concatenated
+        we.delete_extension('principal_components')
+        pc_concatenated = compute_principal_components(we, n_components=n_components,
+                                                       load_if_exists=True, mode="concatenated")
+
+        all_pca = pc_concatenated.get_pca_model()
+        assert isinstance(all_pca, IncrementalPCA)
+
+        # project
+        new_waveforms = np.random.randn(100, n_samples, n_channels)
+        new_proj = pc_concatenated.project_new(new_waveforms)
+
+        assert new_proj.shape == (100, n_components)
 
 
 if __name__ == '__main__':
-    setup_module()
-    #~ test_WaveformPrincipalComponent()
-    #~ test_compute_principal_components_for_all_spikes()
-    test_pca_models_and_project_new()
+    test = PrincipalComponentsExtensionTest
+    test.setUp()
+    test.test_extension()
+    test.test_shapes()
+    test.test_compute_for_all_spikes()
+    test.test_sparse()
+    test.test_project_new()

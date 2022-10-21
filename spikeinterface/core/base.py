@@ -24,6 +24,8 @@ class BaseExtractor:
 
     """
 
+    default_missing_property_values = {"f": np.nan, "O": None, "S": "", "U": ""}
+
     # This replaces the old key_properties
     # These are annotations/properties/features that always need to be
     # dumped (for instance locations, groups, is_fileterd, etc.)
@@ -174,7 +176,6 @@ class BaseExtractor:
             it specifies the how the missing values should be filled, by default None.
             The missing_value has to be specified for types int and unsigned int.
         """
-        default_missing_values = {"f": np.nan, "O": None, "S": "", "U": ""}
         
         if values is None:
             if key in self._properties:
@@ -200,12 +201,12 @@ class BaseExtractor:
                     
         
                     if missing_value is None:
-                        if dtype_kind not in default_missing_values.keys():
-                            raise Exception("For values dtypes other than float, string or unicode, the missing value "
+                        if dtype_kind not in self.default_missing_property_values.keys():
+                            raise Exception("For values dtypes other than float, string, object or unicode, the missing value "
                                             "cannot be automatically inferred. Please specify it with the 'missing_value' "
                                             "argument.")
                         else:
-                            missing_value = default_missing_values[dtype_kind]
+                            missing_value = self.default_missing_property_values[dtype_kind]
                     else:
                         assert dtype_kind == np.array(missing_value).dtype.kind, ("Mismatch between values and "
                                                                                   "missing_value types. Provide a "
@@ -237,6 +238,12 @@ class BaseExtractor:
 
     def get_property_keys(self):
         return list(self._properties.keys())
+
+    def delete_property(self, key):
+        if key in self._properties:
+            del self._properties[key]
+        else:
+            raise Exception(f"{key} is not a property key")
 
     def copy_metadata(self, other, only_main=False, ids=None):
         """
@@ -804,7 +811,7 @@ def _check_if_dumpable(d):
     if np.any([isinstance(v, dict) and 'dumpable' in v.keys() for (k, v) in kwargs.items()]):
         # check nested
         for k, v in kwargs.items():
-            if 'dumpable' in v.keys():
+            if isinstance(v, dict) and 'dumpable' in v.keys():
                 return _check_if_dumpable(v)
     else:
         return d['dumpable']

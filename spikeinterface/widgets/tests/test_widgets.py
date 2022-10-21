@@ -148,11 +148,17 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_amplitudes(self.we, backend=backend, **self.backend_kwargs[backend])
-                unit_ids = self.we.sorting.unit_ids[:4]
+                unit_ids = self.we.unit_ids[:4]
                 sw.plot_amplitudes(self.we, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_amplitudes(self.we, unit_ids=unit_ids, plot_histograms=True,
                                    backend=backend, **self.backend_kwargs[backend])
 
+    def test_plot_all_amplitudes_distributions(self):
+        possible_backends = list(sw.AllAmplitudesDistributionsWidget.possible_backends.keys())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                unit_ids = self.we.unit_ids[:4]
+                sw.plot_all_amplitudes_distributions(self.we, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
         
     def test_unit_locations(self):
         possible_backends = list(sw.UnitLocationsWidget.possible_backends.keys())
@@ -183,7 +189,19 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_template_metrics(self.we, backend=backend, **self.backend_kwargs[backend])
+    
+    def test_plot_unit_depths(self):
+        possible_backends = list(sw.UnitSummaryWidget.possible_backends.keys())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_unit_depths(self.we, backend=backend, **self.backend_kwargs[backend])
 
+    def test_plot_unit_summary(self):
+        possible_backends = list(sw.UnitSummaryWidget.possible_backends.keys())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_unit_summary(self.we, self.we.sorting.unit_ids[0],  backend=backend, **self.backend_kwargs[backend])
+        
     def test_sorting_summary(self):
         possible_backends = list(sw.SortingSummaryWidget.possible_backends.keys())
         for backend in possible_backends:
@@ -196,11 +214,15 @@ if __name__ == '__main__':
 
     mytest = TestWidgets()
     mytest.setUp()
-    
-    # mytest.test_plot_timeseries()
-    
+
+    # mytest.test_amplitudes()
+    # mytest.test_plot_all_amplitudes_distributions()
+    # mytest.test_plot_timeseries()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_templates()
+    # mytest.test_plot_unit_templates()
+    # mytest.test_plot_unit_depths()
+    # mytest.test_plot_unit_templates()
+    mytest.test_plot_unit_summary()
 
     plt.show()

@@ -94,32 +94,28 @@ class MaxwellEventSegment(BaseEventSegment):
         self.bits = self.h5_file['bits']
         self.fs = fs
 
-    def get_event_times(self, channel_id, start_time, end_time):
-        if self.version == 20160704:
-            framevals = self.h5_file["sig"][-2:, 0]
-            first_frame = framevals[1] << 16 | framevals[0]
-            ttl_frames = self.bits['frameno'] - first_frame
-            ttl_states = self.bits['bits']
-            if channel_id is not None:
-                bits_channel_idx = np.where((ttl_states == channel_id) | (ttl_states == 0))[0]
-                ttl_frames = ttl_frames[bits_channel_idx]
-                ttl_states = ttl_states[bits_channel_idx]
-            if start_time is not None:
-                bit_idxs = np.where(ttl_frames / self.fs >= start_time)[0]
-                ttl_frames = ttl_frames[bit_idxs]
-                ttl_states = ttl_states[bit_idxs]
-            if end_time is not None:
-                bit_idxs = np.where(ttl_frames / self.fs < end_time)[0]
-                ttl_frames = ttl_frames[bit_idxs]
-                ttl_states = ttl_states[bit_idxs]
-            ttl_states[ttl_states == 0] = -1
-            event = np.zeros(len(ttl_frames), dtype=_maxwell_event_dtype)
-            event["frame"] = ttl_frames
-            event["time"] = ttl_frames / self.fs
-            event["state"] = ttl_states
-        else:
-            raise NotImplementedError
+    def get_events(self, channel_id, start_time, end_time):
+        if self.version != 20160704:
+            raise NotImplementedError(f"Version {self.version} not supported")
 
+        framevals = self.h5_file["sig"][-2:, 0]
+        first_frame = framevals[1] << 16 | framevals[0]
+        ttl_frames = self.bits['frameno'] - first_frame
+        ttl_states = self.bits['bits']
+        if channel_id is not None:
+            bits_channel_idx = np.where((ttl_states == channel_id) | (ttl_states == 0))[0]
+            ttl_frames = ttl_frames[bits_channel_idx]
+            ttl_states = ttl_states[bits_channel_idx]
+        ttl_states[ttl_states == 0] = -1
+        event = np.zeros(len(ttl_frames), dtype=_maxwell_event_dtype)
+        event["frame"] = ttl_frames
+        event["time"] = ttl_frames / self.fs
+        event["state"] = ttl_states            
+
+        if start_time is not None:
+            event = event[event["time"] >= start_time]
+        if end_time is not None:
+            event = event[event["time"] < end_time]
         return event
 
 

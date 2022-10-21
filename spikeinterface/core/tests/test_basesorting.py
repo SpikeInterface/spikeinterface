@@ -55,13 +55,17 @@ def test_BaseSorting():
 
     # cache
     folder = cache_folder / 'simple_sorting'
+    sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder)
     sorting2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     sorting3 = BaseExtractor.load(folder)
-    
+    assert "test" in sorting2.get_property_keys()
+    assert "test" in sorting3.get_property_keys()
+
     # save to memory
     sorting4 = sorting.save(format="memory")
+    assert "test" in sorting4.get_property_keys()
 
     spikes = sorting.get_all_spike_trains()
     # print(spikes)

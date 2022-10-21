@@ -1,9 +1,11 @@
 from ..base import to_attr
 from ..unit_templates import UnitTemplatesWidget
-from .base_sortingview import SortingviewPlotter
+from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
 
 class UnitTemplatesPlotter(SortingviewPlotter):
+    default_label = "SpikeInterface - Unit Templates"
+
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
 
@@ -36,14 +38,21 @@ class UnitTemplatesPlotter(SortingviewPlotter):
             average_waveforms=aw_items,
             channel_locations=locations
         )
-        self.set_view(v_average_waveforms)
 
-        if backend_kwargs["generate_url"]:
-            if backend_kwargs.get("figlabel") is None:
-                label = "SpikeInterface - AverageWaveforms"
-            url = v_average_waveforms.url(label=label)
-            print(url)
-        return v_average_waveforms
+        if not dp.hide_unit_selector:
+            v_units_table = generate_unit_table_view(dp.waveform_extractor.sorting)
+
+            view = vv.Box(direction='horizontal',
+                        items=[
+                            vv.LayoutItem(v_units_table, max_size=150),
+                            vv.LayoutItem(v_average_waveforms)
+                        ]
+                    )
+        else:
+            view = v_average_waveforms
+
+        self.handle_display_and_url(view, **backend_kwargs)
+        return view
 
 
 UnitTemplatesPlotter.register(UnitTemplatesWidget)

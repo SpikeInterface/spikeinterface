@@ -247,7 +247,7 @@ def _parse_units(file, _units):
 
 
 def _squeeze_ds(ds):
-    while not isinstance(ds, (int, float, np.integer, np.float)):
+    while not isinstance(ds, (int, float, np.integer)):
         ds = ds[0]
     return ds
 
