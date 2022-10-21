@@ -41,7 +41,7 @@ def test_find_spikes_from_templates():
 
     for method in matching_methods.keys():
         spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
-                                            n_jobs=1, chunk_size=30000, progress_bar=True)
+                                            n_jobs=1, chunk_size=1000, progress_bar=True)
 
         result[method] = NumpySorting.from_times_labels(
             spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
