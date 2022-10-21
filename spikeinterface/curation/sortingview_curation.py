@@ -45,26 +45,37 @@ def apply_sortingview_curation(
 
     # get sorting view curation
     try:
-        sorting_curation = kcl.load_json(uri=uri)
+        sortingview_curation_dict = kcl.load_json(uri=uri)
     except:
         raise Exception(f"Could not retrieve curation from SortingView uri: {uri}")
 
+    unit_ids_dtype = sorting.unit_ids.dtype
+
     # first, merge groups
-    if "mergeGroups" in sorting_curation:
-        merge_groups = sorting_curation["mergeGroups"]
+    if "mergeGroups" in sortingview_curation_dict:
+        merge_groups = sortingview_curation_dict["mergeGroups"]
         for mg in merge_groups:
             if verbose:
                 print(f"Merging {mg}")
-            curation_sorting.merge(mg, new_unit_id="-".join(mg))
+            if unit_ids_dtype.kind in ("U", "S"):
+                # if unit dtype is str, set new id as "{unit1}-{unit2}"
+                new_unit_id = "-".join(mg)
+            else:
+                # in this case, the CurationSorting takes care of finding a new unused int
+                new_unit_id = None
+            curation_sorting.merge(mg, new_unit_id=new_unit_id)
 
-    # gather and apply properties
-    labels_dict = sorting_curation["labelsByUnit"]
+    # gather and apply sortingview curation labels
+
+    # In sortingview, a unit is not required to have all labels.
+    # For example, the first 3 units could be labeled as "accept".
+    # In this case, the first 3 values of the property "accept" will be True, the rest False
+    labels_dict = sortingview_curation_dict["labelsByUnit"]
     properties = {}
     for _, labels in labels_dict.items():
         for label in labels:
             if label not in properties:
                 properties[label] = np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
-
     for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         labels_unit = []
         for unit_label, labels in labels_dict.items():
