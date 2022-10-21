@@ -39,8 +39,11 @@ def generate_sortingview_curation_dataset():
     w = sw.plot_sorting_summary(we, curation=True, backend="sortingview")
 
 
-@pytest.mark.skipIf(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
+@pytest.mark.skipIf((ON_GITHUB and not KACHERY_CLOUD_SET), reason="Kachery cloud secrets not available")
 def test_sortingview_curation():
+    print(ON_GITHUB)
+    print(KACHERY_CLOUD_SET)
+    print((ON_GITHUB and not KACHERY_CLOUD_SET))
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
 
