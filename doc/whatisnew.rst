@@ -8,7 +8,8 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
-  releases/0.95.0.rst
+  releases/0.96.0.rst
+  releases/0.95.1.rst
   releases/0.95.0.rst
   releases/0.94.0.rst
   releases/0.93.0.rst
@@ -25,6 +26,19 @@ Release notes
 
 NEW API
 -------
+
+Version 0.96.0
+==============
+
+* Change setup.py to pyproject.toml
+* Enable loading waveform extractor without recording and with pre-existing sorting
+* Implement NpzFolder for saving Sorting object
+* Implement in-memory waveform extensions
+* Improve NEO event handling
+* Modify pyks for IBL version
+* Implement sparse PCA
+* Extend comparison to multi-segment sortings
+* Various improvements to widgets modules
 
 Version 0.95.1
 ==============
@@ -44,7 +58,6 @@ Version 0.95.0
 * First implementations of (experimental) `sortingcomponents`-based sorters:
   * `spykingcircus2`
   * `tridesclous2`
-
 
 Version 0.94.0
 ==============
@@ -67,7 +80,6 @@ Version 0.93.0
 * refactor comparison module and add TemplateComparison
 * add template_matching module (experimental)
 * add motion_correction module (experimental)
-
 
 
 Version 0.92.0
