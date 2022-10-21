@@ -172,8 +172,11 @@ jobs:
           KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
           KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
         run: |
+          echo $KACHERY_CLOUD_CLIENT_ID
+          echo $KACHERY_CLOUD_PRIVATE_KEY
+
           source ~/test_env/bin/activate
-          pytest -v -m curation
+          pytest -v -s -m curation
       - name: Test widgets
         if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         env:
