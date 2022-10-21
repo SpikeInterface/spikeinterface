@@ -93,6 +93,7 @@ test = [
     "hdbscan",
 
     # for sortingview backend
+    "cryptography==0.37.4",
     "sortingview",
 
     # recent datalad need a too recent version for git-annex
