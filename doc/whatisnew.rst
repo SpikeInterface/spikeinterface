@@ -8,7 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
-  releases/0.95.2.rst
+  releases/0.96.0.rst
   releases/0.95.1.rst
   releases/0.95.0.rst
   releases/0.94.0.rst
@@ -27,7 +27,7 @@ Release notes
 NEW API
 -------
 
-Version 0.95.2
+Version 0.96.0
 ==============
 
 * Change setup.py to pyproject.toml
