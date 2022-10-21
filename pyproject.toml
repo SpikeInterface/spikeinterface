@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.96.0"
+version = "0.96.1.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -120,8 +120,8 @@ test = [
     
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
     
 ]
 
