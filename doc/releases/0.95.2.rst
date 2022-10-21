@@ -41,6 +41,7 @@ sorters:
   * Improve run sorter in docker and singularity containers (#938)
   * Modify pyks for IBL version (#1011)
   * Better handling of SI dev install in containers (#1013 - #1015)
+  * Improvements to Circus2 pipeline (#971)
 
 postprocessing:
   * Fix border effect for compute_spike_amplitudes (#962)
