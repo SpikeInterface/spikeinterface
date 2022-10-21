@@ -92,7 +92,7 @@ test = [
     "zarr",
 
     # tridesclous
-    "numpy<1.23",
+    "numpy<1.24",
     "numba",
     "hdbscan",
 
