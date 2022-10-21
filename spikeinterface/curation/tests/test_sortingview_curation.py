@@ -32,7 +32,7 @@ def generate_sortingview_curation_dataset():
     # plot_sorting_summary with curation
     w = sw.plot_sorting_summary(we, curation=True, backend="sortingview")
 
-
+@pytest.mark.skip("OpenSSL error with Ed25519 private key. Test locally")
 def test_sortingview_curation():
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
