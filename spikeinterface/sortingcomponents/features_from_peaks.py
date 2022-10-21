@@ -169,10 +169,12 @@ class RandomProjectionsFeature(PeakPipelineStep):
             wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
 
             if self.min_values is not None:
-                indices = np.where(wf_ptp < self.min_values[chan_inds])
-                wf_ptp[indices[0], indices[1]] = 0
+                wf_ptp = (wf_ptp/self.min_values[chan_inds])**4
 
-            all_projections[idx] = np.dot(wf_ptp, local_projections)/(np.sum(wf_ptp, axis=1)[:, np.newaxis])
+            denom = np.sum(wf_ptp, axis=1)
+            mask = denom != 0
+
+            all_projections[idx[mask]] = np.dot(wf_ptp[mask], local_projections)/(denom[mask][:, np.newaxis])
         return all_projections
 
 
@@ -196,13 +198,14 @@ class RandomProjectionsEnergyFeature(PeakPipelineStep):
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
             energies = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
-            expected = np.sqrt(waveforms.shape[1])
 
             if self.min_values is not None:
-                indices = np.where(energies < self.min_values[chan_inds]*expected)
-                energies[indices[0], indices[1]] = 0
+                energies = (energies/self.min_values[chan_inds])**4
 
-            all_projections[idx] = np.dot(energies, local_projections)/(np.sum(energies, axis=1)[:, np.newaxis])
+            denom = np.sum(energies, axis=1)
+            mask = denom != 0
+
+            all_projections[idx[mask]] = np.dot(energies[mask], local_projections)/(denom[mask][:, np.newaxis])
         return all_projections
 
 

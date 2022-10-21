@@ -5,6 +5,10 @@ on:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
+env:
+  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
 jobs:
   build-and-test:
     name: Test on (${{ matrix.os }})
@@ -170,12 +174,9 @@ jobs:
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m curation
+          pytest -v -s -m curation
       - name: Test widgets
         if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
-        env:
-          KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
-          KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -s -m widgets
