@@ -116,8 +116,8 @@ class WaveformExtractor:
             recording = None
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
             if not rec_attributes_file.exists():
-                raise ValueError('This WaveformExtractor folder was created with oled version of spikeinterface'
-                                 'you cannot use the mode with_recording=False')
+                raise ValueError('This WaveformExtractor folder was created with an older version of spikeinterface'
+                                 '\nYou cannot use the mode with_recording=False')
             with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
             # the probe is handle ouside the main json
