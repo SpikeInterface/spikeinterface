@@ -1,3 +1,4 @@
+from re import template
 import numpy as np
 import scipy.signal
 import scipy.spatial
@@ -12,12 +13,16 @@ from ..qualitymetrics import compute_refrac_period_violations
 def get_potential_auto_merge(waveform_extractor,
                 minimum_spikes=1000, maximum_distance_um=150.,
                 peak_sign="neg",
-                bin_ms=0.25, window_ms=100., corr_thresh=0.3,
+                bin_ms=0.25, window_ms=100.,
+                corr_diff_thresh=0.3,
+                template_diff_thresh=0.3,
                 censored_period_ms=0., refractory_period_ms=1.0,
                 sigma_smooth_ms = 0.6,
                 contamination_threshold=0.2,
                 # correlogram_low_pass = 800.,
                 adaptative_window_threshold=0.5,
+                num_channels=5,
+                num_shift=5,
                 debug_folder=None,
                 extra_outputs=False,
                 ):
@@ -67,14 +72,13 @@ def get_potential_auto_merge(waveform_extractor,
     unit_max_chan = list(unit_max_chan.values())
     unit_locations = chan_loc[unit_max_chan, :]
     unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric='euclidean')
-    pair_mask = pair_mask & (unit_distances <=maximum_distance_um)
+    pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
     
     # print('Will check ', np.sum(pair_mask), 'pairs on ', pair_mask.size)
     
     # Step 4 : potential auto merge by correlogram
     correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method='numba')
     correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
-
     # find correlogram window for each units
     win_sizes = np.zeros(n, dtype=int)
     for unit_ind in range(n):
@@ -82,33 +86,27 @@ def get_potential_auto_merge(waveform_extractor,
         thresh = np.max(auto_corr) * adaptative_window_threshold
         win_size = get_unit_adaptive_window(auto_corr, thresh)
         win_sizes[unit_ind] = win_size
-        
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots()
-        # bins2 = bins[:-1] + np.mean(np.diff(bins))
-        # ax.plot(bins2, auto_corr)
-        # ax.axhline(thresh)
-        # ax.axvline(bins2[m - win_size])
-        # ax.axvline(bins2[m + win_size])
-        # dev = -np.gradient(np.gradient(auto_corr))
-        # ax.plot(bins2, dev)
-        # plt.show()
-
-
-
     correlogram_diff = compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes,
                                     adaptative_window_threshold=adaptative_window_threshold,
                                     pair_mask=pair_mask)
-    ind1, ind2 = np.nonzero(correlogram_diff  < corr_thresh)
-    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
-    print(potential_merges)
-    
+    pair_mask = pair_mask & (correlogram_diff  < corr_diff_thresh)
+
+
+
     # step 5 : check if potential merge with CC also have template similarity
-    # TODO
+    templates = we.get_all_templates(mode='average')
+    templates_diff = compute_templates_diff(sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask)
+    pair_mask = pair_mask & (templates_diff  < template_diff_thresh)
     
     # step 6 : validate the potential merges with CC increase the contamination quality metrics
     # TODO
-    
+
+
+    # create the final list from pair_mask boolean matrix
+    ind1, ind2 = np.nonzero(pair_mask)
+    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
+
+
     if extra_outputs:
         outs = dict(
             correlograms=correlograms,
@@ -116,6 +114,7 @@ def get_potential_auto_merge(waveform_extractor,
             correlograms_smoothed=correlograms_smoothed,
             correlogram_diff=correlogram_diff,
             win_sizes=win_sizes,
+            templates_diff=templates_diff,
         )
         return potential_merges, outs
     else:
@@ -187,29 +186,6 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes, ad
             # Weighted difference (larger unit imposes its difference).
             w_diff = (num1 * diff1 + num2 * diff2) / (num1 + num2)
             corr_diff[unit_ind1, unit_ind2] = w_diff
-            
-            
-            # debug
-            # corr_thresh = 0.3
-            # if w_diff < corr_thresh:
-            #     import matplotlib.pyplot as plt
-            #     bins2 = bins[:-1] + np.mean(np.diff(bins))
-            #     fig, axs = plt.subplots(ncols=3)
-            #     ax = axs[0]
-            #     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind1, :], color='b')
-            #     ax.plot(bins2, correlograms_smoothed[unit_ind2, unit_ind2, :], color='r')
-                
-
-            #     ax.set_title(f'{unit_id1}[{num1}] {unit_id2}[{num2}]')
-            #     ax = axs[1]
-            #     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind2, :], color='g')
-            #     ax = axs[2]
-            #     ax.plot(bins2, auto_corr1, color='b')
-            #     ax.plot(bins2, auto_corr2, color='r')
-            #     ax.axvline(bins2[m - win_size])
-            #     ax.axvline(bins2[m + win_size])
-            #     ax.set_title(f'corr diff {w_diff}')
-            #     plt.show()
     
     return corr_diff
 
@@ -295,3 +271,53 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     # ax.axvline(bins2[best_peak])
 
     return win_size
+
+
+
+def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None):
+    """
+    Compute normalilzed template differences.
+
+    Parameters
+    ----------
+
+    pair_mask: None or boolean array
+        A bool matrix of size (num_units, num_units) to select
+        which pair to compute.
+
+
+    Returns
+    -------
+    templates_diff
+
+    """
+    unit_ids = sorting.unit_ids
+    n = len(unit_ids)
+
+    if pair_mask is None:
+        pair_mask = np.ones((n, n), dtype='bool')
+
+    templates_diff = np.full((n, n), np.nan, dtype='float64')
+    for unit_ind1 in range(n):
+        for unit_ind2 in range(unit_ind1 + 1, n):
+            if not pair_mask[unit_ind1, unit_ind2]:
+                continue
+            
+            template1 = templates[unit_ind1]
+            template2 = templates[unit_ind2]
+            # take best channels
+            chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
+            template1 = template1[:, chan_inds]
+            template2 = template2[:, chan_inds]
+
+            num_samples = template1.shape[0]
+            norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
+            all_shift_diff = []
+            for shift in range(-num_shift, num_shift+1):
+                temp1 = template1[num_shift:num_samples - num_shift, :]
+                temp2 = template2[num_shift + shift:num_samples - num_shift + shift, :]
+                d = np.sum(np.abs(temp1 - temp2)) / (norm)
+                all_shift_diff.append(d)
+            templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
+
+    return templates_diff
