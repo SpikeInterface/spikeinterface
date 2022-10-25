@@ -6,9 +6,6 @@ import scipy.spatial
 from ..postprocessing import compute_correlograms, get_template_extremum_channel
 from ..qualitymetrics import compute_refrac_period_violations
 
-# TODO:
-#   * template similarity
-#   * 
 
 def get_potential_auto_merge(waveform_extractor,
                 minimum_spikes=1000, maximum_distance_um=150.,
@@ -29,7 +26,7 @@ def get_potential_auto_merge(waveform_extractor,
     """
     Algorithm to find and check potential merges between units.
     
-    This is taken from lussac version 1 done Aurelien Wyngaard.
+    This is taken from lussac version 1 done by Aurelien Wyngaard.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     
     This check:
@@ -58,11 +55,11 @@ def get_potential_auto_merge(waveform_extractor,
     pair_mask[:, to_remove] = False
 
     # STEP 2 : remove contaminated auto corr
-    nb_violations, contamination = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
+    nb_violations, contaminations = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)
     nb_violations = np.array(list(nb_violations.values()))
-    contamination = np.array(list(contamination.values()))
-    to_remove = contamination > contamination_threshold
+    contaminations = np.array(list(contaminations.values()))
+    to_remove = contaminations > contamination_threshold
     pair_mask[to_remove, :] = False
     pair_mask[:, to_remove] = False
 
@@ -97,7 +94,10 @@ def get_potential_auto_merge(waveform_extractor,
     templates = we.get_all_templates(mode='average')
     templates_diff = compute_templates_diff(sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask)
     pair_mask = pair_mask & (templates_diff  < template_diff_thresh)
-    
+
+
+
+
     # step 6 : validate the potential merges with CC increase the contamination quality metrics
     # TODO
 
@@ -189,6 +189,7 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes, ad
     
     return corr_diff
 
+
 def normalize_correlogram(correlogram: np.ndarray):
     """
     Normalizes a correlogram so its mean in time is 1.
@@ -206,6 +207,7 @@ def normalize_correlogram(correlogram: np.ndarray):
     """
     mean = np.mean(correlogram)
     return correlogram if mean == 0 else correlogram / mean
+
 
 def smooth_correlogram(correlograms, bins, sigma_smooth_ms = 0.6):
     """
@@ -250,8 +252,6 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     peaks = peaks[keep]
     keep = peaks < (auto_corr.shape[0] // 2)
     peaks = peaks[keep]
-
-
  
     if peaks.size == 0:
         # If none of the peaks crossed the threshold, redo with threshold/2.
@@ -259,16 +259,6 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
 
     # keep the last peak (nearest to center)
     win_size = auto_corr.shape[0] // 2 - peaks[-1]
-
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # bins2 = np.arange(auto_corr.size)
-    # ax.plot(bins2, auto_corr, color='b')
-    # ax.axhline(threshold)
-    # ax.scatter(bins2[peaks], auto_corr[peaks], color='orange')
-    # ax.plot(bins2, derivative_2, color='r')
-    # ax.scatter(bins2[peaks], derivative_2[peaks], color='orange')
-    # ax.axvline(bins2[best_peak])
 
     return win_size
 
@@ -321,3 +311,25 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
 
     return templates_diff
+
+
+def check_improve_contaminations_score(sorting, pair_mask, contaminations):
+    """
+    Check that the contamination score is improved (decrease)  after 
+    a potential merge
+    """
+    pair_mask = pair_mask.copy()
+
+    inds1, inds2 = np.nonzero(pair_mask)
+    for i in range(inds1.size):
+        ind1, ind2 =inds1[i], inds2[i]
+
+        c1 = contaminations[ind1]
+        c2 = contaminations[ind2]
+
+        
+
+
+
+
+    return pair_mask
