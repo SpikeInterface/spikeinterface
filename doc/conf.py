@@ -29,26 +29,18 @@ if not os.path.isdir('sources'):
 
 # clean some folder
 folders =  [
-
     '../examples/getting_started/herdingspikes_output',
     '../examples/getting_started/phy_folder_for_TDC',
     '../examples/getting_started/redringspikes_output2',
     '../examples/getting_started/tridesclous_output',
     '../examples/getting_started/waveforms',
-
     '../examples/modules/comparison/herdingspikes_output',
     '../examples/modules/comparison/mountainsort4_output',
     '../examples/modules/comparison/tridesclous_output',
-
-
     '../examples/modules/core/waveform_folder',
     '../examples/modules/core/waveform_folder2',
-
     '../examples/modules/sorters/tridesclous_output',
-
     '../examples/modules/widgets/waveforms_mearec',
-
-
 ]
 
 for folder in folders:
@@ -59,8 +51,8 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'spikeinterface'
-copyright = '2021, Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
-author = 'Alessio Paolo Buccino, Cole Hurwitz, Jeremy Magland, Matthias Hennig, Samuel Garcia'
+copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
+author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
 
 
 # -- General configuration ---------------------------------------------------
@@ -118,8 +110,8 @@ sphinx_gallery_conf = {
     'examples_dirs': ['../examples/getting_started', '../examples/modules'],   # path to your example scripts
     'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
-                                        '../examples/modules/core/',
-                                        '../examples/modules/extractors/',
+                                       '../examples/modules/core/',
+                                       '../examples/modules/extractors/',
                                        '../examples/modules/preprocessing',
                                        '../examples/modules/sorters',
                                        '../examples/modules/postprocessing',

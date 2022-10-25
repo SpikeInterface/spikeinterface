@@ -23,6 +23,10 @@ Installation instructions are given for an **Unbuntu** platform. Please check th
 sorters to retrieve installation instructions for other operating systems.
 We use **pip** to install packages, but **conda** should also work in many cases.
 
+Some novel spike sorting algorithms are implemented directly in SpikeInterface using the 
+:py:mod:`spikeinterface.sortingcomponents` module. Checkout the **SpikeInterface-based spike sorters** of this page
+for more information!
+
 If you experience installation problems please directly contact the authors of theses tools or write on the
 related mailing list, google group, etc.
 
@@ -124,8 +128,8 @@ pykilosort
 ----------
 
 * Python, requires cuda
-* Url: https://github.com/MouseLand/pykilosort
-* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant
+* Url: https://github.com/int-brain-lab/pykilosort / https://github.com/MouseLand/pykilosort
+* Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant, Kush Bunga
 
 * Install the python cuda toolkit. In principle, this should work::
     
@@ -135,11 +139,13 @@ pykilosort
     
     conda install cupy 
 
-* Next, clone and install pykilosort. Note that we support the newer version on the `develop` branch::
+* Next, clone and install pykilosort. Note that we support the newer version on the `develop` branch and the `ibl_prod` version from the IBL fork::
 
     pip install phylib, pypandoc
-    git clone https://github.com/MouseLand/pykilosort
-    git checkout develop
+    # recommended
+    git clone --branch ibl_prod https://github.com/int-brain-lab/pykilosort
+    # or
+    git clone --branch develop https://github.com/MouseLand/pykilosort
     cd pykilosort
     pip install -r requirements.txt
     python setup.py install
@@ -243,3 +249,25 @@ Yass
 * Installation::
 
       https://github.com/paninski-lab/yass/wiki/Installation-Local
+
+
+SpikeInterface-based spike sorters
+==================================
+
+Thanks to the :py:mod:`spikeinterface.sortingcomponents` module, some spike sorting algorithms can now be fully implemented 
+with SpikeInterface. 
+
+SpykingCircus2
+--------------
+
+This is a upgraded version of SpykingCircus, natively written in SpikeInterface. 
+The main differences are located in the clustering (now using on-the-fly features and less prone to find 
+noise clusters), and in the template-matching procedure, which is now a full orthogonal matching pursuit, 
+working not only at peak times but at all times, recovering more spikes close to noise thresholds.
+
+* Python, requires HDBSCAN
+* Authors: Pierre Yger
+* Installation::
+
+        pip install hdbscan
+        pip install spikeinterface

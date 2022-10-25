@@ -5,8 +5,8 @@ from pathlib import Path
 
 # define marks
 mark_names = ["core", "extractors", "preprocessing", "postprocessing",
-              "sorters", "qualitymetrics", "comparison", "widgets", 
-              "exporters", "sortingcomponents"]
+              "sorters", "qualitymetrics", "comparison", "curation",
+              "widgets", "exporters", "sortingcomponents"]
 
 
 # define global test folder

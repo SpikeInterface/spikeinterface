@@ -6,7 +6,7 @@ import platform
 from typing import Optional, Union
 
 from ..core import BaseRecording
-from ..version import version as si_version
+from .. import __version__ as si_version
 from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 from spikeinterface.core.core_tools import check_json, recursive_path_modifier
 from .sorterlist import sorter_dict
@@ -469,6 +469,9 @@ if __name__ == '__main__':
         py_user_base_folder = (parent_folder / 'in_container_python_base')
         py_user_base_folder.mkdir(parents=True, exist_ok=True)
         py_user_base_unix = path_to_unix(py_user_base_folder)
+        si_source_folder = f"{py_user_base_unix}/sources"
+    else:
+        si_source_folder = "/sources"
     container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
         print('Starting container')
@@ -490,7 +493,12 @@ if __name__ == '__main__':
             # TODO later check output
             if install_si_from_source:
                 si_source = 'local machine'
-                cmd = f'pip install {si_dev_path_unix}[full]'
+                # install in local copy of host SI folder in sources/spikeinterface to avoid permission errors
+                cmd = f'mkdir {si_source_folder}'
+                res_output = container_client.run_command(cmd)
+                cmd = f'cp -r {si_dev_path_unix} {si_source_folder}'
+                res_output = container_client.run_command(cmd)
+                cmd = f'pip install {si_source_folder}/spikeinterface[full]'
             else:
                 si_source = 'remote repository'
                 cmd = 'pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]'

@@ -156,14 +156,26 @@ class PyKilosortSorter(BaseSorter):
 
         num_chans = recording.get_num_channels()
         locations = recording.get_channel_locations()
+        params["n_channels"] = num_chans
 
         # ks_probe is not probeinterface Probe at all
         ks_probe = Bunch()
-        ks_probe.n_channels_total = num_chans
+        # handle different versions
+        # Mouseland - develop version
+        ks_probe.n_channels = num_chans
+        ks_probe.n_channels_tot = num_chans
         ks_probe.channel_map = np.arange(num_chans)
         ks_probe.channel_groups = np.ones(num_chans)
         ks_probe.xcoords = locations[:, 0]
         ks_probe.ycoords = locations[:, 1]
+        # IBL version
+        ks_probe.Nchans = num_chans
+        ks_probe.NchanTOT = num_chans
+        ks_probe.chanMap = np.arange(num_chans)
+        ks_probe.kcoords = np.ones(num_chans)
+        ks_probe.xc = locations[:, 0]
+        ks_probe.yc = locations[:, 1]
+        ks_probe.shank = None
 
         run(
             dat_path,

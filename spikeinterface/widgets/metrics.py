@@ -14,10 +14,14 @@ class MetricsBaseWidget(BaseWidget):
         List of unit ids.
     skip_metrics: list or None
         If given, a list of quality metrics to skip
+    include_metrics: list or None
+        If given, a list of quality metrics to include
     unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values
     hide_unit_selector : bool
         For sortingview backend, if True the unit selector is not displayed
+    include_metrics_data :  bool
+        If True, metrics data are included in unit table, by default True
     """
 
     possible_backends = {}
@@ -31,6 +35,7 @@ class MetricsBaseWidget(BaseWidget):
         skip_metrics=None,
         unit_colors=None,
         hide_unit_selector=False,
+        include_metrics_data=True,
         backend=None,
         **backend_kwargs
     ):
@@ -47,11 +52,13 @@ class MetricsBaseWidget(BaseWidget):
 
         plot_data = dict(
             metrics=metrics,
+            sorting=sorting,
             unit_ids=unit_ids,
             include_metrics=include_metrics,
             skip_metrics=skip_metrics,
             unit_colors=unit_colors,
             hide_unit_selector=hide_unit_selector,
+            include_metrics_data=include_metrics_data
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

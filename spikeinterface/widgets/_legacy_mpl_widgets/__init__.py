@@ -21,13 +21,13 @@ from .drift import (plot_drift_over_time, DriftOverTimeWidget,
 # waveform/PC related
 # from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
 # from .unitwaveformdensitymap import plot_unit_waveform_density_map, UnitWaveformDensityMapWidget
-from .amplitudes import plot_amplitudes_distribution
+# from .amplitudes import plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
 # from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
 # units on probe
 from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
-from .depthamplitude import plot_units_depth_vs_amplitude
+# from .depthamplitude import plot_units_depth_vs_amplitude
 
 # comparison related
 from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget
@@ -59,7 +59,7 @@ from .gtcomparison import (plot_gt_performances, plot_gt_performances_averages, 
     plot_gt_performances_by_template_similarity, ComparisonPerformancesByTemplateSimilarity,)
 
 # unit summary
-from .unitsummary import plot_unit_summary, UnitSummaryWidget
+# from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
 # unit presence
 from .presence import plot_presence, PresenceWidget
