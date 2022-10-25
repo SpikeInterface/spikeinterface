@@ -239,6 +239,12 @@ class BaseExtractor:
     def get_property_keys(self):
         return list(self._properties.keys())
 
+    def delete_property(self, key):
+        if key in self._properties:
+            del self._properties[key]
+        else:
+            raise Exception(f"{key} is not a property key")
+
     def copy_metadata(self, other, only_main=False, ids=None):
         """
         Copy annotations/properties/features to another extractor.
@@ -805,7 +811,7 @@ def _check_if_dumpable(d):
     if np.any([isinstance(v, dict) and 'dumpable' in v.keys() for (k, v) in kwargs.items()]):
         # check nested
         for k, v in kwargs.items():
-            if 'dumpable' in v.keys():
+            if isinstance(v, dict) and 'dumpable' in v.keys():
                 return _check_if_dumpable(v)
     else:
         return d['dumpable']

@@ -41,7 +41,7 @@ jobs:
             file_list+="%0A- \`${file}\`"
           done
           echo ${file_list}
-          echo "::set-output name=file_list::${file_list}"
+          echo "file_list=${file_list}" >> $GITHUB_OUTPUT
       - name: Create new issue
         uses: imjohnbo/issue-bot@v3
         with:
