@@ -95,7 +95,7 @@ def check_json(d):
             dc[k] = check_json(v)
         elif isinstance(v, Path):
             dc[k] = str(v.absolute())
-        elif isinstance(v, bool):
+        elif isinstance(v, (bool, np.bool_)):
             dc[k] = bool(v)
         elif isinstance(v, (np.int32, np.int64)):
             dc[k] = int(v)
@@ -110,35 +110,28 @@ def check_json(d):
                     dc[k] = [check_json(v_el) for v_el in v]
                 else:
                     v_arr = np.array(v)
+                    if v_arr.dtype.kind not in ("b", "i", "u", "f", "S", "U", "O"):
+                        print(f'Skipping field {k}: only int, uint, bool, float, or str types can be serialized')
+                        continue
                     # 64-bit types are not serializable
                     if v_arr.dtype == np.dtype('int64'):
                         v_arr = v_arr.astype('int32')
                     if v_arr.dtype == np.dtype('float64'):
                         v_arr = v_arr.astype('float32')
-                    if len(v_arr.shape) == 1:
-                        if 'int' in str(v_arr.dtype):
-                            v_arr = [int(v_el) for v_el in v_arr]
-                            dc[k] = v_arr
-                        elif 'float' in str(v_arr.dtype):
-                            v_arr = [float(v_el) for v_el in v_arr]
-                            dc[k] = v_arr
-                        elif isinstance(v_arr[0], str):
-                            v_arr = [str(v_el) for v_el in v_arr]
-                            dc[k] = v_arr
+                    # np.bool_ needs to be cast as bool
+                    if v_arr.dtype == np.bool_:
+                        v_arr = v_arr.astype(bool)
+                    # for object types O, if they are actually str cast it
+                    # this is the case when loading a pandas column
+                    if v_arr.dtype.kind == "O":
+                        if isinstance(v_arr[0], str):
+                            v_arr = v_arr.astype('str')
                         else:
-                            print(f'Skipping field {k}: only 1D arrays of int, float, or str types can be serialized')
-                    elif len(v_arr.shape) == 2:
-                        if 'int' in str(v_arr.dtype):
-                            v_arr = [[int(v_el) for v_el in v_row] for v_row in v_arr]
-                            dc[k] = v_arr
-                        elif 'float' in str(v_arr.dtype):
-                            v_arr = [[float(v_el) for v_el in v_row] for v_row in v_arr]
-                            dc[k] = v_arr
-                        else:
-                            print(f'Skipping field {k}: only 2D arrays of int or float type can be serialized')
-                    else:
-                        print(f"Skipping field {k}: only 1D and 2D arrays can be serialized")
+                            print(f'Skipping field {k}: Object type cannot be serialized')
+                            continue
+                    dc[k] = v_arr.tolist()
             else:
+                # this is for empty arrays
                 dc[k] = list(v)
     return dc
 

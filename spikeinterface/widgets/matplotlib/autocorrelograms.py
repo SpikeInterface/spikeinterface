@@ -20,7 +20,10 @@ class AutoCorrelogramsPlotter(MplPlotter):
         for i, unit_id in enumerate(unit_ids):
             ccg = correlograms[i, i]
             ax = self.axes.flatten()[i]
-            color = 'g'
+            if dp.unit_colors is None:
+                color = 'g'
+            else:
+                color = dp.unit_colors[unit_id]
             ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align='edge')
             ax.set_title(str(unit_id))
 

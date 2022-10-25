@@ -5,6 +5,10 @@ on:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
+env:
+  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
 jobs:
   build-and-test:
     name: Test on (${{ matrix.os }})
@@ -17,15 +21,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Get current year-month
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m')"
+        run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-venv
         with:
           path: ~/test_env
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}${{ hashFiles('**/requirements_full.txt') }}-${{ hashFiles('**/requirements_extractors.txt') }}-${{ hashFiles('**/requirements_test.txt') }}-${{ steps.date.outputs.date }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
       - name: Install dependencies
         run: |
           sudo apt update
@@ -45,14 +49,9 @@ jobs:
           pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
-          # TODO remove it after neo release
-          # because it force some version (numpy/numba/dhdbscan...)
-          pip install numpy==1.20
-          pip install -r requirements_test.txt
-          pip install -r requirements.txt
-          pip install -r requirements_full.txt
-          pip install -r requirements_extractors.txt
-          pip install -e .
+          # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
+          pip install numpy==1.22
+          pip install -e .[test,extractors,full]
       - name: git-annex install
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
@@ -69,7 +68,7 @@ jobs:
         # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
         run: |
-          echo "::set-output name=HASH_EPHY_DATASET::$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
         env:
@@ -92,87 +91,102 @@ jobs:
         id: modules-changed
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [ $file == *"/core/"* ] || [ $file == *"/extractors/neoextractors/neobaseextractor.py" ]; then
+            if [[ $file == *"/core/"* || $file == *"/extractors/neoextractors/neobaseextractor.py" ]]; then
               echo "Core changed"
-              echo "::set-output name=CORE_CHANGED::true"
+              echo "CORE_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/extractors/"* ]]; then
               echo "Extractors changed"
-              echo "::set-output name=EXTRACTORS_CHANGED::true"
+              echo "EXTRACTORS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/preprocessing/"* ]]; then
               echo "Preprocessing changed"
-              echo "::set-output name=PREPROCESSING_CHANGED::true"
+              echo "PREPROCESSING_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/postprocessing/"* ]]; then
               echo "Postprocessing changed"
-              echo "::set-output name=POSTPROCESSING_CHANGED::true"
+              echo "POSTPROCESSING_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/qualitymetrics/"* ]]; then
               echo "Quality metrics changed"
-              echo "::set-output name=QUALITYMETRICS_CHANGED::true"
+              echo "QUALITYMETRICS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/sorters/"* ]]; then
               echo "Sorters changed"
-              echo "::set-output name=SORTERS_CHANGED::true"
+              echo "SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
+            if [[ $file == *"/comparison/"* ]]; then
+              echo "Comparison changed"
+              echo "COMPARISON_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
+            if [[ $file == *"/curation/"* ]]; then
+              echo "Curation changed"
+              echo "CURATION_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/widgets/"* ]]; then
               echo "Widgets changed"
-              echo "::set-output name=WIDGETS_CHANGED::true"
+              echo "WIDGETS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/exporters/"* ]]; then
               echo "Exporters changed"
-              echo "::set-output name=EXPORTERS_CHANGED::true"
+              echo "EXPORTERS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/sortingcomponents/"* ]]; then
               echo "Sortingcomponents changed"
-              echo "::set-output name=SORTINGCOMPONENTS_CHANGED::true"
+              echo "SORTINGCOMPONENTS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
-          done 
+          done
       - name: Test core
         run: |
           source ~/test_env/bin/activate
           pytest -v -m core
       - name: Test extractors
-        if: steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -s -m extractors
       - name: Test preprocessing
-        if: steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m preprocessing
       - name: Test postprocessing
-        if: steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m postprocessing
       - name: Test quality metrics
-        if: steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m qualitymetrics
       - name: Test sorters
-        if: steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m sorters
+      - name: Test comparison
+        if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m comparison
+      - name: Test curation
+        if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -s -m curation
       - name: Test widgets
-        if: steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
-        env:
-          KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
-          KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+        if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -s -m widgets
       - name: Test exporters
-        if: steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m exporters
       - name: Test sortingcomponents
-        if: steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true'
+        if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -m sortingcomponents

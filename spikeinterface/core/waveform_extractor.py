@@ -107,7 +107,7 @@ class WaveformExtractor:
         return txt
 
     @classmethod
-    def load_from_folder(cls, folder, with_recording=True):
+    def load_from_folder(cls, folder, with_recording=True, sorting=None):
         folder = Path(folder)
         assert folder.is_dir(), f'This waveform folder does not exists {folder}'
 
@@ -116,8 +116,8 @@ class WaveformExtractor:
             recording = None
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
             if not rec_attributes_file.exists():
-                raise ValueError('This WaveformExtractor folder was created with oled version of spikeinterface'
-                                 'you cannot use the mode with_recording=False')
+                raise ValueError('This WaveformExtractor folder was created with an older version of spikeinterface'
+                                 '\nYou cannot use the mode with_recording=False')
             with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
             # the probe is handle ouside the main json
@@ -132,10 +132,11 @@ class WaveformExtractor:
                                         base_folder=folder)
                 rec_attributes = None
             except:
-                raise Exception("The recording could not be loaded. You can use the `without_recording=True` argument")
+                raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
 
-        sorting = load_extractor(folder / 'sorting.json',
-                                 base_folder=folder)
+        if sorting is None:
+            sorting = load_extractor(folder / 'sorting.json',
+                                     base_folder=folder)
         we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes)
 
         for mode in _possible_template_modes:
@@ -1072,7 +1073,7 @@ class BaseWaveformExtractorExtension:
                 data = np.load(ext_data_file, mmap_mode='r')
             elif ext_data_file.suffix == '.csv':
                 import pandas as pd
-                data = pd.read_csv(ext_data_file, index_col=False)
+                data = pd.read_csv(ext_data_file, index_col=0)
             elif ext_data_file.suffix == '.pkl':
                 data = pickle.load(ext_data_file.open('rb'))
             self._extension_data[ext_data_name] = data
@@ -1096,7 +1097,7 @@ class BaseWaveformExtractorExtension:
                 elif isinstance(ext_data, np.ndarray):
                     np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
                 elif isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=False)
+                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
                 else:
                     try:
                         with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:

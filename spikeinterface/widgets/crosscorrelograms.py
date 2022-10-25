@@ -23,11 +23,14 @@ class CrossCorrelogramsWidget(BaseWidget):
         Bin size in ms, by default 1 ms
     hide_unit_selector : bool
         For sortingview backend, if True the unit selector is not displayed
+    unit_colors: dict or None
+        Optional dict of colors for units.
     """
     possible_backends = {}
 
     def __init__(self, waveform_or_sorting_extractor: Union[WaveformExtractor, BaseSorting], 
                  unit_ids=None, window_ms=100.0, bin_ms=1.0, hide_unit_selector=False,
+                 unit_colors=None,
                  backend=None, **backend_kwargs):
         if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
             sorting = waveform_or_sorting_extractor.sorting
@@ -51,7 +54,8 @@ class CrossCorrelogramsWidget(BaseWidget):
             correlograms=correlograms,
             bins=bins,
             unit_ids=unit_ids,
-            hide_unit_selector=hide_unit_selector
+            hide_unit_selector=hide_unit_selector,
+            unit_colors=unit_colors,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
