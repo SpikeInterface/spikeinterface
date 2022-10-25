@@ -4,22 +4,24 @@ import scipy.signal
 import scipy.spatial
 
 from ..postprocessing import compute_correlograms, get_template_extremum_channel
-from ..qualitymetrics import compute_refrac_period_violations
+from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rate
+
+from .mergeunitssorting import MergeUnitsSorting
 
 
 def get_potential_auto_merge(waveform_extractor,
                 minimum_spikes=1000, maximum_distance_um=150.,
                 peak_sign="neg",
                 bin_ms=0.25, window_ms=100.,
-                corr_diff_thresh=0.3,
-                template_diff_thresh=0.3,
+                corr_diff_thresh=0.16,
+                template_diff_thresh=0.25,
                 censored_period_ms=0., refractory_period_ms=1.0,
                 sigma_smooth_ms = 0.6,
                 contamination_threshold=0.2,
                 adaptative_window_threshold=0.5,
                 num_channels=5,
                 num_shift=5,
-                debug_folder=None,
+                firing_contamination_balance=1.5,
                 extra_outputs=False,
                 ):
     """
@@ -98,7 +100,8 @@ def get_potential_auto_merge(waveform_extractor,
 
 
     # step 6 : validate the potential merges with CC increase the contamination quality metrics
-    # TODO
+    pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations, 
+        firing_contamination_balance, refractory_period_ms, censored_period_ms)
 
 
     # create the final list from pair_mask boolean matrix
@@ -213,10 +216,11 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     
     """
-    # smooth correlogram by low pass filter (convolution with a Gaussian)
+    # OLD implementation : smooth correlogram by low pass filter
     # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
     # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
 
+    # new implementation smooth by convolution with a Gaussian kernel
     smooth_kernel = np.exp( -bins**2 / ( 2 * sigma_smooth_ms **2))
     smooth_kernel /= np.sum(smooth_kernel)
     smooth_kernel = smooth_kernel[None, None, :]
@@ -311,24 +315,59 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
 
     return templates_diff
 
+class MockWaveformExtractor:
+    def __init__(self, recording, sorting):
+        self.recording = recording
+        self.sorting = sorting
 
-def check_improve_contaminations_score(sorting, pair_mask, contaminations):
+def check_improve_contaminations_score(we, pair_mask, contaminations,
+        firing_contamination_balance, refractory_period_ms, censored_period_ms):
     """
+    Check that the score is improve afeter a potential merge
+
+    The score is a balance between:
+      * contamination decrease
+      * firing increase
+
     Check that the contamination score is improved (decrease)  after 
     a potential merge
     """
+    recording = we.recording
+    soring = we.sorting
     pair_mask = pair_mask.copy()
+
+    
+
+    firing_rates = compute_firing_rate(we)
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
         ind1, ind2 =inds1[i], inds2[i]
 
-        c1 = contaminations[ind1]
-        c2 = contaminations[ind2]
+        c_1 = contaminations[ind1]
+        c_2 = contaminations[ind2]
 
-        
+        f_1 = firing_rates[ind1]
+        f_2 = firing_rates[ind2]
 
+        # make a merged sorting and tale one unit (unit_id1 is used)
+        unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
+        sorting_merged = MergeUnitsSorting(sorting, [unit_id1, unit_id2], new_unit_id=unit_id1).select_units([unit_id1])
+        # make a lazy fake WaveformExtractor to compute contamination and firing rate
+        we_new = MockWaveformExtractor(recording, sorting_merged)
+        _, contaminations = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
+                                    censored_period_ms=censored_period_ms)
+        c_new = contaminations[unit_id1]
+        f_new = compute_firing_rate(we)[unit_id1]
 
+        # old and new scores
+        k = 1 + firing_contamination_balance
+        score_1 = f_1 * ( 1 - k * c_1)
+        score_2 = f_2 * ( 1 - k * c_2)
+        score_new = f_new * ( 1 - k * c_new)
 
+        if score_new < score_1 or score_new < score_2:
+            # the score is not improved
+            pair_mask[ind1, ind2] = False
 
     return pair_mask
