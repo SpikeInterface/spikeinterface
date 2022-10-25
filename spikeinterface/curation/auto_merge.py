@@ -16,7 +16,6 @@ def get_potential_auto_merge(waveform_extractor,
                 censored_period_ms=0., refractory_period_ms=1.0,
                 sigma_smooth_ms = 0.6,
                 contamination_threshold=0.2,
-                # correlogram_low_pass = 800.,
                 adaptative_window_threshold=0.5,
                 num_channels=5,
                 num_shift=5,
@@ -32,7 +31,7 @@ def get_potential_auto_merge(waveform_extractor,
     This check:
        * correlograms
        * template_similarity
-       * contamination quality mertics
+       * contamination quality metrics
     
     """
     
@@ -63,7 +62,7 @@ def get_potential_auto_merge(waveform_extractor,
     pair_mask[to_remove, :] = False
     pair_mask[:, to_remove] = False
 
-    # STEP 3 : unit positions are estimated rougtly with channel
+    # STEP 3 : unit positions are estimated roughly with channel
     chan_loc = we.recording.get_channel_locations()
     unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
     unit_max_chan = list(unit_max_chan.values())
@@ -124,20 +123,21 @@ def get_potential_auto_merge(waveform_extractor,
 def compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes, adaptative_window_threshold=0.5,
             pair_mask=None):
     """
-    Original author: Aurelien Wyngaard ( lussac)
+    Original author: Aurelien Wyngaard (lussac)
     
     Parameters
     ----------
     sorting: BaseSorting
         The sorting object
-    correlograms: array 3d
-        The 3d array containing all cross and auto corrlogram
+    correlograms_smoothed: array 3d
+        The 3d array containing all cross and auto correlograms
+        (smoothed by a convolution with a gaussian curve)
     bins: array
         Bins of the correlograms
-    correlogram_low_pass: float
-        low pass filter on correlogram for smoothing
-    adaptative_window_threshold
-        
+    win_sized: 
+        TODO
+    adaptative_window_threshold: float
+        TODO
     pair_mask: None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
@@ -209,11 +209,11 @@ def normalize_correlogram(correlogram: np.ndarray):
     return correlogram if mean == 0 else correlogram / mean
 
 
-def smooth_correlogram(correlograms, bins, sigma_smooth_ms = 0.6):
+def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     
     """
-    # smooth correlogram by low pass filter
+    # smooth correlogram by low pass filter (convolution with a Gaussian)
     # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
     # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
 
@@ -233,9 +233,9 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     Parameters
     ----------
     auto_corr (np.ndarray) [time]:
-        Correlogram used for adaptive window. Needs to start at t=0.
+        Correlogram used for adaptive window.
     threshold (float):
-        Minimum threshold of correlogram (all peaks under this threshold is discarded).
+        Minimum threshold of correlogram (all peaks under this threshold are discarded).
 
     Returns
     -------
@@ -266,11 +266,10 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
 
 def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None):
     """
-    Compute normalilzed template differences.
+    Computes normalilzed template differences.
 
     Parameters
     ----------
-
     pair_mask: None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
