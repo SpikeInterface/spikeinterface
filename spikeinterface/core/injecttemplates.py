@@ -51,7 +51,7 @@ class InjectTemplatesRecording(BaseRecording):
 
         if nbefore is None:
             nbefore = np.argmax(np.max(np.abs(templates), axis=2), axis=1)
-        elif type(nbefore) == int:
+        elif isinstance(nbefore, (int, np.integer)):
             nbefore = [nbefore]*n_units 
         else:
             assert len(nbefore) == n_units
