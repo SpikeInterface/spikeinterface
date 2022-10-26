@@ -20,11 +20,18 @@ set_global_tmp_folder(cache_folder)
 
 def test_get_auto_merge_list():
 
-    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[10.])
+    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[120.])
     
     sorting_with_dup = inject_some_duplicat_units(sorting, num=3, max_shift=2, ratio=0.7, seed=None)
-    
-    we = extract_waveforms(rec, sorting_with_dup, mode='memory', folder=None, n_jobs=1)
+
+    rec = rec.save()
+    sorting_with_dup = sorting_with_dup.save()
+    wf_folder = cache_folder / 'wf_auto_merge'
+    if wf_folder.exists():
+        shutil.rmtree(wf_folder)
+    we = extract_waveforms(rec, sorting_with_dup, mode='folder', folder=wf_folder, n_jobs=1)
+
+    # we = extract_waveforms(rec, sorting_with_dup, mode='memory', folder=None, n_jobs=1)
     print(we)
 
     potential_merges = get_potential_auto_merge(we,
@@ -33,7 +40,7 @@ def test_get_auto_merge_list():
                 bin_ms=0.25, window_ms=100.,
                 corr_diff_thresh=0.16,
                 template_diff_thresh=0.25,
-                censored_period_ms=0., refractory_period_ms=1.0,
+                censored_period_ms=0., refractory_period_ms=4.0,
                 sigma_smooth_ms = 0.6,
                 contamination_threshold=0.2,
                 adaptative_window_threshold=0.5,
