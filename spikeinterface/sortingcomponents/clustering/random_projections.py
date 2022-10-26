@@ -180,8 +180,7 @@ class RandomProjectionClustering:
                 name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
                 if tmp_folder.exists():
-                    import shutils
-                    shutils.rmtree(tmp_folder)
+                    shutil.rmtree(tmp_folder)
                 mode = 'folder'
 
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
