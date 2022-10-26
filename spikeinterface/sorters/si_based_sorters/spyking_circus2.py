@@ -105,6 +105,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params = params['clustering'].copy()
         clustering_params.update(params['waveforms'])
         clustering_params.update(params['general'])
+        clustering_params.update(params['shared_memory'])
         clustering_params['job_kwargs'] = params['job_kwargs']
 
         labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='random_projections',
