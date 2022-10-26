@@ -10,7 +10,7 @@ import spikeinterface.extractors as se
 
 from spikeinterface.postprocessing import compute_correlograms, CorrelogramsCalculator
 from spikeinterface.postprocessing.correlograms import _make_bins
-from spikeinterface.core.testing_tools import generate_sorting
+from spikeinterface.core import generate_sorting
 
 
 try:

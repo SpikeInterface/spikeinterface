@@ -7,7 +7,7 @@ from spikeinterface.core import UnitsSelectionSorting
 from spikeinterface.core import NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.testing_tools import create_sorting_npz
+from spikeinterface.core import create_sorting_npz
 
 
 if hasattr(pytest, "global_test_folder"):

@@ -7,6 +7,8 @@ import pytest
 import numpy as np
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, NumpySorting, set_global_tmp_folder
+from spikeinterface.core.generate import inject_some_duplicat_units
+
 from spikeinterface.extractors import toy_example
 
 from spikeinterface.curation import remove_redundant_units
@@ -22,17 +24,7 @@ set_global_tmp_folder(cache_folder)
 def test_remove_redundant_units():
     rec, sorting = toy_example(num_segments=1, duration=[10.])
     
-    # sorting to dict
-    d = {unit_id: sorting.get_unit_spike_train(unit_id) for unit_id in sorting.unit_ids}
-    
-    # inject some duplicate
-    other_ids = np.arange(np.max(sorting.unit_ids) +1 , np.max(sorting.unit_ids) + 5)
-    unit_peak_shifts = dict(zip(other_ids, [-5, -2, +2, +5]))
-    for i, unit_id in  enumerate(other_ids):
-        d[unit_id] = d[sorting.unit_ids[i]] + unit_peak_shifts[unit_id]
-    sorting_with_dup = NumpySorting.from_dict(d, sampling_frequency=sorting.get_sampling_frequency())
-    print(sorting_with_dup.unit_ids)
-
+    sorting_with_dup = inject_some_duplicat_units(sorting, num=4)
     
     rec = rec.save()
     sorting_with_dup = sorting_with_dup.save()

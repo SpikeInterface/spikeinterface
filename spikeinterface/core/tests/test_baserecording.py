@@ -14,7 +14,7 @@ from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_e
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"

@@ -32,6 +32,11 @@ from .frameslicesorting import FrameSliceSorting
 from .channelsaggregationrecording import ChannelsAggregationRecording, aggregate_channels
 from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 
+# generator of simple object for testing or examples
+from .generate import (generate_recording, generate_sorting,
+  create_sorting_npz, generate_snippets,
+  synthesize_random_firings, synthetize_spike_train_bad_isi,)
+
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
 from .segmentutils import (
     append_recordings,

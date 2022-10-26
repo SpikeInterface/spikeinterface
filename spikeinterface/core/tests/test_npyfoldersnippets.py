@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 
 from spikeinterface.core import load_extractor
-from spikeinterface.core.testing_tools import generate_snippets
+from spikeinterface.core import generate_snippets
 
 
 if hasattr(pytest, "global_test_folder"):

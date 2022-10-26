@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 
 from spikeinterface.core import NumpyRecording, NumpySorting, NumpyEvent
-from spikeinterface.core.testing_tools import create_sorting_npz
+from spikeinterface.core import create_sorting_npz
 from spikeinterface.core import NpzSortingExtractor
 
 if hasattr(pytest, "global_test_folder"):
