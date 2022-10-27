@@ -116,26 +116,26 @@ def kfilt(traces, collection, ntr_pad, ntr_tap, agc_options, butter_kwargs):
     if not agc_options:
         gain = 1
     else:
-        xf, gain = agc(traces,
-                       window_length=agc_options["window_length_s"],
-                       sampling_interval=agc_options["sampling_interval"])
+        traces, gain = agc(traces,
+                           window_length=agc_options["window_length_s"],
+                           sampling_interval=agc_options["sampling_interval"])
 
     if ntr_pad > 0:
         # pad the array with a mirrored version of itself and apply a cosine taper
-        xf = np.r_[np.flipud(xf[:ntr_pad]), xf, np.flipud(xf[-ntr_pad:])]
+        traces = np.r_[np.flipud(traces[:ntr_pad]), traces, np.flipud(traces[-ntr_pad:])]
 
     if ntr_tap > 0:
         taper = fcn_cosine([0, ntr_tap])(np.arange(nxp))  # taper up
         taper *= 1 - fcn_cosine([nxp - ntr_tap, nxp])(np.arange(nxp))   # taper down
-        xf = xf * taper[:, np.newaxis]
+        traces = traces * taper[:, np.newaxis]
 
     sos = scipy.signal.butter(**butter_kwargs, output='sos')
-    xf = scipy.signal.sosfiltfilt(sos, xf, axis=0)
-    breakpoint()
-    if ntr_pad > 0:
-        xf = xf[ntr_pad:-ntr_pad, :]
+    traces = scipy.signal.sosfiltfilt(sos, traces, axis=0)
 
-    return xf / gain
+    if ntr_pad > 0:
+        traces = traces[ntr_pad:-ntr_pad, :]
+
+    return traces / gain
 
 
 def agc(traces, window_length, sampling_interval, epsilon=1e-8):
