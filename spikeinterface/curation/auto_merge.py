@@ -26,15 +26,76 @@ def get_potential_auto_merge(waveform_extractor,
                 ):
     """
     Algorithm to find and check potential merges between units.
-    
+
     This is taken from lussac version 1 done by Aurelien Wyngaard.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
-    
-    This check:
-       * correlograms
-       * template_similarity
-       * contamination quality metrics
-    
+
+
+    The merge are proposed when:
+      * STEP 1:  enougth spikes in each units for coimputing the correlogram
+      * STEP 2: each units is not contaminated by checking auto corrlogram
+      * STEP 3 : unit location are close enough
+      * STEP 4 : the cross correlogram of 2 units is similar to each auto corrleogram
+      * STEP 5 the waveform of the 2 units are similar
+      * STEP 6 : the "score" is increase.
+        The score is a balance between having more spike (increasing the firing) and 
+        getting more contamination in the auto correlogram.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+    minimum_spikes: int 
+        Minimum number of spike to be a potential merge.
+        Enought to estimate the correlogram
+        STEP 1
+    maximum_distance_um: float
+        Minimum distance between units for considering a merge.
+        STEP 3
+    peak_sign: "neg"/"pos"/"both"
+        Used to estimate the maximum channel of a template
+        STEP 3
+    bin_ms: float
+        Used for computing the correlogram
+        STEP 4
+    window_ms: float
+        Used for computing the correlogram
+        STEP 4
+    corr_diff_thresh: float
+        between 0 and 1
+        The threshold on the "correlogram distance metric" for considering a merge.
+        STEP 4
+    template_diff_thresh: float
+        between 0 and 1
+        The threshold on the "template distance metric" for considering a merge.
+        STEP 5
+    censored_period_ms: float
+        Used to compute the refractory period violations aka "contaminagtion"
+        STEP 2.
+    refractory_period_ms: float
+        Used to compute the refractory period violations aka "contaminagtion"
+        STEP 2.
+    sigma_smooth_ms: float
+        Parameters to smooth the correlogram in STEP 4
+    contamination_threshold: float
+        Threshold for not taking in account a unit when too much contaminated (STEP 2)
+    adaptative_window_threshold:: float
+        Parameter to detect the window size in STEP 4
+    num_channels: int
+        Number of channel to use for STEP 5
+    num_shift: int
+        shift to be explored for STEP 5
+    firing_contamination_balance: float
+        Parameter to control the balance for STEP 6.
+        
+    Returns
+    -------
+    potential_merges
+        A list of tuple of 2 elements.
+        List of pair that could be merged
+    outs: optional
+        Return only when extra_outputs=True
+        A dictionary that contain data for debugging and plotting.
     """
     
     we = waveform_extractor
