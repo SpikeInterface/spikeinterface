@@ -54,7 +54,8 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
         # non rigid motion = interpolation 2D
         f = scipy.interpolate.RegularGridInterpolator((temporal_bins, spatial_bins), motion,
                                                       method='linear', bounds_error=False, fill_value=None)
-        shift = f(np.c_[times, peak_locations[direction]])
+        spike_times = times[peaks['sample_ind']]
+        shift = f(np.c_[spike_times, peak_locations[direction]])
         corrected_peak_locations[direction] -= shift
 
     return corrected_peak_locations
@@ -120,16 +121,9 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
             locs = channel_locations[:, direction]
             channel_motions = f(locs)
         channel_locations_moved = channel_locations.copy()
-        channel_locations_moved[:, direction] += channel_motions
+        # channel_locations_moved[:, direction] += channel_motions
+        channel_locations_moved[:, direction] -= channel_motions
 
-        # Step 2 : interpolate trace
-        # interpolation is done with Inverse Distance Weighted
-        # because it is simple to implement
-        # Instead vwe should use use the convex hull, Delaunay triangulation http://www.qhull.org/
-        # scipy.interpolate.LinearNDInterpolator and qhull.Delaunay should help for this
-        # https://www.aspexit.com/spatial-data-interpolation-tin-idw-kriging-block-kriging-co-kriging-what-are-the-differences/
-        
-        
         drift_kernel = get_drift_kernel(channel_locations, channel_locations_moved,
                                         method=spatial_interpolation_method, **spatial_interpolation_kwargs)
         
@@ -176,6 +170,9 @@ def get_drift_kernel(source_location, target_location, method='idw', num_closest
 
         drift_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
         drift_kernel = drift_kernel.T.astype('float32').copy()
+        
+        #TODO norm to one per col
+        
     else:
         raise ValueError('get_drift_kernel wrong method')
     
