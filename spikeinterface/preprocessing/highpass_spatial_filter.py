@@ -56,7 +56,6 @@ def kfilt(x, collection=None, ntr_pad=0, ntr_tap=None, lagc=300, butter_kwargs=N
         xf = xf[ntr_pad:-ntr_pad, :]
     return xf / gain
 
-
 def agc(x, wl=.5, si=.002, epsilon=1e-8, gpu=False):
     """
     Automatic gain control
@@ -84,4 +83,45 @@ def agc(x, wl=.5, si=.002, epsilon=1e-8, gpu=False):
         return (x * gain).astype('float32'), gain.astype('float32')
 
     return x * gain, gain
+
+def convolve(x, w, mode='full', gpu=False):
+    """
+    Frequency domain convolution along the last dimension (2d arrays)
+    Will broadcast if a matrix is convolved with a vector
+    :param x:
+    :param w:
+    :param mode:
+    :param gpu: bool
+    :return: convolution
+    """
+    if gpu:
+        import cupy as gp
+    else:
+        gp = np
+
+    nsx = x.shape[-1]
+    nsw = w.shape[-1]
+    ns = ns_optim_fft(nsx + nsw)
+    x_ = gp.concatenate((x, gp.zeros([*x.shape[:-1], ns - nsx], dtype=x.dtype)), axis=-1)
+    w_ = gp.concatenate((w, gp.zeros([*w.shape[:-1], ns - nsw], dtype=w.dtype)), axis=-1)
+    xw = gp.real(gp.fft.irfft(gp.fft.rfft(x_, axis=-1) * gp.fft.rfft(w_, axis=-1), axis=-1))
+    xw = xw[..., :(nsx + nsw)]  # remove 0 padding
+    if mode == 'full':
+        return xw
+    elif mode == 'same':
+        first = int(gp.floor(nsw / 2)) - ((nsw + 1) % 2)
+        last = int(gp.ceil(nsw / 2)) + ((nsw + 1) % 2)
+        return xw[..., first:-last]
+
+
+def ns_optim_fft(ns):
+    """
+    Gets the next higher combination of factors of 2 and 3 than ns to compute efficient ffts
+    :param ns:
+    :return: nsoptim
+    """
+    p2, p3 = np.meshgrid(2 ** np.arange(25), 3 ** np.arange(15))
+    sz = np.unique((p2 * p3).flatten())
+    return sz[np.searchsorted(sz, ns)]
+
 
