@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.96.1.rst
   releases/0.96.0.rst
   releases/0.95.1.rst
   releases/0.95.0.rst
@@ -26,6 +27,11 @@ Release notes
 
 NEW API
 -------
+
+Version 0.96.1
+==============
+
+* Bump up probeinterface version to 0.2.14 to fix bug in reading SpikeGLX contact locations
 
 Version 0.96.0
 ==============
