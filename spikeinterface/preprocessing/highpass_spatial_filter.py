@@ -1,27 +1,36 @@
 import numpy as np
 import scipy.signal
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment  # TODO: fix
+from spikeinterface.core.core_tools import define_function_from_class
 
+# Tests: all options (taper, padding, agc_defaults)
+# TODO: check that 300 samples is good default (is good for all time lengths?)
+# TODO: check Wn
+# TODO: operating on a copy of traces so can overwrite in
 
 class HighpassSpatialFilter(BasePreprocessor):
     """
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, collection=None, ntr_pad=0, ntr_tap=None, acg_window_s=None, butter_kwargs=None):
+    def __init__(self, recording, collection=None, ntr_pad=0, ntr_tap=None, agc_options="default", butter_kwargs=None):
         BasePreprocessor.__init__(self, recording)
 
-        # some logic to check args
-        # acg_window_s = 300 default (if keeping agc)
+        sampling_interval = 1 / recording.get_sampling_frequency()
+
+        if agc_options == "default":
+            agc_options = {"window_length_s": self.get_default_agc_window_length(sampling_interval),
+                           "sampling_interval": sampling_interval}
+
         if butter_kwargs is None:
             butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
 
         for parent_segment in recording._recording_segments:
-            rec_segment = HighpassSpatialFilterSegment(parent_segment,
+            rec_segment = HighPassSpatialFilterSegment(parent_segment,
                                                        collection,
                                                        ntr_pad,
                                                        ntr_tap,
-                                                       acg_window_s,
+                                                       agc_options,
                                                        butter_kwargs)
             self.add_recording_segment(rec_segment)
 
@@ -29,9 +38,11 @@ class HighpassSpatialFilter(BasePreprocessor):
                             collection=collection,
                             ntr_pad=ntr_pad,
                             ntr_tap=ntr_tap,
-                            acg_window_s=acg_window_s,
+                            agc_options=agc_options,
                             butter_kwargs=butter_kwargs)
 
+    def get_default_agc_window_length(self, sampling_interval):
+        return 300 * sampling_interval
 
 class HighPassSpatialFilterSegment(BasePreprocessorSegment):
     """
@@ -42,15 +53,15 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                  collection,
                  ntr_pad,
                  ntr_tap,
-                 acg_window_s,
+                 agc_options,
                  butter_kwargs):
 
         self.parent_recording_segment = parent_recording_segment
         self.collection = collection
         self.ntr_pad = ntr_pad
         self.ntr_tap = ntr_tap
-        self.acg_window_s = acg_window_s
-        self.butter_kwargs
+        self.agc_options = agc_options
+        self.butter_kwargs = butter_kwargs
 
     def get_traces(self, start_frame, end_frame, channel_indices):
 
@@ -64,35 +75,37 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                        self.collection,
                        self.ntr_pad,
                        self.ntr_tap,
-                       self.acg_window_s,
+                       self.agc_options,
                        self.butter_kwargs)
 
+# function for API
+highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatialFilter, name="highpass_spatial_filter")
 
 # -----------------------------------------------------------------------------------------------
 # IBL Functions
 # -----------------------------------------------------------------------------------------------
 
-def kfilt(x, collection, ntr_pad, ntr_tap, acg_window_s, butter_kwargs):
+def kfilt(traces, collection, ntr_pad, ntr_tap, agc_options, butter_kwargs):
     """
     Applies a butterworth filter on the 0-axis with tapering / padding
 
-    :param x: the input array to be filtered. dimension, the filtering is considering
+    :param traces: the input array to be filtered. dimension, the filtering is considering
               axis=0: spatial dimension, axis=1 temporal dimension. (ntraces, ns)
     :param collection:
     :param ntr_pad: traces added to each side (mirrored)
     :param ntr_tap: n traces for apodizatin on each side
-    :param acg_window_s: window size for time domain automatic gain control (no agc otherwise)
+    :param agc_options: window size for time domain automatic gain control (no agc otherwise)
     :param butter_kwargs: filtering parameters: defaults: {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
     :return:
     """
     if collection is not None:
-        xout = np.zeros_like(x)
+        xout = np.zeros_like(traces)
         for c in np.unique(collection):
             sel = collection == c
-            xout[sel, :] = kfilt(x=x[sel, :], ntr_pad=0, ntr_tap=None, collection=None,
+            xout[sel, :] = kfilt(traces=traces[sel, :], ntr_pad=0, ntr_tap=None, collection=None,
                                  butter_kwargs=butter_kwargs)
         return xout
-    nx, nt = x.shape
+    nx, nt = traces.shape
 
     # lateral padding left and right
     ntr_pad = int(ntr_pad)
@@ -100,17 +113,17 @@ def kfilt(x, collection, ntr_pad, ntr_tap, acg_window_s, butter_kwargs):
     nxp = nx + ntr_pad * 2
 
     # apply agc and keep the gain in handy
-    if not acg_window_s:
-        xf = np.copy(x)
+    if not agc_options:
         gain = 1
     else:
-        xf, gain = agc(x, wl=acg_window_s, si=1.0)
+        xf, gain = agc(traces,
+                       window_length=agc_options["window_length_s"],
+                       sampling_interval=agc_options["sampling_interval"])
 
     if ntr_pad > 0:
         # pad the array with a mirrored version of itself and apply a cosine taper
         xf = np.r_[np.flipud(xf[:ntr_pad]), xf, np.flipud(xf[-ntr_pad:])]
 
-    breakpoint()
     if ntr_tap > 0:
         taper = fcn_cosine([0, ntr_tap])(np.arange(nxp))  # taper up
         taper *= 1 - fcn_cosine([nxp - ntr_tap, nxp])(np.arange(nxp))   # taper down
@@ -118,31 +131,32 @@ def kfilt(x, collection, ntr_pad, ntr_tap, acg_window_s, butter_kwargs):
 
     sos = scipy.signal.butter(**butter_kwargs, output='sos')
     xf = scipy.signal.sosfiltfilt(sos, xf, axis=0)
-
+    breakpoint()
     if ntr_pad > 0:
         xf = xf[ntr_pad:-ntr_pad, :]
+
     return xf / gain
 
 
-def agc(x, wl=.5, si=.002, epsilon=1e-8):
+def agc(traces, window_length, sampling_interval, epsilon=1e-8):
     """
     Automatic gain control
-    w_agc, gain = agc(w, wl=.5, si=.002, epsilon=1e-8)
+    w_agc, gain = agc(w, window_length=.5, si=.002, epsilon=1e-8)
     such as w_agc / gain = w
-    :param x: seismic array (sample last dimension)
-    :param wl: window length (secs)
-    :param si: sampling interval (secs)
+    :param traces: seismic array (sample last dimension)
+    :param window_length: window length (secs) (original default 0.5)
+    :param si: sampling interval (secs) (original default 0.002)
     :param epsilon: whitening (useful mainly for synthetic data)
     :return: AGC data array, gain applied to data
     """
-    ns_win = int(np.round(wl / si / 2) * 2 + 1)
-    w = np.hanning(ns_win)
-    w /= np.sum(w)
-    gain = convolve(np.abs(x), w, mode='same')
-    gain += (np.sum(gain, axis=1) * epsilon / x.shape[-1])[:, np.newaxis]
+    num_samples_window = int(np.round(window_length / sampling_interval / 2) * 2 + 1)
+    window = np.hanning(num_samples_window)
+    window /= np.sum(window)
+    gain = convolve(np.abs(traces), window, mode='same')
+    gain += (np.sum(gain, axis=1) * epsilon / traces.shape[-1])[:, np.newaxis]
     gain = 1 / gain
 
-    return x * gain, gain
+    return traces * gain, gain
 
 
 def convolve(x, w, mode='full'):
