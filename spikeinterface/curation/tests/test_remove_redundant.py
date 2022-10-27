@@ -24,7 +24,7 @@ set_global_tmp_folder(cache_folder)
 def test_remove_redundant_units():
     rec, sorting = toy_example(num_segments=1, duration=[10.])
     
-    sorting_with_dup = inject_some_duplicat_units(sorting, num=4)
+    sorting_with_dup = inject_some_duplicat_units(sorting, ratio=0.8, num=4)
     
     rec = rec.save()
     sorting_with_dup = sorting_with_dup.save()

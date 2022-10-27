@@ -7,7 +7,7 @@ from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms,
 from spikeinterface.extractors import toy_example
 
 
-from spikeinterface.core.generate import inject_some_duplicat_units
+from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import get_potential_auto_merge
 
 
@@ -20,18 +20,21 @@ set_global_tmp_folder(cache_folder)
 
 def test_get_auto_merge_list():
 
-    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[120.])
+    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[600.])
     
-    sorting_with_dup = inject_some_duplicat_units(sorting, num=3, max_shift=2, ratio=0.7, seed=None)
+
+    sorting_with_split = inject_some_split_units(sorting, split_ids=sorting.unit_ids[:2], num_split=2,)
+    print(sorting_with_split)
+    print(sorting_with_split.unit_ids)
 
     rec = rec.save()
-    sorting_with_dup = sorting_with_dup.save()
+    sorting_with_split = sorting_with_split.save()
     wf_folder = cache_folder / 'wf_auto_merge'
     if wf_folder.exists():
         shutil.rmtree(wf_folder)
-    we = extract_waveforms(rec, sorting_with_dup, mode='folder', folder=wf_folder, n_jobs=1)
+    we = extract_waveforms(rec, sorting_with_split, mode='folder', folder=wf_folder, n_jobs=1)
 
-    # we = extract_waveforms(rec, sorting_with_dup, mode='memory', folder=None, n_jobs=1)
+    # we = extract_waveforms(rec, sorting_with_split, mode='memory', folder=None, n_jobs=1)
     print(we)
 
     potential_merges = get_potential_auto_merge(we,

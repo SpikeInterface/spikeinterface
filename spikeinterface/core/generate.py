@@ -1,7 +1,6 @@
 import numpy as np
 
 from .numpyextractors import NumpyRecording, NumpySorting
-from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
 from probeinterface import generate_linear_probe
@@ -268,6 +267,45 @@ def inject_some_duplicat_units(sorting, num=4, max_shift=5, ratio=None, seed=Non
     sorting_with_dup = NumpySorting.from_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
 
     return sorting_with_dup
+
+def inject_some_split_units(sorting, split_ids=[], num_split=2, seed=None):
+    """
+    
+    """
+    assert len(split_ids) > 0, 'you need to provide some ids to split'
+    unit_ids = sorting.unit_ids
+    assert unit_ids.dtype.kind == 'i'
+
+    m = np.max(unit_ids) + 1
+    other_ids = {}
+    for unit_id in split_ids:
+        other_ids[unit_id] = np.arange(m, m+num_split, dtype=unit_ids.dtype)
+        m += num_split
+    print(other_ids)
+
+
+    spiketrains = []
+    for segment_index in range(sorting.get_num_segments()):
+        # sorting to dict
+        d = {unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids}
+
+        new_units = {}
+        for unit_id in sorting.unit_ids:
+            original_times = d[unit_id]
+            if unit_id in split_ids:
+                split_inds = np.random.RandomState().randint(0, num_split, original_times.size)
+                for split in range(num_split):
+                    mask = split_inds == split
+                    other_id = other_ids[unit_id][split]
+                    new_units[other_id] = original_times[mask]
+            else:
+                new_units[unit_id] = original_times
+        spiketrains.append(new_units)
+    
+    sorting_with_split = NumpySorting.from_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
+
+    return sorting_with_split
+
 
 
 
