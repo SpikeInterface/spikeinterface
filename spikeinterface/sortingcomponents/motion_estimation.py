@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm.auto import tqdm, trange
-
+import scipy.interpolate
 possible_motion_estimation_methods = ['decentralized_registration', ]
 
 
@@ -15,7 +15,8 @@ def init_kwargs_dict(method, method_kwargs):
 def estimate_motion(recording, peaks, peak_locations,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
                     method='decentralized_registration', method_kwargs={},
-                    non_rigid_kwargs=None, output_extra_check=False, progress_bar=False,
+                    non_rigid_kwargs=None, clean_motion_kwargs=None, 
+                    output_extra_check=False, progress_bar=False,
                     upsample_to_histogram_bin=None, verbose=False):
     """
     Estimate motion given peaks and their localization.
@@ -46,6 +47,10 @@ def estimate_motion(recording, peaks, peak_locations,
         If None then the motion is consider as rigid.
         If dict then the motion is estimated in non rigid manner with fields:
         * bin_step_um: step in um to construct overlapping gaussian smoothing functions
+    clean_motion_kwargs: None or dict
+        If None then the clean_motion_vector() is apply on the vector to
+        remove the spurious fast bump in the motion vector.
+        Can also apply optional a smoothing.
     output_extra_check: bool
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
@@ -180,6 +185,10 @@ def estimate_motion(recording, peaks, peak_locations,
 
     # replace nan by zeros
     motion[np.isnan(motion)] = 0
+
+    if clean_motion_kwargs is not None:
+        motion = clean_motion_vector(motion, temporal_bins, bin_duration_s, **clean_motion_kwargs)
+
     
     if upsample_to_histogram_bin is None:
         upsample_to_histogram_bin = non_rigid_kwargs is not None
@@ -567,3 +576,71 @@ def scipy_conv1d(input, weights, padding="valid"):
 
     return output
 
+
+def clean_motion_vector(motion, temporal_bins, bin_duration_s, 
+                        speed_threshold=30, sigma_smooth_s=None):
+    """
+    Simple machinery to remove spurious fast bump in the motion vector.
+    Also can applyt a smoothing.
+
+
+    Arguments
+    ---------
+    motion: numpy array 2d
+        Motion estimate in um.
+    temporal_bins: numpy.array 1d
+        temporal bins (bin center)
+    bin_duration_s: float
+        bin duration in second
+    speed_threshold: float (units um/s)
+        Maximum speed treshold between 2 bins allowed.
+        Expressed in um/s
+    sigma_smooth_s: None or float
+        Optional smooting gaussian kernel.
+
+    Returns
+    -------
+    corr : tensor
+
+
+    """
+    motion_clean = motion.copy()
+    
+    # STEP 1 : 
+    #   * detect long plateau or small peak corssing the speed thresh
+    #   * mask the period and interpolate
+    for i in range(motion.shape[1]):
+        one_motion = motion_clean[:, i]
+        speed = np.diff(one_motion, axis=0) / bin_duration_s
+        inds,  = np.nonzero(np.abs(speed) > speed_threshold)
+        inds +=1 
+        if inds.size % 2 == 1:
+            # more compicated case: number of of inds is odd must remove first or last
+            # take the smallest duration sum
+            inds0 = inds[:-1]
+            inds1 = inds[1:]
+            d0 = np.sum(inds0[1::2] - inds0[::2])
+            d1 = np.sum(inds1[1::2] - inds1[::2])
+            if d0 < d1:
+                inds = inds0
+        mask = np.ones(motion_clean.shape[0], dtype='bool')
+        for i in range(inds.size // 2):
+            mask[inds[i*2]:inds[i*2+1]] = False
+        f = scipy.interpolate.interp1d(temporal_bins[mask], one_motion[mask])
+        one_motion[~mask] = f(temporal_bins[~mask])
+    
+    # Step 2 : gaussian smooth
+    if sigma_smooth_s is not None:
+        half_size = motion_clean.shape[0] // 2
+        if motion_clean.shape[0] % 2 == 0:
+            # take care of the shift
+            bins = (np.arange(motion_clean.shape[0]) - half_size + 1) * bin_duration_s
+        else:
+            bins = (np.arange(motion_clean.shape[0]) - half_size) * bin_duration_s
+        smooth_kernel = np.exp( -bins**2 / ( 2 * sigma_smooth_s **2))
+        smooth_kernel /= np.sum(smooth_kernel)
+        smooth_kernel = smooth_kernel[:, None]
+        motion_clean = scipy.signal.fftconvolve(motion_clean, smooth_kernel, mode='same', axes=0)
+    
+    return motion_clean
+    
