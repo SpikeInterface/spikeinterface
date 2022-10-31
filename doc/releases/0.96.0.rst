@@ -1,0 +1,86 @@
+.. _release0.96.0:
+
+SpikeInterface 0.96.0 release notes
+-----------------------------------
+
+21st October 2022
+
+
+Main change:
+  * Change setup.py to pyproject.toml
+  * Enable loading waveform extractor without recording and with pre-existing sorting
+  * Implement NpzFolder for saving Sorting object
+  * Implement in-memory waveform extensions
+  * Improve NEO event handling
+  * Modify pyks for IBL version
+  * Implement sparse PCA
+  * Extend comparison to multi-segment sortings
+  * Various improvements to widgets modules
+
+core:
+  * Enable loading waveform extractor without recording and with pre-existing sorting (#929 - #990)
+  * Make split_sorting dumpable (#934)
+  * Fix recording propagation in run_sorter_by_property (#937)
+  * Add 'use_relative_path' param to WaveformExtractor.select_units() (#956)
+  * Check chunk_size VS number of samples in random chunks (#959)
+  * Missing values for dtype object should be None (#960)
+  * UnitsAggregationSorting property inheritance (#961)
+  * Implement NpzFolder for saving Sorting object (#966)
+  * Remove scipy dependency from core (#980)
+  * Implement in-memory waveform extensions (#981 - #1003)
+  * Simplify and improve check_json() function (#1014 - #1019)
+
+extractors:
+  * Add NWBRecordingExtractor in extractorlist (#982)
+  * Fix deprecation warning for HDsortSortingExtractor (#991)
+  * Improve NEO event handling (#995 - #1001)
+  * Don't load phy spike_templates if not necessary (#998)
+  * Use proper annotation key instead of 'k' (#1017)
+
+sorters:
+  * Improve run sorter in docker and singularity containers (#938)
+  * Modify pyks for IBL version (#1011)
+  * Better handling of SI dev install in containers (#1013 - #1015)
+  * Improvements to Circus2 pipeline (#971)
+
+postprocessing:
+  * Fix border effect for compute_spike_amplitudes (#962)
+  * Implement sparse PCA (#975)
+  * Protect against PCA projection on unfitted models (#983)
+  * Protect solve monopolar triangulation from optimization errors (#1012)
+
+qualitymetrics:
+  * Catch errors in PC metrics (#941)
+
+comparison:
+  * Implement hybrid recordings (#944)
+  * Extend comparison to multi-segment sortings (#963 - #984)
+
+exporters:
+  * Allow export_to_phy to make parent directories (#948)
+
+widgets: 
+  * Sortingview backend: display in jupyter (#942)
+  * Improve timeseries widgets (#945 - #1008)
+  * Use segment_index=0 as default in plot_amplitudes (#964)
+  * Hide diagonal in similarity plot (#968)
+  * Fix labels and unit selection in widgets (#977)
+  * Fix spikes_on_traces widget (#989)
+  * Fix spike amplitudes and widgets tests (#996)
+  * Port plot_unit_summary to the new widgets API (#999)
+  * Fix order_channel_by_depth with multiple layers (#1000)
+  * Fix show_legend flag in locations plots (#1005)
+  * Check backend kwargs validity (#1002)
+  * Sortingview metrics and unit tables fixes (#1019)
+  * Add sortingview curation widget (#1023)
+
+package:
+  * Change setup.py to pyproject.toml (#986)
+
+CI:
+  * Fix ephy_testing_data cache (#993)
+
+docs:
+  * Update overview doc diagram (#940)
+  * Fix doc index.html image (#1007)
+  * Use correct test badge and add Twitter (remove unused Gitter) (#1016)

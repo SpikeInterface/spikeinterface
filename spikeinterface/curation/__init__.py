@@ -4,3 +4,5 @@ from .remove_duplicated_spikes import RemoveDuplicatedSpikesSorting, remove_dupl
 from .mergeunitssorting import MergeUnitsSorting
 from .splitunitsorting import SplitUnitSorting
 from .curationsorting import CurationSorting
+
+from .sortingview_curation import apply_sortingview_curation

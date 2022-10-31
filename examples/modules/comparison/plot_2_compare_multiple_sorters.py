@@ -51,14 +51,12 @@ mcmp = sc.compare_multiple_sorters(
 # The multiple sorters comparison internally computes pairwise comparison,
 # that can be accessed as follows:
 
-print(mcmp.comparisons[0].sorting1, mcmp.comparisons[0].sorting2)
-# mcmp.comparisons[0].get_mapped_sorting1().get_mapped_unit_ids()
-print(mcmp.comparisons[0].get_matching())
+print(mcmp.comparisons[('MS4', 'HS')].sorting1, mcmp.comparisons[('MS4', 'HS')].sorting2)
+print(mcmp.comparisons[('MS4', 'HS')].get_matching())
 
 #############################################################################
-print(mcmp.comparisons[1].sorting1, mcmp.comparisons[1].sorting2)
-# mcmp.comparisons[0].get_mapped_sorting1().get_mapped_unit_ids()
-print(mcmp.comparisons[0].get_matching())
+print(mcmp.comparisons[('MS4', 'TDC')].sorting1, mcmp.comparisons[('MS4', 'TDC')].sorting2)
+print(mcmp.comparisons[('MS4', 'TDC')].get_matching())
 
 #############################################################################
 # The global multi comparison can be visualized with this graph

@@ -64,7 +64,7 @@ class SpikesOnTracesWidget(BaseWidget):
     def __init__(self, waveform_extractor: WaveformExtractor, 
                  segment_index=None, channel_ids=None, unit_ids=None, order_channel_by_depth=False,
                  time_range=None, unit_colors=None, sparsity=None, 
-                 mode='auto', cmap='RdBu', show_channel_ids=False,
+                 mode='auto', return_scaled=False, cmap='RdBu', show_channel_ids=False,
                  color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
                  with_colorbar=True, backend=None, **backend_kwargs):
         we = waveform_extractor
@@ -72,7 +72,7 @@ class SpikesOnTracesWidget(BaseWidget):
         sorting: BaseSorting = we.sorting
         
         ts_widget = TimeseriesWidget(recording, segment_index, channel_ids, order_channel_by_depth,
-                                     time_range, mode, cmap, show_channel_ids, color_groups, color, clim, 
+                                     time_range, mode, return_scaled, cmap, show_channel_ids, color_groups, color, clim, 
                                      tile_size, seconds_per_row, with_colorbar, backend, **backend_kwargs)
 
         if unit_ids is None:
