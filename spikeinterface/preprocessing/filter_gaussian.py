@@ -8,7 +8,19 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 class GaussianFilterRecording(BasePreprocessor):
 	"""
-	TODO
+	Class for performing gaussian filtering/smoothing on a recording.
+
+	Parameters
+	----------
+	recording: BaseRecording
+		The recording extractor to be filtered.
+	band: list[float, float]
+		Band (low, high) in Hz of the bandpass filter.
+
+	Returns
+	-------
+	gaussian_filtered_recording: GaussianFilterRecording
+		The filtered recording extractor object.
 	"""
 
 	def __init__(self, recording: BaseRecording, band=[300., 5000.]):
@@ -33,14 +45,13 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 		sf = parent_recording_segment.sampling_frequency
 		low_sigma  = sf / (2*np.pi * low_f)
 		high_sigma = sf / (2*np.pi * high_f)
-		self.margin = int(max(low_sigma, high_sigma) * 5. * self.sampling_frequency * 1e-3 + 1)
+		self.margin = int(max(low_sigma, high_sigma) * 6. + 1)
 
 	def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None,
 				   channel_indices: Union[Iterable, None] = None):
 		traces, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment, start_frame,
 																  end_frame, channel_indices, self.margin)
 		dtype = traces.dtype
-
 		
 		traces_fft = np.fft.fft(traces, axis=0)
 		gauss_low  = self._create_gaussian(traces.shape[0], self.low_f)
