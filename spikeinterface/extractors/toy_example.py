@@ -10,7 +10,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
                 average_peak_amplitude=-100, upsample_factor=13,
                 contact_spacing_um=40, num_columns=1,
                 spike_times=None, spike_labels=None,
-                score_detection=1, seed=None):
+                score_detection=1, firing_rate=3., seed=None):
     """
     Creates a toy recording and sorting extractors.
 
@@ -32,6 +32,8 @@ def toy_example(duration=10, num_channels=4, num_units=10,
         Cluster label for each spike time (needs to specified both together).
     score_detection: int (between 0 and 1)
         Generate the sorting based on a subset of spikes compare with the trace generation.
+    firing_rate: float
+        The firing rate for the units (in Hz).
     seed: int
         Seed for random initialization.
 
@@ -76,7 +78,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     for segment_index in range(num_segments):
         if spike_times is None:
             times, labels = synthesize_random_firings(num_units=num_units, duration=durations[segment_index],
-                                                  sampling_frequency=sampling_frequency, seed=seed)
+                                                  sampling_frequency=sampling_frequency, firing_rates=firing_rate, seed=seed)
         else:
             times = spike_times[segment_index]
             labels = spike_labels[segment_index]

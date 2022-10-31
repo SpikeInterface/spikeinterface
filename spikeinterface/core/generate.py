@@ -122,7 +122,7 @@ def generate_snippets(
 
 
 
-def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration=60, refractory_period_ms=4.0, seed=None):
+def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration=60, refractory_period_ms=4.0, firing_rates=3., seed=None):
     """"
     Generate some spiketrain with random firing for one segment.
 
@@ -136,6 +136,9 @@ def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration
         duration of the segment in seconds
     refractory_period_ms: float
         refractory_period in ms
+    firing_rates: float or list[float]
+        The firing rate of each unit (in Hz).
+        If float, all units will have the same firing rate.
     seed: int, optional
         seed for the generator
 
@@ -153,7 +156,8 @@ def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration
     else:
         seeds = np.random.randint(0, 2147483647, num_units)
 
-    firing_rates = 3 * np.ones((num_units))
+    if isinstance(firing_rates, (int, float)):
+        firing_rates = np.array([firing_rates]*num_units)
     refractory_sample = int(refractory_period_ms / 1000. * sampling_frequency)
     refr = 4
 

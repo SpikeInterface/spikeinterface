@@ -20,7 +20,7 @@ set_global_tmp_folder(cache_folder)
 
 def test_get_auto_merge_list():
 
-    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.])
+    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.], firing_rate=20.)
     
 
     sorting_with_split = inject_some_split_units(sorting, split_ids=sorting.unit_ids[:2], num_split=2,)
@@ -53,6 +53,7 @@ def test_get_auto_merge_list():
                 extra_outputs=True,
                 )
     print(potential_merges)
+    assert False
 
 
     import matplotlib.pyplot as plt
