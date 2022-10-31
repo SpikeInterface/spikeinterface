@@ -6,7 +6,6 @@ Contain core class:
 And contain also "core extractors" used for caching:
   * BinaryRecordingExtractor
   * NpzSortingExtractor
-
 """
 from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
@@ -57,7 +56,7 @@ from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
 from .core_tools import write_binary_recording, write_to_h5_dataset_format, write_binary_recording, read_python, \
     write_python
 from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor
-from .recording_tools import (get_random_data_chunks, get_channel_distances, get_closest_channels, 
+from .recording_tools import (get_random_data_chunks, get_channel_distances, get_closest_channels,
                               get_noise_levels, get_chunk_with_margin, order_channels_by_depth)
 from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
@@ -70,3 +69,7 @@ from .datasets import download_dataset
 
 from .old_api_utils import (create_recording_from_old_extractor, create_sorting_from_old_extractor,
                             create_extractor_from_new_recording, create_extractor_from_new_sorting)
+
+# templates addition
+from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
+

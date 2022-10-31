@@ -273,7 +273,8 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
     Notes
     -----
     A is a (hopefully) representative subset of cluster X
-    NN_hit(X) = 1/k \sum_i=1^k |{x in A such that ith closest neighbor is in X}| / |A|
+
+    NN_hit(X) = 1/k \\sum_i=1^k |{{x in A such that ith closest neighbor is in X}}| / |A|
 
     Reference
     ---------
@@ -606,7 +607,7 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     Notes
     -----
     Definition of isolation score:
-        Isolation(A, B) = 1/k \sum_{j=1}^k |{x \in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
+        Isolation(A, B) = 1/k \\sum_{j=1}^k |{x \\in A U B: \rho(x)=\rho(jth nearest neighbor of x)}| / |A U B|
             where \rho(x) is the cluster x belongs to (in this case, either A or B)
     Note that this definition implies that the isolation score:
         (1) ranges from 0 to 1; and

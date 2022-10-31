@@ -1,5 +1,8 @@
+import numpy as np
+
 from ...core.core_tools import check_json
 from spikeinterface.widgets.base import BackendPlotter
+
 
 class SortingviewPlotter(BackendPlotter):
     backend = 'sortingview'
@@ -21,13 +24,15 @@ class SortingviewPlotter(BackendPlotter):
         self.url = None
 
     def make_serializable(*args):
-        serializable_dict = check_json({i: a for i, a in enumerate(args[1:])})
+        dict_to_serialize = {int(i): a for i, a in enumerate(args[1:])}
+        serializable_dict = check_json(dict_to_serialize)
         returns = ()
         for i in range(len(args) - 1):
             returns += (serializable_dict[i],)
         if len(returns) == 1:
             returns = returns[0]
         return returns
+
 
     @staticmethod
     def is_notebook() -> bool:
@@ -62,12 +67,47 @@ class SortingviewPlotter(BackendPlotter):
         self.url = url
 
 
-def generate_unit_table_view(unit_ids):
+def generate_unit_table_view(sorting, unit_properties=None):
     import sortingview.views as vv
-    ut_rows = [
-        vv.UnitsTableRow(unit_id=u, values={})
-        for u in unit_ids
-    ]
-    ut_columns = []
+    if unit_properties is None:
+        ut_columns = []
+        ut_rows = [
+            vv.UnitsTableRow(unit_id=u, values={})
+            for u in sorting.unit_ids
+        ]
+    else:
+        ut_columns = []
+        ut_rows = []
+        values = {}
+        valid_unit_properties = []
+        for prop_name in unit_properties:
+            property_values = sorting.get_property(prop_name)
+            # make dtype available
+            val0 = np.array(property_values[0])
+            if val0.dtype.kind in ("i", "u"):
+                dtype = "int"
+            elif val0.dtype.kind in ("U", "S"):
+                dtype = "str"
+            elif val0.dtype.kind == "f":
+                dtype = "float"
+            elif val0.dtype.kind == "b":
+                dtype = "bool"
+            else:
+                print(f"Unsupported dtype {val0.dtype} for property {prop_name}. Skipping")
+                continue
+            ut_columns.append(
+                vv.UnitsTableColumn(key=prop_name, label=prop_name, dtype=dtype)
+            )
+            valid_unit_properties.append(prop_name)
+        
+        for ui, unit in enumerate(sorting.unit_ids):
+            for prop_name in valid_unit_properties:
+                property_values = sorting.get_property(prop_name)
+                val0 = property_values[0]
+                if np.isnan(property_values[ui]):
+                    continue
+                values[prop_name] = property_values[ui]
+            ut_rows.append(vv.UnitsTableRow(unit_id=unit, values=check_json(values)))
+            
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns)
     return v_units_table

@@ -1,5 +1,0 @@
-# installs ipywidgets and sortingview widgets backends
-ipympl
-ipywidgets
-sortingview
-figurl-jupyter

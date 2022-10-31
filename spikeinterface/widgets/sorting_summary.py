@@ -19,23 +19,29 @@ class SortingSummaryWidget(BaseWidget):
     
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
+    waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    sparsity: dict or None
+    sparsity : dict or None
         Optional dictionary with sparsity with unit ids as keys and 
         list of channel ids as values.
-    max_amplitudes_per_unit: int or None
+    max_amplitudes_per_unit : int or None
         Maximum number of spikes per unit for plotting amplitudes,
         by default None (all spikes)
+    curation : bool
+        If True, manual curation is enabled, by default False
+        (sortingview backend)
+    unit_table_properties : list or None
+        List of properties to be added to the unit table, by default None
+        (sortingview backend)
     """
     possible_backends = {}
 
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
-                 sparsity=None, max_amplitudes_per_unit=None,
-                 backend=None, **backend_kwargs):
+                 sparsity=None, max_amplitudes_per_unit=None, curation=False,
+                 unit_table_properties=None, backend=None, **backend_kwargs):
         self.check_extensions(waveform_extractor, ['correlograms', 'spike_amplitudes',
-                                                  'unit_locations', 'similarity'])
+                                                   'unit_locations', 'similarity'])
         we = waveform_extractor
         sorting = we.sorting
 
@@ -58,12 +64,15 @@ class SortingSummaryWidget(BaseWidget):
         sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
         
         plot_data = dict(
+            waveform_extractor=waveform_extractor,
             unit_ids=unit_ids,
             templates=template_plot_data,
             correlograms=ccg_plot_data,
             amplitudes=amps_plot_data,
             similarity=sim_plot_data,
-            unit_locations=locs_plot_data
+            unit_locations=locs_plot_data,
+            unit_table_properties=unit_table_properties,
+            curation=curation
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
