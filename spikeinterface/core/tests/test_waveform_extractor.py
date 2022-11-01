@@ -144,12 +144,14 @@ def test_extract_waveforms():
 
     # Test unfiltered recording
     recording.annotate(is_filtered=False)
-    
+
+    folder_crash = cache_folder / "test_extract_waveforms_crash"
     with pytest.raises(Exception):
-        we1 = extract_waveforms(recording, sorting, folder1, overwrite=True,
+        we1 = extract_waveforms(recording, sorting, folder_crash,
                                 max_spikes_per_unit=None, return_scaled=False)
 
-    we1 = extract_waveforms(recording, sorting, folder1, overwrite=True, unfiltered=True,
+    folder_unfiltered = cache_folder / "test_extract_waveforms_unfiltered"
+    we1 = extract_waveforms(recording, sorting, folder_unfiltered, unfiltered=True,
                             max_spikes_per_unit=None, return_scaled=False)
 
 
