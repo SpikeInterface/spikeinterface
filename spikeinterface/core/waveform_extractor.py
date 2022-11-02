@@ -74,7 +74,7 @@ class WaveformExtractor:
                 "The recording and sorting objects must have the same number of segments!"
             np.testing.assert_almost_equal(recording.get_sampling_frequency(),
                                            sorting.get_sampling_frequency(), decimal=2)
-            if not recording.is_filtered() and not unfiltered:
+            if not recording.is_filtered() and not allow_unfiltered:
                 raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
                                 'If the recording is already filtered, you can also do '
                                 '`recording.annotate(is_filtered=True).\n'
@@ -915,7 +915,7 @@ def extract_waveforms(recording, sorting, folder=None,
                       overwrite=False,
                       return_scaled=True,
                       dtype=None,
-                      unfiltered=False,
+                      allow_unfiltered=False,
                       use_relative_path=False,
                       seed=None,
                       **job_kwargs):
