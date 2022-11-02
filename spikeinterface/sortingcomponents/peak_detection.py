@@ -30,9 +30,9 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
 
 
 def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                 local_radius_um=50, engine=None, noise_levels=None, random_chunk_kwargs={}, 
+                 local_radius_um=50, engine=None, device=None, noise_levels=None, random_chunk_kwargs={},
                  pipeline_steps=None, outputs='numpy_compact', **job_kwargs):
-    """Peak detection based on threshold crossing in term of k x MAD.
+    """Peak detection based on threshold crossing in terms of k x MAD.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     detect_threshold: float
         Threshold, in median absolute deviations (MAD), to use to detect peaks.
     exclude_sweep_ms: float or None
-        Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
+        Time, in ms, during which the peak is isolated.
         For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
         and no larger peaks are located during the 0.1ms preceding and following the peak.
     local_radius_um: float
@@ -55,7 +55,10 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     engine: str or None
         The engine used for peak detection. 
         If None, the default for "by_channel" is "numpy" and for "locally_exclusive" is "numba".
-        The "torch" engine is also available for both methods.
+        The "torch" engine is also available for both methods and it uses max pooling for deduplication in time
+        and space (for locally exclusive).
+    device: str or None
+        For "torch" engine, "cuda" (default if None) or "cpu".
     noise_levels: array, optional
         Estimated noise levels to use, if already computed.
         If not provide then it is estimated from a random snippet of the data.
@@ -97,7 +100,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         assert engine in ("numba", "torch")
         channel_distance = get_channel_distances(recording)
         # we need a matrix padded with numchannels
-        if method == "torch":
+        if engine == "torch":
             neighbour_indices_by_chan = []
             for chan in range(num_channels):
                 neighbour_indices_by_chan.append(np.nonzero(channel_distance[chan] < local_radius_um)[0])
@@ -145,7 +148,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
     init_args = (recording_, method, peak_sign, abs_threholds, exclude_sweep_size,
-                 neighbours_mask, extra_margin, engine, pipeline_steps_)
+                 neighbours_mask, extra_margin, engine, device, pipeline_steps_)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='detect peaks',
                                        mp_context=mp_context, **job_kwargs)
@@ -166,7 +169,7 @@ detect_peaks.__doc__ = detect_peaks.__doc__.format(_shared_job_kwargs_doc)
 
 
 def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclude_sweep_size,
-                              neighbours_mask, extra_margin, engine, pipeline_steps):
+                              neighbours_mask, extra_margin, engine, device, pipeline_steps):
     """Initialize a worker for detecting peaks."""
 
     if isinstance(recording, dict):
@@ -186,8 +189,9 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclu
     worker_ctx['exclude_sweep_size'] = exclude_sweep_size
     worker_ctx['neighbours_mask'] = neighbours_mask
     worker_ctx['extra_margin'] = extra_margin
-    worker_ctx['pipeline_steps'] = pipeline_steps
     worker_ctx['engine'] = engine
+    worker_ctx['device'] = device
+    worker_ctx['pipeline_steps'] = pipeline_steps
 
     if pipeline_steps is not None:
         worker_ctx['need_waveform'] = any(
@@ -208,7 +212,9 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     exclude_sweep_size = worker_ctx['exclude_sweep_size']
     method = worker_ctx['method']
     extra_margin = worker_ctx['extra_margin']
+    neighbours_mask = worker_ctx['neighbours_mask']
     engine = worker_ctx['engine']
+    device = worker_ctx['device']
     pipeline_steps = worker_ctx['pipeline_steps']
 
     margin = exclude_sweep_size + extra_margin
@@ -231,20 +237,22 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
             )
         else:
             peak_sample_ind, peak_chan_ind = detect_peak_torch(
-                trace_detection, peak_sign, abs_threholds, exclude_sweep_size
+                trace_detection, peak_sign, abs_threholds, exclude_sweep_size,
+                device=device
             )
     elif method == 'locally_exclusive':
         if engine == 'numba':
             peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(
                 trace_detection, peak_sign, abs_threholds,
                 exclude_sweep_size,
-                neighbours_mask=worker_ctx['neighbours_mask']
+                neighbours_mask=neighbours_mask
             )
         else:
             peak_sample_ind, peak_chan_ind = detect_peak_torch(
                 trace_detection, peak_sign, abs_threholds, 
                 exclude_sweep_size,
-                neighbours_mask=worker_ctx['neighbours_mask']
+                neighbours_mask=neighbours_mask,
+                device=device
             )
     if extra_margin > 0:
         peak_sample_ind += extra_margin
@@ -410,7 +418,10 @@ if HAVE_TORCH:
         device=None,
     ):
         """
-        Voltage thresholding detection and deduplication with torch
+        Voltage thresholding detection and deduplication with torch.
+
+        Implementation from Charlie Windolf:
+        https://github.com/cwindolf/spike-psvae/blob/ba0a985a075776af892f09adfd453b8d9db168b9/spike_psvae/detect.py#L350
 
         Parameters
         ----------
@@ -422,7 +433,7 @@ if HAVE_TORCH:
             "neg", "pos" or "both", by default "neg"
         exclude_sweep_size : int, optional
             How many temporal neighbors to compare with during argrelmin, by default 5
-        max_window : int, optional (can't we use exclude sweep size?)
+        max_window : int, optional
             How many temporal neighbors to compare with during dedup, by default 7
         neighbor_mask : np.array, optional
             If given, a matrix with shape (num_channels, num_neighbours) with 
@@ -472,10 +483,11 @@ if HAVE_TORCH:
         # find those which actually *were* the max
         unique_inds = inds.unique()
         window_max_inds = unique_inds[inds.view(-1)[unique_inds] == unique_inds]
+
+        # voltage threshold (@Charlie, added by channel)
         thresholds_by_channel = torch.as_tensor(
                 thresholds_torch[window_max_inds % num_channels], device=device, dtype=torch.float
             )
-        # voltage threshold
         max_amps_at_inds = max_amps.view(-1)[window_max_inds]
         crossings = torch.nonzero(max_amps_at_inds > thresholds_by_channel).squeeze()
         if not crossings.numel():
@@ -488,6 +500,16 @@ if HAVE_TORCH:
         chan_inds = peak_inds % num_channels
         amplitudes = max_amps_at_inds[crossings]
 
+        # we need this due to the padding in convolution
+        valid_inds = torch.nonzero(
+            (0 < sample_inds) & (sample_inds < traces.shape[0] - 1)
+        ).squeeze()
+        if not sample_inds.numel():
+            return np.array([]), np.array([]), np.array([])
+        sample_inds = sample_inds[valid_inds]
+        chan_inds = chan_inds[valid_inds]
+        amplitudes = amplitudes[valid_inds]
+
         # -- deduplication
         # We deduplicate if the channel index is provided.
         if neighbours_mask is not None:
@@ -496,10 +518,14 @@ if HAVE_TORCH:
             )
 
             # -- temporal max pool
-            # still not sure why we can't just use `max_energies` instead of making
+            # still not sure why we can't just use `max_amps` instead of making
             # this sparsely populated array, but it leads to a different result.
             max_amps[:] = 0
             max_amps[sample_inds, chan_inds] = amplitudes
+
+            # TODO: @Charlie
+            # 1. is this to deduplicate over neighbours using a wider window? Assuming propagation
+            # 2. can we derive max_window from exclude_sweep_ms (like max_window = 2*exclude_window_ms)?
             max_amps = F.max_pool2d(
                 max_amps[None, None],
                 kernel_size=[2 * max_window + 1, 1],
