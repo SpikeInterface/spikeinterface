@@ -151,7 +151,7 @@ def test_extract_waveforms():
                                 max_spikes_per_unit=None, return_scaled=False)
 
     folder_unfiltered = cache_folder / "test_extract_waveforms_unfiltered"
-    we1 = extract_waveforms(recording, sorting, folder_unfiltered, unfiltered=True,
+    we1 = extract_waveforms(recording, sorting, folder_unfiltered, allow_unfiltered=True,
                             max_spikes_per_unit=None, return_scaled=False)
 
 
