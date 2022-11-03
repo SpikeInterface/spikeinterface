@@ -235,11 +235,17 @@ class BaseSorting(BaseExtractor):
                     spike_labels.append(np.array([unit_id] * st.size))
                 elif outputs == 'unit_index':
                     spike_labels.append(np.zeros(st.size, dtype='int64') + i)
-            spike_times = np.concatenate(spike_times)
-            spike_labels = np.concatenate(spike_labels)
-            order = np.argsort(spike_times)
-            spike_times = spike_times[order]
-            spike_labels = spike_labels[order]
+
+            if len(spike_times) > 0:
+                spike_times = np.concatenate(spike_times)
+                spike_labels = np.concatenate(spike_labels)
+                order = np.argsort(spike_times)
+                spike_times = spike_times[order]
+                spike_labels = spike_labels[order]
+            else:
+                spike_times = np.array([], dtype=np.int64)
+                spike_labels = np.array([], dtype=np.int64)
+
             spikes.append((spike_times, spike_labels))
         return spikes
 
