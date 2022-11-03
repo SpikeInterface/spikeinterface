@@ -1,16 +1,24 @@
 import spikeinterface as si
-import spikeinterface.preprocessing as sipp
+import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
-import copy
+import pytest
 import numpy as np
 
 try:
     import spikeglx
     import neurodsp.voltage as voltage
+    HAVE_IBL_NPIX = True
 except ImportError:
-    raise ImportError("Requires ibl-neuropixel dev install (pip install -e .) from inside cloned repo."
-                      "https://github.com/int-brain-lab/ibl-neuropixel")
+    HAVE_IBL_NPIX = False
 
+DEBUG = False
+if DEBUG:
+    import matplotlib.pyplot as plt
+    plt.ion()
+    plt.show()
+
+
+@pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
 def test_interpolate_bad_channels():
     """
     Test SI implementation of bad channel interpolation against native IBL.
@@ -29,31 +37,35 @@ def test_interpolate_bad_channels():
                                     ignore_warnings=True)
 
     bad_channel_indexes = np.random.choice(si_recording.get_num_channels(),
-                                           100, replace=False)
+                                           10, replace=False)
+    si_recording = spre.ScaleRecording(si_recording, dtype="float32")
 
     # interpolate SI
-    si_scaled_recording = sipp.ScaleRecording(si_recording,
-                                              gain=si_recording.get_property("gain_to_uV"),
-                                              offset=si_recording.get_property("offset_to_uV"))
-
-    si_interpolated_recording = sipp.interpolate_bad_channels(si_scaled_recording,
+    si_interpolated_recording = spre.interpolate_bad_channels(si_recording,
                                                               bad_channel_indexes)
-    si_interpolated = si_interpolated_recording.get_traces(0)
 
     # interpolate IBL
     ibl_bad_channel_labels = np.zeros(si_recording.get_num_channels())
     ibl_bad_channel_labels[bad_channel_indexes] = 1
 
-    ibl_data = ibl_recording.read()[0].T[:-1, :]  # cut sync channel
-
+    ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
+    si_interpolated = si_interpolated_recording.get_traces(return_scaled=True)
     ibl_interpolated = voltage.interpolate_bad_channels(ibl_data,
                                                         ibl_bad_channel_labels,
                                                         x=ibl_recording.geometry["x"],
-                                                        y=ibl_recording.geometry["y"])
+                                                        y=ibl_recording.geometry["y"]).T
+
+    if DEBUG:
+        for bad_idx in bad_channel_indexes:
+            fig, ax = plt.subplots()
+            ax.plot(si_interpolated[:, bad_idx], label="SI")
+            ax.plot(ibl_interpolated[:, bad_idx]*1e6, label="IBL")
+            ax.set_title(f"bad channel {bad_idx}")
+            ax.legend()
 
     # compare
-    assert np.allclose(ibl_interpolated.T*1e6, si_interpolated, 1e-2)
-    is_close = np.isclose(ibl_interpolated.T*1e6, si_interpolated, 1e-5)
+    assert np.allclose(ibl_interpolated*1e6, si_interpolated, 1e-1)
+    is_close = np.isclose(ibl_interpolated*1e6, si_interpolated, 1e-5)
     assert np.mean(is_close) > 0.999
 
 if __name__ == '__main__':

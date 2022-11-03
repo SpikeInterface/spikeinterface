@@ -109,13 +109,15 @@ test = [
     ## herdingspikes
     "herdingspikes<=0.3.99",
 
-
     ## sliding_nn
     "pymde",
     "torch",
     "pynndescent",
-    
-    # probeinterface and neo from master
+
+    ## IBL
+    ibl-neuropixel
+
+    ## probeinterface and neo from master
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
