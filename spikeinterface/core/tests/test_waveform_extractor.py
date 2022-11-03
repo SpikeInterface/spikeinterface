@@ -142,6 +142,18 @@ def test_extract_waveforms():
     wf_mem = we_mem.get_waveforms(0)
     assert np.array_equal(wf_mem, wf3)
 
+    # Test unfiltered recording
+    recording.annotate(is_filtered=False)
+
+    folder_crash = cache_folder / "test_extract_waveforms_crash"
+    with pytest.raises(Exception):
+        we1 = extract_waveforms(recording, sorting, folder_crash,
+                                max_spikes_per_unit=None, return_scaled=False)
+
+    folder_unfiltered = cache_folder / "test_extract_waveforms_unfiltered"
+    we1 = extract_waveforms(recording, sorting, folder_unfiltered, allow_unfiltered=True,
+                            max_spikes_per_unit=None, return_scaled=False)
+
 
 def test_recordingless():
     durations = [30, 40]

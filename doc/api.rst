@@ -115,17 +115,10 @@ Low-level classes
     .. autoclass:: MEArecRecordingExtractor
     .. autoclass:: MEArecSortingExtractor
     .. autoclass:: MCSRawRecordingExtractor
-    .. autoclass:: NeoBaseRecordingExtractor
-    .. autoclass:: NeoRecordingSegment
-    .. autoclass:: NeoBaseSortingExtractor
-    .. autoclass:: NeoSortingSegment
-    .. autoclass:: NeoBaseEventExtractor
-    .. autoclass:: NeoEventSegment
     .. autoclass:: NeuralynxRecordingExtractor
     .. autoclass:: NeuralynxSortingExtractor
     .. autoclass:: NeuroScopeRecordingExtractor
     .. autoclass:: NeuroScopeSortingExtractor
-    .. autoclass:: NeuroScopeSortingSegment
     .. autoclass:: NixRecordingExtractor
     .. autoclass:: OpenEphysLegacyRecordingExtractor
     .. autoclass:: OpenEphysBinaryRecordingExtractor
@@ -242,13 +235,13 @@ spikeinterface.widgets
     .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_unit_waveforms
     .. autofunction:: plot_unit_templates
-    .. autofunction:: plot_unit_waveform_density_map
-    .. autofunction:: plot_amplitudes_timeseries
-    .. autofunction:: plot_amplitudes_distribution
+    .. autofunction:: plot_unit_waveforms_density_map
+    .. autofunction:: plot_amplitudes
+    .. autofunction:: plot_all_amplitudes_distributions
     .. autofunction:: plot_principal_component
-    .. autofunction:: plot_unit_localization
+    .. autofunction:: plot_unit_locations
     .. autofunction:: plot_unit_probe_map
-    .. autofunction:: plot_units_depth_vs_amplitude
+    .. autofunction:: plot_unit_depths
     .. autofunction:: plot_confusion_matrix
     .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_multicomp_graph
@@ -258,6 +251,7 @@ spikeinterface.widgets
     .. autofunction:: plot_comparison_collision_by_similarity
     .. autofunction:: plot_sorting_performance
     .. autofunction:: plot_unit_summary
+    .. autofunction:: plot_sorting_summary
 
 
 spikeinterface.exporters
