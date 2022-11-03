@@ -168,7 +168,7 @@ class NwbRecordingExtractor(BaseRecording):
         # Set offsets
         offset = self._es.offset if hasattr(self._es, "offset") else 0
         if offset == 0 and "offset" in self._nwbfile.electrodes:
-            offset = self._nwbfile.electrodes["offset"]
+            offset = self._nwbfile.electrodes["offset"][:]
 
         self.set_channel_offsets(offset * 1e6)
 
