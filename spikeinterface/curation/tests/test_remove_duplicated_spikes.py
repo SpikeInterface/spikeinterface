@@ -9,7 +9,7 @@ def test_remove_duplicated_spikes() -> None:
     censored_period_ms = 0.5
     censored_period = int(round(0.5 * 1e-3 * sorting.get_sampling_frequency()))
 
-    for method in ("keep_first", "keep_last", "random"):
+    for method in ("keep_first", "keep_last", "keep_first_iterative", "keep_last_iterative", "random"):
         new_sorting = remove_duplicated_spikes(sorting, censored_period_ms, method=method)
 
         for segment_index in range(sorting.get_num_segments()):
@@ -21,8 +21,10 @@ def test_remove_duplicated_spikes() -> None:
 
 
 def test_find_duplicated_spikes() -> None:
-    spike_train = np.array([20, 80, 81, 150, 152, 900], dtype=np.int64)
+    spike_train = np.array([20, 80, 81, 150, 153, 156, 900], dtype=np.int64)
 
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="random")) == 2
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_first")) == 2
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_last")) == 2
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="random", seed=42)) >= 2
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_first")) == 3
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_last")) == 3
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_first_iterative")) == 2
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_last_iterative")) == 2
