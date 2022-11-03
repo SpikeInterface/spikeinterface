@@ -55,6 +55,7 @@ follows:
         noise_levels=None,
         random_chunk_kwargs={},
         outputs='numpy_compact',
+        engine='numpy',
         **job_kwargs,
     )
 
@@ -70,8 +71,18 @@ Different methods are available with the :code:`method` argument:
 * 'by_channel' (default): peaks are detected separately for each channel
 * 'locally_exclusive': peaks on neighboring channels within a certain radius are excluded (not counted multiple times)
 
-Peak detection, as many sorting components, can be run in parallel. Note that the 'locally_exclusive' method requires
-:code:`numba` to be installed.
+For the two methods, there are different engines, with slight different implementations:
+
+* 'by_channel' engines:
+  * 'numpy' (default): numpy implementation that uses masks for time deduplication
+  * 'torch': pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
+* 'locally_exclusive' engines:
+  * 'numba' (default - requires :code:`numba`): numba implementation that uses spatio-temporal masks for space deduplication ()
+  * 'torch' (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for space-time deduplication
+
+**NOTE**: the different engines give slight different results due to the different implementation.
+
+Peak detection, as many sorting components, can be run in parallel.
 
 
 Peak localization

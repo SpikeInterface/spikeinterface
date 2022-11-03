@@ -21,16 +21,30 @@ def test_detect_peaks():
     
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
     # by_channel
-    peaks = detect_peaks(recording, method='by_channel',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         **job_kwargs)
+    peaks_by_channel_np = detect_peaks(recording, method='by_channel', engine='numpy',
+                                       peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                       **job_kwargs)
+    peaks_by_channel_torch = detect_peaks(recording, method='by_channel', engine='torch',
+                                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                          **job_kwargs)
     
 
     # locally_exclusive
-    peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         chunk_size=10000, verbose=1, progress_bar=False)
-    
+    peaks_local_numba = detect_peaks(recording, method='locally_exclusive',
+                                     peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                     chunk_size=10000, verbose=1, progress_bar=False)
+    peaks_local_torch = detect_peaks(recording, method='locally_exclusive',
+                                     peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                     chunk_size=10000, verbose=1, progress_bar=False)
+
+    assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)),
+                      rtol=0.1)
+    assert np.isclose(np.array(len(peaks_local_numba)), np.array(len(peaks_local_torch)),
+                      rtol=0.1)
+    assert len(peaks_by_channel_np) > len(peaks_local_numba)
+    assert len(peaks_by_channel_torch) > len(peaks_local_numba)
+    assert len(peaks_by_channel_np) > len(peaks_local_torch)
+    assert len(peaks_by_channel_torch) > len(peaks_local_torch)
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
     pipeline_steps = [
@@ -38,13 +52,19 @@ def test_detect_peaks():
         LocalizeCenterOfMass(recording, ms_before=1., ms_after=1., local_radius_um=150.),
     ]
     peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         pipeline_steps=pipeline_steps, **job_kwargs)
+                                              peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                              pipeline_steps=pipeline_steps, **job_kwargs)
     assert peaks.shape[0] == ptp.shape[0]
     assert peaks.shape[0] == peak_locations.shape[0]
     assert 'x' in peak_locations.dtype.fields
     
-    
+    peaks_torch, ptp_torch, peak_locations_torch = detect_peaks(recording, method='locally_exclusive',
+                                                                peak_sign='neg', detect_threshold=5,
+                                                                exclude_sweep_ms=0.1, pipeline_steps=pipeline_steps,
+                                                                **job_kwargs)
+    assert peaks_torch.shape[0] == ptp_torch.shape[0]
+    assert peaks_torch.shape[0] == peak_locations_torch.shape[0]
+    assert 'x' in peak_locations_torch.dtype.fields
     
 
     # DEBUG
