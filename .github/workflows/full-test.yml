@@ -5,6 +5,10 @@ on:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
+env:
+  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
 jobs:
   build-and-test:
     name: Test on (${{ matrix.os }})
@@ -20,7 +24,7 @@ jobs:
           python-version: 3.9
       - name: Get current year-month
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m')"
+        run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-venv
         with:
@@ -64,7 +68,7 @@ jobs:
         # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
         run: |
-          echo "::set-output name=HASH_EPHY_DATASET::$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
         env:
@@ -89,47 +93,47 @@ jobs:
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
             if [[ $file == *"/core/"* || $file == *"/extractors/neoextractors/neobaseextractor.py" ]]; then
               echo "Core changed"
-              echo "::set-output name=CORE_CHANGED::true"
+              echo "CORE_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/extractors/"* ]]; then
               echo "Extractors changed"
-              echo "::set-output name=EXTRACTORS_CHANGED::true"
+              echo "EXTRACTORS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/preprocessing/"* ]]; then
               echo "Preprocessing changed"
-              echo "::set-output name=PREPROCESSING_CHANGED::true"
+              echo "PREPROCESSING_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/postprocessing/"* ]]; then
               echo "Postprocessing changed"
-              echo "::set-output name=POSTPROCESSING_CHANGED::true"
+              echo "POSTPROCESSING_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/qualitymetrics/"* ]]; then
               echo "Quality metrics changed"
-              echo "::set-output name=QUALITYMETRICS_CHANGED::true"
+              echo "QUALITYMETRICS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/sorters/"* ]]; then
               echo "Sorters changed"
-              echo "::set-output name=SORTERS_CHANGED::true"
+              echo "SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/comparison/"* ]]; then
               echo "Comparison changed"
-              echo "::set-output name=COMPARISON_CHANGED::true"
+              echo "COMPARISON_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/curation/"* ]]; then
               echo "Curation changed"
-              echo "::set-output name=CURATION_CHANGED::true"
+              echo "CURATION_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/widgets/"* ]]; then
               echo "Widgets changed"
-              echo "::set-output name=WIDGETS_CHANGED::true"
+              echo "WIDGETS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/exporters/"* ]]; then
               echo "Exporters changed"
-              echo "::set-output name=EXPORTERS_CHANGED::true"
+              echo "EXPORTERS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/sortingcomponents/"* ]]; then
               echo "Sortingcomponents changed"
-              echo "::set-output name=SORTINGCOMPONENTS_CHANGED::true"
+              echo "SORTINGCOMPONENTS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
           done
       - name: Test core
@@ -170,12 +174,9 @@ jobs:
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m curation
+          pytest -v -s -m curation
       - name: Test widgets
         if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
-        env:
-          KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
-          KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
         run: |
           source ~/test_env/bin/activate
           pytest -v -s -m widgets

@@ -3,11 +3,11 @@
 SpikeInterface 0.95.1 release notes
 -----------------------------------
 
-5nth September 2022
+5th September 2022
 
 
 Minor change:
  
-WIDGETS: 
+widgets: 
   * Fix creation of 2D axes when figure is passed (https://github.com/SpikeInterface/spikeinterface/pull/926)
   * Add check for matplotlib backend when using ipywidgets (https://github.com/SpikeInterface/spikeinterface/pull/927)

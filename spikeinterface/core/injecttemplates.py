@@ -43,7 +43,8 @@ class InjectTemplatesRecording(BaseRecording):
         self._check_templates(templates)
 
         channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
-        BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, templates.dtype)
+        dtype = parent_recording.dtype if parent_recording is not None else templates.dtype
+        BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
         
         n_units = len(sorting.unit_ids)
         assert len(templates) == n_units
@@ -51,7 +52,7 @@ class InjectTemplatesRecording(BaseRecording):
 
         if nbefore is None:
             nbefore = np.argmax(np.max(np.abs(templates), axis=2), axis=1)
-        elif type(nbefore) == int:
+        elif isinstance(nbefore, (int, np.integer)):
             nbefore = [nbefore]*n_units 
         else:
             assert len(nbefore) == n_units
