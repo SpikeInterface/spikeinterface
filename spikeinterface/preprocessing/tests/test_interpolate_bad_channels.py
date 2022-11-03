@@ -38,7 +38,7 @@ def test_interpolate_bad_channels():
 
     bad_channel_indexes = np.random.choice(si_recording.get_num_channels(),
                                            10, replace=False)
-    si_recording = spre.ScaleRecording(si_recording, dtype="float32")
+    si_recording = spre.scale(si_recording, dtype="float32")
 
     # interpolate SI
     si_interpolated_recording = spre.interpolate_bad_channels(si_recording,
