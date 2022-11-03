@@ -1,31 +1,56 @@
 import numpy as np
 import scipy.signal
-from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment  # TODO: fix
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
-import matplotlib.pyplot as plt
-# Tests: all options (taper, padding, agc_defaults)
-# TODO: check that 300 samples is good default (is good for all time lengths?)
-# TODO: check Wn
-# TODO: operating on a copy of traces so can overwrite in
-# TODO: check n_channel_pad and n_channel_taper argument behaviour
-# TODO: check agc on first trace
+
 
 class HighpassSpatialFilter(BasePreprocessor):
     """
+    Perform destriping with high-pass spatial filtering. Uses
+    the kfilt() function of the International Brain Laboratory.
+
+    Median average filtering, by removing the median of signal across
+    channels, assumes noise is constant across all channels. However,
+    noise have exhibit low-frequency changes across nearby channels.
+
+    This function extends the cut-band from 0 to 0.01 Nyquist to
+    remove these low-frequency changes during destriping.
+
+    Parameters
+    ----------
+
+    n_channel_pad: Number of channels to pad prior to filtering. Channels
+                   are padded with mirroring.
+
+    n_channel_taper: Number of channels to perform cosine tapering on
+                     prior to filtering. If None and n_channel_pad is set,
+                     n_channel_taper will be set to the number of
+                     padded channels. Otherwise, the passed value will be used.
+
+    agc_options: Options for automatic gain control. By default, gain control
+                 is applied prior to filtering to improve filter performance.
+                 "default" will use the IBL pipeline defaults (agc on). Setting to
+                 None will turn off gain control. To customise, pass a
+                 dictionary with the fields:
+                    agc_options["window_length_s"] - window length in seconds
+                    agc_options["sampling_interval"] - recording sampling interval
+
+    butter_kwargs: Dictionary with fields "N", "Wn", "btype" to be passed to
+                   scipy.signal.butter
+
+    select_channel_idx: To perform filtering on a sub-set of channels, pass a
+                        numpy array of channel indexes.
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, collection=None, n_channel_pad=0, n_channel_taper=None, agc_options="default", butter_kwargs=None):
+    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None, agc_options="default", butter_kwargs=None, select_channel_idx=None):
         BasePreprocessor.__init__(self, recording)
 
-        sampling_interval = 1 / recording.get_sampling_frequency()
-
-        if agc_options == "default":
-            agc_options = {"window_length_s": self.get_default_agc_window_length(sampling_interval),
-                           "sampling_interval": sampling_interval}
-
-        if butter_kwargs is None:
-            butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
+        n_channel_pad, agc_options, butter_kwargs, collection = self.handle_args(recording,
+                                                                                 n_channel_pad,
+                                                                                 agc_options,
+                                                                                 butter_kwargs,
+                                                                                 select_channel_idx)
 
         for parent_segment in recording._recording_segments:
             rec_segment = HighPassSpatialFilterSegment(parent_segment,
@@ -43,20 +68,59 @@ class HighpassSpatialFilter(BasePreprocessor):
                             agc_options=agc_options,
                             butter_kwargs=butter_kwargs)
 
+    def handle_args(self,
+                    recording,
+                    n_channel_pad,
+                    agc_options,
+                    butter_kwargs,
+                    select_channel_idx):
+        """
+        Make arguments well defined before passing to kfilt.
+
+        Use "default" argument for agc_options to make clear
+        that they are on, then None / False / 0 are all clearly off.
+
+        Default butter_kwargs are based on the IBL white paper .
+        """
+        if n_channel_pad in [None, False]:
+            n_channel_pad = 0
+
+        if agc_options == "default":
+            sampling_interval = 1 / recording.get_sampling_frequency()
+            agc_options = {"window_length_s": self.get_default_agc_window_length(sampling_interval),
+                           "sampling_interval": sampling_interval}
+
+        elif agc_options in [None, False, 0]:
+            agc_options = None
+
+        if butter_kwargs is None:
+            butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
+
+        if np.any(select_channel_idx):
+            collection = np.zeros(recording.get_num_channels(), dtype=bool)
+            collection[select_channel_idx] = True
+        else:
+            collection = None
+
+        return n_channel_pad, agc_options, butter_kwargs, collection
+
     def get_default_agc_window_length(self, sampling_interval):
+        """
+        300 samples default based on the IBL implementation
+        """
         return 300 * sampling_interval
 
-class HighPassSpatialFilterSegment(BasePreprocessorSegment):
-    """
 
-    """
+class HighPassSpatialFilterSegment(BasePreprocessorSegment):
+
     def __init__(self,
                  parent_recording_segment,
                  collection,
                  n_channel_pad,
                  n_channel_taper,
                  agc_options,
-                 butter_kwargs):
+                 butter_kwargs,
+                 ):
 
         self.parent_recording_segment = parent_recording_segment
         self.collection = collection
@@ -73,7 +137,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
         traces = traces.copy()
 
-        traces = kfilt(traces.T,  # TODO: change dims in function
+        traces = kfilt(traces.T,
                        self.collection,
                        self.n_channel_pad,
                        self.n_channel_taper,
@@ -86,29 +150,46 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatialFilter, name="highpass_spatial_filter")
 
 # -----------------------------------------------------------------------------------------------
-# IBL Functions
+# IBL KFilt Function
 # -----------------------------------------------------------------------------------------------
 
 def kfilt(traces, collection, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
     """
+    Alternative to median filtering across channels, in which the cut-band is
+    extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
+    This allows removal of  contaminating stripes that are not constant across channels.
+
+    Performs filtering on the 0 axis (across channels), with optional
+    padding (mirrored) and tapering (cosine taper) prior to filtering.
     Applies a butterworth filter on the 0-axis with tapering / padding
 
-    :param traces: the input array to be filtered. dimension, the filtering is considering
-              axis=0: spatial dimension, axis=1 temporal dimension. (ntraces, ns)
-    :param collection:
-    :param n_channel_pad: traces added to each side (mirrored)
-    :param n_channel_taper: n traces for apodizatin on each side
-    :param agc_options: window size for time domain automatic gain control (no agc otherwise)
-    :param butter_kwargs: filtering parameters: defaults: {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
-    :return:
+    Details of the high-pass spatial filter function (Olivier Winter)
+    used in the IBL pipeline can be found at:
+
+    International Brain Laboratory et al. (2022). Spike sorting pipeline for the
+    International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
+
+    traces: (num_channels x num_samples) numpy array
     """
+    # ----------------------------------------------------------------------------------------------
+    # TODO: visualise
     if collection is not None:
         xout = np.zeros_like(traces)
         for c in np.unique(collection):
             sel = collection == c
-            xout[sel, :] = kfilt(traces=traces[sel, :], n_channel_pad=0, n_channel_taper=None, collection=None,
+
+            agc_options = {"window_length_s": 300 * 3.3333333333333335e-05,
+                           "sampling_interval": 3.3333333333333335e-05}  # TODO: check why these args are turned off for collection, hard code for now
+
+            xout[sel, :] = kfilt(traces=traces[sel, :],
+                                 collection=None,
+                                 n_channel_pad=0, # n_channel_pad,
+                                 n_channel_taper=None, # n_channel_taper,
+                                 agc_options=agc_options,
                                  butter_kwargs=butter_kwargs)
         return xout
+    # ----------------------------------------------------------------------------------------------
+
     num_channels = traces.shape[0]
 
     # lateral padding left and right
@@ -123,12 +204,13 @@ def kfilt(traces, collection, n_channel_pad, n_channel_taper, agc_options, butte
         traces, gain = agc(traces,
                            window_length=agc_options["window_length_s"],
                            sampling_interval=agc_options["sampling_interval"])
-        print(traces)
+
     if n_channel_pad > 0:
         # pad the array with a mirrored version of itself and apply a cosine taper
         traces = np.r_[np.flipud(traces[:n_channel_pad]),
                        traces,
                        np.flipud(traces[-n_channel_pad:])]
+
     if n_channel_taper > 0:
         taper = fcn_cosine([0, n_channel_taper])(np.arange(num_channels_padded))  # taper up
         taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper,
@@ -142,6 +224,10 @@ def kfilt(traces, collection, n_channel_pad, n_channel_taper, agc_options, butte
         traces = traces[n_channel_pad:-n_channel_pad, :]
 
     return traces / gain
+
+# -----------------------------------------------------------------------------------------------
+# IBL Helper Functions
+# -----------------------------------------------------------------------------------------------
 
 
 def agc(traces, window_length, sampling_interval, epsilon=1e-8):
