@@ -394,12 +394,12 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
     a potential merge
     """
     recording = we.recording
-    soring = we.sorting
+    sorting = we.sorting
     pair_mask = pair_mask.copy()
 
     
 
-    firing_rates = compute_firing_rate(we)
+    firing_rates = list(compute_firing_rate(we).values())
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
