@@ -36,6 +36,7 @@ class RandomProjectionClustering:
         "cleaning_method": "matching",
         "shared_memory" : False,
         "min_values" : {'ptp' : 0, 'energy' : 0},
+        "tmp_folder" : None,
         "job_kwargs" : {"n_jobs" : os.cpu_count(), "chunk_memory" : "10M", "verbose" : True, "progress_bar" : True},
     }
 
@@ -172,20 +173,23 @@ class RandomProjectionClustering:
             labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params['cleaning_kwargs'])
 
         elif cleaning_method == "matching":
-
+            # create a tmp folder
+            if params["tmp_folder"] is None:
+                name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                tmp_folder = get_global_tmp_folder() / name
+            else:
+                tmp_folder = params["tmp_folder"]
             if params['shared_memory']:
-                tmp_folder = None
+                waveform_folder = None
                 mode = 'memory'
             else:
-                name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
-                if tmp_folder.exists():
-                    import shutils
-                    shutils.rmtree(tmp_folder)
+                waveform_folder = tmp_folder / "waveforms"
                 mode = 'folder'
 
+            sorting_folder = tmp_folder / "sorting"
             sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
-            we = extract_waveforms(recording, sorting, tmp_folder, ms_before=params['ms_before'], 
+            sorting = sorting.save(folder=sorting_folder)
+            we = extract_waveforms(recording, sorting, waveform_folder, ms_before=params['ms_before'],
                 ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False, mode=mode)
 
             cleaning_matching_params = params['job_kwargs'].copy()
@@ -194,10 +198,14 @@ class RandomProjectionClustering:
             cleaning_matching_params['verbose'] = False
             cleaning_matching_params['progress_bar'] = False
 
-            labels, peak_labels = remove_duplicates_via_matching(we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **params['cleaning_kwargs'])
+            labels, peak_labels = remove_duplicates_via_matching(we, noise_levels, peak_labels, 
+                                                                 job_kwargs=cleaning_matching_params, **params['cleaning_kwargs'])
     
-            if tmp_folder is not None:
+            if params["tmp_folder"] is None:
                 shutil.rmtree(tmp_folder)
+            else:
+                shutil.rmtree(tmp_folder / "waveforms")
+                shutil.rmtree(tmp_folder / "sorting")
 
         if verbose:
             print("We kept %d non-duplicated clusters..." %len(labels))
