@@ -142,7 +142,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                        self.n_channel_pad,
                        self.n_channel_taper,
                        self.agc_options,
-                       self.butter_kwargs)
+                       self.butter_kwargs).T
 
         return traces
 
