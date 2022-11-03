@@ -21,10 +21,10 @@ def test_remove_duplicated_spikes() -> None:
 
 
 def test_find_duplicated_spikes() -> None:
-    spike_train = np.array([20, 80, 81, 150, 153, 156, 900], dtype=np.int64)
+    spike_train = np.array([20, 80, 81, 82, 150, 153, 156, 900], dtype=np.int64)
 
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="random", seed=42)) >= 2
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_first")) == 3
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_last")) == 3
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_first_iterative")) == 2
-    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_last_iterative")) == 2
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="random", seed=42)) >= 3
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_first")) == 4
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_last")) == 4
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_first_iterative")) == 3
+    assert len(find_duplicated_spikes(spike_train, censored_period=5, method="keep_last_iterative")) == 3
