@@ -64,12 +64,13 @@ def detect_bad_channels(recording,
     Note psd_hf_threshold units
     Edge cases:
     """
-    # assert recording.get_num_channels() != 384, "bad channel detection for channels < 384 is not currently supported"
-
+    # Get random subset of data to estimate from
     random_chunk_kwargs, scale_for_testing = handle_random_chunk_kwargs(recording,
                                                                         random_chunk_kwargs)
     random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
+    # Create empty channel labels and fill with bad-channel detection
+    # estimate for each chunk
     channel_labels = np.zeros((recording.get_num_channels(),
                                recording.get_num_segments() * random_chunk_kwargs["num_chunks_per_segment"]))
 
@@ -81,6 +82,8 @@ def detect_bad_channels(recording,
                                                            psd_hf_threshold,
                                                            scale_for_testing)
 
+    # Take the mode of the chunk estimates as final result. Convert to
+    # binary good / bad channel output.
     channel_flags, __ = scipy.stats.mode(channel_labels, axis=1, keepdims=False)
 
     bad_inds, = np.where(channel_flags != 0)
@@ -96,8 +99,21 @@ def detect_bad_channels(recording,
 
 def handle_random_chunk_kwargs(recording, user_random_chunk_kwargs):
     """
+    Here we want to overwrite the default random_chunk_kwargs,
+    but allow the user to overwrite these with their own options.
     Make default random chunk kwargs and overwrite with any user-specified.
+
+    The default chunk size of 0.3 s, 10 chunks is taken
+    from IBL implementation.
+
+    To add scaling in detect_bad_channels_ibl() to match IBL
+    original function for testing against, a hidden flag on
+    the kwargs is used, "scale_for_testing".
     """
+    if ("concatenated" in user_random_chunk_kwargs and
+        user_random_chunk_kwargs["concatenated"]):
+        raise AttributeError("Custom random_chunk_kwargs cannot included data concatenation")
+
     chunk_size = int(0.3 * recording.get_sampling_frequency())
     random_chunk_kwargs = {"return_scaled": True,
                            "num_chunks_per_segment": 10,
@@ -110,13 +126,12 @@ def handle_random_chunk_kwargs(recording, user_random_chunk_kwargs):
 
     scale_for_testing = handle_test_case(random_chunk_kwargs)
 
-    if random_chunk_kwargs["concatenated"]:
-        raise AttributeError("Custom random_chunk_kwargs cannot included data concatenation")
-
     return random_chunk_kwargs, scale_for_testing
 
 def handle_test_case(scale_for_testing):
-    """"""
+    """
+    see test_remove_bad_channels() for logic
+    """
     if "scale_for_testing" in scale_for_testing:
         scale_for_testing.pop("scale_for_testing")
         scale_for_testing = True
@@ -128,9 +143,6 @@ def handle_test_case(scale_for_testing):
 # ----------------------------------------------------------------------------------------------
 # IBL Detect Bad Channels
 # ----------------------------------------------------------------------------------------------
-
-# units; uV ** 2 / Hz
-# the LFP band data is obviously much stronger so auto-adjust the default threshold
 
 def detect_bad_channels_ibl(raw, fs, similarity_threshold=(-0.5, 1), psd_hf_threshold=None, scale_for_testing=False):
     """
@@ -162,7 +174,7 @@ def detect_bad_channels_ibl(raw, fs, similarity_threshold=(-0.5, 1), psd_hf_thre
 
     xfeats = ({
         'ind': np.arange(nc),
-        'rms_raw': rms(raw),  # very similar to the rms avfter butterworth filter
+        'rms_raw': rms(raw),  # very similar to the rms after butterworth filter
         'xcor_hf': detrend(xcor, 11),
         'xcor_lf': xcorf - detrend(xcorf, 11) - 1,
         'psd_hf': np.mean(psd[:, fscale > (fs / 2 * 0.8)], axis=-1),  # 80% nyquists

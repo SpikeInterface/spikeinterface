@@ -18,16 +18,13 @@ e.g. np.isclose(a, b, 1e-05) False
 
 add assert for 384 channels
 """
-import copy
 import spikeinterface as si  # import core only
 import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
-from pathlib import Path
 import numpy as np
 import pytest
 import scipy.signal
 from spikeinterface.core.testing_tools import generate_recording
-from spikeinterface.preprocessing.remove_bad_channels import detect_bad_channels_ibl
 
 try:
     import spikeglx
@@ -38,16 +35,6 @@ except:  # Catch relevant exception
 
 
 class TestBadChannelDetection():
-
-    @pytest.fixture(scope="class")
-    def recording(self):
-        """
-        Set fixture to class to ensure origional data is not changed.
-        """
-        download_path = si.download_dataset(remote_path='spikeglx/Noise4Sam_g0')
-        recording = se.read_spikeglx(download_path, stream_id="imec0.ap")
-
-        yield recording
 
     @pytest.mark.parametrize("set_num_channels", [32, 64, 384])
     def test_download_data_against_ibl_neuropixel(self, recording, set_num_channels):
@@ -67,6 +54,9 @@ class TestBadChannelDetection():
         the random_chunk_kwargs then the psd in SI bad_channel_detection
         will be scaled by 1e6. This also requires scaling the PSD
         """
+        download_path = si.download_dataset(remote_path='spikeglx/Noise4Sam_g0')
+        recording = se.read_spikeglx(download_path, stream_id="imec0.ap")
+
         num_channels = set_num_channels
         __, recording = self.get_test_recording(num_channels)
 
