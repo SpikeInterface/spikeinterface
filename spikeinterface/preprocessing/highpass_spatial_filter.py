@@ -37,24 +37,19 @@ class HighpassSpatialFilter(BasePreprocessor):
 
     butter_kwargs: Dictionary with fields "N", "Wn", "btype" to be passed to
                    scipy.signal.butter
-
-    collection: To perform filtering on a sub-set of channels, pass a
-                numpy array of channel indexes.
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None, agc_options="default", butter_kwargs=None, collection=None):
+    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None, agc_options="default", butter_kwargs=None):
         BasePreprocessor.__init__(self, recording)
 
         n_channel_pad, agc_options, butter_kwargs = self.handle_args(recording,
                                                                      n_channel_pad,
                                                                      agc_options,
-                                                                     butter_kwargs,
-                                                                     collection)
+                                                                     butter_kwargs)
 
         for parent_segment in recording._recording_segments:
             rec_segment = HighPassSpatialFilterSegment(parent_segment,
-                                                       collection,
                                                        n_channel_pad,
                                                        n_channel_taper,
                                                        agc_options,
@@ -62,7 +57,6 @@ class HighpassSpatialFilter(BasePreprocessor):
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(),
-                            collection=collection,
                             n_channel_pad=n_channel_pad,
                             n_channel_taper=n_channel_taper,
                             agc_options=agc_options,
@@ -72,8 +66,7 @@ class HighpassSpatialFilter(BasePreprocessor):
                     recording,
                     n_channel_pad,
                     agc_options,
-                    butter_kwargs,
-                    collection):
+                    butter_kwargs):
         """
         Make arguments well-defined before passing to kfilt.
 
@@ -96,9 +89,6 @@ class HighpassSpatialFilter(BasePreprocessor):
         if butter_kwargs is None:
             butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
 
-        assert collection.size == recording.get_num_channels(),\
-            "collection must have one entry for each channel"
-
         return n_channel_pad, agc_options, butter_kwargs
 
     def get_default_agc_window_length(self, sampling_interval):
@@ -112,7 +102,6 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
     def __init__(self,
                  parent_recording_segment,
-                 collection,
                  n_channel_pad,
                  n_channel_taper,
                  agc_options,
@@ -120,7 +109,6 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                  ):
 
         self.parent_recording_segment = parent_recording_segment
-        self.collection = collection
         self.n_channel_pad = n_channel_pad
         self.n_channel_taper = n_channel_taper
         self.agc_options = agc_options
@@ -135,7 +123,6 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         traces = traces.copy()
 
         traces = kfilt(traces.T,
-                       self.collection,
                        self.n_channel_pad,
                        self.n_channel_taper,
                        self.agc_options,
@@ -150,7 +137,7 @@ highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatia
 # IBL KFilt Function
 # -----------------------------------------------------------------------------------------------
 
-def kfilt(traces, collection, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
+def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
     """
     Alternative to median filtering across channels, in which the cut-band is
     extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
@@ -168,25 +155,6 @@ def kfilt(traces, collection, n_channel_pad, n_channel_taper, agc_options, butte
 
     traces: (num_channels x num_samples) numpy array
     """
-    # ----------------------------------------------------------------------------------------------
-    # TODO: visualise
-    if collection is not None:
-        xout = np.zeros_like(traces)
-        for c in np.unique(collection):
-            sel = collection == c
-
-            agc_options = {"window_length_s": 300 * 3.3333333333333335e-05,
-                           "sampling_interval": 3.3333333333333335e-05}  # TODO: check why these args are turned off for collection, hard code for now
-
-            xout[sel, :] = kfilt(traces=traces[sel, :],
-                                 collection=None,
-                                 n_channel_pad=0, # n_channel_pad,
-                                 n_channel_taper=None, # n_channel_taper,
-                                 agc_options=agc_options,
-                                 butter_kwargs=butter_kwargs)
-        return xout
-    # ----------------------------------------------------------------------------------------------
-
     num_channels = traces.shape[0]
 
     # lateral padding left and right

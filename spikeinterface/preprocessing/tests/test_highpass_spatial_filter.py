@@ -35,12 +35,11 @@ class TestHighPassFilter:
 
         return [ibl_data, si_recording]
 
-    @pytest.mark.parametrize("collection", [True])  # False
     @pytest.mark.parametrize("ntr_pad", [None, 0, 10, 25, 50, 100])
     @pytest.mark.parametrize("ntr_tap", [10, 25, 50, 100])  # None
     @pytest.mark.parametrize("lagc", ["default", None, False, 1, 300, 600, 1000])
     @pytest.mark.parametrize("butter_kwargs", [None, {'N': 3, 'Wn': 0.05, 'btype': 'highpass'}, {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
-    def test_highpass_spatial_filter_ibl_vs_si(self, ibl_si_data, ntr_pad, ntr_tap, lagc, butter_kwargs, collection):
+    def test_highpass_spatial_filter_ibl_vs_si(self, ibl_si_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
         """
         Test highpass spatial filter IBL vs. SI implimentations.
 
@@ -52,19 +51,10 @@ class TestHighPassFilter:
               can be easily passed to IBL helper function, and so that
               window_length can be specified in seconds.
 
-            - collection: pass an array of channel indicies
-              rather than bool array for consistency with other SI functions.
-              IBL function is resursive and kfilt default settings
-              are: {'N': 3, 'Wn': 0.1, 'btype': 'highpass'}. So to
-              test with collection butter_kwargs are changed
-              for SI too.
             - ntr_pad can be None for SI, lagc can be "default", None or False.
 
         """
         ibl_data, si_recording = ibl_si_data
-
-        if collection:
-            collection, butter_kwargs = self.process_collection(si_recording)
 
         # Run SI highpass spatial filter
 
@@ -74,8 +64,7 @@ class TestHighPassFilter:
                                                                   n_channel_pad=ntr_pad,
                                                                   n_channel_taper=ntr_tap,
                                                                   agc_options=si_lagc,
-                                                                  butter_kwargs=butter_kwargs,
-                                                                  collection=collection)
+                                                                  butter_kwargs=butter_kwargs)
 
         si_filtered = si_highpass_spatial_filter.get_traces(return_scaled=True)
 
@@ -86,7 +75,7 @@ class TestHighPassFilter:
                                                                  ntr_pad,
                                                                  lagc)
 
-        ibl_filtered = voltage.kfilt(ibl_data, collection, ntr_pad, ntr_tap, lagc, butter_kwargs).T
+        ibl_filtered = voltage.kfilt(ibl_data, None, ntr_pad, ntr_tap, lagc, butter_kwargs).T
 
         if DEBUG:
             for bad_idx in [0, 1, 2]:
@@ -101,14 +90,6 @@ class TestHighPassFilter:
                            atol=1e-01,
                            rtol=0)  # the differences are entired due to scaling on data load. If passing SI input to
                                     # this function results are the same 1e-08
-
-
-    def process_collection(self, recording):
-        """"""
-        collection = np.random.choice(3, recording.get_num_channels(), replace=True)
-        butter_kwargs = {'N': 3, 'Wn': 0.1, 'btype': 'highpass'}
-
-        return collection, butter_kwargs
 
     def process_args_for_si(self, si_recording, lagc):
         """"""
