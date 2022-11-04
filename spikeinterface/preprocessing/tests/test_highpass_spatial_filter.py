@@ -87,6 +87,7 @@ class TestHighPassFilter:
                 ax.set_title(f"bad channel {bad_idx}")
                 ax.legend()
 
+
         assert np.allclose(si_filtered,
                            ibl_filtered*1e6,
                            atol=1e-01,

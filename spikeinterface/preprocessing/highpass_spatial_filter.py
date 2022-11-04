@@ -187,7 +187,7 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
     if n_channel_pad > 0:
         traces = traces[n_channel_pad:-n_channel_pad, :]
 
-    return traces / gain
+    return traces * gain
 
 # -----------------------------------------------------------------------------------------------
 # IBL Helper Functions
@@ -198,7 +198,7 @@ def agc(traces, window_length, sampling_interval, epsilon=1e-8):
     """
     Automatic gain control
     w_agc, gain = agc(w, window_length=.5, si=.002, epsilon=1e-8)
-    such as w_agc / gain = w
+    such as w_agc * gain = w
     :param traces: seismic array (sample last dimension)
     :param window_length: window length (secs) (original default 0.5)
     :param si: sampling interval (secs) (original default 0.002)
@@ -210,9 +210,11 @@ def agc(traces, window_length, sampling_interval, epsilon=1e-8):
     window /= np.sum(window)
     gain = convolve(np.abs(traces), window, mode='same')
     gain += (np.sum(gain, axis=1) * epsilon / traces.shape[-1])[:, np.newaxis]
-    gain = 1 / gain
 
-    return traces * gain, gain
+    dead_channels = np.sum(gain, axis=1) == 0
+    traces[~dead_channels, :] = traces[~dead_channels, :] / gain[~dead_channels, :]
+
+    return traces, gain
 
 
 def convolve(x, w, mode='full'):
