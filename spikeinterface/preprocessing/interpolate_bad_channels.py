@@ -42,10 +42,10 @@ class InterpolateBadChannels(BasePreprocessor):
         x = recording.get_probe().contact_positions[:, 0]
         y = recording.get_probe().contact_positions[:, 1]
 
+        if recording.get_probe().si_units != "um":
+            raise NotImplementedError("Channel spacing units must be um")
+        
         if kriging_distance_um is None:
-            if recording.get_probe().si_units != "um":
-                raise NotImplementedError("Channel spacing units must be um")
-
             kriging_distance_um = self.get_recommended_kriging_distance_um(recording, y)
 
         all_weights = self.calculate_weights_and_lock_channel_idxs(bad_channel_indexes,
