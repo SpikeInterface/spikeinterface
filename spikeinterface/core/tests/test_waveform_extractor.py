@@ -85,6 +85,16 @@ def test_WaveformExtractor():
         filtered_templates = wf_filt.get_all_templates()
         assert filtered_templates.shape == (len(keep_units), 210, num_channels)
 
+        # test save
+        we_saved = we.save(cache_folder / f"we_saved_{mode}")
+        for unit_id in we_saved.unit_ids:
+            assert np.array_equal(we.get_waveforms(unit_id),
+                                  we_saved.get_waveforms(unit_id))
+            assert np.array_equal(we.get_sampled_indices(unit_id),
+                                  we_saved.get_sampled_indices(unit_id))
+            assert np.array_equal(we.get_all_templates(unit_id),
+                                  we_saved.get_all_templates(unit_id))
+
 
 def test_extract_waveforms():
     # 2 segments
