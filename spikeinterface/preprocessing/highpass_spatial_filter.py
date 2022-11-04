@@ -38,19 +38,19 @@ class HighpassSpatialFilter(BasePreprocessor):
     butter_kwargs: Dictionary with fields "N", "Wn", "btype" to be passed to
                    scipy.signal.butter
 
-    select_channel_idx: To perform filtering on a sub-set of channels, pass a
-                        numpy array of channel indexes.
+    collection: To perform filtering on a sub-set of channels, pass a
+                numpy array of channel indexes.
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None, agc_options="default", butter_kwargs=None, select_channel_idx=None):
+    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None, agc_options="default", butter_kwargs=None, collection=None):
         BasePreprocessor.__init__(self, recording)
 
-        n_channel_pad, agc_options, butter_kwargs, collection = self.handle_args(recording,
-                                                                                 n_channel_pad,
-                                                                                 agc_options,
-                                                                                 butter_kwargs,
-                                                                                 select_channel_idx)
+        n_channel_pad, agc_options, butter_kwargs = self.handle_args(recording,
+                                                                     n_channel_pad,
+                                                                     agc_options,
+                                                                     butter_kwargs,
+                                                                     collection)
 
         for parent_segment in recording._recording_segments:
             rec_segment = HighPassSpatialFilterSegment(parent_segment,
@@ -73,9 +73,9 @@ class HighpassSpatialFilter(BasePreprocessor):
                     n_channel_pad,
                     agc_options,
                     butter_kwargs,
-                    select_channel_idx):
+                    collection):
         """
-        Make arguments well defined before passing to kfilt.
+        Make arguments well-defined before passing to kfilt.
 
         Use "default" argument for agc_options to make clear
         that they are on, then None / False / 0 are all clearly off.
@@ -96,13 +96,10 @@ class HighpassSpatialFilter(BasePreprocessor):
         if butter_kwargs is None:
             butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
 
-        if np.any(select_channel_idx):
-            collection = np.zeros(recording.get_num_channels(), dtype=bool)
-            collection[select_channel_idx] = True
-        else:
-            collection = None
+        assert collection.size == recording.get_num_channels(),\
+            "collection must have one entry for each channel"
 
-        return n_channel_pad, agc_options, butter_kwargs, collection
+        return n_channel_pad, agc_options, butter_kwargs
 
     def get_default_agc_window_length(self, sampling_interval):
         """
@@ -129,7 +126,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         self.agc_options = agc_options
         self.butter_kwargs = butter_kwargs
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def get_traces(self, start_frame, end_frame, channel_indices):  # TODO:
 
         traces = self.parent_recording_segment.get_traces(start_frame,
                                                           end_frame,
@@ -213,8 +210,7 @@ def kfilt(traces, collection, n_channel_pad, n_channel_taper, agc_options, butte
 
     if n_channel_taper > 0:
         taper = fcn_cosine([0, n_channel_taper])(np.arange(num_channels_padded))  # taper up
-        taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper,
-                                 num_channels_padded])(np.arange(num_channels_padded))   # taper down
+        taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(np.arange(num_channels_padded))   # taper down
         traces = traces * taper[:, np.newaxis]
 
     sos = scipy.signal.butter(**butter_kwargs, output='sos')

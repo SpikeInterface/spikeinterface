@@ -35,12 +35,12 @@ class TestHighPassFilter:
 
         return [ibl_data, si_recording]
 
-    @pytest.mark.parametrize("select_channel_idx", [None, True])
+    @pytest.mark.parametrize("collection", [True])  # False
     @pytest.mark.parametrize("ntr_pad", [None, 0, 10, 25, 50, 100])
-    @pytest.mark.parametrize("ntr_tap", [None, 10, 25, 50, 100])
+    @pytest.mark.parametrize("ntr_tap", [10, 25, 50, 100])  # None
     @pytest.mark.parametrize("lagc", ["default", None, False, 1, 300, 600, 1000])
     @pytest.mark.parametrize("butter_kwargs", [None, {'N': 3, 'Wn': 0.05, 'btype': 'highpass'}, {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
-    def test_highpass_spatial_filter_ibl_vs_si(self, ibl_si_data, ntr_pad, ntr_tap, lagc, butter_kwargs, select_channel_idx):
+    def test_highpass_spatial_filter_ibl_vs_si(self, ibl_si_data, ntr_pad, ntr_tap, lagc, butter_kwargs, collection):
         """
         Test highpass spatial filter IBL vs. SI implimentations.
 
@@ -52,19 +52,19 @@ class TestHighPassFilter:
               can be easily passed to IBL helper function, and so that
               window_length can be specified in seconds.
 
-            - select_channel_idx: pass an array of channel indicies
+            - collection: pass an array of channel indicies
               rather than bool array for consistency with other SI functions.
               IBL function is resursive and kfilt default settings
               are: {'N': 3, 'Wn': 0.1, 'btype': 'highpass'}. So to
-              test with select_channel_idx butter_kwargs are changed
+              test with collection butter_kwargs are changed
               for SI too.
             - ntr_pad can be None for SI, lagc can be "default", None or False.
 
         """
         ibl_data, si_recording = ibl_si_data
 
-        if select_channel_idx:
-            select_channel_idx, butter_kwargs = self.process_select_channel_idx()
+        if collection:
+            collection, butter_kwargs = self.process_collection(si_recording)
 
         # Run SI highpass spatial filter
 
@@ -75,17 +75,16 @@ class TestHighPassFilter:
                                                                   n_channel_taper=ntr_tap,
                                                                   agc_options=si_lagc,
                                                                   butter_kwargs=butter_kwargs,
-                                                                  select_channel_idx=select_channel_idx)
+                                                                  collection=collection)
 
         si_filtered = si_highpass_spatial_filter.get_traces(return_scaled=True)
 
         # Run IBL highpass spatial filter
 
-        butter_kwargs, collection, ntr_pad, lagc = self.process_args_for_ibl(si_recording,
-                                                                             butter_kwargs,
-                                                                             select_channel_idx,
-                                                                             ntr_pad,
-                                                                             lagc)
+        butter_kwargs, ntr_pad, lagc = self.process_args_for_ibl(si_recording,
+                                                                 butter_kwargs,
+                                                                 ntr_pad,
+                                                                 lagc)
 
         ibl_filtered = voltage.kfilt(ibl_data, collection, ntr_pad, ntr_tap, lagc, butter_kwargs).T
 
@@ -104,12 +103,12 @@ class TestHighPassFilter:
                                     # this function results are the same 1e-08
 
 
-    def process_select_channel_idx(self):
+    def process_collection(self, recording):
         """"""
-        select_channel_idx = np.random.choice(374, 20, replace=False) + 10
+        collection = np.random.choice(3, recording.get_num_channels(), replace=True)
         butter_kwargs = {'N': 3, 'Wn': 0.1, 'btype': 'highpass'}
 
-        return select_channel_idx, butter_kwargs
+        return collection, butter_kwargs
 
     def process_args_for_si(self, si_recording, lagc):
         """"""
@@ -123,16 +122,10 @@ class TestHighPassFilter:
 
         return si_lagc
 
-    def process_args_for_ibl(self, si_recording, butter_kwargs, select_channel_idx, ntr_pad, lagc):
+    def process_args_for_ibl(self, si_recording, butter_kwargs, ntr_pad, lagc):
         """"""
         if butter_kwargs is None:
             butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
-
-        if np.any(select_channel_idx):
-            collection = np.zeros(si_recording.get_num_channels(), dtype=bool)
-            collection[select_channel_idx] = True
-        else:
-            collection = None
 
         if ntr_pad is None:
             ntr_pad = 0
@@ -141,4 +134,4 @@ class TestHighPassFilter:
         if lagc in [None, False]:
             lagc = 0
 
-        return butter_kwargs, collection, ntr_pad, lagc
+        return butter_kwargs, ntr_pad, lagc
