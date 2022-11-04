@@ -4,6 +4,7 @@ import shutil
 import json
 
 import numpy as np
+from copy import deepcopy
 
 from .base import load_extractor
 
@@ -109,6 +110,38 @@ class WaveformExtractor:
             max_spikes_per_unit = self._params['max_spikes_per_unit']
             txt = txt + f'\n  before:{self.nbefore} after:{self.nafter} n_per_units:{max_spikes_per_unit}'
         return txt
+
+    @classmethod
+    def load(cls, folder, with_recording=True, sorting=None):
+        """
+        Load a waveform extractor object from disk.
+
+        Parameters
+        ----------
+        folder : _type_
+            _description_
+        with_recording : bool, optional
+            _description_, by default True
+        sorting : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+
+        Raises
+        ------
+        NotImplementedError
+            _description_
+        """
+        folder = Path(folder)
+        assert folder.is_dir()
+        if folder.suffix == "zarr":
+            raise NotImplementedError("Zarr backend is not supported yet")
+        else:
+            return WaveformExtractor.load_from_folder(folder, with_recording=with_recording,
+                                                      sorting=sorting)
 
     @classmethod
     def load_from_folder(cls, folder, with_recording=True, sorting=None):
@@ -492,14 +525,14 @@ class WaveformExtractor:
             # create new waveform extractor folder
             shutil.copyfile(self.folder / "params.json",
                             new_folder / "params.json")
-            shutil.copyfile(self.folder / "recording.json",
-                            new_folder / "recording.json")
 
             if use_relative_path:
                 relative_to = new_folder
             else:
                 relative_to = None
 
+            if self._recording is not None:
+                self.recording.dump(new_folder / 'recording.json', relative_to=relative_to)
             sorting.dump(new_folder / 'sorting.json', relative_to=relative_to)
 
             # create and populate waveforms folder
@@ -532,6 +565,86 @@ class WaveformExtractor:
             ext = self.load_extension(ext_name)
             ext.select_units(unit_ids, new_waveform_extractor=we)
 
+        return we
+
+    def save(self, folder, format="binary", use_relative_path=False, **kwargs):
+        """
+        Save WaveformExtractor object to disk.
+
+        Parameters
+        ----------
+        folder : str or Path
+            The output waveform folder
+        format : str, optional
+            "binary", "zarr", by default "binary"
+        use_relative_path : bool, optional
+            If True, the recording and sorting paths are relative to the waveforms folder. 
+            This allows portability of the waveform folder provided that the relative paths are the same, 
+            but forces all the data files to be in the same drive, by default False
+        """
+        folder = Path(folder)
+        assert not folder.is_dir()
+        folder.mkdir(parents=True)
+        if format == "binary":
+            if use_relative_path:
+                relative_to = folder
+            else:
+                relative_to = None
+
+            (folder / 'params.json').write_text(
+                json.dumps(check_json(self._params), indent=4), encoding='utf8')
+
+            if self._recording is not None:
+                if self._recording.is_dumpable:
+                    self._recording.dump(folder / 'recording.json', relative_to=relative_to)
+            if self.sorting.is_dumpable:
+                self.sorting.dump(folder / 'sorting.json', relative_to=relative_to)
+
+            # dump some attributes of the recording for the mode with_recording=False at next load
+            rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
+            rec_attributes_file.parent.mkdir()
+            rec_attributes = deepcopy(self._rec_attributes)
+            if "probegroup" in rec_attributes:
+                del rec_attributes["probegroup"]
+            rec_attributes_file.write_text(
+                json.dumps(check_json(rec_attributes), indent=4),
+                encoding='utf8'
+            )
+            if self._rec_attributes["probegroup"] is not None:
+                probegroup_file = folder / 'recording_info' / 'probegroup.json'
+                probeinterface.write_probeinterface(probegroup_file, 
+                                                    self._rec_attributes["probegroup"].get_probegroup())
+
+            with open(rec_attributes_file, 'r') as f:
+                rec_attributes = json.load(f)
+
+            if self.folder is not None:
+                # now waveforms and templates
+                shutil.copytree(self.folder / "waveforms", folder / "waveforms")
+                template_files = [t for t in self.folder.iterdir() if "templates" in t and t.suffix == ".npy"]
+                for template_file in template_files:
+                    shutil.copy(template_file, folder)
+            else:
+                # save waveforms and templates
+                waveform_folder = folder / "waveforms"
+                waveform_folder.mkdir()
+                for unit_id in self.sorting.unit_ids:
+                    waveforms, sampled_indices = self.get_waveforms(unit_id, with_index=True)
+                    np.save(waveform_folder / f'waveforms_{unit_id}.npy', waveforms)
+                    np.save(waveform_folder / f'sampled_index_{unit_id}.npy', sampled_indices)                 
+                for mode, templates in self._template_cache.items():
+                    if self.folder is not None:
+                        template_file = self.folder / f'templates_{mode}.npy'
+                        np.save(template_file, templates)
+        elif format == "zarr":
+            raise NotImplementedError("Zarr backend is not supported yet")
+
+        # save waveform extensions
+        for ext_name in self.get_available_extension_names():
+            ext = self.load_extension(ext_name)
+            ext.save(folder, format=format, **kwargs)
+
+        we = WaveformExtractor.load(folder)
         return we
 
     def get_waveforms(self, unit_id, with_index=False, cache=False, memmap=True, sparsity=None):
@@ -1031,10 +1144,13 @@ class BaseWaveformExtractorExtension:
         
         if self.waveform_extractor.folder is not None:
             self.folder = self.waveform_extractor.folder
-            self.extension_folder = self.folder / self.extension_name
+            if not self.waveform_extractor.folder.suffix == ".zarr":
+                self.extension_folder = self.folder / self.extension_name
 
-            if not self.extension_folder.is_dir():
-                self.extension_folder.mkdir()
+                if not self.extension_folder.is_dir():
+                    self.extension_folder.mkdir()
+            else:
+                raise NotImplementedError("Zarr backend not supported yet")
         else:
             self.extension_folder = None
             self.folder = None
@@ -1088,30 +1204,36 @@ class BaseWaveformExtractorExtension:
 
     def run(self, **kwargs):
         self._run(**kwargs)
-        self._save()
+        self._save(folder=self.folder)
 
     def _run(self, **kwargs):
         # must be implemented in subclass
         # must populate the self._extension_data dictionary
         raise NotImplementedError
+    
+    def save(self, folder, format="binary", **kwargs):
+        self._save(folder, format, **kwargs)
 
-    def _save(self):
-        if self.folder is not None:
-            import pandas as pd
-            for ext_data_name, ext_data in self._extension_data.items():
-                if isinstance(ext_data, dict):
-                    with (self.extension_folder / f"{ext_data_name}.json").open('w') as f:
-                        json.dump(ext_data, f)
-                elif isinstance(ext_data, np.ndarray):
-                    np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
-                elif isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
-                else:
-                    try:
-                        with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
-                            pickle.dump(ext_data, f)
-                    except:
-                        raise Exception(f"Could not save {ext_data_name} as extension data")
+    def _save(self, folder=None, format="binary", **kwargs):
+        if folder is not None:
+            if format == "binary":
+                import pandas as pd
+                for ext_data_name, ext_data in self._extension_data.items():
+                    if isinstance(ext_data, dict):
+                        with (self.extension_folder / f"{ext_data_name}.json").open('w') as f:
+                            json.dump(ext_data, f)
+                    elif isinstance(ext_data, np.ndarray):
+                        np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
+                    elif isinstance(ext_data, pd.DataFrame):
+                        ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
+                    else:
+                        try:
+                            with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
+                                pickle.dump(ext_data, f)
+                        except:
+                            raise Exception(f"Could not save {ext_data_name} as extension data")
+            elif format == "zarr":
+                raise NotImplementedError("Zarr backend is not supported yet")
 
     def reset(self):
         """
