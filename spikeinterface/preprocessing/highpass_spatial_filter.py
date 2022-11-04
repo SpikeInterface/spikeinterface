@@ -114,11 +114,11 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         self.agc_options = agc_options
         self.butter_kwargs = butter_kwargs
 
-    def get_traces(self, start_frame, end_frame, channel_indices):  # TODO:
+    def get_traces(self, start_frame, end_frame, channel_indices):
 
         traces = self.parent_recording_segment.get_traces(start_frame,
                                                           end_frame,
-                                                          slice(None))
+                                                          channel_indices)
 
         traces = traces.copy()
 

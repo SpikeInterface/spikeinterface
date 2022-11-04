@@ -11,7 +11,7 @@ try:
 except ImportError:
     HAVE_IBL_NPIX = False
 
-DEBUG = False  # TODO: Debug not working, need to reformat tests to SI style 
+DEBUG = False
 if DEBUG:
     import matplotlib.pyplot as plt
     plt.ion()
@@ -24,7 +24,7 @@ class TestHighPassFilter:
     @pytest.fixture(scope="session")
     def ibl_si_data(self):
         """
-        Set fixture to class to ensure origional data is not changed.
+        Set fixture to session to ensure origional data is not changed.
         """
         local_path = si.download_dataset(remote_path='spikeglx/Noise4Sam_g0')
         ibl_recording = spikeglx.Reader(local_path / "Noise4Sam_g0_imec0" / "Noise4Sam_g0_t0.imec0.ap.bin", ignore_warnings=True)
@@ -36,9 +36,11 @@ class TestHighPassFilter:
         return [ibl_data, si_recording]
 
     @pytest.mark.parametrize("ntr_pad", [None, 0, 10, 25, 50, 100])
-    @pytest.mark.parametrize("ntr_tap", [10, 25, 50, 100])  # None
+    @pytest.mark.parametrize("ntr_tap", [None, 10, 25, 50, 100])
     @pytest.mark.parametrize("lagc", ["default", None, False, 1, 300, 600, 1000])
-    @pytest.mark.parametrize("butter_kwargs", [None, {'N': 3, 'Wn': 0.05, 'btype': 'highpass'}, {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
+    @pytest.mark.parametrize("butter_kwargs", [None,
+                                               {'N': 3, 'Wn': 0.05, 'btype': 'highpass'},
+                                               {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
     def test_highpass_spatial_filter_ibl_vs_si(self, ibl_si_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
         """
         Test highpass spatial filter IBL vs. SI implimentations.
