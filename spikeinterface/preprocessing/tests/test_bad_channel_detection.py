@@ -1,7 +1,23 @@
 # assert for uV SI!
 # TODO: is the assmption that large channel number == outside of brain true across all probes?
 # TODO: makes the assumption that 5000 Hz is LFP band - is this valid for other probes?
-# TODO: assumes segments are all the same (pools all when getting random chunks - is this valid?) 
+# TODO: assumes segments are all the same (pools all when getting random chunks - is this valid?)
+
+"""
+Notes - did not change dims here but did in other function!!
+# TODO: check that 300 samples is good default for agc gain control
+# TODO: check Wn
+# removed collection
+
+# Tests: all options (taper, padding, agc_defaults)
+# TODO: check n_channel_pad and n_channel_taper argument behaviour
+
+isclose has strange becaufour for very small values
+e.g. np.isclose(a, b, 1e-05) False
+     np.isclose(a, b, atol=1e-05, rtol=0) True
+
+add assert for 384 channels
+"""
 import copy
 import spikeinterface as si  # import core only
 import spikeinterface.extractors as se
