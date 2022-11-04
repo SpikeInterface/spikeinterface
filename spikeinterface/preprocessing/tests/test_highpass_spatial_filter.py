@@ -21,7 +21,7 @@ if DEBUG:
 @pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
 class TestHighPassFilter:
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture(scope="session")
     def ibl_si_data(self):
         """
         Set fixture to class to ensure origional data is not changed.
@@ -40,7 +40,6 @@ class TestHighPassFilter:
     @pytest.mark.parametrize("ntr_tap", [None, 10, 25, 50, 100])
     @pytest.mark.parametrize("lagc", ["default", None, False, 1, 300, 600, 1000])
     @pytest.mark.parametrize("butter_kwargs", [None, {'N': 3, 'Wn': 0.05, 'btype': 'highpass'}, {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
-    @pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
     def test_highpass_spatial_filter_ibl_vs_si(self, ibl_si_data, ntr_pad, ntr_tap, lagc, butter_kwargs, select_channel_idx):
         """
         Test highpass spatial filter IBL vs. SI implimentations.
