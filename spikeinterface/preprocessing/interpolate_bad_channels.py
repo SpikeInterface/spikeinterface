@@ -48,13 +48,16 @@ class InterpolateBadChannels(BasePreprocessor):
 
             kriging_distance_um = self.get_recommended_kriging_distance_um(recording, y)
 
+        all_weights = self.calculate_weights_and_lock_channel_idxs(bad_channel_indexes,
+                                                                   x,
+                                                                   y,
+                                                                   kriging_distance_um,
+                                                                   p)
+
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(parent_segment,
                                                         bad_channel_indexes,
-                                                        x,
-                                                        y,
-                                                        p,
-                                                        kriging_distance_um)
+                                                        all_weights)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(),
@@ -68,38 +71,37 @@ class InterpolateBadChannels(BasePreprocessor):
         """
         return scipy.stats.mode(np.diff(np.unique(y)), keepdims=False)[0]
 
-class InterpolateBadChannelsSegment(BasePreprocessorSegment):
-
-    def __init__(self, parent_recording_segment, bad_channel_indexes, x, y, p, kriging_distance_um):
-        BasePreprocessorSegment.__init__(self, parent_recording_segment)
-
-        self._bad_channel_indexes = bad_channel_indexes
-        self._x = x
-        self._y = y
-        self._p = p
-        self._kriging_distance_um = kriging_distance_um
-        self._all_weights = self.pre_calculate_channel_weights()
-
-    def pre_calculate_channel_weights(self):
+    def calculate_weights_and_lock_channel_idxs(self, bad_channel_indexes, x, y, kriging_distance_um, p):
         """
         Pre-compute the channel weights for this InterpolateBadChannels
         instance. Code taken from original IBL function
         (see interpolate_bad_channels_ibl).
         """
-        all_weights = np.empty((self._bad_channel_indexes.size, self._x.size))
+        all_weights = np.empty((bad_channel_indexes.size,
+                                x.size))
         all_weights.fill(np.nan)
 
-        for cnt, idx in enumerate(self._bad_channel_indexes):
+        for cnt, idx in enumerate(bad_channel_indexes):
             # compute the weights to apply to neighbouring traces
-            offset = np.abs(self._x - self._x[idx] + 1j * (self._y - self._y[idx]))
-            weights = np.exp(-(offset / self._kriging_distance_um) ** self._p)
-            weights[self._bad_channel_indexes] = 0
+            offset = np.abs(x - x[idx] + 1j * (y - y[idx]))
+            weights = np.exp(-(offset / kriging_distance_um) ** p)
+            weights[bad_channel_indexes] = 0
             weights[weights < 0.005] = 0
             weights = weights / np.sum(weights)
 
             all_weights[cnt, :] = weights
 
+        bad_channel_indexes.setflags(write=False)
+
         return all_weights
+
+class InterpolateBadChannelsSegment(BasePreprocessorSegment):
+
+    def __init__(self, parent_recording_segment, bad_channel_indexes, all_weights):
+        BasePreprocessorSegment.__init__(self, parent_recording_segment)
+
+        self._bad_channel_indexes = bad_channel_indexes
+        self._all_weights = all_weights
 
     def get_traces(self, start_frame, end_frame, channel_indices):
 
@@ -111,15 +113,11 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
         traces = interpolate_bad_channels_ibl(traces,  # TODO: check dims
                                               self._bad_channel_indexes,
-                                              self._x,
-                                              self._y,
-                                              self._p,
-                                              self._kriging_distance_um,
                                               self._all_weights)
 
         return traces
 
-def interpolate_bad_channels_ibl(traces, bad_channel_indexes, x, y, p, kriging_distance_um, all_weights):
+def interpolate_bad_channels_ibl(traces, bad_channel_indexes, all_weights):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
     This is based on the distance from the bad channel, as determined from x,y
