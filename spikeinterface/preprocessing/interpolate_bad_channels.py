@@ -44,9 +44,9 @@ class InterpolateBadChannels(BasePreprocessor):
 
         if kriging_distance_um is None:
             if recording.get_probe().si_units != "um":
-                raise NotImplementedError("Channel spacing units must be in um")
+                raise NotImplementedError("Channel spacing units must be um")
 
-            kriging_distance_um = self.get_reccomended_kriging_distance_um(recording, y)
+            kriging_distance_um = self.get_recommended_kriging_distance_um(recording, y)
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(parent_segment,
@@ -62,7 +62,7 @@ class InterpolateBadChannels(BasePreprocessor):
                             p=p,
                             kriging_distance_um=kriging_distance_um)
 
-    def get_reccomended_kriging_distance_um(self, recording, y):
+    def get_recommended_kriging_distance_um(self, recording, y):
         """
         Get the most common distance between channels on the y-axis
         """
