@@ -92,8 +92,8 @@ def test_WaveformExtractor():
                                   we_saved.get_waveforms(unit_id))
             assert np.array_equal(we.get_sampled_indices(unit_id),
                                   we_saved.get_sampled_indices(unit_id))
-            assert np.array_equal(we.get_all_templates(unit_id),
-                                  we_saved.get_all_templates(unit_id))
+            assert np.array_equal(we.get_all_templates(),
+                                  we_saved.get_all_templates())
 
 
 def test_extract_waveforms():
@@ -317,7 +317,7 @@ def test_portability():
 
 
 if __name__ == '__main__':
-    # test_WaveformExtractor()
+    test_WaveformExtractor()
     # test_extract_waveforms()
     # test_sparsity()
     # test_portability()

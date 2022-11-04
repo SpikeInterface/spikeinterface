@@ -80,6 +80,7 @@ class WaveformExtractor:
                                 'If the recording is already filtered, you can also do '
                                 '`recording.annotate(is_filtered=True).\n'
                                 'If you trully want to extract unfiltered waveforms, use `allow_unfiltered=True`.')
+            self._rec_attributes = rec_attributes
 
         self._recording = recording
         self.sorting = sorting
@@ -603,17 +604,26 @@ class WaveformExtractor:
             # dump some attributes of the recording for the mode with_recording=False at next load
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
             rec_attributes_file.parent.mkdir()
-            rec_attributes = deepcopy(self._rec_attributes)
-            if "probegroup" in rec_attributes:
-                del rec_attributes["probegroup"]
+            probegroup = None
+            if self._recording is not None:
+                rec_attributes = dict(
+                    channel_ids=self.recording.channel_ids,
+                    sampling_frequency=self.recording.get_sampling_frequency(),
+                    num_channels=self.recording.get_num_channels(),
+                )
+                if self.recording.get_probegroup() is not None:
+                    probegroup = self.recording.get_probegroup()
+            else:
+                rec_attributes = deepcopy(self._rec_attributes)
+                probegroup = rec_attributes["probegroup"]
             rec_attributes_file.write_text(
                 json.dumps(check_json(rec_attributes), indent=4),
                 encoding='utf8'
             )
-            if self._rec_attributes["probegroup"] is not None:
+            if probegroup is not None:
                 probegroup_file = folder / 'recording_info' / 'probegroup.json'
                 probeinterface.write_probeinterface(probegroup_file, 
-                                                    self._rec_attributes["probegroup"].get_probegroup())
+                                                    probegroup)
 
             with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
@@ -621,7 +631,7 @@ class WaveformExtractor:
             if self.folder is not None:
                 # now waveforms and templates
                 shutil.copytree(self.folder / "waveforms", folder / "waveforms")
-                template_files = [t for t in self.folder.iterdir() if "templates" in t and t.suffix == ".npy"]
+                template_files = [t for t in self.folder.iterdir() if "templates" in t.name and t.suffix == ".npy"]
                 for template_file in template_files:
                     shutil.copy(template_file, folder)
             else:
