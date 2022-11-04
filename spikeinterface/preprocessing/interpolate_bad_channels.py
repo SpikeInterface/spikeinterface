@@ -73,11 +73,33 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, bad_channel_indexes, x, y, p, kriging_distance_um):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
-        self.bad_channel_indexes = bad_channel_indexes
-        self.x = x
-        self.y = y
-        self.p = p
-        self.kriging_distance_um = kriging_distance_um
+        self._bad_channel_indexes = bad_channel_indexes
+        self._x = x
+        self._y = y
+        self._p = p
+        self._kriging_distance_um = kriging_distance_um
+        self._all_weights = self.pre_calculate_channel_weights()
+
+    def pre_calculate_channel_weights(self):
+        """
+        Pre-compute the channel weights for this InterpolateBadChannels
+        instance. Code taken from original IBL function
+        (see interpolate_bad_channels_ibl).
+        """
+        all_weights = np.empty((self._bad_channel_indexes.size, self._x.size))
+        all_weights.fill(np.nan)
+
+        for cnt, idx in enumerate(self._bad_channel_indexes):
+            # compute the weights to apply to neighbouring traces
+            offset = np.abs(self._x - self._x[idx] + 1j * (self._y - self._y[idx]))
+            weights = np.exp(-(offset / self._kriging_distance_um) ** self._p)
+            weights[self._bad_channel_indexes] = 0
+            weights[weights < 0.005] = 0
+            weights = weights / np.sum(weights)
+
+            all_weights[cnt, :] = weights
+
+        return all_weights
 
     def get_traces(self, start_frame, end_frame, channel_indices):
 
@@ -88,20 +110,24 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
         traces = traces.copy()
 
         traces = interpolate_bad_channels_ibl(traces,  # TODO: check dims
-                                              self.bad_channel_indexes,
-                                              self.x,
-                                              self.y,
-                                              self.p,
-                                              self.kriging_distance_um)
+                                              self._bad_channel_indexes,
+                                              self._x,
+                                              self._y,
+                                              self._p,
+                                              self._kriging_distance_um,
+                                              self._all_weights)
 
         return traces
 
-def interpolate_bad_channels_ibl(traces, bad_channel_indexes, x, y, p, kriging_distance_um):
+def interpolate_bad_channels_ibl(traces, bad_channel_indexes, x, y, p, kriging_distance_um, all_weights):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
     This is based on the distance from the bad channel, as determined from x,y
     channel coordinates. The weights applied to neighbouring channels come
     from an exponential decay function.
+
+    Weights are pre-calculated (see pre_calculate_channel_weights()) and
+    interpolated here.
 
     Details of the interpolation function (Olivier Winter) used in the IBL pipeline
     can be found at:
@@ -112,20 +138,14 @@ def interpolate_bad_channels_ibl(traces, bad_channel_indexes, x, y, p, kriging_d
     traces: (num_samples x num_channels) numpy array
 
     """
-    for i in bad_channel_indexes:
-        # compute the weights to apply to neighbouring traces
-        offset = np.abs(x - x[i] + 1j * (y - y[i]))
-        weights = np.exp(-(offset / kriging_distance_um) ** p)
-        weights[bad_channel_indexes] = 0
-        weights[weights < 0.005] = 0
-        weights = weights / np.sum(weights)
+    for cnt, idx in enumerate(bad_channel_indexes):
 
-        # apply interpolation
+        weights = all_weights[cnt, :]
         imult = np.where(weights > 0.005)[0]
         if imult.size == 0:
-            traces[:, i] = 0
+            traces[:, idx] = 0
             continue
-        traces[:, i] = np.matmul(traces[:, imult], weights[imult])
+        traces[:, idx] = np.matmul(traces[:, imult], weights[imult])
 
     return traces
 
