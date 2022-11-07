@@ -6,6 +6,7 @@ import numpy as np
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, NumpySorting, set_global_tmp_folder
 from spikeinterface.extractors import toy_example
 
+
 from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import get_potential_auto_merge
 from spikeinterface.curation.auto_merge import normalize_correlogram
@@ -20,10 +21,12 @@ set_global_tmp_folder(cache_folder)
 
 def test_get_auto_merge_list():
 
+
     rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.], firing_rate=20.)
     num_split = 2
 
     sorting_with_split = inject_some_split_units(sorting, split_ids=sorting.unit_ids[:2], num_split=num_split)
+
     print(sorting_with_split)
     print(sorting_with_split.unit_ids)
 
@@ -54,6 +57,7 @@ def test_get_auto_merge_list():
                 )
     print(potential_merges)
 
+
     assert len(potential_merges) == num_split
 
 
@@ -72,6 +76,7 @@ def test_get_auto_merge_list():
     ax.hist(templates_diff.flatten(), bins=np.arange(0, 1, 0.05))
 
     m = correlograms.shape[2] // 2
+
     for unit_id1, unit_id2 in potential_merges[:5]:
         unit_ind1 = sorting_with_split.id_to_index(unit_id1)
         unit_ind2 = sorting_with_split.id_to_index(unit_id2)
@@ -104,8 +109,6 @@ def test_get_auto_merge_list():
         
         ax.set_title(f'corr diff {correlogram_diff[unit_ind1, unit_ind2]} - temp diff {templates_diff[unit_ind1, unit_ind2]}')
     plt.show()
-
-    
 
 
     

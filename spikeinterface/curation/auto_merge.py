@@ -401,6 +401,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
+
         ind1, ind2 = inds1[i], inds2[i]
 
         c_1 = contaminations[ind1]
@@ -414,6 +415,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
         sorting_merged = MergeUnitsSorting(sorting, [unit_id1, unit_id2], new_unit_id=unit_id1).select_units([unit_id1])
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
+
         _, new_contaminations = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)
         c_new = new_contaminations[unit_id1]
