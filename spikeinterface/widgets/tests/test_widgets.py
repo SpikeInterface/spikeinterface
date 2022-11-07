@@ -152,9 +152,9 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_amplitudes(self.we, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_amplitudes(self.we, unit_ids=unit_ids, plot_histograms=True,
                                    backend=backend, **self.backend_kwargs[backend])
-    
+
     def test_plot_all_amplitudes_distributions(self):
-        possible_backends = list(sw.AmplitudesWidget.possible_backends.keys())
+        possible_backends = list(sw.AllAmplitudesDistributionsWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 unit_ids = self.we.unit_ids[:4]
