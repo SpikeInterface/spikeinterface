@@ -21,7 +21,7 @@ if DEBUG:
 @pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
 class TestHighPassFilter:
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="function")
     def ibl_si_data(self):
         """
         Set fixture to session to ensure origional data is not changed.
@@ -72,8 +72,7 @@ class TestHighPassFilter:
 
         # Run IBL highpass spatial filter
 
-        butter_kwargs, ntr_pad, lagc = self.process_args_for_ibl(si_recording,
-                                                                 butter_kwargs,
+        butter_kwargs, ntr_pad, lagc = self.process_args_for_ibl(butter_kwargs,
                                                                  ntr_pad,
                                                                  lagc)
 
@@ -106,7 +105,7 @@ class TestHighPassFilter:
 
         return si_lagc
 
-    def process_args_for_ibl(self, si_recording, butter_kwargs, ntr_pad, lagc):
+    def process_args_for_ibl(self, butter_kwargs, ntr_pad, lagc):
         """"""
         if butter_kwargs is None:
             butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
