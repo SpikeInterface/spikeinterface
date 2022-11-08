@@ -16,7 +16,6 @@ def _find_duplicated_spikes_numpy(spike_train: np.ndarray, censored_period: int,
     if method == "keep_first":
         indices_of_duplicates += 1
     elif method == "random":
-        assert seed is not None, "The 'seed' has to be provided if method=='random'"
         rand_state = np.random.get_state()
         np.random.seed(seed)
         mask = np.ones(len(spike_train), dtype=bool)
@@ -31,6 +30,21 @@ def _find_duplicated_spikes_numpy(spike_train: np.ndarray, censored_period: int,
         raise ValueError(f"Method '{method}' isn't a valid method for _find_duplicated_spikes_numpy.")
 
     return indices_of_duplicates
+
+
+def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int, seed: int) -> np.ndarray:
+    rand_state = np.random.get_state()
+    np.random.seed(seed)
+
+    indices_of_duplicates = []
+    while not np.all(np.diff(np.delete(spike_train, indices_of_duplicates)) > censored_period):
+        duplicates, = np.where(np.diff(spike_train) <= censored_period)
+        duplicates = np.unique(np.concatenate((duplicates, duplicates + 1)))
+        duplicate = np.random.choice(duplicates)
+        indices_of_duplicates.append(duplicate)
+
+    np.random.set_state(rand_state)
+    return np.array(indices_of_duplicates, dtype=np.int64)
 
 
 
@@ -68,7 +82,7 @@ if HAVE_NUMBA:
         return np.asarray(indices_of_duplicates)
 
 
-def find_duplicated_spikes(spike_train, censored_period, method: str = "random", seed: Optional[int] = None) -> np.ndarray:
+def find_duplicated_spikes(spike_train, censored_period: int, method: str = "random", seed: Optional[int] = None) -> np.ndarray:
     """
     Finds the indices where there a spike in considered a duplicate.
     When two spikes are closer together than the censored period,
@@ -91,8 +105,11 @@ def find_duplicated_spikes(spike_train, censored_period, method: str = "random",
         The indices of spikes considered to be duplicates.
     """
 
-    if method in ("keep_first", "keep_last", "random"):
-        return _find_duplicated_spikes_numpy(spike_train.astype(np.int64), censored_period, method=method, seed=seed)
+    if method in ("keep_first", "keep_last"):
+        return _find_duplicated_spikes_numpy(spike_train, censored_period, method=method)
+    elif method == "random":
+        assert seed is not None, "The 'seed' has to be provided if method=='random'"
+        return _find_duplicated_spikes_random(spike_train, censored_period, seed)
     elif method == "keep_first_iterative":
         assert HAVE_NUMBA, "'keep_first' method requires numba. Install it with >>> pip install numba"
         return _find_duplicated_spikes_keep_first_iterative(spike_train.astype(np.int64), censored_period)
