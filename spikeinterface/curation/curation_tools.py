@@ -13,7 +13,7 @@ def _find_duplicated_spikes_numpy(spike_train: np.ndarray, censored_period: int,
                                   method: str = "keep_first") -> np.ndarray:
     indices_of_duplicates, = np.where(np.diff(spike_train) <= censored_period)
 
-    if method == "keep_last":
+    if method == "keep_first":
         indices_of_duplicates += 1
     elif method == "random":
         assert seed is not None, "The 'seed' has to be provided if method=='random'"
@@ -27,7 +27,7 @@ def _find_duplicated_spikes_numpy(spike_train: np.ndarray, censored_period: int,
         np.random.set_state(rand_state)
 
         indices_of_duplicates, = np.where(~mask)
-    elif method != "keep_first":
+    elif method != "keep_last":
         raise ValueError(f"Method '{method}' isn't a valid method for _find_duplicated_spikes_numpy.")
 
     return indices_of_duplicates
