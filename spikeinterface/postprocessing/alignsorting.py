@@ -17,6 +17,10 @@ class AlignSortingExtractor(BaseSorting):
         for segment in sorting._sorting_segments:
             self.add_sorting_segment(AlignSortingSegment(segment, unit_peak_shifts))
 
+        sorting.copy_metadata(self, only_main=False)
+        if sorting.has_recording():
+            self.register_recording(sorting._recording)
+
 
 class AlignSortingSegment(BaseSortingSegment):
     def __init__(self, parent_segment, unit_peak_shifts):
