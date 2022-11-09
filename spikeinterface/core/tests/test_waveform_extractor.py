@@ -5,7 +5,7 @@ import numpy as np
 import platform
 
 
-from spikeinterface.core.testing_tools import generate_recording, generate_sorting
+from spikeinterface.core.testing_tools import generate_recording, generate_sorting, NumpySorting
 from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms
 
 
@@ -304,6 +304,20 @@ def test_portability():
         wf_loaded = we_loaded.get_waveforms(unit_id=unit)
 
         assert np.allclose(wf, wf_loaded)
+
+
+def test_empty_sorting():
+    sf = 30000
+    num_channels = 2
+
+    recording = generate_recording(num_channels=num_channels, sampling_frequency=sf, durations=[15.32])
+    sorting = NumpySorting.from_dict({}, sf)
+
+    folder = cache_folder / "empty_sorting"
+    wvf_extractor = extract_waveforms(recording, sorting, folder, allow_unfiltered=True)
+
+    assert len(wvf_extractor.unit_ids) == 0
+    assert wvf_extractor.get_all_templates().shape == (0, wvf_extractor.nsamples, num_channels)
 
 
 if __name__ == '__main__':
