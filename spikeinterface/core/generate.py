@@ -275,7 +275,7 @@ def inject_some_duplicat_units(sorting, num=4, max_shift=5, ratio=None, seed=Non
 
     return sorting_with_dup
 
-def inject_some_split_units(sorting, split_ids=[], num_split=2, seed=None):
+def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False, seed=None):
     """
     
     """
@@ -288,7 +288,7 @@ def inject_some_split_units(sorting, split_ids=[], num_split=2, seed=None):
     for unit_id in split_ids:
         other_ids[unit_id] = np.arange(m, m+num_split, dtype=unit_ids.dtype)
         m += num_split
-    print(other_ids)
+    # print(other_ids)
 
 
     spiketrains = []
@@ -310,8 +310,10 @@ def inject_some_split_units(sorting, split_ids=[], num_split=2, seed=None):
         spiketrains.append(new_units)
     
     sorting_with_split = NumpySorting.from_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
-
-    return sorting_with_split
+    if output_ids:
+        return sorting_with_split, other_ids
+    else:
+        return sorting_with_split
 
 
 
