@@ -289,7 +289,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
             #     t0 = t0 + self.t_start
             times += t0
 
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=None)
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
 
         # print(traces.shape, times.shape, self.channel_locations, self.motion, self.temporal_bins, self.spatial_bins)
         trace2 = correct_motion_on_traces(traces, times, self.channel_locations, self.motion,
