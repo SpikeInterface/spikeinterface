@@ -21,6 +21,11 @@ class AlignSortingExtractor(BaseSorting):
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 
+        self._kwargs = {
+            'sorting': sorting.to_dict();
+            'unit_peak_shifts': unit_peak_shifts
+        }
+
 
 class AlignSortingSegment(BaseSortingSegment):
     def __init__(self, parent_segment, unit_peak_shifts):
