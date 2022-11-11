@@ -32,6 +32,9 @@ class WaveformExtractor:
     rec_attributes: None or dict
         When recording is None then a minimal dict with some attributes
         is needed.
+    allow_unfiltered: bool
+        If true, will accept unfiltered recording.
+        False by default.
     Returns
     -------
     we: WaveformExtractor
@@ -56,7 +59,7 @@ class WaveformExtractor:
 
     """
     extensions = []
-    def __init__(self, recording, sorting, folder=None, rec_attributes=None):
+    def __init__(self, recording, sorting, folder=None, rec_attributes=None, allow_unfiltered=False):
         if recording is None:
             # this is for the mode when recording is not accessible anymore
             if rec_attributes is None:
@@ -71,10 +74,11 @@ class WaveformExtractor:
                 "The recording and sorting objects must have the same number of segments!"
             np.testing.assert_almost_equal(recording.get_sampling_frequency(),
                                            sorting.get_sampling_frequency(), decimal=2)
-            if not recording.is_filtered():
+            if not recording.is_filtered() and not allow_unfiltered:
                 raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
                                 'If the recording is already filtered, you can also do '
-                                '`recording.annotate(is_filtered=True)')
+                                '`recording.annotate(is_filtered=True).\n'
+                                'If you trully want to extract unfiltered waveforms, use `allow_unfiltered=True`.')
 
         self._recording = recording
         self.sorting = sorting
@@ -149,7 +153,7 @@ class WaveformExtractor:
 
     @classmethod
     def create(cls, recording, sorting, folder, mode="folder", remove_if_exists=False,
-               use_relative_path=False):
+               use_relative_path=False, allow_unfiltered=False):
         assert mode in ("folder", "memory")
         if mode == "folder":
             folder = Path(folder)
@@ -189,7 +193,7 @@ class WaveformExtractor:
             with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
 
-        return cls(recording, sorting, folder)
+        return cls(recording, sorting, folder, allow_unfiltered=allow_unfiltered)
 
     @classmethod
     def register_extension(cls, extension_class):
@@ -826,7 +830,7 @@ class WaveformExtractor:
         
         spikes = []
         for segment_index in range(self.sorting.get_num_segments()):
-            num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids])
+            num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids], dtype=np.int64)
             spike_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
             spikes_ = np.zeros(num_in_seg,  dtype=spike_dtype)
             pos = 0
@@ -911,6 +915,7 @@ def extract_waveforms(recording, sorting, folder=None,
                       overwrite=False,
                       return_scaled=True,
                       dtype=None,
+                      allow_unfiltered=False,
                       use_relative_path=False,
                       seed=None,
                       **job_kwargs):
@@ -948,6 +953,9 @@ def extract_waveforms(recording, sorting, folder=None,
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
+    allow_unfiltered: bool
+        If true, will accept an allow_unfiltered recording.
+        False by default.
     use_relative_path: bool
         If True, the recording and sorting paths are relative to the waveforms folder. 
         This allows portability of the waveform folder provided that the relative paths are the same, 
@@ -973,7 +981,7 @@ def extract_waveforms(recording, sorting, folder=None,
         if load_if_exists and folder.is_dir():
             we = WaveformExtractor.load_from_folder(folder)
             return we
-    we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path)
+    we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path, allow_unfiltered=allow_unfiltered)
     we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
                   return_scaled=return_scaled)
     we.run_extract_waveforms(seed=seed, **job_kwargs)

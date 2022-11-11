@@ -79,7 +79,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
 
     empty_flag = False
     non_empty_units = []
-    for unit in sorting.get_unit_ids():
+    for unit in sorting.unit_ids:
         if len(sorting.get_unit_spike_train(unit)) > 0:
             non_empty_units.append(unit)
         else:
@@ -202,12 +202,11 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         best_channels_index = get_template_channel_sparsity(waveform_extractor, method='best_channels',
                                                             peak_sign=peak_sign, num_channels=max_channels_per_template,
                                                             outputs='index')
-        for u, unit_id in enumerate(sorting.unit_ids):
+        for u, unit_id in enumerate(unit_ids):
             pc_feature_ind[u, :] = best_channels_index[unit_id]
         np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
 
     # Save .tsv metadata
-    unit_ids = sorting.unit_ids
     cluster_group = pd.DataFrame({'cluster_id': [i for i in range(len(unit_ids))],
                                   'group': ['unsorted'] * len(unit_ids)})
     cluster_group.to_csv(output_folder / 'cluster_group.tsv',

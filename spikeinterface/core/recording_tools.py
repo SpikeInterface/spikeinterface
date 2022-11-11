@@ -57,8 +57,6 @@ def get_channel_distances(recording):
     Distance between channel pairs
     """
     locations = recording.get_channel_locations()
-    
-
     channel_distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
 
     return channel_distances
