@@ -57,13 +57,62 @@ remove_bad_channels = define_function_from_class(source_class=RemoveBadChannelsR
 # ------------------------------------------------------------------------------------------
 
 def detect_bad_channels(recording,
-                        similarity_threshold=(-0.5, 1),
                         psd_hf_threshold=None,
+                        similarity_threshold=(-0.5, 1),
                         random_chunk_kwargs=None):
     """
-    Note psd_hf_threshold units
-    Edge cases:
+    Perform bad channel detection using the detect_bad_channels
+    algorithm of the IBL.
+
+    Detects bad channels of three types:
+        Dead channels are those with low similarity to the surrounding channels
+            (n=11 median)
+        Noise channels are those with power at >80% Nyquist above the
+            psd_hf_threshold (default 0.02 uV^2 / Hz)
+        Out of brain channels are contigious regions of channels
+            dissimilar to the median of all channels at the top end
+            of the probe (i.e. large channel number)
+
+    Parameters
+    ----------
+
+    psd_hf_threshold: an absolute threshold (uV^2/Hz) used as a cutoff for
+                      noise channels. Channels with average power at >80%
+                      Nyquist larger than this threshold will be labelled
+                      as noise.
+
+    similarity_threshold: absolute threshold for channel similarity,
+                          in the form for a tuple (threshold1, threshold2).
+                          In dead channel detection, the median filtered
+                          cross-correlation (N=11) is subtracted from the
+                          cross-correlation. When a channel is not similar
+                          from the surrounding channels, there are large
+                          residuals (negative when a channel has a
+                          negative cross-correlation with all other channels,
+                          positive when it has a positive cross-correlation.
+                          This is termed the 'similarity' measure.
+
+                          threshold1 (default -0.5) tags any channel with
+                          a similarity measure < -0.05 (i.e., there is a
+                          large negative-direction different between the
+                          xcor of this channel with all other channels,
+                          and the nearest 11 channels.
+
+                          threshold2 is used in noise detection, channels
+                          with similarity measure > threshold2 are tagged
+                          as noise (i.e. the channel is much more strongly
+                          correlated with all other channels than the surrounding
+                          11 channels).
+
+    random_chunk_kwargs: a dictionary with keys passed to get_random_data_chunks()
+
+    see for details:
+        International Brain Laboratory et al. (2022). Spike sorting pipeline for the
+        International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
     """
+    if psd_hf_threshold is None:
+        psd_hf_threshold = 1.4 if fs < 5000 else 0.02
+
     # Get random subset of data to estimate from
     random_chunk_kwargs, scale_for_testing = handle_random_chunk_kwargs(recording,
                                                                         random_chunk_kwargs)
@@ -78,8 +127,8 @@ def detect_bad_channels(recording,
 
         channel_labels[:, i], __ = detect_bad_channels_ibl(random_chunk.T,
                                                            recording.get_sampling_frequency(),
-                                                           similarity_threshold,
                                                            psd_hf_threshold,
+                                                           similarity_threshold,
                                                            scale_for_testing)
 
     # Take the mode of the chunk estimates as final result. Convert to
@@ -144,7 +193,7 @@ def handle_test_case(scale_for_testing):
 # IBL Detect Bad Channels
 # ----------------------------------------------------------------------------------------------
 
-def detect_bad_channels_ibl(raw, fs, similarity_threshold=(-0.5, 1), psd_hf_threshold=None, scale_for_testing=False):
+def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.5, 1), scale_for_testing=False):
     """
     Bad channels detection for Neuropixel probes
     Labels channels
@@ -164,9 +213,6 @@ def detect_bad_channels_ibl(raw, fs, similarity_threshold=(-0.5, 1), psd_hf_thre
 
     scale = 1e6 if scale_for_testing else 1
     fscale, psd = scipy.signal.welch(raw * scale, fs=fs)
-
-    if psd_hf_threshold is None:
-        psd_hf_threshold = 1.4 if fs < 5000 else 0.02
 
     sos_hp = scipy.signal.butter(**{'N': 3, 'Wn': 300 / fs * 2, 'btype': 'highpass'}, output='sos')
     hf = scipy.signal.sosfiltfilt(sos_hp, raw)
