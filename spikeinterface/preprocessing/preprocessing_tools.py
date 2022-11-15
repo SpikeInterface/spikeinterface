@@ -4,7 +4,7 @@ import scipy.spatial
 
 
 def get_spatial_interpolation_kernel(source_location, target_location, method='kriging',
-                                     sigma_um=20., p=1, num_closest=3, ):
+                                     sigma_um=20., p=1, num_closest=3, dtype='float32', force_extrapolate=False):
     """
     Compute the spatial kernel for linear spatial interpolation.
     
@@ -25,20 +25,30 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         Choice of the method
             'kriging' : the same one used in kilosort
             'idw' : inverse  distance weithed
-            '' : 
+            'nearest' : use nereast channel
     sigma_um : float (default 20.)
-        Used in the krigging formula
+        Used in the 'kriging' formula
     p: int (default 1)
-        Used in the krigging formula
+        Used in the 'kriging' formula
     num_closest: int (default 3)
         Used for 'idw'
+    force_extrapolate: bool (false by default)
+        How to handle when target location are outside source location.
+        When False :  no extrapolation all target location outside are set to zero.
+        When True : extrapolation done with the formula of the method.
+                    In that case the sum of the kernel is not force to be 1.
 
     Returns
     -------
     interpolation_kernel: array (m, n)
     """
 
-
+    target_is_inside = np.ones(target_location.shape[0], dtype=bool)
+    for dim in range(source_location.shape[1]):
+        l0, l1 = np.min(source_location[:, dim]), np.max(source_location[:, dim])
+        target_is_inside &= (target_location[:, dim] >= l0) & (target_location[:, dim] <= l1)
+    
+    
     if method == 'kriging':
         # this is an adaptation of  pykilosort implementation by Kush Benga
         # https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L352
@@ -49,16 +59,15 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         Kyx = np.exp(-(dist_yx / sigma_um) **p)
 
         interpolation_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
-        interpolation_kernel = interpolation_kernel.T.astype('float32').copy()
+        interpolation_kernel = interpolation_kernel.T.copy()
 
-        # sparse and ensure sum = 1
-        # interpolation_kernel[interpolation_kernel < 0.05] = 0
-        # interpolation_kernel /= np.sum(interpolation_kernel, axis=1).reshape(-1, 1)
+        # ensure sum = 1 for target inside
+        s = np.sum(interpolation_kernel, axis=0)
+        interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
     elif method == 'idw':
         distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
-
-        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float32')
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float64')
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[c, :])
             chan_closest = ind_sorted[:num_closest]
@@ -67,13 +76,26 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
                 # no interpolation the first have zeros distance
                 interpolation_kernel[chan_closest[0], c] = 1.
             else:
-                w = 1 / dists
-                w /= np.sum(w)
-                interpolation_kernel[chan_closest, c] = w
+                interpolation_kernel[chan_closest, c] = 1 / dists
+
+        # ensure sum = 1 for target inside
+        s = np.sum(interpolation_kernel, axis=0)
+        interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
+
+
     elif method == 'nearest':
-        raise NotImplementedError('get_spatial_interpolation_kernel nearest will be done soon')
+        distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float64')
+        for c in range(target_location.shape[0]):
+            ind_closest = np.argmin(distances[c, :])
+            interpolation_kernel[ind_closest, c] = 1.
 
     else:
         raise ValueError('get_interpolation_kernel wrong method')
+    
+    if not force_extrapolate:
+        interpolation_kernel[:, ~target_is_inside] = 0
 
-    return interpolation_kernel
+    
+
+    return interpolation_kernel.astype(dtype)
