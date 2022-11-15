@@ -216,60 +216,45 @@ if HAVE_NUMBA:
                 diff = spike_train[j] - spike_train[i]
 
 
-    @numba.jit((numba.int64[::1], numba.int32[::1], numba.int32), nopython=True, nogil=True, cache=True)
-    def _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std):
-        spike_diffs = numba.typed.List()
-        max_t = t_axis[-1] + 4*gaussian_std
+    @numba.jit((numba.int64[::1], numba.float64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    def _compute_autocorr_gaussian(spike_train, gaussian, max_time):
+        auto_corr = np.zeros(2*max_time + 1, dtype=np.int64)
 
         for i in range(len(spike_train)):
             for j in range(i+1, len(spike_train)):
                 diff = spike_train[j] - spike_train[i]
 
-                if diff > max_t:
+                if diff > max_time:
                     break
 
-                spike_diffs.append(diff)
-                spike_diffs.append(-diff)
+                auto_corr[max_time + diff] += 1
+                auto_corr[max_time - diff] += 1
 
-        spike_diffs = np.asarray(spike_diffs, dtype=np.int32)
-        auto_corr = np.zeros(t_axis.shape, dtype=np.float64)
-        denominator = gaussian_std * np.sqrt(2*np.pi)
-        for i, t in enumerate(t_axis):  # Numpy broadcasting might take too much RAM.
-            spikes = spike_diffs[np.abs(spike_diffs - t) < 5*gaussian_std]
-            d = spikes - t
-            auto_corr[i] = np.sum(np.exp(-d**2/(2*gaussian_std**2)) / denominator)
+        auto_corr_smoothed = np.convolve(auto_corr, gaussian)
+        N = len(gaussian) // 2
+        return auto_corr_smoothed[N:-N]
 
-        return auto_corr
-
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32),
+    @numba.jit((numba.int64[::1], numba.int64[::1], numba.float64[::1], numba.int32),
                nopython=True, nogil=True, cache=True)
-    def _compute_crosscorr_gaussian(spike_train1, spike_train2, t_axis, gaussian_std):
-        spike_diffs = numba.typed.List()
-        min_t = t_axis[0] - 4*gaussian_std
-        max_t = t_axis[-1] + 4*gaussian_std
+    def _compute_crosscorr_gaussian(spike_train1, spike_train2, gaussian, max_time):
+        cross_corr = np.zeros(2*max_time + 1, dtype=np.int64)
 
         start_j = 0
         for i in range(len(spike_train1)):
             for j in range(start_j, len(spike_train2)):
                 diff = spike_train1[i] - spike_train2[j]
 
-                if diff > -min_t:
+                if diff > max_time:
                     start_j += 1
                     continue
-                if diff < -max_t:
+                if diff < -max_time:
                     break
 
-                spike_diffs.append(diff)
+                cross_corr[max_time + diff] += 1
 
-        spike_diffs = np.asarray(spike_diffs, dtype=np.int32)
-        cross_corr = np.zeros(t_axis.shape, dtype=np.float64)
-        denominator = gaussian_std * np.sqrt(2*np.pi)
-        for i, t in enumerate(t_axis):  # Numpy broadcasting might take too much RAM.
-            spikes = spike_diffs[np.abs(spike_diffs - t) < 5*gaussian_std]
-            d = spikes - t
-            cross_corr[i] = np.sum(np.exp(-d**2/(2*gaussian_std**2)) / denominator)
-
-        return cross_corr
+        cross_corr_smoothed = np.convolve(cross_corr, gaussian)
+        N = len(gaussian) // 2
+        return cross_corr_smoothed[N:-N]
 
 
 def compute_correlograms(waveform_or_sorting_extractor, 
@@ -465,7 +450,7 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
     return correlograms
 
 
-def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std: float = 0.5, dt: float = 0.1):
+def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std: float = 0.5):
     """
     Computes several gaussian-filtered auto & cross-correlograms
     in one course from several clusters.
@@ -483,8 +468,6 @@ def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std:
         The correlograms are going to be computed between -max_time and +max_time (in ms).
     gaussian_std: float
         Standard deviation for the gaussian filter (in ms).
-    dt: float:
-        The delta time for the time axis (in ms).
 
     Returns
     -------
@@ -501,17 +484,16 @@ def compute_gaussian_correlograms(sorting, max_time: float = 50.0, gaussian_std:
 
     max_time = int(round(max_time * fs * 1e-3))
     gaussian_std = int(round(gaussian_std * fs * 1e-3))
-    dt = int(round(dt * fs * 1e-3))
-    t_axis = np.arange(-max_time, max_time+1, dt, dtype=np.int32)
+    t_axis = np.arange(-max_time, max_time+1, dtype=np.int32)
 
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
     correlograms = np.zeros((num_units, num_units, len(t_axis)), dtype=np.float64)
 
     for seg_index in range(sorting.get_num_segments()):
         _compute_gaussian_correlograms(correlograms, spikes[seg_index][0].astype(np.int64),
-                                       spikes[seg_index][1].astype(np.int32), t_axis, gaussian_std)
+                                       spikes[seg_index][1].astype(np.int32), max_time, gaussian_std)
 
-    return correlograms, t_axis*1e-3*fs
+    return correlograms, t_axis*1e3/fs
 
 if HAVE_NUMBA:
 
@@ -588,10 +570,12 @@ if HAVE_NUMBA:
                     correlograms[i, j, :] += cc
                     correlograms[j, i, :] += cc[::-1]
 
-    @numba.jit((numba.float64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32[::1], numba.int32),
+    @numba.jit((numba.float64[:, :, ::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
                nopython=True, nogil=True, cache=True, parallel=True)
-    def _compute_gaussian_correlograms(correlograms, spike_trains, spike_clusters, t_axis, gaussian_std):
+    def _compute_gaussian_correlograms(correlograms, spike_trains, spike_clusters, max_time, gaussian_std):
         n_units = correlograms.shape[0]
+        gaussian = np.exp(-np.arange(-5*gaussian_std, 5*gaussian_std+1)**2/(2*gaussian_std**2)) / (gaussian_std * math.sqrt(2*math.pi))
+        margin = 4 * gaussian_std
 
         for i in numba.prange(n_units):
             spike_train1 = spike_trains[spike_clusters == i]
@@ -600,7 +584,7 @@ if HAVE_NUMBA:
                 spike_train2 = spike_trains[spike_clusters == j]
 
                 if i == j:
-                    correlograms[i, j] += _compute_autocorr_gaussian(spike_train1, t_axis, gaussian_std)
+                    correlograms[i, j] += _compute_autocorr_gaussian(spike_train1, gaussian, max_time + margin)[margin:-margin]
                 else:
-                    correlograms[i, j] += _compute_crosscorr_gaussian(spike_train1, spike_train2, t_axis, gaussian_std)
+                    correlograms[i, j] += _compute_crosscorr_gaussian(spike_train1, spike_train2, gaussian, max_time + margin)[margin:-margin]
                     correlograms[j, i] = correlograms[i, j, ::-1]
