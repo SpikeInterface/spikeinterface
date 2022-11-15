@@ -6,6 +6,8 @@ from tqdm import tqdm
 import scipy.spatial
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.preprocessing import get_spatial_interpolation_kernel
+
 
 # try:
 #     import numba
@@ -62,7 +64,7 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
 
 
 def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_bins, spatial_bins,
-                             direction=1, spatial_interpolation_method='idw', spatial_interpolation_kwargs={}):
+                             direction=1, spatial_interpolation_method='kriging', spatial_interpolation_kwargs={}):
     """
     Apply inverse motion with spatial interpolation on traces.
 
@@ -124,8 +126,9 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
         # channel_locations_moved[:, direction] += channel_motions
         channel_locations_moved[:, direction] -= channel_motions
 
-        drift_kernel = get_drift_kernel(channel_locations, channel_locations_moved,
-                                        method=spatial_interpolation_method, **spatial_interpolation_kwargs)
+        drift_kernel = get_spatial_interpolation_kernel(channel_locations, channel_locations_moved,
+                                                        force_extrapolate=False, dtype='float32',
+                                                        method=spatial_interpolation_method, **spatial_interpolation_kwargs)
         
         
         i0 = np.searchsorted(bin_inds, bin_ind, side='left')
@@ -137,47 +140,6 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
         traces_corrected[i0:i1] = traces[i0:i1] @ drift_kernel
 
     return traces_corrected
-
-
-def get_drift_kernel(source_location, target_location, method='idw', num_closest=3, sigma_um=20., p=1):
-    # here asimple overview on spatial interpolation:
-    # https://www.aspexit.com/spatial-data-interpolation-tin-idw-kriging-block-kriging-co-kriging-what-are-the-differences/
-    
-    if method == 'idw':
-        distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
-        
-        drift_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float32')
-        for c in range(target_location.shape[0]):
-            ind_sorted = np.argsort(distances[c, :])
-            chan_closest = ind_sorted[:num_closest]
-            dists = distances[c, chan_closest]
-            if dists[0] == 0.:
-                # no interpolation the first have zeros distance
-                drift_kernel[chan_closest[0], c] = 1.
-            else:
-                w = 1 / dists
-                w /= np.sum(w)
-                drift_kernel[chan_closest, c] = w
-
-    elif method == 'kriging':
-        # this is an adaptation of  pykilosort implementation by Kush Benga
-        # https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L352
-        dist_xx = scipy.spatial.distance.cdist(source_location, source_location, metric='euclidean')
-        Kxx = np.exp(-(dist_xx / sigma_um) **p)
-
-        dist_yx = scipy.spatial.distance.cdist(target_location, source_location, metric='euclidean')
-        Kyx = np.exp(-(dist_yx / sigma_um) **p)
-
-        drift_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
-        drift_kernel = drift_kernel.T.astype('float32').copy()
-        
-        #TODO norm to one per col
-        
-    else:
-        raise ValueError('get_drift_kernel wrong method')
-    
-    return drift_kernel
-
 
 
 
@@ -221,6 +183,9 @@ def _get_closest_ind(array, values):
     return idxs
 
 
+# TODO:
+#  * add option for interpolation mode
+#  * add option to handle the borders
 
 class CorrectMotionRecording(BasePreprocessor):
     """
