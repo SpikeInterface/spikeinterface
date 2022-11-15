@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import scipy.stats
 from typing import List
 
 from spikeinterface.core.testing_tools import generate_sorting
@@ -87,9 +88,12 @@ def test_compute_autocorr_gaussian():
     t_axis = np.arange(-1500, 1501, dtype=np.int32)
     expectation = duration * freq**2 / fs
 
+    gaussian_15 = scipy.stats.norm.pdf(np.arange(-75, 76), loc=0.0, scale=15)
+    gaussian_30 = scipy.stats.norm.pdf(np.arange(-150, 151), loc=0.0, scale=30)
+
     spike_train = np.sort(np.random.uniform(low=0.0, high=fs*duration, size=duration*freq).astype(np.int64))
-    corr1 = _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std=15)
-    corr2 = _compute_autocorr_gaussian(spike_train, t_axis, gaussian_std=30)
+    corr1 = _compute_autocorr_gaussian(spike_train, gaussian_15, 1500)
+    corr2 = _compute_autocorr_gaussian(spike_train, gaussian_30, 1500)
 
     assert abs(np.mean(corr1) - expectation) < 0.2
     assert abs(np.mean(corr2) - expectation) < 0.2
