@@ -42,6 +42,10 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
             self.add_sorting_segment(RemoveDuplicatedSpikesSortingSegment(segment, censored_period,
                                                                           sorting.unit_ids, method, seed))
 
+        sorting.copy_metadata(self, only_main=False)
+        if sorting.has_recording():
+            self.register_recording(sorting._recording)
+
         self._kwargs = {
             'sorting': sorting.to_dict(),
             'censored_period_ms': censored_period_ms,
