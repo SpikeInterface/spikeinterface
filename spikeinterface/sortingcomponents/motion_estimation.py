@@ -306,8 +306,8 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                     ind_max = np.argmax(corr)
                     max_corr = corr[0, 0, ind_max]
                     if max_corr > corr_threshold:
-                        pairwise_displacement[i, j] = possible_displacement[ind_max]
-                        pairwise_displacement[j, i] = -possible_displacement[ind_max]
+                        pairwise_displacement[i, j] = -possible_displacement[ind_max]
+                        pairwise_displacement[j, i] = possible_displacement[ind_max]
                         correlation[i, j] = correlation[j, i] = max_corr
 
             pairwise_displacement = pairwise_displacement.tocsr()
@@ -449,20 +449,28 @@ def compute_global_displacement(
         if sparse_mask is not None:
             I, J = np.where(sparse_mask > 0)
         elif pairwise_displacement_weight is not None:
-            I, J = np.where(pairwise_displacement_weight > 0)
+            I, J = pairwise_displacement_weight.nonzero()
         else:
             I, J = np.where(np.ones_like(pairwise_displacement, dtype=bool))
 
         nnz_ones = np.ones(I.shape[0], dtype=pairwise_displacement.dtype)
+
         if pairwise_displacement_weight is not None:
-            W = pairwise_displacement_weight[I, J][:,None]
+            if isinstance(pairwise_displacement_weight, scipy.sparse.csr_matrix):
+                W = np.array(pairwise_displacement_weight[I, J]).T
+            else:
+                W = pairwise_displacement_weight[I, J][:,None]
         else:
             W = nnz_ones[:, None]
-        V = pairwise_displacement[I, J]
+        if isinstance(pairwise_displacement, scipy.sparse.csr_matrix):
+            V = np.array(pairwise_displacement[I, J])[0]
+        else:
+            V = pairwise_displacement[I, J]
         M = csr_matrix((nnz_ones, (range(I.shape[0]), I)))
         N = csr_matrix((nnz_ones, (range(I.shape[0]), J)))
         A = M - N
         idx = np.ones(A.shape[0], dtype=bool)
+
         xrange = trange if progress_bar else range
         for i in xrange(lsqr_robust_n_iter):
             p = lsqr(A[idx].multiply(W[idx]), V[idx] * W[idx][:,0])[0]
