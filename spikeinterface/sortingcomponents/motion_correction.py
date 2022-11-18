@@ -217,7 +217,7 @@ class CorrectMotionRecording(BasePreprocessor):
     """
     name = 'correct_motion'
 
-    def __init__(self, recording, motion, temporal_bins, spatial_bins=None, direction=1):
+    def __init__(self, recording, motion, temporal_bins, spatial_bins, direction=1):
         assert recording.get_num_segments() == 1, 'correct is handle only for one segment for the moment'
         BasePreprocessor.__init__(self, recording)
 
@@ -254,7 +254,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
             #     t0 = t0 + self.t_start
             times += t0
 
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=None)
 
         # print(traces.shape, times.shape, self.channel_locations, self.motion, self.temporal_bins, self.spatial_bins)
         trace2 = correct_motion_on_traces(traces, times, self.channel_locations, self.motion,
@@ -264,31 +264,3 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
             trace2 = trace2[:, channel_indices]
 
         return trace2
-
-
-
-class ResidualRecording(BasePreprocessor):
-    name = 'residual_recording'
-    def __init__(self, recording_1, recording_2):
-        assert recording_1.get_num_segments() == recording_2.get_num_segments()
-        BasePreprocessor.__init__(self, recording_1)
-
-        for parent_recording_segment_1, parent_recording_segment_2 in zip(recording_1._recording_segments, recording_2._recording_segments):
-            rec_segment = DifferenceRecordingSegment(parent_recording_segment_1, parent_recording_segment_2)
-            self.add_recording_segment(rec_segment)
-
-        self._kwargs = dict(recording_1=recording_1.to_dict(), recording_2=recording_2.to_dict())
-
-
-class DifferenceRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment_1, parent_recording_segment_2):
-        BasePreprocessorSegment.__init__(self, parent_recording_segment_1)
-        self.parent_recording_segment_1 = parent_recording_segment_1
-        self.parent_recording_segment_2 = parent_recording_segment_2
-
-    def get_traces(self, start_frame, end_frame, channel_indices):
-
-        traces_1 = self.parent_recording_segment_1.get_traces(start_frame, end_frame, channel_indices=slice(None))
-        traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices=slice(None))
-
-        return traces_2 - traces_1
