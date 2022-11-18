@@ -62,14 +62,14 @@ With SpikeInterface, users can:
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, in jupyter)
 - export report and export to phy
-- offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://https://github.com/SpikeInterface/spikeinterface-gui)
+- offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
 - have some powerful sorting components to build your own sorter.
 
 
 
 **Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
 
-You can also have a look at the [spikeinterface-gui](https://https://github.com/SpikeInterface/spikeinterface-gui).
+You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui).
 
 ## Documentation
 
