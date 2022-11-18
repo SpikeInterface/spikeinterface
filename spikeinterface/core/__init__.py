@@ -62,7 +62,7 @@ from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
-from .waveform_extractor import WaveformExtractor, extract_waveforms
+from .waveform_extractor import WaveformExtractor, extract_waveforms, load_waveforms
 
 # retrieve datasets
 from .datasets import download_dataset
