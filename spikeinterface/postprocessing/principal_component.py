@@ -337,11 +337,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         for chan_ind, chan_id in enumerate(channel_ids):
             pca_model = pca_models[chan_ind]
             if n_jobs > 1:
-                if self.extension_folder is not None:
-                    pca_model_file = self.extension_folder / f"tmp_pca_model_{mode}_{chan_id}.pkl"
-                else:
-                    tmp_folder.mkdir(exist_ok=True)
-                    pca_model_file = tmp_folder / f"tmp_pca_model_{mode}_{chan_id}.pkl"
+                tmp_folder.mkdir(exist_ok=True)
+                pca_model_file = tmp_folder / f"tmp_pca_model_{mode}_{chan_id}.pkl"
                 with pca_model_file.open("wb") as f:
                     pickle.dump(pca_model, f)
                 pca_model_files.append(pca_model_file)

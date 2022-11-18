@@ -77,7 +77,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         
         we = kwargs['waveform_extractor']
         if  isinstance(we, str):
-            we = WaveformExtractor.load_from_folder(we)
+            we = WaveformExtractor.load(we)
             kwargs['waveform_extractor'] = we
         
         templates = we.get_all_templates(mode='average')

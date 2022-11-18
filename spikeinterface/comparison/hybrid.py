@@ -133,7 +133,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
                  injected_rate: float = 0.05, refractory_period_ms: float = 1.5,
                  injected_sorting_folder: Union[str, Path, None] = None) -> None:
         if isinstance(wvf_extractor, (Path, str)):
-            wvf_extractor = WaveformExtractor.load_from_folder(wvf_extractor)
+            wvf_extractor = WaveformExtractor.load(wvf_extractor)
 
         target_recording = wvf_extractor.recording
         target_sorting = wvf_extractor.sorting

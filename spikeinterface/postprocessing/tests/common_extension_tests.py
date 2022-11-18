@@ -54,8 +54,8 @@ class WaveformExtensionCommonTestSuite:
         else:
             sorting = sorting.save(folder=cache_folder / 'toy_sorting_2seg')
         we2 = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms_2seg',
-                               ms_before=3., ms_after=4., max_spikes_per_unit=500,
-                               n_jobs=1, chunk_size=30000, overwrite=True)
+                                ms_before=3., ms_after=4., max_spikes_per_unit=500,
+                                n_jobs=1, chunk_size=30000, overwrite=True)
         self.we2 = we2
         self.sparsity2 = get_template_channel_sparsity(we1, method="radius",
                                                        radius_um=30)
@@ -63,7 +63,9 @@ class WaveformExtensionCommonTestSuite:
                                       ms_before=3., ms_after=4., max_spikes_per_unit=500,
                                       n_jobs=1, chunk_size=30000)
         self.we_memory = we_memory
-        
+
+        self.we_zarr = we_memory.save(folder=cache_folder / 'toy_sorting_2seg', 
+                                      overwrite=True, format="zarr")
 
     def _test_extension_folder(self, we, in_memory=False):
         if self.extension_function_kwargs_list is None:
@@ -81,7 +83,7 @@ class WaveformExtensionCommonTestSuite:
             for ext_name in self.extension_data_names:
                 assert ext_name in ext._extension_data
             if not in_memory:
-                ext_loaded = self.extension_class.load_from_folder(we.folder)
+                ext_loaded = self.extension_class.load(we.folder)
                 for ext_name in self.extension_data_names:
                     assert ext_name in ext_loaded._extension_data
     
@@ -96,3 +98,6 @@ class WaveformExtensionCommonTestSuite:
         # memory
         print("Memory", self.we_memory)
         self._test_extension_folder(self.we_memory, in_memory=True)
+        # zarr
+        print("Zarr", self.we_zarr)
+        self._test_extension_folder(self.we_zarr)

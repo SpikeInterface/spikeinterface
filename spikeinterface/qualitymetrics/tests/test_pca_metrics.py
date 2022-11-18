@@ -39,10 +39,9 @@ def setup_module():
 
 
 def test_calculate_pc_metrics():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
     print(we)
-    pca = WaveformPrincipalComponent.load_from_folder(
-        cache_folder / 'toy_waveforms')
+    pca = WaveformPrincipalComponent.load(cache_folder / 'toy_waveforms')
     print(pca)
 
     res = calculate_pc_metrics(pca)

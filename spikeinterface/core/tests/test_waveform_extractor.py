@@ -59,7 +59,7 @@ def test_WaveformExtractor():
 
         if mode == "folder":
             # load back
-            we = WaveformExtractor.load_from_folder(folder)
+            we = WaveformExtractor.load(folder)
 
         wfs = we.get_waveforms(0)
 
@@ -94,6 +94,14 @@ def test_WaveformExtractor():
                                   we_saved.get_sampled_indices(unit_id))
             assert np.array_equal(we.get_all_templates(),
                                   we_saved.get_all_templates())
+        we_saved_zarr = we.save(cache_folder / f"we_saved_{mode}", format="zarr")
+        for unit_id in we_saved_zarr.unit_ids:
+            assert np.array_equal(we.get_waveforms(unit_id),
+                                  we_saved_zarr.get_waveforms(unit_id))
+            assert np.array_equal(we.get_sampled_indices(unit_id),
+                                  we_saved_zarr.get_sampled_indices(unit_id))
+            assert np.array_equal(we.get_all_templates(),
+                                  we_saved_zarr.get_all_templates())
 
 
 def test_extract_waveforms():
@@ -188,7 +196,7 @@ def test_recordingless():
     # save with relative paths
     we = extract_waveforms(recording, sorting, wf_folder,
                            use_relative_path=True, return_scaled=False)
-    we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
+    we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
 
     assert isinstance(we.recording, BaseRecording)
     assert we_loaded._recording is None
@@ -208,7 +216,7 @@ def test_recordingless():
     # delete original recording and rely on rec_attributes
     if platform.system() != "Windows":
         shutil.rmtree(cache_folder / "recording1")
-        we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
+        we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
         assert we_loaded._recording is None
 
 
@@ -321,4 +329,4 @@ if __name__ == '__main__':
     # test_extract_waveforms()
     # test_sparsity()
     # test_portability()
-    test_recordingless()
+    # test_recordingless()

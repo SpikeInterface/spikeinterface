@@ -78,7 +78,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         amps = np.concatenate(amps)
         segments = np.concatenate(segments)
 
-        amplitudes = []
         for segment_index in range(recording.get_num_segments()):
             mask = segments == segment_index
             amps_seg = amps[mask]
