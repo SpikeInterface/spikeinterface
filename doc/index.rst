@@ -10,8 +10,6 @@ Welcome to SpikeInterface's documentation!
 Spikeinterface is a Python module designed to improve the accessibility, reliability, and reproducibility
 of spike sorting and all its associated computations.
 
-
-
 With SpikeInterface, users can:
 
 - read/write many extracellular file formats.
@@ -50,13 +48,22 @@ Overview of SpikeInterface modules
     authors
 
 
-For more information, please have a look at:
+Other resources
+---------------
 
-- The `eLife paper <https://elifesciences.org/articles/61834>`_
+To get started with SpikeInterface, you can take a look at the following additional resources:
 
-- 1-hour `video tutorial <https://www.youtube.com/watch?v=fvKG_-xQ4D8&t=3364s&ab_channel=NeurodataWithoutBorders>`_, recorded for the NWB User Days (Sep 2020)
+- `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_` is a collection of basic and advanced tutorials, 
+It includes links to videos to dive into the SpikeInterface framework.
 
-- A collection of analysis notebook `SpikeInterface Reports <https://spikeinterface.github.io/>`_
+- `SpikeInterface Reports <https://spikeinterface.github.io/>`_ contains several notebooks to reproduce analysis figures 
+of SpikeInterface-based papers and to showcase the latest features of SpikeInterface.
+
+- The `2020 eLife paper <https://elifesciences.org/articles/61834>`_ introduces the concept and motivation and performs 
+an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). **Note**: the 
+code-base and implementation has changed a lot since the "paper" version in published in 2020. 
+For detailed documentation we therefore suggest more recent  resources, like this documentation and 
+:code:`spiketutorials`.
 
 
 Versions and compatibility
