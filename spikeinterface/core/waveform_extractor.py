@@ -1292,9 +1292,9 @@ class BaseWaveformExtractorExtension:
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
-            params = cls.load_params_from_zarr(folder, waveform_extractor=waveform_extractor)
+            params = cls.load_params_from_zarr(folder)
         else:
-            params = cls.load_params_from_folder(folder, waveform_extractor=waveform_extractor)
+            params = cls.load_params_from_folder(folder)
 
         if waveform_extractor is None:
             waveform_extractor = WaveformExtractor.load(folder)
@@ -1324,7 +1324,7 @@ class BaseWaveformExtractorExtension:
         return params
 
     @classmethod
-    def load_params_from_folder(cls, folder, waveform_extractor=None):
+    def load_params_from_folder(cls, folder):
         """
         Load extension params from folder.
         'folder' is the waveform extractor folder.
