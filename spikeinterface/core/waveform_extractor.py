@@ -1265,10 +1265,7 @@ class BaseWaveformExtractorExtension:
         
         if self.waveform_extractor.folder is not None:
             self.folder = self.waveform_extractor.folder
-            if not self.waveform_extractor.folder.suffix == ".zarr":
-                self.format = "binary"
-            else:
-                self.format = "zarr"
+            self.format = self.waveform_extractor.format
             if self.format == "binary":
                 self.extension_folder = self.folder / self.extension_name
                 if not self.extension_folder.is_dir():
@@ -1295,14 +1292,24 @@ class BaseWaveformExtractorExtension:
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
-            return cls.load_from_zarr(folder, waveform_extractor=waveform_extractor)
+            params = cls.load_params_from_zarr(folder, waveform_extractor=waveform_extractor)
         else:
-            return cls.load_from_folder(folder, waveform_extractor=waveform_extractor)
+            params = cls.load_params_from_folder(folder, waveform_extractor=waveform_extractor)
+
+        if waveform_extractor is None:
+            waveform_extractor = WaveformExtractor.load(folder)
+
+        # make instance with params
+        ext = cls(waveform_extractor)
+        ext._params = params
+        ext._load_extension_data()
+
+        return ext
 
     @classmethod
-    def load_from_zarr(cls, folder, waveform_extractor=None):
+    def load_params_from_zarr(cls, folder):
         """
-        Load extension from Zarr folder.
+        Load extension params from Zarr folder.
         'folder' is the waveform extractor zarr folder.
         """
         import zarr
@@ -1314,20 +1321,12 @@ class BaseWaveformExtractorExtension:
         assert 'params' in extension_group.attrs, f'No params file in extension {cls.extension_name} folder'
         params = extension_group.attrs['params']
 
-        if waveform_extractor is None:
-            waveform_extractor = WaveformExtractor.load(folder)
-        
-        # make instance with params
-        ext = cls(waveform_extractor)
-        ext._params = params
-        ext._load_extension_data()
-
-        return ext
+        return params
 
     @classmethod
-    def load_from_folder(cls, folder, waveform_extractor=None):
+    def load_params_from_folder(cls, folder, waveform_extractor=None):
         """
-        Load extension from folder.
+        Load extension params from folder.
         'folder' is the waveform extractor folder.
         """
         ext_folder = Path(folder) / cls.extension_name
@@ -1339,15 +1338,7 @@ class BaseWaveformExtractorExtension:
         with open(str(params_file), 'r') as f:
             params = json.load(f)
 
-        if waveform_extractor is None:
-            waveform_extractor = WaveformExtractor.load(folder)
-        
-        # make instance with params
-        ext = cls(waveform_extractor)
-        ext._params = params
-        ext._load_extension_data()
-
-        return ext
+        return params
 
     # use load instead
     def _load_extension_data(self):
@@ -1377,7 +1368,6 @@ class BaseWaveformExtractorExtension:
                     ext_data["index"] = ext_data_.attrs["index"]
                     ext_data.set_index("index", drop=True, inplace=True)
                     ext_data.index.rename("", inplace=True)
-                    print(ext_data)
                 else:
                     ext_data = ext_data_
                 self._extension_data[ext_data_name] = ext_data                    
