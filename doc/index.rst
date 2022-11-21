@@ -30,7 +30,7 @@ Overview of SpikeInterface modules
   :align: center
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :caption: Contents:
 
     overview
@@ -61,8 +61,8 @@ of SpikeInterface-based papers and to showcase the latest features of SpikeInter
 
 - The `2020 eLife paper <https://elifesciences.org/articles/61834>`_ introduces the concept and motivation and performs 
 an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). **Note**: the 
-code-base and implementation has changed a lot since the "paper" version in published in 2020. 
-For detailed documentation we therefore suggest more recent  resources, like this documentation and 
+code-base and implementation have changed a lot since the "paper" version in published in 2020. 
+For detailed documentation we therefore suggest more recent resources, like this documentation and 
 :code:`spiketutorials`.
 
 
