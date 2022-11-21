@@ -162,7 +162,7 @@ class WaveformExtractor:
         if sorting is None:
             sorting = load_extractor(folder / 'sorting.json',
                                      base_folder=folder)
-        we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes)
+        we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes, allow_unfiltered=True)
 
         for mode in _possible_template_modes:
             # load cached templates

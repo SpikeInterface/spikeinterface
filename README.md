@@ -66,18 +66,16 @@ With SpikeInterface, users can:
 - have some powerful sorting components to build your own sorter.
 
 
-
-**Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
-
-You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui).
-
 ## Documentation
 
-All documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
+Detailed documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
-Some useful jupyter notebook tutorials can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
+Several tutorials to get started can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
 
-There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking and sorting components.
+There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking 
+and sorting components.
+
+You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui).
 
 
 ## How to install spikeinteface
