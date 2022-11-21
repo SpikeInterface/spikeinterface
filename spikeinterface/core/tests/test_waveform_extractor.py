@@ -202,6 +202,73 @@ def test_recordingless():
         assert we_loaded._recording is None
 
 
+def test_unfiltered_extraction():
+    durations = [30, 40]
+    sampling_frequency = 30000.
+
+    # 2 segments
+    num_channels = 2
+    recording = generate_recording(num_channels=num_channels, durations=durations,
+                                   sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=False)
+    folder_rec = cache_folder / "wf_unfiltered"
+    recording = recording.save(folder=folder_rec)
+    num_units = 15
+    sorting = generate_sorting(
+        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
+
+    # test with dump !!!!
+    recording = recording.save()
+    sorting = sorting.save()
+
+    folder = cache_folder / 'test_waveform_extractor_unfiltered'
+    if folder.is_dir():
+        shutil.rmtree(folder)
+
+    for mode in ["folder", "memory"]:
+        if mode == "memory":
+            wf_folder = None
+        else:
+            wf_folder = folder
+
+        with pytest.raises(Exception):
+            we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=False)
+        if wf_folder is not None:
+            shutil.rmtree(wf_folder)
+        we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=True)
+
+        we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
+
+        we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+        we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
+
+        wfs = we.get_waveforms(0)
+        assert wfs.shape[0] <= 500
+        assert wfs.shape[1:] == (210, num_channels)
+
+        wfs, sampled_index = we.get_waveforms(0, with_index=True)
+
+        if mode == "folder":
+            # load back
+            we = WaveformExtractor.load_from_folder(folder)
+
+        wfs = we.get_waveforms(0)
+
+        template = we.get_template(0)
+        assert template.shape == (210, 2)
+        templates = we.get_all_templates()
+        assert templates.shape == (num_units, 210, num_channels)
+
+        wf_std = we.get_template(0, mode='std')
+        assert wf_std.shape == (210, num_channels)
+        wfs_std = we.get_all_templates(mode='std')
+        assert wfs_std.shape == (num_units, 210, num_channels)
+
+        wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
+        assert wf_segment.shape == (210, num_channels)
+        assert wf_segment.shape == (210, num_channels)
+
+
 def test_sparsity():
     durations = [30]
     sampling_frequency = 30000.
