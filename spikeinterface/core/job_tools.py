@@ -35,7 +35,7 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
     """
     
 job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
-            'mp_context', 'verbose', 'max_thread_per_process']
+            'mp_context', 'verbose', 'max_threads_per_process']
 
 
 # from https://stackoverflow.com/questions/24983493/tracking-progress-of-joblib-parallel-execution
@@ -226,7 +226,7 @@ class ChunkRecordingExecutor:
         "fork" is only available on UNIX systems.
     job_name: str
         Job name
-    max_thread_per_process: int or None
+    max_threads_per_process: int or None
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
@@ -239,7 +239,7 @@ class ChunkRecordingExecutor:
 
     def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
                  n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None,
-                 mp_context=None, job_name='', max_thread_per_process=1):
+                 mp_context=None, job_name='', max_threads_per_process=1):
         self.recording = recording
         self.func = func
         self.init_func = init_func
@@ -264,7 +264,7 @@ class ChunkRecordingExecutor:
                                             n_jobs=self.n_jobs)
         self.job_name = job_name
         
-        self.max_thread_per_process = max_thread_per_process
+        self.max_threads_per_process = max_threads_per_process
         
         if verbose:
             print(self.job_name, 'with n_jobs =', self.n_jobs, 'and chunk_size =', self.chunk_size)
@@ -304,7 +304,7 @@ class ChunkRecordingExecutor:
             with ProcessPoolExecutor(max_workers=n_jobs,
                                      initializer=worker_initializer,
                                      mp_context=mp.get_context(self.mp_context),
-                                     initargs=(self.func, self.init_func, self.init_args, self.max_thread_per_process)) as executor:
+                                     initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process)) as executor:
 
                 results = executor.map(function_wrapper, all_chunks)
 
@@ -329,10 +329,10 @@ global _worker_ctx
 global _func
 
 
-def worker_initializer(func, init_func, init_args, max_thread_per_process):
+def worker_initializer(func, init_func, init_args, max_threads_per_process):
     global _worker_ctx
     _worker_ctx = init_func(*init_args)
-    _worker_ctx['max_thread_per_process'] = max_thread_per_process
+    _worker_ctx['max_threads_per_process'] = max_threads_per_process
     global _func
     _func = func
 
@@ -341,9 +341,9 @@ def function_wrapper(args):
     segment_index, start_frame, end_frame = args
     global _func
     global _worker_ctx
-    max_thread_per_process = _worker_ctx['max_thread_per_process']
-    if max_thread_per_process is None:
+    max_threads_per_process = _worker_ctx['max_threads_per_process']
+    if max_threads_per_process is None:
         return _func(segment_index, start_frame, end_frame, _worker_ctx)
     else:
-        with threadpool_limits(limits=max_thread_per_process):
+        with threadpool_limits(limits=max_threads_per_process):
             return _func(segment_index, start_frame, end_frame, _worker_ctx)
