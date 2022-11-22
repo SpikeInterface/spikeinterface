@@ -85,10 +85,10 @@ def check_json(d):
     # quick hack to ensure json writable
     for k, v in d.items():
         # take care of keys first
-        if isinstance(k, np.int64):
+        if isinstance(k, np.integer):
             del dc[k]
             dc[int(k)] = v
-        if isinstance(k, np.float64):
+        if isinstance(k, np.floating):
             del dc[k]
             dc[float(k)] = v
         if isinstance(v, dict):
@@ -97,9 +97,9 @@ def check_json(d):
             dc[k] = str(v.absolute())
         elif isinstance(v, (bool, np.bool_)):
             dc[k] = bool(v)
-        elif isinstance(v, (np.int32, np.int64)):
+        elif isinstance(v, np.integer):
             dc[k] = int(v)
-        elif isinstance(v, (np.float32, np.float64)):
+        elif isinstance(v, np.floating):
             dc[k] = float(v)
         elif isinstance(v, datetime.datetime):
             dc[k] = v.isoformat()

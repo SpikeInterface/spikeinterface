@@ -141,7 +141,7 @@ class WaveformExtractor:
         if sorting is None:
             sorting = load_extractor(folder / 'sorting.json',
                                      base_folder=folder)
-        we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes)
+        we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes, allow_unfiltered=True)
 
         for mode in _possible_template_modes:
             # load cached templates
@@ -830,7 +830,7 @@ class WaveformExtractor:
         
         spikes = []
         for segment_index in range(self.sorting.get_num_segments()):
-            num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids])
+            num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids], dtype=np.int64)
             spike_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
             spikes_ = np.zeros(num_in_seg,  dtype=spike_dtype)
             pos = 0
