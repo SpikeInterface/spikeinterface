@@ -61,6 +61,9 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         interpolation_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
         interpolation_kernel = interpolation_kernel.T.copy()
 
+        # sparsify
+        interpolation_kernel[interpolation_kernel < 0.001] = 0.
+
         # ensure sum = 1 for target inside
         s = np.sum(interpolation_kernel, axis=0)
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
