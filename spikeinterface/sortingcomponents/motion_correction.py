@@ -123,8 +123,8 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
             locs = channel_locations[:, direction]
             channel_motions = f(locs)
         channel_locations_moved = channel_locations.copy()
-        # channel_locations_moved[:, direction] += channel_motions
-        channel_locations_moved[:, direction] -= channel_motions
+        channel_locations_moved[:, direction] += channel_motions
+        # channel_locations_moved[:, direction] -= channel_motions
 
         drift_kernel = get_spatial_interpolation_kernel(channel_locations, channel_locations_moved,
                                                         force_extrapolate=False, dtype='float32',
