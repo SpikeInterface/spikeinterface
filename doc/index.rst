@@ -53,7 +53,7 @@ Other resources
 
 To get started with SpikeInterface, you can take a look at the following additional resources:
 
-- `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_` is a collection of basic and advanced tutorials, 
+- `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_ is a collection of basic and advanced tutorials, 
 It includes links to videos to dive into the SpikeInterface framework.
 
 - `SpikeInterface Reports <https://spikeinterface.github.io/>`_ contains several notebooks to reproduce analysis figures 
