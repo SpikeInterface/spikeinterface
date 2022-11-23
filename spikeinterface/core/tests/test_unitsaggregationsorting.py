@@ -5,7 +5,7 @@ from pathlib import Path
 from spikeinterface.core import aggregate_units
 
 from spikeinterface.core import NpzSortingExtractor
-from spikeinterface.core.testing_tools import create_sorting_npz
+from spikeinterface.core import create_sorting_npz
 
 
 if hasattr(pytest, "global_test_folder"):

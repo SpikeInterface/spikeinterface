@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 
 from spikeinterface.core.recording_tools import (get_random_data_chunks, get_chunk_with_margin,
                                                  get_closest_channels, get_channel_distances, get_noise_levels,

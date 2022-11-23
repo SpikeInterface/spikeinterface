@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 
 from spikeinterface import set_global_tmp_folder
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 
 from spikeinterface.preprocessing import clip, blank_staturation
 
