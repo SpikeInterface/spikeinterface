@@ -75,6 +75,8 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "fsspec",
+    "aiohttp",
 ]
 
 widgets = [
