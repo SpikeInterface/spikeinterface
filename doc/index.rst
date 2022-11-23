@@ -53,7 +53,7 @@ Other resources
 
 To get started with SpikeInterface, you can take a look at the following additional resources:
 
-- `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_` is a collection of basic and advanced tutorials, 
+- `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_ is a collection of basic and advanced tutorials, 
 It includes links to videos to dive into the SpikeInterface framework.
 
 - `SpikeInterface Reports <https://spikeinterface.github.io/>`_ contains several notebooks to reproduce analysis figures 
@@ -69,9 +69,9 @@ For detailed documentation we therefore suggest more recent resources, like this
 Versions and compatibility
 --------------------------
 
-We released a major version of SpikeInterface in July 2021 (version 0.90.0)
+We released a major version of SpikeInterface (referred to as **new API**) in July 2021 (version>=0.90) which:
 
-  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series
+  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series (**old API**)
   * is not a metapackage anymore
   * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
 
@@ -79,7 +79,7 @@ Please see the release notes here: :ref:`release0.90.0`.
 
 For other version release notes check the :ref:`releasenotes`.
   
-See the documentation for the version 0.13.0 (old API) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
+See the documentation for the version **old API** (version<=0.13) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
 
 
 .. Indices and tables

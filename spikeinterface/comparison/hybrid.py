@@ -3,8 +3,7 @@ from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, NpzSortingExtractor, InjectTemplatesRecording
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.testing_tools import generate_sorting
-from spikeinterface.extractors.toy_example import synthesize_random_firings
+from spikeinterface.core import generate_sorting
 
 
 class HybridUnitsRecording(InjectTemplatesRecording):

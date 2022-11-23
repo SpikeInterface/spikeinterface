@@ -5,7 +5,7 @@ import numpy as np
 import platform
 
 
-from spikeinterface.core.testing_tools import generate_recording, generate_sorting, NumpySorting
+from spikeinterface.core import generate_recording, generate_sorting, NumpySorting
 from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms
 
 

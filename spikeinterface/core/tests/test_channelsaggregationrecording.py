@@ -2,7 +2,7 @@ import numpy as np
 
 from spikeinterface.core import aggregate_channels
 
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 
 
 def test_channelsaggregationrecording():
