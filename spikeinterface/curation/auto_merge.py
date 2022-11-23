@@ -9,21 +9,24 @@ from ..qualitymetrics import compute_refrac_period_violations, compute_firing_ra
 from .mergeunitssorting import MergeUnitsSorting
 
 
-def get_potential_auto_merge(waveform_extractor,
-                minimum_spikes=1000, maximum_distance_um=150.,
-                peak_sign="neg",
-                bin_ms=0.25, window_ms=100.,
-                corr_diff_thresh=0.16,
-                template_diff_thresh=0.25,
-                censored_period_ms=0., refractory_period_ms=1.0,
-                sigma_smooth_ms = 0.6,
-                contamination_threshold=0.2,
-                adaptative_window_threshold=0.5,
-                num_channels=5,
-                num_shift=5,
-                firing_contamination_balance=1.5,
-                extra_outputs=False,
-                ):
+def get_potential_auto_merge(
+    waveform_extractor, 
+    minimum_spikes=1000, 
+    maximum_distance_um=150.,
+    peak_sign="neg",
+    bin_ms=0.25, window_ms=100.,
+    corr_diff_thresh=0.16,
+    template_diff_thresh=0.25,
+    censored_period_ms=0., 
+    refractory_period_ms=1.0,
+    sigma_smooth_ms = 0.6,
+    contamination_threshold=0.2,
+    adaptative_window_threshold=0.5,
+    num_channels=5,
+    num_shift=5,
+    firing_contamination_balance=1.5,
+    extra_outputs=False, 
+):
     """
     Algorithm to find and check potential merges between units.
 
@@ -31,71 +34,70 @@ def get_potential_auto_merge(waveform_extractor,
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
 
 
-    The merge are proposed when:
-      * STEP 1:  enougth spikes in each units for coimputing the correlogram
-      * STEP 2: each units is not contaminated by checking auto corrlogram
-      * STEP 3 : unit location are close enough
-      * STEP 4 : the cross correlogram of 2 units is similar to each auto corrleogram
-      * STEP 5 the waveform of the 2 units are similar
-      * STEP 6 : the "score" is increase.
-        The score is a balance between having more spike (increasing the firing) and 
-        getting more contamination in the auto correlogram.
+    The merges are proposed when the following criteria are met:
+      * STEP 1: enough spikes are found in each units for computing the correlogram (`minimum_spikes`)
+      * STEP 2: each unit is not contaminated (by checking auto-correlogram - `contamination_threshold`)
+      * STEP 3: estimated unit locations are close enough (`maximum_distance_um`)
+      * STEP 4: the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
+      * STEP 5: the templates of the two units are similar (`template_diff_thresh`)
+      * STEP 6: the unit "quality score" is increased after the merge.
+
+    The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in 
+    contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
+
+    .. math::
+        Q = f(1 - (k + 1)C)
+
 
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
     minimum_spikes: int 
-        Minimum number of spike to be a potential merge.
-        Enought to estimate the correlogram
-        STEP 1
+        Minimum number of spikes for each unit to consider a potential merge.
+        Enough spikes are needed to estimate the correlogram, by default 1000
     maximum_distance_um: float
-        Minimum distance between units for considering a merge.
-        STEP 3
+        Minimum distance between units for considering a merge, by default 150
     peak_sign: "neg"/"pos"/"both"
-        Used to estimate the maximum channel of a template
-        STEP 3
+        Peak sign used to estimate the maximum channel of a template, by default "neg"
     bin_ms: float
-        Used for computing the correlogram
-        STEP 4
+        Bin size in ms used for computing the correlogram, by default 0.25
     window_ms: float
-        Used for computing the correlogram
-        STEP 4
+        Window size in ms used for computing the correlogram, by default 100
     corr_diff_thresh: float
-        between 0 and 1
         The threshold on the "correlogram distance metric" for considering a merge.
-        STEP 4
+        It needs to be between 0 and 1, by default 0.16
     template_diff_thresh: float
-        between 0 and 1
         The threshold on the "template distance metric" for considering a merge.
-        STEP 5
+        It needs to be between 0 and 1, by default 0.25
     censored_period_ms: float
-        Used to compute the refractory period violations aka "contaminagtion"
-        STEP 2.
+        Used to compute the refractory period violations aka "contamination", by default 0
     refractory_period_ms: float
-        Used to compute the refractory period violations aka "contaminagtion"
-        STEP 2.
+        Used to compute the refractory period violations aka "contamination", by default 1
     sigma_smooth_ms: float
-        Parameters to smooth the correlogram in STEP 4
+        Parameters to smooth the correlogram estimation, by default 0.6
     contamination_threshold: float
-        Threshold for not taking in account a unit when too much contaminated (STEP 2)
+        Threshold for not taking in account a unit when it is too contaminated, by default 0.2
     adaptative_window_threshold:: float
-        Parameter to detect the window size in STEP 4
+        Parameter to detect the window size in correlogram estimation, by default 0.5
     num_channels: int
-        Number of channel to use for STEP 5
+        Number of channel to use for template similarity computation, by default 5
     num_shift: int
-        shift to be explored for STEP 5
+        Number of shifts in samles to be explored for template similarity computation, by default 5
     firing_contamination_balance: float
-        Parameter to control the balance for STEP 6.
+        Parameter to control the balance between firing rate and contamination in computing unit "quality score",
+        by default 1.5
+    extra_outputs: bool
+        If True, an additional dictionary (`outs`) with processed data is returned, by default False
         
     Returns
     -------
-    potential_merges
-        A list of tuple of 2 elements.
-        List of pair that could be merged
-    outs: optional
-        Return only when extra_outputs=True
-        A dictionary that contain data for debugging and plotting.
+    potential_merges:
+        A list of tuples of 2 elements.
+        List of pairs that could be merged.
+    outs:
+        Returned only when extra_outputs=True
+        A dictionary that contains data for debugging and plotting.
     """
     
     we = waveform_extractor
@@ -106,7 +108,6 @@ def get_potential_auto_merge(waveform_extractor,
     #    * not enough spikes for one of theses
     #    * auto correlogram is contaminated
     #    * to far away one from each other
-    
 
     # STEP 1 : 
     n = unit_ids.size
@@ -132,10 +133,8 @@ def get_potential_auto_merge(waveform_extractor,
     unit_locations = chan_loc[unit_max_chan, :]
     unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric='euclidean')
     pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
-    
-    # print('Will check ', np.sum(pair_mask), 'pairs on ', pair_mask.size)
-    
-    # Step 4 : potential auto merge by correlogram
+
+    # STEP 4 : potential auto merge by correlogram
     correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method='numba')
     correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
     # find correlogram window for each units
@@ -150,25 +149,18 @@ def get_potential_auto_merge(waveform_extractor,
                                     pair_mask=pair_mask)
     pair_mask = pair_mask & (correlogram_diff  < corr_diff_thresh)
 
-
-
-    # step 5 : check if potential merge with CC also have template similarity
+    # STEP 5 : check if potential merge with CC also have template similarity
     templates = we.get_all_templates(mode='average')
     templates_diff = compute_templates_diff(sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask)
     pair_mask = pair_mask & (templates_diff  < template_diff_thresh)
 
-
-
-
-    # step 6 : validate the potential merges with CC increase the contamination quality metrics
+    # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations, 
         firing_contamination_balance, refractory_period_ms, censored_period_ms)
 
-
-    # create the final list from pair_mask boolean matrix
+    # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
-
 
     if extra_outputs:
         outs = dict(
@@ -185,7 +177,7 @@ def get_potential_auto_merge(waveform_extractor,
 
 
 def compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes, adaptative_window_threshold=0.5,
-            pair_mask=None):
+                             pair_mask=None):
     """
     Original author: Aurelien Wyngaard (lussac)
     
@@ -214,14 +206,12 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes, ad
     
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
-    
+
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype='bool')
-    
-    
+
     # Index of the middle of the correlograms.
     m = correlograms_smoothed.shape[2] // 2
-    
     num_spikes = sorting.get_total_num_spikes()
 
     corr_diff = np.full((n, n), np.nan, dtype='float64')
@@ -232,16 +222,14 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes, ad
 
             unit_id1, unit_id2 = unit_ids[unit_ind1], unit_ids[unit_ind2]
 
-            
             num1, num2 = num_spikes[unit_id1], num_spikes[unit_id2]
             # Weighted window (larger unit imposes its window).
             win_size = int(round((num1 * win_sizes[unit_ind1] + num2 * win_sizes[unit_ind2]) / (num1 + num2)))    
             # Plage of indices where correlograms are inside the window.
             corr_inds = np.arange(m - win_size, m + win_size, dtype=int)
-            
+
             # TODO : for Aurelien 
             shift = 0
-
             auto_corr1 = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind1, :])
             auto_corr2 = normalize_correlogram(correlograms_smoothed[unit_ind2, unit_ind2, :])
             cross_corr = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind2, :])
@@ -250,7 +238,7 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes, ad
             # Weighted difference (larger unit imposes its difference).
             w_diff = (num1 * diff1 + num2 * diff2) / (num1 + num2)
             corr_diff[unit_ind1, unit_ind2] = w_diff
-    
+
     return corr_diff
 
 
@@ -275,7 +263,7 @@ def normalize_correlogram(correlogram: np.ndarray):
 
 def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
-    
+    Smooths cross-correlogram with a Gaussian kernel.
     """
     # OLD implementation : smooth correlogram by low pass filter
     # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
@@ -289,6 +277,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
 
     return correlograms_smoothed
 
+
 def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     """
     Computes an adaptive window to correlogram (basically corresponds to the first peak).
@@ -297,9 +286,9 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
 
     Parameters
     ----------
-    auto_corr (np.ndarray) [time]:
+    auto_corr: np.ndarray
         Correlogram used for adaptive window.
-    threshold (float):
+    threshold: float
         Minimum threshold of correlogram (all peaks under this threshold are discarded).
 
     Returns
@@ -317,7 +306,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     peaks = peaks[keep]
     keep = peaks < (auto_corr.shape[0] // 2)
     peaks = peaks[keep]
- 
+
     if peaks.size == 0:
         # If none of the peaks crossed the threshold, redo with threshold/2.
         return get_unit_adaptive_window(auto_corr, threshold/2)
@@ -328,22 +317,28 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-
 def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None):
     """
     Computes normalilzed template differences.
 
     Parameters
     ----------
+    sorting : BaseSorting
+        The sorting object
+    templates : np.array
+        The templates array (num_units, num_samples, num_channels)
+    num_channels: int, optional
+        Number of channel to use for template similarity computation, by default 5
+    num_shift: int, optional
+        Number of shifts in samles to be explored for template similarity computation, by default 5
     pair_mask: None or boolean array
         A bool matrix of size (num_units, num_units) to select
         which pair to compute.
 
-
     Returns
     -------
-    templates_diff
-
+    templates_diff: np.array
+        2D array with template differences
     """
     unit_ids = sorting.unit_ids
     n = len(unit_ids)
@@ -376,10 +371,12 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
 
     return templates_diff
 
+
 class MockWaveformExtractor:
     def __init__(self, recording, sorting):
         self.recording = recording
         self.sorting = sorting
+
 
 def check_improve_contaminations_score(we, pair_mask, contaminations,
         firing_contamination_balance, refractory_period_ms, censored_period_ms):
@@ -401,7 +398,6 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
-
         ind1, ind2 = inds1[i], inds2[i]
 
         c_1 = contaminations[ind1]
