@@ -19,11 +19,21 @@ try:
 except ModuleNotFoundError:
     HAVE_NWB = False
 
+try:
+    import fsspec
+    HAVE_FSSPEC = True
+except ModuleNotFoundError:
+    HAVE_FSSPEC = False
+
 PathType = Union[str, Path, None]
 
 
 def check_nwb_install():
     assert HAVE_NWB, NwbRecordingExtractor.installation_mesg
+
+
+def check_fsspec_install():
+    assert HAVE_FSSPEC, "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec\n\n"
 
 
 def get_electrical_series(nwbfile, electrical_series_name):
@@ -112,6 +122,7 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         if stream_mode == "fsspec":
+            check_nwb_install()
             import fsspec
             from fsspec.implementations.cached import CachingFileSystem
             import h5py
