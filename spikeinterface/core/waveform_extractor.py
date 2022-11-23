@@ -1368,9 +1368,9 @@ class BaseWaveformExtractorExtension:
         elif self.format == "zarr":            
             for ext_data_name in self.extension_group.keys():
                 ext_data_ = self.extension_group[ext_data_name]
-                if "is_dict" in ext_data_.attrs:
+                if "dict" in ext_data_.attrs:
                     ext_data = ext_data_[0]
-                elif "index" in ext_data_.attrs:
+                elif "dataframe" in ext_data_.attrs:
                     import xarray
                     ext_data = xarray.open_zarr(ext_data_.store,
                                                 group=f"{self.extension_group.name}/{ext_data_name}").to_pandas()
@@ -1421,8 +1421,9 @@ class BaseWaveformExtractorExtension:
                     if ext_data_name in self.extension_group.keys():
                         del self.extension_group[ext_data_name]
                     if isinstance(ext_data, dict):
-                        # dictionaries are saved as attributes
-                        self.extension_group.attrs["ext_data_name"] = check_json(ext_data)
+                        self.extension_group.create_dataset(name=ext_data_name, data=[ext_data],
+                                                            object_codec=numcodecs.JSON())
+                        ext_data.attrs["dict"] = True
                     elif isinstance(ext_data, np.ndarray):
                         self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
                                                             compressor=compressor)
@@ -1430,6 +1431,7 @@ class BaseWaveformExtractorExtension:
                         ext_data.to_xarray().to_zarr(store=self.extension_group.store,
                                                      group=f"{self.extension_group.name}/{ext_data_name}",
                                                      mode="a")
+                        ext_data.attrs["dataframe"] = True
                     else:
                         try:
                             self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
