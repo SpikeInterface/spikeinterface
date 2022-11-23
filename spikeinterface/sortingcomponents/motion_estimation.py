@@ -303,8 +303,13 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                         padding=possible_displacement.size // 2,
                         conv_engine=conv_engine,
                     )
-                    ind_max = np.argmax(corr)
-                    max_corr = corr[0, 0, ind_max]
+                    if conv_engine == "torch":
+                        max_corr, ind_max = torch.max(corr, dim=2)
+                        max_corr = max_corr.cpu()
+                        ind_max = ind_max.cpu()
+                    elif conv_engine == "numpy":
+                        ind_max = np.argmax(corr, axis=2)
+                        max_corr = corr[0, 0, ind_max]
                     if max_corr > corr_threshold:
                         pairwise_displacement[i, j] = -possible_displacement[ind_max]
                         pairwise_displacement[j, i] = possible_displacement[ind_max]
