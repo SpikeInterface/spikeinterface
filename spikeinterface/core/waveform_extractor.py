@@ -283,14 +283,14 @@ class WaveformExtractor:
     # map some method from recording and sorting
     @property
     def recording(self):
-        if self._recording is None:
+        if not self.has_recording():
             raise ValueError('WaveformExtractor is used in mode "with_recording=False" '
                              'this operation needs the recording')
         return self._recording
 
     @property
     def channel_ids(self):
-        if self._recording is not None:
+        if self.has_recording():
             return self.recording.channel_ids
         else:
             return np.array(self._rec_attributes['channel_ids'])
@@ -320,9 +320,12 @@ class WaveformExtractor:
     @property
     def return_scaled(self):
         return self._params['return_scaled']
+
+    def has_recording(self):
+        return self._recording is not None
      
     def get_num_channels(self):
-        if self._recording is not None:
+        if self.has_recording():
             return self.recording.get_num_channels()
         else:
             return self._rec_attributes['num_channels']
@@ -331,7 +334,7 @@ class WaveformExtractor:
         return self.sorting.get_num_segments()
 
     def get_probegroup(self):
-        if self._recording is not None:
+        if self.has_recording():
             return self.recording.get_probegroup()
         else:
             return self._rec_attributes['probegroup']
@@ -344,7 +347,7 @@ class WaveformExtractor:
     def get_channel_locations(self):
         # important note : contrary to recording
         # this give all channel locations, so no kwargs like channel_ids and axes
-        if self._recording is not None:
+        if self.has_recording():
             return self.recording.get_channel_locations()
         else:
             if self.get_probegroup() is not None:
@@ -357,7 +360,7 @@ class WaveformExtractor:
                 raise Exception('There are no channel locations')
 
     def channel_ids_to_indices(self, channel_ids):
-        if self._recording is not None:
+        if self.has_recording():
             return self.recording.ids_to_indices(channel_ids)
         else:
             all_channel_ids = self._rec_attributes['channel_ids']
@@ -568,7 +571,7 @@ class WaveformExtractor:
             else:
                 relative_to = None
 
-            if self._recording is not None:
+            if self.has_recording():
                 self.recording.dump(new_folder / 'recording.json', relative_to=relative_to)
             sorting.dump(new_folder / 'sorting.json', relative_to=relative_to)
 
@@ -629,7 +632,7 @@ class WaveformExtractor:
             relative_to = None
 
         probegroup = None
-        if self._recording is not None:
+        if self.has_recording():
             rec_attributes = dict(
                 channel_ids=self.recording.channel_ids,
                 sampling_frequency=self.recording.get_sampling_frequency(),
@@ -650,9 +653,9 @@ class WaveformExtractor:
             (folder / 'params.json').write_text(
                 json.dumps(check_json(self._params), indent=4), encoding='utf8')
 
-            if self._recording is not None:
-                if self._recording.is_dumpable:
-                    self._recording.dump(folder / 'recording.json', relative_to=relative_to)
+            if self.has_recording():
+                if self.recording.is_dumpable:
+                    self.recording.dump(folder / 'recording.json', relative_to=relative_to)
             if self.sorting.is_dumpable:
                 self.sorting.dump(folder / 'sorting.json', relative_to=relative_to)
 
@@ -697,9 +700,9 @@ class WaveformExtractor:
             zarr_root = zarr.open(str(folder), mode="w")
             # write metadata
             zarr_root.attrs['params'] = check_json(self._params)
-            if self._recording is not None:
-                if self._recording.is_dumpable:
-                    rec_dict = self._recording.to_dict(relative_to=relative_to)
+            if self.has_recording():
+                if self.recording.is_dumpable:
+                    rec_dict = self.recording.to_dict(relative_to=relative_to)
                     zarr_root.attrs['recording'] = check_json(rec_dict)
             if self.sorting.is_dumpable:
                 sort_dict = self.sorting.to_dict(relative_to=relative_to)
@@ -733,7 +736,7 @@ class WaveformExtractor:
         we = WaveformExtractor.load(folder)
         return we
 
-    def get_waveforms(self, unit_id, with_index=False, cache=False, memmap=True, sparsity=None):
+    def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True, sparsity=None):
         """
         Return waveforms for the specified unit id.
 
@@ -745,8 +748,9 @@ class WaveformExtractor:
             If True, spike indices of extracted waveforms are returned (default False)
         cache: bool
             If True, waveforms are cached to the self._waveforms dictionary (default False)
-        memmap: bool
-            If True, waveforms are loaded as memmap objects.
+        lazy: bool
+            If True, waveforms are loaded as memmap objects (when format="binary") or Zarr datasets 
+            (when format="zarr").
             If False, waveforms are loaded as np.array objects (default True)
         sparsity: dict or None
             If given, dictionary with unit ids as keys and channel sparsity by channel ids as values.
@@ -770,7 +774,7 @@ class WaveformExtractor:
                     if not waveform_file.is_file():
                         raise Exception('Waveforms not extracted yet: '
                                         'please do WaveformExtractor.run_extract_waveforms() first')
-                    if memmap:
+                    if lazy:
                         wfs = np.load(str(waveform_file), mmap_mode="r")
                     else:
                         wfs = np.load(waveform_file)
@@ -779,7 +783,10 @@ class WaveformExtractor:
                     if f'waveforms_{unit_id}' not in waveforms_group.keys():
                         raise Exception('Waveforms not extracted yet: '
                                         'please do WaveformExtractor.run_extract_waveforms() first')
-                    wfs = waveforms_group[f'waveforms_{unit_id}'][:]
+                    if lazy:
+                        wfs = waveforms_group[f'waveforms_{unit_id}']
+                    else:
+                        wfs = waveforms_group[f'waveforms_{unit_id}'][:]
                 if cache:
                     self._waveforms[unit_id] = wfs
             else:
@@ -1194,7 +1201,8 @@ def extract_waveforms(recording, sorting, folder=None,
         if load_if_exists and folder.is_dir():
             we = WaveformExtractor.load_from_folder(folder)
             return we
-    we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path, allow_unfiltered=allow_unfiltered)
+    we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path,
+                                  allow_unfiltered=allow_unfiltered)
     we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
                   return_scaled=return_scaled)
     we.run_extract_waveforms(seed=seed, **job_kwargs)
@@ -1363,10 +1371,9 @@ class BaseWaveformExtractorExtension:
                 if "is_dict" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 elif "index" in ext_data_.attrs:
-                    import pandas as pd
-                    ext_data = pd.DataFrame.from_records(ext_data_, columns=ext_data_.attrs["columns"])
-                    ext_data["index"] = ext_data_.attrs["index"]
-                    ext_data.set_index("index", drop=True, inplace=True)
+                    import xarray
+                    ext_data = xarray.open_zarr(ext_data_.store,
+                                                group=f"{self.extension_group.name}/{ext_data_name}").to_pandas()
                     ext_data.index.rename("", inplace=True)
                 else:
                     ext_data = ext_data_
@@ -1414,20 +1421,15 @@ class BaseWaveformExtractorExtension:
                     if ext_data_name in self.extension_group.keys():
                         del self.extension_group[ext_data_name]
                     if isinstance(ext_data, dict):
-                        self.extension_group.create_dataset(name=ext_data_name, data=[ext_data],
-                                                            object_codec=numcodecs.JSON())
-                        self.extension_group.attrs["is_dict"] = True
+                        # dictionaries are saved as attributes
+                        self.extension_group.attrs["ext_data_name"] = check_json(ext_data)
                     elif isinstance(ext_data, np.ndarray):
                         self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
                                                             compressor=compressor)
                     elif isinstance(ext_data, pd.DataFrame):
-                        ext_data_array = ext_data.to_numpy().astype("float")
-                        dset = self.extension_group.create_dataset(name=ext_data_name, data=ext_data_array,
-                                                                   compressor=compressor)
-                        index_dict = check_json({"index": ext_data.index.values})
-                        dset.attrs["index"] = index_dict["index"]
-                        dset.attrs["columns"] = list(ext_data.columns.values)
-                        
+                        ext_data.to_xarray().to_zarr(store=self.extension_group.store,
+                                                     group=f"{self.extension_group.name}/{ext_data_name}",
+                                                     mode="a")
                     else:
                         try:
                             self.extension_group.create_dataset(name=ext_data_name, data=ext_data,

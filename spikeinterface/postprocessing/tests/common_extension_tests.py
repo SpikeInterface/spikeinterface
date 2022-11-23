@@ -1,4 +1,7 @@
 import pytest
+import numpy as np
+import pandas as pd
+
 from spikeinterface import extract_waveforms, load_extractor
 from spikeinterface.extractors import toy_example
 from spikeinterface.postprocessing import get_template_channel_sparsity
@@ -62,10 +65,10 @@ class WaveformExtensionCommonTestSuite:
         we_memory = extract_waveforms(recording, sorting, mode="memory",
                                       ms_before=3., ms_after=4., max_spikes_per_unit=500,
                                       n_jobs=1, chunk_size=30000)
-        self.we_memory = we_memory
+        self.we_memory2 = we_memory
 
-        self.we_zarr = we_memory.save(folder=cache_folder / 'toy_sorting_2seg', 
-                                      overwrite=True, format="zarr")
+        self.we_zarr2 = we_memory.save(folder=cache_folder / 'toy_sorting_2seg',
+                                       overwrite=True, format="zarr")
 
     def _test_extension_folder(self, we, in_memory=False):
         if self.extension_function_kwargs_list is None:
@@ -96,8 +99,27 @@ class WaveformExtensionCommonTestSuite:
         print("2 segment", self.we2)
         self._test_extension_folder(self.we2)
         # memory
-        print("Memory", self.we_memory)
-        self._test_extension_folder(self.we_memory, in_memory=True)
+        print("Memory", self.we_memory2)
+        self._test_extension_folder(self.we_memory2, in_memory=True)
         # zarr
-        print("Zarr", self.we_zarr)
-        self._test_extension_folder(self.we_zarr)
+        print("Zarr", self.we_zarr2)
+        self._test_extension_folder(self.we_zarr2)
+
+        # test content of memory/content/zarr
+        for ext in self.we2.get_available_extension_names():
+            ext_memory = self.we2.load_extension(ext)
+            ext_folder = self.we2.load_extension(ext)
+            ext_zarr = self.we2.load_extension(ext)
+
+            for ext_data_name, ext_data_mem in ext_memory._extension_data.items():
+                ext_data_folder = ext_folder._extension_data[ext_data_name]
+                ext_data_zarr = ext_zarr._extension_data[ext_data_name]
+                if isinstance(ext_data_mem, np.ndarray):
+                    np.testing.assert_array_equal(ext_data_mem, ext_data_folder)
+                    np.testing.assert_array_equal(ext_data_mem, ext_data_zarr)
+                elif isinstance(ext_data_mem, pd.DataFrame):
+                    assert ext_data_mem.equals(ext_data_folder)
+                    assert ext_data_mem.equals(ext_data_zarr)
+                else:
+                    print(f"{ext_data_name} of type {type(ext_data_mem)} not tested.")
+                    

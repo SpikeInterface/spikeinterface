@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 import numpy as np
 import platform
+import zarr
 
 
 from spikeinterface.core import generate_recording, generate_sorting, NumpySorting
@@ -62,6 +63,10 @@ def test_WaveformExtractor():
             we = WaveformExtractor.load(folder)
 
         wfs = we.get_waveforms(0)
+        if mode == "folder":
+            assert isinstance(wfs, np.memmap)
+        wfs_array = we.get_waveforms(0, lazy=False)
+        assert isinstance(wfs_array, np.ndarray)
 
         template = we.get_template(0)
         assert template.shape == (210, 2)
@@ -94,6 +99,11 @@ def test_WaveformExtractor():
                                   we_saved.get_sampled_indices(unit_id))
             assert np.array_equal(we.get_all_templates(),
                                   we_saved.get_all_templates())
+        wfs = we_saved.get_waveforms(0)
+        assert isinstance(wfs, np.memmap)
+        wfs_array = we_saved.get_waveforms(0, lazy=False)
+        assert isinstance(wfs_array, np.ndarray)
+
         we_saved_zarr = we.save(cache_folder / f"we_saved_{mode}", format="zarr")
         for unit_id in we_saved_zarr.unit_ids:
             assert np.array_equal(we.get_waveforms(unit_id),
@@ -102,6 +112,10 @@ def test_WaveformExtractor():
                                   we_saved_zarr.get_sampled_indices(unit_id))
             assert np.array_equal(we.get_all_templates(),
                                   we_saved_zarr.get_all_templates())
+        wfs = we_saved_zarr.get_waveforms(0)
+        assert isinstance(wfs, zarr.Array)
+        wfs_array = we_saved_zarr.get_waveforms(0, lazy=False)
+        assert isinstance(wfs_array, np.ndarray)
 
 
 def test_extract_waveforms():
@@ -199,7 +213,7 @@ def test_recordingless():
     we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
 
     assert isinstance(we.recording, BaseRecording)
-    assert we_loaded._recording is None
+    assert not we_loaded.has_recording()
     with pytest.raises(ValueError):
         # reccording cannot be accessible
         rec = we_loaded.recording
@@ -217,7 +231,7 @@ def test_recordingless():
     if platform.system() != "Windows":
         shutil.rmtree(cache_folder / "recording1")
         we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
-        assert we_loaded._recording is None
+        assert not we_loaded.has_recording()
 
 
 def test_unfiltered_extraction():

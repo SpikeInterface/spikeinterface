@@ -349,7 +349,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(unit_ids))
 
         for unit_ind, unit_id in units_loop:
-            wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+            wfs = we.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
             if len(wfs) < p['n_components']:
                 continue
             if sparsity is not None:
@@ -373,6 +373,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 with open(pca_model_file, 'rb') as fid:
                     pca_models.append(pickle.load(fid))
                 pca_model_file.unlink()
+            shutil.rmtree(tmp_folder)
 
         # add models to extension data
         for chan_ind, chan_id in enumerate(channel_ids):
@@ -401,7 +402,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         project_on_non_fitted = False
         for unit_ind, unit_id in units_loop:
-            wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+            wfs = we.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
             if sparsity is not None:
                 sparse_channel_ids = sparsity[unit_id]
             else:
@@ -438,7 +439,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # with 'by_channel_global' we can't parallelize over channels
         for unit_ind, unit_id in units_loop:
-            wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+            wfs = we.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
             if wfs.size == 0:
                 continue
             # avoid loop with reshape
@@ -473,7 +474,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # with 'by_channel_global' we can't parallelize over channels
         for unit_ind, unit_id in units_loop:
-            wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+            wfs = we.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
             if sparsity is not None:
                 sparse_channel_ids = sparsity[unit_id]
             else:
@@ -503,7 +504,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(unit_ids))
 
         for unit_ind, unit_id in units_loop:
-            wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+            wfs = we.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
             pca_model.partial_fit(wfs_flat)
 
@@ -532,7 +533,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             units_loop = tqdm(units_loop, desc="Projecting waveforms", total=len(unit_ids))
 
         for unit_ind, unit_id in units_loop:
-            wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+            wfs = we.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
             proj = pca_model.transform(wfs_flat)
             projection_objects[unit_id][:, :] = proj
