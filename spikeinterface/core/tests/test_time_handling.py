@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-from spikeinterface.core.testing_tools import generate_recording, generate_sorting
+from spikeinterface.core import generate_recording, generate_sorting
 
 
 if hasattr(pytest, "global_test_folder"):
