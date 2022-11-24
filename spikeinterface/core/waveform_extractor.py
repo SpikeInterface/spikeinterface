@@ -1423,7 +1423,7 @@ class BaseWaveformExtractorExtension:
                     if isinstance(ext_data, dict):
                         self.extension_group.create_dataset(name=ext_data_name, data=[ext_data],
                                                             object_codec=numcodecs.JSON())
-                        ext_data.attrs["dict"] = True
+                        self.extension_group[ext_data_name].attrs["dict"] = True
                     elif isinstance(ext_data, np.ndarray):
                         self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
                                                             compressor=compressor)
@@ -1431,7 +1431,7 @@ class BaseWaveformExtractorExtension:
                         ext_data.to_xarray().to_zarr(store=self.extension_group.store,
                                                      group=f"{self.extension_group.name}/{ext_data_name}",
                                                      mode="a")
-                        ext_data.attrs["dataframe"] = True
+                        self.extension_group[ext_data_name].attrs["dataframe"] = True
                     else:
                         try:
                             self.extension_group.create_dataset(name=ext_data_name, data=ext_data,

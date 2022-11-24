@@ -107,6 +107,7 @@ class WaveformExtensionCommonTestSuite:
 
         # test content of memory/content/zarr
         for ext in self.we2.get_available_extension_names():
+            print(f"Testing data for {ext}")
             ext_memory = self.we2.load_extension(ext)
             ext_folder = self.we2.load_extension(ext)
             ext_zarr = self.we2.load_extension(ext)
