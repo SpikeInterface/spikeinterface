@@ -511,8 +511,8 @@ class BaseExtractor:
         """
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(include_annotations=True,
-                                 include_properties=False,
-                                 include_features=False,
+                                 include_properties=include_properties,
+                                 include_features=include_features,
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
