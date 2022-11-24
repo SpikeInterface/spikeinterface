@@ -124,7 +124,8 @@ def openMCSH5File(filename, stream_id):
     assert timestamps[0][0] < timestamps[0][2], 'Please check the validity of \'ChannelDataTimeStamps\' in the stream.'
     TimeVals = np.arange(timestamps[0][0], timestamps[0][2] + 1, 1) * Tick
 
-    assert Unit == b'V', 'Unexpected units found, expected volts, found {}'.format(Unit.decode('UTF-8'))
+    if not Unit == b'V':
+        print('Unexpected units found, expected volts, found {}'.format(Unit.decode('UTF-8')))
 
     timestep_avg = np.mean(TimeVals[1:] - TimeVals[0:-1])
     timestep_min = np.min(TimeVals[1:] - TimeVals[0:-1])
