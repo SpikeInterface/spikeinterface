@@ -1,6 +1,6 @@
 from pathlib import Path
 import importlib
-from copy import deepcopy
+import warnings
 import weakref
 import json
 import pickle
@@ -8,6 +8,7 @@ import os
 import random
 import string
 from packaging.version import parse
+from copy import deepcopy
 
 import numpy as np
 
@@ -510,8 +511,8 @@ class BaseExtractor:
         """
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(include_annotations=True,
-                                 include_properties=False,
-                                 include_features=False,
+                                 include_properties=include_properties,
+                                 include_features=include_features,
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
@@ -709,8 +710,8 @@ class BaseExtractor:
 
         return cached
 
-    def save_to_zarr(self, name=None, zarr_path=None, storage_options=None, 
-                     channel_chunk_size=None, verbose=True, **save_kwargs):
+    def save_to_zarr(self, name=None, folder=None, storage_options=None, 
+                     channel_chunk_size=None, verbose=True, zarr_path=None, **save_kwargs):
         """
         Save extractor to zarr.
 
@@ -724,20 +725,33 @@ class BaseExtractor:
         name: str or None
             Name of the subfolder in get_global_tmp_folder()
             If 'name' is given, 'folder' must be None.
-        zarr_path: str, Path, or None
-            Name of the zarr folder (.zarr).
+        folder: str, Path, or None
+            The folder used to save the zarr output. If the folder does not have a '.zarr' suffix, 
+            it will be automatically appended.
         storage_options: dict or None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
         channel_chunk_size: int or None
             Channels per chunk. Default None (chunking in time only)
+        verbose: bool
+            If True (default), the output is verbose.
+        zarr_path: str, Path, or None
+            (Deprecated) Name of the zarr folder (.zarr). 
         
         Returns
         -------
-        cached: saved copy of the extractor.
+        cached: ZarrRecordingExtractor
+            Saved copy of the extractor.
         """
         import zarr
-        if zarr_path is None:
+
+        if zarr_path is not None:
+            warnings.warn("The 'zarr_path' argument is deprecated. "
+                          "Use 'folder' instead",
+                          DeprecationWarning, stacklevel=2)
+            folder = zarr_path
+
+        if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
                 name = ''.join(random.choices(
@@ -752,12 +766,13 @@ class BaseExtractor:
                         print(f'Use zarr_path={zarr_path}')
         else:
             if storage_options is None:
-                if isinstance(zarr_path, str):
-                    zarr_path_init = zarr_path
-                    zarr_path = Path(zarr_path)
-                else:
-                    zarr_path_init = str(zarr_path)
+                folder = Path(folder)
+                if folder.suffix != ".zarr":
+                    folder = folder.parent / f"{folder.stem}.zarr"
+                zarr_path = folder
+                zarr_path_init = str(zarr_path)
             else:
+                zarr_path = folder
                 zarr_path_init = zarr_path
 
         if isinstance(zarr_path, Path):

@@ -12,7 +12,8 @@ def remove_redundant_units(sorting_or_waveform_extractor,
                            agreement_threshold=0.2,
                            duplicate_threshold=0.8,
                            remove_strategy='minimum_shift',
-                           peak_sign="neg"):
+                           peak_sign="neg",
+                           extra_outputs=False):
     """
     Removes redundant or duplicate units by comparing the sorting output with itself.
     
@@ -43,6 +44,8 @@ def remove_redundant_units(sorting_or_waveform_extractor,
             'highest_amplitude': keep the unit with the best amplitude on un shifted max.
     peak_sign: str  ('neg', 'pos', 'both')
         Used when remove_strategy='highest_amplitude'
+    extra_outputs: bool
+        If True, will return the redundant pairs.
 
     Returns
     -------
@@ -116,7 +119,10 @@ def remove_redundant_units(sorting_or_waveform_extractor,
 
     sorting_clean = sorting.remove_units(remove_unit_ids)
 
-    return sorting_clean
+    if extra_outputs:
+        return sorting_clean, redundant_unit_pairs
+    else:
+        return sorting_clean
 
     
 def find_redundant_units(sorting, delta_time: float=0.4, agreement_threshold=0.2, duplicate_threshold=0.8):

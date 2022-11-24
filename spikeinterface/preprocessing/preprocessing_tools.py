@@ -61,6 +61,9 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         interpolation_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
         interpolation_kernel = interpolation_kernel.T.copy()
 
+        # sparsify
+        interpolation_kernel[interpolation_kernel < 0.001] = 0.
+
         # ensure sum = 1 for target inside
         s = np.sum(interpolation_kernel, axis=0)
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
@@ -69,9 +72,9 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
         interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float64')
         for c in range(target_location.shape[0]):
-            ind_sorted = np.argsort(distances[c, :])
+            ind_sorted = np.argsort(distances[:, c])
             chan_closest = ind_sorted[:num_closest]
-            dists = distances[c, chan_closest]
+            dists = distances[chan_closest, c]
             if dists[0] == 0.:
                 # no interpolation the first have zeros distance
                 interpolation_kernel[chan_closest[0], c] = 1.
@@ -87,7 +90,7 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
         interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float64')
         for c in range(target_location.shape[0]):
-            ind_closest = np.argmin(distances[c, :])
+            ind_closest = np.argmin(distances[:, c])
             interpolation_kernel[ind_closest, c] = 1.
 
     else:

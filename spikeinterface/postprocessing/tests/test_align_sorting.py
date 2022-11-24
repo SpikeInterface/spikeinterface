@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, NumpySorting
-from spikeinterface.core.testing_tools import generate_sorting
+from spikeinterface.core import generate_sorting
 
 from spikeinterface.postprocessing import align_sorting
 

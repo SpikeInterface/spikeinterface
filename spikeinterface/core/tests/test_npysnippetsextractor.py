@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 
 from spikeinterface.core import NpySnippetsExtractor
-from spikeinterface.core.testing_tools import generate_snippets
+from spikeinterface.core import generate_snippets
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
