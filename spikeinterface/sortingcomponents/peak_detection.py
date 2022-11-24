@@ -413,7 +413,6 @@ if HAVE_TORCH:
         peak_sign,
         thresholds,
         exclude_sweep_size=5,
-        max_window=7,
         neighbours_mask=None,
         device=None,
     ):
@@ -433,14 +432,14 @@ if HAVE_TORCH:
             "neg", "pos" or "both", by default "neg"
         exclude_sweep_size : int, optional
             How many temporal neighbors to compare with during argrelmin, by default 5
-        max_window : int, optional
-            How many temporal neighbors to compare with during dedup, by default 7
+            Called `order` in original the implementation. The `max_window` parameter, used
+            for deduplication, is now set as 2* exclude_sweep_size
         neighbor_mask : np.array, optional
             If given, a matrix with shape (num_channels, num_neighbours) with 
             neighbour indices for each channel. The matrix needs to be rectangular and
             padded to num_channels, by default None
         device : str, optional
-            "cpu", "gpu", or None. If None and cuda is available, "gpu" is selected, by default None
+            "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected, by default None
 
         Returns
         -------
@@ -485,9 +484,7 @@ if HAVE_TORCH:
         window_max_inds = unique_inds[inds.view(-1)[unique_inds] == unique_inds]
 
         # voltage threshold (@Charlie, added by channel)
-        thresholds_by_channel = torch.as_tensor(
-                thresholds_torch[window_max_inds % num_channels], device=device, dtype=torch.float
-            )
+        thresholds_by_channel = thresholds_torch[window_max_inds % num_channels]
         max_amps_at_inds = max_amps.view(-1)[window_max_inds]
         crossings = torch.nonzero(max_amps_at_inds > thresholds_by_channel).squeeze()
         if not crossings.numel():
@@ -522,10 +519,7 @@ if HAVE_TORCH:
             # this sparsely populated array, but it leads to a different result.
             max_amps[:] = 0
             max_amps[sample_inds, chan_inds] = amplitudes
-
-            # TODO: @Charlie
-            # 1. is this to deduplicate over neighbours using a wider window? Assuming propagation
-            # 2. can we derive max_window from exclude_sweep_ms (like max_window = 2*exclude_window_ms)?
+            max_window = 2 * exclude_sweep_size
             max_amps = F.max_pool2d(
                 max_amps[None, None],
                 kernel_size=[2 * max_window + 1, 1],
