@@ -125,7 +125,7 @@ def openMCSH5File(filename, stream_id):
     TimeVals = np.arange(timestamps[0][0], timestamps[0][2] + 1, 1) * Tick
 
     if Unit != b'V':
-        print('Unexpected units found, expected volts, found {}'.format(Unit.decode('UTF-8')))
+        print(f"Unexpected units found, expected volts, found {Unit.decode('UTF-8')}. Assuming Volts.")
 
     timestep_avg = np.mean(TimeVals[1:] - TimeVals[0:-1])
     timestep_min = np.min(TimeVals[1:] - TimeVals[0:-1])
