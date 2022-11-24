@@ -31,8 +31,13 @@ or
 Some sorters are GPU required or optional. To run containerized sorters with GPU capabilities, CUDA and `nvidia-container-toolkit <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html>`_ needs to be installed.
 Only NVIDIA GPUs are supported for now.
 
-For Docker users, you can either install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_ (recommended for Windows and MacOS)
-or the `Docker Engine  <https://docs.docker.com/engine/install/ubuntu/>`_ (recommended for Linux). In the latter case, you also need to enable Docker to run without :code:`sudo` priviledges following `this post-install guide <https://docs.docker.com/engine/install/linux-postinstall/>`_
+For Docker users, you can either install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_ 
+(recommended for Windows and MacOS) or the `Docker Engine  <https://docs.docker.com/engine/install/ubuntu/>`_ 
+(recommended for Linux). 
+To enable :code:`Docker Desktop` to download the containers, you need to create an account on 
+`DockerHub <https://hub.docker.com/>`_ (free) and perform the login in :code:`Docker Desktop`.
+For :code:`Docker Engine`, you also need to enable Docker to run without :code:`sudo` priviledges 
+following `this post-install guide <https://docs.docker.com/engine/install/linux-postinstall/>`_
 
 The containers are built with Docker, but Singularity has an internal mechanism to convert docker images.
 Using Singularity is often prefered due to its simpler approach with regard to root privilege.
