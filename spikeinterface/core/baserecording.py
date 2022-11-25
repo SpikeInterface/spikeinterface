@@ -9,7 +9,7 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
-from .job_tools import job_keys
+from .job_tools import split_job_kwargs
 
 from warnings import warn
 
@@ -213,67 +213,52 @@ class BaseRecording(BaseRecordingSnippets):
         if all(t_start is None for t_start in t_starts):
             t_starts = None
 
-        if format == 'binary':
-            folder = save_kwargs['folder']
-            file_paths = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
-            dtype = save_kwargs.get('dtype', None)
-            if dtype is None:
-                dtype = self.get_dtype()
+        kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
-            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
+        if format == 'binary':
+            folder = kwargs['folder']
+            file_paths = [folder / f'traces_cached_seg{i}.raw' for i in range(self.get_num_segments())]
+            dtype = kwargs.get('dtype', None) or self.get_dtype()
+
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
-            cached = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
+            binary_rec = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
                                               num_chan=self.get_num_channels(), dtype=dtype,
                                               t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
                                               file_offset=0, gain_to_uV=self.get_channel_gains(),
                                               offset_to_uV=self.get_channel_offsets())
-            cached.dump(folder / 'binary.json', relative_to=folder)
+            binary_rec.dump(folder / 'binary.json', relative_to=folder)
 
             from .binaryfolder import BinaryFolderRecording
             cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == 'memory':
-            job_kwargs = {k: save_kwargs[k] for k in job_keys if k in save_kwargs}
             traces_list = write_memory_recording(self, dtype=None, **job_kwargs)
             from .numpyextractors import NumpyRecording
-
-            cached = NumpyRecording(traces_list, self.get_sampling_frequency(), t_starts=t_starts,
-                                    channel_ids=self.channel_ids)
+            cached = NumpyRecording(traces_list, self.get_sampling_frequency(), t_starts=t_starts, channel_ids=self.channel_ids)
 
         elif format == 'zarr':
             from .zarrrecordingextractor import get_default_zarr_compressor, ZarrRecordingExtractor
+            zarr_kwargs = kwargs.copy()
             
-            zarr_root = save_kwargs.get('zarr_root', None)
-            zarr_path = save_kwargs.get('zarr_path', None)
-            storage_options = save_kwargs.get('storage_options', None)
-            channel_chunk_size = save_kwargs.get('channel_chunk_size', None)
-
+            zarr_root = zarr_kwargs['zarr_root']
             zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
             zarr_root.attrs["num_segments"] = int(self.get_num_segments())
-            zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(),
-                                     compressor=None)
+            zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(), compressor=None)
 
-            dataset_paths = [f'traces_seg{i}' for i in range(self.get_num_segments())]
-            dtype = save_kwargs.get('dtype', None)
-            if dtype is None:
-                dtype = self.get_dtype()
+            zarr_kwargs['dataset_paths'] = [f'traces_seg{i}' for i in range(self.get_num_segments())]
+            zarr_kwargs['dtype'] = kwargs.get('dtype', None) or self.get_dtype()
             
-            compressor = save_kwargs.get('compressor', None)
-            filters = save_kwargs.get('filters', None)
+            compressor = kwargs.get('compressor', None)
+            filters = kwargs.get('filters', None)
             
-            if compressor is None:
-                compressor = get_default_zarr_compressor()
+            if 'compressor' not in zarr_kwargs:
+                zarr_kwargs['compressor'] = get_default_zarr_compressor()
                 print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
                       f"'compressor' argument")
-            
-            job_kwargs = {k: save_kwargs[k]
-                          for k in job_keys if k in save_kwargs}
-            write_traces_to_zarr(self, zarr_root=zarr_root, zarr_path=zarr_path, storage_options=storage_options,
-                                 channel_chunk_size=channel_chunk_size, dataset_paths=dataset_paths, dtype=dtype, 
-                                 compressor=compressor, filters=filters,
-                                 **job_kwargs)
+
+            write_traces_to_zarr(self, **zarr_kwargs, **job_kwargs)
 
             # save probe
             if self.get_property('contact_vector') is not None:
