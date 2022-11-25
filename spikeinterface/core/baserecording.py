@@ -281,7 +281,7 @@ class BaseRecording(BaseRecordingSnippets):
                 zarr_root.create_dataset(name="t_starts", data=t_starts,
                                          compressor=None)
 
-            cached = ZarrRecordingExtractor(zarr_path, storage_options)
+            cached = ZarrRecordingExtractor(zarr_kwargs['zarr_path'], zarr_kwargs['storage_options'])
 
         elif format == 'nwb':
             # TODO implement a format based on zarr
