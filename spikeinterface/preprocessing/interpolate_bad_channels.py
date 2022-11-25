@@ -105,11 +105,11 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
     """
-    def __init__(self, parent_recording_segment, bad_channel_indexes, all_weights):
+    def __init__(self, parent_recording_segment, bad_channel_indexes, weights):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self._bad_channel_indexes = bad_channel_indexes
-        self._all_weights = all_weights
+        self._weights = weights
 
     def get_traces(self, start_frame, end_frame, channel_indices):
 
@@ -119,7 +119,7 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
         traces = traces.copy()
 
-        traces[:, self._bad_channel_indexes] = traces @ self._all_weights
+        traces[:, self._bad_channel_indexes] = traces @ self._weights
 
         return traces
 

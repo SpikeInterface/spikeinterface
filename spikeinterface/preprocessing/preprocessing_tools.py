@@ -1,8 +1,6 @@
 import numpy as np
 import scipy.spatial
 
-
-
 def get_spatial_interpolation_kernel(source_location, target_location, method='kriging',
                                      sigma_um=20., p=1, num_closest=3, dtype='float32', force_extrapolate=False):
     """
