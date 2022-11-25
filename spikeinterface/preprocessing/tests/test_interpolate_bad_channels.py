@@ -3,6 +3,7 @@ import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 import pytest
 import numpy as np
+from spikeinterface.core.testing_tools import generate_recording
 
 try:
     import spikeglx
@@ -19,7 +20,7 @@ if DEBUG:
 
 
 @pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
-def test_interpolate_bad_channels():
+def test_compare_real_data_with_ibl():
     """
     Test SI implementation of bad channel interpolation against native IBL.
 
@@ -36,7 +37,8 @@ def test_interpolate_bad_channels():
     ibl_recording = spikeglx.Reader(local_path / "Noise4Sam_g0_imec0" / "Noise4Sam_g0_t0.imec0.ap.bin",
                                     ignore_warnings=True)
 
-    bad_channel_indexes = np.random.choice(si_recording.get_num_channels(),
+    num_channels = si_recording.get_num_channels()
+    bad_channel_indexes = np.random.choice(num_channels,
                                            10, replace=False)
     si_recording = spre.scale(si_recording, dtype="float32")
 
@@ -45,8 +47,8 @@ def test_interpolate_bad_channels():
                                                               bad_channel_indexes)
 
     # interpolate IBL
-    ibl_bad_channel_labels = np.zeros(si_recording.get_num_channels())
-    ibl_bad_channel_labels[bad_channel_indexes] = 1
+    ibl_bad_channel_labels = get_ibl_bad_channel_labels(num_channels,
+                                                        bad_channel_indexes)
 
     ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
     si_interpolated = si_interpolated_recording.get_traces(return_scaled=True)
@@ -67,6 +69,114 @@ def test_interpolate_bad_channels():
     assert np.allclose(ibl_interpolated*1e6, si_interpolated, 1e-1)
     is_close = np.isclose(ibl_interpolated*1e6, si_interpolated, 1e-5)
     assert np.mean(is_close) > 0.999
+
+
+def get_ibl_bad_channel_labels(num_channels, bad_channel_indexes):
+    ibl_bad_channel_labels = np.zeros(num_channels)  # TODO: own function
+    ibl_bad_channel_labels[bad_channel_indexes] = 1
+    return ibl_bad_channel_labels
+
+def get_test_recording(num_channels=32):
+
+    recording = generate_recording(num_channels=num_channels,
+                                   durations=[1])
+    return num_channels, recording
+
+@pytest.mark.parametrize("num_channels", [32, 64, 384])
+@pytest.mark.parametrize("sigma_um", [1.25, 20, 123.321])
+@pytest.mark.parametrize("p", [0, -0.5, 1, 0.5, 10])
+@pytest.mark.parametrize("shanks", [4, 1])
+def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_channels):
+    """
+    Perform an extended test across a range of function inputs to check
+    IBL and SI interpolation results match.
+    """
+    __, recording = get_test_recording(num_channels)
+
+    # distribute default probe locations across 4 shanks if set
+    x = np.random.choice(shanks, num_channels)
+    for idx, __ in enumerate(recording._properties["contact_vector"]):
+        recording._properties["contact_vector"][idx][1] = x[idx]
+
+    # generate random bad channel locations
+    bad_channel_indexes = np.random.choice(num_channels, np.random.randint(1, int(num_channels / 5)), replace=False)
+
+    # Run SI and IBL interpolation and check against eachother
+    recording = spre.scale(recording, dtype="float32")
+    si_interpolated_recording = spre.interpolate_bad_channels(recording,
+                                                              bad_channel_indexes,
+                                                              sigma_um=sigma_um,
+                                                              p=p)
+    si_interpolated = si_interpolated_recording.get_traces()
+
+    ibl_bad_channel_labels = get_ibl_bad_channel_labels(num_channels,
+                                                        bad_channel_indexes)
+    x, y = np.hsplit(recording.get_probe().contact_positions, 2)
+    ibl_interpolated = voltage.interpolate_bad_channels(recording.get_traces().T,
+                                                        ibl_bad_channel_labels,
+                                                        x=x.ravel(),
+                                                        y=y.ravel(),
+                                                        p=p,
+                                                        kriging_distance_um=sigma_um).T
+
+    assert np.allclose(si_interpolated, ibl_interpolated, rtol=0, atol=1e-06)
+
+
+
+def test_output_values():
+    """
+    Quick sanity check that the outputs are as expected. Settings all
+    channels equally apart, the interpolated channel should be a linear
+    combination of the non-bad channels, using arbitary sigma_um and p.
+
+    Then, set the final channel to twice as far away as the rest of the
+    other channels. Calculate the expected weights and check they
+    match interpolation output.
+
+    Checking the bad channel ts is a combination of
+    the non-interpolated channels is also an implicit test
+    these were not accidently changed during the procedure.
+    """
+    new_probe_locs = [[5, 7, 3, 5, 5],  # 5 channels, 1 in the center ('bad channel', zero index)
+                      [5, 5, 5, 7, 3]]  # all others equal distance away.
+    bad_channel_indexes = np.array([0])
+
+    __, recording = get_test_recording(num_channels=5)
+
+    # Overwrite the probe information with the new locations
+    for idx, (x, y) in enumerate(zip(*new_probe_locs)):
+        recording._properties["contact_vector"][idx][1] = x
+        recording._properties["contact_vector"][idx][2] = y
+
+    # Run interpolation in SI and check the interpolated channel
+    # 0 is a linear combination of other channels
+    recording = spre.scale(recording, dtype="float32")
+    si_interpolated_recording = spre.interpolate_bad_channels(recording,
+                                                              bad_channel_indexes,
+                                                              sigma_um=5,
+                                                              p=2)
+    si_interpolated = si_interpolated_recording.get_traces()
+    expected_ts = np.sum(si_interpolated[:, 1:] / 4, axis=1)
+
+    assert np.allclose(si_interpolated[:, 0], expected_ts, rtol=0, atol=1e-06)
+
+    # Shift the last channel position so that it is 4 units, rather than 2
+    # away. Setting sigma_um = p = 1 allows easy calculation of the expected
+    # weights.
+    recording._properties["contact_vector"][-1][1] = 5
+    recording._properties["contact_vector"][-1][2] = 9
+    expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
+    expected_weights /= np.sum(expected_weights)
+
+    si_interpolated_recording = spre.interpolate_bad_channels(recording,
+                                                              bad_channel_indexes,
+                                                              sigma_um=1,
+                                                              p=1)
+    si_interpolated = si_interpolated_recording.get_traces()
+
+    expected_ts = si_interpolated[:, 1:] @ expected_weights
+
+    assert np.allclose(si_interpolated[:, 0], expected_ts, rtol=0, atol=1e-06)
 
 if __name__ == '__main__':
     test_interpolate_bad_channels()
