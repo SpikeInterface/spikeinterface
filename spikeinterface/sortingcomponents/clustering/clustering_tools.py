@@ -591,7 +591,6 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
 
     del recording, sub_recording
     os.remove(tmp_filename)
-    os.rmdir(tmp_folder)
 
     return labels, new_labels
 
