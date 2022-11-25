@@ -590,8 +590,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     labels = labels[labels>=0]
 
     del recording, sub_recording
-    import os
     os.remove(tmp_filename)
+    os.rmdir(tmp_folder)
 
     return labels, new_labels
 
