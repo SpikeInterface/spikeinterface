@@ -22,7 +22,7 @@ class BasePreprocessor(BaseRecording):
         BaseRecording.__init__(self, sampling_frequency, _channel_ids, dtype)
         recording.copy_metadata(self, only_main=False, ids=channel_ids)
 
-        # self._kwargs have to be handle in subclass
+        # self._kwargs have to be handled in subclass
 
 
 class BasePreprocessorSegment(BaseRecordingSegment):

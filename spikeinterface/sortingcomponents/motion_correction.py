@@ -1,10 +1,10 @@
 import numpy as np
 import scipy.interpolate
-import sklearn
 from tqdm import tqdm
 
 import scipy.spatial
 
+from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 
@@ -20,7 +20,7 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
                             motion, temporal_bins, spatial_bins,
                             direction='y', progress_bar=False):
     """
-    Given the output of estimate_motion(), apply inverse motion on peak location.
+    Given the output of estimate_motion(), apply inverse motion on peak locations.
 
     Parameters
     ----------
@@ -64,7 +64,8 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
 
 
 def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_bins, spatial_bins, direction=1,
-                            channel_inds=None, spatial_interpolation_method='kriging', spatial_interpolation_kwargs={}):
+                             channel_inds=None, spatial_interpolation_method='kriging',
+                             spatial_interpolation_kwargs={}):
     """
     Apply inverse motion with spatial interpolation on traces.
 
@@ -88,7 +89,7 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
         Dimension of shift in channel_locations.
     channel_inds: None or list
         If not None, interpolate only a subset of channels.
-    spatial_interpolation_method: str in ('idw', 'krigging', 
+    spatial_interpolation_method: str in ('idw', 'kriging')
         * idw : Inverse Distance Weighing
         * kriging : kilosort2.5 like
     spatial_interpolation_kwargs:
@@ -133,7 +134,8 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
             channel_locations_moved = channel_locations_moved[channel_inds]
         
         drift_kernel = get_spatial_interpolation_kernel(channel_locations, channel_locations_moved, dtype='float32',
-                                                        method=spatial_interpolation_method, **spatial_interpolation_kwargs)
+                                                        method=spatial_interpolation_method,
+                                                        **spatial_interpolation_kwargs)
         
         i0 = np.searchsorted(bin_inds, bin_ind, side='left')
         i1 = np.searchsorted(bin_inds, bin_ind, side='right')
@@ -188,63 +190,61 @@ def _get_closest_ind(array, values):
 
 class CorrectMotionRecording(BasePreprocessor):
     """
-    Recording that corrects motion on-the-fly given a rigid or non-rigid
-    motion vector estimation.
-    This internally applies for every time bin an inverse weighted distance interpolation
-    on the original after reverse the motion.
-    `estimate_motion()` must be call before this to get the motion vector.
+    Recording that corrects motion on-the-fly given a motion vector estimation (rigid or non-rigid).
+    This internally applies a spatial interpolation on the original traces after reversing the motion.
+    `estimate_motion()` must be called before this to estimate the motion vector.
 
     Parameters
     ----------
     recording: Recording
         The parent recording.
     motion: np.array 2D
-        motion.shape[0] equal temporal_bins.shape[0]
-        motion.shape[1] equal 1 when "rigid" motion
-                        equal temporal_bins.shape[0] when "none rigid"
+        The motion signal obtained with `estimate_motion()`
+        motion.shape[0] must correspond to temporal_bins.shape[0]
+        motion.shape[1] is 1 when "rigid" motion and spatial_bins.shape[0] when "non-rigid"
     temporal_bins: np.array
         Temporal bins in second.
     spatial_bins: None or np.array
         Bins for non-rigid motion. If None, rigid motion is used
-    direction: int in (0, 1, 2)
-        Dimension of shift in channel_locations.
-    spatial_interpolation_method : 'kriging' or 'idw' or 'nearest'
-        see `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more detail
-        Choice of the method
+    direction: int (0, 1, 2)
+        Dimension along which channel_locations are shifted (0 - x, 1 - y, 2 - z), by default 1
+    spatial_interpolation_method: str
+        'kriging' or 'idw' or 'nearest'.
+        See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
+        Choice of the method:
             'kriging' : the same one used in kilosort
-            'idw' : inverse  distance weithed
+            'idw' : inverse  distance weighted
             'nearest' : use nereast channel
-    sigma_um : float (default 20.)
+    sigma_um: float (default 20.)
         Used in the 'kriging' formula
     p: int (default 1)
         Used in the 'kriging' formula
     num_closest: int (default 3)
-        Used for 'idw'
+        Number of closest channels used by 'idw' method for interpolation.
     border_mode: 'remove_channels', 'force_extrapolate', 'force_zeros'
         Control how channels are handled on border
         * 'remove_channels': remove channels on the border, the recording has less channels
         * 'force_extrapolate': keep all channel and force extrapolation (can lead to strange signal)
         * 'force_zeros': keep all channel but set zeros when outside (force_extrapolate=False)
 
-
     Returns
     -------
-    Corrected_recording: CorrectMotionRecording
+    corrected_recording: CorrectMotionRecording
         Recording after motion correction
     """
     name = 'correct_motion'
 
     def __init__(self, recording, motion, temporal_bins, spatial_bins, direction=1,
-                border_mode='remove_channels',
-                spatial_interpolation_method='kriging', sigma_um=20., p=1, num_closest=3,
-
-                ):
-        assert recording.get_num_segments() == 1, 'correct is handle only for one segment for the moment'
+                 border_mode='remove_channels', spatial_interpolation_method='kriging',
+                 sigma_um=20., p=1, num_closest=3):
+        assert recording.get_num_segments() == 1, 'correct_motion() is only availabl for single-segment recordings'
         
         channel_locations = recording.get_channel_locations()
 
         spatial_interpolation_kwargs = dict(sigma_um=sigma_um, p=p, num_closest=num_closest)
         if border_mode == 'remove_channels':
+            assert channel_locations.ndim >= direction, (f"'direction' {direction} not available. "
+                                                         "Channel locations have {channel_locations.ndim} dimensions.")
             locs = channel_locations[:, direction]
             l0, l1 = np.min(channel_locations[:, direction]), np.max(channel_locations[:, direction])
 
@@ -300,8 +300,7 @@ class CorrectMotionRecording(BasePreprocessor):
 
 class CorrectMotionRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, channel_locations, motion, temporal_bins, spatial_bins, direction,
-                spatial_interpolation_method, spatial_interpolation_kwargs, channel_inds, 
-                ):
+                 spatial_interpolation_method, spatial_interpolation_kwargs, channel_inds):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.channel_locations = channel_locations
         self.motion = motion
@@ -336,3 +335,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
             trace2 = trace2[:, channel_indices]
 
         return trace2
+
+
+correct_motion = define_function_from_class(source_class=CorrectMotionRecording,
+                                            name="correct_motion")
