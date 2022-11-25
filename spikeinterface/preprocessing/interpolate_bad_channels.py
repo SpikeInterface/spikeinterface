@@ -77,47 +77,25 @@ class InterpolateBadChannels(BasePreprocessor):
         instance. Code taken from original IBL function
         (see interpolate_bad_channels_ibl).
         """
-        all_weights = np.empty((bad_channel_indexes.size,
-                                x.size))
+        all_weights = np.empty((x.size,
+                                bad_channel_indexes.size))
         all_weights.fill(np.nan)
 
         for cnt, idx in enumerate(bad_channel_indexes):
-            # compute the weights to apply to neighbouring traces
+
             offset = np.abs(x - x[idx] + 1j * (y - y[idx]))
             weights = np.exp(-(offset / kriging_distance_um) ** p)
             weights[bad_channel_indexes] = 0
             weights[weights < 0.005] = 0
             weights = weights / np.sum(weights)
 
-            all_weights[cnt, :] = weights
+            all_weights[:, cnt] = weights
 
         bad_channel_indexes.setflags(write=False)
 
         return all_weights
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
-
-    def __init__(self, parent_recording_segment, bad_channel_indexes, all_weights):
-        BasePreprocessorSegment.__init__(self, parent_recording_segment)
-
-        self._bad_channel_indexes = bad_channel_indexes
-        self._all_weights = all_weights
-
-    def get_traces(self, start_frame, end_frame, channel_indices):
-
-        traces = self.parent_recording_segment.get_traces(start_frame,
-                                                          end_frame,
-                                                          slice(None))
-
-        traces = traces.copy()
-
-        traces = interpolate_bad_channels_ibl(traces,  # TODO: check dims
-                                              self._bad_channel_indexes,
-                                              self._all_weights)
-
-        return traces
-
-def interpolate_bad_channels_ibl(traces, bad_channel_indexes, all_weights):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
     This is based on the distance from the bad channel, as determined from x,y
@@ -132,19 +110,25 @@ def interpolate_bad_channels_ibl(traces, bad_channel_indexes, all_weights):
 
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
-
-    traces: (num_samples x num_channels) numpy array
-
     """
-    for cnt, idx in enumerate(bad_channel_indexes):
+    def __init__(self, parent_recording_segment, bad_channel_indexes, all_weights):
+        BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
-        weights = all_weights[cnt, :]
-        imult = np.where(weights > 0.005)[0]
-        if imult.size == 0:
-            traces[:, idx] = 0
-            continue
-        traces[:, idx] = np.matmul(traces[:, imult], weights[imult])
+        self._bad_channel_indexes = bad_channel_indexes
+        self._all_weights = all_weights
 
-    return traces
+    def get_traces(self, start_frame, end_frame, channel_indices):
+
+        traces = self.parent_recording_segment.get_traces(start_frame,
+                                                          end_frame,
+                                                          slice(None))
+
+        traces = traces.copy()
+        traces_test = traces.copy()
+
+
+        traces[:, self._bad_channel_indexes] = traces @ self._all_weights
+
+        return traces
 
 interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannels, name='interpolate_bad_channels')
