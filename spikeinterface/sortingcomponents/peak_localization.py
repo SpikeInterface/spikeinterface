@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs
 
 
 from ..postprocessing.unit_localization import (dtype_localize_by_method,
@@ -16,8 +16,7 @@ from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
 
 
 
-def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_mass',
-                   method_kwargs={}, **job_kwargs):
+def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_mass', **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -37,7 +36,7 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
         The right window, after a peak, in milliseconds.
     method: 'center_of_mass' or 'monopolar_triangulation'
         Method to use.
-    method_kwargs: dict of kwargs method
+    **method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
             'center_of_mass':
                 * local_radius_um: float
@@ -58,6 +57,8 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
         The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
     """
     assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
+
+    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if method == 'center_of_mass':
         step = LocalizeCenterOfMass(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
