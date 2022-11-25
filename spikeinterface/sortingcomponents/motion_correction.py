@@ -237,14 +237,13 @@ class CorrectMotionRecording(BasePreprocessor):
     def __init__(self, recording, motion, temporal_bins, spatial_bins, direction=1,
                  border_mode='remove_channels', spatial_interpolation_method='kriging',
                  sigma_um=20., p=1, num_closest=3):
-        assert recording.get_num_segments() == 1, 'correct_motion() is only availabl for single-segment recordings'
+        assert recording.get_num_segments() == 1, 'correct_motion() is only available for single-segment recordings'
         
         channel_locations = recording.get_channel_locations()
-
+        assert channel_locations.ndim >= direction, (f"'direction' {direction} not available. "
+                                                     f"Channel locations have {channel_locations.ndim} dimensions.")
         spatial_interpolation_kwargs = dict(sigma_um=sigma_um, p=p, num_closest=num_closest)
         if border_mode == 'remove_channels':
-            assert channel_locations.ndim >= direction, (f"'direction' {direction} not available. "
-                                                         "Channel locations have {channel_locations.ndim} dimensions.")
             locs = channel_locations[:, direction]
             l0, l1 = np.min(channel_locations[:, direction]), np.max(channel_locations[:, direction])
 
