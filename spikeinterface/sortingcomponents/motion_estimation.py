@@ -1,13 +1,20 @@
 import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
-possible_motion_estimation_methods = ['decentralized_registration', ]
+possible_motion_estimation_methods = ['decentralized_registration', 'kilosort']
 
 
 def init_kwargs_dict(method, method_kwargs):
     # handle kwargs by method
     if method == 'decentralized_registration':
-        method_kwargs_ = dict(pairwise_displacement_method='conv', convergence_method='gradient_descent', max_displacement_um=1500)
+        method_kwargs_ = dict(pairwise_displacement_method='conv',
+                              convergence_method='gradient_descent',
+                              max_displacement_um=1500)
+    elif method == 'kilosort':
+        method_kwargs_ = dict(n_amp_bins=20,
+                              num_shifts_global=15,
+                              num_shifts_block=5,
+                              num_iterations=10)
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
 
@@ -43,6 +50,7 @@ def estimate_motion(recording, peaks, peak_locations,
     method_kwargs: dict
         Specific options for the chosen method.
         * 'decentralized_registration'
+        * 'kilosort'
     non_rigid_kwargs: None or dict.
         If None then the motion is consider as rigid.
         If dict then the motion is estimated in non rigid manner with fields:
@@ -124,7 +132,6 @@ def estimate_motion(recording, peaks, peak_locations,
             sigma_um = non_rigid_kwargs.get('sigma', 3) * bin_step_um
             min_ = np.min(contact_pos) - margin_um
             max_ = np.max(contact_pos) + margin_um
-
             num_win = (max_ - min_) // bin_step_um
             spatial_bins = np.arange(num_win) * bin_step_um + bin_step_um / 2. + min_
 
@@ -182,6 +189,93 @@ def estimate_motion(recording, peaks, peak_locations,
             motion.append(one_motion[:, np.newaxis])
 
         motion = np.concatenate(motion, axis=1)
+    elif method == "kilosort":
+        from spikeinterface.core.job_tools import ensure_chunk_size, divide_recording_into_chunks
+        from scipy.sparse import coo_matrix
+
+        chunk_size = ensure_chunk_size(recording, chunk_duration=f"{bin_duration_s}s")
+        chunks = divide_recording_into_chunks(recording, chunk_size)
+        channel_locations = recording.get_channel_locations()
+        n_amp_bins = method_kwargs['n_amp_bins']
+
+        # binning width across Y (um)
+        dd = bin_um
+
+        # min and max for the raspike_locsepths
+        dmin = min(channel_locations[:, 1]) - 1
+        dmax = max(channel_locations[:, 1])
+        num_spatial_bins = int(1 + np.ceil(np.max(channel_locations[:, 1]) - dmin) / dd)
+        spike_depths = peak_locations["y"]
+
+        # preallocate matrix of counts with n_amp_bins bins, spaced logarithmically
+        spikecounts_hists = np.zeros((num_spatial_bins, n_amp_bins, len(chunks)))
+
+        # pre-compute abs amplitude and ranges for scaling
+        abs_peaks = np.abs(peaks["amplitude"])
+        max_peak_amp = np.max(abs_peaks)
+        min_peak_amp = np.min(abs_peaks)
+
+        # use chunk executor here
+        timestamps = []
+        for t in range(len(chunks)):
+            segment_index, frame_start, frame_stop = chunks[t]
+            # find spikes in this batch
+            start = np.searchsorted(peaks["sample_ind"], frame_start)
+            end = np.searchsorted(peaks["sample_ind"], frame_stop)
+
+            # subtract offset
+            spike_depths_batch = spike_depths[start:end]
+            # we need clipping to construct sparse matrix
+            spike_depths_batch = np.clip(spike_depths_batch, dmin, dmax) - dmin
+
+            # amplitude bin relative to the minimum possible value
+            spike_amps_batch_log = np.log10(abs_peaks[start:end]) - np.log10(min_peak_amp)
+            # normalization by maximum possible values
+            spike_amps_batch_log_norm = spike_amps_batch_log / (np.log10(max_peak_amp) - np.log10(min_peak_amp))
+
+            # multiply by n_amp_bins to distribute a [0,1] variable into 20 bins
+            # sparse is very useful here to do this binning quickly
+            i, j, v, m, n = (
+                np.ceil(1e-5 + spike_depths_batch / dd).astype("int"),
+                np.minimum(np.ceil(1e-5 + spike_amps_batch_log_norm * n_amp_bins), n_amp_bins).astype("int"),
+                np.ones(end - start),
+                num_spatial_bins,
+                n_amp_bins
+            )
+            M = coo_matrix((v, (i-1, j-1)), shape=(m,n)).toarray()
+
+            # the counts themselves are taken on a logarithmic scale (some neurons
+            # fire too much!)
+            spikecounts_hists[:, :, t] = np.log2(1 + M)
+            timestamps.append((frame_start + (frame_stop - frame_start) / 2) / recording.sampling_frequency)
+
+        # pre-compute y-positions for alignemnt
+        y_upsampled = dmin + dd * np.arange(1, dmax+1) - dd / 2
+
+        # move this to a separate function
+        probe = recording.get_probe()
+        dim = ['x', 'y', 'z'].index(direction)
+        contact_pos = probe.contact_positions[:, dim]
+
+        bin_step_um = non_rigid_kwargs['bin_step_um']
+        sigma_um = non_rigid_kwargs.get('sigma', 3) * bin_step_um
+        min_ = np.min(contact_pos) - margin_um
+        max_ = np.max(contact_pos) + margin_um
+        num_spatial_blocks = (max_ - min_) // bin_step_um
+
+        shift_indices, y_center_blocks, target_hist = align_block_ks(spikecounts_hists, y_upsampled, num_spatial_blocks, 
+                                                                     method_kwargs['num_shifts_global'],
+                                                                     method_kwargs['num_shifts_block'],
+                                                                     method_kwargs['num_iterations'])
+
+        # convert to um
+        dshift = shift_indices * dd
+        temporal_bins = np.array(timestamps)
+        motion = y_center_blocks - dshift
+
+        if output_extra_check:
+            extra_check = dict(spikecounts_hists=spikecounts_hists,
+                               target_hist=target_hist)
 
     # replace nan by zeros
     motion[np.isnan(motion)] = 0
@@ -483,9 +577,142 @@ def compute_global_displacement(
         displacement = p
 
     else:
-        raise ValueError(f"Method {method} doesn't exists for compute_global_displacement")
+        raise ValueError(f"Method {convergence_method} doesn't exists for compute_global_displacement")
 
     return displacement
+
+
+def align_block_ks(spikecounts_hist_images, y_upsampled, num_spatial_blocks,
+                   num_shifts_global=15, num_shifts_block=5, num_iterations=10):
+    """
+    Alignment function implemented by Kilosort and ported from pykilosort:
+
+
+    Parameters
+    ----------
+    spikecounts_hist_images : _type_
+        _description_
+    y_upsampled : _type_
+        _description_
+    num_spatial_blocks : _type_
+        _description_
+    num_shifts_global : int, optional
+        _description_, by default 15
+    num_shifts_block : int, optional
+        _description_, by default 5
+    num_iterations : int, optional
+        _description_, by default 10
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+
+    # F is y bins by amp bins by batches
+    # ysamp are the coordinates of the y bins in um
+
+    num_batches = spikecounts_hist_images.shape[2]
+
+    # look up and down this many y bins to find best alignment
+    shift_covs = np.zeros((2 * num_shifts_global + 1, num_batches))
+    shifts = np.arange(-num_shifts_global, num_shifts_global + 1)
+
+    # mean subtraction to compute covariance
+    F = spikecounts_hist_images
+    Fg = F - np.mean(F, axis=0)
+
+    # initialize the target "frame" for alignment with a single sample
+    # TODO
+    F0 = Fg[:, :, min(299, np.floor(num_batches / 2).astype("int")) - 1]
+    F0 = F0[:, :, np.newaxis]
+
+    # first we do rigid registration by integer shifts
+    # everything is iteratively aligned until most of the shifts become 0.
+    best_shifts = np.zeros((num_iterations, num_batches))
+    
+    for iteration in range(num_iterations):
+        for t, shift in enumerate(shifts):
+            # for each NEW potential shift, estimate covariance
+            Fs = np.roll(Fg, shift, axis=0)
+            shift_covs[t, :] = np.mean(Fs * F0, axis=(0, 1))
+        if iteration + 1 < num_iterations:
+            # estimate the best shifts
+            imax = np.argmax(shift_covs, axis=0)
+            # align the data by these integer shifts
+            for t, shift in enumerate(shifts):
+                ibest = imax == t
+                Fg[:, :, ibest] = np.roll(Fg[:, :, ibest], shift, axis=0)
+                best_shifts[iteration, ibest] = shift
+            # new target frame based on our current best alignment
+            F0 = np.mean(Fg, axis=2)[:, :, np.newaxis]
+    target_spikecount_hist = F0[:, :, 0]
+
+    # TODO: make sure number of blocks are consistent
+
+    # now we figure out how to split the probe into nblocks pieces
+    # if nblocks = 1, then we're doing rigid registration
+    num_ybins = F.shape[0]
+    num_bins_per_block = np.floor(num_ybins / num_spatial_blocks).astype("int") - 1
+    # MATLAB rounds 0.5 to 1. Python uses "Bankers Rounding".
+    # Numpy uses round to nearest even. Force the result to be like MATLAB
+    # by adding a tiny constant.
+    ifirst = np.round(np.linspace(0, num_ybins - num_bins_per_block - 1,
+                                  2 * num_spatial_blocks - 1) + 1e-10).astype("int")
+    ilast = ifirst + num_bins_per_block  # 287
+
+    ##
+    num_overlapping_blocks = len(ifirst)
+    y_center_blocks = np.zeros(len(ifirst))
+
+    # for each small block, we only look up and down this many samples to find
+    # nonrigid shift
+    shifts_block = np.arange(-num_shifts_block, num_shifts_block + 1)
+    shift_covs_block = np.zeros((2 * num_shifts_block + 1, num_batches, num_overlapping_blocks))
+
+    # this part determines the up/down covariance for each block without
+    # shifting anything
+    for block_index in range(num_overlapping_blocks):
+        isub = np.arange(ifirst[block_index], ilast[block_index] + 1)
+        y_center_blocks[block_index] = np.mean(y_upsampled[isub])
+        Fsub = Fg[isub, :, :]
+        for t, shift in enumerate(shifts_block):
+            Fs = np.roll(Fsub, shift, axis=0)
+            shift_covs_block[t, :, block_index] = np.mean(Fs * F0[isub, :, :], axis=(0, 1))
+
+    # to find sub-integer shifts for each block ,
+    # we now use upsampling, based on kriging interpolation
+    shifts_block_up = np.linspace(-num_shifts_block, num_shifts_block, (2 * num_shifts_block * 10) + 1)
+    upsample_kernel = kernelD(
+        shifts_block[np.newaxis, :], shifts_block_up[np.newaxis], 1
+    )  # this kernel is fixed as a variance of 1
+    for i in range(shift_covs_block.shape[0]):
+        shift_covs_block[i, :, :] = my_conv2_cpu(
+            shift_covs_block[i, :, :], 0.5, [0, 1]
+        )  # some additional smoothing for robustness, across all dimensions
+    for i in range(shift_covs_block.shape[2]):
+        shift_covs_block[:, :, i] = my_conv2_cpu(
+            shift_covs_block[:, :, i], 0.5, [0]
+        )  # some additional smoothing for robustness, across all dimensions
+
+    # return K, dcs, dt, dtup
+    shift_indices = np.zeros((num_batches, num_overlapping_blocks))
+    for block_index in range(num_overlapping_blocks):
+        # using the upsampling kernel K, get the upsampled cross-correlation
+        # curves
+        upsampled_cov = np.matmul(upsample_kernel.T, shift_covs_block[:, :, block_index])
+
+        # find the max index of these curves
+        imax = np.argmax(upsampled_cov, axis=0)
+
+        # add the value of the shift to the last row of the matrix of shifts
+        # (as if it was the last iteration of the main rigid loop )
+        best_shifts[num_iterations - 1, :] = shifts_block_up[imax]
+
+        # the sum of all the shifts equals the final shifts for this block
+        shift_indices[:, block_index] = np.sum(best_shifts, axis=0)
+
+    return shift_indices, y_center_blocks, target_spikecount_hist
 
 
 def normxcorr1d(template, x, padding="same", conv_engine="torch"):
@@ -656,4 +883,83 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
         motion_clean = scipy.signal.fftconvolve(motion_clean, smooth_kernel, mode='same', axes=0)
     
     return motion_clean
-    
+
+
+
+### PYKILOSORT functions
+# TODO: refactor
+def kernelD(xp0, yp0, length):
+    D = xp0.shape[0]
+    N = xp0.shape[1] if len(xp0.shape) > 1 else 1
+    M = yp0.shape[1] if len(yp0.shape) > 1 else 1
+
+    K = np.zeros((N, M))
+    cs = M
+
+    for i in range(int(M * 1.0 / cs)):
+        ii = np.arange(i * cs, min(M, (i + 1) * cs))
+        mM = len(ii)
+
+        xp = np.tile(xp0, (mM, 1)).T[np.newaxis, :, :]
+        yp = np.tile(yp0[:, ii], (N, 1)).reshape((D, N, mM))
+        a = (xp - yp) ** 2
+        b = 1.0 / (length ** 2)
+        Kn = np.exp(-np.sum((a * b) / 2, axis=0))
+
+        K[:, ii] = Kn
+
+    return K
+
+
+def my_conv2_cpu(x, sig, varargin=None, **kwargs):
+    # (Alternative conv2 function for testing)
+    # x is the matrix to be filtered along a choice of axes
+    # sig is either a scalar or a sequence of scalars, one for each axis to be filtered
+    # varargin can be the dimensions to do filtering, if len(sig) != x.shape
+    # if sig is scalar and no axes are provided, the default axis is 2
+    from scipy.signal import lfilter
+    if sig <= .25:
+        return x
+    idims = 1
+    if varargin is not None:
+        idims = varargin
+    idims = _make_vect(idims)
+    if _is_vect(idims) and _is_vect(sig):
+        sigall = sig
+    else:
+        sigall = np.tile(sig, len(idims))
+
+    for sig, idim in zip(sigall, idims):
+        Nd = x.ndim
+        x = np.transpose(x, [idim] + list(range(0, idim)) + list(range(idim + 1, Nd)))
+        dsnew = x.shape
+        x = np.reshape(x, (x.shape[0], -1), order='F')
+
+        tmax = int(np.ceil(4 * sig))
+        dt = np.arange(-tmax, tmax + 1)
+        gaus = np.exp(-dt ** 2 / (2 * sig ** 2))
+        gaus = gaus / np.sum(gaus)
+
+        cNorm = lfilter(gaus, np.array([1.]), np.concatenate((np.ones(dsnew[0]), np.zeros(tmax))))
+        cNorm = cNorm[tmax:]
+
+        x_n = x #cp.asnumpy(x)
+        x_n = lfilter(gaus, np.array([1.]), np.concatenate((x_n, np.zeros((tmax, dsnew[1])))),
+                      axis=0)
+        x_n = x_n[tmax:]
+        x_n = np.reshape(x_n, dsnew)
+
+        x_n = x_n / cNorm.reshape(-1, 1)
+        x = np.array(x_n)
+        x = np.transpose(x, list(range(1, idim + 1)) + [0] + list(range(idim + 1, Nd)))
+
+    return x
+
+def _is_vect(x):
+    return hasattr(x, '__len__') and len(x) > 1
+
+
+def _make_vect(x):
+    if not hasattr(x, '__len__'):
+        x = np.array([x])
+    return x
