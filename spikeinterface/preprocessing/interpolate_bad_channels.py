@@ -2,6 +2,7 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.preprocessing import preprocessing_tools
 import scipy.stats
 
 class InterpolateBadChannels(BasePreprocessor):
@@ -25,13 +26,13 @@ class InterpolateBadChannels(BasePreprocessor):
     p: exponent of the Gaussian kernel. Determines rate of decay
        for distance weightings.
 
-    kriging_distance_um: distance between sequential channels in um. If None, will use
+    sigma_um: distance between sequential channels in um. If None, will use
                          the most common distance between y-axis channels.
 
     """
     name = 'interpolate_bad_channels'
 
-    def __init__(self, recording, bad_channel_indexes, p=1.3, kriging_distance_um=None):
+    def __init__(self, recording, bad_channel_indexes, p=1.3, sigma_um=None):
         BasePreprocessor.__init__(self, recording)
 
         self.bad_channel_indexes = bad_channel_indexes
@@ -39,61 +40,51 @@ class InterpolateBadChannels(BasePreprocessor):
         if recording.get_property('contact_vector') is None:
             raise ValueError('A probe must be attached to use bad channel interpolation. Use set_probe(...)')
 
-        x = recording.get_probe().contact_positions[:, 0]
-        y = recording.get_probe().contact_positions[:, 1]
-
         if recording.get_probe().si_units != "um":
             raise NotImplementedError("Channel spacing units must be um")
-        
-        if kriging_distance_um is None:
-            kriging_distance_um = self.get_recommended_kriging_distance_um(recording, y)
 
-        all_weights = self.calculate_weights_and_lock_channel_idxs(bad_channel_indexes,
-                                                                   x,
-                                                                   y,
-                                                                   kriging_distance_um,
-                                                                   p)
+        contact_positions = recording.get_probe().contact_positions
+
+        if sigma_um is None:
+            sigma_um = self.get_recommended_sigma_um(recording, contact_positions)
+
+        weights = self.calculate_weights_and_lock_channel_idxs(contact_positions,
+                                                               sigma_um,
+                                                               p)
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(parent_segment,
                                                         bad_channel_indexes,
-                                                        all_weights)
+                                                        weights)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(),
                             bad_channel_indexes=bad_channel_indexes,
                             p=p,
-                            kriging_distance_um=kriging_distance_um)
+                            sigma_um=sigma_um)
 
-    def get_recommended_kriging_distance_um(self, recording, y):
+    def get_recommended_sigma_um(self, recording, contact_positions):
         """
         Get the most common distance between channels on the y-axis
         """
+        y = contact_positions[:, 1]
+
         return scipy.stats.mode(np.diff(np.unique(y)), keepdims=False)[0]
 
-    def calculate_weights_and_lock_channel_idxs(self, bad_channel_indexes, x, y, kriging_distance_um, p):
+    def calculate_weights_and_lock_channel_idxs(self, contact_positions, sigma_um, p):
         """
         Pre-compute the channel weights for this InterpolateBadChannels
         instance. Code taken from original IBL function
         (see interpolate_bad_channels_ibl).
         """
-        all_weights = np.empty((x.size,
-                                bad_channel_indexes.size))
-        all_weights.fill(np.nan)
+        weights = preprocessing_tools.get_kriging_bad_channel_weights(contact_positions,
+                                                                      self.bad_channel_indexes,
+                                                                      sigma_um,
+                                                                      p)
 
-        for cnt, idx in enumerate(bad_channel_indexes):
+        self.bad_channel_indexes.setflags(write=False)
 
-            offset = np.abs(x - x[idx] + 1j * (y - y[idx]))
-            weights = np.exp(-(offset / kriging_distance_um) ** p)
-            weights[bad_channel_indexes] = 0
-            weights[weights < 0.005] = 0
-            weights = weights / np.sum(weights)
-
-            all_weights[:, cnt] = weights
-
-        bad_channel_indexes.setflags(write=False)
-
-        return all_weights
+        return weights
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
     """

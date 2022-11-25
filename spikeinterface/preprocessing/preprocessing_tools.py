@@ -14,7 +14,6 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     here asimple overview on spatial interpolation:
     https://www.aspexit.com/spatial-data-interpolation-tin-idw-kriging-block-kriging-co-kriging-what-are-the-differences/
 
-
     Parameters
     ----------
     source_location: array shape (m, 2)
@@ -52,11 +51,10 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     if method == 'kriging':
         # this is an adaptation of  pykilosort implementation by Kush Benga
         # https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L352
-        dist_xx = scipy.spatial.distance.cdist(source_location, source_location, metric='euclidean')
-        Kxx = np.exp(-(dist_xx / sigma_um) **p)
 
-        dist_yx = scipy.spatial.distance.cdist(target_location, source_location, metric='euclidean')
-        Kyx = np.exp(-(dist_yx / sigma_um) **p)
+        Kxx = get_kriging_kernel_distance(source_location, source_location, sigma_um, p)
+
+        Kyx = get_kriging_kernel_distance(target_location, source_location, sigma_um, p)
 
         interpolation_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
         interpolation_kernel = interpolation_kernel.T.copy()
@@ -99,6 +97,26 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     if not force_extrapolate:
         interpolation_kernel[:, ~target_is_inside] = 0
 
-    
-
     return interpolation_kernel.astype(dtype)
+
+def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p):
+    """
+    """
+    dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric='euclidean')
+    kernal_dist = np.exp(-(dist / sigma_um) ** p)
+    return kernal_dist
+
+def get_kriging_bad_channel_weights(contact_positions, bad_channel_indexes, sigma_um, p):
+    """
+    0.005 from IBL
+    """
+    weights = get_kriging_kernel_distance(contact_positions,
+                                          contact_positions[bad_channel_indexes],
+                                          sigma_um,
+                                          p)
+    weights[bad_channel_indexes, :] = 0
+    weights[weights < 0.005] = 0
+
+    weights /= np.sum(weights, axis=0)[None, :]
+
+    return weights
