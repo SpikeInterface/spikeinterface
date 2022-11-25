@@ -35,14 +35,9 @@ class InterpolateBadChannels(BasePreprocessor):
     def __init__(self, recording, bad_channel_indexes, p=1.3, sigma_um=None):
         BasePreprocessor.__init__(self, recording)
 
+        self.check_inputs(recording)
+
         self.bad_channel_indexes = bad_channel_indexes
-
-        if recording.get_property('contact_vector') is None:
-            raise ValueError('A probe must be attached to use bad channel interpolation. Use set_probe(...)')
-
-        if recording.get_probe().si_units != "um":
-            raise NotImplementedError("Channel spacing units must be um")
-
         contact_positions = recording.get_probe().contact_positions
 
         if sigma_um is None:
@@ -85,6 +80,14 @@ class InterpolateBadChannels(BasePreprocessor):
         self.bad_channel_indexes.setflags(write=False)
 
         return weights
+
+    def check_inputs(self, recording):
+
+        if recording.get_property('contact_vector') is None:
+            raise ValueError('A probe must be attached to use bad channel interpolation. Use set_probe(...)')
+
+        if recording.get_probe().si_units != "um":
+            raise NotImplementedError("Channel spacing units must be um")
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
     """
