@@ -58,7 +58,7 @@ class TimeseriesWidget(BaseWidget):
 
     def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
                  time_range=None, mode='auto', return_scaled=False, cmap='RdBu_r', show_channel_ids=False,
-                 color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
+                 color_groups=False, color=None, clim=None, tile_size=1500, seconds_per_row=0.2,
                  with_colorbar=True, add_legend=True, backend=None, **backend_kwargs):
         if isinstance(recording, BaseRecording):
             recordings = {'rec': recording}
