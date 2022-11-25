@@ -117,6 +117,10 @@ def get_kriging_bad_channel_weights(contact_positions, bad_channel_indexes, sigm
     weights[bad_channel_indexes, :] = 0
     weights[weights < 0.005] = 0
 
-    weights /= np.sum(weights, axis=0)[None, :]
+    with np.errstate(divide='ignore', invalid='ignore'):
+        weights /= np.sum(weights, axis=0)[None, :]
+
+    weights[np.logical_or(weights < 0.005,
+                          np.isnan(weights))] = 0
 
     return weights

@@ -19,10 +19,6 @@ class InterpolateBadChannels(BasePreprocessor):
 
     bad_channel_indexes: numpy array, indexes of the bad channels to interpolate.
 
-    x: numpy array of channel x coordinates.
-
-    y: numpy array of channel y coordinates.
-
     p: exponent of the Gaussian kernel. Determines rate of decay
        for distance weightings.
 
@@ -35,7 +31,7 @@ class InterpolateBadChannels(BasePreprocessor):
     def __init__(self, recording, bad_channel_indexes, p=1.3, sigma_um=None):
         BasePreprocessor.__init__(self, recording)
 
-        self.check_inputs(recording)
+        self.check_inputs(recording, bad_channel_indexes)
 
         self.bad_channel_indexes = bad_channel_indexes
         contact_positions = recording.get_probe().contact_positions
@@ -81,13 +77,17 @@ class InterpolateBadChannels(BasePreprocessor):
 
         return weights
 
-    def check_inputs(self, recording):
+    def check_inputs(self, recording, bad_channel_indexes):
+
+        if type(bad_channel_indexes) != np.ndarray:
+            raise TypeError("Bad channel indexes must be a numpy array.")
 
         if recording.get_property('contact_vector') is None:
             raise ValueError('A probe must be attached to use bad channel interpolation. Use set_probe(...)')
 
         if recording.get_probe().si_units != "um":
             raise NotImplementedError("Channel spacing units must be um")
+
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
     """
@@ -118,8 +118,6 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
                                                           slice(None))
 
         traces = traces.copy()
-        traces_test = traces.copy()
-
 
         traces[:, self._bad_channel_indexes] = traces @ self._all_weights
 
