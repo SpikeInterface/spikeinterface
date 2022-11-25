@@ -4,7 +4,7 @@ import scipy.interpolate
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-
+from spikeinterface.core import NumpySorting, extract_waveforms
 
 class RemoveArtifactsRecording(BasePreprocessor):
     """
@@ -30,6 +30,12 @@ class RemoveArtifactsRecording(BasePreprocessor):
         Determines what artifacts are replaced by. Can be one of the following:
             
         - 'zeros' (default): Artifacts are replaced by zeros.
+
+        - 'median': The median over all artefacts is computed and subtracted for 
+            each occurence of an artefact
+
+        - 'average': The mean over all artefacts is computed and subtracted for each 
+            occurence of an artefact
         
         - 'linear': Replacement are obtained through Linear interpolation between
            the trace before and after the artifact.
@@ -72,7 +78,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         assert isinstance(list_triggers, list)
         assert len(list_triggers) == num_seg
         assert all(isinstance(list_triggers[i], list) for i in range(num_seg))
-        assert mode in ('zeros', 'linear', 'cubic')
+        assert mode in ('zeros', 'linear', 'cubic', 'average', 'median')
         if ms_before is None:
             assert ms_after is None, "To remove a single sample, set both ms_before and ms_after to None"
         else:
@@ -89,25 +95,37 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
 
+        artefact = None
+
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             triggers = list_triggers[seg_index]
-            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples)
+            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples, artefact)
             self.add_recording_segment(rec_segment)
+
+        if mode in ['median', 'average']:
+            sorting = NumpySorting.from_times_labels(list_triggers, [np.ones(len(i)) for i in list_triggers], recording.get_sampling_frequency())
+            waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
+            w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params, return_scaled=False)
+            artefact = w.get_all_templates(mode=mode)[0]
+
+            for seg_index, parent_segment in enumerate(recording._recording_segments):
+                self._recording_segments[seg_index].artefact = artefact
 
         list_triggers_int = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
         self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers_int,
                             ms_before=ms_before, ms_after=ms_after, mode=mode,
-                            fit_sample_spacing=fit_sample_spacing)
+                            fit_sample_spacing=fit_sample_spacing, artefact=artefact)
 
 
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples):
+    def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples, artefact):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.triggers = np.asarray(triggers, dtype='int64')
         self.pad = pad
         self.mode = mode
+        self.artefact = artefact
         self.fit_samples = fit_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -136,7 +154,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         traces[:trig + pad[1], :] = 0
                     elif trig + pad[1] >= end_frame - start_frame:
                         traces[trig - pad[0]:, :] = 0
-        else:
+        elif self.mode in ['linear', 'cubic']:
             for trig in triggers:
                 if pad is None:
                     pre_data_end_idx = trig - 1
@@ -221,6 +239,19 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     # No data to interpolate from on either side of gap;
                     # Fill with zeros
                     traces[gap_idx, :] = 0
+        elif self.mode in ['average', 'median']:
+            for trig in triggers:
+                if pad is None:
+                    traces[trig, :] -= self.artefact    
+                else:
+                    if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
+                        traces[trig-pad[0]:trig+pad[1], :] -= self.artefact
+                    elif trig - pad[0] < 0:
+                        duration = pad[1] + pad[0] - (pad[0] - trig)
+                        traces[:trig+pad[1], :] -= self.artefact[duration:]
+                    elif trig + pad[1] >= end_frame - start_frame:
+                        duration = (end_frame - start_frame) - (trig - pad[0])
+                        traces[trig-pad[0]:, :] -= self.artefact[:duration]        
 
         return traces
 
