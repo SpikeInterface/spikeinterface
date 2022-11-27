@@ -3,7 +3,7 @@ import scipy
 from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channel_distances)
 from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
-from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
+from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
@@ -221,7 +221,7 @@ def _tdc_find_spikes(traces, d, level=0):
         
         
         peak_traces = traces[margin // 2:-margin // 2, :]
-        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(peak_traces, peak_sign,
+        peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(peak_traces, peak_sign,
                                     d['abs_threholds'], d['peak_shift'], d['neighbours_mask'])
         peak_sample_ind += margin // 2
 

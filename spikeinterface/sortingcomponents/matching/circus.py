@@ -20,7 +20,7 @@ from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_random
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
 from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
-from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
+from spikeinterface.sortingcomponents.peak_detection import  DetectPeakByChannel
 
 potrs, = scipy.linalg.get_lapack_funcs(('potrs',), dtype=np.float32)
 
@@ -812,7 +812,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         sym_patch = d['sym_patch']
         
         peak_traces = traces[margin // 2:-margin // 2, :]
-        peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(peak_traces, peak_sign, abs_threholds, exclude_sweep_size)
+        peak_sample_ind, peak_chan_ind = DetectPeakByChannel.detect_peaks(peak_traces, peak_sign, abs_threholds, exclude_sweep_size)
 
         if jitter > 0:
             jittered_peaks = peak_sample_ind[:, np.newaxis] + np.arange(-jitter, jitter)
