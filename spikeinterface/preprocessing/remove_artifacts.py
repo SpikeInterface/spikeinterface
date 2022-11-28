@@ -95,22 +95,19 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
 
-        artefact = None
+        if mode in ['median', 'average']:
+            sorting = NumpySorting.from_times_labels(list_triggers, [np.ones(len(i)) for i in list_triggers], recording.get_sampling_frequency())
+            waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
+            w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params, return_scaled=False)
+            artefact = w.get_all_templates(mode=mode)[0]
+        else:
+            artefact = None
 
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             triggers = list_triggers[seg_index]
             rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples, artefact)
             self.add_recording_segment(rec_segment)
-
-        if mode in ['median', 'average']:
-            sorting = NumpySorting.from_times_labels(list_triggers, [np.ones(len(i)) for i in list_triggers], recording.get_sampling_frequency())
-            waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
-            w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params, return_scaled=False)
-            artefact = w.get_all_templates(mode=mode)[0]
-
-            for seg_index, parent_segment in enumerate(recording._recording_segments):
-                self._recording_segments[seg_index].artefact = artefact
 
         list_triggers_int = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
         self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers_int,
