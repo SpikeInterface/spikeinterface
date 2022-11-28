@@ -62,7 +62,6 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
         step = LocalizeCenterOfMass(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
     elif method == 'monopolar_triangulation':
         step = LocalizeMonopolarTriangulation(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
-        
     elif method == "peak_channel":
         step = LocalizePeakChannel(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
     
