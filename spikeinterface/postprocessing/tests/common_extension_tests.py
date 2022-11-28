@@ -1,4 +1,5 @@
 import pytest
+import shutil
 from spikeinterface import extract_waveforms, load_extractor
 from spikeinterface.extractors import toy_example
 from spikeinterface.postprocessing import get_template_channel_sparsity
@@ -75,15 +76,25 @@ class WaveformExtensionCommonTestSuite:
             _ = self.extension_class.get_extension_function()(we, **ext_kwargs)
             # reload as an extension from we
             assert self.extension_class.extension_name in we.get_available_extension_names()
-            assert self.we1.is_extension(self.extension_class.extension_name)
-            ext = self.we1.load_extension(self.extension_class.extension_name)
+            assert we.is_extension(self.extension_class.extension_name)
+            ext = we.load_extension(self.extension_class.extension_name)
             assert isinstance(ext, self.extension_class)
             for ext_name in self.extension_data_names:
                 assert ext_name in ext._extension_data
             if not in_memory:
+                # test select units
+                new_folder = cache_folder / f"{we.folder.stem}_{self.extension_class.extension_name}_selected"
+                if new_folder.is_dir():
+                    shutil.rmtree(new_folder)
+                we_new = we.select_units(unit_ids=we.sorting.unit_ids[::2], 
+                                         new_folder=cache_folder / \
+                                             f"{we.folder.stem}_{self.extension_class.extension_name}_selected")
                 ext_loaded = self.extension_class.load_from_folder(we.folder)
                 for ext_name in self.extension_data_names:
                     assert ext_name in ext_loaded._extension_data
+            else:
+                # test select units
+                we_new = we.select_units(unit_ids=we.sorting.unit_ids[::2])
     
     def test_extension(self):
         print("Test extension", self.extension_class)

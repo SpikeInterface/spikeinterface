@@ -50,7 +50,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        new_metrics = self.template_metrics.loc[np.array(unit_ids)]
+        new_metrics = self._extension_data['metrics'].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
         
     def _run(self):
