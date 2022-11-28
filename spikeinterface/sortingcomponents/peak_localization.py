@@ -16,7 +16,7 @@ from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
 
 
 
-def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_mass', **kwargs):
+def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -39,9 +39,17 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
     **method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
             'center_of_mass':
+                * ms_before: float
+                    Time in ms to cut before spike peak
+                * ms_after: float
+                    Time in ms to cut after spike peak
                 * local_radius_um: float
                     For channel sparsity.
             'monopolar_triangulation':
+                * ms_before: float
+                    Time in ms to cut before spike peak
+                * ms_after: float
+                    Time in ms to cut after spike peak
                 * local_radius_um: float
                     For channel sparsity.
                 * max_distance_um: float, default: 1000
@@ -61,9 +69,9 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if method == 'center_of_mass':
-        step = LocalizeCenterOfMass(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
+        step = LocalizeCenterOfMass(recording, **method_kwargs)
     elif method == 'monopolar_triangulation':
-        step = LocalizeMonopolarTriangulation(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
+        step = LocalizeMonopolarTriangulation(recording, **method_kwargs)
     
     peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks', squeeze_output=True)
     
