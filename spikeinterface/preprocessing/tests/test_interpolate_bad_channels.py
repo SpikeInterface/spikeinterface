@@ -19,6 +19,10 @@ if DEBUG:
     plt.show()
 
 
+# -------------------------------------------------------------------------------
+# Tests
+# -------------------------------------------------------------------------------
+
 @pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
 def test_compare_real_data_with_ibl():
     """
@@ -71,17 +75,7 @@ def test_compare_real_data_with_ibl():
     assert np.mean(is_close) > 0.999
 
 
-def get_ibl_bad_channel_labels(num_channels, bad_channel_indexes):
-    ibl_bad_channel_labels = np.zeros(num_channels)  # TODO: own function
-    ibl_bad_channel_labels[bad_channel_indexes] = 1
-    return ibl_bad_channel_labels
-
-def get_test_recording(num_channels=32):
-
-    recording = generate_recording(num_channels=num_channels,
-                                   durations=[1])
-    return num_channels, recording
-
+@pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
 @pytest.mark.parametrize("num_channels", [32, 64, 384])
 @pytest.mark.parametrize("sigma_um", [1.25, 20, 123.321])
 @pytest.mark.parametrize("p", [0, -0.5, 1, 0.5, 10])
@@ -122,7 +116,6 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     assert np.allclose(si_interpolated, ibl_interpolated, rtol=0, atol=1e-06)
 
 
-
 def test_output_values():
     """
     Quick sanity check that the outputs are as expected. Settings all
@@ -135,9 +128,9 @@ def test_output_values():
 
     Checking the bad channel ts is a combination of
     the non-interpolated channels is also an implicit test
-    these were not accidently changed during the procedure.
+    these were not accidently changed.
     """
-    new_probe_locs = [[5, 7, 3, 5, 5],  # 5 channels, 1 in the center ('bad channel', zero index)
+    new_probe_locs = [[5, 7, 3, 5, 5],  # 5 channels, a in the center ('bad channel', zero index)
                       [5, 5, 5, 7, 3]]  # all others equal distance away.
     bad_channel_indexes = np.array([0])
 
@@ -177,6 +170,23 @@ def test_output_values():
     expected_ts = si_interpolated[:, 1:] @ expected_weights
 
     assert np.allclose(si_interpolated[:, 0], expected_ts, rtol=0, atol=1e-06)
+
+# -------------------------------------------------------------------------------
+# Test Utils
+# -------------------------------------------------------------------------------
+
+def get_ibl_bad_channel_labels(num_channels, bad_channel_indexes):
+
+    ibl_bad_channel_labels = np.zeros(num_channels)
+    ibl_bad_channel_labels[bad_channel_indexes] = 1
+    return ibl_bad_channel_labels
+
+def get_test_recording(num_channels=32):
+
+    recording = generate_recording(num_channels=num_channels,
+                                   durations=[1])
+    return num_channels, recording
+
 
 if __name__ == '__main__':
     test_interpolate_bad_channels()

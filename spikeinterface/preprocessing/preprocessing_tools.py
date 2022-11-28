@@ -99,6 +99,28 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
 
 def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p):
     """
+    Get the distance between two sets of locations processed with
+    the Gaussian kernel as used in Neuropixels 2.0 and IBL
+    kriging interpolation.
+
+    Parameters
+    ----------
+
+    locations_1 / locations_2 : n x d / m x d  numpy array of
+                               locations where n / m is number of
+                               channels and d is spatial
+                               dimension (e.g. x, y)
+    sigma_um : scale paremter on  the Gaussian kernel,
+               typically distance between contacts in micrometers.
+
+    p : weighting parameter on the exponential function. Default
+        in IBL kriging interpolation is 1.3.
+
+    Results
+    ----------
+    kernal_dist : n x m array (i.e. locations 1 x locations 2) of
+                  distances (gaussian kernel) between locations 1 and 2.
+
     """
     dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric='euclidean')
     kernal_dist = np.exp(-(dist / sigma_um) ** p)
@@ -106,7 +128,12 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p):
 
 def get_kriging_bad_channel_weights(contact_positions, bad_channel_indexes, sigma_um, p):
     """
-    0.005 from IBL
+    Calculate weights for IBL kriging interpolation.
+
+    Based on theinterpolate_bad_channels() function of the International Brain Laboratory
+
+    International Brain Laboratory et al. (2022). Spike sorting pipeline for the
+    International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
     """
     weights = get_kriging_kernel_distance(contact_positions,
                                           contact_positions[bad_channel_indexes],

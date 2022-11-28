@@ -7,9 +7,12 @@ import scipy.stats
 
 class InterpolateBadChannels(BasePreprocessor):
     """
-    Interpolate bad channels based on weighted distance using linear interpolation.
+    Interpolate the channel labeled as bad channels using linear interpolation.
+    This is based on the distance (Gaussian kernel) from the bad channel,
+    as determined from x,y channel coordinates.
 
-    Uses the interpolate_bad_channels() function of the International Brain Laboratory
+    Details of the interpolation function (Olivier Winter) used in the IBL pipeline
+    can be found at:
 
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
@@ -17,18 +20,18 @@ class InterpolateBadChannels(BasePreprocessor):
     Parameters
     ----------
 
-    bad_channel_indexes: numpy array, indexes of the bad channels to interpolate.
+    bad_channel_indexes : numpy array, indexes of the bad channels to interpolate.
 
-    p: exponent of the Gaussian kernel. Determines rate of decay
-       for distance weightings.
+    sigma_um : distance between sequential channels in um. If None, will use
+               the most common distance between y-axis channels.
 
-    sigma_um: distance between sequential channels in um. If None, will use
-                         the most common distance between y-axis channels.
+    p : exponent of the Gaussian kernel. Determines rate of decay
+        for distance weightings.
 
     """
     name = 'interpolate_bad_channels'
 
-    def __init__(self, recording, bad_channel_indexes, p=1.3, sigma_um=None):
+    def __init__(self, recording, bad_channel_indexes, sigma_um=None, p=1.3, ):
         BasePreprocessor.__init__(self, recording)
 
         self.check_inputs(recording, bad_channel_indexes)
@@ -65,8 +68,7 @@ class InterpolateBadChannels(BasePreprocessor):
     def calculate_weights_and_lock_channel_idxs(self, contact_positions, sigma_um, p):
         """
         Pre-compute the channel weights for this InterpolateBadChannels
-        instance. Code taken from original IBL function
-        (see interpolate_bad_channels_ibl).
+        instance.
         """
         weights = preprocessing_tools.get_kriging_bad_channel_weights(contact_positions,
                                                                       self.bad_channel_indexes,
@@ -90,21 +92,7 @@ class InterpolateBadChannels(BasePreprocessor):
 
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
-    """
-    Interpolate the channel labeled as bad channels using linear interpolation.
-    This is based on the distance from the bad channel, as determined from x,y
-    channel coordinates. The weights applied to neighbouring channels come
-    from an exponential decay function.
 
-    Weights are pre-calculated (see pre_calculate_channel_weights()) and
-    interpolated here.
-
-    Details of the interpolation function (Olivier Winter) used in the IBL pipeline
-    can be found at:
-
-    International Brain Laboratory et al. (2022). Spike sorting pipeline for the
-    International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
-    """
     def __init__(self, parent_recording_segment, bad_channel_indexes, weights):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
