@@ -187,6 +187,7 @@ def get_test_recording(num_channels=32):
                                    durations=[1])
     return num_channels, recording
 
-
 if __name__ == '__main__':
-    test_interpolate_bad_channels()
+    test_compare_real_data_with_ibl()
+    test_compare_input_argument_ranges_against_ibl()
+    test_output_values()
