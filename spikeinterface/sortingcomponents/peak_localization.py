@@ -92,7 +92,7 @@ class LocalizePeakChannel(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms):  # Why buffer?
+    def compute_buffer(self, traces, peaks):  # Why buffer?
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for index, main_chan in enumerate(peaks['channel_ind']):
