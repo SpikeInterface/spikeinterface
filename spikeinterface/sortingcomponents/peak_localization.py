@@ -41,7 +41,7 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
         Keyword arguments for the chosen method:
             'center_of_mass':
                 * local_radius_um: float
-                    For channel sparsity.        
+                    For channel sparsity.
             'monopolar_triangulation':
                 * local_radius_um: float
                     For channel sparsity.
@@ -113,7 +113,7 @@ class LocalizeCenterOfMass(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms): 
+    def compute_buffer(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for main_chan in np.unique(peaks['channel_ind']):
@@ -122,7 +122,7 @@ class LocalizeCenterOfMass(PeakPipelineStep):
             local_contact_locations = self.contact_locations[chan_inds, :]
 
             wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
-            coms = np.dot(wf_ptp, local_contact_locations)/(np.sum(wf_ptp, axis=1)[:,np.newaxis])  
+            coms = np.dot(wf_ptp, local_contact_locations)/(np.sum(wf_ptp, axis=1)[:,np.newaxis])
             peak_locations['x'][idx] = coms[:, 0]
             peak_locations['y'][idx] = coms[:, 1]
 
