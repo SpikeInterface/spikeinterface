@@ -63,7 +63,7 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
     elif method == 'monopolar_triangulation':
         step = LocalizeMonopolarTriangulation(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
         
-    if method == "peak_channel":
+    elif method == "peak_channel":
         step = LocalizePeakChannel(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
     
     peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks', squeeze_output=True)
@@ -83,7 +83,8 @@ class LocalizeBase(PeakPipelineStep):
 
 class LocalizePeakChannel(PeakPipelineStep):
     """Localize peaks using the center of mass method."""
-    need_waveforms = True
+    
+    need_waveforms = False
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
