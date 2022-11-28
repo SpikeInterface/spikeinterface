@@ -35,13 +35,13 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
         The left window, before a peak, in milliseconds.
     ms_after: float
         The right window, after a peak, in milliseconds.
-    method: 'center_of_mass' or 'monopolar_triangulation'
+    method: 'center_of_mass', 'monopolar_triangulation' or `peak_channel`.
         Method to use.
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
             'center_of_mass':
                 * local_radius_um: float
-                    For channel sparsity.
+                    For channel sparsity.        
             'monopolar_triangulation':
                 * local_radius_um: float
                     For channel sparsity.
@@ -49,7 +49,6 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
                     Boundary for distance estimation.
                 * enforce_decrese : None or "radial"
                     If+how to enforce spatial decreasingness for PTP vectors.
-    {}
 
     Returns
     -------
@@ -63,6 +62,9 @@ def localize_peaks(recording, peaks, ms_before=1, ms_after=1, method='center_of_
         step = LocalizeCenterOfMass(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
     elif method == 'monopolar_triangulation':
         step = LocalizeMonopolarTriangulation(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
+        
+    if method == "peak_channel":
+        step = LocalizePeakChannel(recording, ms_before=ms_before, ms_after=ms_after, **method_kwargs)
     
     peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks', squeeze_output=True)
     
@@ -79,6 +81,26 @@ class LocalizeBase(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
+class LocalizePeakChannel(PeakPipelineStep):
+    """Localize peaks using the center of mass method."""
+    need_waveforms = True
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
+                                  ms_after=ms_after, local_radius_um=local_radius_um)
+        self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute_buffer(self, traces, peaks, waveforms):  # Why buffer?
+        peak_locations = np.zeros(peaks.size, dtype=self._dtype)
+
+        for index, main_chan in enumerate(peaks['channel_ind']):
+            locations = self.contact_locations[main_chan, :]
+            peak_locations['x'][index] = locations[0]
+            peak_locations['y'][index] = locations[1]
+
+        return peak_locations
 
 class LocalizeCenterOfMass(PeakPipelineStep):
     """Localize peaks using the center of mass method."""
@@ -91,7 +113,7 @@ class LocalizeCenterOfMass(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def compute_buffer(self, traces, peaks, waveforms):  # Why buffer?
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for main_chan in np.unique(peaks['channel_ind']):
@@ -100,7 +122,7 @@ class LocalizeCenterOfMass(PeakPipelineStep):
             local_contact_locations = self.contact_locations[chan_inds, :]
 
             wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
-            coms = np.dot(wf_ptp, local_contact_locations)/(np.sum(wf_ptp, axis=1)[:,np.newaxis])
+            coms = np.dot(wf_ptp, local_contact_locations)/(np.sum(wf_ptp, axis=1)[:,np.newaxis])  # What is comms? Why not used full word
             peak_locations['x'][idx] = coms[:, 0]
             peak_locations['y'][idx] = coms[:, 1]
 
