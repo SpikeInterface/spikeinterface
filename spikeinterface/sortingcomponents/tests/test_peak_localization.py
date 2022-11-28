@@ -51,7 +51,7 @@ def test_localize_peaks():
     peak_locations = localize_peaks(recording, peaks, method='peak_channel', 
                                     **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
-    list_locations.append(('minimize_with_log_penality', peak_locations))
+    list_locations.append(('peak_location', peak_locations))
 
 
     #DEBUG
