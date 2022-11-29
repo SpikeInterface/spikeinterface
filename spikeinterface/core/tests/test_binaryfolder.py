@@ -6,7 +6,7 @@ import shutil
 import numpy as np
 
 from spikeinterface.core import BinaryFolderRecording, read_binary_folder, load_extractor
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 
 
 if hasattr(pytest, "global_test_folder"):

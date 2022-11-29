@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import remove_artifacts
 
 

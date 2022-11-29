@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import NpzSortingExtractor, load_extractor
+from spikeinterface.core import NumpySorting, NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.testing_tools import create_sorting_npz, generate_sorting
+from spikeinterface.core import create_sorting_npz, generate_sorting
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -89,5 +89,20 @@ def test_BaseSorting():
         assert unit not in empty_units
 
 
+def test_empty_sorting():
+    sorting = NumpySorting.from_dict({}, 30000)
+
+    assert len(sorting.unit_ids) == 0
+
+    spikes = sorting.get_all_spike_trains()
+    assert len(spikes) == 1
+    assert len(spikes[0][0]) == 0
+    assert len(spikes[0][1]) == 0
+
+    spikes = sorting.to_spike_vector()
+    assert spikes.shape == (0, )
+
+
 if __name__ == '__main__':
     test_BaseSorting()
+    test_empty_sorting()

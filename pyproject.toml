@@ -23,6 +23,7 @@ dependencies = [
     "numpy",
     "neo>=0.11.1",
     "joblib!=1.2",
+    "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.14",
 ]
@@ -75,6 +76,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    
 ]
 
 widgets = [
