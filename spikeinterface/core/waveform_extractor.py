@@ -556,41 +556,46 @@ class WaveformExtractor:
         sorting = self.sorting.select_units(unit_ids)
         unit_indices = self.sorting.ids_to_indices(unit_ids)
 
-        if self.folder is not None:
-            assert new_folder is not None, "Please specify 'new_folder'"
-            new_folder = Path(new_folder)
-            assert not new_folder.is_dir(), f"{new_folder} already exists!"
-            new_folder.mkdir(parents=True)
+        if self.folder is not None and new_folder is not None:
+            if self.format == "binary":
+                new_folder = Path(new_folder)
+                assert not new_folder.is_dir(), f"{new_folder} already exists!"
+                new_folder.mkdir(parents=True)
 
-            # create new waveform extractor folder
-            shutil.copyfile(self.folder / "params.json",
-                            new_folder / "params.json")
+                # create new waveform extractor folder
+                shutil.copyfile(self.folder / "params.json",
+                                new_folder / "params.json")
 
-            if use_relative_path:
-                relative_to = new_folder
-            else:
-                relative_to = None
+                if use_relative_path:
+                    relative_to = new_folder
+                else:
+                    relative_to = None
 
-            if self.has_recording():
-                self.recording.dump(new_folder / 'recording.json', relative_to=relative_to)
-            sorting.dump(new_folder / 'sorting.json', relative_to=relative_to)
+                if self.has_recording():
+                    self.recording.dump(new_folder / 'recording.json', relative_to=relative_to)
+                sorting.dump(new_folder / 'sorting.json', relative_to=relative_to)
 
-            # create and populate waveforms folder
-            new_waveforms_folder = new_folder / "waveforms"
-            new_waveforms_folder.mkdir()
-        
-            waveforms_files = [f for f in (self.folder / "waveforms").iterdir() if f.suffix == ".npy"]
-            for unit in sorting.get_unit_ids():
-                for wf_file in waveforms_files:
-                    if f"waveforms_{unit}.npy" in wf_file.name or f'sampled_index_{unit}.npy' in wf_file.name:
-                        shutil.copyfile(
-                            wf_file, new_waveforms_folder / wf_file.name)
+                # create and populate waveforms folder
+                new_waveforms_folder = new_folder / "waveforms"
+                new_waveforms_folder.mkdir()
+            
+                waveforms_files = [f for f in (self.folder / "waveforms").iterdir() if f.suffix == ".npy"]
+                for unit in sorting.get_unit_ids():
+                    for wf_file in waveforms_files:
+                        if f"waveforms_{unit}.npy" in wf_file.name or f'sampled_index_{unit}.npy' in wf_file.name:
+                            shutil.copyfile(
+                                wf_file, new_waveforms_folder / wf_file.name)
 
-            template_files = [f for f in self.folder.iterdir() if "template" in f.name and f.suffix == ".npy"]
-            for tmp_file in template_files:
-                templates_data_sliced = np.load(tmp_file)[unit_indices]
-                np.save(new_waveforms_folder / tmp_file.name, templates_data_sliced)
-            we = WaveformExtractor.load_from_folder(new_folder)
+                template_files = [f for f in self.folder.iterdir() if "template" in f.name and f.suffix == ".npy"]
+                for tmp_file in template_files:
+                    templates_data_sliced = np.load(tmp_file)[unit_indices]
+                    np.save(new_waveforms_folder / tmp_file.name, templates_data_sliced)
+                we = WaveformExtractor.load(new_folder)
+            elif self.format == "zarr":
+                raise NotImplementedError("For zarr format, `select_units()` to a folder is not supported yet. "
+                                          "You can select units in two steps:\n"
+                                          "1. `we_new = select_units(unit_ids, new_folder=None)`\n"
+                                          "2. `we_new.save(folder='new_folder', format='zarr')`")
         else:
             sorting = self.sorting.select_units(unit_ids)
             we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory")
