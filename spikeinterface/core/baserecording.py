@@ -251,7 +251,7 @@ class BaseRecording(BaseRecordingSnippets):
             zarr_kwargs['dtype'] = kwargs.get('dtype', None) or self.get_dtype()
             
             if 'compressor' not in zarr_kwargs:
-                zarr_kwargs['compressor'] = get_default_zarr_compressor()
+                zarr_kwargs['compressor'] = compressor = get_default_zarr_compressor()
                 print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
                       f"'compressor' argument")
 
