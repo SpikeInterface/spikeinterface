@@ -250,9 +250,6 @@ class BaseRecording(BaseRecordingSnippets):
             zarr_kwargs['dataset_paths'] = [f'traces_seg{i}' for i in range(self.get_num_segments())]
             zarr_kwargs['dtype'] = kwargs.get('dtype', None) or self.get_dtype()
             
-            compressor = kwargs.get('compressor', None)
-            filters = kwargs.get('filters', None)
-            
             if 'compressor' not in zarr_kwargs:
                 zarr_kwargs['compressor'] = get_default_zarr_compressor()
                 print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
@@ -272,8 +269,8 @@ class BaseRecording(BaseRecordingSnippets):
                 time_vector = d['time_vector']
                 if time_vector is not None:
                     _ = zarr_root.create_dataset(name=f'times_seg{segment_index}', data=time_vector,
-                                                 filters=filters,
-                                                 compressor=compressor)
+                                                 filters=zarr_kwargs.get('filters', None),
+                                                 compressor=zarr_kwargs['compressor'])
                 elif d["t_start"] is not None:
                     t_starts[segment_index] = d["t_start"]
 
