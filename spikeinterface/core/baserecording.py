@@ -224,10 +224,10 @@ class BaseRecording(BaseRecordingSnippets):
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
             binary_rec = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
-                                              num_chan=self.get_num_channels(), dtype=dtype,
-                                              t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
-                                              file_offset=0, gain_to_uV=self.get_channel_gains(),
-                                              offset_to_uV=self.get_channel_offsets())
+                                                  num_chan=self.get_num_channels(), dtype=dtype,
+                                                  t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
+                                                  file_offset=0, gain_to_uV=self.get_channel_gains(),
+                                                  offset_to_uV=self.get_channel_offsets())
             binary_rec.dump(folder / 'binary.json', relative_to=folder)
 
             from .binaryfolder import BinaryFolderRecording
@@ -250,11 +250,8 @@ class BaseRecording(BaseRecordingSnippets):
             zarr_kwargs['dataset_paths'] = [f'traces_seg{i}' for i in range(self.get_num_segments())]
             zarr_kwargs['dtype'] = kwargs.get('dtype', None) or self.get_dtype()
             
-            compressor = kwargs.get('compressor', None)
-            filters = kwargs.get('filters', None)
-            
             if 'compressor' not in zarr_kwargs:
-                zarr_kwargs['compressor'] = get_default_zarr_compressor()
+                zarr_kwargs['compressor'] = compressor = get_default_zarr_compressor()
                 print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
                       f"'compressor' argument")
 
@@ -272,8 +269,8 @@ class BaseRecording(BaseRecordingSnippets):
                 time_vector = d['time_vector']
                 if time_vector is not None:
                     _ = zarr_root.create_dataset(name=f'times_seg{segment_index}', data=time_vector,
-                                                 filters=filters,
-                                                 compressor=compressor)
+                                                 filters=zarr_kwargs.get('filters', None),
+                                                 compressor=zarr_kwargs['compressor'])
                 elif d["t_start"] is not None:
                     t_starts[segment_index] = d["t_start"]
 

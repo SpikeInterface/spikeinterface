@@ -40,8 +40,8 @@ job_keys = ('n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_durat
 
 def split_job_kwargs(mixed_kwargs):
     """
-    This split mixed kwargs into job_kwargs and specific_kwargs.
-    This can be usefull for some function with generic signature
+    This function splits mixed kwargs into job_kwargs and specific_kwargs.
+    This can be useful for some function with generic signature
     mixing specific and job kwargs.
     """
     specific_kwargs, job_kwargs = {}, {}
