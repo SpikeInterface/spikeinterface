@@ -262,7 +262,7 @@ def estimate_motion(recording, peaks, peak_locations,
         shift_indices, y_center_blocks, target_hist = \
             align_block_ks(spikecounts_hists, y_upsampled,
                            num_non_rigid_windows=num_non_rigid_windows,
-                           non_rigid_window_overlap=method_kwargs['non_rigid_window_overlap'],
+                           non_rigid_window_overlap=method_kwargs['non_rigid_window_overlap'], # use block_size?
                            num_shifts_global=method_kwargs['num_shifts_global'],
                            num_iterations=method_kwargs['num_iterations'],
                            num_shifts_block=method_kwargs['num_shifts_block'])
@@ -272,7 +272,6 @@ def estimate_motion(recording, peaks, peak_locations,
         temporal_bins = np.array(temporal_bins)
         motion = -dshift
         spatial_bins_non_rigid = y_center_blocks
-        # print(y_center_blocks, spatial_bins_non_rigid)
 
         if output_extra_check:
             extra_check = dict(spikecounts_hists=spikecounts_hists,
