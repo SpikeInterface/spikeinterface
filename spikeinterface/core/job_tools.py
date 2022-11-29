@@ -346,7 +346,11 @@ global _func
 
 def worker_initializer(func, init_func, init_args, max_threads_per_process):
     global _worker_ctx
-    _worker_ctx = init_func(*init_args)
+    if max_threads_per_process is None:
+        _worker_ctx = init_func(*init_args)
+    else:
+        with threadpool_limits(limits=max_threads_per_process):
+            return _func(segment_index, start_frame, end_frame, _worker_ctx)
     _worker_ctx['max_threads_per_process'] = max_threads_per_process
     global _func
     _func = func
