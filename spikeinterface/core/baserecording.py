@@ -224,10 +224,10 @@ class BaseRecording(BaseRecordingSnippets):
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
             binary_rec = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=self.get_sampling_frequency(),
-                                              num_chan=self.get_num_channels(), dtype=dtype,
-                                              t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
-                                              file_offset=0, gain_to_uV=self.get_channel_gains(),
-                                              offset_to_uV=self.get_channel_offsets())
+                                                  num_chan=self.get_num_channels(), dtype=dtype,
+                                                  t_starts=t_starts, channel_ids=self.get_channel_ids(), time_axis=0,
+                                                  file_offset=0, gain_to_uV=self.get_channel_gains(),
+                                                  offset_to_uV=self.get_channel_offsets())
             binary_rec.dump(folder / 'binary.json', relative_to=folder)
 
             from .binaryfolder import BinaryFolderRecording
