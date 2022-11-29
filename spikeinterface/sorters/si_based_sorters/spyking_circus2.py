@@ -38,7 +38,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'clustering': {},
         'matching':  {},
         'apply_preprocessing': True,
-        'drift_correction': True,
+        'drift_correction': False,
         'shared_memory' : False,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
