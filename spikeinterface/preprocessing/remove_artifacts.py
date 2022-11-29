@@ -145,7 +145,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.pad = pad
         self.mode = mode
         self.artefacts = artefacts
-        self.labels = labels
+        self.labels = np.asarray(labels)
         self.fit_samples = fit_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
