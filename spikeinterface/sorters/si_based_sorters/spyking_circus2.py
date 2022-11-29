@@ -33,11 +33,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                                        'method_kwargs' : {'convergence_method' : 'lsqr_robust',
                                                           'time_horizon_s' : 600,
                                                           'corr_threshold' : 0.7}},
-                       'correction' : {'border_mode' : 'force_extrapolate', 'direction' : 1}},
+                       'correction' : {'border_mode' : 'force_extrapolate', 'direction' : 1},
+                       'selection' : {'peak_selection_rate' : 20}},
         'clustering': {},
         'matching':  {},
         'apply_preprocessing': True,
-        'drift_correction': False,
+        'drift_correction': True,
         'shared_memory' : False,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
@@ -68,6 +69,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
+        duration = recording.get_total_duration()
 
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
@@ -78,6 +80,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f = recording
 
         recording_f = zscore(recording_f, dtype='float32')
+        noise_levels = np.ones(num_channels, dtype=np.float32)
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()
@@ -91,23 +94,25 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             **detection_params)
 
         if params['drift_correction']:
+
+            from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+            from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+
             if verbose:
                 print('We are looking for %d peaks to estimate the motion' %len(peaks))
 
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
-            selection_params = params['selection']
-            selection_params['n_peaks'] = params['selection']['n_peaks_per_channel'] * num_channels
-            selection_params['n_peaks'] = max(selection_params['min_n_peaks'], selection_params['n_peaks'])
+            n_peaks = int(params['motion']['selection']['peak_selection_rate'] * duration)
 
-            noise_levels = np.ones(num_channels, dtype=np.float32)
-            selection_params.update({'noise_levels' : noise_levels})
-            selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
+            selected_peaks = select_peaks(peaks, method='uniform', n_peaks=n_peaks)
 
             localization_params = params['localization'].copy()
             localization_params.update(params['job_kwargs'])
             localization_params.update(params['general'])
-            positions = localize_peaks(recording_f, peaks, **localization_params)
+            localization_params.pop('local_radius_um')
+            localization_params['method_kwargs'] = {'local_radius_um' : params['general']['local_radius_um']}
+            positions = localize_peaks(recording_f, selected_peaks, **localization_params)
 
             estimation_params = params['motion']['estimation'].copy()
             estimation_params['verbose'] = params['job_kwargs']['verbose']
@@ -125,11 +130,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
         ## channels as flat as possible
-        selection_params = params['selection']
+        selection_params = params['selection'].copy()
         selection_params['n_peaks'] = params['selection']['n_peaks_per_channel'] * num_channels
         selection_params['n_peaks'] = max(selection_params['min_n_peaks'], selection_params['n_peaks'])
 
-        noise_levels = np.ones(num_channels, dtype=np.float32)
         selection_params.update({'noise_levels' : noise_levels})
         selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
 
