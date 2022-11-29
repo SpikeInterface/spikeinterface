@@ -24,7 +24,7 @@ class TemplateMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Te
 
 
 if __name__ == '__main__':
-    test = TemplateMetricsExtensionTest
+    test = TemplateMetricsExtensionTest()
     test.setUp()
     test.test_extension()
     test.test_sparse_metrics()

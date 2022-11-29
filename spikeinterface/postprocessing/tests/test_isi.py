@@ -42,6 +42,6 @@ def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
 
 
 if __name__ == '__main__':
-    test = ISIHistogramsExtensionTest
+    test = ISIHistogramsExtensionTest()
     test.setUp()
     test.test_compute_ISI()

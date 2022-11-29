@@ -26,7 +26,7 @@ class SpikeLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 
 
 if __name__ == '__main__':
-    test = SpikeLocationsExtensionTest
+    test = SpikeLocationsExtensionTest()
     test.setUp()
     test.test_extension()
     test.test_parallel()
