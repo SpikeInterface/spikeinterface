@@ -63,6 +63,13 @@ def test_remove_artifacts():
     rec_rmart_cub = remove_artifacts(rec, triggers, ms_before=None, ms_after=None, mode="cubic")
 
 
+    # test removing several artefact types at once
+    triggers = [15000, 20000, 25000, 30000]
+    labels = ['stim_1', 'stim_2', 'stim_1', 'stim_2']
+    list_triggers = [triggers]
+    list_labels = [labels]
+    rec_rmart = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode="median", list_labels=list_labels)
+
 
 if __name__ == '__main__':
     test_remove_artifacts()

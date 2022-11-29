@@ -80,8 +80,9 @@ class RemoveArtifactsRecording(BasePreprocessor):
             list_triggers = [list_triggers]
 
         if num_seg == 1 and isinstance(list_labels, list):
-            # when unisque segment accept list instead of of list of list
-            list_labels = [list_labels]
+            if not isinstance(list_labels[0], list):
+                # when unisque segment accept list instead of of list of list
+                list_labels = [list_labels]
 
         if list_labels is None:
             list_labels = [[0]*len(i) for i in list_triggers]
