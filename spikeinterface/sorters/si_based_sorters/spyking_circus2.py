@@ -25,11 +25,19 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'filtering' : {'dtype' : 'float32'},
         'detection' : {'peak_sign': 'neg', 'detect_threshold': 5},
         'selection' : {'n_peaks_per_channel' : 5000, 'min_n_peaks' : 20000},
-        'localization' : {},
+        'localization' : {'method' : 'monopolar_triangulation'},
+        'motion'    : {'estimation' : {'direction' : 'y', 'bin_duration_s' : 5, 
+                                       'bin_um' : 10, 
+                                       'non_rigid_kwargs' : {'bin_step_um' : 50},
+                                       'method' : 'decentralized_registration', 
+                                       'method_kwargs' : {'convergence_method' : 'lsqr_robust',
+                                                          'time_horizon_s' : 600,
+                                                          'corr_threshold' : 0.7}},
+                       'correction' : {'border_mode' : 'force_extrapolate', 'direction' : 1}},
         'clustering': {},
         'matching':  {},
-        'registration' : {},
         'apply_preprocessing': True,
+        'drift_correction': False,
         'shared_memory' : False,
         'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
     }
@@ -64,8 +72,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## First, we are filtering the data
         filtering_params = params['filtering'].copy()
         if params['apply_preprocessing']:
-            #if recording.is_filtered == True:
-            #    print('Looks like the recording is already filtered, check preprocessing!')
             recording_f = bandpass_filter(recording, **filtering_params)
             recording_f = common_reference(recording_f)
         else:
@@ -83,6 +89,36 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         peaks = detect_peaks(recording_f, method='locally_exclusive', 
             **detection_params)
+
+        if params['drift_correction']:
+            if verbose:
+                print('We are looking for %d peaks to estimate the motion' %len(peaks))
+
+            ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
+            ## channels as flat as possible
+            selection_params = params['selection']
+            selection_params['n_peaks'] = params['selection']['n_peaks_per_channel'] * num_channels
+            selection_params['n_peaks'] = max(selection_params['min_n_peaks'], selection_params['n_peaks'])
+
+            noise_levels = np.ones(num_channels, dtype=np.float32)
+            selection_params.update({'noise_levels' : noise_levels})
+            selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
+
+            localization_params = params['localization'].copy()
+            localization_params.update(params['job_kwargs'])
+            localization_params.update(params['general'])
+            positions = localize_peaks(recording_f, peaks, **localization_params)
+
+            estimation_params = params['motion']['estimation'].copy()
+            estimation_params['verbose'] = params['job_kwargs']['verbose']
+
+            motion, temporal_bins, spatial_bins = estimate_motion(recording_f, selected_peaks, peak_locations=positions,
+                                                                       **estimation_params)
+
+            recording_f = CorrectMotionRecording(recording_f, motion, temporal_bins, 
+                                                            spatial_bins, **params['motion']['correction'])
+
+            peaks = detect_peaks(recording_f, method='locally_exclusive', **detection_params)
 
         if verbose:
             print('We found %d peaks in total' %len(peaks))
