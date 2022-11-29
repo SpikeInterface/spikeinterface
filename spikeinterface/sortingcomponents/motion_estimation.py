@@ -700,6 +700,11 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     # to find sub-integer shifts for each block ,
     # we now use upsampling, based on kriging interpolation
     shifts_block_up = np.linspace(-num_shifts_block, num_shifts_block, (2 * num_shifts_block * 10) + 1)
+    
+    # upsample_kernel = get_spatial_interpolation_kernel()
+    # for t in range(shift_covs_blocks.shape[1]):
+        # shift_covs_blocks[:, t, :] = shift_covs_blocks[:, t, :] @ upsample_kernel
+
     upsample_kernel = kernelD(
         shifts_block[np.newaxis, :], shifts_block_up[np.newaxis], 1
     )  # this kernel is fixed as a variance of 1
