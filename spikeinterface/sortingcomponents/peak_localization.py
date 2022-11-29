@@ -13,7 +13,7 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
 
 
 from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
-
+from .tools import make_multi_method_doc
 
 
 def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
@@ -30,32 +30,10 @@ def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
         The recording extractor object.
     peaks: array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way.
-    ms_before: float
-        The left window, before a peak, in milliseconds.
-    ms_after: float
-        The right window, after a peak, in milliseconds.
-    method: 'center_of_mass', 'monopolar_triangulation' or `peak_channel`.
-        Method to use.
-    **method_kwargs: dict of kwargs method
-        Keyword arguments for the chosen method:
-            'center_of_mass':
-                * ms_before: float
-                    Time in ms to cut before spike peak
-                * ms_after: float
-                    Time in ms to cut after spike peak
-                * local_radius_um: float
-                    For channel sparsity.
-            'monopolar_triangulation':
-                * ms_before: float
-                    Time in ms to cut before spike peak
-                * ms_after: float
-                    Time in ms to cut after spike peak
-                * local_radius_um: float
-                    For channel sparsity.
-                * max_distance_um: float, default: 1000
-                    Boundary for distance estimation.
-                * enforce_decrese : None or "radial"
-                    If+how to enforce spatial decreasingness for PTP vectors.
+
+    {method_doc}
+
+    {job_doc}
 
     Returns
     -------
@@ -78,8 +56,6 @@ def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
     
     return peak_locations
 
-localize_peaks.__doc__ = localize_peaks.__doc__.format(_shared_job_kwargs_doc)
-
 
 class LocalizeBase(PeakPipelineStep):
     def __init__(self, recording, ms_before, ms_after, local_radius_um):
@@ -93,6 +69,10 @@ class LocalizePeakChannel(PeakPipelineStep):
     """Localize peaks using the center of mass method."""
     
     need_waveforms = False
+    name = 'peak_channel'
+    params_doc = """
+    """
+
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
@@ -114,6 +94,16 @@ class LocalizePeakChannel(PeakPipelineStep):
 class LocalizeCenterOfMass(PeakPipelineStep):
     """Localize peaks using the center of mass method."""
     need_waveforms = True
+    name = 'center_of_mass'
+    params_doc = """
+    ms_before: float
+        Time in ms to cut before spike peak
+    ms_after: float
+        Time in ms to cut after spike peak
+    local_radius_um: float
+        For channel sparsity.
+    """
+    
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
@@ -145,8 +135,21 @@ class LocalizeMonopolarTriangulation(PeakPipelineStep):
     -----
     This method is from  Julien Boussard, Erdem Varol and Charlie Windolf
     See spikeinterface.postprocessing.unit_localization.
-    """    
+    """
     need_waveforms = False
+    name = 'monopolar_triangulation'
+    params_doc = """
+    ms_before: float
+        Time in ms to cut before spike peak
+    ms_after: float
+        Time in ms to cut after spike peak
+    local_radius_um: float
+        For channel sparsity.
+    max_distance_um: float, default: 1000
+        Boundary for distance estimation.
+    enforce_decrese : None or "radial"
+        If+how to enforce spatial decreasingness for PTP vectors.
+    """
     def __init__(self, recording, 
                         ms_before=1., ms_after=1.,
                         local_radius_um=150,
@@ -195,3 +198,11 @@ class LocalizeMonopolarTriangulation(PeakPipelineStep):
 
         return peak_locations
 
+
+# LocalizePeakChannel is not include in doc because it is not a good idea to use it
+_methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation]
+localize_peak_methods = {m.name: m for m in _methods_list}
+method_doc = make_multi_method_doc(_methods_list)
+localize_peaks.__doc__ = localize_peaks.__doc__.format(
+                                    method_doc=method_doc,
+                                    job_doc=_shared_job_kwargs_doc)

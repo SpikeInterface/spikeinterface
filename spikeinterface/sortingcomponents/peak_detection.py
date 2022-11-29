@@ -1,16 +1,14 @@
 """Sorting components: peak detection."""
 
 import numpy as np
-import scipy
 
-from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, split_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from ..core import get_chunk_with_margin
 
 from .peak_pipeline import PeakPipelineStep, get_nbefore_nafter_from_steps
-
+from .tools import make_multi_method_doc
 
 try:
     import numba
@@ -26,18 +24,21 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
 def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
+    In 'by_channel' : peak are detected in each channel independently
+    In 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
+
+
     Parameters
     ----------
     recording: RecordingExtractor
         The recording extractor object.
-    method: 'by_channel', 'locally_exclusive'
-        Method to use. Options:
-            * 'by_channel' : peak are detected in each channel independently
-            * 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
     pipeline_steps: None or list[PeakPipelineStep]
         Optional additional PeakPipelineStep need to computed just after detection time.
         This avoid reading the recording multiple times.
-    {}
+
+    {method_doc}
+
+    {job_doc}
 
     Returns
     -------
@@ -94,8 +95,6 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
             outs_concat += (np.concatenate(output_step, axis=0), )
         return outs_concat
 
-
-detect_peaks.__doc__ = detect_peaks.__doc__.format(_shared_job_kwargs_doc)
 
 
 def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_steps):
@@ -205,15 +204,12 @@ class DetectPeakByChannel:
         Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
         For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
         and no larger peaks are located during the 0.1ms preceding and following the peak.
-    local_radius_um: float
-        The radius to use for detection across local channels.
     noise_levels: array, optional
         Estimated noise levels to use, if already computed.
         If not provide then it is estimated from a random snippet of the data.
     random_chunk_kwargs: dict, optional
         A dict that contain option to randomize chunk for get_noise_levels().
-        Only used if noise_levels is None.
-    """
+        Only used if noise_levels is None."""
 
     @classmethod
     def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
@@ -273,7 +269,10 @@ class DetectPeakLocallyExclusive:
 
     name = 'locally_exclusive'
     engine = 'numba'
-    params_doc = """
+    params_doc = DetectPeakByChannel.params_doc + """
+    local_radius_um: float
+        For exclusive spatialy.
+
     """
 
     @classmethod
@@ -328,10 +327,10 @@ class DetectPeakLocallyExclusive:
 # TODO make a dict with name+engine entry later
 _methods_list = [DetectPeakByChannel, DetectPeakLocallyExclusive]
 detect_peak_methods = {m.name: m for m in _methods_list}
-
-
-
-
+method_doc = make_multi_method_doc(_methods_list)
+detect_peaks.__doc__ = detect_peaks.__doc__.format(
+                                    method_doc=method_doc,
+                                    job_doc=_shared_job_kwargs_doc)
 
 
 

@@ -81,3 +81,4 @@ def test_detect_peaks():
 
 if __name__ == '__main__':
     test_detect_peaks()
+    
