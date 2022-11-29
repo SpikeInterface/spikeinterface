@@ -790,7 +790,7 @@ class BaseExtractor:
         save_kwargs['zarr_path'] = zarr_path
         save_kwargs['storage_options'] = storage_options
         save_kwargs['channel_chunk_size'] = channel_chunk_size
-        cached = self._save(folder=None, verbose=verbose, **save_kwargs)
+        cached = self._save(verbose=verbose, **save_kwargs)
         cached_annotations = deepcopy(cached._annotations)
 
         # save properties
