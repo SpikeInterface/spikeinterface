@@ -3,6 +3,7 @@ import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 import pytest
 import numpy as np
+from spikeinterface.core.testing_tools import generate_recording
 
 try:
     import spikeglx
@@ -35,13 +36,8 @@ class TestHighPassFilter:
 
         return [ibl_data, si_recording]
 
-    @pytest.mark.parametrize("ntr_pad", [None, 0, 10, 25, 50, 100])
-    @pytest.mark.parametrize("ntr_tap", [None, 10, 25, 50, 100])
-    @pytest.mark.parametrize("lagc", ["default", None, False, 1, 300, 600])
-    @pytest.mark.parametrize("butter_kwargs", [None,
-                                               {'N': 3, 'Wn': 0.05, 'btype': 'highpass'},
-                                               {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
-    def test_highpass_spatial_filter_ibl_vs_si(self, ibl_si_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
+    @pytest.mark.parametrize("lagc", ["default", None, False, 1])
+    def test_highpass_spatial_filter_real_data(self, ibl_si_data, lagc):
         """
         Test highpass spatial filter IBL vs. SI implimentations.
 
@@ -56,27 +52,15 @@ class TestHighPassFilter:
             - ntr_pad can be None for SI, lagc can be "default", None or False.
 
         """
+        options = dict(lagc=lagc, ntr_pad=25, ntr_tap=50, butter_kwargs=None)
+
         ibl_data, si_recording = ibl_si_data
 
-        # Run SI highpass spatial filter
+        si_filtered, __ = self.run_si_highpass_filter(si_recording,
+                                                  **options)
 
-        si_lagc = self.process_args_for_si(si_recording, lagc)
-
-        si_highpass_spatial_filter = spre.highpass_spatial_filter(si_recording,
-                                                                  n_channel_pad=ntr_pad,
-                                                                  n_channel_taper=ntr_tap,
-                                                                  agc_options=si_lagc,
-                                                                  butter_kwargs=butter_kwargs)
-
-        si_filtered = si_highpass_spatial_filter.get_traces(return_scaled=True)
-
-        # Run IBL highpass spatial filter
-
-        butter_kwargs, ntr_pad, lagc = self.process_args_for_ibl(butter_kwargs,
-                                                                 ntr_pad,
-                                                                 lagc)
-
-        ibl_filtered = voltage.kfilt(ibl_data, None, ntr_pad, ntr_tap, lagc, butter_kwargs).T
+        ibl_filtered = self.run_ibl_highpass_filter(ibl_data,
+                                                    **options)
 
         if DEBUG:
             for bad_idx in [0, 1, 2]:
@@ -86,12 +70,48 @@ class TestHighPassFilter:
                 ax.set_title(f"bad channel {bad_idx}")
                 ax.legend()
 
-
         assert np.allclose(si_filtered,
                            ibl_filtered*1e6,
                            atol=1e-01,
                            rtol=0)  # the differences are entired due to scaling on data load. If passing SI input to
                                     # this function results are the same 1e-08
+
+
+    @pytest.mark.parametrize("ntr_pad", [None, 0, 10, 31])
+    @pytest.mark.parametrize("ntr_tap", [None, 5, 31])
+    @pytest.mark.parametrize("lagc", ["default", None, 125, 1232])
+    @pytest.mark.parametrize("butter_kwargs", [None,
+                                               {'N': 3, 'Wn': 0.05, 'btype': 'highpass'},
+                                               {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
+    @pytest.mark.parametrize("num_channels", [32, 64, 384])
+    def test_highpass_spatial_filter_synthetic_data(self, num_channels, ntr_pad, ntr_tap, lagc, butter_kwargs):
+        """
+        """
+        num_segments = 2
+        options = dict(lagc=lagc, ntr_pad=ntr_pad, ntr_tap=ntr_tap, butter_kwargs=butter_kwargs)
+
+        si_recording = self.get_test_recording(num_channels, num_segments)
+
+        __, si_highpass_spatial_filter = self.run_si_highpass_filter(si_recording,
+                                                                     get_traces=False,
+                                                                     **options)
+        for seg in range(num_segments):
+            
+
+            si_filtered = si_highpass_spatial_filter.get_traces(segment_index=seg)
+   
+            ibl_filtered = self.run_ibl_highpass_filter(ibl_data=si_recording.get_traces(segment_index=seg).T,  **options)
+
+            assert np.allclose(si_filtered, ibl_filtered, atol=1e-06, rtol=0)
+
+    def add_trend_and_check_deleted(self):
+
+        si_recording = self.get_test_recording(num_channels, num_segments=1)
+
+        # TODO: make a sanity check test, add spatially varing trendlind Wn 0.01
+        #       determine units for 0.1 Wn in the spatial domain
+
+
 
     def process_args_for_si(self, si_recording, lagc):
         """"""
@@ -119,39 +139,38 @@ class TestHighPassFilter:
 
         return butter_kwargs, ntr_pad, lagc
 
+    def get_test_recording(self, num_channels=32, num_segments=2):
+        """
+        1500 and 2100 samples
+        """
+        recording = generate_recording(num_channels=num_channels,
+                                       durations=[0.05, 0.07])
 
-    # Do this test
-    
-    def convolve(x, w, mode='full'):
-        """
-        Frequency domain convolution along the last dimension (2d arrays)
-        Will broadcast if a matrix is convolved with a vector
-        :param x:
-        :param w:
-        :param mode:
-        :return: convolution
-        """
-        nsx = x.shape[-1]
-        nsw = w.shape[-1]
-        ns = ns_optim_fft(nsx + nsw)
-        x_ = np.concatenate((x, np.zeros([*x.shape[:-1], ns - nsx], dtype=x.dtype)), axis=-1)
-        w_ = np.concatenate((w, np.zeros([*w.shape[:-1], ns - nsw], dtype=w.dtype)), axis=-1)
-        xw = np.real(np.fft.irfft(np.fft.rfft(x_, axis=-1) * np.fft.rfft(w_, axis=-1), axis=-1))
-        xw = xw[..., :(nsx + nsw)]  # remove 0 padding
-        if mode == 'full':
-            return xw
-        elif mode == 'same':
-            first = int(np.floor(nsw / 2)) - ((nsw + 1) % 2)
-            last = int(np.ceil(nsw / 2)) + ((nsw + 1) % 2)
-            return xw[..., first:-last]
+        return recording
 
-    def ns_optim_fft(ns):
-        """
-        Gets the next higher combination of factors of 2 and 3 than ns to compute efficient ffts
-        :param ns:
-        :return: nsoptim
-        """
-        p2, p3 = np.meshgrid(2 ** np.arange(25), 3 ** np.arange(15))
-        sz = np.unique((p2 * p3).flatten())
-        return sz[np.searchsorted(sz, ns)]
+    def run_si_highpass_filter(self, si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, get_traces=True):
+        """"""
+        si_lagc = self.process_args_for_si(si_recording, lagc)
 
+        si_highpass_spatial_filter = spre.highpass_spatial_filter(si_recording,
+                                                                  n_channel_pad=ntr_pad,
+                                                                  n_channel_taper=ntr_tap,
+                                                                  agc_options=si_lagc,
+                                                                  butter_kwargs=butter_kwargs)
+
+        if get_traces:
+            si_filtered = si_highpass_spatial_filter.get_traces(return_scaled=True)
+        else:
+            si_filtered = False
+
+        return si_filtered, si_highpass_spatial_filter
+
+    def run_ibl_highpass_filter(self, ibl_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
+
+        butter_kwargs, ntr_pad, lagc = self.process_args_for_ibl(butter_kwargs,
+                                                                 ntr_pad,
+                                                                 lagc)
+
+        ibl_filtered = voltage.kfilt(ibl_data, None, ntr_pad, ntr_tap, lagc, butter_kwargs).T
+
+        return ibl_filtered
