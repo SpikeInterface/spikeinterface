@@ -193,7 +193,6 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
 # IBL Helper Functions
 # -----------------------------------------------------------------------------------------------
 
-
 def agc(traces, window_length, sampling_interval, epsilon=1e-8):
     """
     Automatic gain control
@@ -208,48 +207,15 @@ def agc(traces, window_length, sampling_interval, epsilon=1e-8):
     num_samples_window = int(np.round(window_length / sampling_interval / 2) * 2 + 1)
     window = np.hanning(num_samples_window)
     window /= np.sum(window)
-    gain = convolve(np.abs(traces), window, mode='same')
+
+    gain = scipy.signal.fftconvolve(np.abs(traces), window[None, :], mode='same', axes=1)
+   
     gain += (np.sum(gain, axis=1) * epsilon / traces.shape[-1])[:, np.newaxis]
 
     dead_channels = np.sum(gain, axis=1) == 0
     traces[~dead_channels, :] = traces[~dead_channels, :] / gain[~dead_channels, :]
 
     return traces, gain
-
-
-def convolve(x, w, mode='full'):
-    """
-    Frequency domain convolution along the last dimension (2d arrays)
-    Will broadcast if a matrix is convolved with a vector
-    :param x:
-    :param w:
-    :param mode:
-    :return: convolution
-    """
-    nsx = x.shape[-1]
-    nsw = w.shape[-1]
-    ns = ns_optim_fft(nsx + nsw)
-    x_ = np.concatenate((x, np.zeros([*x.shape[:-1], ns - nsx], dtype=x.dtype)), axis=-1)
-    w_ = np.concatenate((w, np.zeros([*w.shape[:-1], ns - nsw], dtype=w.dtype)), axis=-1)
-    xw = np.real(np.fft.irfft(np.fft.rfft(x_, axis=-1) * np.fft.rfft(w_, axis=-1), axis=-1))
-    xw = xw[..., :(nsx + nsw)]  # remove 0 padding
-    if mode == 'full':
-        return xw
-    elif mode == 'same':
-        first = int(np.floor(nsw / 2)) - ((nsw + 1) % 2)
-        last = int(np.ceil(nsw / 2)) + ((nsw + 1) % 2)
-        return xw[..., first:-last]
-
-
-def ns_optim_fft(ns):
-    """
-    Gets the next higher combination of factors of 2 and 3 than ns to compute efficient ffts
-    :param ns:
-    :return: nsoptim
-    """
-    p2, p3 = np.meshgrid(2 ** np.arange(25), 3 ** np.arange(15))
-    sz = np.unique((p2 * p3).flatten())
-    return sz[np.searchsorted(sz, ns)]
 
 
 def fcn_extrap(x, f, bounds):

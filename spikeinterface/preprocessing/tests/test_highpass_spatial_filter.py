@@ -37,7 +37,7 @@ class TestHighPassFilter:
 
     @pytest.mark.parametrize("ntr_pad", [None, 0, 10, 25, 50, 100])
     @pytest.mark.parametrize("ntr_tap", [None, 10, 25, 50, 100])
-    @pytest.mark.parametrize("lagc", ["default", None, False, 1, 300, 600, 1000])
+    @pytest.mark.parametrize("lagc", ["default", None, False, 1, 300, 600])
     @pytest.mark.parametrize("butter_kwargs", [None,
                                                {'N': 3, 'Wn': 0.05, 'btype': 'highpass'},
                                                {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
@@ -118,3 +118,40 @@ class TestHighPassFilter:
             lagc = 0
 
         return butter_kwargs, ntr_pad, lagc
+
+
+    # Do this test
+    
+    def convolve(x, w, mode='full'):
+        """
+        Frequency domain convolution along the last dimension (2d arrays)
+        Will broadcast if a matrix is convolved with a vector
+        :param x:
+        :param w:
+        :param mode:
+        :return: convolution
+        """
+        nsx = x.shape[-1]
+        nsw = w.shape[-1]
+        ns = ns_optim_fft(nsx + nsw)
+        x_ = np.concatenate((x, np.zeros([*x.shape[:-1], ns - nsx], dtype=x.dtype)), axis=-1)
+        w_ = np.concatenate((w, np.zeros([*w.shape[:-1], ns - nsw], dtype=w.dtype)), axis=-1)
+        xw = np.real(np.fft.irfft(np.fft.rfft(x_, axis=-1) * np.fft.rfft(w_, axis=-1), axis=-1))
+        xw = xw[..., :(nsx + nsw)]  # remove 0 padding
+        if mode == 'full':
+            return xw
+        elif mode == 'same':
+            first = int(np.floor(nsw / 2)) - ((nsw + 1) % 2)
+            last = int(np.ceil(nsw / 2)) + ((nsw + 1) % 2)
+            return xw[..., first:-last]
+
+    def ns_optim_fft(ns):
+        """
+        Gets the next higher combination of factors of 2 and 3 than ns to compute efficient ffts
+        :param ns:
+        :return: nsoptim
+        """
+        p2, p3 = np.meshgrid(2 ** np.arange(25), 3 ** np.arange(15))
+        sz = np.unique((p2 * p3).flatten())
+        return sz[np.searchsorted(sz, ns)]
+
