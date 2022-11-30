@@ -33,17 +33,16 @@ def _find_duplicated_spikes_numpy(spike_train: np.ndarray, censored_period: int,
 
 
 def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int, seed: int) -> np.ndarray:
-    rand_state = np.random.get_state()
-    np.random.seed(seed)
+    # random seed
+    rng = np.random.RandomState(seed=seed)
 
     indices_of_duplicates = []
     while not np.all(np.diff(np.delete(spike_train, indices_of_duplicates)) > censored_period):
         duplicates, = np.where(np.diff(spike_train) <= censored_period)
         duplicates = np.unique(np.concatenate((duplicates, duplicates + 1)))
-        duplicate = np.random.choice(duplicates)
+        duplicate = rng.choice(duplicates)
         indices_of_duplicates.append(duplicate)
 
-    np.random.set_state(rand_state)
     return np.array(indices_of_duplicates, dtype=np.int64)
 
 
