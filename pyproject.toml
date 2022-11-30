@@ -71,12 +71,12 @@ full = [
     "zarr",
     "h5py",
     "pandas",
+    "xarray",
     "scipy",
     "scikit-learn",
     "networkx",
     "distinctipy",
     "matplotlib",
-    
 ]
 
 widgets = [
@@ -91,6 +91,7 @@ test = [
 
     # zarr is needed for testing
     "zarr",
+    "xarray",
 
     # tridesclous
     "numpy<1.24",

@@ -213,7 +213,7 @@ class GroundTruthStudy:
         waveform_folder = self.study_folder / 'waveforms' / f'waveforms_{name}_{rec_name}'
 
         if waveform_folder.is_dir():
-            we = WaveformExtractor.load_from_folder(waveform_folder)
+            we = WaveformExtractor.load(waveform_folder)
         else:
             we = WaveformExtractor.create(rec, sorting, waveform_folder)
         return we
