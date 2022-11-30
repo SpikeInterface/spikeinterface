@@ -83,7 +83,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # localization
         localization_params = params['localization'].copy()
         localization_params['local_radius_um'] = params['general']['local_radius_um']
-        peak_locations = localize_peaks(recording, some_peaks, method='monopolar_triangulation',  method_kwargs=localization_params, **job_kwargs)
+        peak_locations = localize_peaks(recording, some_peaks, method='monopolar_triangulation',  **localization_params, **job_kwargs)
         
         #~ print(peak_locations.dtype)
         
