@@ -35,19 +35,19 @@ def setup_module():
 
 
 def test_get_template_amplitudes():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
     peak_values = get_template_amplitudes(we)
     print(peak_values)
 
 
 def test_get_template_extremum_channel():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
     extremum_channels_ids = get_template_extremum_channel(we, peak_sign='both')
     print(extremum_channels_ids)
 
 
 def test_get_template_extremum_channel_peak_shift():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
     shifts = get_template_extremum_channel_peak_shift(we, peak_sign='neg')
     print(shifts)
 
@@ -68,7 +68,7 @@ def test_get_template_extremum_channel_peak_shift():
 
 
 def test_get_template_channel_sparsity():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
 
     sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='id', num_channels=5)
     print(sparsity)
@@ -98,7 +98,7 @@ def test_get_template_channel_sparsity():
 
 
 def test_get_template_extremum_amplitude():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
 
     extremum_channels_ids = get_template_extremum_amplitude(we, peak_sign='both')
     print(extremum_channels_ids)
