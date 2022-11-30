@@ -20,7 +20,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "sortingcomponents"
 
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     import matplotlib.pyplot as plt
@@ -84,7 +84,7 @@ def test_motion_functions():
                             origin='lower', aspect='auto', extent=extent)
 
         fig, ax = plt.subplots()
-        ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
+        ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(), peak_locations['y'], color='r')
 
         fig, ax = plt.subplots()
         extent = None
