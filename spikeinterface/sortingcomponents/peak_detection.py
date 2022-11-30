@@ -263,7 +263,7 @@ class DetectPeakLocallyExclusive:
     engine = 'numba'
     params_doc = DetectPeakByChannel.params_doc + """
     local_radius_um: float
-        The radius to use for detection across local channels.
+        The radius to use to select neighbour channels for locally exclusive detection.
     """
     @classmethod
     def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
