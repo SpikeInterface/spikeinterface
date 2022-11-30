@@ -7,9 +7,8 @@ def make_multi_method_doc(methods, ident='    '):
 
     for method  in methods:
         doc += "\n"
-        doc += ident + f"option for method='{method.name}'"
+        doc += ident + f"arguments for method='{method.name}'"
         for line in method.params_doc.splitlines():
             doc += ident + line + '\n'
 
     return doc
-

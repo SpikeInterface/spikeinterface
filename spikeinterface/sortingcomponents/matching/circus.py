@@ -20,7 +20,7 @@ from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_random
 from spikeinterface.core.job_tools import ChunkRecordingExecutor
 from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
-from spikeinterface.sortingcomponents.peak_detection import  DetectPeakByChannel
+from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 
 potrs, = scipy.linalg.get_lapack_funcs(('potrs',), dtype=np.float32)
 

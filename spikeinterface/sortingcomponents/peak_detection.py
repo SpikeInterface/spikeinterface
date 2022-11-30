@@ -20,7 +20,6 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-
 def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
@@ -35,9 +34,7 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     pipeline_steps: None or list[PeakPipelineStep]
         Optional additional PeakPipelineStep need to computed just after detection time.
         This avoid reading the recording multiple times.
-
     {method_doc}
-
     {job_doc}
 
     Returns
@@ -96,7 +93,6 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
         return outs_concat
 
 
-
 def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_steps):
     """Initialize a worker for detecting peaks."""
 
@@ -148,7 +144,6 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     else:
         trace_detection = traces
 
-
     peak_sample_ind, peak_chan_ind = method_class.detect_peaks(trace_detection, *method_args)
 
     if extra_margin > 0:
@@ -186,7 +181,6 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         return peaks
     else:
         return (peaks, ) + outs
-
 
 
 class DetectPeakByChannel:
@@ -231,8 +225,6 @@ class DetectPeakByChannel:
 
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size):
-    
-
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
         length = traces_center.shape[0]
 
@@ -271,10 +263,9 @@ class DetectPeakLocallyExclusive:
     engine = 'numba'
     params_doc = DetectPeakByChannel.params_doc + """
     local_radius_um: float
-        For exclusive spatialy.
+        The radius to use for detection across local channels.
 
     """
-
     @classmethod
     def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
                      exclude_sweep_ms=0.1, local_radius_um=50, noise_levels=None, random_chunk_kwargs={}):
@@ -296,8 +287,6 @@ class DetectPeakLocallyExclusive:
 
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask):
-        
-
         assert HAVE_NUMBA, 'You need to install numba'
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 
@@ -328,10 +317,8 @@ class DetectPeakLocallyExclusive:
 _methods_list = [DetectPeakByChannel, DetectPeakLocallyExclusive]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
-detect_peaks.__doc__ = detect_peaks.__doc__.format(
-                                    method_doc=method_doc,
-                                    job_doc=_shared_job_kwargs_doc)
-
+detect_peaks.__doc__ = detect_peaks.__doc__.format(method_doc=method_doc,
+                                                   job_doc=_shared_job_kwargs_doc)
 
 
 if HAVE_NUMBA:
