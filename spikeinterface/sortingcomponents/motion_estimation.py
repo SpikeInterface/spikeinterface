@@ -128,9 +128,10 @@ def estimate_motion(recording, peaks, peak_locations,
         min_ = np.min(contact_pos) - margin_um
         max_ = np.max(contact_pos) + margin_um
         num_non_rigid_windows = int((max_ - min_) // bin_step_um)
-        spatial_bins_non_rigid = np.arange(num_non_rigid_windows) * bin_step_um + bin_step_um / 2. + min_
+        border = ((max_ - min_)  %  bin_step_um) / 2
+        spatial_bins_non_rigid = np.arange(num_non_rigid_windows) * bin_step_um + min_ + border
+        # non rigid windows need to be pre-computed for upsample_to_histogram_bin option
         sigma_um = non_rigid_kwargs.get('sigma', 3) * bin_step_um
-
         non_rigid_windows = []
         for win_center in spatial_bins_non_rigid:
             win = np.exp(-(spatial_bins[:-1] - win_center) ** 2 / (sigma_um ** 2))
@@ -150,13 +151,11 @@ def estimate_motion(recording, peaks, peak_locations,
             extra_check['motion_histogram'] = motion_histogram
             extra_check['temporal_hist_bins'] = temporal_hist_bins
             extra_check['spatial_hist_bins'] = spatial_hist_bins
-        # temporal bins are bin center
-        temporal_bins = temporal_hist_bins[:-1] + bin_duration_s // 2.
-
-        if output_extra_check:
             extra_check['pairwise_displacement_list'] = []
             if non_rigid_kwargs is not None:
                 extra_check['non_rigid_windows'] = non_rigid_windows
+        # temporal bins are bin center
+        temporal_bins = temporal_hist_bins[:-1] + bin_duration_s // 2.
 
         motion = []
         windows_iter = non_rigid_windows
@@ -177,7 +176,7 @@ def estimate_motion(recording, peaks, peak_locations,
                 conv_engine=method_kwargs.get("conv_engine", 'numpy'),
                 torch_device=method_kwargs.get("torch_device", None),
                 batch_size=method_kwargs.get("batch_size", 1),
-                max_displacement_um=method_kwargs.get("max_displacement_um", 1500),
+                max_displacement_um=method_kwargs.get("max_displacement_um", 1500), # TODO: unify arg with KS
                 corr_threshold=method_kwargs.get("corr_threshold", 0),
                 time_horizon_s=method_kwargs.get("time_horizon_s", None),
                 bin_duration_s=bin_duration_s,
@@ -201,7 +200,7 @@ def estimate_motion(recording, peaks, peak_locations,
             motion.append(one_motion[:, np.newaxis])
         motion = np.concatenate(motion, axis=1)
 
-    elif method == "kilosort25":
+    elif method == "kilosort25": #maybe change name to: "iterative_histogram_registration"
         from spikeinterface.core.job_tools import ensure_chunk_size, divide_recording_into_chunks
         from scipy.sparse import coo_matrix
 
@@ -223,6 +222,9 @@ def estimate_motion(recording, peaks, peak_locations,
         abs_peaks = np.abs(peaks["amplitude"])
         max_peak_amp = np.max(abs_peaks)
         min_peak_amp = np.min(abs_peaks)
+        # log amplitudes and scale between 0-1
+        abs_peaks_log_norm = (np.log10(abs_peaks) - np.log10(min_peak_amp)) / \
+            (np.log10(max_peak_amp) - np.log10(min_peak_amp))
 
         # use chunk executor here
         temporal_bins = []
@@ -238,15 +240,13 @@ def estimate_motion(recording, peaks, peak_locations,
             spike_depths_batch = np.clip(spike_depths_batch, dmin, dmax) - dmin
 
             # amplitude bin relative to the minimum possible value
-            spike_amps_batch_log = np.log10(abs_peaks[start:end]) - np.log10(min_peak_amp)
-            # normalization by maximum possible values
-            spike_amps_batch_log_norm = spike_amps_batch_log / (np.log10(max_peak_amp) - np.log10(min_peak_amp))
+            spike_amps_batch = abs_peaks_log_norm[start:end]
 
             # multiply by n_amp_bins to distribute a [0,1] variable into 20 bins
             # sparse is very useful here to do this binning quickly
             i, j, v, m, n = (
                 np.ceil(1e-5 + spike_depths_batch / bin_um).astype("int"),
-                np.minimum(np.ceil(1e-5 + spike_amps_batch_log_norm * n_amp_bins), n_amp_bins).astype("int"),
+                np.minimum(np.ceil(1e-5 + spike_amps_batch * n_amp_bins), n_amp_bins).astype("int"),
                 np.ones(end - start),
                 num_spatial_bins,
                 n_amp_bins
@@ -726,7 +726,7 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     shift_covs_block_smooth = shift_covs_block.copy()
     shifts_block_up = np.linspace(-num_shifts_block, num_shifts_block,
                                   (2 * num_shifts_block * 10) + 1)
-    
+    # 1. 2d smoothing over time and blocks dimensions for each shift
     for i in range(num_shifts):
         shift_covs_block_smooth[i, :, :] = gaussian_filter(
             shift_covs_block_smooth[i, :, :], smoothing_sigma
