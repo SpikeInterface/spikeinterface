@@ -110,7 +110,18 @@ class TestHighPassFilter:
 
         # TODO: make a sanity check test, add spatially varing trendlind Wn 0.01
         #       determine units for 0.1 Wn in the spatial domain
+        """
+            
+        1) the fft convolution very similar, for 
+        n = 1000 on a 1035 length signal they are
+        slightly different but in real life will never 
+        have such a case. also only slightly different. or when wl is 1-2 samples
+        
+        in get_chunks:
+        
+        taper_ibl = fcn_cosine([0, margin])(np.arange(margin))
 
+        """
 
 
     def process_args_for_si(self, si_recording, lagc):
