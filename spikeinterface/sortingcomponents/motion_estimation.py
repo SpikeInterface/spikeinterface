@@ -1,7 +1,9 @@
 import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
-possible_motion_estimation_methods = ['decentralized_registration', 'kilosort']
+
+
+possible_motion_estimation_methods = ['decentralized_registration', 'kilosort25']
 
 
 def init_kwargs_dict(method, method_kwargs):
@@ -10,12 +12,16 @@ def init_kwargs_dict(method, method_kwargs):
         method_kwargs_ = dict(pairwise_displacement_method='conv',
                               convergence_method='gradient_descent',
                               max_displacement_um=1500)
-    elif method == 'kilosort':
+    elif method == 'kilosort25':
         method_kwargs_ = dict(n_amp_bins=20,
                               num_shifts_global=15,
                               num_iterations=10,
                               num_shifts_block=5,
-                              non_rigid_window_overlap=0.5)
+                              non_rigid_window_overlap=0.5,
+                              smoothing_sigma=0.5,
+                              kriging_sigma=1,
+                              kriging_p=2,
+                              kriging_d=2)
     method_kwargs_.update(method_kwargs)
     return method_kwargs_
 
@@ -47,11 +53,11 @@ def estimate_motion(recording, peaks, peak_locations,
         Margin in um to exclude from histogram estimation and
         non-rigid smoothing functions to avoid edge effects
     method: str
-        The method to be used ('decentralized_registration', 'kilosort')
+        The method to be used ('decentralized_registration', 'kilosort25')
     method_kwargs: dict
-        Specific options for the chosen method.
+        Specific options for the chosen method. You can use `init_kwargs_dict(method)` to retrieve default params.
         * 'decentralized_registration'
-        * 'kilosort'
+        * 'kilosort25'
     non_rigid_kwargs: None or dict.
         If None then the motion is consider as rigid.
         If dict then the motion is estimated in non rigid manner with fields:
@@ -94,7 +100,6 @@ def estimate_motion(recording, peaks, peak_locations,
     """
     # TODO handle multi segment one day
     assert recording.get_num_segments() == 1
-
     assert method in possible_motion_estimation_methods
     method_kwargs = init_kwargs_dict(method, method_kwargs)
 
@@ -130,7 +135,6 @@ def estimate_motion(recording, peaks, peak_locations,
         for win_center in spatial_bins_non_rigid:
             win = np.exp(-(spatial_bins[:-1] - win_center) ** 2 / (sigma_um ** 2))
             non_rigid_windows.append(win)
-
 
     if method == 'decentralized_registration':
         # make 2D histogram raster
@@ -197,7 +201,7 @@ def estimate_motion(recording, peaks, peak_locations,
             motion.append(one_motion[:, np.newaxis])
         motion = np.concatenate(motion, axis=1)
 
-    elif method == "kilosort":
+    elif method == "kilosort25":
         from spikeinterface.core.job_tools import ensure_chunk_size, divide_recording_into_chunks
         from scipy.sparse import coo_matrix
 
@@ -259,13 +263,16 @@ def estimate_motion(recording, peaks, peak_locations,
         y_upsampled = spatial_bins[:-1] + bin_um / 2
 
         # do alignment
-        shift_indices, y_center_blocks, target_hist = \
+        shift_indices, y_center_blocks, target_hist, shift_covs_block = \
             align_block_ks(spikecounts_hists, y_upsampled,
                            num_non_rigid_windows=num_non_rigid_windows,
                            non_rigid_window_overlap=method_kwargs['non_rigid_window_overlap'], # use block_size?
                            num_shifts_global=method_kwargs['num_shifts_global'],
                            num_iterations=method_kwargs['num_iterations'],
-                           num_shifts_block=method_kwargs['num_shifts_block'])
+                           num_shifts_block=method_kwargs['num_shifts_block'],
+                           smoothing_sigma=method_kwargs['smoothing_sigma'],
+                           kriging_p=method_kwargs['kriging_p'],
+                           kriging_d=method_kwargs['kriging_d'])
 
         # convert to um
         dshift = shift_indices * bin_um
@@ -275,7 +282,8 @@ def estimate_motion(recording, peaks, peak_locations,
 
         if output_extra_check:
             extra_check = dict(spikecounts_hists=spikecounts_hists,
-                               target_hist=target_hist)
+                               target_hist=target_hist,
+                               shift_covs_block=shift_covs_block)
 
     # replace nan by zeros
     motion[np.isnan(motion)] = 0
@@ -592,10 +600,11 @@ def compute_global_displacement(
 def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1,
                    num_shifts_global=15, num_iterations=10,
                    non_rigid_window_overlap=0.5,
-                   num_shifts_block=3):
+                   num_shifts_block=5, smoothing_sigma=0.5,
+                   kriging_sigma=1, kriging_p=2, kriging_d=2):
     """
-    Alignment function implemented by Kilosort and ported from pykilosort:
-
+    Alignment function implemented by Kilosort2.5 and ported from pykilosort:
+    https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L166
 
     Parameters
     ----------
@@ -613,6 +622,14 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
         Amount of overlap (between 0 and 1) between non-rigid windows, by default 0.5
     num_shifts_block : int, optional
         Number of spatial bin shifts to consider for non-rigid alignment, by default 5
+    smoothing_sigma : float, optional
+        Sigma of gaussian for covariance matrices smoothing, by default 0.5
+    kriging_sogma : float, optional
+        sigma parameter for kriging_kernel function
+    kriging_p : float, optional
+        p parameter for kriging_kernel function
+    kriging_d : float, optional
+        d parameter for kriging_kernel function
 
     Returns
     -------
@@ -623,6 +640,9 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     target_spikecount_hist
         Target histogram used for alignment (num_spatial_bins, num_amps_bins)
     """
+    from scipy.ndimage import gaussian_filter, gaussian_filter1d
+    from spikeinterface.preprocessing.preprocessing_tools import get_spatial_interpolation_kernel
+
     assert 0 <= non_rigid_window_overlap <= 1, "'non_rigid_window_overlap' can be between 0 and 1!"
     # F is y bins by amp bins by batches
     # ysamp are the coordinates of the y bins in um
@@ -644,7 +664,6 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     # first we do rigid registration by integer shifts
     # everything is iteratively aligned until most of the shifts become 0.
     best_shifts = np.zeros((num_iterations, num_temporal_bins))
-    
     for iteration in range(num_iterations):
         for t, shift in enumerate(shifts):
             # for each NEW potential shift, estimate covariance
@@ -664,19 +683,23 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
 
     # now we figure out how to split the probe into nblocks pieces
     # if nblocks = 1, then we're doing rigid registration
-    num_ybins = F.shape[0]
-    num_bins_per_block = ((1 + non_rigid_window_overlap) * np.round(num_ybins / num_non_rigid_windows)).astype("int")
-    # MATLAB rounds 0.5 to 1. Python uses "Bankers Rounding".
-    # Numpy uses round to nearest even. Force the result to be like MATLAB
-    # by adding a tiny constant.
-    ifirst = np.round(np.linspace(0, num_ybins - num_bins_per_block - 1,
-                                  num_non_rigid_windows) + 1e-10).astype("int")
-    ilast = ifirst + num_bins_per_block
+    if num_non_rigid_windows == 1:
+        ifirst = [0]
+        ilast = [F.shape[0] - 1]
+    else:
+        num_ybins = F.shape[0]
+        num_bins_per_block = ((1 + non_rigid_window_overlap) * np.round(num_ybins / num_non_rigid_windows)).astype("int")
+        # MATLAB rounds 0.5 to 1. Python uses "Bankers Rounding".
+        # Numpy uses round to nearest even. Force the result to be like MATLAB
+        # by adding a tiny constant.
+        ifirst = np.round(np.linspace(0, num_ybins - num_bins_per_block - 1,
+                                    num_non_rigid_windows) + 1e-10).astype("int")
+        ilast = ifirst + num_bins_per_block
 
-    if num_shifts_block >= num_bins_per_block:
-        print(f"'num_shifts_block' should be smaller than number of bins per spatial block {num_bins_per_block}. "
-              f"Setting 'num_shifts_block' to {num_bins_per_block - 1}")
-        num_shifts_block = num_bins_per_block - 1
+        if num_shifts_block >= num_bins_per_block:
+            print(f"'num_shifts_block' should be smaller than number of bins per spatial block {num_bins_per_block}. "
+                f"Setting 'num_shifts_block' to {num_bins_per_block - 1}")
+            num_shifts_block = num_bins_per_block - 1
 
     ##
     num_overlapping_blocks = len(ifirst)
@@ -685,6 +708,7 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     # for each small block, we only look up and down this many samples to find
     # nonrigid shift
     shifts_block = np.arange(-num_shifts_block, num_shifts_block + 1)
+    num_shifts = len(shifts_block)
     shift_covs_block = np.zeros((2 * num_shifts_block + 1, num_temporal_bins, num_overlapping_blocks))
 
     # this part determines the up/down covariance for each block without
@@ -697,32 +721,30 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
             Fs = np.roll(Fsub, shift, axis=0)
             shift_covs_block[t, :, block_index] = np.mean(Fs * F0[isub, :, :], axis=(0, 1))
 
-    # to find sub-integer shifts for each block ,
-    # we now use upsampling, based on kriging interpolation
-    shifts_block_up = np.linspace(-num_shifts_block, num_shifts_block, (2 * num_shifts_block * 10) + 1)
+    # gaussian smoothing:
+    # here the original my_conv2_cpu is substituted with scipy gaussian_filters
+    shift_covs_block_smooth = shift_covs_block.copy()
+    shifts_block_up = np.linspace(-num_shifts_block, num_shifts_block,
+                                  (2 * num_shifts_block * 10) + 1)
     
-    # upsample_kernel = get_spatial_interpolation_kernel()
-    # for t in range(shift_covs_blocks.shape[1]):
-        # shift_covs_blocks[:, t, :] = shift_covs_blocks[:, t, :] @ upsample_kernel
-
-    upsample_kernel = kernelD(
-        shifts_block[np.newaxis, :], shifts_block_up[np.newaxis], 1
-    )  # this kernel is fixed as a variance of 1
-    for i in range(shift_covs_block.shape[0]):
-        shift_covs_block[i, :, :] = my_conv2_cpu(
-            shift_covs_block[i, :, :], 0.5, [0, 1]
+    for i in range(num_shifts):
+        shift_covs_block_smooth[i, :, :] = gaussian_filter(
+            shift_covs_block_smooth[i, :, :], smoothing_sigma
         )  # some additional smoothing for robustness, across all dimensions
-    for i in range(shift_covs_block.shape[2]):
-        shift_covs_block[:, :, i] = my_conv2_cpu(
-            shift_covs_block[:, :, i], 0.5, [0]
+    # 2. 1d smoothing over shift dimension for each spatial block
+    for i in range(num_overlapping_blocks):
+        shift_covs_block_smooth[:, :, i] = gaussian_filter1d(
+            shift_covs_block_smooth[:, :, i], smoothing_sigma, axis=0
         )  # some additional smoothing for robustness, across all dimensions
+    upsample_kernel = kriging_kernel(shifts_block[:, np.newaxis],
+                                     shifts_block_up[:, np.newaxis],
+                                     sigma=kriging_sigma, p=kriging_p, d=kriging_d)
 
-    # return K, dcs, dt, dtup
     optimal_shift_indices = np.zeros((num_temporal_bins, num_overlapping_blocks))
     for block_index in range(num_overlapping_blocks):
         # using the upsampling kernel K, get the upsampled cross-correlation
         # curves
-        upsampled_cov = np.matmul(upsample_kernel.T, shift_covs_block[:, :, block_index])
+        upsampled_cov = upsample_kernel.T @ shift_covs_block_smooth[:, :, block_index]
 
         # find the max index of these curves
         imax = np.argmax(upsampled_cov, axis=0)
@@ -734,7 +756,7 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
         # the sum of all the shifts equals the final shifts for this block
         optimal_shift_indices[:, block_index] = np.sum(best_shifts, axis=0)
 
-    return optimal_shift_indices, y_center_blocks, target_spikecount_hist
+    return optimal_shift_indices, y_center_blocks, target_spikecount_hist, shift_covs_block
 
 
 def normxcorr1d(template, x, padding="same", conv_engine="torch"):
@@ -907,81 +929,8 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
     return motion_clean
 
 
-
-### PYKILOSORT functions
-# TODO: refactor
-def kernelD(xp0, yp0, length):
-    D = xp0.shape[0]
-    N = xp0.shape[1] if len(xp0.shape) > 1 else 1
-    M = yp0.shape[1] if len(yp0.shape) > 1 else 1
-
-    K = np.zeros((N, M))
-    cs = M
-
-    for i in range(int(M * 1.0 / cs)):
-        ii = np.arange(i * cs, min(M, (i + 1) * cs))
-        mM = len(ii)
-
-        xp = np.tile(xp0, (mM, 1)).T[np.newaxis, :, :]
-        yp = np.tile(yp0[:, ii], (N, 1)).reshape((D, N, mM))
-        a = (xp - yp) ** 2
-        b = 1.0 / (length ** 2)
-        Kn = np.exp(-np.sum((a * b) / 2, axis=0))
-
-        K[:, ii] = Kn
-
+def kriging_kernel(source_location, target_location, sigma=1, p=2, d=2):
+    from scipy.spatial.distance import cdist
+    dist_xy = cdist(source_location, target_location, metric='euclidean')
+    K = np.exp(-(dist_xy / sigma)**p / d)
     return K
-
-
-def my_conv2_cpu(x, sig, varargin=None, **kwargs):
-    # (Alternative conv2 function for testing)
-    # x is the matrix to be filtered along a choice of axes
-    # sig is either a scalar or a sequence of scalars, one for each axis to be filtered
-    # varargin can be the dimensions to do filtering, if len(sig) != x.shape
-    # if sig is scalar and no axes are provided, the default axis is 2
-    from scipy.signal import lfilter
-    if sig <= .25:
-        return x
-    idims = 1
-    if varargin is not None:
-        idims = varargin
-    idims = _make_vect(idims)
-    if _is_vect(idims) and _is_vect(sig):
-        sigall = sig
-    else:
-        sigall = np.tile(sig, len(idims))
-
-    for sig, idim in zip(sigall, idims):
-        Nd = x.ndim
-        x = np.transpose(x, [idim] + list(range(0, idim)) + list(range(idim + 1, Nd)))
-        dsnew = x.shape
-        x = np.reshape(x, (x.shape[0], -1), order='F')
-
-        tmax = int(np.ceil(4 * sig))
-        dt = np.arange(-tmax, tmax + 1)
-        gaus = np.exp(-dt ** 2 / (2 * sig ** 2))
-        gaus = gaus / np.sum(gaus)
-
-        cNorm = lfilter(gaus, np.array([1.]), np.concatenate((np.ones(dsnew[0]), np.zeros(tmax))))
-        cNorm = cNorm[tmax:]
-
-        x_n = x #cp.asnumpy(x)
-        x_n = lfilter(gaus, np.array([1.]), np.concatenate((x_n, np.zeros((tmax, dsnew[1])))),
-                      axis=0)
-        x_n = x_n[tmax:]
-        x_n = np.reshape(x_n, dsnew)
-
-        x_n = x_n / cNorm.reshape(-1, 1)
-        x = np.array(x_n)
-        x = np.transpose(x, list(range(1, idim + 1)) + [0] + list(range(idim + 1, Nd)))
-
-    return x
-
-def _is_vect(x):
-    return hasattr(x, '__len__') and len(x) > 1
-
-
-def _make_vect(x):
-    if not hasattr(x, '__len__'):
-        x = np.array([x])
-    return x

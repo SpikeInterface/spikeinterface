@@ -20,6 +20,13 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "sortingcomponents"
 
+DEBUG = True
+
+if DEBUG:
+    import matplotlib.pyplot as plt
+    plt.ion()
+    plt.show()
+
 
 def setup_module():
     local_path = download_dataset(
@@ -30,10 +37,11 @@ def setup_module():
 
     # detect and localize
     peaks, peak_locations = detect_peaks(recording,
-                         method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         chunk_size=10000, verbose=1, progress_bar=True,
-                        pipeline_steps = [LocalizeCenterOfMass(recording, ms_before=0.1, ms_after=0.3, local_radius_um=150.)]
+                                         method='locally_exclusive',
+                                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                         chunk_size=10000, verbose=1, progress_bar=True,
+                                         pipeline_steps = [LocalizeCenterOfMass(recording, ms_before=0.1,
+                                                                                ms_after=0.3, local_radius_um=150.)]
                          )
     np.save(cache_folder / 'mearec_peaks.npy', peaks)
     np.save(cache_folder / 'mearec_peak_locations.npy', peak_locations)
@@ -69,29 +77,28 @@ def test_motion_functions():
     except ImportError:
         print("No skimage, not running phase_cross_correlation test.")
 
-    # DEBUG
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # extent = (temporal_bins[0], temporal_bins[-1], spatial_bins[0], spatial_bins[-1])
-    # im = ax.imshow(motion_histogram.T, interpolation='nearest',
-    #                     origin='lower', aspect='auto', extent=extent)
+    if DEBUG:
+        fig, ax = plt.subplots()
+        extent = (temporal_bins[0], temporal_bins[-1], spatial_bins[0], spatial_bins[-1])
+        im = ax.imshow(motion_histogram.T, interpolation='nearest',
+                            origin='lower', aspect='auto', extent=extent)
 
-    # fig, ax = plt.subplots()
-    # ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
+        fig, ax = plt.subplots()
+        ax.scatter(peaks['sample_ind'] / recording.get_sampling_frequency(),peaks['y'], color='r')
 
-    # fig, ax = plt.subplots()
-    # extent = None
-    # im = ax.imshow(pairwise_displacement, interpolation='nearest',
-    #                     cmap='PiYG', origin='lower', aspect='auto', extent=extent)
-    # im.set_clim(-40, 40)
-    # ax.set_aspect('equal')
-    # fig.colorbar(im)
+        fig, ax = plt.subplots()
+        extent = None
+        im = ax.imshow(pairwise_displacement, interpolation='nearest',
+                            cmap='PiYG', origin='lower', aspect='auto', extent=extent)
+        im.set_clim(-40, 40)
+        ax.set_aspect('equal')
+        fig.colorbar(im)
 
-    # fig, ax = plt.subplots()
-    # ax.plot(temporal_bins[:-1], motion)
-    # plt.show()
+        fig, ax = plt.subplots()
+        ax.plot(temporal_bins[:-1], motion)
 
-def test_estimate_motion_rigid():
+
+def test_estimate_motion_rigid_decentralized():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
@@ -111,34 +118,69 @@ def test_estimate_motion_rigid():
                                                                            verbose=True)
         motions.append(motion)
 
-        # # DEBUG
-        # import matplotlib.pyplot as plt
+        if DEBUG:
+            fig, ax = plt.subplots()
+            ax.plot(temporal_bins, motion)
 
-        # fig, ax = plt.subplots()
-        # ax.plot(temporal_bins, motion)
+            motion_histogram = extra_check['motion_histogram']
+            spatial_hist_bins = extra_check['spatial_hist_bins']
+            fig, ax = plt.subplots()
+            extent = (temporal_bins[0], temporal_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
+            im = ax.imshow(motion_histogram.T, interpolation='nearest',
+                                origin='lower', aspect='auto', extent=extent)
 
-        # motion_histogram = extra_check['motion_histogram']
-        # spatial_hist_bins = extra_check['spatial_hist_bins']
-        # fig, ax = plt.subplots()
-        # extent = (temporal_bins[0], temporal_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
-        # im = ax.imshow(motion_histogram.T, interpolation='nearest',
-        #                     origin='lower', aspect='auto', extent=extent)
-
-        # fig, ax = plt.subplots()
-        # pairwise_displacement = extra_check['pairwise_displacement_list'][0]
-        # im = ax.imshow(pairwise_displacement, interpolation='nearest',
-        #                     cmap='PiYG', origin='lower', aspect='auto', extent=None)
-        # im.set_clim(-40, 40)
-        # ax.set_aspect('equal')
-        # fig.colorbar(im)
-
-        # plt.show()
+            fig, ax = plt.subplots()
+            pairwise_displacement = extra_check['pairwise_displacement_list'][0]
+            im = ax.imshow(pairwise_displacement, interpolation='nearest',
+                                cmap='PiYG', origin='lower', aspect='auto', extent=None)
+            im.set_clim(-40, 40)
+            ax.set_aspect('equal')
+            fig.colorbar(im)
 
     motion_numpy, motion_torch = motions
     assert (motion_numpy == motion_torch).all()
 
 
-def test_estimate_motion_non_rigid():
+def test_estimate_motion_rigid_kilosort25():
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
+    recording = MEArecRecordingExtractor(local_path)
+    
+    peaks = np.load(cache_folder / 'mearec_peaks.npy')
+    peak_locations = np.load(cache_folder / 'mearec_peak_locations.npy')
+
+    motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations,
+                                                                       direction='y', bin_duration_s=1., bin_um=10., 
+                                                                       margin_um=5,
+                                                                       method='kilosort25', 
+                                                                       method_kwargs=dict(),
+                                                                       non_rigid_kwargs=None,
+                                                                       output_extra_check=True, progress_bar=True, 
+                                                                       verbose=True)
+    if DEBUG:
+        fig, ax = plt.subplots()
+        ax.plot(temporal_bins, motion)
+
+        spikecounts_hists = extra_check['spikecounts_hists']
+        target_hist = extra_check['target_hist']
+        fig, axs = plt.subplots(ncols=len(spikecounts_hists))
+        
+        for temporal_bin, spikecounts_hist in enumerate(spikecounts_hists):
+            ax = axs[temporal_bin]
+            im = ax.imshow(spikecounts_hist.T, interpolation='nearest',
+                        origin='lower', aspect='auto')
+            ax.set_title(f"T{temporal_bin}")
+            if temporal_bin > 0:
+                ax.set_yticklabels([])
+            ax.set_xticklabels([])
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(target_hist, interpolation='nearest')
+        fig.colorbar(im)
+        ax.set_title("Target hist")
+
+
+def test_estimate_motion_non_rigid_decentralized():
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
@@ -163,32 +205,71 @@ def test_estimate_motion_non_rigid():
         assert spatial_bins is not None
         assert len(spatial_bins) == motion.shape[1]
 
-        ### DEBUG
-        # import matplotlib.pyplot as plt
-        # probe = recording.get_probe()
+        if DEBUG:
+            probe = recording.get_probe()
 
-        # from probeinterface.plotting import plot_probe
-        # fig, ax = plt.subplots()
-        # plot_probe(probe, ax=ax)
+            from probeinterface.plotting import plot_probe
+            fig, ax = plt.subplots()
+            plot_probe(probe, ax=ax)
 
-        # non_rigid_windows = extra_check['non_rigid_windows']
-        # spatial_hist_bins = extra_check['spatial_hist_bins']
-        # fig, ax = plt.subplots()
-        # for w, win in enumerate(non_rigid_windows):
-        #     ax.plot(win, spatial_hist_bins[:-1])
-        #     ax.axhline(spatial_bins[w])
+            non_rigid_windows = extra_check['non_rigid_windows']
+            spatial_hist_bins = extra_check['spatial_hist_bins']
+            fig, ax = plt.subplots()
+            for w, win in enumerate(non_rigid_windows):
+                ax.plot(win, spatial_hist_bins[:-1])
+                ax.axhline(spatial_bins[w])
 
-        # fig, ax = plt.subplots()
-        # for w, win in enumerate(non_rigid_windows):
-        #     ax.plot(temporal_bins, motion[:, w])
-
-        # plt.show()
+            fig, ax = plt.subplots()
+            for w, win in enumerate(non_rigid_windows):
+                ax.plot(temporal_bins, motion[:, w])
 
     motion_numpy, motion_torch = motions
     assert (motion_numpy == motion_torch).all()
 
+
+def test_estimate_motion_non_rigid_kilosort25():
+    local_path = download_dataset(
+        repo=repo, remote_path=remote_path, local_folder=None)
+    recording = MEArecRecordingExtractor(local_path)
+
+    peaks = np.load(cache_folder / 'mearec_peaks.npy')
+    peak_locations = np.load(cache_folder / 'mearec_peak_locations.npy')
+
+    motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations,
+                                                                       direction='y', bin_duration_s=1., bin_um=10.,
+                                                                       margin_um=5,
+                                                                       method='kilosort25',
+                                                                       method_kwargs=dict(),
+                                                                       non_rigid_kwargs={'bin_step_um': 50},
+                                                                       output_extra_check=True, progress_bar=True,
+                                                                       verbose=True)
+    if DEBUG:
+        fig, ax = plt.subplots()
+        ax.plot(temporal_bins, motion)
+
+        spikecounts_hists = extra_check['spikecounts_hists']
+        target_hist = extra_check['target_hist']
+        fig, axs = plt.subplots(ncols=len(spikecounts_hists))
+
+        for temporal_bin, spikecounts_hist in enumerate(spikecounts_hists):
+            ax = axs[temporal_bin]
+            im = ax.imshow(spikecounts_hist.T, interpolation='nearest',
+                        origin='lower', aspect='auto')
+            ax.set_title(f"T{temporal_bin}")
+            if temporal_bin > 0:
+                ax.set_yticklabels([])
+            ax.set_xticklabels([])
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(target_hist, interpolation='nearest')
+        fig.colorbar(im)
+        ax.set_title("Target hist")
+    
+
 if __name__ == '__main__':
     setup_module()
-    test_motion_functions()
-    test_estimate_motion_rigid()
-    test_estimate_motion_non_rigid()
+    # test_motion_functions()
+    # test_estimate_motion_rigid_decentralized()
+    # test_estimate_motion_non_rigid_decentralized()
+    test_estimate_motion_rigid_kilosort25()
+    test_estimate_motion_non_rigid_kilosort25()
