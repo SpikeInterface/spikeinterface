@@ -7,6 +7,7 @@ from spikeinterface.preprocessing import remove_artifacts
 def test_remove_artifacts():
     # one segment only
     rec = generate_recording(durations=[10.])
+    rec.annotate(is_filtered=True)
 
     triggers = [15000, 30000]
     list_triggers = [triggers]
@@ -27,6 +28,16 @@ def test_remove_artifacts():
     assert not np.any(traces_all_1)
     assert not np.any(traces_short_0)
     assert not np.any(traces_short_1)
+
+    rec_rmart_mean = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode='average')
+    traces_all_0 = rec_rmart_mean.get_traces(start_frame=triggers[0] - ms_frames, end_frame=triggers[0] + ms_frames)
+
+    rec_rmart_median = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode='median')
+    traces_all_1 = rec_rmart_median.get_traces(start_frame=triggers[0] - ms_frames, end_frame=triggers[0] + ms_frames)
+
+    assert not np.allclose(traces_all_0, traces_all_0_clean)
+    assert not np.allclose(traces_all_1, traces_all_1_clean)
+
 
     rec_rmart_lin = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode="linear")
     traces_all_0 = rec_rmart_lin.get_traces(start_frame=triggers[0] - ms_frames, end_frame=triggers[0] + ms_frames)
@@ -51,6 +62,13 @@ def test_remove_artifacts():
     rec_rmart_lin = remove_artifacts(rec, triggers, ms_before=None, ms_after=None, mode="linear")
     rec_rmart_cub = remove_artifacts(rec, triggers, ms_before=None, ms_after=None, mode="cubic")
 
+
+    # test removing several artefact types at once
+    triggers = [15000, 20000, 25000, 30000]
+    labels = ['stim_1', 'stim_2', 'stim_1', 'stim_2']
+    list_triggers = [triggers]
+    list_labels = [labels]
+    rec_rmart = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode="median", list_labels=list_labels)
 
 
 if __name__ == '__main__':
