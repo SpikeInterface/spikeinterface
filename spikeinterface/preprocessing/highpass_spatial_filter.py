@@ -44,6 +44,7 @@ class HighpassSpatialFilter(BasePreprocessor):
         BasePreprocessor.__init__(self, recording)
 
         n_channel_pad, agc_options, butter_kwargs = self.handle_args(recording,
+                                                                     n_channel_taper,
                                                                      n_channel_pad,
                                                                      agc_options,
                                                                      butter_kwargs)
@@ -64,6 +65,7 @@ class HighpassSpatialFilter(BasePreprocessor):
 
     def handle_args(self,
                     recording,
+                    n_channel_taper,
                     n_channel_pad,
                     agc_options,
                     butter_kwargs):
@@ -89,7 +91,17 @@ class HighpassSpatialFilter(BasePreprocessor):
         if butter_kwargs is None:
             butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
 
+        self.check_length(n_channel_pad, recording, "n_channel_pad")
+        self.check_length(n_channel_taper, recording, "n_channel_taper")
+
         return n_channel_pad, agc_options, butter_kwargs
+
+    def check_length(self, variable, recording, label):
+
+        if variable and variable > recording.get_num_channels():
+            raise ValueError(f"{label} must be less "
+                             "than the number of channels in recording.")
+
 
     def get_default_agc_window_length(self, sampling_interval):
         """
