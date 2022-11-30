@@ -71,7 +71,7 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
     
     if dtype is None:
         if return_scaled:
-            dtype = recording.get_detype()
+            dtype = recording.get_dtype()
         else:
             dtype = 'float32'
     dtype = np.dtype(dtype)

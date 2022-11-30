@@ -3,9 +3,10 @@ from pathlib import Path
 import shutil
 import numpy as np
 import platform
+import zarr
 
 
-from spikeinterface.core.testing_tools import generate_recording, generate_sorting, NumpySorting
+from spikeinterface.core import generate_recording, generate_sorting, NumpySorting
 from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms
 
 
@@ -59,9 +60,13 @@ def test_WaveformExtractor():
 
         if mode == "folder":
             # load back
-            we = WaveformExtractor.load_from_folder(folder)
+            we = WaveformExtractor.load(folder)
 
         wfs = we.get_waveforms(0)
+        if mode == "folder":
+            assert isinstance(wfs, np.memmap)
+        wfs_array = we.get_waveforms(0, lazy=False)
+        assert isinstance(wfs_array, np.ndarray)
 
         template = we.get_template(0)
         assert template.shape == (210, 2)
@@ -84,6 +89,33 @@ def test_WaveformExtractor():
             assert unit in keep_units
         filtered_templates = wf_filt.get_all_templates()
         assert filtered_templates.shape == (len(keep_units), 210, num_channels)
+
+        # test save
+        we_saved = we.save(cache_folder / f"we_saved_{mode}")
+        for unit_id in we_saved.unit_ids:
+            assert np.array_equal(we.get_waveforms(unit_id),
+                                  we_saved.get_waveforms(unit_id))
+            assert np.array_equal(we.get_sampled_indices(unit_id),
+                                  we_saved.get_sampled_indices(unit_id))
+            assert np.array_equal(we.get_all_templates(),
+                                  we_saved.get_all_templates())
+        wfs = we_saved.get_waveforms(0)
+        assert isinstance(wfs, np.memmap)
+        wfs_array = we_saved.get_waveforms(0, lazy=False)
+        assert isinstance(wfs_array, np.ndarray)
+
+        we_saved_zarr = we.save(cache_folder / f"we_saved_{mode}", format="zarr")
+        for unit_id in we_saved_zarr.unit_ids:
+            assert np.array_equal(we.get_waveforms(unit_id),
+                                  we_saved_zarr.get_waveforms(unit_id))
+            assert np.array_equal(we.get_sampled_indices(unit_id),
+                                  we_saved_zarr.get_sampled_indices(unit_id))
+            assert np.array_equal(we.get_all_templates(),
+                                  we_saved_zarr.get_all_templates())
+        wfs = we_saved_zarr.get_waveforms(0)
+        assert isinstance(wfs, zarr.Array)
+        wfs_array = we_saved_zarr.get_waveforms(0, lazy=False)
+        assert isinstance(wfs_array, np.ndarray)
 
 
 def test_extract_waveforms():
@@ -178,10 +210,10 @@ def test_recordingless():
     # save with relative paths
     we = extract_waveforms(recording, sorting, wf_folder,
                            use_relative_path=True, return_scaled=False)
-    we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
+    we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
 
     assert isinstance(we.recording, BaseRecording)
-    assert we_loaded._recording is None
+    assert not we_loaded.has_recording()
     with pytest.raises(ValueError):
         # reccording cannot be accessible
         rec = we_loaded.recording
@@ -198,8 +230,75 @@ def test_recordingless():
     # delete original recording and rely on rec_attributes
     if platform.system() != "Windows":
         shutil.rmtree(cache_folder / "recording1")
-        we_loaded = WaveformExtractor.load_from_folder(wf_folder, with_recording=False)
-        assert we_loaded._recording is None
+        we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
+        assert not we_loaded.has_recording()
+
+
+def test_unfiltered_extraction():
+    durations = [30, 40]
+    sampling_frequency = 30000.
+
+    # 2 segments
+    num_channels = 2
+    recording = generate_recording(num_channels=num_channels, durations=durations,
+                                   sampling_frequency=sampling_frequency)
+    recording.annotate(is_filtered=False)
+    folder_rec = cache_folder / "wf_unfiltered"
+    recording = recording.save(folder=folder_rec)
+    num_units = 15
+    sorting = generate_sorting(
+        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
+
+    # test with dump !!!!
+    recording = recording.save()
+    sorting = sorting.save()
+
+    folder = cache_folder / 'test_waveform_extractor_unfiltered'
+    if folder.is_dir():
+        shutil.rmtree(folder)
+
+    for mode in ["folder", "memory"]:
+        if mode == "memory":
+            wf_folder = None
+        else:
+            wf_folder = folder
+
+        with pytest.raises(Exception):
+            we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=False)
+        if wf_folder is not None:
+            shutil.rmtree(wf_folder)
+        we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=True)
+
+        we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
+
+        we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+        we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
+
+        wfs = we.get_waveforms(0)
+        assert wfs.shape[0] <= 500
+        assert wfs.shape[1:] == (210, num_channels)
+
+        wfs, sampled_index = we.get_waveforms(0, with_index=True)
+
+        if mode == "folder":
+            # load back
+            we = WaveformExtractor.load_from_folder(folder)
+
+        wfs = we.get_waveforms(0)
+
+        template = we.get_template(0)
+        assert template.shape == (210, 2)
+        templates = we.get_all_templates()
+        assert templates.shape == (num_units, 210, num_channels)
+
+        wf_std = we.get_template(0, mode='std')
+        assert wf_std.shape == (210, num_channels)
+        wfs_std = we.get_all_templates(mode='std')
+        assert wfs_std.shape == (num_units, 210, num_channels)
+
+        wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
+        assert wf_segment.shape == (210, num_channels)
+        assert wf_segment.shape == (210, num_channels)
 
 
 def test_sparsity():
@@ -321,8 +420,8 @@ def test_empty_sorting():
 
 
 if __name__ == '__main__':
-    # test_WaveformExtractor()
+    test_WaveformExtractor()
     # test_extract_waveforms()
     # test_sparsity()
     # test_portability()
-    test_recordingless()
+    # test_recordingless()

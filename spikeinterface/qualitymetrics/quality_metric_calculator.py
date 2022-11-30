@@ -34,7 +34,10 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         else:
             self.principal_component = None
 
-        self.recording = waveform_extractor.recording
+        if waveform_extractor.has_recording():
+            self.recording = waveform_extractor.recording
+        else:
+            self.recording = None
         self.sorting = waveform_extractor.sorting
 
     def _set_params(self, metric_names=None, sparsity=None, peak_sign='neg',

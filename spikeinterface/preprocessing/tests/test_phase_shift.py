@@ -5,7 +5,7 @@ import shutil
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from spikeinterface import NumpyRecording
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 from spikeinterface import NumpyRecording, set_global_tmp_folder
 
 from spikeinterface.preprocessing import phase_shift
