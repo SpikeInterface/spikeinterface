@@ -214,7 +214,7 @@ def estimate_motion(recording, peaks, peak_locations,
         dmax = max(contact_pos)
         num_spatial_bins = len(spatial_bins) - 1
         # num_spatial_bins = int(1 + np.ceil(np.max(contact_pos) - dmin) / bin_um)
-        spike_depths = peak_locations["y"]
+        spike_depths = peak_locations[direction]
 
         # preallocate matrix of counts with n_amp_bins bins, spaced logarithmically
         spikecounts_hists = np.zeros((num_spatial_bins, n_amp_bins, len(chunks)))
