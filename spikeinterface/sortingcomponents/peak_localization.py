@@ -1,19 +1,15 @@
 """Sorting components: peak localization."""
-
 import numpy as np
-
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs
 
+from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
+from .tools import make_multi_method_doc
 
 from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 possible_localization_methods,
                                                 solve_monopolar_triangulation,
                                                 make_radial_order_parents,
                                                 enforce_decrease_shells_ptp)
-
-
-from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
-from .tools import make_multi_method_doc
 
 
 def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
@@ -65,6 +61,7 @@ class LocalizeBase(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
+
 class LocalizePeakChannel(PeakPipelineStep):
     """Localize peaks using the center of mass method."""
     
@@ -91,6 +88,7 @@ class LocalizePeakChannel(PeakPipelineStep):
 
         return peak_locations
 
+
 class LocalizeCenterOfMass(PeakPipelineStep):
     """Localize peaks using the center of mass method."""
     need_waveforms = True
@@ -101,9 +99,8 @@ class LocalizeCenterOfMass(PeakPipelineStep):
     ms_after: float
         Time in ms to cut after spike peak
     local_radius_um: float
-        For channel sparsity.
+        Radius in um for channel sparsity.
     """
-    
     def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)

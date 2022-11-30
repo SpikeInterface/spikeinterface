@@ -264,7 +264,6 @@ class DetectPeakLocallyExclusive:
     params_doc = DetectPeakByChannel.params_doc + """
     local_radius_um: float
         The radius to use for detection across local channels.
-
     """
     @classmethod
     def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
