@@ -122,11 +122,11 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
         traces = traces.copy()
 
-        traces = kfilt(traces.T,
+        traces = kfilt(traces,
                        self.n_channel_pad,
                        self.n_channel_taper,
                        self.agc_options,
-                       self.butter_kwargs).T
+                       self.butter_kwargs)
 
         return traces
 
@@ -155,12 +155,7 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
 
     traces: (num_channels x num_samples) numpy array
     """
-    traces2 = traces.copy().T
-
-    num_channels_orig = traces.shape[0]  # REMOVE
-    num_channels = traces2.shape[1]
-
-    assert num_channels_orig == num_channels  # REMOVE
+    num_channels = traces.shape[1]
 
     # lateral padding left and right
     n_channel_pad = int(n_channel_pad)
@@ -171,44 +166,26 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
     if not agc_options:
         gain = 1
     else:
-        traces, gain = agc(traces,  # .T
-                           window_length=agc_options["window_length_s"],   # REMOVE
+        traces, gain = agc(traces,
+                           window_length=agc_options["window_length_s"],
                            sampling_interval=agc_options["sampling_interval"])
-
-        traces2, gain2 = agc_flip(traces2,
-                                  window_length=agc_options["window_length_s"],
-                                  sampling_interval=agc_options["sampling_interval"])
-
 
     if n_channel_pad > 0:
         # pad the array with a mirrored version of itself and apply a cosine taper
-
-        traces = np.r_[np.flipud(traces[:n_channel_pad]), traces, np.flipud(traces[-n_channel_pad:])]   # REMOVE
-        traces2 = np.c_[np.fliplr(traces2[:, :n_channel_pad]), traces2, np.fliplr(traces2[:, -n_channel_pad:])]
-
-        assert np.array_equal(traces.T, traces2)    # REMOVE
+        traces = np.c_[np.fliplr(traces[:, :n_channel_pad]),
+                       traces,
+                       np.fliplr(traces[:, -n_channel_pad:])]
 
     if n_channel_taper > 0:
         taper = fcn_cosine([0, n_channel_taper])(np.arange(num_channels_padded))  # taper up
         taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(np.arange(num_channels_padded))   # taper down
-
-        traces = traces * taper[:, np.newaxis]    # REMOVE
-        traces2 = traces2 * taper[np.newaxis, :]
-
-        assert np.array_equal(traces.T, traces2)  # REMOVE
+        traces = traces * taper[np.newaxis, :]
 
     sos = scipy.signal.butter(**butter_kwargs, output='sos')
-    
-    traces = scipy.signal.sosfiltfilt(sos, traces, axis=0)  # REMOVE
-    traces2 = scipy.signal.sosfiltfilt(sos, traces2, axis=1)
+    traces = scipy.signal.sosfiltfilt(sos, traces, axis=1)
 
-    assert np.array_equal(traces.T, traces2)  # REMOVE
-    
     if n_channel_pad > 0:
-        traces = traces[n_channel_pad:-n_channel_pad, :]   # REMOVE
-        traces2 = traces2[:, n_channel_pad:-n_channel_pad]
-
-        assert np.array_equal(traces.T, traces2)  # REMOVE
+        traces = traces[:, n_channel_pad:-n_channel_pad]
 
     return traces * gain
 
@@ -217,49 +194,6 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
 # -----------------------------------------------------------------------------------------------
 
 def agc(traces, window_length, sampling_interval, epsilon=1e-8):
-    """
-    Automatic gain control
-    w_agc, gain = agc(w, window_length=.5, si=.002, epsilon=1e-8)
-    such as w_agc * gain = w
-    :param traces: seismic array (sample last dimension)
-    :param window_length: window length (secs) (original default 0.5)
-    :param si: sampling interval (secs) (original default 0.002)
-    :param epsilon: whitening (useful mainly for synthetic data)
-    :return: AGC data array, gain applied to data
-    """
-    num_samples_window = int(np.round(window_length / sampling_interval / 2) * 2 + 1)
-    window = np.hanning(num_samples_window)
-    window /= np.sum(window)
-
-    traces2 = traces.copy().T
-    
-    gain = scipy.signal.fftconvolve(np.abs(traces), window[None, :], mode='same', axes=1)  # REMOVE 
-    gain2 = scipy.signal.fftconvolve(np.abs(traces2), window[:, None], mode='same', axes=0)
-   
-    assert np.array_equal(gain.T, gain2)  # REMOVE 
-   
-    gain += (np.sum(gain, axis=1) * epsilon / traces.shape[-1])[:, np.newaxis]  # REMOVE 
-    
-    gain2 += (np.sum(gain2, axis=0) * epsilon / traces2.shape[0])[np.newaxis, :]
-    
-    assert np.allclose((np.sum(gain, axis=1) * epsilon / traces.shape[-1])[:, np.newaxis].T, 
-                       (np.sum(gain2, axis=0) * epsilon / traces2.shape[0])[np.newaxis, :], rtol=0, atol=1e-06)  # REMOVE 
-
-    dead_channels = np.sum(gain, axis=1) == 0
-    dead_channels2 = np.sum(gain2, axis=0) == 0
-    
-    assert np.array_equal(dead_channels, dead_channels2)
-    
-    traces[~dead_channels, :] = traces[~dead_channels, :] / gain[~dead_channels, :]
-
-    traces2[:, ~dead_channels2] = traces2[:, ~dead_channels2] / gain2[:, ~dead_channels2]
-
-    assert np.array_equal(traces2, traces.T)
-
-    return traces, gain
-
-
-def agc_flip(traces, window_length, sampling_interval, epsilon=1e-8):
     """
     Automatic gain control
     w_agc, gain = agc(w, window_length=.5, si=.002, epsilon=1e-8)
