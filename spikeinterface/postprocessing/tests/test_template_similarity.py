@@ -23,7 +23,7 @@ class SimilarityExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCas
 
 
 if __name__ == '__main__':
-    test = SimilarityExtensionTest
+    test = SimilarityExtensionTest()
     test.setUp()
     test.test_extension()
     test.test_check_equal_template_with_distribution_overlap()
