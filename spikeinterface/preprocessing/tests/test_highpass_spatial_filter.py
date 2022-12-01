@@ -79,7 +79,7 @@ class TestHighPassFilter:
 
     @pytest.mark.parametrize("ntr_pad", [None, 0, 10, 31])
     @pytest.mark.parametrize("ntr_tap", [None, 5, 31])
-    @pytest.mark.parametrize("lagc", ["default", None, 125, 1232])
+    @pytest.mark.parametrize("lagc", ["default", None, 150, 1232])
     @pytest.mark.parametrize("butter_kwargs", [None,
                                                {'N': 3, 'Wn': 0.05, 'btype': 'highpass'},
                                                {'N': 5, 'Wn': 0.12, 'btype': 'lowpass'}])
@@ -104,9 +104,36 @@ class TestHighPassFilter:
 
             assert np.allclose(si_filtered, ibl_filtered, atol=1e-06, rtol=0)
 
-    def add_trend_and_check_deleted(self):
+    @pytest.mark.parametrize("num_channels", [32, 64, 384])
+    def test_add_trend_and_check_deleted(self, num_channels):
 
-        si_recording = self.get_test_recording(num_channels, num_segments=1)
+        recording = self.get_test_recording(num_channels, num_segments=1)
+
+        channel_trend = self.get_trend_across_channels(recording.get_num_samples(),
+                                                       num_channels)
+        import scipy.signal
+        data = recording.get_traces()
+        sos = scipy.signal.butter(N=3, Wn=0.01, btype="highpass", output='sos')
+        data = scipy.signal.sosfiltfilt(sos, data, axis=1)
+        data_no_trend = data.copy()
+
+        recording._recording_segments[0]._trace = data + channel_trend
+
+        __, si_highpass_spatial_filter = self.run_si_highpass_filter(recording, ntr_pad=10, ntr_tap=10, lagc="default", butter_kwargs=dict(N=3, Wn=0.01, btype="highpass"), get_traces=False)
+        si_filtered = si_highpass_spatial_filter.get_traces()
+        breakpoint()
+        assert np.array_equal(si_filtered, data_no_trend)
+
+    def get_trend_across_channels(self, num_samples, num_channels, nyq_percent=0.05):
+        """ """
+        k_space = np.zeros((num_samples, num_channels))
+        nyq_samples = np.floor((num_channels / 2) * nyq_percent).astype("int")
+        k_space[0, nyq_samples] = 1
+        k_space[0, -nyq_samples] = 1
+
+        channel_trend = np.abs(np.fft.ifft2(k_space))
+
+        return channel_trend
 
         # TODO: make a sanity check test, add spatially varing trendlind Wn 0.01
         #       determine units for 0.1 Wn in the spatial domain
@@ -152,11 +179,10 @@ class TestHighPassFilter:
 
     def get_test_recording(self, num_channels=32, num_segments=2):
         """
-        1500 and 2100 samples
+        1500 and 2100 samples, [0.05, 0.07]
         """
         recording = generate_recording(num_channels=num_channels,
-                                       durations=[0.05, 0.07])
-
+                                       durations=np.random.uniform(0.05, 0.07, num_segments))  
         return recording
 
     def run_si_highpass_filter(self, si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, get_traces=True):
