@@ -5,7 +5,7 @@ from spikeinterface.core import WaveformExtractor
 from spikeinterface.core import get_noise_levels, get_channel_distances, get_chunk_with_margin, get_random_data_chunks
 from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
-from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
+from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
@@ -104,7 +104,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
             peak_traces = traces[margin:-margin, :]
         else:
             peak_traces = traces
-        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(peak_traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask)
+        peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(peak_traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask)
         peak_sample_ind += margin
 
 
