@@ -241,7 +241,30 @@ class BenchmarkMotionEstimationMearec:
         ax.set_xlabel('depth (um)')
         _simpleaxis(ax)
 
+    def view_errors(self):
+        fig = plt.figure(figsize=(15, 10))
+        gs = fig.add_gridspec(2, 2)
 
+        ax = fig.add_subplot(gs[0, :])
+        im = ax.imshow(np.abs(self.gt_motion - self.motion).T, aspect='auto', interpolation='nearest', origin='lower', 
+        extent=(self.temporal_bins[0], self.temporal_bins[-1], self.spatial_bins[0], self.spatial_bins[-1]))
+        plt.colorbar(im, ax=ax, label='error')
+        ax.set_ylabel('depth (um)')
+        ax.set_xlabel('time (s)')
+
+        ax = fig.add_subplot(gs[1, 0])
+        mean_error = np.linalg.norm(self.gt_motion - self.motion, axis=1)
+        ax.plot(self.temporal_bins, mean_error)
+        ax.set_xlabel('time (s)')
+        ax.set_ylabel('error')
+        _simpleaxis(ax)
+
+        ax = fig.add_subplot(gs[1, 1])
+        depth_error = np.linalg.norm(self.gt_motion - self.motion, axis=0)
+        ax.plot(self.spatial_bins, depth_error)
+        ax.set_xlabel('depth (um)')
+        ax.set_ylabel('error')
+        _simpleaxis(ax)
 
 def _simpleaxis(ax):
     ax.spines['top'].set_visible(False)
