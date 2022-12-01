@@ -61,6 +61,10 @@ class BenchmarkMotionEstimationMearec:
         t3 = time.perf_counter()
         self.motion, self.temporal_bins, self.spatial_bins = estimate_motion(self.recording, self.selected_peaks, self.peak_locations, 
                                         **self.estimate_motion_kwargs)
+
+        ## You were right, we need to subtract the first value of the motion to have something
+        ## properly centered. Otherwise, there is a bias distorting traces
+        # self.motion -= self.motion[0]
         t4 = time.perf_counter()
 
         self.run_times = dict(
