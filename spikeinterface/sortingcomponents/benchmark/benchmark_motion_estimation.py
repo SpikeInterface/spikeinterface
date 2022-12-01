@@ -92,7 +92,6 @@ class BenchmarkMotionEstimationMearec:
             # time, units
             self.gt_motion = np.zeros_like(self.motion)
             for t in range(self.gt_unit_positions.shape[0]):
-                print(unit_positions, unit_motions[t], self.spatial_bins)
                 f = scipy.interpolate.interp1d(unit_positions, unit_motions[t, :], fill_value="extrapolate")
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
@@ -214,6 +213,7 @@ class BenchmarkMotionEstimationMearec:
                     depth = self.spatial_bins[i]
                     ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='red', lw=2)
 
+
     def estimation_vs_depth(self):
         fig, axes = plt.subplots(2, figsize=(15,10))
 
@@ -222,9 +222,9 @@ class BenchmarkMotionEstimationMearec:
         duration = self.recording.get_total_duration()
         
         ax = axes[0]
-        ax.plot(self.gt_motion, lw=2, c='b')
-        ax.plot(self.motion.mean(1), lw=2, c='r')
-        ax.fill_between(np.arange(len(self.motion)), self.motion.mean(1)-self.motion.std(1), 
+        ax.plot(self.temporal_bins, self.gt_motion, lw=2, c='b')
+        ax.plot(self.temporal_bins, self.motion.mean(1), lw=2, c='r')
+        ax.fill_between(self.temporal_bins, self.motion.mean(1)-self.motion.std(1), 
                                 self.motion.mean(1) + self.motion.std(1), color='r', alpha=0.25)
         
         ax.set_ylabel('drift (um)')
