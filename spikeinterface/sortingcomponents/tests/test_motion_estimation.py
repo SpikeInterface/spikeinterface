@@ -6,8 +6,9 @@ from spikeinterface import download_dataset
 from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion, make_motion_histogram,
-                                              compute_pairwise_displacement, compute_global_displacement)
+from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion, make_2d_motion_histogram,
+                                                                compute_pairwise_displacement, 
+                                                                compute_global_displacement)
 
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
@@ -56,7 +57,7 @@ def test_motion_functions():
     peak_locations = np.load(cache_folder / 'mearec_peak_locations.npy')
 
     bin_um = 2
-    motion_histogram, temporal_bins, spatial_bins = make_motion_histogram(
+    motion_histogram, temporal_bins, spatial_bins = make_2d_motion_histogram(
         recording, peaks, peak_locations, bin_um=bin_um)
     # print(motion_histogram.shape, temporal_bins.size, spatial_bins.size)
     
