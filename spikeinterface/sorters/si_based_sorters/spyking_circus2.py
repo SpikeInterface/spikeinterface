@@ -61,7 +61,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-        from spikeinterface.sortingcomponents.peak_localization import localize_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
@@ -91,7 +90,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             detection_params['exclude_sweep_ms'] = max(params['general']['ms_before'], params['general']['ms_after'])
 
         peaks = detect_peaks(recording_f, method='locally_exclusive', 
-            **detection_params)
+                             **detection_params)
 
         if params['drift_correction']:
 
@@ -135,7 +134,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         selection_params['n_peaks'] = max(selection_params['min_n_peaks'], selection_params['n_peaks'])
 
         selection_params.update({'noise_levels' : noise_levels})
-        selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
+        selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, 
+                                      **selection_params)
 
         if verbose:
             print('We kept %d peaks for clustering' %len(selected_peaks))
