@@ -170,7 +170,7 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 
 
 if __name__ == '__main__':
-    test = PrincipalComponentsExtensionTest
+    test = PrincipalComponentsExtensionTest()
     test.setUp()
     test.test_extension()
     test.test_shapes()

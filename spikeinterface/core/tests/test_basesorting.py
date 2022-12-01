@@ -10,7 +10,7 @@ import numpy as np
 from spikeinterface.core import NumpySorting, NpzSortingExtractor, load_extractor
 from spikeinterface.core.base import BaseExtractor
 
-from spikeinterface.core.testing_tools import create_sorting_npz, generate_sorting
+from spikeinterface.core import create_sorting_npz, generate_sorting
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"

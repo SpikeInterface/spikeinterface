@@ -3,7 +3,7 @@ import scipy
 from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channel_distances)
 from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
 
-from spikeinterface.sortingcomponents.peak_detection import detect_peak_locally_exclusive, detect_peaks_by_channel
+from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
@@ -100,7 +100,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         #~ template_sparsity_inds = get_template_channel_sparsity(we, method='radius',
                                   #~ peak_sign=d['peak_sign'], outputs='index', radius_um=d['local_radius_um'])
         template_sparsity_inds = get_template_channel_sparsity(we, method='threshold',
-                                  peak_sign=d['peak_sign'], outputs='index', threshold=d['detect_threshold'])                                  
+                                                               peak_sign=d['peak_sign'], outputs='index',
+                                                               threshold=d['detect_threshold'])
         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype='bool')
         for unit_index, unit_id in enumerate(unit_ids):
             chan_inds = template_sparsity_inds[unit_id]
@@ -157,10 +158,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             possible_clusters_by_channel.append(cluster_inds)
         
         d['possible_clusters_by_channel'] = possible_clusters_by_channel
-
-
-        
-        
         d['possible_shifts'] = np.arange(-d['sample_shift'], d['sample_shift'] +1, dtype='int64')
 
         return d        
@@ -218,13 +215,12 @@ def _tdc_find_spikes(traces, d, level=0):
         templates_short = d['templates_short']
         margin = d['margin']
         possible_clusters_by_channel = d['possible_clusters_by_channel']
-        
-        
-        peak_traces = traces[margin // 2:-margin // 2, :]
-        peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(peak_traces, peak_sign,
-                                    d['abs_threholds'], d['peak_shift'], d['neighbours_mask'])
-        peak_sample_ind += margin // 2
 
+        peak_traces = traces[margin // 2:-margin // 2, :]
+        peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(peak_traces, peak_sign,
+                                                                                 d['abs_threholds'], d['peak_shift'],
+                                                                                 d['neighbours_mask'])
+        peak_sample_ind += margin // 2
 
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         order = np.argsort(np.abs(peak_amplitude))[::-1]
@@ -234,8 +230,6 @@ def _tdc_find_spikes(traces, d, level=0):
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
         spikes['sample_ind'] = peak_sample_ind
         spikes['channel_ind'] = peak_chan_ind  # TODO need to put the channel from template
-
-
 
         possible_shifts = d['possible_shifts']
         distances_shift = np.zeros(possible_shifts.size)
@@ -289,7 +283,8 @@ def _tdc_find_spikes(traces, d, level=0):
                     # shift = possible_shifts[ind_shift]
                     
                     ## numba version
-                    numba_best_shift(traces, templates[cluster_ind, :, :], sample_ind, d['nbefore'], possible_shifts, distances_shift, chan_sparsity)
+                    numba_best_shift(traces, templates[cluster_ind, :, :], sample_ind, d['nbefore'],
+                                     possible_shifts, distances_shift, chan_sparsity)
                     ind_shift = np.argmin(distances_shift)
                     shift = possible_shifts[ind_shift]
 
@@ -332,10 +327,8 @@ def _tdc_find_spikes(traces, d, level=0):
             
             spikes['cluster_ind'][i] = cluster_ind
             spikes['amplitude'][i] =amplitude
-            
 
         return spikes    
-
 
 
 if HAVE_NUMBA:
@@ -379,4 +372,3 @@ if HAVE_NUMBA:
             distances_shift[i] = sum_dist
         
         return distances_shift
-    

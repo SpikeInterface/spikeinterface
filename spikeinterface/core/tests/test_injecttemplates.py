@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from spikeinterface.core import extract_waveforms, InjectTemplatesRecording, NpzSortingExtractor, load_extractor, set_global_tmp_folder
 from spikeinterface.core.testing import check_recordings_equal
-from spikeinterface.core.testing_tools import generate_recording, create_sorting_npz
+from spikeinterface.core import generate_recording, create_sorting_npz
 
 
 if hasattr(pytest, "global_test_folder"):

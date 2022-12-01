@@ -8,6 +8,24 @@ from ..postprocessing import get_template_extremum_channel_peak_shift
 
 
 class AlignSortingExtractor(BaseSorting):
+    """
+    Class to shift a unit (generally to align the template on the peak) given
+    the shifts for each unit.
+    
+    Parameters
+    ----------
+    sorting: BaseSorting
+        The sorting to align.
+    unit_peak_shifts: dict
+        Dictionary mapping the unit_id to the unit's shift (in number of samples).
+        A positive shift means the spike train is shifted back in time, while
+        a negative shift means the spike train is shifted forward.
+    
+    Returns
+    -------
+    aligned_sorting: AlignSortingExtractor
+        The aligned sorting.
+    """
     
     is_dumpable = False
     
@@ -16,6 +34,15 @@ class AlignSortingExtractor(BaseSorting):
         
         for segment in sorting._sorting_segments:
             self.add_sorting_segment(AlignSortingSegment(segment, unit_peak_shifts))
+
+        sorting.copy_metadata(self, only_main=False)
+        if sorting.has_recording():
+            self.register_recording(sorting._recording)
+
+        self._kwargs = {
+            'sorting': sorting.to_dict(),
+            'unit_peak_shifts': unit_peak_shifts
+        }
 
 
 class AlignSortingSegment(BaseSortingSegment):
