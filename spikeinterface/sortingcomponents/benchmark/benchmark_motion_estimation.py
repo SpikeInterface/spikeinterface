@@ -26,7 +26,8 @@ class BenchmarkMotionEstimationMearec:
                 localize_kwargs={},
                 estimate_motion_kwargs={},
                 output_folder=None,
-                jobs_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}):
+                jobs_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
+                overwrite=False):
                 
         self.mearec_filename = mearec_filename
         self.recording, self.gt_sorting = read_mearec(self.mearec_filename)
@@ -36,11 +37,18 @@ class BenchmarkMotionEstimationMearec:
         self.select_kwargs = select_kwargs
         self.localize_kwargs = localize_kwargs
         self.estimate_motion_kwargs = estimate_motion_kwargs
+        self.overwrite = overwrite
 
         self.output_folder = output_folder
 
 
     def run(self):
+
+        if self.output_folder is not None:
+            if self.output_folder.exists() and not self.overwrite:
+                print(f"The folder {self.output_folder} is not empty")
+                return
+
         t0 = time.perf_counter()
         self.peaks = detect_peaks(self.recording, **self.detect_kwargs, **self.job_kwargs)
         t1 = time.perf_counter()
@@ -84,7 +92,11 @@ class BenchmarkMotionEstimationMearec:
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
     def save_to_folder(self, folder):
-        assert not folder.exists()
+
+        if folder.exists():
+            if self.overwrite:
+                import shutil
+                shutil.rmtree(folder)
         folder.mkdir(parents=True)
 
         folder = Path(folder)
@@ -241,6 +253,8 @@ class BenchmarkMotionEstimationMearec:
         _simpleaxis(ax)
         ax.set_yticks([])
         ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+        ax.spines['left'].set_visible(False)
+        ax.set_xlabel('time (s)')
 
         if show_drift:
             if self.spatial_bins is None:
