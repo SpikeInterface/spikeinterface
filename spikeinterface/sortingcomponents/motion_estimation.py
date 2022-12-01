@@ -120,7 +120,7 @@ def estimate_motion(recording, peaks, peak_locations,
         # unique block for all depths
         num_non_rigid_windows = 1
         non_rigid_windows = [np.ones(num_spatial_bins, dtype='float64')]
-        spatial_bins_non_rigid = None
+        spatial_bins_non_rigid = [spatial_bin_edges[num_spatial_bins // 2] + bin_um / 2]
     else:
         assert 'bin_step_um' in non_rigid_kwargs, "'non_rigid_kwargs' needs to specify the 'bin_step_um' field"
         bin_step_um = non_rigid_kwargs['bin_step_um']
@@ -143,7 +143,7 @@ def estimate_motion(recording, peaks, peak_locations,
         # make 2D histogram raster
         if verbose:
             print('Computing motion histogram')
-        motion_histogram, temporal_hist_bins, spatial_hist_bins = \
+        motion_histogram, temporal_hist_bin_edges, spatial_hist_bin_edges = \
             make_2d_motion_histogram(recording, peaks,
                                      peak_locations,
                                      direction=direction,
@@ -151,12 +151,10 @@ def estimate_motion(recording, peaks, peak_locations,
                                      spatial_bin_edges=spatial_bin_edges)
         if output_extra_check:
             extra_check['motion_histogram'] = motion_histogram
-            extra_check['temporal_hist_bins'] = temporal_hist_bins
-            extra_check['spatial_hist_bins'] = spatial_hist_bins
             extra_check['pairwise_displacement_list'] = []
 
         # temporal bins are bin center
-        temporal_bins = temporal_hist_bins[:-1] + bin_duration_s // 2.
+        temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.
 
         motion = []
         windows_iter = non_rigid_windows
@@ -201,8 +199,8 @@ def estimate_motion(recording, peaks, peak_locations,
             motion.append(one_motion[:, np.newaxis])
         motion = np.concatenate(motion, axis=1)
 
-    elif method == "kilosort25": #maybe change name to: "iterative_histogram_registration"
-        motion_histograms, temporal_hist_bins, spatial_hist_bins = \
+    elif method == "kilosort25": # TODO: change name to: "iterative_histogram_registration"
+        motion_histograms, temporal_hist_bin_edges, spatial_hist_bin_edges = \
             make_3d_motion_histograms(recording, peaks,
                                       peak_locations,
                                       direction=direction,
@@ -210,17 +208,13 @@ def estimate_motion(recording, peaks, peak_locations,
                                       bin_duration_s=bin_duration_s,
                                       spatial_bin_edges=spatial_bin_edges)
         # temporal bins are bin center
-        temporal_bins = temporal_hist_bins[:-1] + bin_duration_s // 2.
-
-        # pre-computed y-positions are in spatial_bins
-        # y_upsampled = dmin + bin_um * np.arange(1, dmax + 1) - bin_um / 2
-        y_upsampled = spatial_bin_edges[:-1] + bin_um / 2
+        temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.
 
         # do alignment
-        shift_indices, y_center_blocks, target_histogram, shift_covs_block = \
-            align_block_ks(motion_histograms, y_upsampled,
+        shift_indices, target_histogram, shift_covs_block = \
+            align_block_ks(motion_histograms,
                            num_non_rigid_windows=num_non_rigid_windows,
-                           non_rigid_window_overlap=method_kwargs['non_rigid_window_overlap'], # use block_size?
+                           non_rigid_windows=non_rigid_windows,
                            num_shifts_global=method_kwargs['num_shifts_global'],
                            num_iterations=method_kwargs['num_iterations'],
                            num_shifts_block=method_kwargs['num_shifts_block'],
@@ -232,12 +226,14 @@ def estimate_motion(recording, peaks, peak_locations,
         dshift = shift_indices * bin_um
         temporal_bins = np.array(temporal_bins)
         motion = -dshift
-        spatial_bins_non_rigid = y_center_blocks
 
         if output_extra_check:
-            extra_check = dict(motion_histograms=motion_histograms,
-                               target_histogram=target_histogram,
-                               shift_covs_block=shift_covs_block)
+            extra_check['motion_histograms'] = motion_histograms
+            extra_check['target_histogram'] = target_histogram
+
+    if output_extra_check:
+        extra_check['temporal_hist_bin_edges'] = temporal_hist_bin_edges
+        extra_check['spatial_hist_bin_edges'] = spatial_hist_bin_edges
 
     # replace nan by zeros
     motion[np.isnan(motion)] = 0
@@ -280,7 +276,7 @@ def make_2d_motion_histogram(recording, peaks, peak_locations,
                              bin_duration_s=1., bin_um=2., margin_um=50,
                              spatial_bin_edges=None):
     """
-    Generate 2d motion histogram in time and space dimensions.
+    Generate 2d motion histogram in depth and time.
 
     Parameters
     ----------
@@ -346,7 +342,7 @@ def make_3d_motion_histograms(recording, peaks, peak_locations,
                               margin_um=50, num_amp_bins=20,
                               log_transform=True, spatial_bin_edges=None):
     """
-    Generate 2d motion histograms in time, amplitude, and space dimensions.
+    Generate 2d motion histograms in depth, amplitude, and time.
 
     Parameters
     ----------
@@ -373,7 +369,7 @@ def make_3d_motion_histograms(recording, peaks, peak_locations,
     Returns
     -------
     motion_histograms
-        3d np.array with motion histogram (num_temporal_bins, num_amp_bins, num_spatial_bins)
+        3d np.array with motion histogram (num_temporal_bins, num_spatial_bins, num_amp_bins)
     temporal_bin_edges
         1d array with temporal bin edges
     spatial_bin_edges
@@ -397,12 +393,11 @@ def make_3d_motion_histograms(recording, peaks, peak_locations,
         (np.log10(max_peak_amp) - np.log10(min_peak_amp))
 
     arr = np.zeros((peaks.size, 3), dtype='float64')
+    arr[:, 0] = peaks['sample_ind']
+    arr[:, 1] = peak_locations[direction]
+    arr[:, 2] = abs_peaks_log_norm
 
-    arr[:, 0] = peak_locations[direction]
-    arr[:, 1] = abs_peaks_log_norm
-    arr[:, 2] = peaks['sample_ind']
-
-    motion_histograms, edges = np.histogramdd(arr, bins=(spatial_bin_edges, amplitude_bin_edges, sample_bin_edges,))
+    motion_histograms, edges = np.histogramdd(arr, bins=(sample_bin_edges, spatial_bin_edges, amplitude_bin_edges,))
 
     if log_transform:
         motion_histograms = np.log2(1 + motion_histograms)
@@ -650,7 +645,9 @@ def compute_global_displacement(
     return displacement
 
 
-def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1,
+def align_block_ks(spikecounts_hist_images,
+                   num_non_rigid_windows=1,
+                   non_rigid_windows=None,
                    num_shifts_global=15, num_iterations=10,
                    non_rigid_window_overlap=0.5,
                    num_shifts_block=5, smoothing_sigma=0.5,
@@ -662,11 +659,12 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     Parameters
     ----------
     spikecounts_hist_images : np.ndarray
-        Spike count histogram images (num_spatial_bins, num_amps_bins, num_temporal_bins)
-    y_upsampled : 1D np.array
-        The upsampled y positions
+        Spike count histogram images (num_temporal_bins, num_spatial_bins, num_amps_bins)
     num_non_rigid_windows : int, optional
         Number of windows for non-rigid estimation, by default 1
+    non_rigid_windows : list, optional
+        If num_non_rigid_windows > 1, this argument is required and it is a list of windows to 
+        taper spatial bins in different blocks, by default None
     num_shifts_global : int, optional
         Number of spatial bin shifts to consider for global alignment, by default 15
     num_iterations : int, optional
@@ -688,17 +686,17 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     -------
     optimal_shift_indices
         Optimal shifts for each temporal and spatial bin (num_temporal_bins, num_non_rigid_windows)
-    y_center_blocks
-        Center position for each non-rigid block (num_non_rigid_bins)
     target_spikecount_hist
         Target histogram used for alignment (num_spatial_bins, num_amps_bins)
     """
     from scipy.ndimage import gaussian_filter, gaussian_filter1d
-    from spikeinterface.preprocessing.preprocessing_tools import get_spatial_interpolation_kernel
 
     assert 0 <= non_rigid_window_overlap <= 1, "'non_rigid_window_overlap' can be between 0 and 1!"
     # F is y bins by amp bins by batches
     # ysamp are the coordinates of the y bins in um
+    print(spikecounts_hist_images.shape)
+    spikecounts_hist_images = spikecounts_hist_images.swapaxes(0, 1).swapaxes(1, 2)
+    print(spikecounts_hist_images.shape)
     num_temporal_bins = spikecounts_hist_images.shape[2]
 
     # look up and down this many y bins to find best alignment
@@ -737,42 +735,28 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
     # now we figure out how to split the probe into nblocks pieces
     # if nblocks = 1, then we're doing rigid registration
     if num_non_rigid_windows == 1:
-        ifirst = [0]
-        ilast = [F.shape[0] - 1]
+        non_rigid_windows = [np.ones(F.shape[0])]
     else:
-        num_ybins = F.shape[0]
-        num_bins_per_block = ((1 + non_rigid_window_overlap) * np.round(num_ybins / num_non_rigid_windows)).astype("int")
-        # MATLAB rounds 0.5 to 1. Python uses "Bankers Rounding".
-        # Numpy uses round to nearest even. Force the result to be like MATLAB
-        # by adding a tiny constant.
-        ifirst = np.round(np.linspace(0, num_ybins - num_bins_per_block - 1,
-                                    num_non_rigid_windows) + 1e-10).astype("int")
-        ilast = ifirst + num_bins_per_block
-
-        if num_shifts_block >= num_bins_per_block:
-            print(f"'num_shifts_block' should be smaller than number of bins per spatial block {num_bins_per_block}. "
-                f"Setting 'num_shifts_block' to {num_bins_per_block - 1}")
-            num_shifts_block = num_bins_per_block - 1
-
-    ##
-    num_overlapping_blocks = len(ifirst)
-    y_center_blocks = np.zeros(len(ifirst))
+        assert non_rigid_windows is not None, "For num_non_rigid_windows>1, non_rigid_windows is required"
 
     # for each small block, we only look up and down this many samples to find
     # nonrigid shift
     shifts_block = np.arange(-num_shifts_block, num_shifts_block + 1)
     num_shifts = len(shifts_block)
-    shift_covs_block = np.zeros((2 * num_shifts_block + 1, num_temporal_bins, num_overlapping_blocks))
+    shift_covs_block = np.zeros((2 * num_shifts_block + 1, num_temporal_bins, num_non_rigid_windows))
 
     # this part determines the up/down covariance for each block without
     # shifting anything
-    for block_index in range(num_overlapping_blocks):
-        isub = np.arange(ifirst[block_index], ilast[block_index])
-        y_center_blocks[block_index] = np.mean(y_upsampled[isub])
-        Fsub = Fg[isub, :, :]
+    for block_index in range(num_non_rigid_windows):
+        win = non_rigid_windows[block_index]
+        window_slice = np.flatnonzero(win > 1e-5)
+        window_slice = slice(window_slice[0], window_slice[-1])
+        tiled_window = win[window_slice, np.newaxis, np.newaxis]
+        Ftaper = Fg[window_slice] * np.tile(tiled_window, (1,) + Fg.shape[1:])
         for t, shift in enumerate(shifts_block):
-            Fs = np.roll(Fsub, shift, axis=0)
-            shift_covs_block[t, :, block_index] = np.mean(Fs * F0[isub, :, :], axis=(0, 1))
+            Fs = np.roll(Ftaper, shift, axis=0)
+            F0taper = F0[window_slice] * np.tile(tiled_window, (1,) + F0.shape[1:])
+            shift_covs_block[t, :, block_index] = np.mean(Fs * F0taper, axis=(0, 1))
 
     # gaussian smoothing:
     # here the original my_conv2_cpu is substituted with scipy gaussian_filters
@@ -785,7 +769,7 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
             shift_covs_block_smooth[i, :, :], smoothing_sigma
         )  # some additional smoothing for robustness, across all dimensions
     # 2. 1d smoothing over shift dimension for each spatial block
-    for i in range(num_overlapping_blocks):
+    for i in range(num_non_rigid_windows):
         shift_covs_block_smooth[:, :, i] = gaussian_filter1d(
             shift_covs_block_smooth[:, :, i], smoothing_sigma, axis=0
         )  # some additional smoothing for robustness, across all dimensions
@@ -793,8 +777,8 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
                                      shifts_block_up[:, np.newaxis],
                                      sigma=kriging_sigma, p=kriging_p, d=kriging_d)
 
-    optimal_shift_indices = np.zeros((num_temporal_bins, num_overlapping_blocks))
-    for block_index in range(num_overlapping_blocks):
+    optimal_shift_indices = np.zeros((num_temporal_bins, num_non_rigid_windows))
+    for block_index in range(num_non_rigid_windows):
         # using the upsampling kernel K, get the upsampled cross-correlation
         # curves
         upsampled_cov = upsample_kernel.T @ shift_covs_block_smooth[:, :, block_index]
@@ -809,7 +793,7 @@ def align_block_ks(spikecounts_hist_images, y_upsampled, num_non_rigid_windows=1
         # the sum of all the shifts equals the final shifts for this block
         optimal_shift_indices[:, block_index] = np.sum(best_shifts, axis=0)
 
-    return optimal_shift_indices, y_center_blocks, target_spikecount_hist, shift_covs_block
+    return optimal_shift_indices, target_spikecount_hist, shift_covs_block
 
 
 def normxcorr1d(template, x, padding="same", conv_engine="torch"):

@@ -21,7 +21,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "sortingcomponents"
 
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     import matplotlib.pyplot as plt
@@ -124,7 +124,7 @@ def test_estimate_motion_rigid_decentralized():
             ax.plot(temporal_bins, motion)
 
             motion_histogram = extra_check['motion_histogram']
-            spatial_hist_bins = extra_check['spatial_hist_bins']
+            spatial_hist_bins = extra_check['spatial_hist_bin_edges']
             fig, ax = plt.subplots()
             extent = (temporal_bins[0], temporal_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
             im = ax.imshow(motion_histogram.T, interpolation='nearest',
@@ -162,8 +162,8 @@ def test_estimate_motion_rigid_kilosort25():
         fig, ax = plt.subplots()
         ax.plot(temporal_bins, motion)
 
-        spikecounts_hists = extra_check['spikecounts_hists']
-        target_hist = extra_check['target_hist']
+        spikecounts_hists = extra_check['motion_histograms']
+        target_hist = extra_check['target_histogram']
         fig, axs = plt.subplots(ncols=len(spikecounts_hists))
         
         for temporal_bin, spikecounts_hist in enumerate(spikecounts_hists):
@@ -214,7 +214,7 @@ def test_estimate_motion_non_rigid_decentralized():
             plot_probe(probe, ax=ax)
 
             non_rigid_windows = extra_check['non_rigid_windows']
-            spatial_hist_bins = extra_check['spatial_hist_bins']
+            spatial_hist_bins = extra_check['spatial_hist_bin_edges']
             fig, ax = plt.subplots()
             for w, win in enumerate(non_rigid_windows):
                 ax.plot(win, spatial_hist_bins[:-1])
@@ -248,8 +248,8 @@ def test_estimate_motion_non_rigid_kilosort25():
         fig, ax = plt.subplots()
         ax.plot(temporal_bins, motion)
 
-        spikecounts_hists = extra_check['spikecounts_hists']
-        target_hist = extra_check['target_hist']
+        spikecounts_hists = extra_check['motion_histograms']
+        target_hist = extra_check['target_histogram']
         fig, axs = plt.subplots(ncols=len(spikecounts_hists))
 
         for temporal_bin, spikecounts_hist in enumerate(spikecounts_hists):
