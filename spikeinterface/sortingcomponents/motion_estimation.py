@@ -230,6 +230,7 @@ def estimate_motion(recording, peaks, peak_locations,
         if output_extra_check:
             extra_check['motion_histograms'] = motion_histograms
             extra_check['target_histogram'] = target_histogram
+            extra_check['shift_covs_block'] = shift_covs_block
 
     if output_extra_check:
         extra_check['temporal_hist_bin_edges'] = temporal_hist_bin_edges
@@ -694,9 +695,7 @@ def align_block_ks(spikecounts_hist_images,
     assert 0 <= non_rigid_window_overlap <= 1, "'non_rigid_window_overlap' can be between 0 and 1!"
     # F is y bins by amp bins by batches
     # ysamp are the coordinates of the y bins in um
-    print(spikecounts_hist_images.shape)
     spikecounts_hist_images = spikecounts_hist_images.swapaxes(0, 1).swapaxes(1, 2)
-    print(spikecounts_hist_images.shape)
     num_temporal_bins = spikecounts_hist_images.shape[2]
 
     # look up and down this many y bins to find best alignment
