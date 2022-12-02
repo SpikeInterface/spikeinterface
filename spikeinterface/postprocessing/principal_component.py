@@ -98,7 +98,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         mode = self._params["mode"]
         if mode == "by_channel_local":
             pca_models = []
-            for chan_id in self.waveform_extractor.recording.channel_ids:
+            for chan_id in self.waveform_extractor.channel_ids:
                 pca_models.append(self._extension_data[f"pca_model_{mode}_{chan_id}"])
         else:
             pca_models = self._extension_data[f"pca_model_{mode}"]
@@ -278,6 +278,9 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         p = self._params
         we = self.waveform_extractor
         sorting = we.sorting
+        assert we.has_recording(), (
+            "To compute PCA projections for all spikes, the waveform extractor needs the recording"
+        )
         recording = we.recording
 
         assert sorting.get_num_segments() == 1
@@ -356,7 +359,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 sparse_channel_ids = sparsity[unit_id]
             else:
                 sparse_channel_ids = channel_ids
-            sparse_channel_inds = we.recording.ids_to_indices(sparse_channel_ids)
+            sparse_channel_inds = we.channel_ids_to_indices(sparse_channel_ids)
             if n_jobs in (0, 1):
                 for wf_ind, chan_ind in enumerate(sparse_channel_inds):
                     pca = pca_models[chan_ind]
@@ -407,7 +410,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 sparse_channel_ids = sparsity[unit_id]
             else:
                 sparse_channel_ids = channel_ids
-            sparse_channel_inds = we.recording.ids_to_indices(sparse_channel_ids)
+            sparse_channel_inds = we.channel_ids_to_indices(sparse_channel_ids)
             if wfs.size == 0:
                 continue
             for wf_ind, chan_ind in enumerate(sparse_channel_inds):
@@ -479,7 +482,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 sparse_channel_ids = sparsity[unit_id]
             else:
                 sparse_channel_ids = channel_ids
-            sparse_channel_inds = we.recording.ids_to_indices(sparse_channel_ids)
+            sparse_channel_inds = we.channel_ids_to_indices(sparse_channel_ids)
             if wfs.size == 0:
                 continue
             for wf_ind, chan_ind in enumerate(sparse_channel_inds):
