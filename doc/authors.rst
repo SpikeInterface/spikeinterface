@@ -7,31 +7,32 @@ of SpikeInterface. The institutional affiliations are those at the time of the c
 and may not be the current affiliation of a contributor.
 
 
-Actual core team
-----------------
+Current core team
+-----------------
 
-* `Alessio Paolo Buccino <https://www.mn.uio.no/ifi/english/people/aca/alessiob/>`_ [1]
+* `Alessio Paolo Buccino <https://github.com/alejoe91>`_ [1]
 * `Samuel Garcia <https://github.com/samuelgarcia>`_ [4]
 
+For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com) or Samuel Garcia 
+(samuel.garcie.die@gmail.com), or just write an issue (preferred)!
 
-Initial core team
+
+Founding core team
 ------------------
 
-
-* `Alessio Paolo Buccino <https://www.mn.uio.no/ifi/english/people/aca/alessiob/>`_ [1]
-* `Cole Hurwitz <https://www.inf.ed.ac.uk/people/students/Cole_Hurwitz.html>`_ [2]
-* `Jeremy Magland <https://www.simonsfoundation.org/team/jeremy-magland>`_ [3]
-* `Matthias Hennig <http://homepages.inf.ed.ac.uk/mhennig/>`_ [2]
+* `Alessio Paolo Buccino <https://github.com/alejoe91>`_ [1]
+* `Cole Hurwitz <https://github.com/colehurwitz>`_ [2]
+* `Jeremy Magland <https://github.com/magland>`_ [3]
+* `Matthias Hennig <https://github.com/mhhennig>`_ [2]
 * `Samuel Garcia <https://github.com/samuelgarcia>`_ [4]
 
-For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com), Cole Hurwitz (cole.hurwitz@ed.ac.uk), or just write an issue!
 
-1. Bio Engineering Laboratory, Dept. of Biosystems Science and Engineering, ETH Zurich, Switzerland.
+1. Allen Institute for Neural Dynamics (AIND), Seattle, USA.
 2. The Institute for Adaptive and Neural Computation (ANC), University of Edinburgh, Edinburgh, Scotland.
 3. Center for Computational Biology (CCB), Flatiron Institute, New York, United States.
 4. Centre de Recherche en Neuroscience de Lyon (CRNL), Lyon, France.
 
-Contributors for actual API (>0.90)
+Contributors to current API (>0.90)
 -----------------------------------
 
 * Kyu Hyun Lee
@@ -46,8 +47,8 @@ Contributors for actual API (>0.90)
 * Marine Chaput
 
 
-Contributors for old API (<0.13.0)
-----------------------------------
+Contributors to old API (<0.13.0)
+---------------------------------
 
 The following people have contributed code to the project as of 10 Nov 2020:
 
@@ -72,4 +73,3 @@ The following people have contributed code to the project as of 10 Nov 2020:
 * TRRuikes
 * Yaroslav Halchenko
 * Michael Scudder
-

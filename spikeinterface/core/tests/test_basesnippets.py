@@ -8,7 +8,7 @@ import numpy as np
 from numpy.testing import assert_raises
 
 from probeinterface import Probe
-from spikeinterface.core.testing_tools import generate_snippets
+from spikeinterface.core import generate_snippets
 from spikeinterface.core import NumpySnippets, load_extractor
 from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 from spikeinterface.core.base import BaseExtractor

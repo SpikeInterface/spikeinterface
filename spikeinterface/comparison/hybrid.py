@@ -3,8 +3,7 @@ from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, NpzSortingExtractor, InjectTemplatesRecording
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.testing_tools import generate_sorting
-from spikeinterface.extractors.toy_example import synthesize_random_firings
+from spikeinterface.core import generate_sorting
 
 
 class HybridUnitsRecording(InjectTemplatesRecording):
@@ -133,7 +132,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
                  injected_rate: float = 0.05, refractory_period_ms: float = 1.5,
                  injected_sorting_folder: Union[str, Path, None] = None) -> None:
         if isinstance(wvf_extractor, (Path, str)):
-            wvf_extractor = WaveformExtractor.load_from_folder(wvf_extractor)
+            wvf_extractor = WaveformExtractor.load(wvf_extractor)
 
         target_recording = wvf_extractor.recording
         target_sorting = wvf_extractor.sorting

@@ -14,7 +14,7 @@ from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_e
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -255,18 +255,18 @@ def test_BaseRecording():
 
     # Test save to zarr
     compressor = get_default_zarr_compressor()
-    rec_zarr = rec2.save(format="zarr", zarr_path=cache_folder / "recording.zarr",
+    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording",
                          compressor=compressor)
     check_recordings_equal(rec2, rec_zarr, return_scaled=False)
 
-    rec_zarr2 = rec2.save(format="zarr", zarr_path=cache_folder / "recording_channel_chunk.zarr",
+    rec_zarr2 = rec2.save(format="zarr", folder=cache_folder / "recording_channel_chunk",
                           compressor=compressor, channel_chunk_size=2)
     check_recordings_equal(rec2, rec_zarr2, return_scaled=False)
 
     # test cast unsigned
-    rec_u = rec_uint16.save(format="zarr", zarr_path=cache_folder / "rec_u.zarr")
+    rec_u = rec_uint16.save(format="zarr", folder=cache_folder / "rec_u")
     rec_u.get_dtype() == 'uint16'
-    rec_i = rec_uint16.save(format="zarr", zarr_path=cache_folder / "rec_i.zarr", dtype="int16")
+    rec_i = rec_uint16.save(format="zarr", folder=cache_folder / "rec_i", dtype="int16")
     rec_i.get_dtype() == 'int16'
     assert np.allclose(rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
                        rec_i.get_traces().astype("float"))

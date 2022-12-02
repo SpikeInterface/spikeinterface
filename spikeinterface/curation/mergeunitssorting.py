@@ -32,8 +32,9 @@ class MergeUnitsSorting(BaseSorting):
 
         self._parent_sorting = parent_sorting
 
-        parents_unit_ids = parent_sorting.get_unit_ids()
+        parents_unit_ids = parent_sorting.unit_ids
         sampling_frequency = parent_sorting.get_sampling_frequency()
+        keep_units = [u for u in parents_unit_ids if u not in units_to_merge]
 
         if new_unit_id is None:
             #select new_units_ids grater that the max id, event greater than the numerical str ids 
@@ -42,11 +43,10 @@ class MergeUnitsSorting(BaseSorting):
             else:
                 new_unit_id = max(parents_unit_ids)+1
         else:
-            assert new_unit_id not in parents_unit_ids, 'new_unit_id already in parent_sorting'
+            assert new_unit_id not in keep_units, 'new_unit_id already in parent_sorting'
         # some checks
         assert all(u in parents_unit_ids for u in units_to_merge), 'units to merge are not all in parent'
         assert properties_policy=='keep' or properties_policy=='remove', 'properties_policy must be ''keep'' or ''remove'''
-        keep_units = [u for u in parents_unit_ids if u not in units_to_merge]
         units_ids = keep_units + [new_unit_id] 
         BaseSorting.__init__(self, sampling_frequency, units_ids)
         assert all(np.isin(keep_units, self.unit_ids)), 'new_unit_id should have a compatible format with the parent ids'

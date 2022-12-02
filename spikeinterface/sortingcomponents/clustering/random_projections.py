@@ -178,7 +178,8 @@ class RandomProjectionClustering:
                 name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 tmp_folder = get_global_tmp_folder() / name
             else:
-                tmp_folder = params["tmp_folder"]
+                tmp_folder = Path(params["tmp_folder"])
+
             if params['shared_memory']:
                 waveform_folder = None
                 mode = 'memory'
@@ -198,8 +199,11 @@ class RandomProjectionClustering:
             cleaning_matching_params['verbose'] = False
             cleaning_matching_params['progress_bar'] = False
 
+            cleaning_params = params['cleaning_kwargs'].copy()
+            cleaning_params['tmp_folder'] = tmp_folder
+
             labels, peak_labels = remove_duplicates_via_matching(we, noise_levels, peak_labels, 
-                                                                 job_kwargs=cleaning_matching_params, **params['cleaning_kwargs'])
+                                                                 job_kwargs=cleaning_matching_params, **cleaning_params)
     
             if params["tmp_folder"] is None:
                 shutil.rmtree(tmp_folder)

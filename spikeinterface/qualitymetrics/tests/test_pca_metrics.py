@@ -3,7 +3,8 @@ import shutil
 from pathlib import Path
 import numpy as np
 from spikeinterface import WaveformExtractor
-from spikeinterface.extractors.toy_example import toy_example, synthetize_spike_train
+from spikeinterface.core import synthetize_spike_train_bad_isi
+from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
 from spikeinterface.qualitymetrics import calculate_pc_metrics
@@ -39,10 +40,9 @@ def setup_module():
 
 
 def test_calculate_pc_metrics():
-    we = WaveformExtractor.load_from_folder(cache_folder / 'toy_waveforms')
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
     print(we)
-    pca = WaveformPrincipalComponent.load_from_folder(
-        cache_folder / 'toy_waveforms')
+    pca = WaveformPrincipalComponent.load(cache_folder / 'toy_waveforms')
     print(pca)
 
     res = calculate_pc_metrics(pca)
@@ -86,9 +86,9 @@ def test_nearest_neighbors_metrics():
 def simulated_data():
     max_time = 100.0
 
-    trains = [synthetize_spike_train(max_time, 10, 2),
-              synthetize_spike_train(max_time, 5, 4),
-              synthetize_spike_train(max_time, 5, 10)]
+    trains = [synthetize_spike_train_bad_isi(max_time, 10, 2),
+              synthetize_spike_train_bad_isi(max_time, 5, 4),
+              synthetize_spike_train_bad_isi(max_time, 5, 10)]
 
     labels = [np.ones((len(trains[i]),), dtype='int') * i for i in range(len(trains))]
 

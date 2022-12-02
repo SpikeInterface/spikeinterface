@@ -1,4 +1,4 @@
-from spikeinterface.core.testing_tools import generate_sorting
+from spikeinterface.core import generate_sorting
 
 
 def test_FrameSliceSorting():
