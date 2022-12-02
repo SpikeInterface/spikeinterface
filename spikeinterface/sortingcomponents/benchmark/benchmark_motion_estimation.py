@@ -280,13 +280,17 @@ class BenchmarkMotionEstimationMearec:
 
     def plot_motion_corrected_peaks(self):
         times = self.recording.get_times()
-        peak_locations_corrected = correct_motion_on_peaks(self.peaks, self.peak_locations, times,
-                                    self.motion, self.temporal_bins, self.spatial_bins, direction='y')
 
+        peak_locations_corrected = correct_motion_on_peaks(self.selected_peaks, self.peak_locations, times,
+                                    self.motion, self.temporal_bins, self.spatial_bins, direction='y')
+        
         fig, ax = plt.subplots(figsize=(15, 10))
-        x = self.peaks['sample_ind'] / self.recording.get_sampling_frequency()
+        x = self.selected_peaks['sample_ind'] / self.recording.get_sampling_frequency()
         y = peak_locations_corrected['y']
         ax.scatter(x, y, s=1, color='k', alpha=0.01)
+        _simpleaxis(ax)
+        ax.set_xlabel('time (s)')
+        ax.set_ylabel('depth (um)')
 
 
 
