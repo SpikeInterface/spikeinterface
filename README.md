@@ -41,26 +41,14 @@
 		</a>
 	</td>
 </tr>
-<tr>
-	<td>Twitter</td>
-	<td>
-		<a href="https://twitter.com/spikeinterface?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">@spikeinterface
-    </a>
-	</td>
-</tr>
-<tr>
-	<td>Mastodon</td>
-	<td>
-		<p>
-    <a href="https://fosstodon.org/@spikeinterface" class="mstdn">@spikeinterface@fosstodon.org</span></a>
-    </p>
-	</td>
-</tr>
 </table>
+
+[![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
+
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
-Please <a class="github-button" href="https://github.com/SpikeInterface/spikeinterface" data-color-scheme="no-preference: light_high_contrast; light: light_high_contrast; dark: light_high_contrast;" data-icon="octicon-star" aria-label="Star SpikeInterface/spikeinterface on GitHub">Star</a> the project to support us and <a class="github-button" href="https://github.com/SpikeInterface/spikeinterface/subscription" data-color-scheme="no-preference: light_high_contrast; light: light_high_contrast; dark: light_high_contrast;" data-icon="octicon-eye" aria-label="Watch SpikeInterface/spikeinterface on GitHub">Watch</a> to always stay up-to-date with latest improvements!
+Please [Star](https://github.com/SpikeInterface/spikeinterface/stargazers) the project to support us and [Watch](https://github.com/SpikeInterface/spikeinterface/subscription) to always stay up-to-date!
 
 
 With SpikeInterface, users can:
