@@ -4,11 +4,14 @@ import numpy as np
 import time
 from pathlib import Path
 
+
+from spikeinterface.core import get_noise_levels
 from spikeinterface.extractors import read_mearec
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
 
 from spikeinterface.widgets import plot_probe_map
 
@@ -48,11 +51,12 @@ class BenchmarkMotionEstimationMearec:
 
         if self.output_folder is not None:
             if self.output_folder.exists() and not self.overwrite:
-                print(f"The folder {self.output_folder} is not empty")
-                return
+                raise ValueError(f"The folder {self.output_folder} is not empty")
+
+        self.noise_levels = get_noise_levels(self.recording, return_scaled=False)
 
         t0 = time.perf_counter()
-        self.peaks = detect_peaks(self.recording, **self.detect_kwargs, **self.job_kwargs)
+        self.peaks = detect_peaks(self.recording, noise_levels=self.noise_levels, **self.detect_kwargs, **self.job_kwargs)
         t1 = time.perf_counter()
         if self.select_kwargs is not None:
             self.selected_peaks = select_peaks(self.peaks, **self.select_kwargs, **self.job_kwargs)
@@ -102,7 +106,7 @@ class BenchmarkMotionEstimationMearec:
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
 
-    _array_names = ('gt_unit_positions', 'peaks', 'selected_peaks', 'motion', 'temporal_bins', 
+    _array_names = ('noise_levels', 'gt_unit_positions', 'peaks', 'selected_peaks', 'motion', 'temporal_bins', 
                     'spatial_bins', 'peak_locations', 'gt_motion')
     
     _dict_kwargs_names = ('job_kwargs', 'detect_kwargs', 'select_kwargs', 'localize_kwargs', 'estimate_motion_kwargs')
@@ -217,6 +221,19 @@ class BenchmarkMotionEstimationMearec:
         ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
         ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
 
+    def plot_peaks_probe(self):
+
+        fig, axs = plt.subplots(ncols=2, sharey=True, figsize=(15, 10))
+        ax = axs[0]
+        plot_probe_map(self.recording, ax=ax)
+        ax.scatter(self.peak_locations['x'], self.peak_locations['y'], color='k', s=1, alpha=0.002)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        if 'z' in self.peak_locations.dtype.fields:
+            ax = axs[1]
+            ax.scatter(self.peak_locations['z'], self.peak_locations['y'], color='k', s=1, alpha=0.002)
+            ax.set_xlabel('z')
+            ax.set_xlim(0, 100)
 
     def plot_peaks(self, scaling_probe=1.5, show_drift=True):
 
@@ -260,6 +277,17 @@ class BenchmarkMotionEstimationMearec:
                 for i in range(self.gt_motion.shape[1]):
                     depth = self.spatial_bins[i]
                     ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='red', lw=2)
+
+    def plot_motion_corrected_peaks(self):
+        times = self.recording.get_times()
+        peak_locations_corrected = correct_motion_on_peaks(self.peaks, self.peak_locations, times,
+                                    self.motion, self.temporal_bins, self.spatial_bins, direction='y')
+
+        fig, ax = plt.subplots(figsize=(15, 10))
+        x = self.peaks['sample_ind'] / self.recording.get_sampling_frequency()
+        y = peak_locations_corrected['y']
+        ax.scatter(x, y, s=1, color='k', alpha=0.01)
+
 
 
     def estimation_vs_depth(self):
