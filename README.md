@@ -48,9 +48,20 @@
     </a>
 	</td>
 </tr>
+<tr>
+	<td>Mastodon</td>
+	<td>
+		<p>
+    <a href="https://fosstodon.org/@spikeinterface" class="mstdn">@spikeinterface@fosstodon.org</span></a>
+    </p>
+	</td>
+</tr>
 </table>
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
+
+Please <a class="github-button" href="https://github.com/SpikeInterface/spikeinterface" data-color-scheme="no-preference: light_high_contrast; light: light_high_contrast; dark: light_high_contrast;" data-icon="octicon-star" aria-label="Star SpikeInterface/spikeinterface on GitHub">Star</a> the project to support us and <a class="github-button" href="https://github.com/SpikeInterface/spikeinterface/subscription" data-color-scheme="no-preference: light_high_contrast; light: light_high_contrast; dark: light_high_contrast;" data-icon="octicon-eye" aria-label="Watch SpikeInterface/spikeinterface on GitHub">Watch</a> to always stay up-to-date with latest improvements!
+
 
 With SpikeInterface, users can:
 
