@@ -13,7 +13,7 @@ from copy import deepcopy
 import numpy as np
 
 from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, NotDumpableError
+from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -432,10 +432,6 @@ class BaseExtractor:
         -------
         Path
             Path object with file path to the file
-
-        Raises
-        ------
-        NotDumpableExtractorError
         """
         ext = extensions[0]
         file_path = Path(file_path)

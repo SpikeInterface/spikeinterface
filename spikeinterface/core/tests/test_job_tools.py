@@ -30,7 +30,7 @@ def test_ensure_n_jobs():
     assert n_jobs == 1
 
     # not dumpable fails
-    with pytest.raises(NotDumpableError):
+    with pytest.raises(RuntimeError):
         n_jobs = ensure_n_jobs(recording, n_jobs=-1)
 
     # dumpable
