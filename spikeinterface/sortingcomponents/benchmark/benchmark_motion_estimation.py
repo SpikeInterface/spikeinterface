@@ -378,15 +378,27 @@ def plot_errors_several_benchmarks(benchmarks):
     ax.set_ylabel('error')
     _simpleaxis(ax)
 
-# def plot_motions_several_benchmarks(benchmarks):
-#     fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+def plot_motions_several_benchmarks(benchmarks):
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
 
-#     ax = axes[0]
-#     for count, benchmark in enumerate(benchmarks):
-#         if benchmark.spatial_bins is None:
-#             center = (probe_y_min + probe_y_max)//2
-#             ax.plot(benchmark.temporal_bins, benchmark.gt_motion[:, 0] + center, color=f'C{count}', lw=2)
-#         else:
-#             for i in range(benchmark.gt_motion.shape[1]):
-#                 depth = benchmark.spatial_bins[i]
-#                 ax.plot(benchmark.temporal_bins, benchmark.gt_motion[:, i] + depth, color=f'C{count}', lw=2)
+    ax = axes[0]
+    for count, benchmark in enumerate(benchmarks):
+        if benchmark.spatial_bins is None:
+            center = (probe_y_min + probe_y_max)//2
+            ax.plot(benchmark.temporal_bins, benchmark.motion[:, 0] + center, color=f'C{count}', lw=2)
+        else:
+            for i in range(benchmark.motion.shape[1]):
+                depth = benchmark.spatial_bins[i]
+                ax.plot(benchmark.temporal_bins, benchmark.motion[:, i] + depth, color=f'C{count}', lw=2)
+    
+    _simpleaxis(ax)
+    ax = axes[1]
+    for count, benchmark in enumerate(benchmarks):
+        corrs = []
+        for i in range(benchmark.motion.shape[1]):
+            corrs += [np.corrcoef(benchmark.motion[:, i], benchmark.gt_motion[:, i])[0,1]]
+        ax.plot(benchmark.spatial_bins, corrs, color=f'C{count}', label=benchmark.title)
+    ax.set_ylabel('Correlation between drift')
+    ax.set_xlabel('depth (um)')
+    ax.legend()
+    _simpleaxis(ax)
