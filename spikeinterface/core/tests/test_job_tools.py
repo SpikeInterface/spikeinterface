@@ -4,7 +4,6 @@ from spikeinterface.core import generate_recording
 
 from spikeinterface.core.job_tools import divide_segment_into_chunks, ensure_n_jobs, ensure_chunk_size, \
     ChunkRecordingExecutor
-from spikeinterface.core.core_tools import NotDumpableError
 
 
 def test_divide_segment_into_chunks():
