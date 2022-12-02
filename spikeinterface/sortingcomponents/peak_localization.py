@@ -48,7 +48,8 @@ def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
     elif method == "peak_channel":
         step = LocalizePeakChannel(recording,  **method_kwargs)
     
-    peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks', squeeze_output=True)
+    peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks',
+                                       squeeze_output=True)
     
     return peak_locations
 
