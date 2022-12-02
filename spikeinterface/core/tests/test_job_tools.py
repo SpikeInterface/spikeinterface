@@ -1,7 +1,10 @@
+import pytest
+
 from spikeinterface.core import generate_recording
 
 from spikeinterface.core.job_tools import divide_segment_into_chunks, ensure_n_jobs, ensure_chunk_size, \
     ChunkRecordingExecutor
+from spikeinterface.core.core_tools import NotDumpableError
 
 
 def test_divide_segment_into_chunks():
@@ -26,9 +29,9 @@ def test_ensure_n_jobs():
     n_jobs = ensure_n_jobs(recording, n_jobs=1)
     assert n_jobs == 1
 
-    # not dumpable force n_jobs=1
-    n_jobs = ensure_n_jobs(recording, n_jobs=-1)
-    assert n_jobs == 1
+    # not dumpable fails
+    with pytest.raises(NotDumpableError):
+        n_jobs = ensure_n_jobs(recording, n_jobs=-1)
 
     # dumpable
     n_jobs = ensure_n_jobs(recording.save(), n_jobs=-1)
