@@ -21,18 +21,20 @@ import MEArec as mr
 class BenchmarkMotionEstimationMearec:
     
     def __init__(self, mearec_filename, 
+                title='',
                 detect_kwargs={},
                 select_kwargs=None,
                 localize_kwargs={},
                 estimate_motion_kwargs={},
                 output_folder=None,
-                jobs_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
+                job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
                 overwrite=False):
                 
         self.mearec_filename = mearec_filename
         self.recording, self.gt_sorting = read_mearec(self.mearec_filename)
+        self.title = title
         
-        self.job_kwargs = jobs_kwargs
+        self.job_kwargs = job_kwargs
         self.detect_kwargs = detect_kwargs
         self.select_kwargs = select_kwargs
         self.localize_kwargs = localize_kwargs
@@ -99,6 +101,12 @@ class BenchmarkMotionEstimationMearec:
                 f = scipy.interpolate.interp1d(unit_positions, unit_motions[t, :], fill_value="extrapolate")
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
+
+    _array_names = ('gt_unit_positions', 'peaks', 'selected_peaks', 'motion', 'temporal_bins', 
+                    'spatial_bins', 'peak_locations', 'gt_motion')
+    
+    _dict_kwargs_names = ('job_kwargs', 'detect_kwargs', 'select_kwargs', 'localize_kwargs', 'estimate_motion_kwargs')
+
     def save_to_folder(self, folder):
 
         if folder.exists():
@@ -109,15 +117,20 @@ class BenchmarkMotionEstimationMearec:
 
         folder = Path(folder)
 
-        for attr_name in ['gt_unit_positions', 'peaks', 'selected_peaks', 'motion', 'temporal_bins', 
-                    'spatial_bins', 'peak_locations', 'gt_motion']:
-            value = getattr(self, attr_name)
+        info = {
+            'mearec_filename': str(self.mearec_filename),
+            'title': self.title,
+        }
+        (folder / 'info.json').write_text(json.dumps(info, indent=4), encoding='utf8')
+
+        for name in self._array_names:
+            value = getattr(self, name)
             if value is not None:
-                np.save(folder / f'{attr_name}.npy', value)
+                np.save(folder / f'{name}.npy', value)
         
-        for attr_name in ('job_kwargs', 'detect_kwargs', 'select_kwargs', 'localize_kwargs', 'estimate_motion_kwargs'):
-            d = getattr(self, attr_name)
-            file = folder / f'{attr_name}.json'
+        for name in self._dict_kwargs_names:
+            d = getattr(self, name)
+            file = folder / f'{name}.json'
             if d is not None:
                 file.write_text(json.dumps(d, indent=4), encoding='utf8')
 
@@ -125,8 +138,39 @@ class BenchmarkMotionEstimationMearec:
         run_times_filename.write_text(json.dumps(self.run_times, indent=4),encoding='utf8')
 
     @classmethod
-    def load_from_folder(cls):
-        pass
+    def load_from_folder(cls, folder):
+        folder = Path(folder)
+        assert folder.exists()
+
+        with open(folder / 'info.json', 'r') as f:
+            info = json.load(f)
+        mearec_filename = info['mearec_filename']
+        title = info['title']
+
+        dict_kwargs = dict()
+        for name in cls._dict_kwargs_names:
+            filename = folder / f'{name}.json' 
+            if filename.exists():
+                with open(filename, 'r') as f:
+                    d = json.load(f)
+            else:
+                d = None
+            dict_kwargs[name] = d
+
+        bench = cls(mearec_filename, output_folder=folder, title=title, overwrite=False, **dict_kwargs)
+        for name in cls._array_names:
+            filename = folder / f'{name}.npy'
+            if filename.exists():
+                arr = np.load(filename)
+            else:
+                arr = None
+            setattr(bench, name, arr)
+
+        with open(folder / 'run_times.json', 'r') as f:
+            bench.run_times = json.load(f)
+
+        return bench
+
 
     def plot_drift(self, scaling_probe=1.5):
                 
