@@ -352,27 +352,6 @@ def _simpleaxis(ax):
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
 
-
-def plot_errors_several_benchmarks(benchmarks):
-    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-
-    ax = axes[0]
-    for benchmark in benchmarks:
-        mean_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=1)
-        ax.plot(benchmark.temporal_bins, mean_error, label=benchmark.title)
-    ax.set_xlabel('time (s)')
-    ax.set_ylabel('error')
-    ax.legend()
-    _simpleaxis(ax)
-
-    ax = axes[1]
-    for benchmark in benchmarks:
-        depth_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=0)
-        ax.plot(benchmark.spatial_bins, depth_error, label=benchmark.title)
-    ax.set_xlabel('depth (um)')
-    ax.set_ylabel('error')
-    _simpleaxis(ax)
-
 def plot_errors_several_benchmarks(benchmarks):
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -398,3 +377,16 @@ def plot_errors_several_benchmarks(benchmarks):
     ax.set_xlabel('depth (um)')
     ax.set_ylabel('error')
     _simpleaxis(ax)
+
+# def plot_motions_several_benchmarks(benchmarks):
+#     fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+
+#     ax = axes[0]
+#     for count, benchmark in enumerate(benchmarks):
+#         if benchmark.spatial_bins is None:
+#             center = (probe_y_min + probe_y_max)//2
+#             ax.plot(benchmark.temporal_bins, benchmark.gt_motion[:, 0] + center, color=f'C{count}', lw=2)
+#         else:
+#             for i in range(benchmark.gt_motion.shape[1]):
+#                 depth = benchmark.spatial_bins[i]
+#                 ax.plot(benchmark.temporal_bins, benchmark.gt_motion[:, i] + depth, color=f'C{count}', lw=2)
