@@ -351,3 +351,50 @@ def _simpleaxis(ax):
     ax.spines['right'].set_visible(False)
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
+
+
+def plot_errors_several_benchmarks(benchmarks):
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+
+    ax = axes[0]
+    for benchmark in benchmarks:
+        mean_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=1)
+        ax.plot(benchmark.temporal_bins, mean_error, label=benchmark.title)
+    ax.set_xlabel('time (s)')
+    ax.set_ylabel('error')
+    ax.legend()
+    _simpleaxis(ax)
+
+    ax = axes[1]
+    for benchmark in benchmarks:
+        depth_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=0)
+        ax.plot(benchmark.spatial_bins, depth_error, label=benchmark.title)
+    ax.set_xlabel('depth (um)')
+    ax.set_ylabel('error')
+    _simpleaxis(ax)
+
+def plot_errors_several_benchmarks(benchmarks):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    ax = axes[0]
+    for count, benchmark in enumerate(benchmarks):
+        mean_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=1)
+        ax.plot(benchmark.temporal_bins, mean_error, label=benchmark.title)
+        axes[1].violinplot(mean_error, [count], showmeans=True)
+
+    ax.set_xlabel('time (s)')
+    ax.set_ylabel('error')
+    ax.legend()
+    _simpleaxis(ax)
+
+    axes[1].set_ylabel('error')
+    axes[1].set_xticks([])
+    _simpleaxis(axes[1])
+
+    ax = axes[2]
+    for benchmark in benchmarks:
+        depth_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=0)
+        ax.plot(benchmark.spatial_bins, depth_error, label=benchmark.title)
+    ax.set_xlabel('depth (um)')
+    ax.set_ylabel('error')
+    _simpleaxis(ax)
