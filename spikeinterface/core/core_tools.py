@@ -11,7 +11,14 @@ import inspect
 
 from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
     _shared_job_kwargs_doc
-    
+
+
+class NotDumpableError(RuntimeError):
+    """Raised whenever attempting to dump/save a non-dumpable object"""
+    def __init__(self, message="The object is not dumpable. Use `save()` function to make the object dumpable."):
+        self.message = message
+        super().__init__(self.message)
+
     
 def copy_signature(source_fct):
     def copy(target_fct):

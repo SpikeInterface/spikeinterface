@@ -12,8 +12,8 @@ from tqdm.auto import tqdm
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
-
 from threadpoolctl import threadpool_limits
+
 
 _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel processing:
             * chunk_duration or chunk_size or chunk_memory or total_memory
@@ -125,10 +125,13 @@ def ensure_n_jobs(recording, n_jobs=1):
         print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
-    if not recording.is_dumpable:
-        if n_jobs > 1:
-            n_jobs = 1
-            print("RecordingExtractor is not dumpable and can't be processed in parallel")
+    if not recording.check_if_dumpable():
+        if n_jobs != 1:
+            from .core_tools import NotDumpableError
+            raise NotDumpableError(
+                message=("Recording is not dumpable and can't be processed in parallel. "
+                         "You can use the `recording.save()` function to make it dumpable or set 'n_jobs' to 1.")
+            )
 
     return n_jobs
 
@@ -278,7 +281,6 @@ class ChunkRecordingExecutor:
                                             chunk_memory=chunk_memory, chunk_duration=chunk_duration,
                                             n_jobs=self.n_jobs)
         self.job_name = job_name
-        
         self.max_threads_per_process = max_threads_per_process
         
         if verbose:

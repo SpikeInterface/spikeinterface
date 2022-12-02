@@ -5,13 +5,14 @@ import json
 
 import numpy as np
 from copy import deepcopy
+from warnings import warn
 
-from .base import load_extractor
-
-from .core_tools import check_json
-from .job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 import probeinterface
+
+from .base import load_extractor
+from .core_tools import check_json
+from .job_tools import _shared_job_kwargs_doc
 from .recording_tools import check_probe_do_not_overlap
 
 _possible_template_modes = ('average', 'std', 'median')
@@ -238,6 +239,9 @@ class WaveformExtractor:
                 recording.dump(folder / 'recording.json', relative_to=relative_to)
             if sorting.is_dumpable:
                 sorting.dump(folder / 'sorting.json', relative_to=relative_to)
+            else:
+                warn("Sorting object is not dumpable, which might result in downstream errors for "
+                     "parallel processing. To make the sorting dumpable, use the `sorting.save()` function.")
             
             # dump some attributes of the recording for the mode with_recording=False at next load
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
@@ -663,6 +667,9 @@ class WaveformExtractor:
                     self.recording.dump(folder / 'recording.json', relative_to=relative_to)
             if self.sorting.is_dumpable:
                 self.sorting.dump(folder / 'sorting.json', relative_to=relative_to)
+            else:
+                warn("Sorting object is not dumpable, which might result in downstream errors for "
+                     "parallel processing. To make the sorting dumpable, use the `sorting.save()` function.")
 
             # dump some attributes of the recording for the mode with_recording=False at next load
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
@@ -712,6 +719,9 @@ class WaveformExtractor:
             if self.sorting.is_dumpable:
                 sort_dict = self.sorting.to_dict(relative_to=relative_to)
                 zarr_root.attrs['sorting'] = check_json(sort_dict)
+            else:
+                warn("Sorting object is not dumpable, which might result in downstream errors for "
+                     "parallel processing. To make the sorting dumpable, use the `sorting.save()` function.")
             recording_info = zarr_root.create_group('recording_info')
             recording_info.attrs['recording_attributes'] = check_json(rec_attributes)
             if probegroup is not None:
