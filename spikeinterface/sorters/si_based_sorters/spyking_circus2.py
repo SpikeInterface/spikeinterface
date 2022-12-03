@@ -89,13 +89,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if 'exclude_sweep_ms' not in detection_params:
             detection_params['exclude_sweep_ms'] = max(params['general']['ms_before'], params['general']['ms_after'])
 
-        peaks = detect_peaks(recording_f, method='locally_exclusive', 
-                             **detection_params)
-
         if params['drift_correction']:
 
             from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
             from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+
+            peaks = detect_peaks(recording_f, method='by_channel', **detection_params)
 
             if verbose:
                 print('We are looking for %d peaks to estimate the motion' %len(peaks))
@@ -122,7 +121,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_f = CorrectMotionRecording(recording_f, motion, temporal_bins, 
                                                             spatial_bins, **params['motion']['correction'])
 
-            peaks = detect_peaks(recording_f, method='locally_exclusive', **detection_params)
+        
+        peaks = detect_peaks(recording_f, method='locally_exclusive', **detection_params)
 
         if verbose:
             print('We found %d peaks in total' %len(peaks))
