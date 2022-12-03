@@ -382,15 +382,13 @@ def plot_motions_several_benchmarks(benchmarks):
     fig, axes = plt.subplots(1, 2, figsize=(15, 5))
 
     ax = axes[0]
+    ax.plot(list(benchmarks)[0].temporal_bins, list(benchmarks)[0].gt_motion[:, 0], lw=2, c='k', label='real motion')
     for count, benchmark in enumerate(benchmarks):
-        if benchmark.spatial_bins is None:
-            center = (probe_y_min + probe_y_max)//2
-            ax.plot(benchmark.temporal_bins, benchmark.motion[:, 0] + center, color=f'C{count}', lw=2)
-        else:
-            for i in range(benchmark.motion.shape[1]):
-                depth = benchmark.spatial_bins[i]
-                ax.plot(benchmark.temporal_bins, benchmark.motion[:, i] + depth, color=f'C{count}', lw=2)
-    
+        ax.plot(benchmark.temporal_bins, benchmark.motion.mean(1), lw=1, c=f'C{count}', label=benchmark.title)
+        ax.fill_between(benchmark.temporal_bins, benchmark.motion.mean(1)-benchmark.motion.std(1), 
+                                benchmark.motion.mean(1) + benchmark.motion.std(1), color=f'C{count}', alpha=0.25)
+
+    #ax.legend()
     _simpleaxis(ax)
     ax = axes[1]
     for count, benchmark in enumerate(benchmarks):
