@@ -278,19 +278,44 @@ class BenchmarkMotionEstimationMearec:
                     depth = self.spatial_bins[i]
                     ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='red', lw=2)
 
-    def plot_motion_corrected_peaks(self):
+    def plot_motion_corrected_peaks(self, scaling_probe=1.5):
+
+        fig = plt.figure(figsize=(15, 10))
+        gs = fig.add_gridspec(1, 3)
+        # Create the Axes.
+
+        ax = fig.add_subplot(gs[0])
+        plot_probe_map(self.recording, ax=ax)
+        _simpleaxis(ax)
+
+        ymin, ymax = ax.get_ylim()
+        ax.set_ylabel('depth (um)')
+        ax.set_xlabel('depth (um)')
+
+        channel_positions = self.recording.get_channel_locations()
+        probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
+
+        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+
+
         times = self.recording.get_times()
 
         peak_locations_corrected = correct_motion_on_peaks(self.selected_peaks, self.peak_locations, times,
                                     self.motion, self.temporal_bins, self.spatial_bins, direction='y')
         
-        fig, ax = plt.subplots(figsize=(15, 10))
+        ax = fig.add_subplot(gs[1:3])
         x = self.selected_peaks['sample_ind'] / self.recording.get_sampling_frequency()
         y = peak_locations_corrected['y']
         ax.scatter(x, y, s=1, color='k', alpha=0.01)
+        xmin, xmax = ax.get_xlim()
+        ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
+        ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
+
         _simpleaxis(ax)
+        ax.set_yticks([])
+        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+        ax.spines['left'].set_visible(False)
         ax.set_xlabel('time (s)')
-        ax.set_ylabel('depth (um)')
 
 
 
@@ -389,6 +414,8 @@ def plot_motions_several_benchmarks(benchmarks):
                                 benchmark.motion.mean(1) + benchmark.motion.std(1), color=f'C{count}', alpha=0.25)
 
     #ax.legend()
+    ax.set_ylabel('depth (um)')
+    ax.set_xlabel('time (s)')
     _simpleaxis(ax)
     ax = axes[1]
     for count, benchmark in enumerate(benchmarks):
