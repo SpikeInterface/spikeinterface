@@ -223,22 +223,25 @@ class BenchmarkMotionEstimationMearec:
 
     def plot_peaks_probe(self):
 
-        fig, axs = plt.subplots(ncols=2, sharey=True, figsize=(15, 10))
+        fig, axs = plt.subplots(ncols=2, sharey=True, figsize=(15, 10), alpha=0.05)
         ax = axs[0]
         plot_probe_map(self.recording, ax=ax)
-        ax.scatter(self.peak_locations['x'], self.peak_locations['y'], color='k', s=1, alpha=0.002)
+        ax.scatter(self.peak_locations['x'], self.peak_locations['y'], color='k', s=1, alpha=alpha)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         if 'z' in self.peak_locations.dtype.fields:
             ax = axs[1]
-            ax.scatter(self.peak_locations['z'], self.peak_locations['y'], color='k', s=1, alpha=0.002)
+            ax.scatter(self.peak_locations['z'], self.peak_locations['y'], color='k', s=1, alpha=alpha)
             ax.set_xlabel('z')
             ax.set_xlim(0, 100)
 
-    def plot_peaks(self, scaling_probe=1.5, show_drift=True):
+    def plot_peaks(self, scaling_probe=1.5, show_drift=True, show_histogram=True, alpha=0.05):
 
         fig = plt.figure(figsize=(15, 10))
-        gs = fig.add_gridspec(1, 3)
+        if show_histogram:
+            gs = fig.add_gridspec(1, 4)
+        else:
+            gs = fig.add_gridspec(1, 3)
         # Create the Axes.
 
         ax = fig.add_subplot(gs[0])
@@ -257,7 +260,7 @@ class BenchmarkMotionEstimationMearec:
         ax = fig.add_subplot(gs[1:3])
         x = self.selected_peaks['sample_ind']/self.recording.get_sampling_frequency()
         y = self.peak_locations['y']
-        ax.scatter(x, y, s=1, color='k', alpha=0.05)
+        ax.scatter(x, y, s=1, color='k', alpha=alpha)
         
         xmin, xmax = ax.get_xlim()
         ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
@@ -278,7 +281,19 @@ class BenchmarkMotionEstimationMearec:
                     depth = self.spatial_bins[i]
                     ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='red', lw=2)
 
-    def plot_motion_corrected_peaks(self, scaling_probe=1.5):
+        if show_histogram:
+            ax = fig.add_subplot(gs[3])
+            ax.hist(self.peak_locations['y'], bins=1000, orientation="horizontal")
+            ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+            xmin, xmax = ax.get_xlim()
+            ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
+            ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
+            ax.set_xlabel('density')
+            _simpleaxis(ax)
+            ax.set_ylabel('')
+            ax.set_yticks([])
+
+    def plot_motion_corrected_peaks(self, scaling_probe=1.5, alpha=0.05):
 
         fig = plt.figure(figsize=(15, 10))
         gs = fig.add_gridspec(1, 3)
@@ -306,7 +321,7 @@ class BenchmarkMotionEstimationMearec:
         ax = fig.add_subplot(gs[1:3])
         x = self.selected_peaks['sample_ind'] / self.recording.get_sampling_frequency()
         y = peak_locations_corrected['y']
-        ax.scatter(x, y, s=1, color='k', alpha=0.01)
+        ax.scatter(x, y, s=1, color='k', alpha=alpha)
         xmin, xmax = ax.get_xlim()
         ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
         ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
@@ -316,8 +331,6 @@ class BenchmarkMotionEstimationMearec:
         ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
         ax.spines['left'].set_visible(False)
         ax.set_xlabel('time (s)')
-
-
 
     def estimation_vs_depth(self):
         fig, axes = plt.subplots(2, figsize=(15,10))
