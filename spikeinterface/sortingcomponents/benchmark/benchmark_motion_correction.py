@@ -12,6 +12,7 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
 from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
+from spikeinterface.postprocessing.template_tools import get_template_channel_sparsity
 
 from spikeinterface.core import extract_waveforms, load_waveforms
 
@@ -164,23 +165,28 @@ class BenchmarkMotionCorrectionMearec:
     #
 
 
-    def compare_snippets_variability(self, metric='cosine'):
-        templates = self.waveforms['static'].get_all_templates()
+    def compare_snippets_variability(self, metric='cosine', num_channels=10):
+        
         
         import sklearn
         results = {}
         nb_templates = len(self.waveforms['static'].unit_ids)
 
+        sparsity = get_template_channel_sparsity(self.waveforms['static'], 
+                    num_channels=num_channels, outputs='index')
+
         for key in self.keys:
             results[key] = np.zeros(nb_templates)
             for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
-                w = self.waveforms[key].get_waveforms(unit_id)
+                w = self.waveforms[key].get_waveforms(unit_id)[:, :, sparsity[unit_id]]
                 nb_waveforms = len(w)
                 flat_w = w.reshape(nb_waveforms, -1)
+                template = self.waveforms['static'].get_template(unit_id)
+                template = template[:, sparsity[unit_id]].reshape(1, -1)
                 if metric == 'euclidean':
-                    d = sklearn.metrics.pairwise_distances(templates[unit_ind].reshape(1, -1), flat_w)[0]
+                    d = sklearn.metrics.pairwise_distances(template, flat_w)[0]
                 elif metric == 'cosine':
-                    d = sklearn.metrics.pairwise.cosine_similarity(templates[unit_ind].reshape(1, -1), flat_w)[0]
+                    d = sklearn.metrics.pairwise.cosine_similarity(template, flat_w)[0]
                 results[key][unit_ind] = d.mean()
 
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
@@ -198,16 +204,24 @@ class BenchmarkMotionCorrectionMearec:
         elif metric == 'cosine':
             axes[0, 0].set_ylabel('cosine(snippet, template)')
 
-
         distances = {}
+        norms = np.zeros(nb_templates)
+        
         for count, key in enumerate(['drifting', 'corrected']):
-            new_templates = self.waveforms[key].get_all_templates().reshape(nb_templates, -1)
-            if metric == 'euclidean':
-                distances[key] = sklearn.metrics.pairwise_distances(templates.reshape(nb_templates, -1), new_templates)[0]
-            elif metric == 'cosine':
-                distances[key] = sklearn.metrics.pairwise.cosine_similarity(templates.reshape(nb_templates, -1), new_templates)[0]
+            distances[key] = np.zeros(nb_templates)    
+            for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
+                template = self.waveforms['static'].get_template(unit_id)
+                template = template[:, sparsity[unit_id]].reshape(1, -1)
+                new_template = self.waveforms[key].get_template(unit_id)
+                new_template = new_template[:, sparsity[unit_id]].reshape(1, -1)
+                if metric == 'euclidean':
+                    distances[key][unit_ind] = sklearn.metrics.pairwise_distances(template, new_template)[0]
+                elif metric == 'cosine':
+                    distances[key][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(template, new_template)[0]
+                
+                norms[unit_ind] = np.linalg.norm(template)
 
-        axes[0, 1].scatter(np.diag(distances['drifting']), np.diag(distances['corrected']), c=f'C{count}', alpha=0.5)
+        axes[0, 1].scatter(distances['drifting'], distances['corrected'], c=f'C{count}', alpha=0.5)
         xmin, xmax = axes[0, 1].get_xlim()
         axes[0, 1].plot([xmin, xmax], [xmin, xmax], 'k--')
         _simpleaxis(axes[0, 1])
@@ -226,8 +240,8 @@ class BenchmarkMotionCorrectionMearec:
 
         diff_corrected = results['corrected'] - results['static']
         diff_drifting = results['drifting'] - results['static']
-        axes[1, 0].scatter(np.linalg.norm(templates, axis=(1, 2)), diff_corrected, color='C2')
-        axes[1, 0].scatter(np.linalg.norm(templates, axis=(1, 2)), diff_drifting, color='C1')
+        axes[1, 0].scatter(norms, diff_corrected, color='C2')
+        axes[1, 0].scatter(norms, diff_drifting, color='C1')
         if metric == 'euclidean':
             axes[1, 0].set_ylabel(r'$\Delta \|~\|_2$')
         elif metric == 'cosine':
