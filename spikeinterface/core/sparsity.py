@@ -11,7 +11,21 @@ class ChannelSparsity:
         * ChannelSparsity.id_to_id : unit_id to channel_ids
         * ChannelSparsity.id_to_iindex : unit_id channel_inds
 
+    By default it is constructed with a boolean array.
+    But can be also constructed by dict
 
+    sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
+    sparsity = ChannelSparsity.from_id_to_id(id_to_id, unit_ids, channel_ids)
+
+    Parameters
+    ----------
+    mask: np.array of bool
+        
+    unit_ids: list or array
+        Unit ids vector or list
+
+    channel_ids: list or array
+        Channel ids vector or list
 
     """
     def __init__(self, mask, unit_ids, channel_ids):
@@ -59,6 +73,7 @@ class ChannelSparsity:
             mask[unit_ind, channel_inds] = True
         return cls(mask, unit_ids, channel_ids)
 
+    # @alessio : maybe this is unnecessary
     @classmethod
     def from_id_to_index(cls, id_to_index, unit_ids, channel_ids):
         unit_ids = list(unit_ids)
@@ -67,3 +82,18 @@ class ChannelSparsity:
             unit_ind = unit_ids.index(unit_id)
             mask[unit_ind, channel_inds] = True
         return cls(mask, unit_ids, channel_ids)
+    
+    def to_dict(self):
+        """
+        Return a serializable dict.
+        """
+        return dict(
+            id_to_id={k:list(v) for k, v in self.id_to_id.items()},
+            channel_ids=list(self.channel_ids),
+            unit_ids=list(self.unit_ids),
+        )
+    
+    @classmethod
+    def from_dict(cls, d):
+        return cls.from_id_to_id(**d)
+

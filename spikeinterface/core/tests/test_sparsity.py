@@ -29,12 +29,18 @@ def test_ChannelSparsity():
         assert np.all(v<len(channel_ids))
 
     sparsity2 = ChannelSparsity.from_id_to_id(sparsity.id_to_id, unit_ids, channel_ids)
-    print(sparsity2)
+    # print(sparsity2)
     assert np.array_equal(sparsity.mask, sparsity2.mask)
 
     sparsity3 = ChannelSparsity.from_id_to_index(sparsity.id_to_index, unit_ids, channel_ids)
-    print(sparsity3)
+    # print(sparsity3)
     assert np.array_equal(sparsity.mask, sparsity3.mask)
+
+    d = sparsity.to_dict()
+    # print(d)
+    sparsity4 = ChannelSparsity.from_dict(d)
+    assert np.array_equal(sparsity.mask, sparsity4.mask)
+    # print(sparsity4)
 
 
 if __name__ == '__main__':
