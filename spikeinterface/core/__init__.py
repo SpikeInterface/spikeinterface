@@ -79,3 +79,5 @@ from .old_api_utils import (create_recording_from_old_extractor, create_sorting_
 # templates addition
 from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
+# channel sparsity
+from .sparsity import ChannelSparsity
