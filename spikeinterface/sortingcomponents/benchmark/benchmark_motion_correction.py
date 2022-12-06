@@ -165,18 +165,26 @@ class BenchmarkMotionCorrectionMearec:
     #
 
 
-    def compare_snippets_variability(self, metric='cosine', num_channels=10):
+    def compare_snippets_variability(self, metric='cosine', num_channels=30):
         
         
         import sklearn
-        results = {}
+        results = {'mean' : {}, 'std' : {}}
         nb_templates = len(self.waveforms['static'].unit_ids)
 
         sparsity = get_template_channel_sparsity(self.waveforms['static'], 
                     num_channels=num_channels, outputs='index')
 
+        norms = np.zeros(nb_templates)
+        for unit_ind, unit_id in enumerate(self.waveforms['static'].sorting.unit_ids):
+            template = self.waveforms['static'].get_template(unit_id)
+            template = template[:, sparsity[unit_id]].reshape(1, -1)
+            norms[unit_ind] = np.linalg.norm(template)
+
         for key in self.keys:
-            results[key] = np.zeros(nb_templates)
+            results['mean'][key] = np.zeros(nb_templates)
+            results['std'][key] = np.zeros(nb_templates)
+
             for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
                 w = self.waveforms[key].get_waveforms(unit_id)[:, :, sparsity[unit_id]]
                 nb_waveforms = len(w)
@@ -187,25 +195,38 @@ class BenchmarkMotionCorrectionMearec:
                     d = sklearn.metrics.pairwise_distances(template, flat_w)[0]
                 elif metric == 'cosine':
                     d = sklearn.metrics.pairwise.cosine_similarity(template, flat_w)[0]
-                results[key][unit_ind] = d.mean()
+                results['mean'][key][unit_ind] = d.mean()
+                results['std'][key][unit_ind] = d.std()
 
-        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        fig, axes = plt.subplots(2  , 3, figsize=(15, 10))
 
         colors = 0
         labels = []
         for key in self.keys:
-            axes[0, 0].violinplot(results[key], [colors], showmeans=True)
+            axes[0, 0].violinplot(results['mean'][key], [colors], showmeans=True)
             colors += 1
 
         _simpleaxis(axes[0, 0])
         axes[0, 0].set_xticks(np.arange(len(self.keys)), self.keys)
         if metric == 'euclidean':
-            axes[0, 0].set_ylabel(r'$\| snippet - template\|_2$')
+            axes[0, 0].set_ylabel(r'mean($\| snippets - template\|_2)$')
         elif metric == 'cosine':
-            axes[0, 0].set_ylabel('cosine(snippet, template)')
+            axes[0, 0].set_ylabel('mean(cosine(snippets, template))')
+        
+        colors = 0
+        labels = []
+        for key in self.keys:
+            axes[0, 1].violinplot(results['std'][key], [colors], showmeans=True)
+            colors += 1
+
+        _simpleaxis(axes[0, 1])
+        axes[0, 1].set_xticks(np.arange(len(self.keys)), self.keys)
+        if metric == 'euclidean':
+            axes[0, 1].set_ylabel(r'std($\| snippets - template\|_2)$')
+        elif metric == 'cosine':
+            axes[0, 1].set_ylabel('std(cosine(snippets, template))')
 
         distances = {}
-        norms = np.zeros(nb_templates)
         
         for count, key in enumerate(['drifting', 'corrected']):
             distances[key] = np.zeros(nb_templates)    
@@ -221,16 +242,16 @@ class BenchmarkMotionCorrectionMearec:
                 
                 norms[unit_ind] = np.linalg.norm(template)
 
-        axes[0, 1].scatter(distances['drifting'], distances['corrected'], c=f'C{count}', alpha=0.5)
-        xmin, xmax = axes[0, 1].get_xlim()
-        axes[0, 1].plot([xmin, xmax], [xmin, xmax], 'k--')
-        _simpleaxis(axes[0, 1])
+        axes[0, 2].scatter(distances['drifting'], distances['corrected'], c=f'C{count}', alpha=0.5)
+        xmin, xmax = axes[0, 2].get_xlim()
+        axes[0, 2].plot([xmin, xmax], [xmin, xmax], 'k--')
+        _simpleaxis(axes[0, 2])
         if metric == 'euclidean':
-            axes[0, 1].set_xlabel(r'$\|drift - static\|_2$')
-            axes[0, 1].set_ylabel(r'$\|corrected - static\|_2$')
+            axes[0, 2].set_xlabel(r'$\|drift - static\|_2$')
+            axes[0, 2].set_ylabel(r'$\|corrected - static\|_2$')
         elif metric == 'cosine':
-            axes[0, 1].set_xlabel(r'$cosine(drift, static)$')
-            axes[0, 1].set_ylabel(r'$cosine(corrected, static)$')
+            axes[0, 2].set_xlabel(r'$cosine(drift, static)$')
+            axes[0, 2].set_ylabel(r'$cosine(corrected, static)$')
 
         import MEArec as mr
         recgen = mr.load_recordings(self.mearec_filenames['static'])
@@ -238,30 +259,44 @@ class BenchmarkMotionCorrectionMearec:
         template_positions = recgen.template_locations[:, nb_versions//2, 1:3]
         distances_to_center = template_positions[:, 1]
 
-        diff_corrected = results['corrected'] - results['static']
-        diff_drifting = results['drifting'] - results['static']
-        axes[1, 0].scatter(norms, diff_corrected, color='C2')
-        axes[1, 0].scatter(norms, diff_drifting, color='C1')
+        differences = {}
+        differences['corrected'] = 1 - results['mean']['corrected']/results['mean']['static'] 
+        differences['drifting'] = 1 - results['mean']['drifting']/results['mean']['static']
+        axes[1, 0].scatter(norms, differences['corrected'], color='C2')
+        axes[1, 0].scatter(norms, differences['drifting'], color='C1')
         if metric == 'euclidean':
-            axes[1, 0].set_ylabel(r'$\Delta \|~\|_2$')
+            axes[1, 0].set_ylabel(r'$\Delta \|~\|_2$ (% static)')
         elif metric == 'cosine':
-            axes[1, 0].set_ylabel(r'$\Delta cosine$')
+            axes[1, 0].set_ylabel(r'$\Delta cosine$  (% static)')
         axes[1, 0].set_xlabel('template norm')
         xmin, xmax = axes[1, 0].get_xlim()
         axes[1, 0].plot([xmin, xmax], [0, 0], 'k--')
         _simpleaxis(axes[1, 0])
 
-        axes[1, 1].scatter(distances_to_center, diff_drifting, color='C1')
-        axes[1, 1].scatter(distances_to_center, diff_corrected, color='C2')
+        axes[1, 1].scatter(distances_to_center, differences['drifting'], color='C1')
+        axes[1, 1].scatter(distances_to_center, differences['corrected'], color='C2')
         if metric == 'euclidean':
-            axes[1, 1].set_ylabel(r'$\Delta \|~\|_2$')
+            axes[1, 1].set_ylabel(r'$\Delta \|~\|_2$  (% static)')
         elif metric == 'cosine':
-            axes[1, 1].set_ylabel(r'$\Delta cosine$')
+            axes[1, 1].set_ylabel(r'$\Delta cosine$  (% static)')
         axes[1, 1].legend()
         axes[1, 1].set_xlabel('depth (um)')
         xmin, xmax = axes[1, 1].get_xlim()
         axes[1, 1].plot([xmin, xmax], [0, 0], 'k--')
         _simpleaxis(axes[1, 1])
+
+        colors = 0
+        labels = []
+        for key in ['drifting', 'corrected']:
+            axes[1, 2].bar([colors], [differences[key].mean()], color=f'C{colors+1}')
+            colors += 1
+
+        _simpleaxis(axes[1, 2])
+        axes[1, 2].set_xticks(np.arange(2), ['drifting', 'corrected'])
+        if metric == 'euclidean':
+            axes[1, 2].set_ylabel(r'$\Delta \|~\|_2$  (% static)')
+        elif metric == 'cosine':
+            axes[1, 2].set_ylabel(r'$\Delta cosine$  (% static)')
 
     def compare_residuals(self, time_range=None):
 
