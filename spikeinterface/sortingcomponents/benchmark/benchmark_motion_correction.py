@@ -28,7 +28,7 @@ class BenchmarkMotionCorrectionMearec:
     def __init__(self, mearec_filename_drifting, mearec_filename_static, 
                 motion,
                 temporal_bins, 
-                spatial_bins
+                spatial_bins,
                 title='',
                 correct_motion_kwargs={},
                 output_folder=None,
@@ -61,16 +61,22 @@ class BenchmarkMotionCorrectionMearec:
             if self.output_folder.exists() and not self.overwrite:
                 raise ValueError(f"The folder {self.output_folder} is not empty")
 
-        self.recordings['corrected'] = CorrectMotionRecording(self.recording, self.motion, **self.job_kwargs)
+        self.recordings['corrected'] = CorrectMotionRecording(self.recordings['drifting'], self.motion, self.temporal_bins, self.spatial_bins)
         self.sortings['corrected'] = self.sortings['static']
 
         ## save folder
         if self.output_folder is not None:
             self.save_to_folder(self.output_folder)
 
+        self.waveforms = {}
         for key in self.keys:
-            waveforms_folder = output_folder / "waveforms" / key
-            self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], overwrite=True, waveforms_folder, **self.job_kwargs)
+            if self.output_folder is None:
+                mode = 'memory'
+                waveforms_folder = None
+            else:
+                mode='memmap'
+                waveforms_folder = self.output_folder / "waveforms" / key
+            self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], waveforms_folder, mode, overwrite=True, **self.job_kwargs)
 
 
     _array_names = ('motion', 'temporal_bins', 'spatial_bins')
