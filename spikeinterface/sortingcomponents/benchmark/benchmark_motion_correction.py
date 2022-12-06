@@ -13,7 +13,7 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
 from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
 
-from spikeinterface.core import extract_waveforms
+from spikeinterface.core import extract_waveforms, load_waveforms
 
 from spikeinterface.widgets import plot_probe_map
 
@@ -43,29 +43,27 @@ class BenchmarkMotionCorrectionMearec:
         self.temporal_bins = temporal_bins
         self.spatial_bins = spatial_bins
 
-        self.recordings = {}
+        self._recordings = None
         self.sortings = {}
-
         for key in ['drifting', 'static']:
-            self.recordings[key], self.sortings[key] = read_mearec(self.mearec_filenames[key])
-        
+            _, self.sortings[key] = read_mearec(self.mearec_filenames[key])
+
         self.title = title
         self.job_kwargs = job_kwargs
         self.correct_motion_kwargs = correct_motion_kwargs
         self.overwrite = overwrite
         self.output_folder = output_folder
 
+    @property
+    def recordings(self):
+        if self._recordings is None:
+            self._recordings = {}
+            for key in ['drifting', 'static']:
+                self._recordings[key], _ = read_mearec(self.mearec_filenames[key])
 
-    def run(self):
-        self.recordings['corrected'] = CorrectMotionRecording(self.recordings['drifting'], self.motion, self.temporal_bins, self.spatial_bins)
-        self.sortings['corrected'] = self.sortings['static']
-
-        if self.output_folder is not None:
-            if self.output_folder.exists() and not self.overwrite:
-                raise ValueError(f"The folder {self.output_folder} is not empty")
-
-        if self.output_folder is not None:
-            self.save_to_folder(self.output_folder)
+            self._recordings['corrected'] = CorrectMotionRecording(self._recordings['drifting'], self.motion, self.temporal_bins, self.spatial_bins)
+            self.sortings['corrected'] = self.sortings['static']
+        return self._recordings
 
     def extract_waveforms(self):
 
@@ -75,10 +73,10 @@ class BenchmarkMotionCorrectionMearec:
                 mode = 'memory'
                 waveforms_folder = None
             else:
-                mode = 'memmap'
+                mode = 'folder'
                 waveforms_folder = self.output_folder / "waveforms" / key
             self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], waveforms_folder, mode, 
-                load_if_exists=True, overwrite=self.overwrite, **self.job_kwargs)
+                load_if_exists=not self.overwrite, overwrite=self.overwrite, **self.job_kwargs)
 
     _array_names = ('motion', 'temporal_bins', 'spatial_bins')
     _dict_kwargs_names = ('job_kwargs', 'correct_motion_kwargs', 'mearec_filenames')
@@ -147,6 +145,12 @@ class BenchmarkMotionCorrectionMearec:
             else:
                 arr = None
             setattr(bench, name, arr)
+
+        bench.waveforms = {}
+        for key in bench.keys:
+            waveforms_folder = folder / 'waveforms' / key
+            if waveforms_folder.exists():
+                bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=False)
 
         #with open(folder / 'run_times.json', 'r') as f:
         #    bench.run_times = json.load(f)
