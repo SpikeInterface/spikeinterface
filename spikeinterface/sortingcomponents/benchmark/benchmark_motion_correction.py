@@ -55,18 +55,19 @@ class BenchmarkMotionCorrectionMearec:
         self.overwrite = overwrite
         self.output_folder = output_folder
 
+
     def run(self):
+        self.recordings['corrected'] = CorrectMotionRecording(self.recordings['drifting'], self.motion, self.temporal_bins, self.spatial_bins)
+        self.sortings['corrected'] = self.sortings['static']
 
         if self.output_folder is not None:
             if self.output_folder.exists() and not self.overwrite:
                 raise ValueError(f"The folder {self.output_folder} is not empty")
 
-        self.recordings['corrected'] = CorrectMotionRecording(self.recordings['drifting'], self.motion, self.temporal_bins, self.spatial_bins)
-        self.sortings['corrected'] = self.sortings['static']
-
-        ## save folder
         if self.output_folder is not None:
             self.save_to_folder(self.output_folder)
+
+    def extract_waveforms(self):
 
         self.waveforms = {}
         for key in self.keys:
@@ -74,13 +75,13 @@ class BenchmarkMotionCorrectionMearec:
                 mode = 'memory'
                 waveforms_folder = None
             else:
-                mode='memmap'
+                mode = 'memmap'
                 waveforms_folder = self.output_folder / "waveforms" / key
-            self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], waveforms_folder, mode, overwrite=True, **self.job_kwargs)
-
+            self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], waveforms_folder, mode, 
+                load_if_exists=True, overwrite=self.overwrite, **self.job_kwargs)
 
     _array_names = ('motion', 'temporal_bins', 'spatial_bins')
-    _dict_kwargs_names = ('job_kwargs', 'correct_motion_kwargs')
+    _dict_kwargs_names = ('job_kwargs', 'correct_motion_kwargs', 'mearec_filenames')
 
     def save_to_folder(self, folder):
 
@@ -94,7 +95,7 @@ class BenchmarkMotionCorrectionMearec:
 
         info = {
             'mearec_filename_static': str(self.mearec_filenames['static']),
-            'mearec_filename_drifting': str(self.mearec_filenams['drifting']),
+            'mearec_filename_drifting': str(self.mearec_filenames['drifting']),
             'title': self.title,
         }
         (folder / 'info.json').write_text(json.dumps(info, indent=4), encoding='utf8')
@@ -113,36 +114,41 @@ class BenchmarkMotionCorrectionMearec:
         #run_times_filename = folder / 'run_times.json'
         #run_times_filename.write_text(json.dumps(self.run_times, indent=4),encoding='utf8')
 
-    # @classmethod
-    # def load_from_folder(cls, folder):
-    #     folder = Path(folder)
-    #     assert folder.exists()
+    @classmethod
+    def load_from_folder(cls, folder):
+        folder = Path(folder)
+        assert folder.exists()
 
-    #     with open(folder / 'info.json', 'r') as f:
-    #         info = json.load(f)
-    #     mearec_filename = info['mearec_filename']
-    #     title = info['title']
+        with open(folder / 'info.json', 'r') as f:
+            info = json.load(f)
+        title = info['title']
 
-    #     dict_kwargs = dict()
-    #     for name in cls._dict_kwargs_names:
-    #         filename = folder / f'{name}.json' 
-    #         if filename.exists():
-    #             with open(filename, 'r') as f:
-    #                 d = json.load(f)
-    #         else:
-    #             d = None
-    #         dict_kwargs[name] = d
+        dict_kwargs = dict()
+        for name in cls._dict_kwargs_names:
+            filename = folder / f'{name}.json' 
+            if filename.exists():
+                with open(filename, 'r') as f:
+                    d = json.load(f)
+            else:
+                d = None
+            dict_kwargs[name] = d
 
-    #     bench = cls(mearec_filename, output_folder=folder, title=title, overwrite=False, **dict_kwargs)
-    #     for name in cls._array_names:
-    #         filename = folder / f'{name}.npy'
-    #         if filename.exists():
-    #             arr = np.load(filename)
-    #         else:
-    #             arr = None
-    #         setattr(bench, name, arr)
+        mearec_filenames = dict_kwargs.pop('mearec_filenames')
+        bench = cls(mearec_filenames['drifting'], mearec_filenames['static'], 
+            None,
+            None,
+            None, 
+            output_folder=folder, title=title, overwrite=False, **dict_kwargs)
 
-    #     with open(folder / 'run_times.json', 'r') as f:
-    #         bench.run_times = json.load(f)
+        for name in cls._array_names:
+            filename = folder / f'{name}.npy'
+            if filename.exists():
+                arr = np.load(filename)
+            else:
+                arr = None
+            setattr(bench, name, arr)
 
-    #     return bench
+        #with open(folder / 'run_times.json', 'r') as f:
+        #    bench.run_times = json.load(f)
+
+        return bench
