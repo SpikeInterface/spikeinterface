@@ -401,11 +401,11 @@ class OpenCLDetectPeakExecutor:
         
         self.abs_threholds = abs_threholds.astype('float32')
         self.exclude_sweep_size = exclude_sweep_size
-        self.neighbours_mask = neighbours_mask
+        self.neighbours_mask = neighbours_mask.astype('uint8')
         self.peak_sign = peak_sign
     
     def create_buffers_and_compile(self, chunk_size):
-        print('OpenCLDetectPeakExecutor.create_buffers_and_compile')
+        #~ print('OpenCLDetectPeakExecutor.create_buffers_and_compile')
         import pyopencl
         mf = pyopencl.mem_flags
         
@@ -414,6 +414,9 @@ class OpenCLDetectPeakExecutor:
         self.max_wg_size = self.ctx.devices[0].get_info(pyopencl.device_info.MAX_WORK_GROUP_SIZE)
         
         self.chunk_size = chunk_size
+        
+        #~ print('self.abs_threholds', self.abs_threholds)
+        #~ print('self.neighbours_mask', self.neighbours_mask)
         
         self.neighbours_mask_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.neighbours_mask)
         self.abs_threholds_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.abs_threholds)
@@ -433,7 +436,7 @@ class OpenCLDetectPeakExecutor:
         variables = dict(
             chunk_size=int(self.chunk_size),
             exclude_sweep_size=int(self.exclude_sweep_size),
-            peak_sign={'pos': 1, 'neg': 0}[self.peak_sign],
+            peak_sign={'pos': 1, 'neg': -1}[self.peak_sign],
             num_channels=num_channels,
         )
 
@@ -451,23 +454,21 @@ class OpenCLDetectPeakExecutor:
         
         s = self.chunk_size - 2 * self.exclude_sweep_size
         self.global_size = (s, )
-        if s > self.max_wg_size:
-            self.local_size = (self.max_wg_size, )
-        else:
-            self.local_size = (s, )
+        self.local_size = None
         
-        print('self.global_size', self.global_size, 'self.local_size', self.local_size)
+        
+        #~ print('self.global_size', self.global_size, 'self.local_size', self.local_size)
 
     def detect_peak(self, traces):
         import pyopencl
         
-        print('OpenCLDetectPeakExecutor.detect_peak')
+        #~ print('OpenCLDetectPeakExecutor.detect_peak')
         if self.chunk_size is None or self.chunk_size != traces.shape[0]:
             self.create_buffers_and_compile(traces.shape[0])
         # print(self.ctx)
         #~ print(self.kern_detect_peak)
 
-        
+        #~ print( traces.astype('float32').min(axis=0))
         event = pyopencl.enqueue_copy(self.queue,  self.traces_cl, traces.astype('float32'))
         
         pyopencl.enqueue_nd_range_kernel(self.queue,  self.kern_detect_peaks, self.global_size, self.local_size,)
@@ -480,20 +481,13 @@ class OpenCLDetectPeakExecutor:
         event = pyopencl.enqueue_copy(self.queue,  self.peaks, self.peaks_cl)
         event.wait()
         
-        print(self.num_peaks)
-        peaks = self.peaks[:self.num_peaks[0]]
+        n = self.num_peaks[0]
+        #~ print('num_peaks', n)
         
-        
+        peaks = self.peaks[:n]
 
-        
-        
-        
-        
-
-
-        
-        peak_sample_ind = np.array([], dtype='int64')
-        peak_chan_ind = np.array([], dtype='int64')
+        peak_sample_ind = peaks['sample_index'].astype('int64')
+        peak_chan_ind = peaks['channel_index'].astype('int64')
         return peak_sample_ind, peak_chan_ind
 
 processor_kernel = """
@@ -503,8 +497,6 @@ processor_kernel = """
 #define num_channels %(num_channels)d
 
 
-
-
 typedef struct st_peak{
     int sample_index;
     int channel_index;
@@ -512,10 +504,11 @@ typedef struct st_peak{
 
 
 __kernel void detect_peaks(
+                        //in
                         __global  float *traces,
-                        __global  int *neighbours_mask,
+                        __global  uchar *neighbours_mask,
                         __global  float *abs_threholds,
-                        
+                        //out
                         __global  st_peak *peaks,
                         volatile __global int *num_peaks
                 ){
@@ -542,7 +535,10 @@ __kernel void detect_peaks(
 
     
     for (int chan=0; chan<num_channels; chan++){
-        v = traces[(pos + exclude_sweep_size)*num_channels + chan];
+        
+        //v = traces[(pos + exclude_sweep_size)*num_channels + chan];
+        index = (pos + exclude_sweep_size) * num_channels + chan;
+        v = traces[index];
         
         if(peak_sign==1){
             if (v>abs_threholds[chan]){peak=1;}
@@ -558,9 +554,9 @@ __kernel void detect_peaks(
             
                 is_neighbour = neighbours_mask[chan * num_channels + chan_neigh];
                 if (is_neighbour == 0){continue;}
-                if (chan == chan_neigh){continue;}
-                
-                index = (pos + exclude_sweep_size)*num_channels + chan_neigh;
+                //if (chan == chan_neigh){continue;}
+
+                index = (pos + exclude_sweep_size) * num_channels + chan_neigh;
                 if(peak_sign==1){
                     peak = peak && (v>=traces[index]);
                 }
@@ -582,9 +578,9 @@ __kernel void detect_peaks(
                         if (peak==0){break;}
                     }
                 }
-            
+
             }
-            
+
         }
         
         if (peak==1){

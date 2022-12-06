@@ -9,7 +9,11 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
 
-
+try:
+    import pyopencl
+    HAVE_PYOPENCL = True
+except:
+    HAVE_PYOPENCL = False
 
 def test_detect_peaks():
 
@@ -31,6 +35,12 @@ def test_detect_peaks():
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                          chunk_size=10000, verbose=1, progress_bar=False)
     
+    # locally_exclusive + opencl
+    if HAVE_PYOPENCL:
+        peaks = detect_peaks(recording, method='locally_exclusive_cl',
+                             peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                             chunk_size=10000, verbose=1, progress_bar=False)
+    
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
     pipeline_steps = [
@@ -48,16 +58,16 @@ def test_detect_peaks():
     
 
     # # DEBUG
-    # sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
-    # import matplotlib.pyplot as plt
-    # import spikeinterface.widgets as sw
-    # chan_offset = 500
-    # traces = recording.get_traces()
-    # traces += np.arange(traces.shape[1])[None, :] * chan_offset
-    # fig, ax = plt.subplots()
-    # ax.plot(traces, color='k')
-    # ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
-    # plt.show()
+    # sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
+    # import matplotlib.pyplot as plt
+    # import spikeinterface.widgets as sw
+    # chan_offset = 500
+    # traces = recording.get_traces()
+    # traces += np.arange(traces.shape[1])[None, :] * chan_offset
+    # fig, ax = plt.subplots()
+    # ax.plot(traces, color='k')
+    # ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
+    # plt.show()
 
     # import matplotlib.pyplot as plt
     # import spikeinterface.widgets as sw
