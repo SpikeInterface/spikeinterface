@@ -84,11 +84,12 @@ class BenchmarkMotionCorrectionMearec:
 
     def save_to_folder(self, folder):
 
-        if folder.exists():
-            if self.overwrite:
-                import shutil
-                shutil.rmtree(folder)
-        folder.mkdir(parents=True)
+        if folder.exists() and self.overwrite:
+            import shutil
+            shutil.rmtree(folder)
+            folder.mkdir(parents=True)
+        elif not folder.exists():
+            folder.mkdir(parents=True)
 
         folder = Path(folder)
 
@@ -159,6 +160,10 @@ class BenchmarkMotionCorrectionMearec:
         return bench
 
 
+    #def _compute_snippets_variability(self, metric='cosine'):
+    #
+
+
     def compare_snippets_variability(self, metric='cosine'):
         templates = self.waveforms['static'].get_all_templates()
         
@@ -219,22 +224,29 @@ class BenchmarkMotionCorrectionMearec:
         template_positions = recgen.template_locations[:, nb_versions//2, 1:3]
         distances_to_center = template_positions[:, 1]
 
-        diff = results['corrected'] - results['static']
-        axes[1, 0].scatter(np.linalg.norm(templates, axis=(1, 2)), diff)
+        diff_corrected = results['corrected'] - results['static']
+        diff_drifting = results['drifting'] - results['static']
+        axes[1, 0].scatter(np.linalg.norm(templates, axis=(1, 2)), diff_corrected, color='C2')
+        axes[1, 0].scatter(np.linalg.norm(templates, axis=(1, 2)), diff_drifting, color='C1')
         if metric == 'euclidean':
             axes[1, 0].set_ylabel(r'$\Delta \|~\|_2$')
         elif metric == 'cosine':
             axes[1, 0].set_ylabel(r'$\Delta cosine$')
         axes[1, 0].set_xlabel('template norm')
+        xmin, xmax = axes[1, 0].get_xlim()
+        axes[1, 0].plot([xmin, xmax], [0, 0], 'k--')
         _simpleaxis(axes[1, 0])
 
-        axes[1, 1].scatter(distances_to_center, diff)
+        axes[1, 1].scatter(distances_to_center, diff_drifting, color='C1')
+        axes[1, 1].scatter(distances_to_center, diff_corrected, color='C2')
         if metric == 'euclidean':
             axes[1, 1].set_ylabel(r'$\Delta \|~\|_2$')
         elif metric == 'cosine':
             axes[1, 1].set_ylabel(r'$\Delta cosine$')
         axes[1, 1].legend()
         axes[1, 1].set_xlabel('depth (um)')
+        xmin, xmax = axes[1, 1].get_xlim()
+        axes[1, 1].plot([xmin, xmax], [0, 0], 'k--')
         _simpleaxis(axes[1, 1])
 
     def compare_residuals(self, time_range=None):
@@ -299,6 +311,12 @@ class BenchmarkMotionCorrectionMearec:
         axes[1, 1].set_xlabel('rate per channel (Hz)')
         axes[1, 1].set_ylabel('Mean residual')
         _simpleaxis(axes[1,1])
+
+    #def compare_sortings(self, sorters=['spykingcircus2', 'kilosort2', 'kilosort3']):
+
+
+
+
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 class ResidualRecording(BasePreprocessor):
