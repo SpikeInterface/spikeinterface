@@ -253,50 +253,52 @@ class BenchmarkMotionCorrectionMearec:
                 t_start, t_stop = time_range
 
             for i in np.arange(t_start*fr, t_stop*fr, fr):
-                data = np.abs(difference.get_traces(start_frame=i, end_frame=i+fr))
-                residuals[key] = np.hstack((residuals[key], data.mean(axis=0)[:,np.newaxis]))
+                data = np.linalg.norm(difference.get_traces(start_frame=i, end_frame=i+fr), axis=0)/np.sqrt(fr)
+                residuals[key] = np.hstack((residuals[key], data[:,np.newaxis]))
 
 
-        fig, axes = plt.subplots(1, 2, figsize=(15, 10))
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
         time_axis = np.arange(t_start, t_stop)
-        axes[0].plot(time_axis, residuals['drifting'].mean(0), label=r'$|S_{drifting} - S_{static}|$')
-        axes[0].plot(time_axis, residuals['corrected'].mean(0), label=r'$|S_{corrected} - S_{static}|$')
-        axes[0].legend()
-        axes[0].set_xlabel('time (s)')
-        axes[0].set_ylabel('mean residual')
-        _simpleaxis(axes[0])
+        axes[0 ,0].plot(time_axis, residuals['drifting'].mean(0), label=r'$|S_{drifting} - S_{static}|$')
+        axes[0 ,0].plot(time_axis, residuals['corrected'].mean(0), label=r'$|S_{corrected} - S_{static}|$')
+        axes[0 ,0].legend()
+        axes[0, 0].set_xlabel('time (s)')
+        axes[0, 0].set_ylabel('mean residual')
+        _simpleaxis(axes[0, 0])
 
         channel_positions = self.recordings['static'].get_channel_locations()
         distances_to_center = channel_positions[:, 1]
         idx = np.argsort(distances_to_center)
 
-        axes[1].plot(distances_to_center[idx], residuals['drifting'].mean(1)[idx], label=r'$|S_{drift} - S_{static}|$')
-        axes[1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=r'$|S_{corrected} - S_{static}|$')
-        axes[1].legend()
-        axes[1].set_xlabel('depth (um)')
-        axes[1].set_ylabel('mean residual')
-        _simpleaxis(axes[1])
+        axes[0, 1].plot(distances_to_center[idx], residuals['drifting'].mean(1)[idx], label=r'$|S_{drift} - S_{static}|$')
+        axes[0, 1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=r'$|S_{corrected} - S_{static}|$')
+        axes[0, 1].legend()
+        axes[0 ,1].set_xlabel('depth (um)')
+        axes[0, 1].set_ylabel('mean residual')
+        _simpleaxis(axes[0, 1])
 
-        # _, counts = np.unique(peaks['static']['channel_ind'], return_counts=True)
-        # duration = pre_processed['static'].get_total_duration()
-        # counts = counts.astype(np.float64) / duration
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        peaks = detect_peaks(self.recordings['static'], method='by_channel', **self.job_kwargs)
 
-        # axes[1, 0].plot(distances_to_center[idx],(fr*residuals.mean(1)/counts)[idx], label='drift')
-        # for i, method in enumerate(all_methods):
-        #     axes[1, 0].plot(distances_to_center[idx],(fr*residuals_2[method].mean(1)/counts)[idx], label=method)
-        # axes[1, 0].set_ylabel('mean residual / rate')
-        # axes[1, 0].set_xlabel('depth of the channel [um]')
-        # axes[1, 0].legend()
-        # _simpleaxis(axes[1,0])
+        mask = (peaks['sample_ind'] >= t_start*fr) & (peaks['sample_ind'] <= t_stop*fr)
 
-        # axes[1, 1].scatter(counts, residuals.mean(1), label='drift')
-        # for method in all_methods:
-        #     axes[1, 1].scatter(counts, residuals_2[method].mean(1), label=method)
-        # axes[1, 1].legend()
-        # axes[1, 1].set_xlabel('rate per channel (Hz)')
-        # axes[1, 1].set_ylabel('Mean residual')
-        # _simpleaxis(axes[1,1])
+        _, counts = np.unique(peaks['channel_ind'][mask], return_counts=True)
+        counts = counts.astype(np.float64) / (t_stop - t_start)
+
+        axes[1, 0].plot(distances_to_center[idx],(fr*residuals['drifting'].mean(1)/counts)[idx], label='drifting')
+        axes[1, 0].plot(distances_to_center[idx],(fr*residuals['corrected'].mean(1)/counts)[idx], label='corrected')
+        axes[1, 0].set_ylabel('mean residual / rate')
+        axes[1, 0].set_xlabel('depth of the channel [um]')
+        axes[1, 0].legend()
+        _simpleaxis(axes[1, 0])
+
+        axes[1, 1].scatter(counts, residuals['drifting'].mean(1), label='drifting')
+        axes[1, 1].scatter(counts, residuals['corrected'].mean(1), label='corrected')
+        axes[1, 1].legend()
+        axes[1, 1].set_xlabel('rate per channel (Hz)')
+        axes[1, 1].set_ylabel('Mean residual')
+        _simpleaxis(axes[1,1])
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 class ResidualRecording(BasePreprocessor):
