@@ -36,7 +36,7 @@ class BenchmarkMotionCorrectionMearec:
                 overwrite=False):
         
         self.mearec_filenames = {}  
-        self.keys = ['drifting', 'static', 'corrected']      
+        self.keys = ['static', 'drifting', 'corrected']
         self.mearec_filenames['drifting'] = mearec_filename_drifting
         self.mearec_filenames['static'] = mearec_filename_static
         self.motion = motion
@@ -193,6 +193,26 @@ class BenchmarkMotionCorrectionMearec:
         elif metric == 'cosine':
             axes[0, 0].set_ylabel('cosine(snippet, template)')
 
+
+        distances = {}
+        for count, key in enumerate(['drifting', 'corrected']):
+            new_templates = self.waveforms[key].get_all_templates().reshape(nb_templates, -1)
+            if metric == 'euclidean':
+                distances[key] = sklearn.metrics.pairwise_distances(templates.reshape(nb_templates, -1), new_templates)[0]
+            elif metric == 'cosine':
+                distances[key] = sklearn.metrics.pairwise.cosine_similarity(templates.reshape(nb_templates, -1), new_templates)[0]
+
+        axes[0, 1].scatter(np.diag(distances['drifting']), np.diag(distances['corrected']), c=f'C{count}', alpha=0.5)
+        xmin, xmax = axes[0, 1].get_xlim()
+        axes[0, 1].plot([xmin, xmax], [xmin, xmax], 'k--')
+        _simpleaxis(axes[0, 1])
+        if metric == 'euclidean':
+            axes[0, 1].set_xlabel(r'$\|drift - static\|_2$')
+            axes[0, 1].set_ylabel(r'$\|corrected - static\|_2$')
+        elif metric == 'cosine':
+            axes[0, 1].set_xlabel(r'$cosine(drift, static)$')
+            axes[0, 1].set_ylabel(r'$cosine(corrected, static)$')
+
         import MEArec as mr
         recgen = mr.load_recordings(self.mearec_filenames['static'])
         nb_templates, nb_versions, _ = recgen.template_locations.shape
@@ -216,6 +236,94 @@ class BenchmarkMotionCorrectionMearec:
         axes[1, 1].legend()
         axes[1, 1].set_xlabel('depth (um)')
         _simpleaxis(axes[1, 1])
+
+    def compare_residuals(self, time_range=None):
+
+        residuals = {}
+
+        for key in ['drifting', 'corrected']:
+            difference = ResidualRecording(self.recordings['static'], self.recordings[key])
+            residuals[key] = np.zeros((self.recordings['static'].get_num_channels(), 0))
+            fr = int(self.recordings['static'].get_sampling_frequency())
+            duration = int(self.recordings['static'].get_total_duration())
+            if time_range is None:
+                t_start = 0
+                t_stop = duration
+            else:
+                t_start, t_stop = time_range
+
+            for i in np.arange(t_start*fr, t_stop*fr, fr):
+                data = np.abs(difference.get_traces(start_frame=i, end_frame=i+fr))
+                residuals[key] = np.hstack((residuals[key], data.mean(axis=0)[:,np.newaxis]))
+
+
+        fig, axes = plt.subplots(1, 2, figsize=(15, 10))
+
+        time_axis = np.arange(t_start, t_stop)
+        axes[0].plot(time_axis, residuals['drifting'].mean(0), label=r'$|S_{drifting} - S_{static}|$')
+        axes[0].plot(time_axis, residuals['corrected'].mean(0), label=r'$|S_{corrected} - S_{static}|$')
+        axes[0].legend()
+        axes[0].set_xlabel('time (s)')
+        axes[0].set_ylabel('mean residual')
+        _simpleaxis(axes[0])
+
+        channel_positions = self.recordings['static'].get_channel_locations()
+        distances_to_center = channel_positions[:, 1]
+        idx = np.argsort(distances_to_center)
+
+        axes[1].plot(distances_to_center[idx], residuals['drifting'].mean(1)[idx], label=r'$|S_{drift} - S_{static}|$')
+        axes[1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=r'$|S_{corrected} - S_{static}|$')
+        axes[1].legend()
+        axes[1].set_xlabel('depth (um)')
+        axes[1].set_ylabel('mean residual')
+        _simpleaxis(axes[1])
+
+        # _, counts = np.unique(peaks['static']['channel_ind'], return_counts=True)
+        # duration = pre_processed['static'].get_total_duration()
+        # counts = counts.astype(np.float64) / duration
+
+        # axes[1, 0].plot(distances_to_center[idx],(fr*residuals.mean(1)/counts)[idx], label='drift')
+        # for i, method in enumerate(all_methods):
+        #     axes[1, 0].plot(distances_to_center[idx],(fr*residuals_2[method].mean(1)/counts)[idx], label=method)
+        # axes[1, 0].set_ylabel('mean residual / rate')
+        # axes[1, 0].set_xlabel('depth of the channel [um]')
+        # axes[1, 0].legend()
+        # _simpleaxis(axes[1,0])
+
+        # axes[1, 1].scatter(counts, residuals.mean(1), label='drift')
+        # for method in all_methods:
+        #     axes[1, 1].scatter(counts, residuals_2[method].mean(1), label=method)
+        # axes[1, 1].legend()
+        # axes[1, 1].set_xlabel('rate per channel (Hz)')
+        # axes[1, 1].set_ylabel('Mean residual')
+        # _simpleaxis(axes[1,1])
+
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+class ResidualRecording(BasePreprocessor):
+    name = 'residual_recording'
+    def __init__(self, recording_1, recording_2):
+        assert recording_1.get_num_segments() == recording_2.get_num_segments()
+        BasePreprocessor.__init__(self, recording_1)
+
+        for parent_recording_segment_1, parent_recording_segment_2 in zip(recording_1._recording_segments, recording_2._recording_segments):
+            rec_segment = DifferenceRecordingSegment(parent_recording_segment_1, parent_recording_segment_2)
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = dict(recording_1=recording_1.to_dict(), recording_2=recording_2.to_dict())
+
+
+class DifferenceRecordingSegment(BasePreprocessorSegment):
+    def __init__(self, parent_recording_segment_1, parent_recording_segment_2):
+        BasePreprocessorSegment.__init__(self, parent_recording_segment_1)
+        self.parent_recording_segment_1 = parent_recording_segment_1
+        self.parent_recording_segment_2 = parent_recording_segment_2
+
+    def get_traces(self, start_frame, end_frame, channel_indices):
+
+        traces_1 = self.parent_recording_segment_1.get_traces(start_frame, end_frame, channel_indices)
+        traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices)
+
+        return traces_2 - traces_1
 
 
 def _simpleaxis(ax):
