@@ -61,7 +61,8 @@ class BenchmarkMotionCorrectionMearec:
             for key in ['drifting', 'static']:
                 self._recordings[key], _ = read_mearec(self.mearec_filenames[key])
 
-            self._recordings['corrected'] = CorrectMotionRecording(self._recordings['drifting'], self.motion, self.temporal_bins, self.spatial_bins)
+            self._recordings['corrected'] = CorrectMotionRecording(self._recordings['drifting'], self.motion, 
+                        self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs)
             self.sortings['corrected'] = self.sortings['static']
         return self._recordings
 
@@ -156,3 +157,69 @@ class BenchmarkMotionCorrectionMearec:
         #    bench.run_times = json.load(f)
 
         return bench
+
+
+    def compare_snippets_variability(self, metric='cosine'):
+        templates = self.waveforms['static'].get_all_templates()
+        
+        import sklearn
+        results = {}
+        nb_templates = len(self.waveforms['static'].unit_ids)
+
+        for key in self.keys:
+            results[key] = np.zeros(nb_templates)
+            for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
+                w = self.waveforms[key].get_waveforms(unit_id)
+                nb_waveforms = len(w)
+                flat_w = w.reshape(nb_waveforms, -1)
+                if metric == 'euclidean':
+                    d = sklearn.metrics.pairwise_distances(templates[unit_ind].reshape(1, -1), flat_w)[0]
+                elif metric == 'cosine':
+                    d = sklearn.metrics.pairwise.cosine_similarity(templates[unit_ind].reshape(1, -1), flat_w)[0]
+                results[key][unit_ind] = d.mean()
+
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+
+        colors = 0
+        labels = []
+        for key in self.keys:
+            axes[0, 0].violinplot(results[key], [colors], showmeans=True)
+            colors += 1
+
+        _simpleaxis(axes[0, 0])
+        axes[0, 0].set_xticks(np.arange(len(self.keys)), self.keys)
+        if metric == 'euclidean':
+            axes[0, 0].set_ylabel(r'$\| snippet - template\|_2$')
+        elif metric == 'cosine':
+            axes[0, 0].set_ylabel('cosine(snippet, template)')
+
+        import MEArec as mr
+        recgen = mr.load_recordings(self.mearec_filenames['static'])
+        nb_templates, nb_versions, _ = recgen.template_locations.shape
+        template_positions = recgen.template_locations[:, nb_versions//2, 1:3]
+        distances_to_center = template_positions[:, 1]
+
+        diff = results['corrected'] - results['static']
+        axes[1, 0].scatter(np.linalg.norm(templates, axis=(1, 2)), diff)
+        if metric == 'euclidean':
+            axes[1, 0].set_ylabel(r'$\Delta \|~\|_2$')
+        elif metric == 'cosine':
+            axes[1, 0].set_ylabel(r'$\Delta cosine$')
+        axes[1, 0].set_xlabel('template norm')
+        _simpleaxis(axes[1, 0])
+
+        axes[1, 1].scatter(distances_to_center, diff)
+        if metric == 'euclidean':
+            axes[1, 1].set_ylabel(r'$\Delta \|~\|_2$')
+        elif metric == 'cosine':
+            axes[1, 1].set_ylabel(r'$\Delta cosine$')
+        axes[1, 1].legend()
+        axes[1, 1].set_xlabel('depth (um)')
+        _simpleaxis(axes[1, 1])
+
+
+def _simpleaxis(ax):
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
