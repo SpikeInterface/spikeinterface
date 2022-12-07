@@ -125,7 +125,7 @@ def get_potential_auto_merge(
     pair_mask = np.ones((n, n), dtype='bool')
 
     # STEP 1 :
-    if 'min_spike' in steps:
+    if 'min_spikes' in steps:
         num_spikes = np.array(list(sorting.get_total_num_spikes().values()))
         to_remove = num_spikes < minimum_spikes
         pair_mask[to_remove, :] = False
