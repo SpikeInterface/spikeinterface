@@ -9,7 +9,7 @@ from spikeinterface.core import extract_waveforms, load_waveforms
 from spikeinterface.extractors import read_mearec
 from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
 from spikeinterface.postprocessing.template_tools import get_template_channel_sparsity
-
+from spikeinterface.widgets import plot_unit_waveforms
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 import matplotlib.pyplot as plt
 
@@ -300,6 +300,17 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         axes[1, 1].set_ylabel('Mean residual')
         _simpleaxis(axes[1,1])
 
+    def compare_waveforms(self, unit_id):
+        fig, axes = plt.subplots(1, 3, figsize=(15, 10))
+        for count, key in enumerate(self.keys):
+            plot_unit_waveforms(self.waveforms[key], unit_ids=[unit_id], ax=axes[count], 
+                unit_colors={unit_id : 'k'}, same_axis=True, alpha_waveforms=0.05)
+            axes[count].set_title(f'unit {unit_id} {key}')
+            axes[count].set_xticks([])
+            axes[count].set_yticks([])
+            _simpleaxis(axes[count])
+            axes[count].spines['bottom'].set_visible(False)
+            axes[count].spines['left'].set_visible(False)
 
 def plot_snippet_comparisons(benchmarks, metric='cosine', num_channels=30):
 
