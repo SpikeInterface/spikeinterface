@@ -96,4 +96,44 @@ class ChannelSparsity:
     @classmethod
     def from_dict(cls, d):
         return cls.from_id_to_id(**d)
+    
 
+
+    # @alessio : I also would like to have this here and slowly remove
+    # get_template_channel_sparsity() but this would lead to move more or less
+    # all the emplates_tools.py into core.
+    # to be discussed
+    @classmethod
+    def from_radius(cls, we, radius_um):
+        """
+        
+
+        """
+        pass
+
+    @classmethod
+    def from_best_channels(cls, we, num_channels):
+        """
+        
+
+        """
+        pass
+
+    @classmethod
+    def from_threshold(cls, we, threshold):
+        """
+        
+
+        """
+        pass
+
+    @classmethod
+    def from_property(cls, we, property):
+        """
+        
+
+        """
+        pass
+
+
+    
