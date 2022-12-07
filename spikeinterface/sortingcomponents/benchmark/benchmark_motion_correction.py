@@ -10,7 +10,7 @@ from spikeinterface.extractors import read_mearec
 from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
 from spikeinterface.postprocessing.template_tools import get_template_channel_sparsity
 
-from spikeinterface.sortingcomponents.benchmark_tools import BenchmarkBase
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 
 
 
@@ -27,7 +27,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 temporal_bins,
                 spatial_bins,
                 correct_motion_kwargs={},
-                copy_from_other_benchmark=None):
+                parent_benchmark=None):
 
         BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs)
 
@@ -75,56 +75,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             else:
                 mode = 'folder'
                 waveforms_folder = self.output_folder / "waveforms" / key
+
             self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], waveforms_folder, mode, 
                 load_if_exists=not self.overwrite, overwrite=self.overwrite, **self.job_kwargs)
 
     _array_names = ('motion', 'temporal_bins', 'spatial_bins')
     _dict_kwargs_names = ('job_kwargs', 'correct_motion_kwargs', 'mearec_filenames')
-
-    @classmethod
-    def load_from_folder(cls, folder):
-        folder = Path(folder)
-        assert folder.exists()
-
-        with open(folder / 'info.json', 'r') as f:
-            info = json.load(f)
-        title = info['title']
-
-        dict_kwargs = dict()
-        for name in cls._dict_kwargs_names:
-            filename = folder / f'{name}.json' 
-            if filename.exists():
-                with open(filename, 'r') as f:
-                    d = json.load(f)
-            else:
-                d = None
-            dict_kwargs[name] = d
-
-        mearec_filenames = dict_kwargs.pop('mearec_filenames')
-        bench = cls(mearec_filenames['drifting'], mearec_filenames['static'], 
-            None,
-            None,
-            None, 
-            output_folder=folder, title=title, overwrite=False, **dict_kwargs)
-
-        for name in cls._array_names:
-            filename = folder / f'{name}.npy'
-            if filename.exists():
-                arr = np.load(filename)
-            else:
-                arr = None
-            setattr(bench, name, arr)
-
-        bench.waveforms = {}
-        for key in bench.keys:
-            waveforms_folder = folder / 'waveforms' / key
-            if waveforms_folder.exists():
-                bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=False)
-
-        #with open(folder / 'run_times.json', 'r') as f:
-        #    bench.run_times = json.load(f)
-
-        return bench
     
     def _compute_templates_similarities(self, metric='cosine', num_channels=30):
         gkey = (metric, num_channels)
@@ -241,8 +197,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         distances_to_center = template_positions[:, 1]
 
         differences = {}
-        differences['corrected'] = 1 - results['mean']['corrected']/results['mean']['static']
-        differences['drifting'] = 1 - results['mean']['drifting']/results['mean']['static']
+        differences['corrected'] = results['mean']['corrected']/results['mean']['static']
+        differences['drifting'] = results['mean']['drifting']/results['mean']['static']
         axes[1, 0].scatter(distances['norm'], differences['corrected'], color='C2')
         axes[1, 0].scatter(distances['norm'], differences['drifting'], color='C1')
         if metric == 'euclidean':
@@ -342,10 +298,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         axes[1, 1].set_ylabel('Mean residual')
         _simpleaxis(axes[1,1])
 
-    #def compare_sortings(self, sorters=['spykingcircus2', 'kilosort2', 'kilosort3']):
-
-
-
 
 def plot_snippet_comparisons(benchmarks, metric='cosine', num_channels=30):
 
@@ -369,7 +321,39 @@ def plot_snippet_comparisons(benchmarks, metric='cosine', num_channels=30):
     labels = []
     for count, bench in enumerate(benchmarks):
         results = bench._compute_snippets_variability(metric, num_channels)
-        differences = 1 - results['mean']['corrected']/results['mean']['static'] 
+        differences = results['mean']['corrected']/results['mean']['static'] 
+        axes[0, 1].bar([count], [differences.mean()], color=f'C{count}')
+
+    _simpleaxis(axes[0, 1])
+    #axes[1, 2].set_xticks(np.arange(2), ['drifting', 'corrected'])
+    if metric == 'euclidean':
+        axes[0, 1].set_ylabel(r'$\Delta \|~\|_2$  (% static)')
+    elif metric == 'cosine':
+        axes[0, 1].set_ylabel(r'$\Delta cosine$  (% static)')
+
+def plot_residuals_comparisons(benchmarks):
+
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    for count, bench in enumerate(benchmarks):
+        distances = bench._compute_templates_similarities(metric, num_channels)
+        axes[0, 0].scatter(distances['drifting'], distances['corrected'], c=f'C{count}', alpha=0.5)
+    
+    xmin, xmax = axes[0, 0].get_xlim()
+    axes[0, 0].plot([xmin, xmax], [xmin, xmax], 'k--')
+    _simpleaxis(axes[0, 0])
+    if metric == 'euclidean':
+        axes[0, 0].set_xlabel(r'$\|drift - static\|_2$')
+        axes[0, 0].set_ylabel(r'$\|corrected - static\|_2$')
+    elif metric == 'cosine':
+        axes[0, 0].set_xlabel(r'$cosine(drift, static)$')
+        axes[0, 0].set_ylabel(r'$cosine(corrected, static)$')
+
+    
+    colors = 0
+    labels = []
+    for count, bench in enumerate(benchmarks):
+        results = bench._compute_snippets_variability(metric, num_channels)
+        differences = results['mean']['corrected']/results['mean']['static'] 
         axes[0, 1].bar([count], [differences.mean()], color=f'C{count}')
 
     _simpleaxis(axes[0, 1])
@@ -406,10 +390,3 @@ class DifferenceRecordingSegment(BasePreprocessorSegment):
         traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices)
 
         return traces_2 - traces_1
-
-
-def _simpleaxis(ax):
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()

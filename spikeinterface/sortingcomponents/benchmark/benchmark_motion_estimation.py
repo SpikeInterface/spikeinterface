@@ -13,7 +13,7 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
 from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
 
-from spikeinterface.sortingcomponents.benchmark_tools import BenchmarkBase
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 
 
 from spikeinterface.widgets import plot_probe_map
@@ -36,7 +36,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 select_kwargs=None,
                 localize_kwargs={},
                 estimate_motion_kwargs={},
-                output_folder=None,
+                folder=None,
                 job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
                 overwrite=False):
         
@@ -98,7 +98,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         ## save folder
         if self.folder is not None:
-            self.save_to_folder(self.folder)
+            self.save_to_folder()
 
 
     def compute_gt_motion(self):
@@ -327,11 +327,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_ylabel('error')
         _simpleaxis(ax)
 
-def _simpleaxis(ax):
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()
+
 
 def plot_errors_several_benchmarks(benchmarks):
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))

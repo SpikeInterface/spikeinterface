@@ -1,16 +1,21 @@
 from pathlib import Path
 import shutil
 import json
+import numpy as np
 
 
 from spikeinterface.core import load_waveforms
 
 
+def _simpleaxis(ax):
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
 class BenchmarkBase:
     _array_names = ()
-    # _dict_kwargs_names = ('job_kwargs', )
     _waveform_names = ()
-
     _array_names_from_other = None
 
     def __init__(self, folder=None, title='', overwrite=None, 
@@ -43,16 +48,16 @@ class BenchmarkBase:
         for name in self._array_names:
             value = getattr(self, name)
             if value is not None:
-                np.save(folder / f'{name}.npy', value)
+                np.save(self.folder / f'{name}.npy', value)
         
-        for name in self._dict_kwargs_names:
+        for name in self._kwargs:
             d = getattr(self, name)
             file = self.folder / f'{name}.json'
             if d is not None:
                 file.write_text(json.dumps(d, indent=4), encoding='utf8')
 
         if self.run_times is not None:
-            run_times_filename = folder / 'run_times.json'
+            run_times_filename = self.folder / 'run_times.json'
             run_times_filename.write_text(json.dumps(self.run_times, indent=4),encoding='utf8')
 
     @classmethod
@@ -65,6 +70,8 @@ class BenchmarkBase:
         args = info['args']
         kwargs = info['kwargs']
 
+        import os
+        kwargs['folder'] = str(os.path.abspath(folder))
         bench = cls(*args, **kwargs)
 
         # dict_kwargs = dict()
@@ -85,14 +92,14 @@ class BenchmarkBase:
                 arr = None
             setattr(bench, name, arr)
 
-        if (folder / 'run_times.json'.exists():)
+        if (folder / 'run_times.json').exists():
             with open(folder / 'run_times.json', 'r') as f:
                 bench.run_times = json.load(f)
         else:
             bench.run_times = None
 
 
-        for key in _waveform_names:
+        for key in bench._waveform_names:
             waveforms_folder = folder / 'waveforms' / key
             if waveforms_folder.exists():
                 bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=False)
