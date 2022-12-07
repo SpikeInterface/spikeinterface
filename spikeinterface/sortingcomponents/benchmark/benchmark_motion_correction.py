@@ -11,9 +11,6 @@ from spikeinterface.sortingcomponents.motion_correction import CorrectMotionReco
 from spikeinterface.postprocessing.template_tools import get_template_channel_sparsity
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
-
-
-
 import matplotlib.pyplot as plt
 
 import MEArec as mr
@@ -21,12 +18,17 @@ import MEArec as mr
 class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     
     _array_names = BenchmarkBase._array_names + ('motion', 'temporal_bins', 'spatial_bins')
+    _waveform_names = ('static', 'drifting', 'corrected')
 
     def __init__(self, mearec_filename_drifting, mearec_filename_static, 
                 motion,
                 temporal_bins,
                 spatial_bins,
                 correct_motion_kwargs={},
+                folder=None,
+                title='',
+                job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
+                overwrite=False,
                 parent_benchmark=None):
 
         BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs)
@@ -69,12 +71,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         self.waveforms = {}
         for key in self.keys:
-            if self.output_folder is None:
+            if self.folder is None:
                 mode = 'memory'
                 waveforms_folder = None
             else:
                 mode = 'folder'
-                waveforms_folder = self.output_folder / "waveforms" / key
+                waveforms_folder = self.folder / "waveforms" / key
 
             self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], waveforms_folder, mode, 
                 load_if_exists=not self.overwrite, overwrite=self.overwrite, **self.job_kwargs)
