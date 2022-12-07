@@ -4,42 +4,44 @@ import numpy as np
 import time
 from pathlib import Path
 
-
-from spikeinterface.core import get_noise_levels
-from spikeinterface.extractors import read_mearec
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
-from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
-from spikeinterface.postprocessing.template_tools import get_template_channel_sparsity
-
 from spikeinterface.core import extract_waveforms, load_waveforms
 
-from spikeinterface.widgets import plot_probe_map
+from spikeinterface.extractors import read_mearec
+from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+from spikeinterface.postprocessing.template_tools import get_template_channel_sparsity
 
-import scipy.interpolate
+from spikeinterface.sortingcomponents.benchmark_tools import BenchmarkBase
+
+
 
 import matplotlib.pyplot as plt
 
 import MEArec as mr
 
-class BenchmarkMotionCorrectionMearec:
+class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     
+    _array_names = BenchmarkBase._array_names + ('motion', 'temporal_bins', 'spatial_bins')
+
     def __init__(self, mearec_filename_drifting, mearec_filename_static, 
                 motion,
-                temporal_bins, 
+                temporal_bins,
                 spatial_bins,
-                title='',
                 correct_motion_kwargs={},
-                output_folder=None,
-                job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
-                overwrite=False):
-        
+                copy_from_other_benchmark=None):
+
+        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs)
+
+        self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None ])
+        self._kwargs.update(dict(
+                correct_motion_kwargs=correct_motion_kwargs,
+            )
+        )
+
         self.mearec_filenames = {}  
         self.keys = ['static', 'drifting', 'corrected']
         self.mearec_filenames['drifting'] = mearec_filename_drifting
         self.mearec_filenames['static'] = mearec_filename_static
+
         self.motion = motion
         self.temporal_bins = temporal_bins
         self.spatial_bins = spatial_bins
@@ -49,11 +51,7 @@ class BenchmarkMotionCorrectionMearec:
         for key in ['drifting', 'static']:
             _, self.sortings[key] = read_mearec(self.mearec_filenames[key])
 
-        self.title = title
-        self.job_kwargs = job_kwargs
         self.correct_motion_kwargs = correct_motion_kwargs
-        self.overwrite = overwrite
-        self.output_folder = output_folder
 
     @property
     def recordings(self):
@@ -82,38 +80,6 @@ class BenchmarkMotionCorrectionMearec:
 
     _array_names = ('motion', 'temporal_bins', 'spatial_bins')
     _dict_kwargs_names = ('job_kwargs', 'correct_motion_kwargs', 'mearec_filenames')
-
-    def save_to_folder(self, folder):
-
-        if folder.exists() and self.overwrite:
-            import shutil
-            shutil.rmtree(folder)
-            folder.mkdir(parents=True)
-        elif not folder.exists():
-            folder.mkdir(parents=True)
-
-        folder = Path(folder)
-
-        info = {
-            'mearec_filename_static': str(self.mearec_filenames['static']),
-            'mearec_filename_drifting': str(self.mearec_filenames['drifting']),
-            'title': self.title,
-        }
-        (folder / 'info.json').write_text(json.dumps(info, indent=4), encoding='utf8')
-
-        for name in self._array_names:
-            value = getattr(self, name)
-            if value is not None:
-                np.save(folder / f'{name}.npy', value)
-        
-        for name in self._dict_kwargs_names:
-            d = getattr(self, name)
-            file = folder / f'{name}.json'
-            if d is not None:
-                file.write_text(json.dumps(d, indent=4), encoding='utf8')
-
-        #run_times_filename = folder / 'run_times.json'
-        #run_times_filename.write_text(json.dumps(self.run_times, indent=4),encoding='utf8')
 
     @classmethod
     def load_from_folder(cls, folder):
