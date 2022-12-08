@@ -11,7 +11,7 @@ import inspect
 
 from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
     _shared_job_kwargs_doc
-    
+
     
 def copy_signature(source_fct):
     def copy(target_fct):
