@@ -10,7 +10,10 @@ from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
 
 
 def get_reader(raw_class, **neo_kwargs):
-    neoIOclass = eval('neo.rawio.' + raw_class)
+    if isinstance(raw_class, str):
+        neoIOclass = eval('neo.rawio.' + raw_class)
+    else:
+        neoIOclass = raw_class
     neo_reader = neoIOclass(**neo_kwargs)
     neo_reader.parse_header()
 
