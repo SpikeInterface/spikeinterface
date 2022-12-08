@@ -314,11 +314,16 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         axes[1, 1].set_ylabel('Mean residual')
         _simpleaxis(axes[1,1])
 
-    def compare_waveforms(self, unit_id):
+    def compare_waveforms(self, unit_id, num_channels=20):
         fig, axes = plt.subplots(1, 3, figsize=(15, 10))
+
+        sparsity = get_template_channel_sparsity(self.waveforms['static'], 
+                        num_channels=num_channels)
+
         for count, key in enumerate(self.keys):
+
             plot_unit_waveforms(self.waveforms[key], unit_ids=[unit_id], ax=axes[count], 
-                unit_colors={unit_id : 'k'}, same_axis=True, alpha_waveforms=0.05)
+                unit_colors={unit_id : 'k'}, same_axis=True, alpha_waveforms=0.05, sparsity=sparsity)
             axes[count].set_title(f'unit {unit_id} {key}')
             axes[count].set_xticks([])
             axes[count].set_yticks([])
@@ -387,10 +392,13 @@ def plot_snippet_comparisons(benchmarks, metric='cosine', num_channels=30):
     xmin, xmax = ax_3.get_xlim()
     ax_3.plot([xmin, xmax], [1, 1], 'k--')
     ax_4.plot([xmin, xmax], [1, 1], 'k--')
+    ax_1.set_xticks([])
+    ax_2.set_xlabel('depth (um)')
 
     xmin, xmax = ax_1.get_xlim()
     ax_1.plot([xmin, xmax], [1, 1], 'k--')
     ax_2.plot([xmin, xmax], [1, 1], 'k--')
+    plt.tight_layout()
 
 
 def plot_residuals_comparisons(benchmarks):
