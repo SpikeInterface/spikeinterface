@@ -328,46 +328,82 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
 def plot_snippet_comparisons(benchmarks, metric='cosine', num_channels=30):
 
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    fig = plt.figure(figsize=(15, 10))
+    gs = fig.add_gridspec(4, 2)
+
+    ax = fig.add_subplot(gs[0:2, 0])
     for count, bench in enumerate(benchmarks):
         distances = bench._compute_templates_similarities(metric, num_channels)
-        axes[0, 0].scatter(distances['drifting'], distances['corrected'], c=f'C{count}', alpha=0.5)
+        ax.scatter(distances['drifting'], distances['corrected'], c=f'C{count}', alpha=0.5, label=bench.title)
 
-    xmin, xmax = axes[0, 0].get_xlim()
-    axes[0, 0].plot([xmin, xmax], [xmin, xmax], 'k--')
-    _simpleaxis(axes[0, 0])
+    ax.legend()
+    xmin, xmax = ax.get_xlim()
+    ax.plot([xmin, xmax], [xmin, xmax], 'k--')
+    _simpleaxis(ax)
     if metric == 'euclidean':
-        axes[0, 0].set_xlabel(r'$\|drift - static\|_2$')
-        axes[0, 0].set_ylabel(r'$\|corrected - static\|_2$')
+        ax.set_xlabel(r'$\|drift - static\|_2$')
+        ax.set_ylabel(r'$\|corrected - static\|_2$')
     elif metric == 'cosine':
-        axes[0, 0].set_xlabel(r'$cosine(drift, static)$')
-        axes[0, 0].set_ylabel(r'$cosine(corrected, static)$')
+        ax.set_xlabel(r'$cosine(drift, static)$')
+        ax.set_ylabel(r'$cosine(corrected, static)$')
 
-    colors = 0
-    labels = []
+
+    import MEArec as mr
+    recgen = mr.load_recordings(benchmarks[0].mearec_filenames['static'])
+    nb_templates, nb_versions, _ = recgen.template_locations.shape
+    template_positions = recgen.template_locations[:, nb_versions//2, 1:3]
+    distances_to_center = template_positions[:, 1]
+
+    ax_1 = fig.add_subplot(gs[0, 1])
+    ax_2 = fig.add_subplot(gs[1, 1])
+    ax_3 = fig.add_subplot(gs[2:, 1])
+    ax_4 = fig.add_subplot(gs[2:, 0])
+
     for count, bench in enumerate(benchmarks):
         results = bench._compute_snippets_variability(metric, num_channels)
-        differences = results['mean']['corrected']/results['mean']['static'] 
-        axes[0, 1].bar([count], [differences.mean()], color=f'C{count}')
+        m_differences = results['mean']['corrected']/results['mean']['static']
+        s_differences = results['std']['corrected']/results['std']['static']
+        ax_3.bar([count], [m_differences.mean()], yerr=[m_differences.std()], color=f'C{count}')
+        ax_4.bar([count], [s_differences.mean()], yerr=[s_differences.std()], color=f'C{count}')
+        idx = np.argsort(distances_to_center)
+        ax_1.plot(distances_to_center[idx], m_differences[idx], color=f'C{count}')
+        ax_2.plot(distances_to_center[idx], s_differences[idx], color=f'C{count}')
 
-    _simpleaxis(axes[0, 1])
-    #axes[1, 2].set_xticks(np.arange(2), ['drifting', 'corrected'])
+    for a in [ax_1, ax_2, ax_3, ax_4]:
+        _simpleaxis(a)
+    
     if metric == 'euclidean':
-        axes[0, 1].set_ylabel(r'$\Delta \|~\|_2$  (% static)')
+        ax_1.set_ylabel(r'$\Delta mean(\|~\|_2)$  (% static)')
+        ax_2.set_ylabel(r'$\Delta std(\|~\|_2)$  (% static)')
+        ax_3.set_ylabel(r'$\Delta mean(\|~\|_2)$  (% static)')
+        ax_4.set_ylabel(r'$\Delta std(\|~\|_2)$  (% static)')
     elif metric == 'cosine':
-        axes[0, 1].set_ylabel(r'$\Delta cosine$  (% static)')
+        ax_1.set_ylabel(r'$\Delta mean(cosine)$  (% static)')
+        ax_2.set_ylabel(r'$\Delta std(cosine)$  (% static)')
+        ax_3.set_ylabel(r'$\Delta mean(cosine)$  (% static)')
+        ax_4.set_ylabel(r'$\Delta std(cosine)$  (% static)')
+    ax_3.set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
+    ax_4.set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
+    xmin, xmax = ax_3.get_xlim()
+    ax_3.plot([xmin, xmax], [1, 1], 'k--')
+    ax_4.plot([xmin, xmax], [1, 1], 'k--')
+
+    xmin, xmax = ax_1.get_xlim()
+    ax_1.plot([xmin, xmax], [1, 1], 'k--')
+    ax_2.plot([xmin, xmax], [1, 1], 'k--')
+
 
 def plot_residuals_comparisons(benchmarks):
 
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     for count, bench in enumerate(benchmarks):
         residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
         time_axis = np.arange(t_start, t_stop)
-        axes[0 ,0].plot(time_axis, residuals.mean(0), label=bench.title)
-    axes[0 ,0].legend()
-    axes[0, 0].set_xlabel('time (s)')
-    axes[0, 0].set_ylabel(r'$|S_{corrected} - S_{static}|$')
-    _simpleaxis(axes[0, 0])
+        axes[0].plot(time_axis, residuals.mean(0), label=bench.title)
+    axes[0].legend()
+    axes[0].set_xlabel('time (s)')
+    axes[0].set_ylabel(r'$|S_{corrected} - S_{static}|$')
+    _simpleaxis(axes[0])
 
     channel_positions = benchmarks[0].recordings['static'].get_channel_locations()
     distances_to_center = channel_positions[:, 1]
@@ -376,21 +412,21 @@ def plot_residuals_comparisons(benchmarks):
     for count, bench in enumerate(benchmarks):
         residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
         time_axis = np.arange(t_start, t_stop)
-        axes[0, 1].plot(distances_to_center[idx], residuals.mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
-        axes[0, 1].fill_between(distances_to_center[idx], residuals.mean(1)[idx]-residuals.std(1)[idx], 
+        axes[1].plot(distances_to_center[idx], residuals.mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
+        axes[1].fill_between(distances_to_center[idx], residuals.mean(1)[idx]-residuals.std(1)[idx], 
                     residuals.mean(1)[idx]+residuals.std(1)[idx], color=f'C{count}', alpha=0.25)
-    axes[0, 1].legend()
-    axes[0 ,1].set_xlabel('depth (um)')
-    axes[0, 1].set_ylabel(r'$|S_{corrected} - S_{static}|$')
-    _simpleaxis(axes[0, 1])
+    #axes[1].legend()
+    axes[1].set_xlabel('depth (um)')
+    #axes[1].set_ylabel(r'$|S_{corrected} - S_{static}|$')
+    _simpleaxis(axes[1])
 
     for count, bench in enumerate(benchmarks):
         residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
-        axes[1, 0].bar([count], [residuals.mean()], yerr=[residuals.std()], color=f'C{count}')
+        axes[2].bar([count], [residuals.mean()], yerr=[residuals.std()], color=f'C{count}')
 
-    _simpleaxis(axes[1, 0])
-    axes[1, 0].set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
-    axes[1, 0].set_ylabel(r'$|S_{corrected} - S_{static}|$')
+    _simpleaxis(axes[2])
+    axes[2].set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
+    #axes[2].set_ylabel(r'$|S_{corrected} - S_{static}|$')
 
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
