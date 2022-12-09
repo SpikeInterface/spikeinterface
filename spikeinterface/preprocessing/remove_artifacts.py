@@ -113,16 +113,17 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
         fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
+        artefacts = None
 
         if mode in ['median', 'average']:
             sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
+            sorting = sorting.save()
             waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
-            w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params, return_scaled=False)
+            w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params, 
+                return_scaled=False, n_jobs=-1, chunk_memory="10M")
             artefacts = {}
             for label in w.sorting.unit_ids:
                 artefacts[label] = w.get_template(label, mode=mode)
-        else:
-            artefacts = None
 
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
