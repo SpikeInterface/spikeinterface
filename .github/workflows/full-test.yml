@@ -30,6 +30,9 @@ jobs:
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
+      - name: Python version
+        run: |
+          python --version
       - name: Install dependencies
         run: |
           sudo apt update
