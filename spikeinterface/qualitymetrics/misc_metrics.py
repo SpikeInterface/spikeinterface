@@ -380,10 +380,14 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
     spike_amplitudes = None
     if waveform_extractor.is_extension("spike_amplitudes"):
-        amps = waveform_extractor.load_extension("spike_amplitudes")
-        spike_amplitudes = amps.get_data(outputs="by_unit")
+        amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
+        spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
     else:
-        warnings.warn("")
+        warnings.warn(
+            "'spike_amplitude' extension not found. Amplitudes will be computed using waveforms (by default 500), "
+            "which might lead to mis-estimation of amplitude cutoff. Pre-computing amplitudes for all spikes is "
+            "strongly recommended: `spikeinterface.postprocessing.compute_spike_amplitudes(waveform_extractor)`"
+        )
 
     all_fraction_missing = {}
     for unit_id in unit_ids:
