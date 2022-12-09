@@ -370,7 +370,6 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     See: WaveformExtractor.set_params(max_spikes_per_unit=500)
 
     """
-
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
@@ -379,12 +378,22 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
 
+    spike_amplitudes = None
+    if waveform_extractor.is_extension("spike_amplitudes"):
+        amps = waveform_extractor.load_extension("spike_amplitudes")
+        spike_amplitudes = amps.get_data(outputs="by_unit")
+    else:
+        warnings.warn("")
+
     all_fraction_missing = {}
     for unit_id in unit_ids:
-        waveforms = waveform_extractor.get_waveforms(unit_id)
-        chan_id = extremum_channels_ids[unit_id]
-        chan_ind = recording.id_to_index(chan_id)
-        amplitudes = waveforms[:, before, chan_ind]
+        if spike_amplitudes is None:
+            waveforms = waveform_extractor.get_waveforms(unit_id)
+            chan_id = extremum_channels_ids[unit_id]
+            chan_ind = recording.id_to_index(chan_id)
+            amplitudes = waveforms[:, before, chan_ind]
+        else:
+            amplitudes = spike_amplitudes[unit_id]
 
         # change amplitudes signs in case peak_sign is pos
         if peak_sign == "pos":
