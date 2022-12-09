@@ -397,12 +397,13 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
             chan_ind = recording.id_to_index(chan_id)
             amplitudes = waveforms[:, before, chan_ind]
         else:
-            amplitudes = spike_amplitudes[unit_id]
+            amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
 
         # change amplitudes signs in case peak_sign is pos
         if peak_sign == "pos":
-            amplitudes = -amplitudes
-
+            # for pre-computed amplitudes, values are already positive
+            if np.mean(amplitudes) > 0:
+                amplitudes = -amplitudes
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
         # TODO : change with something better scipy.ndimage.gaussian_filter1d
