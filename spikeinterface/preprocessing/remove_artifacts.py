@@ -72,7 +72,8 @@ class RemoveArtifactsRecording(BasePreprocessor):
     """
     name = 'remove_artifacts'
 
-    def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1., list_labels=None):
+    def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1., list_labels=None,
+                    artefacts=None, job_kwargs={'n_jobs' : -1, 'chunk_memory' : "10M"}):
 
         num_seg = recording.get_num_segments()
         if num_seg == 1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
@@ -113,17 +114,25 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
         fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
-        artefacts = None
 
         if mode in ['median', 'average']:
-            sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
-            sorting = sorting.save()
-            waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
-            w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params, 
-                return_scaled=False, n_jobs=-1, chunk_memory="10M")
-            artefacts = {}
-            for label in w.sorting.unit_ids:
-                artefacts[label] = w.get_template(label, mode=mode)
+            if artefacts is not None:
+                labels = []
+                for sub_list in list_labels:
+                    labels += list(np.unique(sub_list))
+                for l in np.unique(labels):
+                    assert l in artefacts.keys(), f"Artefacts are provided by label {l} has no value!"
+            else:
+                sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
+                sorting = sorting.save()
+                waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
+                w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params,
+                    return_scaled=False, **job_kwargs)
+                artefacts = {}
+                for label in w.sorting.unit_ids:
+                    artefacts[label] = w.get_template(label, mode=mode)
+        else:
+            artefacts = None
 
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
@@ -187,7 +196,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     post_data_start_idx = trig + pad[1] + 1
 
                 # Generate fit points from the sample points determined
-                #  pre_idx = pre_data_end_idx - self.rev_fit_samples + 1
+                # pre_idx = pre_data_end_idx - self.rev_fit_samples + 1
                 pre_idx = pre_data_end_idx - self.fit_samples[::-1]
                 post_idx = post_data_start_idx + self.fit_samples
 
