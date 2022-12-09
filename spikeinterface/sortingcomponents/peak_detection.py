@@ -109,6 +109,8 @@ def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipe
     worker_ctx['recording'] = recording
     worker_ctx['method'] = method
     worker_ctx['method_class'] = detect_peak_methods[method]
+    # import copy
+    # worker_ctx['method_args'] = copy.deepcopy(method_args)
     worker_ctx['method_args'] = method_args
     worker_ctx['extra_margin'] = extra_margin
     worker_ctx['pipeline_steps'] = pipeline_steps
@@ -143,6 +145,11 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         trace_detection = traces[extra_margin:-extra_margin]
     else:
         trace_detection = traces
+
+    
+    # import os
+    # print('_detect_peaks_chunk', os.getpid(), method_args[0].x, method_args[0].ctx, )
+
 
     peak_sample_ind, peak_chan_ind = method_class.detect_peaks(trace_detection, *method_args)
 
@@ -377,7 +384,6 @@ class DetectPeakLocallyExclusiveOpenCL:
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance < local_radius_um
         
-        import pyopencl
         executor = OpenCLDetectPeakExecutor(abs_threholds, exclude_sweep_size, neighbours_mask, peak_sign)
         
         return (executor, )
@@ -403,13 +409,24 @@ class OpenCLDetectPeakExecutor:
         self.exclude_sweep_size = exclude_sweep_size
         self.neighbours_mask = neighbours_mask.astype('uint8')
         self.peak_sign = peak_sign
+        self.ctx = None
+        self.queue = None
+
+        
+
+        self.x = 0
     
     def create_buffers_and_compile(self, chunk_size):
-        #~ print('OpenCLDetectPeakExecutor.create_buffers_and_compile')
         import pyopencl
         mf = pyopencl.mem_flags
         
-        self.ctx = pyopencl.create_some_context(interactive=False)
+        # self.ctx = pyopencl.create_some_context(interactive=False)
+        try:
+            self.device = pyopencl.get_platforms()[0].get_devices()[0]
+            self.ctx = pyopencl.Context(devices=[self.device])
+        except Exception as e:
+            print('error create context ', e)
+
         self.queue = pyopencl.CommandQueue(self.ctx)
         self.max_wg_size = self.ctx.devices[0].get_info(pyopencl.device_info.MAX_WORK_GROUP_SIZE)
         
@@ -455,16 +472,22 @@ class OpenCLDetectPeakExecutor:
         s = self.chunk_size - 2 * self.exclude_sweep_size
         self.global_size = (s, )
         self.local_size = None
-        
-        
+
         #~ print('self.global_size', self.global_size, 'self.local_size', self.local_size)
 
     def detect_peak(self, traces):
-        import pyopencl
         
-        #~ print('OpenCLDetectPeakExecutor.detect_peak')
+        import os
+        # import time
+        # time.sleep(float(np.random.rand() * 3))
+
+        # print('detect_peak', os.getpid(), self.x, self.chunk_size,)
+        self.x += 1
+
+        import pyopencl
         if self.chunk_size is None or self.chunk_size != traces.shape[0]:
             self.create_buffers_and_compile(traces.shape[0])
+            # print('   AFTER create', os.getpid(), self.chunk_size, self.ctx)
         # print(self.ctx)
         #~ print(self.kern_detect_peak)
 
