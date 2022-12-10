@@ -127,10 +127,10 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 sorting = sorting.save()
                 waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
                 w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params,
-                    return_scaled=False, **job_kwargs)
+                    return_scaled=False, **job_kwargs, allow_unfiltered=True)
                 artefacts = {}
                 for label in w.sorting.unit_ids:
-                    artefacts[label] = w.get_template(label, mode=mode)
+                    artefacts[label] = w.get_template(label, mode=mode).astype(recording.dtype)
         else:
             artefacts = None
 
