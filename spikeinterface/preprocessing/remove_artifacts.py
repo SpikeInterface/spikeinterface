@@ -63,7 +63,13 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit if mode = 'cubic'. Default = 1ms. Note: The actual fit samples are 
         the median of the 5 data points around the time of each sample point to
         avoid excessive influence from hyper-local fluctuations.
-        
+    artefacts: dict
+        If provided (when mode is 'median' or 'average') then it must be a dict with
+        keys that are the labels of the artefacts, and values the artefacts themselves,
+        on all channels (and thus bypassing ms_before and ms_after)
+    job_kwargs: dict (default is {'n_jobs' : -1, 'chunk_memory' : "10M"})
+        The arguments passed to the WaveformExtractor object when extracting the
+        artefacts, for mode 'median' or 'average'
 
     Returns
     -------
@@ -280,7 +286,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         traces[trig-pad[0]:trig+pad[1], :] -= self.artefacts[label]
                     elif trig - pad[0] < 0:
                         duration = pad[1] + pad[0] - (pad[0] - trig)
-                        traces[:trig+pad[1], :] -= self.artefacts[label][duration:]
+                        traces[:trig+pad[1], :] -= self.artefacts[label][-duration:]
                     elif trig + pad[1] >= end_frame - start_frame:
                         duration = (end_frame - start_frame) - (trig - pad[0])
                         traces[trig-pad[0]:, :] -= self.artefacts[label][:duration]        
