@@ -30,7 +30,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         If None, then also ms_before must be None and a single sample is removed
     list_labels: list of list or None
         One list per segment of labels with the stimulation labels for the given
-        artefacs
+        artefacs. labels should be strings, for JSON serialization
     mode: str
         Determines what artifacts are replaced by. Can be one of the following:
             
@@ -127,7 +127,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 for sub_list in list_labels:
                     labels += list(np.unique(sub_list))
                 for l in np.unique(labels):
-                    assert l in artefacts.keys(), f"Artefacts are provided by label {l} has no value!"
+                    assert l in artefacts.keys(), f"Artefacts are provided but label {l} has no value!"
             else:
                 sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
                 sorting = sorting.save()
