@@ -93,7 +93,7 @@ class FilterRecording(BasePreprocessor):
 
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
                             filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, coeff=coeff,
-                            margin_ms=margin_ms, dtype=dtype)
+                            margin_ms=margin_ms, dtype=dtype.str)
 
 
 class FilterRecordingSegment(BasePreprocessorSegment):
