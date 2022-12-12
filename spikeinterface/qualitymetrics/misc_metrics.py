@@ -27,6 +27,9 @@ except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
 
+_default_params = dict()
+
+
 def compute_num_spikes(waveform_extractor, **kwargs):
     """Compute the number of spike across segments.
 
@@ -56,7 +59,10 @@ def compute_num_spikes(waveform_extractor, **kwargs):
     return num_spikes
 
 
-def compute_firing_rate(waveform_extractor, **kwargs):
+_default_params["num_spikes"] = dict()
+
+
+def compute_firing_rate(waveform_extractor):
     """Compute the firing rate across segments.
 
     Parameters
@@ -80,10 +86,13 @@ def compute_firing_rate(waveform_extractor, **kwargs):
     total_duration = np.sum(seg_durations)
 
     firing_rates = {}
-    num_spikes = compute_num_spikes(waveform_extractor, **kwargs)
+    num_spikes = compute_num_spikes(waveform_extractor)
     for unit_id in unit_ids:
         firing_rates[unit_id] = num_spikes[unit_id]/total_duration
     return firing_rates
+
+
+_default_params["firing_rate"] = dict()
 
 
 def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
@@ -127,6 +136,9 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
         presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
 
     return presence_ratio
+
+
+_default_params["firing_rate"] = dict()
 
 
 def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum", **kwargs):

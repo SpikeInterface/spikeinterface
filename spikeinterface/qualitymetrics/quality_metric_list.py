@@ -37,6 +37,7 @@ _metric_name_to_func = {
     # 'nn_noise_overlap' : nearest_neighbors_noise_overlap
 }
 
+
 # TODO
 # @Cole @ Alessio
 # "silhouette_score",
