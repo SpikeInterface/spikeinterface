@@ -14,9 +14,8 @@ from spikeinterface.postprocessing import (get_template_channel_sparsity,
 
 
 def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
-                  compute_amplitudes=True, sparsity_dict=None, copy_binary=True,
-                  max_channels_per_template=16, remove_if_exists=False,
-                  peak_sign='neg', template_mode='median',
+                  compute_amplitudes=True, sparsity=None, copy_binary=True,
+                  remove_if_exists=False, peak_sign='neg', template_mode='median',
                   dtype=None, verbose=True, **job_kwargs):
     """
     Exports a waveform extractor to the phy template-gui format.
@@ -31,17 +30,8 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         If True (default), pc features are computed
     compute_amplitudes: bool
         If True (default), waveforms amplitudes are computed
-    sparsity_dict: dict or None
-        If given, the dictionary should contain a sparsity method (e.g. "best_channels") and optionally
-        arguments associated with the method (e.g. "num_channels" for "best_channels" method).
-        Other examples are:
-           * by radius: sparsity_dict=dict(method="radius", radius_um=100)
-           * by SNR threshold: sparsity_dict=dict(method="threshold", threshold=2)
-           * by property: sparsity_dict=dict(method="by_property", by_property="group")
-        Default is sparsity_dict=dict(method="best_channels", num_channels=16)
-        For more info, see the postprocessing.get_template_channel_sparsity() function.
-    max_channels_per_template: int or None
-        Maximum channels per unit to return. If None, all channels are returned
+    sparsity: dict or None
+        The sparsity dictionary (key: unit_id, value: list of channel_ids)
     copy_binary: bool
         If True, the recording is copied and saved in the phy 'output_folder'
     remove_if_exists: bool
@@ -59,23 +49,24 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     """
     assert isinstance(waveform_extractor, spikeinterface.core.waveform_extractor.WaveformExtractor), \
         'waveform_extractor must be a WaveformExtractor object'
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
+    assert waveform_extractor.has_recording(), "Export to phy is not supported for 'recordingless' waveform extractors"
+    recording = waveform_extractor.recording
 
-    assert recording.get_num_segments() == sorting.get_num_segments(), \
-        "The recording and sorting objects must have the same number of segments!"
-
-    assert recording.get_num_segments() == 1, "Export to phy work only with one segment"
-
-    if sparsity_dict is None:
-        sparsity_dict = dict(method="best_channels", num_channels=16)
-
+    assert waveform_extractor.get_num_segments() == 1, "Export to phy only works with one segment"
     channel_ids = recording.channel_ids
     num_chans = recording.get_num_channels()
-    fs = recording.get_sampling_frequency()
+    fs = recording.sampling_frequency
 
-    if max_channels_per_template is None:
-        max_channels_per_template = num_chans
+    # handle sparsity
+    if sparsity is None:
+        if num_chans > 64:
+            print(
+                "WARNING: export to Phy with many channels and without sparsity might result in a heavy and less "
+                "informative visualization. You can use the 'sparsity' argument to enforce sparsity "
+                "(see spikeinterface.postprocessing.get_template_channel_sparsity() function for sparsity details.)"
+            )
+        sparsity = {unit_id: channel_ids for unit_id in sorting.unit_ids}
 
     empty_flag = False
     non_empty_units = []
@@ -137,22 +128,20 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     np.save(str(output_folder / 'spike_clusters.npy'), spike_labels[:, np.newaxis])
 
     # export templates/templates_ind/similar_templates
-    # shape (num_units, num_samples, num_channels)
+    # shape (num_units, num_samples, max_num_channels)
     templates = []
     templates_ind = []
 
-    template_sparsity = get_template_channel_sparsity(waveform_extractor,
-                                                      outputs="id", **sparsity_dict)
-    num_sparse_chans = np.max([len(channels) for channels in template_sparsity.values()])
-    num_channels = np.min([max_channels_per_template, num_sparse_chans])
+    # here we pad template inds with -1 if len of sparse channels is unequal
+    max_num_channels_templates = np.max([len(channels) for channels in sparsity.values()])
     for unit_id in unit_ids:
-        template = waveform_extractor.get_template(unit_id, mode=template_mode, sparsity=template_sparsity)
-        inds = waveform_extractor.recording.ids_to_indices(template_sparsity[unit_id])
-        if template.shape[-1] < num_channels:
+        template = waveform_extractor.get_template(unit_id, mode=template_mode, sparsity=sparsity)
+        inds = waveform_extractor.recording.ids_to_indices(sparsity[unit_id])
+        if template.shape[-1] < max_num_channels_templates:
             # fill missing channels
-            template_full = np.zeros((template.shape[0], num_channels))
+            template_full = np.zeros((template.shape[0], max_num_channels_templates))
             template_full[:, :template.shape[-1]] = template
-            inds_full = np.concatenate((inds, np.array([-1] * (num_channels - template.shape[-1]))))
+            inds_full = np.concatenate((inds, np.array([-1] * (max_num_channels_templates - template.shape[-1]))))
         else:
             template_full = template
             inds_full = inds
@@ -192,18 +181,24 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
             pc = waveform_extractor.load_extension('principal_components')
         else:
             pc = compute_principal_components(waveform_extractor, n_components=5, mode='by_channel_local')
+
+        if pc.get_sparsity() is None:
+            pc_sparsity = sparsity
+            pc_feature_ind = templates_ind
+        else:
+            pc_sparsity = pc.get_sparsity()
+            pc_feature_ind = None
         
-        max_channels_per_template = min(max_channels_per_template, len(channel_ids))
+        max_num_channels_pc = np.max([len(channels) for channels in pc_sparsity.values()])
         pc.run_for_all_spikes(output_folder / 'pc_features.npy',
-                              max_channels_per_template=max_channels_per_template, peak_sign=peak_sign,
+                              sparsity=pc_sparsity, peak_sign=peak_sign,
                               **job_kwargs)
 
-        pc_feature_ind = np.zeros((len(unit_ids), max_channels_per_template), dtype='int64')
-        best_channels_index = get_template_channel_sparsity(waveform_extractor, method='best_channels',
-                                                            peak_sign=peak_sign, num_channels=max_channels_per_template,
-                                                            outputs='index')
-        for u, unit_id in enumerate(unit_ids):
-            pc_feature_ind[u, :] = best_channels_index[unit_id]
+        if pc_feature_ind is None:
+            pc_feature_ind = -np.ones((len(unit_ids), max_num_channels_pc), dtype='int64')
+            for u, unit_id in enumerate(unit_ids):
+                sparse_channel_indices = recording.ids_to_indices(pc_sparsity[unit_id])
+                pc_feature_ind[u, :len(sparse_channel_indices)] = sparse_channel_indices
         np.save(str(output_folder / 'pc_feature_ind.npy'), pc_feature_ind)
 
     # Save .tsv metadata
