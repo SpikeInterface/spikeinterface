@@ -4,54 +4,68 @@ import numpy as np
 import time
 from pathlib import Path
 
-from spikeinterface.core import extract_waveforms, load_waveforms
-
+from spikeinterface.core import extract_waveforms
 from spikeinterface.extractors import read_mearec
-from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
-from spikeinterface.postprocessing.template_tools import get_template_channel_sparsity
+from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
+from spikeinterface.sorters import run_sorter
+from spikeinterface.postprocessing import get_template_channel_sparsity
 from spikeinterface.widgets import plot_unit_waveforms
+
+from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
+
+
+
 import matplotlib.pyplot as plt
 
 import MEArec as mr
 
 class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     
-    _array_names = BenchmarkBase._array_names + ('motion', 'temporal_bins', 'spatial_bins')
+    _array_names = ('motion', 'temporal_bins', 'spatial_bins')
     _waveform_names = ('static', 'drifting', 'corrected')
+    # _sorting_names = ('gt_static', 'gt_drifting', )
+    
+
+    _array_names_from_parent = None
+    _waveform_names_from_parent = ('static', 'drifting')
+    _sorting_names_from_parent = ('static', 'drifting')
 
     def __init__(self, mearec_filename_drifting, mearec_filename_static, 
                 motion,
                 temporal_bins,
                 spatial_bins,
                 correct_motion_kwargs={},
+                sorter_params={},
                 folder=None,
                 title='',
                 job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
                 overwrite=False,
                 parent_benchmark=None):
 
-        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs)
+        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs, parent_benchmark=parent_benchmark)
 
         self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None ])
         self._kwargs.update(dict(
                 correct_motion_kwargs=correct_motion_kwargs,
+                sorter_params=sorter_params,
             )
         )
 
+        self.sorter_params = sorter_params
         self.mearec_filenames = {}  
         self.keys = ['static', 'drifting', 'corrected']
         self.mearec_filenames['drifting'] = mearec_filename_drifting
         self.mearec_filenames['static'] = mearec_filename_static
-
-        self.motion = motion
         self.temporal_bins = temporal_bins
         self.spatial_bins = spatial_bins
 
         self._recordings = None
         self.sortings = {}
-        for key in ['drifting', 'static']:
-            _, self.sortings[key] = read_mearec(self.mearec_filenames[key])
+        # for key in ['drifting', 'static',]:
+        #     _, self.sortings[key] = read_mearec(self.mearec_filenames[key])
+        _, self.sortings['gt'] = read_mearec(self.mearec_filenames['static'])
+
 
         self.correct_motion_kwargs = correct_motion_kwargs
 
@@ -59,30 +73,41 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def recordings(self):
         if self._recordings is None:
             self._recordings = {}
-            for key in ['drifting', 'static']:
-                self._recordings[key], _ = read_mearec(self.mearec_filenames[key])
+            for key in ('drifting', 'static',):
+                rec, _  = read_mearec(self.mearec_filenames[key])
+                if self.do_preprocessing:
+                    rec = bandpass_filter(rec)
+                    rec = common_reference(rec)
+                    rec = zscore(rec)
+                self._recordings[key] = rec
 
-            self._recordings['corrected'] = CorrectMotionRecording(self._recordings['drifting'], self.motion, 
+            rec = self._recordings['drifting']
+            self._recordings['corrected'] = CorrectMotionRecording(rec, self.motion, 
                         self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs)
-            self.sortings['corrected'] = self.sortings['static']
         return self._recordings
 
-    def extract_waveforms(self):
+    def run(self):
+        self.extract_waveforms()
+        for sorter_name, sorter_params in self.sorter_params.items():
+            self.run_sorting(sorter_name, sorter_params)
+        self.save_to_folder()
 
+
+    def extract_waveforms(self):
         self.waveforms = {}
         for key in self.keys:
-            if self.folder is None:
-                mode = 'memory'
-                waveforms_folder = None
-            else:
-                mode = 'folder'
-                waveforms_folder = self.folder / "waveforms" / key
-
-            self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings[key], waveforms_folder, mode, 
+            if self.parent_benchmark is not None and key in self._waveform_names_from_parent:
+                continue
+            
+            waveforms_folder = self.folder / "waveforms" / key
+            self.waveforms[key] = extract_waveforms(self.recordings[key], self.sortings['gt'], waveforms_folder, 'folder', 
                 load_if_exists=not self.overwrite, overwrite=self.overwrite, **self.job_kwargs)
+    
+    def run_sorting(self, sorter_name, sorter_params):
+        for key in ('drifting', 'static', 'drifting'):
+            sorting = run_sorter(sorter_name, self.recordings[key], sorter_name, **sorter_params, delete_output_folder=True)
+            self.sortings[sorter_name, key] = sorting
 
-    _array_names = ('motion', 'temporal_bins', 'spatial_bins')
-    _dict_kwargs_names = ('job_kwargs', 'correct_motion_kwargs', 'mearec_filenames')
     
     def _compute_templates_similarities(self, metric='cosine', num_channels=30):
         gkey = (metric, num_channels)

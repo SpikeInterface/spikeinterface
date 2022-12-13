@@ -26,9 +26,8 @@ import MEArec as mr
 
 class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
-    _array_names = BenchmarkBase._array_names + ('noise_levels', 'gt_unit_positions',
+    _array_names = ('noise_levels', 'gt_unit_positions',
             'peaks', 'selected_peaks', 'motion', 'temporal_bins', 'spatial_bins', 'peak_locations', 'gt_motion')
-    
     
     def __init__(self, mearec_filename, 
                 title='',
