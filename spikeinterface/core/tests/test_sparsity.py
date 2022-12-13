@@ -20,19 +20,19 @@ def test_ChannelSparsity():
     with pytest.raises(AssertionError):
         sparsity = ChannelSparsity(mask, unit_ids, channel_ids[:2])
 
-    for key, v in sparsity.id_to_id.items():
+    for key, v in sparsity.unit_id_to_channel_ids.items():
         assert key in unit_ids
         assert np.all(np.in1d(v, channel_ids))
 
-    for key, v in sparsity.id_to_index.items():
+    for key, v in sparsity.unit_id_to_channel_indices.items():
         assert key in unit_ids
         assert np.all(v<len(channel_ids))
 
-    sparsity2 = ChannelSparsity.from_id_to_id(sparsity.id_to_id, unit_ids, channel_ids)
+    sparsity2 = ChannelSparsity.from_unit_id_to_channel_ids(sparsity.unit_id_to_channel_ids, unit_ids, channel_ids)
     # print(sparsity2)
     assert np.array_equal(sparsity.mask, sparsity2.mask)
 
-    sparsity3 = ChannelSparsity.from_id_to_index(sparsity.id_to_index, unit_ids, channel_ids)
+    sparsity3 = ChannelSparsity.from_unit_id_to_channel_indices(sparsity.unit_id_to_channel_indices, unit_ids, channel_ids)
     # print(sparsity3)
     assert np.array_equal(sparsity.mask, sparsity3.mask)
 

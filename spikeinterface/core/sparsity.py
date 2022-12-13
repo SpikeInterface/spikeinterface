@@ -8,14 +8,14 @@ class ChannelSparsity:
     Internally stored as a boolean mask.
 
     Can also provide other dict to manipulate this sparsity:
-        * ChannelSparsity.id_to_id : unit_id to channel_ids
+        * ChannelSparsity.unit_id_to_channel_ids : unit_id to channel_ids
         * ChannelSparsity.id_to_iindex : unit_id channel_inds
 
     By default it is constructed with a boolean array.
     But can be also constructed by dict
 
     sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
-    sparsity = ChannelSparsity.from_id_to_id(id_to_id, unit_ids, channel_ids)
+    sparsity = ChannelSparsity.from_unit_id_to_channel_ids(unit_id_to_channel_ids, unit_ids, channel_ids)
 
     Parameters
     ----------
@@ -31,13 +31,13 @@ class ChannelSparsity:
     def __init__(self, mask, unit_ids, channel_ids):
         self.unit_ids = np.asarray(unit_ids)
         self.channel_ids = np.asarray(channel_ids)
-        self.mask = np.asarray(mask)
+        self.mask = np.asarray(mask, dtype='bool')
         assert self.mask.shape[0] == self.unit_ids.shape[0]
         assert self.mask.shape[1] == self.channel_ids.shape[0]
 
         # some precomputed dict
-        self._id_to_id = None
-        self._id_to_index = None
+        self._unit_id_to_channel_ids = None
+        self._unit_id_to_channel_indices = None
 
     def __repr__(self):
         ratio = np.mean(self.mask)
@@ -45,57 +45,50 @@ class ChannelSparsity:
         return txt
 
     @property
-    def id_to_id(self):
-        if self._id_to_id is None:
-            self._id_to_id = {}
+    def unit_id_to_channel_ids(self):
+        if self._unit_id_to_channel_ids is None:
+            self._unit_id_to_channel_ids = {}
             for unit_ind, unit_id in enumerate(self.unit_ids):
                 channel_inds = np.flatnonzero(self.mask[unit_ind, :])
-                self._id_to_id[unit_id] = self.channel_ids[channel_inds]
-        return self._id_to_id
+                self._unit_id_to_channel_ids[unit_id] = self.channel_ids[channel_inds]
+        return self._unit_id_to_channel_ids
     
     @property
-    def id_to_index(self):
-        if self._id_to_index is None:
-            self._id_to_index = {}
+    def unit_id_to_channel_indices(self):
+        if self._unit_id_to_channel_indices is None:
+            self._unit_id_to_channel_indices = {}
             for unit_ind, unit_id in enumerate(self.unit_ids):
                 channel_inds = np.flatnonzero(self.mask[unit_ind, :])
-                self._id_to_index[unit_id] = channel_inds
-        return self._id_to_index
+                self._unit_id_to_channel_indices[unit_id] = channel_inds
+        return self._unit_id_to_channel_indices
 
     @classmethod
-    def from_id_to_id(cls, id_to_id, unit_ids, channel_ids):
+    def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):
+        """
+        Create a sparsity object from dict unit_id to channel_ids.
+        """
         unit_ids = list(unit_ids)
         channel_ids = list(channel_ids)
         mask = np.zeros((len(unit_ids), len(channel_ids)), dtype='bool')
-        for unit_id, chan_ids in id_to_id.items():
+        for unit_id, chan_ids in unit_id_to_channel_ids.items():
             unit_ind = unit_ids.index(unit_id)
             channel_inds = [channel_ids.index(chan_id) for chan_id in chan_ids]
             mask[unit_ind, channel_inds] = True
         return cls(mask, unit_ids, channel_ids)
 
-    # @alessio : maybe this is unnecessary
-    @classmethod
-    def from_id_to_index(cls, id_to_index, unit_ids, channel_ids):
-        unit_ids = list(unit_ids)
-        mask = np.zeros((len(unit_ids), len(channel_ids)), dtype='bool')
-        for unit_id, channel_inds in id_to_index.items():
-            unit_ind = unit_ids.index(unit_id)
-            mask[unit_ind, channel_inds] = True
-        return cls(mask, unit_ids, channel_ids)
-    
     def to_dict(self):
         """
         Return a serializable dict.
         """
         return dict(
-            id_to_id={k:list(v) for k, v in self.id_to_id.items()},
+            unit_id_to_channel_ids={k:list(v) for k, v in self.unit_id_to_channel_ids.items()},
             channel_ids=list(self.channel_ids),
             unit_ids=list(self.unit_ids),
         )
     
     @classmethod
     def from_dict(cls, d):
-        return cls.from_id_to_id(**d)
+        return cls.from_unit_id_to_channel_ids(**d)
     
 
 
