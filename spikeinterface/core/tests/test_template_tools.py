@@ -4,17 +4,17 @@ from pathlib import Path
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
 from spikeinterface.extractors import toy_example
-from spikeinterface.postprocessing import (get_template_amplitudes,
-                                                   get_template_extremum_channel,
-                                                   get_template_extremum_channel_peak_shift,
-                                                   get_template_extremum_amplitude,
-                                                   get_template_channel_sparsity)
+from spikeinterface.core import (get_template_amplitudes,
+                                 get_template_extremum_channel,
+                                 get_template_extremum_channel_peak_shift,
+                                 get_template_extremum_amplitude,
+                                 get_template_channel_sparsity)
 
 
 if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
+    cache_folder = pytest.global_test_folder / "core"
 else:
-    cache_folder = Path("cache_folder") / "postprocessing"
+    cache_folder = Path("cache_folder") / "core"
 
 
 def setup_module():
@@ -66,6 +66,12 @@ def test_get_template_extremum_channel_peak_shift():
     #     ax.axvline(we.nbefore + shift, color='red')
     #     plt.show()
 
+def test_get_template_extremum_amplitude():
+    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
+
+    extremum_channels_ids = get_template_extremum_amplitude(we, peak_sign='both')
+    print(extremum_channels_ids)
+
 
 def test_get_template_channel_sparsity():
     we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
@@ -73,6 +79,8 @@ def test_get_template_channel_sparsity():
     sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='id', num_channels=5)
     print(sparsity)
     sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='index', num_channels=5)
+    print(sparsity)
+    sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='object', num_channels=5)
     print(sparsity)
 
     sparsity = get_template_channel_sparsity(we, method='radius', outputs='id', radius_um=50)
@@ -97,18 +105,15 @@ def test_get_template_channel_sparsity():
     print(sparsity)
 
 
-def test_get_template_extremum_amplitude():
-    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
 
-    extremum_channels_ids = get_template_extremum_amplitude(we, peak_sign='both')
-    print(extremum_channels_ids)
 
 
 if __name__ == '__main__':
     setup_module()
 
-    # ~ test_get_template_amplitudes()
-    # ~ test_get_template_extremum_channel()
-    # ~ test_get_template_extremum_channel_peak_shift()
+    # test_get_template_amplitudes()
+    # test_get_template_extremum_channel()
+    # test_get_template_extremum_channel_peak_shift()
+    # test_get_template_extremum_amplitude()
     test_get_template_channel_sparsity()
-    # ~ test_get_template_extremum_amplitude()
+    

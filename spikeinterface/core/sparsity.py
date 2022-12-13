@@ -1,5 +1,10 @@
 import numpy as np
 
+from.recording_tools import get_channel_distances, get_noise_levels
+
+from .template_tools import get_template_amplitudes, get_template_extremum_channel
+
+
 
 class ChannelSparsity:
     """
@@ -9,13 +14,29 @@ class ChannelSparsity:
 
     Can also provide other dict to manipulate this sparsity:
         * ChannelSparsity.unit_id_to_channel_ids : unit_id to channel_ids
-        * ChannelSparsity.id_to_iindex : unit_id channel_inds
+        * ChannelSparsity.unit_id_to_channel_indices : unit_id channel_inds
 
     By default it is constructed with a boolean array.
-    But can be also constructed by dict
-
+    
     sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
+
+    But can be also constructed by dict
     sparsity = ChannelSparsity.from_unit_id_to_channel_ids(unit_id_to_channel_ids, unit_ids, channel_ids)
+
+    There are several other ways to construct/estimate the sparsity from a Waveformextractor:
+
+    By N best channels:
+    sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
+
+    By radius:
+    sparsity = ChannelSparsity.from_radius(we, radius_um)
+
+    With threshold:
+    sparsity = ChannelSparsity.from_threshold(we, threshold, peak_sign='neg')
+
+    With property (ex 'group'):
+    sparsity = ChannelSparsity.from_property(we, by_property)
+
 
     Parameters
     ----------
@@ -89,44 +110,69 @@ class ChannelSparsity:
     @classmethod
     def from_dict(cls, d):
         return cls.from_unit_id_to_channel_ids(**d)
-    
 
+    ## Some convinient function to compute sparsity from several strategy
+    @classmethod
+    def from_best_channels(cls, we, num_channels, peak_sign='neg'):
+        """
+        Construct sparsity from N best channels with the largest amplitude.
+        Use the 'num_channels' argument to specify the number of channels.
+        """
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
+        peak_values = get_template_amplitudes(we, peak_sign=peak_sign)
+        for unit_ind, unit_id in enumerate(we.unit_ids):
+            chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
+            chan_inds = chan_inds[:num_channels]
+            mask[unit_ind, chan_inds] = True
+        return cls(mask, we.unit_ids, we.channel_ids)
 
-    # @alessio : I also would like to have this here and slowly remove
-    # get_template_channel_sparsity() but this would lead to move more or less
-    # all the emplates_tools.py into core.
-    # to be discussed
     @classmethod
     def from_radius(cls, we, radius_um):
         """
-        
-
+        Construct sparsity from a radius around the best channel.
+        Use the 'radius_um' argument to specify the radius in um
         """
-        pass
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
+        distances = get_channel_distances(we.recording)
+        best_chan = get_template_extremum_channel(we, outputs="index")
+        for unit_ind, unit_id in enumerate(we.unit_ids):
+            chan_ind = best_chan[unit_id]
+            chan_inds, = np.nonzero(distances[chan_ind, :] <= radius_um)
+            mask[unit_ind, chan_inds] = True
+        return cls(mask, we.unit_ids, we.channel_ids)
 
     @classmethod
-    def from_best_channels(cls, we, num_channels):
+    def from_threshold(cls, we, threshold, peak_sign='neg'):
         """
-        
+        Construct sparsity from a thresholds based on template signal-to-noise ratio.
+        Use the 'threshold' argument to specify the SNR threshold.
+        """
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
 
-        """
-        pass
+        peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="extremum")
+        noise = get_noise_levels(we.recording, return_scaled=we.return_scaled)
+        for unit_ind, unit_id in enumerate(we.unit_ids):
+            chan_inds = np.nonzero((np.abs(peak_values[unit_id]) / noise) >= threshold)
+            mask[unit_ind, chan_inds] = True
+        return cls(mask, we.unit_ids, we.channel_ids)
 
     @classmethod
-    def from_threshold(cls, we, threshold):
+    def from_property(cls, we, by_property):
         """
-        
-
+        Construct sparsity witha property of the recording and sorting(e.g. 'group').
+        Use the 'by_property' argument to specify the property name.
         """
-        pass
+        # check consistency
+        assert by_property in we.recording.get_property_keys(), f"Property {by_property} is not a recording property"
+        assert by_property in we.sorting.get_property_keys(), f"Property {by_property} is not a sorting property"
 
-    @classmethod
-    def from_property(cls, we, property):
-        """
-        
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
+        rec_by = we.recording.split_by(by_property)
+        for unit_ind, unit_id in enumerate(we.unit_ids):
+            unit_property = we.sorting.get_property(by_property)[unit_ind]
+            assert unit_property in rec_by.keys(), (
+                   f"Unit property {unit_property} cannot be found in the recording properties")
+            chan_inds = we.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
+            mask[unit_ind, chan_inds] = True
+        return cls(mask, we.unit_ids, we.channel_ids)
 
-        """
-        pass
-
-
-    
