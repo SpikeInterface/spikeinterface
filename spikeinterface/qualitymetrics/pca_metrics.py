@@ -27,6 +27,15 @@ _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
                              'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
 
 
+_default_params = dict(
+    max_spikes_for_nn=10000,
+    min_spikes_for_nn=10,
+    n_neighbors=4,
+    n_components=10,
+    radius_um=100
+)
+
+
 def get_quality_pca_metric_list():
     """Get a list of the available PCA-based quality metrics."""
 

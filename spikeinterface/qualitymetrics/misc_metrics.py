@@ -141,7 +141,8 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
 _default_params["firing_rate"] = dict()
 
 
-def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum", **kwargs):
+def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum",
+                 random_chunk_kwargs_dict=None):
     """Compute signal to noise ratio.
 
     Parameters
@@ -154,6 +155,9 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
         How to compute the amplitude.
         Extremum takes the maxima/minima
         At_index takes the value at t=0
+    random_chunk_kwarg_dict: dict or None
+        Dictionary to control the get_random_data_chunks() function.
+        If None, default values are used
 
     Returns
     -------
@@ -171,7 +175,9 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
     unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
     return_scaled = waveform_extractor.return_scaled
-    noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **kwargs)
+    if random_chunk_kwargs_dict is None:
+        random_chunk_kwargs_dict = {}
+    noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **random_chunk_kwargs_dict)
 
     # make a dict to access by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
@@ -186,7 +192,14 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     return snrs
 
 
-def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0, **kwargs):
+_default_params["snr"] = dict(
+    peak_sign="neg",
+    peak_mode="extremum",
+    random_chunk_kwargs_dict=None
+)
+
+
+def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0):
     """Calculate Inter-Spike Interval (ISI) violations.
 
     It computes several metrics related to isi violations:
@@ -276,6 +289,12 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
 
 
+_default_params["isi_violations"] = dict(
+    isi_threshold_ms=1.5, 
+    min_isi_ms=0
+)
+
+
 def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: float = 1.0,
                                      censored_period_ms: float=0.0):
     """Calculates the number of refractory period violations.
@@ -346,9 +365,14 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     return res(nb_violations, contamination)
 
 
+_default_params["rp_violations"] = dict(
+    refractory_period_ms=1,
+    censored_period_ms=0.0
+)
+
 
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
-                              num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
+                              num_histogram_bins=500, histogram_smoothing_value=3):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Parameters
@@ -422,6 +446,13 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         all_fraction_missing[unit_id] = fraction_missing
 
     return all_fraction_missing
+
+
+_default_params["amplitude_cutoff"] = dict(
+    peak_sign='neg',
+    num_histogram_bins=500,
+    histogram_smoothing_value=3
+)
 
 
 if HAVE_NUMBA:
