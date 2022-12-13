@@ -198,7 +198,17 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return projections
 
-    #TODO
+    def get_sparsity(self):
+        """
+        Returns sparsity used in PC computation
+
+        Returns
+        -------
+        dict
+            The sparsity dictionary (key: unit_id, value: list of channel_ids)
+        """
+        return self._params["sparsity"]
+
     def _run(self, n_jobs=1, progress_bar=False):
         """
         Compute the PCs on waveforms extacted within the WaveformExtarctor.
@@ -255,8 +265,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     def get_extension_function():
         return compute_principal_components
 
-    def run_for_all_spikes(self, file_path, max_channels_per_template=16, peak_sign='neg',
-                           **job_kwargs):
+    def run_for_all_spikes(self, file_path=None, peak_sign='neg',
+                           sparsity=None, **job_kwargs):
         """
         Project all spikes from the sorting on the PCA model.
         This is a long computation because waveform need to be extracted from each spikes.
@@ -267,12 +277,19 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        file_path : str or Path
-            Path to npy file that will store the PCA projections
-        max_channels_per_template : int, optionl
-            Maximum number of best channels to compute PCA projections on
+        file_path : str or Path or None
+            Path to npy file that will store the PCA projections.
+            If None, output is saved in principal_components/all_pcs.npy
         peak_sign : str, optional
             Peak sign to get best channels ('neg', 'pos', 'both'), by default 'neg'
+        sparsity : dict, optional
+            The sparsity to use for PC projection computation (by default None):
+            * If None and the principal_component extension has been computed with sparsity, the same
+            sparsity is used. 
+            * If given and sparsity has not been used to compute principal components,
+            the provided sparsity is used (dictionary with unit_id as key and list of channel_ids as values).
+            * If None and principal components are not sparse, no sparsity is applied and PC projections are 
+            computed on all channels
         {}
         """
         p = self._params
@@ -286,24 +303,39 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         assert sorting.get_num_segments() == 1
         assert p['mode'] in ('by_channel_local', 'by_channel_global')
 
+        if file_path is None:
+            file_path = self.extension_folder / "all_pcs.npy"
         file_path = Path(file_path)
 
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
         spike_times, spike_labels = all_spikes[0]
 
-        max_channels_per_template = min(max_channels_per_template, we.get_num_channels())
+        if sparsity is not None:
+            if p["sparsity"] is not None:
+                for unit_id, sparse_channels in sparsity.items():
+                    assert np.all(sparse_channels == p["sparsity"][unit_id]), \
+                        ("The provided sparsity does not match the sparsity used to estimate PC models. "
+                         "Use sparsity=None to use correct sparsity")
+        else:
+            sparsity = p["sparsity"]
 
-        best_channels_index = get_template_channel_sparsity(we, outputs="index", peak_sign=peak_sign,
-                                                            num_channels=max_channels_per_template)
+        if sparsity is None:
+            sparse_channels_indices = {unit_id: np.arange(we.get_num_channels()) for unit_id in we.unit_ids}
+            max_channels_per_template = we.get_num_channels()
+        else:
+            sparse_channels_indices = {unit_id: self.waveform_extractor.channel_ids_to_indices(sparsity[unit_id])
+                                       for unit_id in sorting.unit_ids}
+            max_sparse_channels = np.max([len(best_channels) for best_channels in sparse_channels_indices.values()])
+            max_channels_per_template = max_sparse_channels
 
-        unit_channels = [best_channels_index[unit_id] for unit_id in sorting.unit_ids]
+        unit_channels = [sparse_channels_indices[unit_id] for unit_id in sorting.unit_ids]
 
         pca_model = self.get_pca_model()
         if p['mode'] in ['by_channel_global', 'concatenated']:
             pca_model = [pca_model] * recording.get_num_channels()
 
         # nSpikes, nFeaturesPerChannel, nPCFeatures
-        # this come from  phy template-gui
+        # this comes from  phy template-gui
         # https://github.com/kwikteam/phy-contrib/blob/master/docs/template-gui.md#datasets
         shape = (spike_times.size, p['n_components'], max_channels_per_template)
         all_pcs = np.lib.format.open_memmap(filename=file_path, mode='w+', dtype='float32', shape=shape)
