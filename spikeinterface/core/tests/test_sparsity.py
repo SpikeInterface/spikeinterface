@@ -32,15 +32,11 @@ def test_ChannelSparsity():
     # print(sparsity2)
     assert np.array_equal(sparsity.mask, sparsity2.mask)
 
-    sparsity3 = ChannelSparsity.from_unit_id_to_channel_indices(sparsity.unit_id_to_channel_indices, unit_ids, channel_ids)
-    # print(sparsity3)
-    assert np.array_equal(sparsity.mask, sparsity3.mask)
-
     d = sparsity.to_dict()
     # print(d)
-    sparsity4 = ChannelSparsity.from_dict(d)
-    assert np.array_equal(sparsity.mask, sparsity4.mask)
-    # print(sparsity4)
+    sparsity3 = ChannelSparsity.from_dict(d)
+    assert np.array_equal(sparsity.mask, sparsity3.mask)
+    # print(sparsity3)
 
 
 if __name__ == '__main__':
