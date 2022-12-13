@@ -127,14 +127,14 @@ class ChannelSparsity:
         return cls(mask, we.unit_ids, we.channel_ids)
 
     @classmethod
-    def from_radius(cls, we, radius_um):
+    def from_radius(cls, we, radius_um, peak_sign='neg'):
         """
         Construct sparsity from a radius around the best channel.
         Use the 'radius_um' argument to specify the radius in um
         """
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         distances = get_channel_distances(we.recording)
-        best_chan = get_template_extremum_channel(we, outputs="index")
+        best_chan = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
         for unit_ind, unit_id in enumerate(we.unit_ids):
             chan_ind = best_chan[unit_id]
             chan_inds, = np.nonzero(distances[chan_ind, :] <= radius_um)

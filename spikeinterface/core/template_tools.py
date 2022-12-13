@@ -149,7 +149,7 @@ def get_template_channel_sparsity(
         sparsity = ChannelSparsity.from_best_channels(waveform_extractor, num_channels, peak_sign=peak_sign)
     elif method == "radius":
         assert radius_um is not None
-        sparsity = ChannelSparsity.from_radius(waveform_extractor, radius_um)
+        sparsity = ChannelSparsity.from_radius(waveform_extractor, radius_um, peak_sign=peak_sign)
     elif method == "threshold":
         assert threshold is not None
         sparsity = ChannelSparsity.from_threshold(waveform_extractor, threshold, peak_sign=peak_sign)
