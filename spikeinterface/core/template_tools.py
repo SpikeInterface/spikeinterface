@@ -186,7 +186,6 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str 
     shifts: dict
         Dictionary with unit ids as keys and shifts as values
     """
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
 
@@ -197,7 +196,7 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str 
     shifts = {}
     for unit_id in unit_ids:
         chan_id = extremum_channels_ids[unit_id]
-        chan_ind = recording.id_to_index(chan_id)
+        chan_ind = waveform_extractor.channel_ids_to_indices([chan_id])[0]
 
         template = waveform_extractor.get_template(unit_id, mode="average")
 
@@ -250,7 +249,7 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", 
     unit_amplitudes = {}
     for unit_id in unit_ids:
         channel_id = extremum_channels_ids[unit_id]
-        best_channel = waveform_extractor.recording.id_to_index(channel_id)
+        best_channel = waveform_extractor.channel_ids_to_indices([channel_id])[0]
         unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes

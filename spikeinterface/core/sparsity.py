@@ -10,44 +10,42 @@ class ChannelSparsity:
     """
     Handle channel sparsity for a set of units.
 
-    Internally stored as a boolean mask.
+    Internally, sparsity is stored as a boolean mask.
 
-    Can also provide other dict to manipulate this sparsity:
+    The ChannelSparsity object can also provide other sparsity representations:
         * ChannelSparsity.unit_id_to_channel_ids : unit_id to channel_ids
         * ChannelSparsity.unit_id_to_channel_indices : unit_id channel_inds
 
-    By default it is constructed with a boolean array.
-    
-    sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
+    By default it is constructed with a boolean array:
+    >>> sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
 
-    But can be also constructed by dict
-    sparsity = ChannelSparsity.from_unit_id_to_channel_ids(unit_id_to_channel_ids, unit_ids, channel_ids)
+    But can be also constructed from a dictionary:
+    >>> sparsity = ChannelSparsity.from_unit_id_to_channel_ids(unit_id_to_channel_ids, unit_ids, channel_ids)
 
-    There are several other ways to construct/estimate the sparsity from a Waveformextractor:
+    The class can also be used to construct/estimate the sparsity from a Waveformextractor
+    with several methods::
 
-    By N best channels:
-    sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
+    - Using the N best channels (largest template amplitude):
+    >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
 
-    By radius:
-    sparsity = ChannelSparsity.from_radius(we, radius_um)
+    - Using a neighborhood by radius:
+    >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign='neg')
 
-    With threshold:
-    sparsity = ChannelSparsity.from_threshold(we, threshold, peak_sign='neg')
+    - Using a SNR threshold:
+    >>> sparsity = ChannelSparsity.from_threshold(we, threshold, peak_sign='neg')
 
-    With property (ex 'group'):
-    sparsity = ChannelSparsity.from_property(we, by_property)
+    - Using a recording/sorting property (e.g. 'group'):
+    >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
 
 
     Parameters
     ----------
     mask: np.array of bool
-        
+        The sparsity mask (num_units, num_channels)
     unit_ids: list or array
         Unit ids vector or list
-
     channel_ids: list or array
         Channel ids vector or list
-
     """
     def __init__(self, mask, unit_ids, channel_ids):
         self.unit_ids = np.asarray(unit_ids)
@@ -102,11 +100,11 @@ class ChannelSparsity:
         Return a serializable dict.
         """
         return dict(
-            unit_id_to_channel_ids={k:list(v) for k, v in self.unit_id_to_channel_ids.items()},
+            unit_id_to_channel_ids={k: list(v) for k, v in self.unit_id_to_channel_ids.items()},
             channel_ids=list(self.channel_ids),
             unit_ids=list(self.unit_ids),
         )
-    
+
     @classmethod
     def from_dict(cls, d):
         return cls.from_unit_id_to_channel_ids(**d)
@@ -175,4 +173,3 @@ class ChannelSparsity:
             chan_inds = we.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             mask[unit_ind, chan_inds] = True
         return cls(mask, we.unit_ids, we.channel_ids)
-

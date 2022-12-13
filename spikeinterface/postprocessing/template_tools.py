@@ -7,8 +7,8 @@ import spikeinterface.core.template_tools as tt
 
 def _warn():
     warnings.warn("The spikeinterface.postprocessing.template_tools is submodule is deprecated."
-              "Use spikeinterface.core.template_tools instead",
-              DeprecationWarning, stacklevel=2)
+                  "Use spikeinterface.core.template_tools instead",
+                  DeprecationWarning, stacklevel=2)
 
 
 def get_template_amplitudes(*args, **kwargs):
