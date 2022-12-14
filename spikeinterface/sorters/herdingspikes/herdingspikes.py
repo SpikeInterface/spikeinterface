@@ -141,12 +141,12 @@ class HerdingspikesSorter(BaseSorter):
         return params['filter']
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         # nothing to copy inside the folder : Herdingspikes used natively spikeinterface
         pass
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import herdingspikes as hs
         from spikeinterface.preprocessing import bandpass_filter, normalize_by_quantile
 
@@ -157,7 +157,7 @@ class HerdingspikesSorter(BaseSorter):
         else:
             new_api = False
 
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+        recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
 
         p = params
 
@@ -189,7 +189,7 @@ class HerdingspikesSorter(BaseSorter):
             peak_jitter=p['probe_peak_jitter'])
 
         H = hs.HSDetection(
-            Probe, file_directory_name=str(output_folder),
+            Probe, file_directory_name=str(sorter_output_folder),
             left_cutout_time=p['left_cutout_time'],
             right_cutout_time=p['right_cutout_time'],
             threshold=p['detect_threshold'],
@@ -206,7 +206,7 @@ class HerdingspikesSorter(BaseSorter):
 
         H.DetectFromRaw(load=True, tInc=int(p['t_inc']))
 
-        sorted_file = str(output_folder / 'HS2_sorted.hdf5')
+        sorted_file = str(sorter_output_folder / 'HS2_sorted.hdf5')
         if (not H.spikes.empty):
             C = hs.HSClustering(H)
             C.ShapePCA(pca_ncomponents=p['pca_ncomponents'],
@@ -233,5 +233,6 @@ class HerdingspikesSorter(BaseSorter):
         C.SaveHDF5(sorted_file, sampling=Probe.fps)
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        return HerdingspikesSortingExtractor(file_path=Path(output_folder) / 'HS2_sorted.hdf5', load_unit_info=True)
+    def _get_result_from_folder(cls, sorter_output_folder):
+        return HerdingspikesSortingExtractor(file_path=Path(sorter_output_folder) / 'HS2_sorted.hdf5',
+                                             load_unit_info=True)

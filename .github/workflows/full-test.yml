@@ -43,8 +43,8 @@ jobs:
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
           # this is for spyking circus
-          sudo apt install mpich libmpich-dev
-          # create an environement (better for cahing)
+          # sudo apt install mpich libmpich-dev
+          # create an environement (better for caching)
           python -m venv ~/test_env
           source ~/test_env/bin/activate
           python -m pip install --upgrade pip
@@ -118,6 +118,10 @@ jobs:
             if [[ $file == *"/sorters/"* ]]; then
               echo "Sorters changed"
               echo "SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
+            if [[ $file == *"/sorters/si_based_sorters"* ]]; then
+              echo "SI sorters changed"
+              echo "SI_SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/comparison/"* ]]; then
               echo "Comparison changed"
@@ -194,3 +198,8 @@ jobs:
         run: |
           source ~/test_env/bin/activate
           pytest -v -m sortingcomponents
+      - name: Test SI sorters
+        if: ${{ steps.modules-changed.outputs.SI_SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        run: |
+          source ~/test_env/bin/activate
+          pytest -v -m si_sorters
