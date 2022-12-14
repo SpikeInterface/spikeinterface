@@ -250,7 +250,7 @@ def run_sorters(sorter_list,
     for rec_name, recording in recording_dict.items():
         for i_s, sorter_name in enumerate(sorter_list):
 
-            output_folder = working_folder / str(rec_name) / sorter_name
+            output_folder = working_folder / str(rec_name) / f"{sorter_name}_run{i_s}"
 
             if output_folder.is_dir():
                 # sorter folder exists
@@ -409,6 +409,8 @@ def iter_working_folder(working_folder):
             else:
                 rec_name = rec_folder.name
                 sorter_name = output_folder.name
+                if "_run" in sorter_name:
+                    sorter_name = sorter_name[:sorter_name.find("_run")]
                 if not output_folder.is_dir():
                     continue
                 if not is_log_ok(output_folder):

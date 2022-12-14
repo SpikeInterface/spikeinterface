@@ -204,7 +204,7 @@ def test_collect_sorting_outputs():
 def test_sorter_installation():
     # This import is to get error on github when import fails
     import tridesclous
-    import circus
+    # import circus
 
 
 if __name__ == '__main__':
