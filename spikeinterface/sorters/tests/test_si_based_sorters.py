@@ -7,7 +7,7 @@ from spikeinterface.sorters import Spykingcircus2Sorter, Tridesclous2Sorter
 
 
 
-# @pytest.mark.skipif(not Spykingcircus2Sorter.is_installed(), reason='spyking circus 2 is not installed')
+#@pytest.mark.skipif(not Spykingcircus2Sorter.is_installed(), reason='spyking circus 2 is not installed')
 class SpykingCircus2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = Spykingcircus2Sorter
 
@@ -17,7 +17,7 @@ class Tridesclous2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase
 
 
 if __name__ == '__main__':
-    # test = SpykingCircus2SorterCommonTestSuite()
+    test = SpykingCircus2SorterCommonTestSuite()
     test = Tridesclous2SorterCommonTestSuite()
     test.setUp()
     test.test_with_class()
