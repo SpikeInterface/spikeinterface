@@ -69,17 +69,12 @@ class SorterCommonTestSuite:
         sorter_params = self.SorterClass.default_params()
 
         sorting = run_sorter(sorter_name, recording, output_folder=output_folder,
-<<<<<<< HEAD
                              remove_existing_folder=True, delete_output_folder=False,
                              verbose=False, raise_error=True, **sorter_params)
         assert sorting.sorting_info is not None
         assert "recording" in sorting.sorting_info.keys()
         assert "params" in sorting.sorting_info.keys()
         assert "log" in sorting.sorting_info.keys()
-=======
-                             remove_existing_folder=True, delete_output_folder=True,
-                             verbose=True, raise_error=True, **sorter_params)
->>>>>>> d75d3a8670f77fb26f770e5f5ff3eb079357d429
 
         del sorting
         # test correct deletion of sorter folder, but not run metadata
