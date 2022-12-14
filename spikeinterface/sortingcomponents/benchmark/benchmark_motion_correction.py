@@ -104,15 +104,9 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     
     def run_sorting(self, sorter_name, sorter_params):
         for key in ('drifting', 'static', 'corrected'):
-            if self.parent_benchmark is not None:
-                if isinstance(key, str) and key in self._sorting_names_from_parent:
-                    continue
-                
-                if isinstance(key, tuple) and key[0] in self._sorting_names_from_parent:
-                    continue
-
-            sorting = run_sorter(sorter_name, self.recordings[key], sorter_name, **sorter_params, delete_output_folder=True)
-            self.sortings[key, sorter_name] = sorting
+            if (key, sorter_name) not in self.sortings.keys():
+                sorting = run_sorter(sorter_name, self.recordings[key], sorter_name, **sorter_params, delete_output_folder=True)
+                self.sortings[key, sorter_name] = sorting
     
     def _compute_templates_similarities(self, metric='cosine', num_channels=30):
         gkey = (metric, num_channels)
