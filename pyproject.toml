@@ -140,6 +140,7 @@ markers = [
     "postprocessing",
     "qualitymetrics",
     "sorters",
+    "si_sorters",
     "comparison",
     "curation",
     "exporters",

@@ -56,7 +56,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+        recording = load_extractor(output_folder.parent / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
 

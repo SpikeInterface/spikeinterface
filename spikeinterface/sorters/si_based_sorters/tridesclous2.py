@@ -44,7 +44,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         
         import hdbscan
 
-        recording_raw = load_extractor(output_folder / 'spikeinterface_recording.json')
+        recording_raw = load_extractor(output_folder.parent / 'spikeinterface_recording.json')
         
         num_chans = recording_raw.get_num_channels()
         sampling_frequency = recording_raw.get_sampling_frequency()

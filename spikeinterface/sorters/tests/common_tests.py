@@ -69,10 +69,16 @@ class SorterCommonTestSuite:
         sorter_params = self.SorterClass.default_params()
 
         sorting = run_sorter(sorter_name, recording, output_folder=output_folder,
-                             remove_existing_folder=True, delete_output_folder=False,
+                             remove_existing_folder=True, delete_output_folder=True,
                              verbose=False, raise_error=True, **sorter_params)
 
         del sorting
+        # test correct deletion of sorter folder, but not run metadata
+        assert not (output_folder / "sorter_output").is_dir()
+        assert (output_folder / "spikeinterface_recording.json").is_file()
+        assert (output_folder / "spikeinterface_params.json").is_file()
+        assert (output_folder / "spikeinterface_log.json").is_file()
+
 
     def test_get_version(self):
         version = self.SorterClass.get_sorter_version()
