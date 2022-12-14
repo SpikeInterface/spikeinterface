@@ -12,6 +12,7 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
 from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
+from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 
@@ -38,9 +39,10 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 folder=None,
                 do_preprocessing=True, 
                 job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
-                overwrite=False):
+                overwrite=False,
+                parent_benchmark=None):
         
-        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs)
+        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs, parent_benchmark=parent_benchmark)
 
         self._args.extend([str(mearec_filename)])
         self._kwargs.update(dict(
@@ -67,9 +69,9 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
     def recording(self):
         if self._recording is None:
             if self.do_preprocessing:
-                self._recording = bandpass_filter(rec)
-                self._recording = common_reference(rec)
-                self._recording = zscore(rec)
+                self._recording = bandpass_filter(self.raw_recording)
+                self._recording = common_reference(self._recording)
+                self._recording = zscore(self._recording)
             else:
                 self._recording = self.raw_recording
         return self._recording
