@@ -69,7 +69,7 @@ class SorterCommonTestSuite:
         sorter_params = self.SorterClass.default_params()
 
         sorting = run_sorter(sorter_name, recording, output_folder=output_folder,
-                             remove_existing_folder=True, delete_output_folder=False,
+                             remove_existing_folder=True, delete_output_folder=True,
                              verbose=False, raise_error=True, **sorter_params)
         assert sorting.sorting_info is not None
         assert "recording" in sorting.sorting_info.keys()
