@@ -30,31 +30,31 @@ class SorterCommonTestSuite:
             folder=cache_folder / "rec", verbose=False, format='binary')
         print(self.recording)
 
-    def test_with_class(self):
-        # test the classmethod approach
+    # def test_with_class(self):
+    #     # test the classmethod approach
 
-        SorterClass = self.SorterClass
-        recording = self.recording
+    #     SorterClass = self.SorterClass
+    #     recording = self.recording
 
-        sorter_params = SorterClass.default_params()
+    #     sorter_params = SorterClass.default_params()
 
-        output_folder = cache_folder / SorterClass.sorter_name
-        verbose = False
-        remove_existing_folder = True
-        raise_error = True
+    #     output_folder = cache_folder / SorterClass.sorter_name
+    #     verbose = False
+    #     remove_existing_folder = True
+    #     raise_error = True
 
-        output_folder = SorterClass.initialize_folder(
-            recording, output_folder, verbose, remove_existing_folder)
-        SorterClass.set_params_to_folder(
-            recording, output_folder, sorter_params, verbose)
-        SorterClass.setup_recording(recording, output_folder, verbose)
-        SorterClass.run_from_folder(output_folder, raise_error, verbose)
-        sorting = SorterClass.get_result_from_folder(output_folder)
+    #     output_folder = SorterClass.initialize_folder(
+    #         recording, output_folder, verbose, remove_existing_folder)
+    #     SorterClass.set_params_to_folder(
+    #         recording, output_folder, sorter_params, verbose)
+    #     SorterClass.setup_recording(recording, output_folder, verbose)
+    #     SorterClass.run_from_folder(output_folder, raise_error, verbose)
+    #     sorting = SorterClass.get_result_from_folder(output_folder)
 
-        # for unit_id in sorting.get_unit_ids():
-        # print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
+    #     # for unit_id in sorting.get_unit_ids():
+    #     # print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
 
-        del sorting
+    #     del sorting
 
     def test_with_run(self):
         # some sorter (TDC, KS, KS2, ...) work by default with the raw binary
@@ -69,10 +69,16 @@ class SorterCommonTestSuite:
         sorter_params = self.SorterClass.default_params()
 
         sorting = run_sorter(sorter_name, recording, output_folder=output_folder,
-                             remove_existing_folder=True, delete_output_folder=False,
-                             verbose=False, raise_error=True, **sorter_params)
+                             remove_existing_folder=True, delete_output_folder=True,
+                             verbose=True, raise_error=True, **sorter_params)
 
         del sorting
+        # test correct deletion of sorter folder, but not run metadata
+        assert not (output_folder / "sorter_output").is_dir()
+        assert (output_folder / "spikeinterface_recording.json").is_file()
+        assert (output_folder / "spikeinterface_params.json").is_file()
+        assert (output_folder / "spikeinterface_log.json").is_file()
+
 
     def test_get_version(self):
         version = self.SorterClass.get_sorter_version()
@@ -100,31 +106,31 @@ class SnippetsSorterCommonTestSuite:
         self.snippets = nse.save(folder=snippets_folder, verbose=False, format='npy')
         print(self.snippets)
 
-    def test_with_class(self):
-        # test the classmethod approach
+    # def test_with_class(self):
+    #     # test the classmethod approach
 
-        SorterClass = self.SorterClass
-        snippets = self.snippets
+    #     SorterClass = self.SorterClass
+    #     snippets = self.snippets
 
-        sorter_params = SorterClass.default_params()
+    #     sorter_params = SorterClass.default_params()
 
-        output_folder = cache_folder / SorterClass.sorter_name
-        verbose = False
-        remove_existing_folder = True
-        raise_error = True
+    #     output_folder = cache_folder / SorterClass.sorter_name
+    #     verbose = False
+    #     remove_existing_folder = True
+    #     raise_error = True
 
-        output_folder = SorterClass.initialize_folder(
-            snippets, output_folder, verbose, remove_existing_folder)
-        SorterClass.set_params_to_folder(
-            snippets, output_folder, sorter_params, verbose)
-        SorterClass.setup_recording(snippets, output_folder, verbose)
-        SorterClass.run_from_folder(output_folder, raise_error, verbose)
-        sorting = SorterClass.get_result_from_folder(output_folder)
+    #     output_folder = SorterClass.initialize_folder(
+    #         snippets, output_folder, verbose, remove_existing_folder)
+    #     SorterClass.set_params_to_folder(
+    #         snippets, output_folder, sorter_params, verbose)
+    #     SorterClass.setup_recording(snippets, output_folder, verbose)
+    #     SorterClass.run_from_folder(output_folder, raise_error, verbose)
+    #     sorting = SorterClass.get_result_from_folder(output_folder)
 
-        # for unit_id in sorting.get_unit_ids():
-        # print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
+    #     # for unit_id in sorting.get_unit_ids():
+    #     # print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
 
-        del sorting
+    #     del sorting
 
     def test_with_run(self):
         # some sorter (TDC, KS, KS2, ...) work by default with the raw binary
