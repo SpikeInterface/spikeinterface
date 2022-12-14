@@ -17,6 +17,7 @@ class BaseSorting(BaseExtractor):
         self._sorting_segments: List[BaseSortingSegment] = []
         # this weak link is to handle times from a recording object
         self._recording = None
+        self._sorting_info = None
 
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -76,6 +77,21 @@ class BaseSorting(BaseExtractor):
                           recording.get_sampling_frequency(),
                           atol=0.1), "The recording has a different sampling frequency than the sorting!"
         self._recording = recording
+
+    @property
+    def sorting_info(self):
+        if "__sorting_info__" in self.get_annotation_keys():
+            return self.get_annotation("__sorting_info__")
+        else:
+            return None
+
+    def set_sorting_info(self, recording_dict, params_dict, log_dict):
+        sorting_info = dict(
+            recording=recording_dict,
+            params=params_dict,
+            log=log_dict
+        )
+        self.annotate(__sorting_info__=sorting_info)
 
     def has_recording(self):
         return self._recording is not None
