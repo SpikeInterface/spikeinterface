@@ -109,8 +109,8 @@ test = [
     ## install sorters ##
     "tridesclous>=1.6.6.1",
 
-    ## spyking-circus
-    "spyking-circus",
+    ## spyking-circus - mpi is buggy in 3.9
+    # "spyking-circus",
 
     ## herdingspikes
     "herdingspikes<=0.3.99",
@@ -140,6 +140,7 @@ markers = [
     "postprocessing",
     "qualitymetrics",
     "sorters",
+    "si_sorters",
     "comparison",
     "curation",
     "exporters",
