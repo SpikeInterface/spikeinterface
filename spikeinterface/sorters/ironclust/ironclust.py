@@ -161,10 +161,10 @@ class IronClustSorter(BaseSorter):
         return params['filter']
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         p = params
 
-        dataset_dir = output_folder / 'ironclust_dataset'
+        dataset_dir = sorter_output_folder / 'ironclust_dataset'
         # Generate three files in the dataset directory: raw.mda, geom.csv, params.json
         MdaRecordingExtractor.write_recording(recording=recording, save_path=str(dataset_dir), verbose=False,
                                               **get_job_kwargs(params, verbose))
@@ -186,18 +186,18 @@ class IronClustSorter(BaseSorter):
             f.write(txt)
 
         # TODO remove this because recording.json contain the sample_rate natively
-        tmpdir = output_folder / 'tmp'
+        tmpdir = sorter_output_folder / 'tmp'
         tmpdir.mkdir(parents=True, exist_ok=True)
         samplerate_fname = str(tmpdir / 'samplerate.txt')
         with open(samplerate_fname, 'w') as f:
             f.write('{}'.format(samplerate))
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-        dataset_dir = (output_folder / 'ironclust_dataset').absolute()
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        dataset_dir = (sorter_output_folder / 'ironclust_dataset').absolute()
         source_dir = (Path(__file__).parent).absolute()
 
-        tmpdir = (output_folder / 'tmp').absolute()
+        tmpdir = (sorter_output_folder / 'tmp').absolute()
 
         if verbose:
             print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
@@ -239,8 +239,8 @@ class IronClustSorter(BaseSorter):
                     matlab -nosplash -nodisplay -log -r run_ironclust
                 '''.format(tmpdir=tmpdir)
 
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{cls.sorter_name}',
+                                   log_path=sorter_output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
 
         retcode = shell_script.wait()
@@ -253,9 +253,9 @@ class IronClustSorter(BaseSorter):
             raise Exception(f'Result file does not exist: {result_fname}')
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        tmpdir = output_folder / 'tmp'
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorter_output_folder = Path(sorter_output_folder)
+        tmpdir = sorter_output_folder / 'tmp'
 
         result_fname = str(tmpdir / 'firings.mda')
         samplerate_fname = str(tmpdir / 'samplerate.txt')

@@ -15,5 +15,4 @@ class Mountainsort4CommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     test = Mountainsort4CommonTestSuite()
     test.setUp()
-    test.test_with_class()
     test.test_with_run()
