@@ -7,7 +7,6 @@ from spikeinterface.sorters import Spykingcircus2Sorter, Tridesclous2Sorter
 
 
 
-@pytest.mark.skip("Hanging, need fixing")
 class SpykingCircus2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = Spykingcircus2Sorter
 
