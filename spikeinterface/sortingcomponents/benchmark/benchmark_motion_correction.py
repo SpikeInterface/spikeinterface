@@ -27,7 +27,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     # _sorting_names = ('gt_static', 'gt_drifting', )
     
 
-    _array_names_from_parent = None
+    _array_names_from_parent = ()
     _waveform_names_from_parent = ('static', 'drifting')
     _sorting_names_from_parent = ('static', 'drifting')
 
@@ -35,6 +35,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 motion,
                 temporal_bins,
                 spatial_bins,
+                do_preprocessing=True,
                 correct_motion_kwargs={},
                 sorter_params={},
                 folder=None,
@@ -59,15 +60,16 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.mearec_filenames['static'] = mearec_filename_static
         self.temporal_bins = temporal_bins
         self.spatial_bins = spatial_bins
+        self.motion = motion
+        self.do_preprocessing = do_preprocessing
 
         self._recordings = None
-        self.sortings = {}
         # for key in ['drifting', 'static',]:
         #     _, self.sortings[key] = read_mearec(self.mearec_filenames[key])
         _, self.sortings['gt'] = read_mearec(self.mearec_filenames['static'])
-
-
+        
         self.correct_motion_kwargs = correct_motion_kwargs
+        self.run()
 
     @property
     def recordings(self):
@@ -87,14 +89,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         return self._recordings
 
     def run(self):
-        self.extract_waveforms()
-        for sorter_name, sorter_params in self.sorter_params.items():
-            self.run_sorting(sorter_name, sorter_params)
+        #for sorter_name, sorter_params in self.sorter_params.items():
+        #    self.run_sorting(sorter_name, sorter_params)
         self.save_to_folder()
 
 
     def extract_waveforms(self):
-        self.waveforms = {}
         for key in self.keys:
             if self.parent_benchmark is not None and key in self._waveform_names_from_parent:
                 continue

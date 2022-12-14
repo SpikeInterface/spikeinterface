@@ -4,7 +4,8 @@ import json
 import numpy as np
 
 
-from spikeinterface.core import load_waveforms, check_json, NpzSortingExtractor
+from spikeinterface.core import load_waveforms, NpzSortingExtractor
+from spikeinterface.core.core_tools import check_json
 
 
 def _simpleaxis(ax):
@@ -50,6 +51,9 @@ class BenchmarkBase:
             for name in self._waveform_names_from_parent:
                 self.waveforms[name] = parent_benchmark.waveforms[name]
 
+            for name in self._sorting_names_from_parent:
+                self.sortings[name] = parent_benchmark.sortings[name]
+
     def save_to_folder(self):
         if self.folder.exists():
             if self.overwrite:
@@ -81,17 +85,12 @@ class BenchmarkBase:
             run_times_filename = self.folder / 'run_times.json'
             run_times_filename.write_text(json.dumps(self.run_times, indent=4),encoding='utf8')
 
-        for key, sorting in self.sortings:
+        for key, sorting in self.sortings.items():
             (self.folder / 'sortings').mkdir(exist_ok=True)
-            if isinstance(key, tuple):
-                # npz_file = self.folder
-                # for k in key[:-1]:
-                #     npz_file = npz_file / k
-                # k = key[-1]
-                # npz_file = npz_file / (k + '.npz')
-                npz_file = self.folder / 'sortings' / ('_###_'.join(key) + '.npz')
-            else:
+            if isinstance(key, str):
                 npz_file = self.folder / 'sortings'  / (str(key) + '.npz')
+            elif isinstance(key, tuple):
+                npz_file = self.folder / 'sortings' / ('_###_'.join(key) + '.npz')
             NpzSortingExtractor.write_sorting(sorting, npz_file)
 
 
@@ -134,12 +133,14 @@ class BenchmarkBase:
 
 
         for key in bench._waveform_names:
+            if parent_benchmark is not None and key in bench._waveform_names_from_parent:
+                continue
             waveforms_folder = folder / 'waveforms' / key
             if waveforms_folder.exists():
                 bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=False)
 
         sorting_folder = folder / 'sortings'
-        if sorting_folder.exits():
+        if sorting_folder.exists():
             for npz_file in sorting_folder.glob('*.npz'):
                 name = npz_file.stem
                 if '_###_' in name:
