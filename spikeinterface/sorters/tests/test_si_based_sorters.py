@@ -19,5 +19,7 @@ if __name__ == '__main__':
     # test = SpykingCircus2SorterCommonTestSuite()
     test = Tridesclous2SorterCommonTestSuite()
     test.setUp()
-    test.test_with_class()
+    test.test_with_run()
+    test = SpykingCircus2SorterCommonTestSuite()
+    test.setUp()
     test.test_with_run()

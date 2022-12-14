@@ -349,12 +349,13 @@ class BaseSorter:
         return params
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         # need be implemented in subclass
         # this setup ONE recording (or SubExtractor)
         # this must copy (or not) the trace in the appropriate format
         # this must take care of geometry file (PRB, CSV, ...)
         # this must generate all needed script
+        # the sorter_ourput_folder is: output_folder / "sorter_output"
         raise NotImplementedError
 
     @classmethod
@@ -369,15 +370,17 @@ class BaseSorter:
         # can be implemented in subclass to check if the filter will be applied
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         # need be implemented in subclass
         # this is where the script is launch for one recording from a folder already prepared
         # this must run or generate the command line to run the sorter for one recording
+        # the sorter_ourput_folder is: output_folder / "sorter_output"
         raise NotImplementedError
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, sorter_output_folder):
         # need be implemented in subclass
+        # the sorter_ourput_folder is: output_folder / "sorter_output"
         raise NotImplementedError
 
 

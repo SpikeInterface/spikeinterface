@@ -13,5 +13,4 @@ class HerdingspikesSorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCas
 if __name__ == '__main__':
     test = HerdingspikesSorterCommonTestSuite()
     test.setUp()
-    test.test_with_class()
     test.test_with_run()

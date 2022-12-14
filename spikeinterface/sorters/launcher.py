@@ -149,7 +149,7 @@ def run_sorter_by_property(sorter_name,
 def run_sorters(sorter_list,
                 recording_dict_or_list,
                 working_folder,
-                sorter_params=None,
+                sorter_params={},
                 mode_if_folder_exists='raise',
                 engine='loop',
                 engine_kwargs={},
@@ -169,9 +169,7 @@ def run_sorters(sorter_list,
         If a list, the names should be recording_0, recording_1, etc.
     working_folder: str
         The working directory.
-    sorter_params: list or dict
-        If list, each element is a dictionary of parameters for the provided sorter_list.
-        If dict, keys are sorter_names and values are params dict.
+    sorter_params: dict of dict with sorter_name as key
         This allow to overwrite default params for sorter.
     mode_if_folder_exists: {'raise', 'overwrite', 'keep'}
         The mode when the subfolder of recording/sorter already exists.
@@ -228,29 +226,12 @@ def run_sorters(sorter_list,
     dtype_rec_name = np.dtype(type(list(recording_dict.keys())[0]))
     assert dtype_rec_name.kind in ("i", "u", "S", "U"), "Dict keys can only be integers or strings!"
 
-    if sorter_params is not None:
-        if isinstance(sorter_params, list):
-            assert len(sorter_params) == len(sorter_list), "'sorter_params' must have the same length as 'sorter_list'"
-            sorter_params_list = sorter_params
-        elif isinstance(sorter_params, dict):
-            assert all(k in sorter_list for k in sorter_params), "'sorter_params' keys must be in 'sorter_list'"
-            sorter_params_list = []
-            for sorter_name in sorter_list:
-                if sorter_name in sorter_params:
-                    sorter_params_list.append(sorter_params[sorter_name])
-                else:
-                    sorter_params_list.append({})
-        else:
-            raise Exception("'sorter_params' can be a list, dict, or None")
-    else:
-        sorter_params_list = [{}] * len(sorter_list)
-
     need_dump = engine != 'loop'
     task_args_list = []
     for rec_name, recording in recording_dict.items():
-        for i, sorter_name in enumerate(sorter_list):
+        for sorter_name in sorter_list:
 
-            output_folder = working_folder / str(rec_name) / f"{sorter_name}_job{i}"
+            output_folder = working_folder / str(rec_name) / sorter_name
 
             if output_folder.is_dir():
                 # sorter folder exists
@@ -264,8 +245,7 @@ def run_sorters(sorter_list,
                     else:
                         shutil.rmtree(str(output_folder))
 
-            # get params
-            params = sorter_params_list[i]
+            params = sorter_params.get(sorter_name, {})
             docker_image = docker_images.get(sorter_name, None)
             singularity_image = singularity_images.get(sorter_name, None)
             _check_container_images(
@@ -348,8 +328,8 @@ def run_sorters(sorter_list,
         # dump spikeinterface_job.json
         # only for non blocking engine
         for rec_name, recording in recording_dict.items():
-            for i, sorter_name in enumerate(sorter_list):
-                output_folder = working_folder / str(rec_name) / f"{sorter_name}_job{i}"
+            for sorter_name in sorter_list:
+                output_folder = working_folder / str(rec_name) / sorter_name
                 with open(output_folder / "spikeinterface_job.json", "w") as f:
                     dump_dict = {"rec_name": rec_name,
                                  "sorter_name": sorter_name,
@@ -409,8 +389,6 @@ def iter_working_folder(working_folder):
             else:
                 rec_name = rec_folder.name
                 sorter_name = output_folder.name
-                if "_job" in sorter_name:
-                    sorter_name = sorter_name[:sorter_name.find("_job")]
                 if not output_folder.is_dir():
                     continue
                 if not is_log_ok(output_folder):

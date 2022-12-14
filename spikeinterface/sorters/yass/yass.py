@@ -132,7 +132,7 @@ class YassSorter(BaseSorter):
         return yass.__version__
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         import yaml
 
         p = params
@@ -144,10 +144,10 @@ class YassSorter(BaseSorter):
             yass_params = yaml.load(file, Loader=yaml.FullLoader)
 
             # update root folder
-        yass_params['data']['root_folder'] = str(output_folder.absolute())
+        yass_params['data']['root_folder'] = str(sorter_output_folder.absolute())
 
         #  geometry
-        probe_file_txt = os.path.join(output_folder, 'geom.txt')
+        probe_file_txt = os.path.join(sorter_output_folder, 'geom.txt')
         geom_txt = recording.get_channel_locations()
         np.savetxt(probe_file_txt, geom_txt)
 
@@ -156,22 +156,22 @@ class YassSorter(BaseSorter):
         yass_params['recordings']['n_channels'] = recording.get_num_channels()
 
         # save to int16 raw
-        input_file_path = os.path.join(output_folder, 'data.bin')
+        input_file_path = os.path.join(sorter_output_folder, 'data.bin')
         dtype = 'int16'  # HARD CODE THIS FOR YASS
-        input_file_path = output_folder / 'data.bin'
+        input_file_path = sorter_output_folder / 'data.bin'
         
         write_binary_recording(recording, file_paths=[input_file_path], dtype=dtype, **get_job_kwargs(params, verbose))
 
         retrain = False
         if params['neural_nets_path'] is None:
-            params['neural_nets_path'] = str(output_folder / 'tmp' / 'nn_train')
+            params['neural_nets_path'] = str(sorter_output_folder / 'tmp' / 'nn_train')
             retrain = True
 
         # MERGE yass_params with self.params that could be changed by the user
         merge_params = merge_params_dict(yass_params, params)
 
         # to yaml
-        fname_config = output_folder / 'config.yaml'
+        fname_config = sorter_output_folder / 'config.yaml'
         with open(fname_config, 'w') as file:
             documents = yaml.dump(merge_params, file)
 
@@ -180,10 +180,10 @@ class YassSorter(BaseSorter):
 
         if retrain:
             # retrain NNs
-            YassSorter.train(recording, output_folder, verbose)
+            YassSorter.train(recording, sorter_output_folder, verbose)
 
             # update NN folder location
-            neural_nets_path = output_folder / 'tmp' / 'nn_train'
+            neural_nets_path = sorter_output_folder / 'tmp' / 'nn_train'
         else:
             #   load previous NNs
             if verbose:
@@ -195,15 +195,15 @@ class YassSorter(BaseSorter):
         merge_params['neuralnetwork']['detect']['filename'] = str(neural_nets_path.absolute() / 'detect.pt')
 
         # to yaml again (for NNs update)
-        fname_config = output_folder / 'config.yaml'
+        fname_config = sorter_output_folder / 'config.yaml'
         with open(fname_config, 'w') as file:
             yaml.dump(merge_params, file)
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         '''
         '''
-        config_file = output_folder.absolute() / 'config.yaml'
+        config_file = sorter_output_folder.absolute() / 'config.yaml'
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = f'''yass sort {config_file}'''
         else:
@@ -212,9 +212,9 @@ class YassSorter(BaseSorter):
                         yass sort {config_file}'''
 
         shell_script = ShellScript(shell_cmd,
-                                   #  script_path=os.path.join(output_folder, self.sorter_name),
-                                   script_path=output_folder / 'run_yass',
-                                   log_path=output_folder / (cls.sorter_name + '.log'),
+                                   #  script_path=os.path.join(sorter_output_folder, self.sorter_name),
+                                   script_path=sorter_output_folder / 'run_yass',
+                                   log_path=sorter_output_folder / (cls.sorter_name + '.log'),
                                    verbose=verbose)
         shell_script.start()
 
@@ -226,7 +226,7 @@ class YassSorter(BaseSorter):
     # Alessio might not want to put here;
     # better option to have a parameter "tune_nn" which
     @classmethod
-    def train(cls, recording, output_folder, verbose):
+    def train(cls, recording, sorter_output_folder, verbose):
         ''' Train NNs on yass prior to running yass sort'''
 
         if verbose:
@@ -236,7 +236,7 @@ class YassSorter(BaseSorter):
             print("            ss.set_NNs('path_to_NNs') (or set params['neural_nets_path'] = path_toNNs)")
             print("prior to running ss.run_sorter()")
 
-        config_file = output_folder.absolute() / 'config.yaml'
+        config_file = sorter_output_folder.absolute() / 'config.yaml'
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = f'yass train {config_file}'
         else:
@@ -245,9 +245,9 @@ class YassSorter(BaseSorter):
                         yass train {config_file}'''
 
         shell_script = ShellScript(shell_cmd,
-                                   script_path=output_folder / 'run_yass_train',
-                                   # os.path.join(output_folder, cls.sorter_name),
-                                   log_path=output_folder / (cls.sorter_name + '_train.log'),
+                                   script_path=sorter_output_folder / 'run_yass_train',
+                                   # os.path.join(sorter_output_folder, cls.sorter_name),
+                                   log_path=sorter_output_folder / (cls.sorter_name + '_train.log'),
                                    verbose=verbose)
         shell_script.start()
 
@@ -257,22 +257,22 @@ class YassSorter(BaseSorter):
             raise Exception('yass returned a non-zero exit code')
 
         if verbose:
-            print("TRAINING COMPLETED. NNs located at: ", output_folder,
+            print("TRAINING COMPLETED. NNs located at: ", sorter_output_folder,
                   "/tmp/nn_train/detect.pt and ",
-                  output_folder, "/tmp/nn_train/denoise.pt")
+                  sorter_output_folder, "/tmp/nn_train/denoise.pt")
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        sorting = YassSortingExtractor(folder_path=Path(output_folder))
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorting = YassSortingExtractor(folder_path=Path(sorter_output_folder))
         return sorting
 
     # TODO integrate this logic somewhere or remove ????
-    # def neural_nets_default(self, output_folder):
+    # def neural_nets_default(self, sorter_output_folder):
     # ''' Revert to default NNs
     # '''
     # self.merge_params['neuralnetwork']['denoise']['filename'] = 'denoise.pt'
     # self.merge_params['neuralnetwork']['detect']['filename'] = 'detect.pt'
-    # fname_config = os.path.join(output_folder, 'config.yaml')
+    # fname_config = os.path.join(sorter_output_folder, 'config.yaml')
     # with open(fname_config, 'w') as file:
     # documents = yaml.dump(self.merge_params, file)
 
