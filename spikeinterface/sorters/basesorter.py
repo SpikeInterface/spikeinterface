@@ -286,9 +286,9 @@ class BaseSorter:
             # can be None when not dumpable
             sorting.register_recording(recording)
         # set sorting info
-        rec_dict = json.load(open('spikeinterface_recording.json', 'r'))
-        params_dict = json.load(open('spikeinterface_params.json'))
-        log_dict = json.load(open('spikeinterface_log.json'))
+        rec_dict = json.load(open(output_folder /'spikeinterface_recording.json', 'r'))
+        params_dict = json.load(open(output_folder / 'spikeinterface_params.json'))
+        log_dict = json.load(open(output_folder / 'spikeinterface_log.json'))
         sorting.set_sorting_info(rec_dict, params_dict, log_dict)
         return sorting
 

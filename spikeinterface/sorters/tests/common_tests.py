@@ -71,6 +71,10 @@ class SorterCommonTestSuite:
         sorting = run_sorter(sorter_name, recording, output_folder=output_folder,
                              remove_existing_folder=True, delete_output_folder=False,
                              verbose=False, raise_error=True, **sorter_params)
+        assert sorting.sorting_info is not None
+        assert "recording" in sorting.sorting_info.keys()
+        assert "params" in sorting.sorting_info.keys()
+        assert "log" in sorting.sorting_info.keys()
 
         del sorting
 
