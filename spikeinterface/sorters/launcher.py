@@ -248,9 +248,9 @@ def run_sorters(sorter_list,
     need_dump = engine != 'loop'
     task_args_list = []
     for rec_name, recording in recording_dict.items():
-        for i_s, sorter_name in enumerate(sorter_list):
+        for i, sorter_name in enumerate(sorter_list):
 
-            output_folder = working_folder / str(rec_name) / f"{sorter_name}_run{i_s}"
+            output_folder = working_folder / str(rec_name) / f"{sorter_name}_job{i}"
 
             if output_folder.is_dir():
                 # sorter folder exists
@@ -265,7 +265,7 @@ def run_sorters(sorter_list,
                         shutil.rmtree(str(output_folder))
 
             # get params
-            params = sorter_params_list[i_s]
+            params = sorter_params_list[i]
             docker_image = docker_images.get(sorter_name, None)
             singularity_image = singularity_images.get(sorter_name, None)
             _check_container_images(
@@ -348,8 +348,8 @@ def run_sorters(sorter_list,
         # dump spikeinterface_job.json
         # only for non blocking engine
         for rec_name, recording in recording_dict.items():
-            for sorter_name in sorter_list:
-                output_folder = working_folder / str(rec_name) / sorter_name
+            for i, sorter_name in enumerate(sorter_list):
+                output_folder = working_folder / str(rec_name) / f"{sorter_name}_job{i}"
                 with open(output_folder / "spikeinterface_job.json", "w") as f:
                     dump_dict = {"rec_name": rec_name,
                                  "sorter_name": sorter_name,
@@ -409,8 +409,8 @@ def iter_working_folder(working_folder):
             else:
                 rec_name = rec_folder.name
                 sorter_name = output_folder.name
-                if "_run" in sorter_name:
-                    sorter_name = sorter_name[:sorter_name.find("_run")]
+                if "_job" in sorter_name:
+                    sorter_name = sorter_name[:sorter_name.find("_job")]
                 if not output_folder.is_dir():
                     continue
                 if not is_log_ok(output_folder):

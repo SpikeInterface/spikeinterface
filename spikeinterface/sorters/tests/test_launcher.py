@@ -104,8 +104,8 @@ def test_run_sorters_with_dict():
     print(t1 - t0)
     print(results)
 
-    shutil.rmtree(working_folder / 'toy_tetrode' / 'tridesclous')
-    run_sorters(sorter_list, recording_dict, working_folder/'by_dict',
+    shutil.rmtree(working_folder / 'toy_tetrode')
+    run_sorters(sorter_list, recording_dict, working_folder / 'by_dict',
                 engine='loop', sorter_params=sorter_params,
                 with_output=False,
                 mode_if_folder_exists='keep')
