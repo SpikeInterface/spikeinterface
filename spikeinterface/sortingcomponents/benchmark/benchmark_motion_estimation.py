@@ -36,6 +36,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 localize_kwargs={},
                 estimate_motion_kwargs={},
                 folder=None,
+                do_preprocessing=True, 
                 job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
                 overwrite=False):
         
@@ -52,13 +53,26 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
 
         self.mearec_filename = mearec_filename
-        self.recording, self.gt_sorting = read_mearec(self.mearec_filename)
+        self.raw_recording, self.gt_sorting = read_mearec(self.mearec_filename)
+        self.do_preprocessing = do_preprocessing
         
+        self._recording = None
         self.detect_kwargs = detect_kwargs
         self.select_kwargs = select_kwargs
         self.localize_kwargs = localize_kwargs
         self.estimate_motion_kwargs = estimate_motion_kwargs
 
+
+    @property
+    def recording(self):
+        if self._recording is None:
+            if self.do_preprocessing:
+                self._recording = bandpass_filter(rec)
+                self._recording = common_reference(rec)
+                self._recording = zscore(rec)
+            else:
+                self._recording = self.raw_recording
+        return self._recording
 
     def run(self):
 

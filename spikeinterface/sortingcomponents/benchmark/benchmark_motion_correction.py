@@ -24,8 +24,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     
     _array_names = ('motion', 'temporal_bins', 'spatial_bins')
     _waveform_names = ('static', 'drifting', 'corrected')
-    # _sorting_names = ('gt_static', 'gt_drifting', )
-    
+    _sorting_names = ('gt', )
 
     _array_names_from_parent = ()
     _waveform_names_from_parent = ('static', 'drifting')
@@ -89,8 +88,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
     def run(self):
         self.extract_waveforms()
-        #for sorter_name, sorter_params in self.sorter_params.items():
-        #    self.run_sorting(sorter_name, sorter_params)
+        for sorter_name, sorter_params in self.sorter_params.items():
+            self.run_sorting(sorter_name, sorter_params)
         self.save_to_folder()
 
 
