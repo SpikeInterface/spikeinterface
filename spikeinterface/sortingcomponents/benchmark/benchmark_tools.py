@@ -56,11 +56,14 @@ class BenchmarkBase:
 
     def save_to_folder(self):
         if self.folder.exists():
-            if self.overwrite:
-                shutil.rmtree(self.folder)
+            import glob, os
+            pattern = "*.*"
+            files = self.folder.glob(pattern)
+            for file in files:
+                os.remove(file)
+        else:
+            self.folder.mkdir(parents=True)
 
-        self.folder.mkdir(parents=True)
-        
         if self.parent_benchmark is None:
             parent_folder = None
         else:
@@ -111,9 +114,7 @@ class BenchmarkBase:
                 parent_benchmark = cls.load_from_folder(info['parent_folder'])
 
         import os
-        # kwargs['folder'] = str(os.path.abspath(folder))
         kwargs['folder'] = folder
-
 
         bench = cls(*args, **kwargs, parent_benchmark=parent_benchmark)
 

@@ -29,7 +29,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
     _array_names_from_parent = ()
     _waveform_names_from_parent = ('static', 'drifting')
-    _sorting_names_from_parent = ('static', 'drifting')
+    _sorting_names_from_parent = ('gt', )
 
     def __init__(self, mearec_filename_drifting, mearec_filename_static, 
                 motion,
@@ -69,7 +69,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         _, self.sortings['gt'] = read_mearec(self.mearec_filenames['static'])
         
         self.correct_motion_kwargs = correct_motion_kwargs
-        self.run()
 
     @property
     def recordings(self):
@@ -89,6 +88,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         return self._recordings
 
     def run(self):
+        self.extract_waveforms()
         #for sorter_name, sorter_params in self.sorter_params.items():
         #    self.run_sorting(sorter_name, sorter_params)
         self.save_to_folder()
