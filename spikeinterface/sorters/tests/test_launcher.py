@@ -89,12 +89,9 @@ def test_run_sorters_with_dict():
     
     recording_dict = {'toy_tetrode': rec0, 'toy_octotrode': rec1}
 
-    sorter_list = ['tridesclous', 'spykingcircus']
+    sorter_list = ['tridesclous', 'tridesclous']
 
-    sorter_params = {
-        'tridesclous': dict(detect_threshold=5.6),
-        'spykingcircus': dict(detect_threshold=5.6),
-    }
+    sorter_params = [dict(detect_threshold=5.6), dict(detect_threshold=5.7)]
 
     # simple loop
     t0 = time.perf_counter()

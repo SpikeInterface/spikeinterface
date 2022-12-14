@@ -43,8 +43,8 @@ jobs:
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
           # this is for spyking circus
-          sudo apt install mpich libmpich-dev
-          # create an environement (better for cahing)
+          # sudo apt install mpich libmpich-dev
+          # create an environement (better for caching)
           python -m venv ~/test_env
           source ~/test_env/bin/activate
           python -m pip install --upgrade pip
