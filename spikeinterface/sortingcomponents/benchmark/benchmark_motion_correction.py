@@ -28,7 +28,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
     _array_names_from_parent = ()
     _waveform_names_from_parent = ('static', 'drifting')
-    _sorting_names_from_parent = ('gt', )
+    _sorting_names_from_parent = ('gt', 'static', 'drifting')
 
     def __init__(self, mearec_filename_drifting, mearec_filename_static, 
                 motion,
@@ -103,10 +103,16 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 load_if_exists=not self.overwrite, overwrite=self.overwrite, **self.job_kwargs)
     
     def run_sorting(self, sorter_name, sorter_params):
-        for key in ('drifting', 'static', 'drifting'):
-            sorting = run_sorter(sorter_name, self.recordings[key], sorter_name, **sorter_params, delete_output_folder=True)
-            self.sortings[sorter_name, key] = sorting
+        for key in ('drifting', 'static', 'corrected'):
+            if self.parent_benchmark is not None:
+                if isinstance(key, str) and key in self._sorting_names_from_parent:
+                    continue
+                
+                if isinstance(key, tuple) and key[0] in self._sorting_names_from_parent:
+                    continue
 
+            sorting = run_sorter(sorter_name, self.recordings[key], sorter_name, **sorter_params, delete_output_folder=True)
+            self.sortings[key, sorter_name] = sorting
     
     def _compute_templates_similarities(self, metric='cosine', num_channels=30):
         gkey = (metric, num_channels)

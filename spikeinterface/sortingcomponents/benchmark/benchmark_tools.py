@@ -20,9 +20,9 @@ class BenchmarkBase:
     _waveform_names = ()
     _sorting_names = ()
 
-    _array_names_from_parent = None
-    _waveform_names_from_parent = None
-    _sorting_names_from_parent = None
+    _array_names_from_parent = ()
+    _waveform_names_from_parent = ()
+    _sorting_names_from_parent = ()
 
 
     def __init__(self, folder=None, title='', overwrite=None, 
@@ -51,8 +51,11 @@ class BenchmarkBase:
             for name in self._waveform_names_from_parent:
                 self.waveforms[name] = parent_benchmark.waveforms[name]
 
-            for name in self._sorting_names_from_parent:
-                self.sortings[name] = parent_benchmark.sortings[name]
+            for key in parent_benchmark.sortings.keys():
+                if isinstance(key, str) and key in self._sorting_names_from_parent:
+                    self.sortings[key] = parent_benchmark.sortings[key]
+                elif isinstance(key, tuple) and key[0] in self._sorting_names_from_parent:
+                    self.sortings[key] = parent_benchmark.sortings[key]
 
     def save_to_folder(self):
         if self.folder.exists():
