@@ -1,3 +1,6 @@
+
+import pytest
+
 from spikeinterface.sortingcomponents.dimensionality_reduction import TemporalPCA
 
 import spikeinterface as si
@@ -7,14 +10,14 @@ from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 
-
-
-def test_dimensionality_reduction():
+def test_dimensionality_reduction(tmp_path):
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting = se.read_mearec(local_path)
 
     local_radius_um = 1
-    temporal_pca = TemporalPCA(recording, model_path="./bin/buffer_pca.pkl", local_radius_um=local_radius_um)
+
+    model_path = tmp_path / "buffer_pca.pkl"
+    temporal_pca = TemporalPCA(recording, model_path=model_path, local_radius_um=local_radius_um)
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
     n_components = 3
