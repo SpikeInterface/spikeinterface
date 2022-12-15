@@ -5,7 +5,8 @@ import numpy as np
 from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.postprocessing import compute_principal_components, get_template_channel_sparsity
+from spikeinterface.postprocessing import compute_principal_components
+from spikeinterface.core.template_tools import get_template_channel_sparsity
 from spikeinterface import extract_waveforms
 from spikeinterface import NumpySorting
 
