@@ -74,16 +74,16 @@ class KlustaSorter(BaseSorter):
         return klusta.__version__
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         source_dir = Path(__file__).parent
 
         # alias to params
         p = params
 
-        experiment_name = output_folder / 'recording'
+        experiment_name = sorter_output_folder / 'recording'
 
         # save prb file
-        prb_file = output_folder / 'probe.prb'
+        prb_file = sorter_output_folder / 'probe.prb'
         probegroup = recording.get_probegroup()
         write_prb(prb_file, probegroup, radius=p['adjacency_radius'])
 
@@ -96,11 +96,11 @@ class KlustaSorter(BaseSorter):
             if not recording.binary_compatible_with(file_suffix='.dat'):
                 # copy and change suffix
                 print("Binary file is not a .dat file. Making a copy!")
-                shutil.copy(raw_filename, output_folder / "recording.dat")
-                raw_filename = output_folder / "recording.dat"
+                shutil.copy(raw_filename, sorter_output_folder / "recording.dat")
+                raw_filename = sorter_output_folder / "recording.dat"
         else:
             # save binary file (chunk by chunk) into a new file
-            raw_filename = output_folder / 'recording.dat'
+            raw_filename = sorter_output_folder / 'recording.dat'
             dtype = 'int16'
             write_binary_recording(recording, file_paths=[raw_filename], verbose=False, 
                                    dtype=dtype, **get_job_kwargs(params, verbose))
@@ -128,23 +128,23 @@ class KlustaSorter(BaseSorter):
                                                       p['pca_n_waveforms_max'], p['num_starting_clusters']
                                                       )
 
-        with (output_folder / 'config.prm').open('w') as f:
+        with (sorter_output_folder / 'config.prm').open('w') as f:
             f.writelines(klusta_config)
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
                         klusta --overwrite {klusta_config}
-                    '''.format(klusta_config=output_folder / 'config.prm')
+                    '''.format(klusta_config=sorter_output_folder / 'config.prm')
         else:
             shell_cmd = '''
                         #!/bin/bash
                         klusta {klusta_config} --overwrite
-                    '''.format(klusta_config=output_folder / 'config.prm')
+                    '''.format(klusta_config=sorter_output_folder / 'config.prm')
 
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{cls.sorter_name}',
+                                   log_path=sorter_output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
 
         retcode = shell_script.wait()
@@ -152,10 +152,10 @@ class KlustaSorter(BaseSorter):
         if retcode != 0:
             raise Exception('klusta returned a non-zero exit code')
 
-        if not (output_folder / 'recording.kwik').is_file():
+        if not (sorter_output_folder / 'recording.kwik').is_file():
             raise Exception('Klusta did not run successfully')
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        sorting = KlustaSortingExtractor(file_or_folder_path=Path(output_folder) / 'recording.kwik')
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorting = KlustaSortingExtractor(file_or_folder_path=Path(sorter_output_folder) / 'recording.kwik')
         return sorting

@@ -21,5 +21,4 @@ class Kilosort2_5CommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     test = Kilosort2_5CommonTestSuite()
     test.setUp()
-    test.test_with_class()
     test.test_with_run()
