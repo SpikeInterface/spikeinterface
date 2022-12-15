@@ -24,11 +24,13 @@ def test_dimensionality_reduction(tmp_path):
     temporal_pca.fit(recording,  n_components, job_kwargs)
 
     steps = [temporal_pca]
-    peaks, tpca = detect_peaks(recording, pipeline_steps=steps)
+    peaks, projected_waveforms = detect_peaks(recording, pipeline_steps=steps)
+    extracted_n_peaks, extracted_n_components, extracted_n_channels =  projected_waveforms.shape
     
-    assert peaks.shape[0] == tpca.shape[0]
-    assert tpca.shape[1] == n_components
-    assert tpca.shape[2] == recording.get_num_channels()
+    n_peaks = peaks.shape[0]
+    assert extracted_n_peaks == n_peaks
+    assert extracted_n_components == n_components
+    assert extracted_n_channels == recording.get_num_channels()
 
 if __name__ == '__main__':
     test_dimensionality_reduction()
