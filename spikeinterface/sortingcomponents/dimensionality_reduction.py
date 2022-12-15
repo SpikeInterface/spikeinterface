@@ -24,16 +24,20 @@ class TemporalPCA(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
-    def fit(self, recording, n_components, job_kwargs, whiten=True):
+    def fit(self, recording, n_components, whiten=True, **job_kwargs):
         
         peaks = detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs)
 
-        sub_peaks = select_peaks(peaks, method="uniform", select_per_channel=False, n_peaks=1000) # How to select n_peaks
+        # Heuristic for extracting peaks n_peaks
+        n_peaks = recording.get_num_channels() * 1e3
+        peaks = select_peaks(peaks, method="uniform", select_per_channel=True, n_peaks=n_peaks) # How to select n_peaks
 
+        # Create a waveform extractor
         ms_before = self._kwargs["ms_before"]
         ms_after = self._kwargs["ms_after"]
-        sorting = NumpySorting.from_peaks(sub_peaks, sampling_frequency=recording.sampling_frequency) 
-        we = extract_waveforms(recording, sorting, ms_before=ms_before, ms_after=ms_after, folder=None, mode="memory", **job_kwargs)
+        sorting = NumpySorting.from_peaks(peaks, sampling_frequency=recording.sampling_frequency) 
+        we = extract_waveforms(recording, sorting, ms_before=ms_before, ms_after=ms_after, folder=None, 
+                               mode="memory", max_spikes_per_unit=None, **job_kwargs)
 
         # compute PCA by_channel_global (with sparsity)
         sparsity = get_template_channel_sparsity(we, method="radius", radius_um=self.local_radius_um)
