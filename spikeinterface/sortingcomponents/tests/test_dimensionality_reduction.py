@@ -18,10 +18,11 @@ def test_dimensionality_reduction(tmp_path):
 
     model_path = tmp_path / "buffer_pca.pkl"
     temporal_pca = TemporalPCA(recording, model_path=model_path, local_radius_um=local_radius_um)
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
     n_components = 3
-    temporal_pca.fit(recording,  n_components, job_kwargs)
+    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    detect_peaks_params = dict(method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1)
+    temporal_pca.fit(recording, n_components, detect_peaks_params, job_kwargs)
 
     steps = [temporal_pca]
     peaks, projected_waveforms = detect_peaks(recording, pipeline_steps=steps)

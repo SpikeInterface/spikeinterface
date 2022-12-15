@@ -24,12 +24,12 @@ class TemporalPCA(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
-    def fit(self, recording, n_components, whiten=True, **job_kwargs):
+    def fit(self, recording, n_components, detect_peaks_params, whiten=True, **job_kwargs):
         
-        peaks = detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs)
+        # Detect peaks and sub-sample them
+        peaks = detect_peaks(recording, **detect_peaks_params, **job_kwargs)
 
-        # Heuristic for extracting peaks n_peaks
-        n_peaks = recording.get_num_channels() * 1e3
+        n_peaks = recording.get_num_channels() * 1e3 # Heuristic for extracting around 1k waveforms per channel
         peaks = select_peaks(peaks, method="uniform", select_per_channel=True, n_peaks=n_peaks) # How to select n_peaks
 
         # Create a waveform extractor
@@ -78,6 +78,5 @@ class TemporalPCA(PeakPipelineStep):
                 sparsified_waveform = waveforms[waveform_index, :, channel_index][np.newaxis, :]
                 projected_waveforms[waveform_index, :, channel_index] = self.pca_model.transform(sparsified_waveform)
 
-        
         return projected_waveforms
         
