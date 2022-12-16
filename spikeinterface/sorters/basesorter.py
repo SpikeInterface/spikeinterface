@@ -290,12 +290,12 @@ class BaseSorter:
             # back-compatibility
             sorting = cls._get_result_from_folder(output_folder)
         
-        # register recording
+        # register recording to Sorting object
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         if recording is not None:
             # can be None when not dumpable
             sorting.register_recording(recording)
-        # set sorting info
+        # set sorting info to Sorting object
         rec_dict = json.load(open(output_folder /'spikeinterface_recording.json', 'r'))
         params_dict = json.load(open(output_folder / 'spikeinterface_params.json'))
         log_dict = json.load(open(output_folder / 'spikeinterface_log.json'))
