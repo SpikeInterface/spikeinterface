@@ -40,13 +40,13 @@ def test_WaveformExtractor():
     sparsity_ext = ChannelSparsity(mask, sorting.unit_ids, recording.channel_ids)
 
     for mode in ["folder", "memory"]:
-        for waveforms_sparsity in [None, sparsity_ext]:
+        for sparsity in [None, sparsity_ext]:
 
             folder = cache_folder / 'test_waveform_extractor'
             if folder.is_dir():
                 shutil.rmtree(folder)
 
-            print(mode, waveforms_sparsity)
+            print(mode, sparsity)
 
             if mode == "memory":
                 wf_folder = None
@@ -54,7 +54,7 @@ def test_WaveformExtractor():
                 wf_folder = folder
 
             we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode,
-                                          waveforms_sparsity=waveforms_sparsity)
+                                          sparsity=sparsity)
 
             we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
 
@@ -64,7 +64,7 @@ def test_WaveformExtractor():
 
             wfs = we.get_waveforms(0)
             assert wfs.shape[0] <= 500
-            if waveforms_sparsity is not None:
+            if sparsity is not None:
                 assert wfs.shape[1:] == (210, 1)
             else:
                 assert wfs.shape[1:] == (210, num_channels)
@@ -76,7 +76,7 @@ def test_WaveformExtractor():
                 # load back
                 we = WaveformExtractor.load(folder)
             
-            if waveforms_sparsity is not None:
+            if sparsity is not None:
                 assert we.is_sparse()
 
             wfs = we.get_waveforms(0)
@@ -87,29 +87,29 @@ def test_WaveformExtractor():
 
             
             template = we.get_template(0)
-            if waveforms_sparsity is None:
+            if sparsity is None:
                 assert template.shape == (210, 2)
             else:
                 assert template.shape == (210, 1)
             templates = we.get_all_templates()
             assert templates.shape == (num_units, 210, num_channels)
 
-            if waveforms_sparsity is not None:
+            if sparsity is not None:
                 assert np.all(templates[:, :, 1] == 0)
 
             template_std = we.get_template(0, mode='std')
-            if waveforms_sparsity is None:
+            if sparsity is None:
                 assert template_std.shape == (210, num_channels)
             else:
                 assert template_std.shape == (210, 1)
             template_std = we.get_all_templates(mode='std')
             assert template_std.shape == (num_units, 210, num_channels)
 
-            if waveforms_sparsity is not None:
+            if sparsity is not None:
                 assert np.all(template_std[:, :, 1] == 0)
 
             template_segment = we.get_template_segment(unit_id=0, segment_index=0)
-            if waveforms_sparsity is None:
+            if sparsity is None:
                 assert template_segment.shape == (210, num_channels)
             else:
                 assert template_segment.shape == (210, 1)
@@ -123,7 +123,7 @@ def test_WaveformExtractor():
                 assert unit in keep_units
             filtered_templates = wf_filt.get_all_templates()
             assert filtered_templates.shape == (len(keep_units), 210, num_channels)
-            if waveforms_sparsity is not None:
+            if sparsity is not None:
                 wf_filt.is_sparse()
 
             # test save
@@ -158,7 +158,7 @@ def test_WaveformExtractor():
             assert isinstance(wfs_array, np.ndarray)
 
             # test post sparsity
-            if waveforms_sparsity is None:
+            if sparsity is None:
                 we.set_post_sparsity(sparsity_ext)
                 template = we.get_template(0)
                 assert template.shape == (210, 1)
@@ -168,6 +168,7 @@ def test_WaveformExtractor():
                 assert wfs.shape[2] == 1
                 all_templates = we.get_all_templates()
                 assert all_templates.shape == (num_units, 210, num_channels)
+                we.reset_post_sparsity()
 
 def test_extract_waveforms():
     # 2 segments
@@ -350,57 +351,6 @@ def test_unfiltered_extraction():
         wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
         assert wf_segment.shape == (210, num_channels)
         assert wf_segment.shape == (210, num_channels)
-
-
-def test_sparsity():
-    durations = [30]
-    sampling_frequency = 30000.
-
-    recording = generate_recording(
-        num_channels=10, durations=durations, sampling_frequency=sampling_frequency)
-    recording.annotate(is_filtered=True)
-    folder_rec = cache_folder / "wf_rec3"
-    recording = recording.save(folder=folder_rec)
-    sorting = generate_sorting(
-        num_units=5, sampling_frequency=sampling_frequency, durations=durations)
-    folder_sort = cache_folder / "wf_sort3"
-    sorting = sorting.save(folder=folder_sort)
-
-    folder = cache_folder / 'test_extract_waveforms_sparsity'
-    if folder.is_dir():
-        shutil.rmtree(folder)
-    we = extract_waveforms(recording, sorting, folder,
-                           max_spikes_per_unit=None)
-
-    # sparsity: same number of channels
-    num_channels = 3
-    channel_bounds = [2, 9]
-    sparsity_same = {}
-    sparsity_diff = {}
-
-    for unit in sorting.get_unit_ids():
-        sparsity_same[unit] = np.random.permutation(
-            recording.get_channel_ids())[:num_channels]
-        rand_channel_num = np.random.randint(
-            channel_bounds[0], channel_bounds[1])
-        sparsity_diff[unit] = np.random.permutation(
-            recording.get_channel_ids())[:rand_channel_num]
-
-    print(sparsity_same)
-    print(sparsity_diff)
-
-    for unit in sorting.get_unit_ids():
-        wf_same = we.get_waveforms(unit_id=unit, sparsity=sparsity_same)
-        temp_same = we.get_template(unit_id=unit, sparsity=sparsity_same)
-
-        assert wf_same.shape[-1] == num_channels
-        assert temp_same.shape[-1] == num_channels
-
-        wf_diff = we.get_waveforms(unit_id=unit, sparsity=sparsity_diff)
-        temp_diff = we.get_template(unit_id=unit, sparsity=sparsity_diff)
-
-        assert wf_diff.shape[-1] == len(sparsity_diff[unit])
-        assert temp_diff.shape[-1] == len(sparsity_diff[unit])
 
 
 def test_portability():

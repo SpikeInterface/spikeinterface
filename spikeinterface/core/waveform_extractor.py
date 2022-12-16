@@ -64,7 +64,7 @@ class WaveformExtractor:
     """
     extensions = []
     def __init__(self, recording, sorting, folder=None, rec_attributes=None, allow_unfiltered=False,
-                 waveforms_sparsity=None):
+                 sparsity=None):
         if recording is None:
             # this is for the mode when recording is not accessible anymore
             if rec_attributes is None:
@@ -94,7 +94,7 @@ class WaveformExtractor:
         self._template_cache = {}
         self._params = {}
         self._loaded_extensions = dict()
-        self.waveforms_sparsity = waveforms_sparsity
+        self.sparsity = sparsity
         self.post_sparsity = None
 
         self.folder = folder
@@ -169,16 +169,16 @@ class WaveformExtractor:
             sorting = load_extractor(folder / 'sorting.json',
                                      base_folder=folder)
 
-        # the waveforms_sparsity is the sparsity of the saved/cached waveforms arrays
-        waveforms_sparsity_file = folder / 'waveforms_sparsity.json'
-        if waveforms_sparsity_file.is_file():
-            with open(waveforms_sparsity_file, mode='r')as f:
-                waveforms_sparsity = ChannelSparsity.from_dict(json.load(f))
+        # the sparsity is the sparsity of the saved/cached waveforms arrays
+        sparsity_file = folder / 'sparsity.json'
+        if sparsity_file.is_file():
+            with open(sparsity_file, mode='r')as f:
+                sparsity = ChannelSparsity.from_dict(json.load(f))
         else:
-            waveforms_sparsity = None
+            sparsity = None
 
         we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes, allow_unfiltered=True,
-                 waveforms_sparsity=waveforms_sparsity)
+                 sparsity=sparsity)
 
         # the post_sparsity is used in postprocessing/plotting and applid on-the-fly
         post_sparsity_file = folder / 'post_sparsity.json'
@@ -226,13 +226,13 @@ class WaveformExtractor:
             sorting_dict = waveforms_root.attrs['sorting']
             sorting = load_extractor(sorting_dict, base_folder=folder)
 
-        if 'waveforms_sparsity' in waveforms_root.attrs:
-            waveforms_sparsity = waveforms_root.attrs['waveforms_sparsity']
+        if 'sparsity' in waveforms_root.attrs:
+            sparsity = waveforms_root.attrs['sparsity']
         else:
-            waveforms_sparsity = None
+            sparsity = None
 
         we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes, allow_unfiltered=True,
-                 waveforms_sparsity=waveforms_sparsity)
+                 sparsity=sparsity)
         
         if 'post_sparsity' in waveforms_root.attrs:
             post_sparsity = waveforms_root.attrs['post_sparsity']
@@ -240,18 +240,13 @@ class WaveformExtractor:
 
         for mode in _possible_template_modes:
             # load cached templates
-            if mode == "binary":
-                template_file = folder / f'templates_{mode}.npy'
-                if template_file.is_file():
-                    we._template_cache[mode] = np.load(template_file)
-            elif mode == "zarr":
-                if f'templates_{mode}' in waveforms_root.keys():
-                    we._template_cache[mode] = waveforms_root[f'templates_{mode}']
+            if f'templates_{mode}' in waveforms_root.keys():
+                we._template_cache[mode] = waveforms_root[f'templates_{mode}']
         return we
 
     @classmethod
     def create(cls, recording, sorting, folder, mode="folder", remove_if_exists=False,
-               use_relative_path=False, allow_unfiltered=False, waveforms_sparsity=None):
+               use_relative_path=False, allow_unfiltered=False, sparsity=None):
         assert mode in ("folder", "memory")
         if mode == "folder":
             folder = Path(folder)
@@ -294,18 +289,18 @@ class WaveformExtractor:
             with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
             
-            if waveforms_sparsity is not None:
-                with open(folder / 'waveforms_sparsity.json', mode='w') as f:
-                    json.dump(check_json(waveforms_sparsity.to_dict()), f)
+            if sparsity is not None:
+                with open(folder / 'sparsity.json', mode='w') as f:
+                    json.dump(check_json(sparsity.to_dict()), f)
 
-        return cls(recording, sorting, folder, allow_unfiltered=allow_unfiltered, waveforms_sparsity=waveforms_sparsity)
+        return cls(recording, sorting, folder, allow_unfiltered=allow_unfiltered, sparsity=sparsity)
 
     def is_sparse(self):
-        return self.waveforms_sparsity is not None
+        return self.sparsity is not None
 
     def get_unit_sparsity_mask(self, unit_id):
-        if self.waveforms_sparsity is not None:
-            unit_sparsity_mask = self.waveforms_sparsity.mask[self.sorting.id_to_index(unit_id)]
+        if self.sparsity is not None:
+            unit_sparsity_mask = self.sparsity.mask[self.sorting.id_to_index(unit_id)]
         elif self.post_sparsity is not None:
             unit_sparsity_mask = self.post_sparsity.mask[self.sorting.id_to_index(unit_id)]
         else:
@@ -314,11 +309,17 @@ class WaveformExtractor:
 
     def set_post_sparsity(self, post_sparsity):
         """
-        Sets post_sparsity for postprocessing/plotting.
+        Set post_sparsity for postprocessing/plotting.
         """
-        assert self.waveforms_sparsity is None, "Waveforms are already sparse!"
+        assert self.sparsity is None, "Waveforms are already sparse!"
         assert isinstance(post_sparsity, ChannelSparsity), "'post_sparsity' needs to be a ChannelSparsity object."
         self.post_sparsity = post_sparsity
+
+    def reset_post_sparsity(self):
+        """
+        Reset post_sparsity to None.
+        """
+        self.post_sparsity = None
 
     @classmethod
     def register_extension(cls, extension_class):
@@ -653,9 +654,9 @@ class WaveformExtractor:
 
                 # slice masks
                 if self.is_sparse():
-                    mask = self.waveforms_sparsity.mask[unit_indices]
+                    mask = self.sparsity.mask[unit_indices]
                     new_sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
-                    with (new_folder / "waveforms_sparsity.json").open("w") as f:
+                    with (new_folder / "sparsity.json").open("w") as f:
                         json.dump(check_json(new_sparsity.to_dict()), f)
                 if self.post_sparsity is not None:
                     mask = self.post_sparsity.mask[unit_indices]
@@ -671,12 +672,12 @@ class WaveformExtractor:
         else:
             sorting = self.sorting.select_units(unit_ids)
             if self.is_sparse():
-                mask = self.waveforms_sparsity.mask[unit_indices]
-                waveforms_sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
+                mask = self.sparsity.mask[unit_indices]
+                sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
             else:
-                waveforms_sparsity = None
+                sparsity = None
             we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory",
-                                          waveforms_sparsity=waveforms_sparsity)
+                                          sparsity=sparsity)
             we.set_params(**self._params)
             # copy memory objects
             for unit_id in unit_ids:
@@ -696,7 +697,7 @@ class WaveformExtractor:
         return we
 
     def save(self, folder, format="binary", use_relative_path=False, 
-             overwrite=False, waveforms_sparsity=None, **kwargs):
+             overwrite=False, sparsity=None, **kwargs):
         """
         Save WaveformExtractor object to disk.
 
@@ -712,8 +713,8 @@ class WaveformExtractor:
             If True, the recording and sorting paths are relative to the waveforms folder. 
             This allows portability of the waveform folder provided that the relative paths are the same, 
             but forces all the data files to be in the same drive, by default False
-        waveforms_sparsity : ChannelSparsity, optional
-            If given, it makes the returned WaveformExtractor sparse
+        sparsity : ChannelSparsity, optional
+            If given and WaveformExtractor is not sparse, it makes the returned WaveformExtractor sparse
         """
         folder = Path(folder)
         if use_relative_path:
@@ -733,6 +734,9 @@ class WaveformExtractor:
         else:
             rec_attributes = deepcopy(self._rec_attributes)
             probegroup = rec_attributes["probegroup"]
+
+        if self.is_sparse():
+            assert sparsity is None, "WaveformExtractor is already sparse!"
 
         if format == "binary":
             if folder.is_dir() and overwrite:
@@ -770,19 +774,19 @@ class WaveformExtractor:
             waveform_folder.mkdir()
             for unit_ind, unit_id in enumerate(self.unit_ids):
                 waveforms, sampled_indices = self.get_waveforms(unit_id, with_index=True)
-                if waveforms_sparsity is not None:
-                    waveforms = waveforms[:, :, waveforms_sparsity.mask[unit_ind]]
+                if sparsity is not None:
+                    waveforms = waveforms[:, :, sparsity.mask[unit_ind]]
                 np.save(waveform_folder / f'waveforms_{unit_id}.npy', waveforms)
                 np.save(waveform_folder / f'sampled_index_{unit_id}.npy', sampled_indices)                 
             for mode, templates in self._template_cache.items():
                 templates_save = templates.copy()
-                if waveforms_sparsity is not None:
-                    templates_save[~waveforms_sparsity.mask[:, None, :]] = 0
+                if sparsity is not None:
+                    templates_save[~sparsity.mask[:, None, :]] = 0
                 template_file = folder / f'templates_{mode}.npy'
                 np.save(template_file, templates_save)
-            if waveforms_sparsity is not None:
-                with (folder / "waveforms_sparsity.json").open("w") as f:
-                    json.dump(check_json(waveforms_sparsity.to_dict()), f)
+            if sparsity is not None:
+                with (folder / "sparsity.json").open("w") as f:
+                    json.dump(check_json(sparsity.to_dict()), f)
             if self.post_sparsity is not None:
                 with (folder / "post_sparsity.json").open("w") as f:
                     json.dump(check_json(self.post_sparsity.to_dict()), f)
@@ -821,20 +825,20 @@ class WaveformExtractor:
             waveform_group = zarr_root.create_group("waveforms")
             for unit_ind, unit_id in enumerate(self.unit_ids):
                 waveforms, sampled_indices = self.get_waveforms(unit_id, with_index=True)
-                if waveforms_sparsity is not None:
-                    waveforms = waveforms[:, :, waveforms_sparsity.mask[unit_ind]]
+                if sparsity is not None:
+                    waveforms = waveforms[:, :, sparsity.mask[unit_ind]]
                 waveform_group.create_dataset(name=f'waveforms_{unit_id}',data=waveforms,
                                               compressor=compressor)
                 waveform_group.create_dataset(name=f'sampled_index_{unit_id}', data=sampled_indices,
                                               compressor=compressor)         
             for mode, templates in self._template_cache.items():
                 templates_save = templates.copy()
-                if waveforms_sparsity is not None:
-                    templates_save[~waveforms_sparsity.mask[:, None, :]] = 0
+                if sparsity is not None:
+                    templates_save[~sparsity.mask[:, None, :]] = 0
                 zarr_root.create_dataset(name=f'templates_{mode}', data=templates_save,
                                          compressor=compressor)
-            if waveforms_sparsity is not None:
-                zarr_root.attrs["waveforms_sparsity"] = check_json(waveforms_sparsity.to_dict())
+            if sparsity is not None:
+                zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
             if self.post_sparsity is not None:
                 zarr_root.attrs["post_sparsity"] = check_json(self.post_sparsity.to_dict())
 
@@ -978,8 +982,8 @@ class WaveformExtractor:
 
         for unit_ind, unit_id in enumerate(unit_ids):
             wfs = self.get_waveforms(unit_id, cache=False)
-            if self.waveforms_sparsity is not None:
-                mask = self.waveforms_sparsity.mask[unit_ind]
+            if self.sparsity is not None:
+                mask = self.sparsity.mask[unit_ind]
             elif self.post_sparsity is not None:
                 mask = self.post_sparsity.mask[unit_ind]
                 wfs = wfs[:, mask]
@@ -1176,10 +1180,10 @@ class WaveformExtractor:
             mode = "shared_memory"
             copy = True
         
-        if self.waveforms_sparsity is None:
+        if self.sparsity is None:
             sparsity_mask = None
         else:
-            sparsity_mask = self.waveforms_sparsity.mask
+            sparsity_mask = self.sparsity.mask
 
         wfs_arrays = extract_waveforms_to_buffers(self.recording, spikes, unit_ids, nbefore, nafter,
                                                   mode=mode, return_scaled=return_scaled, folder=wf_folder,
