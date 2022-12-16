@@ -43,7 +43,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         clust_id = np.unique(spike_clusters)
         unit_ids = list(clust_id)
-        spike_times.astype(int)
+        spike_times = spike_times.astype(int)
         params = read_python(str(phy_folder / 'params.py'))
         sampling_frequency = params['sample_rate']
 
@@ -97,7 +97,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             del cluster_info["id"]
 
         # update spike clusters and times values
-        spike_clusters_clean_idxs = np.in1d(spike_clusters, cluster_info["cluster_id"].values).nonzero()[0]
+        spike_clusters_clean_idxs = np.isin(spike_clusters, cluster_info["cluster_id"].values)  # Slow
         spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
         spike_times_clean = spike_times[spike_clusters_clean_idxs]
 
@@ -111,7 +111,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
             spike_clusters_new = np.zeros_like(spike_clusters_clean)
             for i, (phy_id, si_id) in enumerate(zip(cluster_info["cluster_id"].values,
-                                                    cluster_info["si_unit_id"].values)):
+                                                    cluster_info["si_unit_id"].values)):  # Slow
                 if np.isnan(si_id):
                     max_si_unit_id += 1
                     new_si_id = int(max_si_unit_id)
@@ -149,11 +149,10 @@ class PhySortingSegment(BaseSortingSegment):
         self._all_clusters = all_clusters
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        spike_times = self._all_spikes[self._all_clusters == unit_id]
-        if start_frame is not None:
-            spike_times = spike_times[spike_times >= start_frame]
-        if end_frame is not None:
-            spike_times = spike_times[spike_times < end_frame]
+        start = 0 if start_frame is None else np.searchsorted(self._all_spikes, start_frame, side="left")
+        end = len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="right")
+
+        spike_times = self._all_spikes[start:end][self._all_clusters[start:end] == unit_id]
         return np.atleast_1d(spike_times.copy().squeeze())
 
 
