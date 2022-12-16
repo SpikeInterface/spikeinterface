@@ -30,8 +30,8 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         params = dict(ms_before=ms_before,
                       ms_after=ms_after,
-                      method=method,
-                      method_kwargs=method_kwargs)
+                      method=method)
+        params.update(**method_kwargs)
         return params        
     
     def _select_extension_data(self, unit_ids):

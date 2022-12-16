@@ -1,16 +1,14 @@
 """Sorting components: peak detection."""
 
 import numpy as np
-import scipy
 
-from spikeinterface.core import NumpySorting
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, split_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from ..core import get_chunk_with_margin
 
 from .peak_pipeline import PeakPipelineStep, get_nbefore_nafter_from_steps
-
+from .tools import make_multi_method_doc
 
 try:
     import numba
@@ -29,46 +27,22 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                 local_radius_um=50, engine=None, device=None, noise_levels=None, random_chunk_kwargs={},
-                 pipeline_steps=None, outputs='numpy_compact', **job_kwargs):
-    """Peak detection based on threshold crossing in terms of k x MAD.
+def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
+    """Peak detection based on threshold crossing in term of k x MAD.
+
+    In 'by_channel' : peak are detected in each channel independently
+    In 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
+
 
     Parameters
     ----------
     recording: RecordingExtractor
         The recording extractor object.
-    method: 'by_channel', 'locally_exclusive'
-        Method to use. Options:
-            * 'by_channel' : peak are detected in each channel independently
-            * 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
-    peak_sign: 'neg', 'pos', 'both'
-        Sign of the peak.
-    detect_threshold: float
-        Threshold, in median absolute deviations (MAD), to use to detect peaks.
-    exclude_sweep_ms: float or None
-        Time, in ms, during which the peak is isolated.
-        For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
-        and no larger peaks are located during the 0.1ms preceding and following the peak.
-    local_radius_um: float
-        The radius to use for detection across local channels.
-    engine: str or None
-        The engine used for peak detection. 
-        If None, the default for "by_channel" is "numpy" and for "locally_exclusive" is "numba".
-        The "torch" engine is also available for both methods and it uses max pooling for deduplication in time
-        and space (for locally exclusive).
-    device: str or None
-        For "torch" engine, "cuda" (default if None) or "cpu".
-    noise_levels: array, optional
-        Estimated noise levels to use, if already computed.
-        If not provide then it is estimated from a random snippet of the data.
-    random_chunk_kwargs: dict, optional
-        A dict that contain option to randomize chunk for get_noise_levels().
-        Only used if noise_levels is None.
     pipeline_steps: None or list[PeakPipelineStep]
         Optional additional PeakPipelineStep need to computed just after detection time.
         This avoid reading the recording multiple times.
-    {}
+    {method_doc}
+    {job_doc}
 
     Returns
     -------
@@ -80,48 +54,14 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
     This peak detection ported from tridesclous into spikeinterface.
     """
 
-    assert method in ('by_channel', 'locally_exclusive')
-    assert peak_sign in ('both', 'neg', 'pos')
+    assert method in detect_peak_methods
 
-    if method == 'locally_exclusive' and not HAVE_NUMBA:
-        raise ModuleNotFoundError(
-            '"locally_exclusive" need numba which is not installed')
+    method_class = detect_peak_methods[method]
+    
+    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
-    if noise_levels is None:
-        noise_levels = get_noise_levels(
-            recording, return_scaled=False, **random_chunk_kwargs)
-
-    abs_threholds = noise_levels * detect_threshold
-    num_channels = recording.get_num_channels()
-
-    if method == 'locally_exclusive':
-        assert local_radius_um is not None
-        engine = engine if engine is not None else "numba"
-        assert engine in ("numba", "torch")
-        channel_distance = get_channel_distances(recording)
-        # we need a matrix padded with numchannels
-        if engine == "torch":
-            neighbour_indices_by_chan = []
-            for chan in range(num_channels):
-                neighbour_indices_by_chan.append(np.nonzero(channel_distance[chan] < local_radius_um)[0])
-            max_neighbs = np.max([len(neigh) for neigh in neighbour_indices_by_chan])
-            neighbours_mask = num_channels * np.ones((num_channels, max_neighbs), dtype=int)
-            for i, neigh in enumerate(neighbour_indices_by_chan):
-                neighbours_mask[i, :len(neigh)] = neigh
-        else:
-            neighbours_mask = channel_distance < local_radius_um
-    else:
-        engine = engine if engine is not None else "numpy"
-        assert engine in ("numpy", "torch")
-        neighbours_mask = None
-
-    mp_context = None
-    if engine == "numba":
-        assert HAVE_NUMBA, "engine 'numba' requires numba!"
-    if engine == "torch":
-        assert HAVE_TORCH, "engine 'torch' requires torch!"
-        if torch.cuda.is_available():
-            mp_context = "spawn"
+    # prepare args
+    method_args = method_class.check_params(recording, **method_kwargs)
 
     if pipeline_steps is not None:
         assert all(isinstance(step, PeakPipelineStep)
@@ -137,9 +77,6 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         extra_margin = 0
 
     # and run
-    exclude_sweep_size = int(
-        exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
-
     if job_kwargs.get('n_jobs', 1) > 1:
         recording_ = recording.to_dict()
     else:
@@ -147,11 +84,9 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
 
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
-    init_args = (recording_, method, peak_sign, abs_threholds, exclude_sweep_size,
-                 neighbours_mask, extra_margin, engine, device, pipeline_steps_)
+    init_args = (recording_, method, method_args, extra_margin, pipeline_steps_)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       handle_returns=True, job_name='detect peaks',
-                                       mp_context=mp_context, **job_kwargs)
+                                       handle_returns=True, job_name='detect peaks', **job_kwargs)
     outputs = processor.run()
 
     if pipeline_steps is None:
@@ -165,11 +100,7 @@ def detect_peaks(recording, method='by_channel', peak_sign='neg', detect_thresho
         return outs_concat
 
 
-detect_peaks.__doc__ = detect_peaks.__doc__.format(_shared_job_kwargs_doc)
-
-
-def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclude_sweep_size,
-                              neighbours_mask, extra_margin, engine, device, pipeline_steps):
+def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_steps):
     """Initialize a worker for detecting peaks."""
 
     if isinstance(recording, dict):
@@ -184,21 +115,16 @@ def _init_worker_detect_peaks(recording, method, peak_sign, abs_threholds, exclu
     worker_ctx = {}
     worker_ctx['recording'] = recording
     worker_ctx['method'] = method
-    worker_ctx['peak_sign'] = peak_sign
-    worker_ctx['abs_threholds'] = abs_threholds
-    worker_ctx['exclude_sweep_size'] = exclude_sweep_size
-    worker_ctx['neighbours_mask'] = neighbours_mask
+    worker_ctx['method_class'] = detect_peak_methods[method]
+    worker_ctx['method_args'] = method_args
     worker_ctx['extra_margin'] = extra_margin
-    worker_ctx['engine'] = engine
-    worker_ctx['device'] = device
     worker_ctx['pipeline_steps'] = pipeline_steps
 
     if pipeline_steps is not None:
         worker_ctx['need_waveform'] = any(
             step.need_waveforms for step in pipeline_steps)
         if worker_ctx['need_waveform']:
-            worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(
-                pipeline_steps)
+            worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(pipeline_steps)
 
     return worker_ctx
 
@@ -207,17 +133,12 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     # recover variables of the worker
     recording = worker_ctx['recording']
-    peak_sign = worker_ctx['peak_sign']
-    abs_threholds = worker_ctx['abs_threholds']
-    exclude_sweep_size = worker_ctx['exclude_sweep_size']
-    method = worker_ctx['method']
+    method_class = worker_ctx['method_class']
+    method_args = worker_ctx['method_args']
     extra_margin = worker_ctx['extra_margin']
-    neighbours_mask = worker_ctx['neighbours_mask']
-    engine = worker_ctx['engine']
-    device = worker_ctx['device']
     pipeline_steps = worker_ctx['pipeline_steps']
 
-    margin = exclude_sweep_size + extra_margin
+    margin = method_class.get_method_margin(*method_args) + extra_margin
 
     # load trace in memory
     recording_segment = recording._recording_segments[segment_index]
@@ -230,30 +151,8 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     else:
         trace_detection = traces
 
-    if method == 'by_channel':
-        if engine == 'numpy':
-            peak_sample_ind, peak_chan_ind = detect_peaks_by_channel(
-                trace_detection, peak_sign, abs_threholds, exclude_sweep_size
-            )
-        else:
-            peak_sample_ind, peak_chan_ind = detect_peak_torch(
-                trace_detection, peak_sign, abs_threholds, exclude_sweep_size,
-                device=device
-            )
-    elif method == 'locally_exclusive':
-        if engine == 'numba':
-            peak_sample_ind, peak_chan_ind = detect_peak_locally_exclusive(
-                trace_detection, peak_sign, abs_threholds,
-                exclude_sweep_size,
-                neighbours_mask=neighbours_mask
-            )
-        else:
-            peak_sample_ind, peak_chan_ind = detect_peak_torch(
-                trace_detection, peak_sign, abs_threholds, 
-                exclude_sweep_size,
-                neighbours_mask=neighbours_mask,
-                device=device
-            )
+    peak_sample_ind, peak_chan_ind = method_class.detect_peaks(trace_detection, *method_args)
+
     if extra_margin > 0:
         peak_sample_ind += extra_margin
 
@@ -269,8 +168,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     if pipeline_steps is not None:
 
         if worker_ctx['need_waveform']:
-            waveforms = traces[peaks['sample_ind'][:, None] +
-                               np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
+            waveforms = traces[peaks['sample_ind'][:, None] + np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
         else:
             waveforms = None
 
@@ -292,67 +190,248 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         return (peaks, ) + outs
 
 
-def detect_peaks_by_channel(traces, peak_sign, abs_threholds, exclude_sweep_size):
-    """Detect peaks using the 'by channel' method."""
+class DetectPeakByChannel:
+    """Detect peaks using the 'by channel' method.
+    """
 
-    traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
-    length = traces_center.shape[0]
+    name = 'by_channel'
+    engine = 'numpy'
+    params_doc = """
+    peak_sign: 'neg', 'pos', 'both'
+        Sign of the peak.
+    detect_threshold: float
+        Threshold, in median absolute deviations (MAD), to use to detect peaks.
+    exclude_sweep_ms: float or None
+        Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
+        For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
+        and no larger peaks are located during the 0.1ms preceding and following the peak.
+    noise_levels: array, optional
+        Estimated noise levels to use, if already computed.
+        If not provide then it is estimated from a random snippet of the data.
+    random_chunk_kwargs: dict, optional
+        A dict that contain option to randomize chunk for get_noise_levels().
+        Only used if noise_levels is None."""
 
-    if peak_sign in ('pos', 'both'):
-        peak_mask = traces_center > abs_threholds[None, :]
-        for i in range(exclude_sweep_size):
-            peak_mask &= traces_center > traces[i:i + length, :]
-            peak_mask &= traces_center >= traces[exclude_sweep_size +
-                                                 i + 1:exclude_sweep_size + i + 1 + length, :]
+    @classmethod
+    def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
+                     exclude_sweep_ms=0.1, noise_levels=None, random_chunk_kwargs={}):
+        
+        assert peak_sign in ('both', 'neg', 'pos')
 
-    if peak_sign in ('neg', 'both'):
-        if peak_sign == 'both':
-            peak_mask_pos = peak_mask.copy()
+        if noise_levels is None:
+            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        abs_threholds = noise_levels * detect_threshold
+        exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
 
-        peak_mask = traces_center < -abs_threholds[None, :]
-        for i in range(exclude_sweep_size):
-            peak_mask &= traces_center < traces[i:i + length, :]
-            peak_mask &= traces_center <= traces[exclude_sweep_size +
-                                                 i + 1:exclude_sweep_size + i + 1 + length, :]
+        return (peak_sign, abs_threholds, exclude_sweep_size)
+    
+    @classmethod
+    def get_method_margin(cls, *args):
+        exclude_sweep_size = args[2]
+        return exclude_sweep_size
 
-        if peak_sign == 'both':
-            peak_mask = peak_mask | peak_mask_pos
+    @classmethod
+    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size):
+        traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
+        length = traces_center.shape[0]
 
-    # find peaks
-    peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
-    # correct for time shift
-    peak_sample_ind += exclude_sweep_size
+        if peak_sign in ('pos', 'both'):
+            peak_mask = traces_center > abs_threholds[None, :]
+            for i in range(exclude_sweep_size):
+                peak_mask &= traces_center > traces[i:i + length, :]
+                peak_mask &= traces_center >= traces[exclude_sweep_size +
+                                                    i + 1:exclude_sweep_size + i + 1 + length, :]
 
-    return peak_sample_ind, peak_chan_ind
+        if peak_sign in ('neg', 'both'):
+            if peak_sign == 'both':
+                peak_mask_pos = peak_mask.copy()
+
+            peak_mask = traces_center < -abs_threholds[None, :]
+            for i in range(exclude_sweep_size):
+                peak_mask &= traces_center < traces[i:i + length, :]
+                peak_mask &= traces_center <= traces[exclude_sweep_size +
+                                                    i + 1:exclude_sweep_size + i + 1 + length, :]
+
+            if peak_sign == 'both':
+                peak_mask = peak_mask | peak_mask_pos
+
+        # find peaks
+        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
+        # correct for time shift
+        peak_sample_ind += exclude_sweep_size
+
+        return peak_sample_ind, peak_chan_ind
 
 
-def detect_peak_locally_exclusive(traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask):
+class DetectPeakByChannelTorch:
+    """Detect peaks using the 'by channel' method with pytorch.
+    """
+
+    name = 'by_channel_torch'
+    engine = 'torch'
+    params_doc = """
+    peak_sign: 'neg', 'pos', 'both'
+        Sign of the peak.
+    detect_threshold: float
+        Threshold, in median absolute deviations (MAD), to use to detect peaks.
+    exclude_sweep_ms: float or None
+        Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
+        For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
+        and no larger peaks are located during the 0.1ms preceding and following the peak.
+    noise_levels: array, optional
+        Estimated noise levels to use, if already computed.
+        If not provide then it is estimated from a random snippet of the data.
+    device : str, optional
+            "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected, by default None
+    return_tensor : bool, optional
+        If True, the output is returned as a tensor, otherwise as a numpy array, by default False
+    random_chunk_kwargs: dict, optional
+        A dict that contain option to randomize chunk for get_noise_levels().
+        Only used if noise_levels is None."""
+
+    @classmethod
+    def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
+                     exclude_sweep_ms=0.1, noise_levels=None, device=None, return_tensor=False,
+                     random_chunk_kwargs={}):
+        if not HAVE_TORCH:
+            raise ModuleNotFoundError('"by_channel_torch" needs torch which is not installed')
+        assert peak_sign in ('both', 'neg', 'pos')
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        if noise_levels is None:
+            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        abs_threholds = noise_levels * detect_threshold
+        exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.)
+
+        return (peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor)
+    
+    @classmethod
+    def get_method_margin(cls, *args):
+        exclude_sweep_size = args[2]
+        return exclude_sweep_size
+
+    @classmethod
+    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor):
+        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, None, device)
+        if not return_tensor:
+            sample_inds = np.array(sample_inds.cpu())
+            chan_inds = np.array(chan_inds.cpu())
+        return sample_inds, chan_inds
+
+
+class DetectPeakLocallyExclusive:
     """Detect peaks using the 'locally exclusive' method."""
 
-    assert HAVE_NUMBA, 'You need to install numba'
-    traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
+    name = 'locally_exclusive'
+    engine = 'numba'
+    params_doc = DetectPeakByChannel.params_doc + """
+    local_radius_um: float
+        The radius to use to select neighbour channels for locally exclusive detection.
+    """
+    @classmethod
+    def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
+                     exclude_sweep_ms=0.1, local_radius_um=50, noise_levels=None, random_chunk_kwargs={}):
 
-    if peak_sign in ('pos', 'both'):
-        peak_mask = traces_center > abs_threholds[None, :]
-        peak_mask = _numba_detect_peak_pos(traces, traces_center, peak_mask, exclude_sweep_size,
-                                           abs_threholds, peak_sign, neighbours_mask)
+        if not HAVE_NUMBA:
+            raise ModuleNotFoundError('"locally_exclusive" needs numba which is not installed')
 
-    if peak_sign in ('neg', 'both'):
-        if peak_sign == 'both':
-            peak_mask_pos = peak_mask.copy()
+        args = DetectPeakByChannel.check_params(recording, peak_sign=peak_sign, detect_threshold=detect_threshold,
+                                                exclude_sweep_ms=exclude_sweep_ms, noise_levels=noise_levels,
+                                                random_chunk_kwargs=random_chunk_kwargs)
 
-        peak_mask = traces_center < -abs_threholds[None, :]
-        peak_mask = _numba_detect_peak_neg(traces, traces_center, peak_mask, exclude_sweep_size,
-                                           abs_threholds, peak_sign, neighbours_mask)
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance < local_radius_um
+        return args + (neighbours_mask, )
 
-        if peak_sign == 'both':
-            peak_mask = peak_mask | peak_mask_pos
+    @classmethod
+    def get_method_margin(cls, *args):
+        exclude_sweep_size = args[2]
+        return exclude_sweep_size
 
-    # Find peaks and correct for time shift
-    peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
-    peak_sample_ind += exclude_sweep_size
+    @classmethod
+    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask):
+        assert HAVE_NUMBA, 'You need to install numba'
+        traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 
-    return peak_sample_ind, peak_chan_ind
+        if peak_sign in ('pos', 'both'):
+            peak_mask = traces_center > abs_threholds[None, :]
+            peak_mask = _numba_detect_peak_pos(traces, traces_center, peak_mask, exclude_sweep_size,
+                                            abs_threholds, peak_sign, neighbours_mask)
+
+        if peak_sign in ('neg', 'both'):
+            if peak_sign == 'both':
+                peak_mask_pos = peak_mask.copy()
+
+            peak_mask = traces_center < -abs_threholds[None, :]
+            peak_mask = _numba_detect_peak_neg(traces, traces_center, peak_mask, exclude_sweep_size,
+                                            abs_threholds, peak_sign, neighbours_mask)
+
+            if peak_sign == 'both':
+                peak_mask = peak_mask | peak_mask_pos
+
+        # Find peaks and correct for time shift
+        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
+        peak_sample_ind += exclude_sweep_size
+
+        return peak_sample_ind, peak_chan_ind
+
+
+class DetectPeakLocallyExclusiveTorch:
+    """Detect peaks using the 'locally exclusive' method with pytorch.
+    """
+
+    name = 'locally_exclusive_torch'
+    engine = 'torch'
+    params_doc = DetectPeakByChannel.params_doc + """
+    local_radius_um: float
+        The radius to use to select neighbour channels for locally exclusive detection.
+    """
+
+    @classmethod
+    def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
+                     exclude_sweep_ms=0.1, noise_levels=None, device=None, local_radius_um=50, return_tensor=False,
+                     random_chunk_kwargs={}):
+        if not HAVE_TORCH:
+            raise ModuleNotFoundError('"by_channel_torch" needs torch which is not installed')
+        args = DetectPeakByChannelTorch.check_params(recording, peak_sign=peak_sign, detect_threshold=detect_threshold,
+                                                     exclude_sweep_ms=exclude_sweep_ms, noise_levels=noise_levels,
+                                                     device=device, return_tensor=return_tensor, 
+                                                     random_chunk_kwargs=random_chunk_kwargs)
+
+        channel_distance = get_channel_distances(recording)
+        neighbour_indices_by_chan = []
+        num_channels = recording.get_num_channels()
+        for chan in range(num_channels):
+            neighbour_indices_by_chan.append(np.nonzero(channel_distance[chan] < local_radius_um)[0])
+        max_neighbs = np.max([len(neigh) for neigh in neighbour_indices_by_chan])
+        neighbours_idxs = num_channels * np.ones((num_channels, max_neighbs), dtype=int)
+        for i, neigh in enumerate(neighbour_indices_by_chan):
+            neighbours_idxs[i, :len(neigh)] = neigh
+        return args + (neighbours_idxs, )
+    
+    @classmethod
+    def get_method_margin(cls, *args):
+        exclude_sweep_size = args[2]
+        return exclude_sweep_size
+
+    @classmethod
+    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
+        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, 
+                                                     neighbor_idxs, device)
+        if not return_tensor:
+            sample_inds = np.array(sample_inds.cpu())
+            chan_inds = np.array(chan_inds.cpu())
+        return sample_inds, chan_inds
+
+
+# TODO make a dict with name+engine entry later
+_methods_list = [DetectPeakByChannel, DetectPeakLocallyExclusive,
+                 DetectPeakByChannelTorch, DetectPeakLocallyExclusiveTorch]
+detect_peak_methods = {m.name: m for m in _methods_list}
+method_doc = make_multi_method_doc(_methods_list)
+detect_peaks.__doc__ = detect_peaks.__doc__.format(method_doc=method_doc,
+                                                   job_doc=_shared_job_kwargs_doc)
 
 
 if HAVE_NUMBA:
@@ -408,25 +487,17 @@ if HAVE_NUMBA:
 
 if HAVE_TORCH:
     @torch.no_grad()
-    def detect_peak_torch(
-        traces,
-        peak_sign,
-        thresholds,
-        exclude_sweep_size=5,
-        neighbours_mask=None,
-        device=None,
-    ):
+    def _torch_detect_peaks(traces, peak_sign, abs_thresholds, 
+                            exclude_sweep_size=5, neighbours_mask=None, device=None):
         """
         Voltage thresholding detection and deduplication with torch.
-
         Implementation from Charlie Windolf:
         https://github.com/cwindolf/spike-psvae/blob/ba0a985a075776af892f09adfd453b8d9db168b9/spike_psvae/detect.py#L350
-
         Parameters
         ----------
         traces : np.array
             Chunk of traces
-        thresholds : np.array
+        abs_thresholds : np.array
             Absolute thresholds by channel
         peak_sign : str, optional
             "neg", "pos" or "both", by default "neg"
@@ -452,8 +523,6 @@ if HAVE_TORCH:
         MAXCOPY = 8
 
         num_samples, num_channels = traces.shape
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # -- torch argrelmin
         if peak_sign == "neg":
@@ -468,10 +537,11 @@ if HAVE_TORCH:
             neg_traces = torch.as_tensor(
                 -np.abs(traces), device=device, dtype=torch.float
             )
-        thresholds_torch = torch.as_tensor(thresholds, device=device, dtype=torch.float)
+        thresholds_torch = torch.as_tensor(abs_thresholds, device=device, dtype=torch.float)
+        traces_norm = neg_traces / thresholds_torch
 
         max_amps, inds = F.max_pool2d_with_indices(
-            neg_traces[None, None],
+            traces_norm[None, None],
             kernel_size=[2 * exclude_sweep_size + 1, 1],
             stride=1,
             padding=[exclude_sweep_size, 0],
@@ -483,10 +553,9 @@ if HAVE_TORCH:
         unique_inds = inds.unique()
         window_max_inds = unique_inds[inds.view(-1)[unique_inds] == unique_inds]
 
-        # voltage threshold (@Charlie, added by channel)
-        thresholds_by_channel = thresholds_torch[window_max_inds % num_channels]
+        # voltage threshold
         max_amps_at_inds = max_amps.view(-1)[window_max_inds]
-        crossings = torch.nonzero(max_amps_at_inds > thresholds_by_channel).squeeze()
+        crossings = torch.nonzero(max_amps_at_inds > 1).squeeze()
         if not crossings.numel():
             return np.array([]), np.array([]), np.array([])
 
@@ -547,4 +616,4 @@ if HAVE_TORCH:
             chan_inds = chan_inds[dedup]
             amplitudes = amplitudes[dedup]
 
-        return np.array(sample_inds.cpu()), np.array(chan_inds.cpu())
+        return sample_inds, chan_inds

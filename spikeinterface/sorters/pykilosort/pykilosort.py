@@ -132,23 +132,23 @@ class PyKilosortSorter(BaseSorter):
         return pykilosort.__version__
 
     @classmethod
-    def _check_params(cls, recording, output_folder, params):
+    def _check_params(cls, recording, sorter_output_folder, params):
         return params
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # local copy needed
-            write_binary_recording(recording, file_paths=output_folder / 'recording.dat',
+            write_binary_recording(recording, file_paths=sorter_output_folder / 'recording.dat',
                                                      verbose=False, **get_job_kwargs(params, verbose))
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
 
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # saved by setup recording
-            dat_path = output_folder / 'recording.dat'
+            dat_path = sorter_output_folder / 'recording.dat'
         else:
             # no copy
             d = recording.get_binary_description()
@@ -179,7 +179,7 @@ class PyKilosortSorter(BaseSorter):
 
         run(
             dat_path,
-            dir_path=output_folder,
+            dir_path=sorter_output_folder,
             probe=ks_probe,
             data_dtype=str(recording.get_dtype()),
             fs=recording.get_sampling_frequency(),
@@ -187,11 +187,16 @@ class PyKilosortSorter(BaseSorter):
         )
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        with (output_folder / 'spikeinterface_params.json').open('r') as f:
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorter_output_folder = Path(sorter_output_folder)
+        if (sorter_output_folder.parent / 'spikeinterface_params.json').is_file():
+            params_file = sorter_output_folder.parent / 'spikeinterface_params.json'
+        else:
+            # back-compatibility
+            params_file = sorter_output_folder / 'spikeinterface_params.json'
+        with params_file.open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', False)
-        sorting = KiloSortSortingExtractor(folder_path=output_folder / "output",
+        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder / "output",
                                            keep_good_only=keep_good_only)
         return sorting

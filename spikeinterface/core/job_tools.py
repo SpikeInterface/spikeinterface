@@ -12,8 +12,8 @@ from tqdm.auto import tqdm
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
-
 from threadpoolctl import threadpool_limits
+
 
 _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel processing:
             * chunk_duration or chunk_size or chunk_memory or total_memory
@@ -34,8 +34,23 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                 Note that "fork" is only available on UNIX systems
     """
     
-job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
-            'mp_context', 'verbose', 'max_threads_per_process']
+job_keys = ('n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
+            'mp_context', 'verbose', 'max_threads_per_process')
+
+
+def split_job_kwargs(mixed_kwargs):
+    """
+    This function splits mixed kwargs into job_kwargs and specific_kwargs.
+    This can be useful for some function with generic signature
+    mixing specific and job kwargs.
+    """
+    specific_kwargs, job_kwargs = {}, {}
+    for k, v in mixed_kwargs.items():
+        if k in job_keys:
+            job_kwargs[k] = v
+        else:
+            specific_kwargs[k] = v
+    return specific_kwargs, job_kwargs
 
 
 # from https://stackoverflow.com/questions/24983493/tracking-progress-of-joblib-parallel-execution
@@ -110,10 +125,12 @@ def ensure_n_jobs(recording, n_jobs=1):
         print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
-    if not recording.is_dumpable:
-        if n_jobs > 1:
-            n_jobs = 1
-            print("RecordingExtractor is not dumpable and can't be processed in parallel")
+    if not recording.check_if_dumpable():
+        if n_jobs != 1:
+            raise RuntimeError(
+                "Recording is not dumpable and can't be processed in parallel. "
+                "You can use the `recording.save()` function to make it dumpable or set 'n_jobs' to 1."
+            )
 
     return n_jobs
 
@@ -263,7 +280,6 @@ class ChunkRecordingExecutor:
                                             chunk_memory=chunk_memory, chunk_duration=chunk_duration,
                                             n_jobs=self.n_jobs)
         self.job_name = job_name
-        
         self.max_threads_per_process = max_threads_per_process
         
         if verbose:
@@ -331,7 +347,11 @@ global _func
 
 def worker_initializer(func, init_func, init_args, max_threads_per_process):
     global _worker_ctx
-    _worker_ctx = init_func(*init_args)
+    if max_threads_per_process is None:
+        _worker_ctx = init_func(*init_args)
+    else:
+        with threadpool_limits(limits=max_threads_per_process):
+            _worker_ctx = init_func(*init_args)
     _worker_ctx['max_threads_per_process'] = max_threads_per_process
     global _func
     _func = func

@@ -7,7 +7,6 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 
 from .base import BaseExtractor, BaseSegment
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
-from .job_tools import job_keys
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn

@@ -81,14 +81,14 @@ class Mountainsort4Sorter(BaseSorter):
         return params['filter']
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         pass
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort4
 
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+        recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
 
         # alias to params
         p = params
@@ -136,11 +136,11 @@ class Mountainsort4Sorter(BaseSorter):
         unit_ids = old_api_sorting.get_unit_ids()
         units_dict_list = [{u: old_api_sorting.get_unit_spike_train(u) for u in unit_ids}]
         new_api_sorting = NumpySorting.from_dict(units_dict_list, samplerate)
-        NpzSortingExtractor.write_sorting(new_api_sorting, str(output_folder / 'firings.npz'))
+        NpzSortingExtractor.write_sorting(new_api_sorting, str(sorter_output_folder / 'firings.npz'))
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        result_fname = output_folder / 'firings.npz'
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorter_output_folder = Path(sorter_output_folder)
+        result_fname = sorter_output_folder / 'firings.npz'
         sorting = NpzSortingExtractor(result_fname)
         return sorting

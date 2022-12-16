@@ -1,12 +1,16 @@
+import json
 import numpy as np
+from pathlib import Path
+
 from .curationsorting import CurationSorting
 
 
 def apply_sortingview_curation(
     sorting,
-    uri,
+    uri_or_json,
     exclude_labels=None,
     include_labels=None,
+    skip_merge=False,
     verbose=False
 ):
     """
@@ -18,14 +22,16 @@ def apply_sortingview_curation(
     ----------
     sorting : BaseSorting
         The sorting object to be curated
-    uri : str
-        The URI or JOT curation link from sortingview
+    uri_or_json : str or Path
+        The URI curation link from sortingview or the path to the curation json file
     exclude_labels : list, optional
         Optional list of labels to exclude (e.g. ["reject", "noise"]).
         Mutually exclusive with include_labels, by default None
     include_labels : list, optional
         Optional list of labels to include (e.g. ["accept"]).
         Mutually exclusive with exclude_labels,  by default None
+    skip_merge : bool, optional
+        If True, merges are not applied (only labels), by default False
     verbose : bool, optional
         If True, output is verbose, by default False
 
@@ -44,15 +50,19 @@ def apply_sortingview_curation(
     curation_sorting = CurationSorting(sorting, make_graph=False, properties_policy="keep")
 
     # get sorting view curation
-    try:
-        sortingview_curation_dict = kcl.load_json(uri=uri)
-    except:
-        raise Exception(f"Could not retrieve curation from SortingView uri: {uri}")
+    if Path(uri_or_json).suffix == ".json":
+        with open(uri_or_json, "r") as f:
+            sortingview_curation_dict = json.load(f)
+    else:
+        try:
+            sortingview_curation_dict = kcl.load_json(uri=uri_or_json)
+        except:
+            raise Exception(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
 
     unit_ids_dtype = sorting.unit_ids.dtype
 
-    # first, merge groups
-    if "mergeGroups" in sortingview_curation_dict:
+    # STEP 1: merge groups
+    if "mergeGroups" in sortingview_curation_dict and not skip_merge:
         merge_groups = sortingview_curation_dict["mergeGroups"]
         for mg in merge_groups:
             if verbose:
@@ -65,7 +75,7 @@ def apply_sortingview_curation(
                 new_unit_id = None
             curation_sorting.merge(mg, new_unit_id=new_unit_id)
 
-    # gather and apply sortingview curation labels
+    # STEP 2: gather and apply sortingview curation labels
 
     # In sortingview, a unit is not required to have all labels.
     # For example, the first 3 units could be labeled as "accept".
@@ -79,7 +89,7 @@ def apply_sortingview_curation(
     for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         labels_unit = []
         for unit_label, labels in labels_dict.items():
-            if unit_label in unit_id:
+            if unit_label in str(unit_id):
                 labels_unit.extend(labels)
         for label in labels_unit:
             properties[label][u_i] = True
