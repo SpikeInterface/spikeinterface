@@ -5,8 +5,7 @@ from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
 from spikeinterface.sorters import Spykingcircus2Sorter, Tridesclous2Sorter
 
-
-
+# @pytest.mark.skip(reason='spyking circus 2 is too slow')
 class SpykingCircus2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = Spykingcircus2Sorter
 
