@@ -2,7 +2,7 @@ import numpy as np
 
 from spikeinterface import WaveformExtractor
 
-from ..core.testing_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
+from ..core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
 from ..postprocessing import align_sorting
 
 
