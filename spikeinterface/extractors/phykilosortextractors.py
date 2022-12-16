@@ -97,7 +97,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             del cluster_info["id"]
 
         # update spike clusters and times values
-        spike_clusters_clean_idxs = np.isin(spike_clusters, cluster_info["cluster_id"].values)  # Slow
+        bad_clusters = [clust for clust in clust_id if clust not in cluster_info['cluster_id'].values]
+        spike_clusters_clean_idxs = ~np.isin(spike_clusters, bad_clusters)
         spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
         spike_times_clean = spike_times[spike_clusters_clean_idxs]
 
@@ -109,7 +110,6 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             else:
                 max_si_unit_id = int(np.nanmax(unit_ids))
 
-            spike_clusters_new = np.zeros_like(spike_clusters_clean)
             for i, (phy_id, si_id) in enumerate(zip(cluster_info["cluster_id"].values,
                                                     cluster_info["si_unit_id"].values)):  # Slow
                 if np.isnan(si_id):
@@ -119,7 +119,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                     new_si_id = si_id
                 unit_ids[i] = new_si_id
 
-                spike_clusters_new[spike_clusters_clean == phy_id] = new_si_id
+            # Little hack to replace values in spike_clusters_clean to spike_clusters_new very efficiently.
+            from_values = cluster_info['cluster_id'].values
+            sort_idx = np.argsort(from_values)
+            idx = np.searchsorted(from_values, spike_clusters_clean, sorter=sort_idx)
+            spike_clusters_new = unit_ids[sort_idx][idx]
+
             unit_ids = unit_ids.astype(int)
             spike_clusters_clean = spike_clusters_new
             del cluster_info["si_unit_id"]
