@@ -379,15 +379,20 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
 
     spike_amplitudes = None
+    invert_amplitudes = False
     if waveform_extractor.is_extension("spike_amplitudes"):
         amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
         spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
+        if amp_calculator._params["peak_sign"] == "pos":
+            invert_amplitudes = True
     else:
         warnings.warn(
             "'spike_amplitude' extension not found. Amplitudes will be computed using waveforms (by default 500), "
             "which might lead to mis-estimation of amplitude cutoff. Pre-computing amplitudes for all spikes is "
             "strongly recommended: `spikeinterface.postprocessing.compute_spike_amplitudes(waveform_extractor)`"
         )
+        if peak_sign == "pos":
+            invert_amplitudes = True
 
     all_fraction_missing = {}
     for unit_id in unit_ids:
@@ -400,10 +405,8 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
 
         # change amplitudes signs in case peak_sign is pos
-        if peak_sign == "pos":
-            # for pre-computed amplitudes, values are already positive
-            if np.mean(amplitudes) > 0:
-                amplitudes = -amplitudes
+        if invert_amplitudes:
+            amplitudes = -amplitudes
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
         # TODO : change with something better scipy.ndimage.gaussian_filter1d
