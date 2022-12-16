@@ -126,13 +126,13 @@ class CombinatoSorter(BaseSorter):
         return params['do_filter']
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         assert HAVE_H5PY, 'You must install h5py for combinato'
         # Generate h5 files in the dataset directory
         chan_ids = recording.get_channel_ids()
         assert len(chan_ids) == 1, 'combinato is a single-channel recording'
         chid = chan_ids[0]
-        vcFile_h5 = str(output_folder / ('recording.h5'))
+        vcFile_h5 = str(sorter_output_folder / ('recording.h5'))
         with h5py.File(vcFile_h5, mode='w') as f:
             f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype='float32')
             write_to_h5_dataset_format(recording, dataset_path='/data', segment_index=0,
@@ -140,7 +140,7 @@ class CombinatoSorter(BaseSorter):
                                        chunk_memory=params['chunk_memory'], return_scaled=True)
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
         p = params.copy()
         p['threshold_factor'] = p.pop('detect_threshold')
@@ -150,7 +150,7 @@ class CombinatoSorter(BaseSorter):
         elif sign_thr == 1:
             sign_thr = ''
 
-        tmpdir = output_folder
+        tmpdir = sorter_output_folder
 
         if verbose:
             print(f'Running combinato in {tmpdir}...')
@@ -173,12 +173,12 @@ class CombinatoSorter(BaseSorter):
 
         shell_cmd = shell_cmd.format(
             extra_cmd=extra_cmd,
-            tmpdir=output_folder.absolute(),
+            tmpdir=sorter_output_folder.absolute(),
             css_folder=CombinatoSorter.combinato_path,
             sign_thr=sign_thr)
 
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{cls.sorter_name}',
+                                   log_path=sorter_output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
         retcode = shell_script.wait()
 
@@ -186,11 +186,11 @@ class CombinatoSorter(BaseSorter):
             raise Exception('combinato returned a non-zero exit code')
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        result_fname = str(output_folder / 'recording')
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorter_output_folder = Path(sorter_output_folder)
+        result_fname = str(sorter_output_folder / 'recording')
 
-        with (output_folder / 'spikeinterface_params.json').open('r') as f:
+        with (sorter_output_folder / 'spikeinterface_params.json').open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', True)
         sorting = CombinatoSortingExtractor(folder_path=result_fname, keep_good_only=keep_good_only)

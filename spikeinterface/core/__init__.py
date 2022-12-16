@@ -79,3 +79,14 @@ from .old_api_utils import (create_recording_from_old_extractor, create_sorting_
 # templates addition
 from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
+# template tools
+from .template_tools import (
+    get_template_amplitudes,
+    get_template_extremum_channel,
+    get_template_extremum_channel_peak_shift,
+    get_template_extremum_amplitude,
+    get_template_channel_sparsity,
+)
+
+# channel sparsity
+from .sparsity import ChannelSparsity

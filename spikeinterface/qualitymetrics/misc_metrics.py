@@ -15,7 +15,7 @@ import warnings
 import scipy.ndimage
 
 from ..core import get_noise_levels
-from ..postprocessing import (
+from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
 )
