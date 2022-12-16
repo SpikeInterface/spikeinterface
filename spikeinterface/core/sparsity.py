@@ -107,6 +107,14 @@ class ChannelSparsity:
 
     @classmethod
     def from_dict(cls, d):
+        unit_id_to_channel_ids_corrected = {}
+        for unit_id in d['unit_ids']:
+            if unit_id in d['unit_id_to_channel_ids']:
+                unit_id_to_channel_ids_corrected[unit_id] = d['unit_id_to_channel_ids'][unit_id]
+            else:
+                unit_id_to_channel_ids_corrected[unit_id] = d['unit_id_to_channel_ids'][str(unit_id)]
+        d['unit_id_to_channel_ids'] = unit_id_to_channel_ids_corrected
+
         return cls.from_unit_id_to_channel_ids(**d)
 
     ## Some convinient function to compute sparsity from several strategy

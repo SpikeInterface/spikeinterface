@@ -6,7 +6,7 @@ import platform
 import zarr
 
 
-from spikeinterface.core import generate_recording, generate_sorting, NumpySorting
+from spikeinterface.core import generate_recording, generate_sorting, NumpySorting, ChannelSparsity
 from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms
 
 
@@ -28,95 +28,146 @@ def test_WaveformExtractor():
     folder_rec = cache_folder / "wf_rec1"
     recording = recording.save(folder=folder_rec)
     num_units = 15
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump !!!!
     recording = recording.save()
     sorting = sorting.save()
 
-    folder = cache_folder / 'test_waveform_extractor'
-    if folder.is_dir():
-        shutil.rmtree(folder)
+
+    mask = np.zeros((num_units, num_channels), dtype=bool)
+    mask[:, 0] = True
+    sparsity_ext = ChannelSparsity(mask, sorting.unit_ids, recording.channel_ids)
 
     for mode in ["folder", "memory"]:
-        if mode == "memory":
-            wf_folder = None
-        else:
-            wf_folder = folder
+        for waveforms_sparsity in [None, sparsity_ext]:
 
-        we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode)
+            folder = cache_folder / 'test_waveform_extractor'
+            if folder.is_dir():
+                shutil.rmtree(folder)
 
-        we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
+            print(mode, waveforms_sparsity)
 
-        we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
-        we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
+            if mode == "memory":
+                wf_folder = None
+            else:
+                wf_folder = folder
 
-        wfs = we.get_waveforms(0)
-        assert wfs.shape[0] <= 500
-        assert wfs.shape[1:] == (210, num_channels)
+            we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode,
+                                          waveforms_sparsity=waveforms_sparsity)
 
-        wfs, sampled_index = we.get_waveforms(0, with_index=True)
+            we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
 
-        if mode == "folder":
-            # load back
-            we = WaveformExtractor.load(folder)
+            we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+            we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
 
-        wfs = we.get_waveforms(0)
-        if mode == "folder":
+
+            wfs = we.get_waveforms(0)
+            assert wfs.shape[0] <= 500
+            if waveforms_sparsity is not None:
+                assert wfs.shape[1:] == (210, 1)
+            else:
+                assert wfs.shape[1:] == (210, num_channels)
+
+
+            wfs, sampled_index = we.get_waveforms(0, with_index=True)
+
+            if mode == "folder":
+                # load back
+                we = WaveformExtractor.load(folder)
+            
+            if waveforms_sparsity is not None:
+                assert we.is_sparse()
+
+            wfs = we.get_waveforms(0)
+            if mode == "folder":
+                assert isinstance(wfs, np.memmap)
+            wfs_array = we.get_waveforms(0, lazy=False)
+            assert isinstance(wfs_array, np.ndarray)
+
+            
+            template = we.get_template(0)
+            if waveforms_sparsity is None:
+                assert template.shape == (210, 2)
+            else:
+                assert template.shape == (210, 1)
+            templates = we.get_all_templates()
+            assert templates.shape == (num_units, 210, num_channels)
+
+            if waveforms_sparsity is not None:
+                assert np.all(templates[:, :, 1] == 0)
+
+            template_std = we.get_template(0, mode='std')
+            if waveforms_sparsity is None:
+                assert template_std.shape == (210, num_channels)
+            else:
+                assert template_std.shape == (210, 1)
+            template_std = we.get_all_templates(mode='std')
+            assert template_std.shape == (num_units, 210, num_channels)
+
+            if waveforms_sparsity is not None:
+                assert np.all(template_std[:, :, 1] == 0)
+
+            template_segment = we.get_template_segment(unit_id=0, segment_index=0)
+            if waveforms_sparsity is None:
+                assert template_segment.shape == (210, num_channels)
+            else:
+                assert template_segment.shape == (210, 1)
+
+            # test filter units
+            keep_units = sorting.get_unit_ids()[::2]
+            if (cache_folder / "we_filt").is_dir():
+                shutil.rmtree(cache_folder / "we_filt")
+            wf_filt = we.select_units(keep_units, cache_folder / "we_filt")
+            for unit in wf_filt.sorting.get_unit_ids():
+                assert unit in keep_units
+            filtered_templates = wf_filt.get_all_templates()
+            assert filtered_templates.shape == (len(keep_units), 210, num_channels)
+            if waveforms_sparsity is not None:
+                wf_filt.is_sparse()
+
+            # test save
+            if (cache_folder / f"we_saved_{mode}").is_dir():
+                shutil.rmtree(cache_folder / f"we_saved_{mode}")
+            we_saved = we.save(cache_folder / f"we_saved_{mode}")
+            for unit_id in we_saved.unit_ids:
+                assert np.array_equal(we.get_waveforms(unit_id),
+                                      we_saved.get_waveforms(unit_id))
+                assert np.array_equal(we.get_sampled_indices(unit_id),
+                                      we_saved.get_sampled_indices(unit_id))
+                assert np.array_equal(we.get_all_templates(),
+                                      we_saved.get_all_templates())
+            wfs = we_saved.get_waveforms(0)
             assert isinstance(wfs, np.memmap)
-        wfs_array = we.get_waveforms(0, lazy=False)
-        assert isinstance(wfs_array, np.ndarray)
+            wfs_array = we_saved.get_waveforms(0, lazy=False)
+            assert isinstance(wfs_array, np.ndarray)
 
-        template = we.get_template(0)
-        assert template.shape == (210, 2)
-        templates = we.get_all_templates()
-        assert templates.shape == (num_units, 210, num_channels)
+            if (cache_folder / f"we_saved_{mode}.zarr").is_dir():
+                shutil.rmtree(cache_folder / f"we_saved_{mode}.zarr")
+            we_saved_zarr = we.save(cache_folder / f"we_saved_{mode}", format="zarr")
+            for unit_id in we_saved_zarr.unit_ids:
+                assert np.array_equal(we.get_waveforms(unit_id),
+                                      we_saved_zarr.get_waveforms(unit_id))
+                assert np.array_equal(we.get_sampled_indices(unit_id),
+                                      we_saved_zarr.get_sampled_indices(unit_id))
+                assert np.array_equal(we.get_all_templates(),
+                                      we_saved_zarr.get_all_templates())
+            wfs = we_saved_zarr.get_waveforms(0)
+            assert isinstance(wfs, zarr.Array)
+            wfs_array = we_saved_zarr.get_waveforms(0, lazy=False)
+            assert isinstance(wfs_array, np.ndarray)
 
-        wf_std = we.get_template(0, mode='std')
-        assert wf_std.shape == (210, num_channels)
-        wfs_std = we.get_all_templates(mode='std')
-        assert wfs_std.shape == (num_units, 210, num_channels)
-
-        wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
-        assert wf_segment.shape == (210, num_channels)
-        assert wf_segment.shape == (210, num_channels)
-
-        # test filter units
-        keep_units = sorting.get_unit_ids()[::2]
-        wf_filt = we.select_units(keep_units, cache_folder / "we_filt")
-        for unit in wf_filt.sorting.get_unit_ids():
-            assert unit in keep_units
-        filtered_templates = wf_filt.get_all_templates()
-        assert filtered_templates.shape == (len(keep_units), 210, num_channels)
-
-        # test save
-        we_saved = we.save(cache_folder / f"we_saved_{mode}")
-        for unit_id in we_saved.unit_ids:
-            assert np.array_equal(we.get_waveforms(unit_id),
-                                  we_saved.get_waveforms(unit_id))
-            assert np.array_equal(we.get_sampled_indices(unit_id),
-                                  we_saved.get_sampled_indices(unit_id))
-            assert np.array_equal(we.get_all_templates(),
-                                  we_saved.get_all_templates())
-        wfs = we_saved.get_waveforms(0)
-        assert isinstance(wfs, np.memmap)
-        wfs_array = we_saved.get_waveforms(0, lazy=False)
-        assert isinstance(wfs_array, np.ndarray)
-
-        we_saved_zarr = we.save(cache_folder / f"we_saved_{mode}", format="zarr")
-        for unit_id in we_saved_zarr.unit_ids:
-            assert np.array_equal(we.get_waveforms(unit_id),
-                                  we_saved_zarr.get_waveforms(unit_id))
-            assert np.array_equal(we.get_sampled_indices(unit_id),
-                                  we_saved_zarr.get_sampled_indices(unit_id))
-            assert np.array_equal(we.get_all_templates(),
-                                  we_saved_zarr.get_all_templates())
-        wfs = we_saved_zarr.get_waveforms(0)
-        assert isinstance(wfs, zarr.Array)
-        wfs_array = we_saved_zarr.get_waveforms(0, lazy=False)
-        assert isinstance(wfs_array, np.ndarray)
-
+            # test post sparsity
+            if waveforms_sparsity is None:
+                we.set_post_sparsity(sparsity_ext)
+                template = we.get_template(0)
+                assert template.shape == (210, 1)
+                template_std = we.get_template(0, mode="std")
+                assert template_std.shape == (210, 1)
+                wfs = we.get_waveforms(0)
+                assert wfs.shape[2] == 1
+                all_templates = we.get_all_templates()
+                assert all_templates.shape == (num_units, 210, num_channels)
 
 def test_extract_waveforms():
     # 2 segments
