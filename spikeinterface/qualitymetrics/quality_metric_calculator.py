@@ -9,6 +9,9 @@ from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWavefo
 
 from .quality_metric_list import (_metric_name_to_func,
                                   calculate_pc_metrics, _possible_pc_metric_names)
+from .misc_metrics import _default_params as misc_metrics_params
+from .pca_metrics import _default_params as pca_metrics_params
+
 
 
 class QualityMetricCalculator(BaseWaveformExtractorExtension):
@@ -52,7 +55,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             # 'nearest_neighbor' is really slow and not taken by default
             metric_names = list(_metric_name_to_func.keys())
             if self.principal_component is not None:
-                metric_names += ['isolation_distance', 'l_ratio', 'd_prime']
+                metric_names += _possible_pc_metric_names
 
         params = dict(metric_names=[str(name) for name in metric_names],
                       sparsity=sparsity,
@@ -190,3 +193,10 @@ def get_quality_metric_list():
     """Get a list of the available quality metrics."""
 
     return deepcopy(list(_metric_name_to_func.keys()))
+
+
+def get_default_qm_params():
+    default_params = {}
+    default_params.update(misc_metrics_params)
+    default_params.update({"pca": pca_metrics_params})
+    return default_params

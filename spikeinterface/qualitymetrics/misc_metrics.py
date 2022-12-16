@@ -286,7 +286,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     res = namedtuple('isi_violation',
                      ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
 
-    return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
+    return res(isi_violations_ratio, isi_violations_count)
 
 
 _default_params["isi_violations"] = dict(
