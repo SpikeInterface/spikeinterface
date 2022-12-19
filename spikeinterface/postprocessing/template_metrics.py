@@ -11,8 +11,8 @@ import scipy.stats
 from scipy.signal import resample_poly
 
 from ..core import WaveformExtractor
+from ..core.template_tools import get_template_extremum_channel, get_template_channel_sparsity
 from ..core.waveform_extractor import BaseWaveformExtractorExtension
-from .template_tools import get_template_extremum_channel, get_template_channel_sparsity
 import warnings
 
 
