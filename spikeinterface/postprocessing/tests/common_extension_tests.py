@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 import shutil
-from spikeinterface import extract_waveforms, load_extractor
+from spikeinterface import extract_waveforms, load_extractor, ChannelSparsity
 from spikeinterface.extractors import toy_example
 from spikeinterface.postprocessing import get_template_channel_sparsity
 from pathlib import Path
@@ -70,6 +70,11 @@ class WaveformExtensionCommonTestSuite:
         self.we_zarr2 = we_memory.save(folder=cache_folder / 'toy_sorting_2seg',
                                        overwrite=True, format="zarr")
 
+        sparsity = ChannelSparsity.from_radius(we_memory, radius_um=30)
+        print(sparsity)
+        self.we_sparse = we_memory.save(folder=cache_folder / 'toy_sorting_2seg_sparse', format="binary",
+                                        sparsity=sparsity, overwrite=True)
+
     def _test_extension_folder(self, we, in_memory=False):
         if self.extension_function_kwargs_list is None:
             extension_function_kwargs_list = [dict()]
@@ -121,6 +126,9 @@ class WaveformExtensionCommonTestSuite:
         # zarr
         print("Zarr", self.we_zarr2)
         self._test_extension_folder(self.we_zarr2)
+        # sparse
+        print("Zarr", self.we_sparse)
+        self._test_extension_folder(self.we_sparse)
 
         # test content of memory/content/zarr
         for ext in self.we2.get_available_extension_names():
