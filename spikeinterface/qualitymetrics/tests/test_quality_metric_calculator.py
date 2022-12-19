@@ -8,7 +8,7 @@ from spikeinterface.extractors import toy_example
 
 from spikeinterface.postprocessing import WaveformPrincipalComponent
 from spikeinterface.preprocessing import scale
-from spikeinterface.qualitymetrics import QualityMetricCalculator
+from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_qm_params
 from spikeinterface.postprocessing import get_template_channel_sparsity
 
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
@@ -32,7 +32,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     def setUp(self):
         super().setUp()
         self.cache_folder = cache_folder
-        recording, sorting = toy_example(num_segments=2, num_units=10, duration=300)
+        recording, sorting = toy_example(num_segments=2, num_units=10, duration=60)
         if (cache_folder / 'toy_rec_long').is_dir():
             recording = load_extractor(self.cache_folder / 'toy_rec_long')
         else:
@@ -94,21 +94,27 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             rec_inv, sort, self.cache_folder / 'toy_waveforms_inv')
         we_inv.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
         we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
-        print(we_inv)
+
+        neg_qm_params = get_default_qm_params()
+        neg_qm_params["snr"]["peak_sign"] = "neg"
+        neg_qm_params["amplitude_cutoff"]["peak_sign"] = "neg"
+        pos_qm_params = get_default_qm_params()
+        pos_qm_params["snr"]["peak_sign"] = "pos"
+        pos_qm_params["amplitude_cutoff"]["peak_sign"] = "pos"
 
         # without PC
         metrics = self.extension_class.get_extension_function()(
-            we, metric_names=['snr', 'amplitude_cutoff'], peak_sign="neg")
+            we, metric_names=['snr', 'amplitude_cutoff'], qm_params=neg_qm_params)
         metrics_inv = self.extension_class.get_extension_function()(
-            we_inv, metric_names=['snr', 'amplitude_cutoff'], peak_sign="pos")
+            we_inv, metric_names=['snr', 'amplitude_cutoff'], qm_params=pos_qm_params)
         assert np.allclose(metrics["snr"].values,
                            metrics_inv["snr"].values, atol=1e-4)
         assert np.allclose(metrics["amplitude_cutoff"].values,
                            metrics_inv["amplitude_cutoff"].values, atol=1e-4)
 
 if __name__ == '__main__':
-    test = QualityMetricsExtensionTest
+    test = QualityMetricsExtensionTest()
     test.setUp()
-    test.test_extension()
+    # test.test_extension()
     test.test_metrics()
-    test.test_peak_sign()
+    # test.test_peak_sign()

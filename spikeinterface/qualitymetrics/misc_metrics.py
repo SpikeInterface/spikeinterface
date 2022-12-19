@@ -95,7 +95,7 @@ def compute_firing_rate(waveform_extractor):
 _default_params["firing_rate"] = dict()
 
 
-def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
+def compute_presence_ratio(waveform_extractor, num_bin_edges=101):
     """Calculate the presence ratio, representing the fraction of time the unit is firing.
 
     Parameters
@@ -138,7 +138,9 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     return presence_ratio
 
 
-_default_params["firing_rate"] = dict()
+_default_params["presence_ratio"] = dict(
+    num_bin_edges=101
+)
 
 
 def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum",
@@ -224,9 +226,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     -------
     isi_violations_ratio : float
         The isi violation ratio described in [1].
-    isi_violations_rate : float
-        Rate of contaminating spikes as a fraction of overall rate.
-        Higher values indicate more contamination.
     isi_violation_count : int
         Number of violations.
 
@@ -257,7 +256,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     min_isi_s = min_isi_ms / 1000
     isi_threshold_samples = int(isi_threshold_s * fs)
 
-    isi_violations_rate = {}
     isi_violations_count = {}
     isi_violations_ratio = {}
 
@@ -276,15 +274,13 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             total_rate = num_spikes / total_duration
             violation_rate = num_violations / violation_time
             isi_violations_ratio[unit_id] = violation_rate / total_rate
-            isi_violations_rate[unit_id] = num_violations / total_duration
             isi_violations_count[unit_id] = num_violations      
         else:
             isi_violations_ratio[unit_id] = np.nan
-            isi_violations_rate[unit_id] = np.nan
             isi_violations_count[unit_id] = np.nan
 
     res = namedtuple('isi_violation',
-                     ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
+                     ['isi_violations_ratio', 'isi_violations_count'])
 
     return res(isi_violations_ratio, isi_violations_count)
 
@@ -316,7 +312,10 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     Returns
     -------
-    TODO
+    rp_contamination : float
+        The refactory period contamination described in [1].
+    rp_violations : int
+        Number of refractory period violations.
 
     Reference
     ---------
@@ -335,6 +334,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     num_units = len(sorting.unit_ids)
     num_segments = sorting.get_num_segments()
     spikes = sorting.get_all_spike_trains(outputs="unit_index")
+    num_spikes = compute_num_spikes(waveform_extractor)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
@@ -352,17 +352,17 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
             T += recording.get_num_frames(segment_idx)
 
     nb_violations = {}
-    contamination = {}
+    rp_contamination = {}
 
     for i, unit_id in enumerate(sorting.unit_ids):
         nb_violations[unit_id] = n_v = nb_rp_violations[i]
-        N = len(sorting.get_unit_spike_train(unit_id))
+        N = num_spikes[unit_id]
         D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
-        contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
+        rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
 
-    res = namedtuple("rp_violations", ['rp_violations', 'contamination'])
+    res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
 
-    return res(nb_violations, contamination)
+    return res(rp_contamination, nb_violations)
 
 
 _default_params["rp_violations"] = dict(

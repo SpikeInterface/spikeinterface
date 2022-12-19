@@ -32,7 +32,8 @@ _default_params = dict(
     min_spikes_for_nn=10,
     n_neighbors=4,
     n_components=10,
-    radius_um=100
+    radius_um=100,
+    seed=0
 )
 
 
