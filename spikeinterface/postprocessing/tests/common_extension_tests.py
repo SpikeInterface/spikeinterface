@@ -69,9 +69,8 @@ class WaveformExtensionCommonTestSuite:
 
         self.we_zarr2 = we_memory.save(folder=cache_folder / 'toy_sorting_2seg',
                                        overwrite=True, format="zarr")
-
-        sparsity = ChannelSparsity.from_radius(we_memory, radius_um=30)
-        print(sparsity)
+        # use best channels for PC-concatenated
+        sparsity = ChannelSparsity.from_best_channels(we_memory, num_channels=4)
         self.we_sparse = we_memory.save(folder=cache_folder / 'toy_sorting_2seg_sparse', format="binary",
                                         sparsity=sparsity, overwrite=True)
 

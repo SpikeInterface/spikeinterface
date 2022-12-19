@@ -781,7 +781,8 @@ class WaveformExtractor:
             for mode, templates in self._template_cache.items():
                 templates_save = templates.copy()
                 if sparsity is not None:
-                    templates_save[~sparsity.mask[:, None, :]] = 0
+                    expanded_mask = np.tile(sparsity.mask[:, np.newaxis, :], (1, templates_save.shape[1], 1))
+                    templates_save[~expanded_mask] = 0
                 template_file = folder / f'templates_{mode}.npy'
                 np.save(template_file, templates_save)
             if sparsity is not None:
@@ -834,7 +835,8 @@ class WaveformExtractor:
             for mode, templates in self._template_cache.items():
                 templates_save = templates.copy()
                 if sparsity is not None:
-                    templates_save[~sparsity.mask[:, None, :]] = 0
+                    expanded_mask = np.tile(sparsity.mask[:, np.newaxis, :], (1, templates_save.shape[1], 1))
+                    templates_save[~expanded_mask] = 0
                 zarr_root.create_dataset(name=f'templates_{mode}', data=templates_save,
                                          compressor=compressor)
             if sparsity is not None:

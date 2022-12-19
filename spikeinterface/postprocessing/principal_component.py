@@ -51,25 +51,24 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     def _set_params(self, n_components=5, mode='by_channel_local',
                     whiten=True, dtype='float32', sparsity=None):
         assert mode in _possible_modes, "Invalid mode!"
-        if sparsity is not None:
-            if self.waveform_extractor.is_sparse():
-                sparsity = self.waveform_extractor.sparsity
-                sparsity_dict = sparsity.unit_id_to_channel_ids
-            elif self.waveform_extractor.post_sparsity is not None:
-                sparsity = self.waveform_extractor.post_sparsity
+        if self.waveform_extractor.is_sparse():
+            sparsity = self.waveform_extractor.sparsity
+            sparsity_dict = sparsity.unit_id_to_channel_ids
+        elif self.waveform_extractor.post_sparsity is not None:
+            sparsity = self.waveform_extractor.post_sparsity
+            sparsity_dict = sparsity.unit_id_to_channel_ids 
+        elif sparsity is not None:
+            assert isinstance(sparsity, (ChannelSparsity, dict)), \
+                "The sparsity parameter should be a ChannelSparsity object or a dictionary"
+            if isinstance(sparsity, ChannelSparsity):
                 sparsity_dict = sparsity.unit_id_to_channel_ids 
             else:
-                assert isinstance(sparsity, (ChannelSparsity, dict)), \
-                    "The sparsity parameter should be a ChannelSparsity object or a dictionary"
-                if isinstance(sparsity, ChannelSparsity):
-                    sparsity_dict = sparsity.unit_id_to_channel_ids 
-                else:
-                    assert all(unit_id in self.waveform_extractor.unit_ids for unit_id in sparsity.keys()), \
-                        "Invalid unit ids in sparsity dictionary"
-                    for channel_ids in sparsity.values():
-                        assert all(chan_id in self.waveform_extractor.channel_ids for chan_id in channel_ids), \
-                            "Invalid channel ids in sparsity dictionary"
-                    sparsity_dict = sparsity
+                assert all(unit_id in self.waveform_extractor.unit_ids for unit_id in sparsity.keys()), \
+                    "Invalid unit ids in sparsity dictionary"
+                for channel_ids in sparsity.values():
+                    assert all(chan_id in self.waveform_extractor.channel_ids for chan_id in channel_ids), \
+                        "Invalid channel ids in sparsity dictionary"
+                sparsity_dict = sparsity
         else:
             sparsity_dict = None
         
