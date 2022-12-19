@@ -59,7 +59,7 @@ def _compute_template_similarity(waveform_extractor,
                                  waveform_extractor_other=None):
     import sklearn.metrics.pairwise
 
-    templates = waveform_extractor.get_all_templates()
+    templates = np.array(waveform_extractor.get_all_templates())
     s = templates.shape
     if method == 'cosine_similarity':
         templates_flat = templates.reshape(s[0], -1)
