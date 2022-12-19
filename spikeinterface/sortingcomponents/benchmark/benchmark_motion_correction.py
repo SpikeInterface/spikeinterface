@@ -63,8 +63,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.do_preprocessing = do_preprocessing
 
         self._recordings = None
-        # for key in ['drifting', 'static',]:
-        #     _, self.sortings[key] = read_mearec(self.mearec_filenames[key])
         _, self.sortings['gt'] = read_mearec(self.mearec_filenames['static'])
         
         self.correct_motion_kwargs = correct_motion_kwargs

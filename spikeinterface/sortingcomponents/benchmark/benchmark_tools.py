@@ -151,6 +151,6 @@ class BenchmarkBase:
                     key = tuple(name.split('_###_'))
                 else:
                     key = name
-                bench.sortings[name] = NpzSortingExtractor(npz_file)
+                bench.sortings[key] = NpzSortingExtractor(npz_file)
 
         return bench
