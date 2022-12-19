@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface import extract_waveforms, WaveformExtractor
+from spikeinterface import ChannelSparsity
 from spikeinterface.extractors import toy_example
 
 from spikeinterface.postprocessing import (WaveformPrincipalComponent, compute_principal_components,
@@ -83,11 +83,9 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         unit_ids = we.unit_ids
         num_channels = we.get_num_channels()
         pc = self.extension_class(we)
-
-        sparsity_radius = get_template_channel_sparsity(we, method="radius",
-                                                        radius_um=50)
-        sparsity_best = get_template_channel_sparsity(we, method="best_channels",
-                                                    num_channels=2)
+        
+        sparsity_radius = ChannelSparsity.from_radius(we, radius_um=50)
+        sparsity_best = ChannelSparsity.from_best_channels(we, num_channels=2)
         sparsities = [sparsity_radius, sparsity_best]
         print(sparsities)
 
@@ -98,6 +96,12 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
                 for i, unit_id in enumerate(unit_ids):
                     proj = pc.get_projections(unit_id)
                     assert proj.shape[1:] == (5, 4)
+
+                # test project_new
+                unit_id = 3
+                new_wfs = we.get_waveforms(unit_id)
+                new_proj = pc.project_new(new_wfs, unit_id=unit_id)
+                assert new_proj.shape == (len(new_wfs), 5, 4)
 
                 if DEBUG:
                     import matplotlib.pyplot as plt
@@ -123,6 +127,12 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
             for i, unit_id in enumerate(unit_ids):
                 proj = pc.get_projections(unit_id)
                 assert proj.shape[1] == 5
+            
+            # test project_new
+            unit_id = 3
+            new_wfs = we.get_waveforms(unit_id)
+            new_proj = pc.project_new(new_wfs, unit_id)
+            assert new_proj.shape == (len(new_wfs), 5)
 
     def test_project_new(self):
         from sklearn.decomposition import IncrementalPCA
@@ -192,8 +202,8 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 if __name__ == '__main__':
     test = PrincipalComponentsExtensionTest()
     test.setUp()
-    test.test_extension()
-    test.test_shapes()
-    test.test_compute_for_all_spikes()
+    # test.test_extension()
+    # test.test_shapes()
+    # test.test_compute_for_all_spikes()
     test.test_sparse()
-    test.test_project_new()
+    # test.test_project_new()
