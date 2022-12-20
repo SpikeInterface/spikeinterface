@@ -5,7 +5,7 @@ from pathlib import Path
 
 # define marks
 mark_names = ["core", "extractors", "preprocessing", "postprocessing",
-              "sorters", "qualitymetrics", "comparison", "curation",
+              "sorters", "si_sorters", "qualitymetrics", "comparison", "curation",
               "widgets", "exporters", "sortingcomponents"]
 
 
@@ -28,10 +28,13 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         rel_path = Path(item.fspath).relative_to(rootdir)
 
-        for mark_name in mark_names:
-            if f"/{mark_name}/" in str(rel_path):
-                mark = getattr(pytest.mark, mark_name)
-                item.add_marker(mark)
+        if "si_based_sorters" not in rel_path.name:
+            for mark_name in mark_names:
+                if f"/{mark_name}/" in str(rel_path):
+                    mark = getattr(pytest.mark, mark_name)
+                    item.add_marker(mark)
+        else:
+            item.add_marker("si_sorters")
 
 
 def pytest_sessionfinish(session, exitstatus):

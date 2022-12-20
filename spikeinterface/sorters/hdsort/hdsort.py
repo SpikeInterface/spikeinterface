@@ -119,7 +119,7 @@ class HDSortSorter(BaseSorter):
         return params['filter']
 
     @staticmethod
-    def _generate_configs_file(output_folder, params, file_name, file_format):
+    def _generate_configs_file(sorter_output_folder, params, file_name, file_format):
         P = {}
 
         # preprocess
@@ -195,10 +195,10 @@ class HDSortSorter(BaseSorter):
             **cfgs
         }
 
-        scipy.io.savemat(str(output_folder / 'configsParams.mat'), data)
+        scipy.io.savemat(str(sorter_output_folder / 'configsParams.mat'), data)
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         #  if isinstance(recording, MaxOneRecordingExtractor):
         if False:  # TODO
             # ~ self.params['file_name'] = str(Path(recording._file_path).absolute())
@@ -210,48 +210,48 @@ class HDSortSorter(BaseSorter):
         else:
             # Generate three files dataset in Mea1k format
             trace_file_name = cls.write_hdsort_input_format(recording,
-                                                            str(output_folder / 'recording.h5'),
+                                                            str(sorter_output_folder / 'recording.h5'),
                                                             chunk_memory=params["chunk_memory"])
             # ~ self.params['file_format'] = 'mea1k'
             file_format = 'mea1k'
 
-        cls._generate_configs_file(output_folder, params, trace_file_name, file_format)
+        cls._generate_configs_file(sorter_output_folder, params, trace_file_name, file_format)
 
         # store sample rate in a file
         samplerate = recording.get_sampling_frequency()
-        samplerate_fname = str(output_folder / 'samplerate.txt')
+        samplerate_fname = str(sorter_output_folder / 'samplerate.txt')
         with open(samplerate_fname, 'w') as f:
             f.write('{}'.format(samplerate))
 
         source_dir = Path(Path(__file__).parent)
-        shutil.copy(str(source_dir / 'hdsort_master.m'), str(output_folder))
+        shutil.copy(str(source_dir / 'hdsort_master.m'), str(sorter_output_folder))
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         if cls.check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
-                {cls.compiled_name} {output_folder}
+                {cls.compiled_name} {sorter_output_folder}
             '''
         else:
-            output_folder = output_folder.absolute()
+            sorter_output_folder = sorter_output_folder.absolute()
             hdsort_path = Path(cls.hdsort_path).absolute()
 
             if "win" in sys.platform and sys.platform != 'darwin':
-                disk_move = str(output_folder)[:2]
+                disk_move = str(sorter_output_folder)[:2]
                 shell_cmd = f'''
                             {disk_move}
-                            cd {output_folder}
-                            matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                            cd {sorter_output_folder}
+                            matlab -nosplash -wait -r "{cls.sorter_name}_master('{sorter_output_folder}', '{hdsort_path}')"
                         '''
             else:
                 shell_cmd = f'''
                             #!/bin/bash
-                            cd "{output_folder}"
-                            matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{hdsort_path}')"
+                            cd "{sorter_output_folder}"
+                            matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{sorter_output_folder}', '{hdsort_path}')"
                         '''
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{cls.sorter_name}',
+                                   log_path=sorter_output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
         retcode = shell_script.wait()
 
@@ -259,9 +259,9 @@ class HDSortSorter(BaseSorter):
             raise Exception('HDsort returned a non-zero exit code')
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        sorting = HDSortSortingExtractor(file_path=str(output_folder / 'hdsort_output' /
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorter_output_folder = Path(sorter_output_folder)
+        sorting = HDSortSortingExtractor(file_path=str(sorter_output_folder / 'hdsort_output' /
                                                        'hdsort_output_results.mat'))
         return sorting
 
