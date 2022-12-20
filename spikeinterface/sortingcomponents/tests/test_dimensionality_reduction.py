@@ -21,10 +21,13 @@ def test_dimensionality_reduction(tmp_path):
 
     n_components = 3
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    n_peaks = recording.get_num_channels() * 1e3 # Heuristic for extracting around 1k waveforms per channel
+    peak_selection_params = dict(method="uniform", select_per_channel=True,  n_peaks=n_peaks)
     detect_peaks_params = dict(method='by_channel', peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1)
-    temporal_pca.fit(recording, n_components, detect_peaks_params, job_kwargs)
+    temporal_pca.fit(recording, n_components, detect_peaks_params, peak_selection_params, job_kwargs)
 
     steps = [temporal_pca]
+    
     peaks, projected_waveforms = detect_peaks(recording, pipeline_steps=steps)
     extracted_n_peaks, extracted_n_components, extracted_n_channels =  projected_waveforms.shape
     

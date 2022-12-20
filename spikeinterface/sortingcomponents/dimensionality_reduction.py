@@ -11,6 +11,24 @@ from spikeinterface import extract_waveforms
 from spikeinterface import NumpySorting
 
 
+class WaveformStep(PeakPipelineStep):
+    need_waveforms = True
+
+    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', all_channels=True):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
+        self.all_channels = all_channels
+        self.peak_sign = peak_sign
+        self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign))
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    
+    def compute_buffer(self, traces, peaks, waveforms):
+        
+        return waveforms
+
 class TemporalPCA(PeakPipelineStep):
     need_waveforms = True
 
@@ -24,13 +42,11 @@ class TemporalPCA(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
-    def fit(self, recording, n_components, detect_peaks_params, whiten=True, **job_kwargs):
+    def fit(self, recording, n_components, detect_peaks_params, peak_selection_params, whiten=True, **job_kwargs):
         
         # Detect peaks and sub-sample them
         peaks = detect_peaks(recording, **detect_peaks_params, **job_kwargs)
-
-        n_peaks = recording.get_num_channels() * 1e3 # Heuristic for extracting around 1k waveforms per channel
-        peaks = select_peaks(peaks, method="uniform", select_per_channel=True, n_peaks=n_peaks) # How to select n_peaks
+        peaks = select_peaks(peaks, **peak_selection_params) # How to select n_peaks
 
         # Create a waveform extractor
         ms_before = self._kwargs["ms_before"]
@@ -70,8 +86,9 @@ class TemporalPCA(PeakPipelineStep):
         
         n_waveforms, n_samples , n_channels = waveforms.shape
         n_components = self.pca_model.n_components
-        projected_waveforms = np.zeros((n_waveforms, n_components, n_channels))
+        projected_waveforms = np.full(shape =(n_waveforms, n_components, n_channels), fill_value=np.nan)
 
+        # Fill the gaps with np.nan
         for waveform_index, main_channel in enumerate(peaks['channel_ind']):
             channel_indexes_sparsified,  = np.nonzero(self.neighbours_mask[main_channel])
             for channel_index in channel_indexes_sparsified:
