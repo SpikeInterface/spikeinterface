@@ -66,7 +66,7 @@ def compute_firing_rate(waveform_extractor, **kwargs):
 
     Returns
     -------
-    firing_rates : dict
+    firing_rates : dict of floats
         The firing rate, across all segments, for each unit ID.
     """
 
@@ -86,6 +86,7 @@ def compute_firing_rate(waveform_extractor, **kwargs):
     return firing_rates
 
 
+
 def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     """Calculate the presence ratio, representing the fraction of time the unit is firing.
 
@@ -98,13 +99,13 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
 
     Returns
     -------
-    presence_ratio : dict
+    presence_ratio : dict of flaots
         The presence ratio for each unit ID.
 
     Notes
     -----
-    The total duration, across all segments, is divide into "num_bins".
-    To do so, spiketrains across segments are concatenated to mimic a continuous segment.
+    The total duration, across all segments, is divided into "num_bins".
+    To do so, spike trains across segments are concatenated to mimic a continuous segment.
     """
 
     recording = waveform_extractor.recording
@@ -115,18 +116,43 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
     seg_length = [recording.get_num_samples(i) for i in range(num_segs)]
     total_length = np.sum(seg_length)
 
-    presence_ratio = {}
+    presence_ratios = {}
     for unit_id in unit_ids:
-        spiketrain = []
+        spike_train = []
         for segment_index in range(num_segs):
             st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             st = st + np.sum(seg_length[:segment_index])
-            spiketrain.append(st)
-        spiketrain = np.concatenate(spiketrain)
-        h, b = np.histogram(spiketrain, np.linspace(0, total_length, num_bin_edges))
-        presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
+            spike_train.append(st)
+        spike_train = np.concatenate(spike_train)
 
-    return presence_ratio
+        presence_ratios[unit_id] = presence_ratio(spike_train, total_length, num_bin_edges)
+
+    return presence_ratios
+
+
+def presence_ratio(spike_train, total_length, num_bin_edges=101):
+    """Calculate the presence ratio for a single unit
+
+    Parameters
+    ----------
+    spike_train : np.ndarray
+        Spike times for this unit, in samples
+    total_length : int
+        Total length of the recording in samples
+    num_bin_edges : int, optional, default: 101
+        The number of bins edges to use to compute the presence ratio.
+
+    Returns
+    -------
+    presence_ratio : float
+        The presence ratio for one unit
+
+    """
+    
+    h, b = np.histogram(spike_train, np.linspace(0, total_length, num_bin_edges))
+    
+    return np.sum(h > 0) / (num_bin_edges - 1)
+
 
 
 def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum", **kwargs):
@@ -423,7 +449,7 @@ if HAVE_NUMBA:
 
 
 
-def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
+def compute_amplitude_cutoff(waveform_extractor, peak_sign='neg',
                               num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
@@ -489,7 +515,7 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_value=3):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
-    See compute_amplitudes_cutoff for additional documentation
+    See compute_amplitude_cutoff for additional documentation
 
     Parameters
     ----------

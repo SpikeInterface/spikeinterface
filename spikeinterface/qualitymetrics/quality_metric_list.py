@@ -7,7 +7,7 @@ from .misc_metrics import (
     compute_snrs,
     compute_isi_violations,
     compute_refrac_period_violations,
-    compute_amplitudes_cutoff,
+    compute_amplitude_cutoff,
 )
 
 from .pca_metrics import (
@@ -29,7 +29,7 @@ _metric_name_to_func = {
     "presence_ratio" : compute_presence_ratio,
     "snr" : compute_snrs,
     "isi_violation" : compute_isi_violations,
-    "amplitude_cutoff" : compute_amplitudes_cutoff,
+    "amplitude_cutoff" : compute_amplitude_cutoff,
     # 'mahalanobis_metrics' : mahalanobis_metrics,
     # 'd_prime' : lda_metrics,
     # 'nearest_neighbor' : nearest_neighbors_metrics,
