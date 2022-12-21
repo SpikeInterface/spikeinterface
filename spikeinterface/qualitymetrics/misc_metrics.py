@@ -12,8 +12,10 @@ from collections import namedtuple
 import math
 import numpy as np
 import warnings
-import scipy.ndimage
+from scipy.ndimage import gaussian_filter1d
+from scipy.stats import poisson
 
+from ..postprocessing import correlogram_for_one_segment
 from ..core import get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
@@ -258,7 +260,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     isi_threshold_s = isi_threshold_ms / 1000
     min_isi_s = min_isi_ms / 1000
-    isi_threshold_samples = int(isi_threshold_s * fs)
 
     isi_violations_rate = {}
     isi_violations_count = {}
@@ -538,7 +539,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
     # TODO : use something better than scipy.ndimage.gaussian_filter1d
-    pdf = scipy.ndimage.gaussian_filter1d(h, histogram_smoothing_value)
+    pdf = gaussian_filter1d(h, histogram_smoothing_value)
     support = b[:-1]
     bin_size = np.mean(np.diff(support))
     peak_index = np.argmax(pdf)
@@ -718,3 +719,140 @@ def noise_cutoff(amplitudes, quantile_length=.25, n_bins=100):
     return cutoff, first_low_quantile, peak_bin_height
 
 
+def compute_slidingRP_viol(waveform_extractor, bin_size=0.25, thresh=0.1, acceptThresh=0.1):
+    """
+    A binary metric developed by IBL which determines whether there is an acceptable level of
+    refractory period violations by using a sliding refractory period.
+    
+    This metric takes into account the firing rate of the neuron and computes a maximum 
+    acceptable level of contamination at different possible values of the refractory period. 
+    If the unit has less than the maximum contamination at any of the possible values of the 
+    refractory period, the unit passes. A neuron will always fail this metric for very 
+    low firing rates, and thus this metric takes into account both firing rate and refractory period
+    violations.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    bin_size : float
+        The size of binning for the autocorrelogram.
+    thresh : float
+        Spike rate used to generate poisson distribution (to compute maximum
+              acceptable contamination, see _max_acceptable_cont)
+    acceptThresh : float
+        The fraction of contamination we are willing to accept (default value
+              set to 0.1, or 10% contamination)
+
+    Returns
+    -------
+    all_didpass : dict of ints
+        0 if unit didn't pass
+        1 if unit did pass
+
+    Reference
+    ----------
+    This code was adapted from https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
+
+    """
+
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    unit_ids = sorting.unit_ids
+    num_segs = sorting.get_num_segments()
+    fs = recording.get_sampling_frequency()
+
+    all_didpass = {}
+
+    # all units converted to seconds
+    for unit_id in unit_ids:
+
+        spike_trains = []
+
+        for segment_index in range(num_segs):
+            spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            spike_trains.append(spike_train / fs)
+
+        all_didpass[unit_id] = slidingRP_viol(np.concatenate(spike_trains), fs, bin_size, thresh,
+                                            acceptThresh)
+
+    return all_didpass
+
+
+def slidingRP_viol(ts, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh=0.1):
+    """
+    A binary metric developed by IBL which determines whether there is an acceptable level of
+    refractory period violations by using a sliding refractory period.
+    
+    See compute_slidingRP_viol for additional documentation
+
+    Parameters
+    ----------
+    ts : ndarray_like
+        The timestamps (in s) of the spikes.
+    bin_size_ms : float
+        The size (in ms) of binning for the autocorrelogram.
+    window_size : float
+        The size (in s) of the window for the autocorrelogram
+    thresh : float
+        Spike rate used to generate poisson distribution (to compute maximum
+              acceptable contamination, see _max_acceptable_cont)
+    acceptThresh : float
+        The fraction of contamination we are willing to accept (default value
+              set to 0.1, or 10% contamination)
+
+    Returns
+    -------
+    didpass : int
+        0 if unit didn't pass
+        1 if unit did pass
+
+    """
+
+    b = np.arange(0, 10.25, bin_size_ms) / 1000 + 1e-6  # bins in seconds
+    bTestIdx = [5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40]
+    bTest = [b[i] for i in bTestIdx]
+
+    if len(ts) > 0 and ts[-1] > ts[0]:  # only do this for units with samples
+        recDur = (ts[-1] - ts[0])
+        # compute acg
+        c0 = correlogram_for_one_segment(ts, np.zeros(len(ts), dtype='int8'),
+                          bin_size=bin_size_ms / 1000, # convert to s
+                          window_size=window_size)
+        # cumulative sum of acg, i.e. number of total spikes occuring from 0
+        # to end of that bin
+        cumsumc0 = np.cumsum(c0[0, 0, :])
+        # cumulative sum at each of the testing bins
+        res = cumsumc0[bTestIdx]
+        total_spike_count = len(ts)
+
+        # divide each bin's count by the total spike count and the bin size
+        bin_count_normalized = c0[0, 0] / total_spike_count / bin_size_ms * 1000
+        num_bins_2s = len(c0[0, 0])  # number of total bins that equal 2 secs
+        num_bins_1s = int(num_bins_2s / 2)  # number of bins that equal 1 sec
+        # compute fr based on the  mean of bin_count_normalized from 1 to 2 s
+        # instead of as before (len(ts)/recDur) for a better estimate
+        fr = np.sum(bin_count_normalized[num_bins_1s:num_bins_2s]) / num_bins_1s
+        mfunc = np.vectorize(_max_acceptable_cont)
+        # compute the maximum allowed number of spikes per testing bin
+        m = mfunc(fr, bTest, recDur, fr * acceptThresh, thresh)
+        # did the unit pass (resulting number of spikes less than maximum
+        # allowed spikes) at any of the testing bins?
+        didpass = int(np.any(np.less_equal(res, m)))
+    else:
+        didpass = 0
+
+    return didpass
+
+def _max_acceptable_cont(FR, RP, rec_duration, acceptableCont, thresh):
+    """
+    Function to compute the maximum acceptable refractory period contamination
+        called during slidingRP_viol
+    """
+
+    time_for_viol = RP * 2 * FR * rec_duration
+    expected_count_for_acceptable_limit = acceptableCont * time_for_viol
+    max_acceptable = poisson.ppf(thresh, expected_count_for_acceptable_limit)
+    if max_acceptable == 0 and poisson.pmf(0, expected_count_for_acceptable_limit) > 0:
+        max_acceptable = -1
+    return max_acceptable

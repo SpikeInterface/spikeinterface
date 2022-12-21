@@ -22,7 +22,7 @@ from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculato
 from .correlograms import (CorrelogramsCalculator,
                            compute_autocorrelogram_from_spiketrain,
                            compute_crosscorrelogram_from_spiketrain,
-                           compute_correlograms,
+                           compute_correlograms, correlogram_for_one_segment,
                            compute_correlograms_numba, compute_correlograms_numpy)
 
 from .isi import (ISIHistogramsCalculator,
