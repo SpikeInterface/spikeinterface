@@ -21,7 +21,7 @@ def test_WaveformExtractor():
     sampling_frequency = 30000.
 
     # 2 segments
-    num_channels = 2
+    num_channels = 4
     recording = generate_recording(num_channels=num_channels, durations=durations,
                                    sampling_frequency=sampling_frequency)
     recording.annotate(is_filtered=True)
@@ -36,7 +36,8 @@ def test_WaveformExtractor():
 
 
     mask = np.zeros((num_units, num_channels), dtype=bool)
-    mask[:, 0] = True
+    mask[:, ::2] = True
+    num_sparse_channels = 2
     sparsity_ext = ChannelSparsity(mask, sorting.unit_ids, recording.channel_ids)
 
     for mode in ["folder", "memory"]:
@@ -64,11 +65,10 @@ def test_WaveformExtractor():
 
             wfs = we.get_waveforms(0)
             assert wfs.shape[0] <= 500
-            if sparsity is not None:
-                assert wfs.shape[1:] == (210, 1)
-            else:
+            if sparsity is None:
                 assert wfs.shape[1:] == (210, num_channels)
-
+            else:
+                assert wfs.shape[1:] == (210, num_sparse_channels)
 
             wfs, sampled_index = we.get_waveforms(0, with_index=True)
 
@@ -88,31 +88,33 @@ def test_WaveformExtractor():
             
             template = we.get_template(0)
             if sparsity is None:
-                assert template.shape == (210, 2)
+                assert template.shape == (210, num_channels)
             else:
-                assert template.shape == (210, 1)
+                assert template.shape == (210, num_sparse_channels)
             templates = we.get_all_templates()
             assert templates.shape == (num_units, 210, num_channels)
 
             if sparsity is not None:
                 assert np.all(templates[:, :, 1] == 0)
+                assert np.all(templates[:, :, 3] == 0)
 
             template_std = we.get_template(0, mode='std')
             if sparsity is None:
                 assert template_std.shape == (210, num_channels)
             else:
-                assert template_std.shape == (210, 1)
+                assert template_std.shape == (210, num_sparse_channels)
             template_std = we.get_all_templates(mode='std')
             assert template_std.shape == (num_units, 210, num_channels)
 
             if sparsity is not None:
                 assert np.all(template_std[:, :, 1] == 0)
+                assert np.all(template_std[:, :, 3] == 0)
 
             template_segment = we.get_template_segment(unit_id=0, segment_index=0)
             if sparsity is None:
                 assert template_segment.shape == (210, num_channels)
             else:
-                assert template_segment.shape == (210, 1)
+                assert template_segment.shape == (210, num_sparse_channels)
 
             # test filter units
             keep_units = sorting.get_unit_ids()[::2]
@@ -157,18 +159,6 @@ def test_WaveformExtractor():
             wfs_array = we_saved_zarr.get_waveforms(0, lazy=False)
             assert isinstance(wfs_array, np.ndarray)
 
-            # test post sparsity
-            if sparsity is None:
-                we.set_post_sparsity(sparsity_ext)
-                template = we.get_template(0)
-                assert template.shape == (210, 1)
-                template_std = we.get_template(0, mode="std")
-                assert template_std.shape == (210, 1)
-                wfs = we.get_waveforms(0)
-                assert wfs.shape[2] == 1
-                all_templates = we.get_all_templates()
-                assert all_templates.shape == (num_units, 210, num_channels)
-                we.reset_post_sparsity()
 
 def test_extract_waveforms():
     # 2 segments

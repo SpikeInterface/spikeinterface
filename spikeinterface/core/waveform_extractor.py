@@ -95,7 +95,6 @@ class WaveformExtractor:
         self._params = {}
         self._loaded_extensions = dict()
         self.sparsity = sparsity
-        self.post_sparsity = None
 
         self.folder = folder
         if self.folder is not None:
@@ -124,6 +123,8 @@ class WaveformExtractor:
         if len(self._params) > 0:
             max_spikes_per_unit = self._params['max_spikes_per_unit']
             txt = txt + f'\n  before:{self.nbefore} after:{self.nafter} n_per_units:{max_spikes_per_unit}'
+        if self.is_sparse():
+            txt += ' - sparse'
         return txt
 
     @classmethod
@@ -180,13 +181,6 @@ class WaveformExtractor:
         we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes, allow_unfiltered=True,
                  sparsity=sparsity)
 
-        # the post_sparsity is used in postprocessing/plotting and applid on-the-fly
-        post_sparsity_file = folder / 'post_sparsity.json'
-        if post_sparsity_file.is_file():
-            with open(post_sparsity_file, mode='r') as f:
-                post_sparsity = ChannelSparsity.from_dict(json.load(f))
-            we.set_post_sparsity(post_sparsity)
-
         for mode in _possible_template_modes:
             # load cached templates
             template_file = folder / f'templates_{mode}.npy'
@@ -233,10 +227,6 @@ class WaveformExtractor:
 
         we = cls(recording, sorting, folder=folder, rec_attributes=rec_attributes, allow_unfiltered=True,
                  sparsity=sparsity)
-        
-        if 'post_sparsity' in waveforms_root.attrs:
-            post_sparsity = waveforms_root.attrs['post_sparsity']
-            we.set_post_sparsity(post_sparsity)
 
         for mode in _possible_template_modes:
             # load cached templates
@@ -301,25 +291,10 @@ class WaveformExtractor:
     def get_unit_sparsity_mask(self, unit_id):
         if self.sparsity is not None:
             unit_sparsity_mask = self.sparsity.mask[self.sorting.id_to_index(unit_id)]
-        elif self.post_sparsity is not None:
-            unit_sparsity_mask = self.post_sparsity.mask[self.sorting.id_to_index(unit_id)]
         else:
             unit_sparsity_mask = slice(None)
         return unit_sparsity_mask
 
-    def set_post_sparsity(self, post_sparsity):
-        """
-        Set post_sparsity for postprocessing/plotting.
-        """
-        assert self.sparsity is None, "Waveforms are already sparse!"
-        assert isinstance(post_sparsity, ChannelSparsity), "'post_sparsity' needs to be a ChannelSparsity object."
-        self.post_sparsity = post_sparsity
-
-    def reset_post_sparsity(self):
-        """
-        Reset post_sparsity to None.
-        """
-        self.post_sparsity = None
 
     @classmethod
     def register_extension(cls, extension_class):
@@ -658,11 +633,7 @@ class WaveformExtractor:
                     new_sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
                     with (new_folder / "sparsity.json").open("w") as f:
                         json.dump(check_json(new_sparsity.to_dict()), f)
-                if self.post_sparsity is not None:
-                    mask = self.post_sparsity.mask[unit_indices]
-                    new_sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
-                    with (new_folder / "post_sparsity.json").open("w") as f:
-                        json.dump(check_json(new_sparsity.to_dict()), f)
+
                 we = WaveformExtractor.load(new_folder)
             elif self.format == "zarr":
                 raise NotImplementedError("For zarr format, `select_units()` to a folder is not supported yet. "
@@ -683,11 +654,6 @@ class WaveformExtractor:
             for unit_id in unit_ids:
                 we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
                 we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
-
-            if self.post_sparsity is not None:
-                mask = self.post_sparsity.mask[unit_indices]
-                new_sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
-                we.set_post_sparsity(new_sparsity)
 
         # finally select extensions data
         for ext_name in self.get_available_extension_names():
@@ -788,9 +754,6 @@ class WaveformExtractor:
             if sparsity is not None:
                 with (folder / "sparsity.json").open("w") as f:
                     json.dump(check_json(sparsity.to_dict()), f)
-            if self.post_sparsity is not None:
-                with (folder / "post_sparsity.json").open("w") as f:
-                    json.dump(check_json(self.post_sparsity.to_dict()), f)
         elif format == "zarr":
             import zarr
             from .zarrrecordingextractor import get_default_zarr_compressor
@@ -841,8 +804,6 @@ class WaveformExtractor:
                                          compressor=compressor)
             if sparsity is not None:
                 zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
-            if self.post_sparsity is not None:
-                zarr_root.attrs["post_sparsity"] = check_json(self.post_sparsity.to_dict())
 
         # save waveform extensions
         for ext_name in self.get_available_extension_names():
@@ -852,7 +813,7 @@ class WaveformExtractor:
         we = WaveformExtractor.load(folder)
         return we
 
-    def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True):
+    def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True, sparsity=None):
         """
         Return waveforms for the specified unit id.
 
@@ -868,6 +829,8 @@ class WaveformExtractor:
             If True, waveforms are loaded as memmap objects (when format="binary") or Zarr datasets 
             (when format="zarr").
             If False, waveforms are loaded as np.array objects (default True)
+        sparsity: ChannelSparsity, optional
+            Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
 
         Returns
         -------
@@ -904,9 +867,9 @@ class WaveformExtractor:
             else:
                 wfs = self._memory_objects["wfs_arrays"][unit_id]
 
-        if self.post_sparsity is not None:
-            mask = self.get_unit_sparsity_mask(unit_id)
-            wfs = wfs[:, :, mask]
+        if sparsity is not None:
+            assert not self.is_sparse(), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
 
         if with_index:
             sampled_index = self.get_sampled_indices(unit_id)
@@ -942,7 +905,7 @@ class WaveformExtractor:
             sampled_index = self._memory_objects["sampled_indices"][unit_id]
         return sampled_index
 
-    def get_waveforms_segment(self, segment_index, unit_id):
+    def get_waveforms_segment(self, segment_index, unit_id, sparsity):
         """
         Return waveforms from a specified segment and unit_id.
 
@@ -952,13 +915,15 @@ class WaveformExtractor:
             The segment index to retrieve waveforms from
         unit_id: int or str
             Unit id to retrieve waveforms for
+        sparsity: ChannelSparsity, optional
+            Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
 
         Returns
         -------
         wfs: np.array
             The returned waveform (num_spikes, num_samples, num_channels)
         """
-        wfs, index_ar = self.get_waveforms(unit_id, with_index=True)
+        wfs, index_ar = self.get_waveforms(unit_id, with_index=True, sparsity=sparsity)
         mask = index_ar['segment_index'] == segment_index
         return wfs[mask, :, :]
 
@@ -986,9 +951,6 @@ class WaveformExtractor:
             wfs = self.get_waveforms(unit_id, cache=False)
             if self.sparsity is not None:
                 mask = self.sparsity.mask[unit_ind]
-            elif self.post_sparsity is not None:
-                mask = self.post_sparsity.mask[unit_ind]
-                wfs = wfs[:, mask]
             else:
                 mask = slice(None)
             for mode in modes:
@@ -1037,7 +999,7 @@ class WaveformExtractor:
 
         return templates
 
-    def get_template(self, unit_id, mode='average'):
+    def get_template(self, unit_id, mode='average', sparsity=None):
         """
         Return template (average waveform).
 
@@ -1047,6 +1009,8 @@ class WaveformExtractor:
             Unit id to retrieve waveforms for
         mode: str
             'average' (default), 'median' , 'std'(standard deviation)
+        sparsity: ChannelSparsity, optional
+            Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
 
         Returns
         -------
@@ -1069,9 +1033,9 @@ class WaveformExtractor:
 
         # compute from waveforms
         wfs = self.get_waveforms(unit_id)
-        if self.post_sparsity is not None:
-            unit_sparsity_mask = self.get_unit_sparsity_mask(unit_id)
-            wfs = wfs[:, :, unit_sparsity_mask]
+        if sparsity is not None:
+            assert not self.is_sparse(), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
         if mode == 'median':
             template = np.median(wfs, axis=0)
         elif mode == 'average':
@@ -1080,7 +1044,7 @@ class WaveformExtractor:
             template = np.std(wfs, axis=0)
         return template
 
-    def get_template_segment(self, unit_id, segment_index, mode='average'):
+    def get_template_segment(self, unit_id, segment_index, mode='average', sparsity=None):
         """
         Return template for the specified unit id computed from waveforms of a specific segment.
 
@@ -1092,6 +1056,8 @@ class WaveformExtractor:
             The segment index to retrieve template from
         mode: str
             'average'  (default), 'median', 'std'(standard deviation)
+        sparsity: ChannelSparsity, optional
+            Sparsity to apply to the waveforms (if WaveformExtractor is not sparse).
 
         Returns
         -------
@@ -1101,7 +1067,7 @@ class WaveformExtractor:
         """
         assert mode in ('median', 'average', 'std', )
         assert unit_id in self.sorting.unit_ids
-        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id)
+        waveforms_segment = self.get_waveforms_segment(segment_index, unit_id, sparsity=sparsity)
         if mode == 'median':
             return np.median(waveforms_segment, axis=0)
         elif mode == 'average':
@@ -1380,6 +1346,7 @@ class BaseWaveformExtractorExtension:
     
     # must be set in inherited in subclass 
     extension_name = None
+    support_sparsity = False
     
     def __init__(self, waveform_extractor):
         self.waveform_extractor = waveform_extractor
@@ -1503,54 +1470,62 @@ class BaseWaveformExtractorExtension:
     
     def save(self, folder, **kwargs):
         self._save(folder, **kwargs)
-
+    
     def _save(self, folder=None, **kwargs):
-        if folder is not None:
-            if self.format == "binary":
-                import pandas as pd
-                for ext_data_name, ext_data in self._extension_data.items():
-                    if isinstance(ext_data, dict):
-                        with (self.extension_folder / f"{ext_data_name}.json").open('w') as f:
-                            json.dump(ext_data, f)
-                    elif isinstance(ext_data, np.ndarray):
-                        np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
-                    elif isinstance(ext_data, pd.DataFrame):
-                        ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
-                    else:
-                        try:
-                            with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
-                                pickle.dump(ext_data, f)
-                        except:
-                            raise Exception(f"Could not save {ext_data_name} as extension data")
-            elif self.format == "zarr":
-                from .zarrrecordingextractor import get_default_zarr_compressor
-                import pandas as pd
-                import numcodecs
+        if not self.support_sparsity and _check_waveform_folder_sparse(folder):
+            if folder is not None:
+                if self.format == "binary":
+                    import pandas as pd
+                    folder = Path(folder)
+                    for ext_data_name, ext_data in self._extension_data.items():
+                        if isinstance(ext_data, dict):
+                            with (folder / f"{ext_data_name}.json").open('w') as f:
+                                json.dump(ext_data, f)
+                        elif isinstance(ext_data, np.ndarray):
+                            np.save(folder / f"{ext_data_name}.npy", ext_data)
+                        elif isinstance(ext_data, pd.DataFrame):
+                            ext_data.to_csv(folder / f"{ext_data_name}.csv", index=True)
+                        else:
+                            try:
+                                with (folder / f"{ext_data_name}.pkl").open("wb") as f:
+                                    pickle.dump(ext_data, f)
+                            except:
+                                raise Exception(f"Could not save {ext_data_name} as extension data")
+                elif self.format == "zarr":
+                    from .zarrrecordingextractor import get_default_zarr_compressor
+                    import zarr
+                    import pandas as pd
+                    import numcodecs
 
-                compressor = kwargs.get("compressor", None)
-                if compressor is None:
-                    compressor = get_default_zarr_compressor()
-                for ext_data_name, ext_data in self._extension_data.items():
-                    if ext_data_name in self.extension_group.keys():
-                        del self.extension_group[ext_data_name]
-                    if isinstance(ext_data, dict):
-                        self.extension_group.create_dataset(name=ext_data_name, data=[ext_data],
-                                                            object_codec=numcodecs.JSON())
-                        self.extension_group[ext_data_name].attrs["dict"] = True
-                    elif isinstance(ext_data, np.ndarray):
-                        self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
-                                                            compressor=compressor)
-                    elif isinstance(ext_data, pd.DataFrame):
-                        ext_data.to_xarray().to_zarr(store=self.extension_group.store,
-                                                     group=f"{self.extension_group.name}/{ext_data_name}",
-                                                     mode="a")
-                        self.extension_group[ext_data_name].attrs["dataframe"] = True
-                    else:
-                        try:
-                            self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
-                                                                object_codec=numcodecs.Pickle())
-                        except:
-                            raise Exception(f"Could not save {ext_data_name} as extension data")
+                    compressor = kwargs.get("compressor", None)
+                    if compressor is None:
+                        compressor = get_default_zarr_compressor()
+                    for ext_data_name, ext_data in self._extension_data.items():
+                        zarr_root = zarr.open(folder, mode="r+")
+                        if self.extension_name not in zarr_root.keys():
+                            extension_group = zarr_root.create_group(self.extension_name)
+                        if isinstance(ext_data, dict):
+                            extension_group.create_dataset(name=ext_data_name, data=[ext_data],
+                                                        object_codec=numcodecs.JSON())
+                            extension_group[ext_data_name].attrs["dict"] = True
+                        elif isinstance(ext_data, np.ndarray):
+                            extension_group.create_dataset(name=ext_data_name, data=ext_data,
+                                                        compressor=compressor)
+                        elif isinstance(ext_data, pd.DataFrame):
+                            ext_data.to_xarray().to_zarr(store=extension_group.store,
+                                                        group=f"{extension_group.name}/{ext_data_name}",
+                                                        mode="a")
+                            extension_group[ext_data_name].attrs["dataframe"] = True
+                        else:
+                            try:
+                                extension_group.create_dataset(name=ext_data_name, data=ext_data,
+                                                            object_codec=numcodecs.Pickle())
+                            except:
+                                raise Exception(f"Could not save {ext_data_name} as extension data")
+        else:
+            print(f"{self.extension_name} cannot be propagated to a sparse WaveformExtractor. "
+                  f"It is recommended to recompute {self.extension_name} to properly handle sparsity")
+        
     def reset(self):
         """
         Reset the waveform extension.
@@ -1603,3 +1578,6 @@ class BaseWaveformExtractorExtension:
         # must return extension function
         raise NotImplementedError
 
+def _check_waveform_folder_sparse(folder):
+    we = WaveformExtractor.load(folder)
+    return we.is_sparse()

@@ -9,12 +9,10 @@ import numpy as np
 from sklearn.decomposition import IncrementalPCA
 from sklearn.exceptions import NotFittedError
 
+
 from spikeinterface.core import ChannelSparsity
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
-from .template_tools import get_template_channel_sparsity
-
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
 _possible_modes = ['by_channel_local', 'by_channel_global', 'concatenated']
 
