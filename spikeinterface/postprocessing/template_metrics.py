@@ -69,7 +69,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             template_metrics = pd.DataFrame(
                 index=unit_ids, columns=metric_names)
         else:
-            extremum_channels_ids = sparsity
+            extremum_channels_ids = sparsity.unit_id_to_channel_ids
             unit_ids = []
             channel_ids = []
             for unit_id, sparse_channels in extremum_channels_ids.items():

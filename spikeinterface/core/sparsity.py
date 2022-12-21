@@ -60,7 +60,7 @@ class ChannelSparsity:
 
     def __repr__(self):
         ratio = np.mean(self.mask)
-        txt = f'ChannelSparsity - units:{self.unit_ids.size} - channels:{self.channel_ids.size} - ratio{ratio:0.2f}'
+        txt = f'ChannelSparsity - units: {self.unit_ids.size} - channels: {self.channel_ids.size} - ratio: {ratio:0.2f}'
         return txt
 
     @property

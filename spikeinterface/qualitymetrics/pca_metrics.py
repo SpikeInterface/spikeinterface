@@ -3,7 +3,7 @@
 from cmath import nan
 import numpy as np
 from spikeinterface.core.waveform_extractor import WaveformExtractor
-from spikeinterface.postprocessing.template_tools import get_template_extremum_channel
+
 from tqdm.auto import tqdm
 import scipy.stats
 import scipy.spatial.distance
@@ -17,7 +17,7 @@ from copy import deepcopy
 import spikeinterface as si
 from ..core import get_random_data_chunks
 from ..core.job_tools import tqdm_joblib
-from ..core.template_tools import get_template_channel_sparsity
+from ..core.template_tools import get_template_channel_sparsity, get_template_extremum_channel
 
 from ..postprocessing import WaveformPrincipalComponent
 
