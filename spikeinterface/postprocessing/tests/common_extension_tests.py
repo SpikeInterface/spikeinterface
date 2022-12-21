@@ -127,8 +127,8 @@ class WaveformExtensionCommonTestSuite:
         self._test_extension_folder(self.we_memory2, in_memory=True)
         # zarr
         # @alessio : this need to be fixed the PCA extention do not work wih zarr
-        # print("Zarr", self.we_zarr2)
-        # self._test_extension_folder(self.we_zarr2)
+        print("Zarr", self.we_zarr2)
+        self._test_extension_folder(self.we_zarr2)
         
         # sparse
         print("Sparse", self.we_sparse)

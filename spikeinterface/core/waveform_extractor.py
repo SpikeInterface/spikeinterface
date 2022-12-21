@@ -1007,7 +1007,7 @@ class WaveformExtractor:
             unit_indices = self.sorting.ids_to_indices(unit_ids)
             templates = templates[unit_indices, :, :]
 
-        return templates
+        return np.array(templates)
 
     def get_template(self, unit_id, mode='average', sparsity=None):
         """
@@ -1052,7 +1052,7 @@ class WaveformExtractor:
             template = np.average(wfs, axis=0)
         elif mode == 'std':
             template = np.std(wfs, axis=0)
-        return template
+        return np.array(template)
 
     def get_template_segment(self, unit_id, segment_index, mode='average', sparsity=None):
         """
@@ -1511,22 +1511,24 @@ class BaseWaveformExtractorExtension:
             if compressor is None:
                 compressor = get_default_zarr_compressor()
             for ext_data_name, ext_data in self._extension_data.items():
+                if ext_data_name in self.extension_group:
+                    del self.extension_group[ext_data_name]
                 if isinstance(ext_data, dict):
                     self.extension_group.create_dataset(name=ext_data_name, data=[ext_data],
-                                                object_codec=numcodecs.JSON())
+                                                        object_codec=numcodecs.JSON())
                     self.extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
                     self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
-                                                compressor=compressor)
+                                                        compressor=compressor)
                 elif isinstance(ext_data, pd.DataFrame):
                     ext_data.to_xarray().to_zarr(store=self.extension_group.store,
-                                                group=f"{extension_group.name}/{ext_data_name}",
-                                                mode="a")
+                                                 group=f"{self.extension_group.name}/{ext_data_name}",
+                                                 mode="a")
                     self.extension_group[ext_data_name].attrs["dataframe"] = True
                 else:
                     try:
                         self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
-                                                    object_codec=numcodecs.Pickle())
+                                                            object_codec=numcodecs.Pickle())
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
