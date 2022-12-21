@@ -33,7 +33,7 @@ class CellExplorerSortingExtractor(BaseSorting):
     installed = HAVE_SCIPY_AND_HDF5STORAGE
     is_writable = True
     mode = "file"
-    installation_mesg = "To use the CellExplorerSortingExtractor install scipy and hdf5storage: \n\n pip install scipy\n\n and  \n\n pip install hdf5storage \n\n"
+    installation_mesg = "To use the CellExplorerSortingExtractor install scipy and hdf5storage: \n\n pip install scipy  hdf5storage"
 
     def __init__(self, spikes_matfile_path: PathType,
                  session_info_matfile_path: OptionalPathType=None,
