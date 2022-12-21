@@ -225,7 +225,6 @@ def run_sorters(sorter_list,
     
     dtype_rec_name = np.dtype(type(list(recording_dict.keys())[0]))
     assert dtype_rec_name.kind in ("i", "u", "S", "U"), "Dict keys can only be integers or strings!"
-    
 
     need_dump = engine != 'loop'
     task_args_list = []

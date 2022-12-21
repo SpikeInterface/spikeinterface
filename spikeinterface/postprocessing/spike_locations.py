@@ -2,10 +2,10 @@ import numpy as np
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
-from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from spikeinterface.core.template_tools import (get_template_extremum_channel,
+                                                get_template_extremum_channel_peak_shift)
 
-from .template_tools import (get_template_extremum_channel,
-                             get_template_extremum_channel_peak_shift)
+from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 
 class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
@@ -30,8 +30,8 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         params = dict(ms_before=ms_before,
                       ms_after=ms_after,
-                      method=method,
-                      method_kwargs=method_kwargs)
+                      method=method)
+        params.update(**method_kwargs)
         return params        
     
     def _select_extension_data(self, unit_ids):

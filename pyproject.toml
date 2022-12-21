@@ -71,6 +71,7 @@ full = [
     "zarr",
     "h5py",
     "pandas",
+    "xarray",
     "scipy",
     "scikit-learn",
     "networkx",
@@ -90,6 +91,7 @@ test = [
 
     # zarr is needed for testing
     "zarr",
+    "xarray",
 
     # tridesclous
     "numpy<1.24",
@@ -107,8 +109,8 @@ test = [
     ## install sorters ##
     "tridesclous>=1.6.6.1",
 
-    ## spyking-circus
-    "spyking-circus",
+    ## spyking-circus - mpi is buggy in 3.9
+    # "spyking-circus",
 
     ## herdingspikes
     "herdingspikes<=0.3.99",
@@ -138,6 +140,7 @@ markers = [
     "postprocessing",
     "qualitymetrics",
     "sorters",
+    "si_sorters",
     "comparison",
     "curation",
     "exporters",

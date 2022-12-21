@@ -281,7 +281,7 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
-    def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
+    def to_dict(self, include_annotations=False, include_properties=False,
                 relative_to=None, folder_metadata=None):
         """
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
@@ -290,13 +290,11 @@ class BaseExtractor:
         Parameters
         ----------
         include_annotations: bool
-            If True, all annotations are added to the dict
+            If True, all annotations are added to the dict, by default False
         include_properties: bool
-            If True, all properties are added to the dict
-        include_features: bool
-            If True, all features are added to the dict
+            If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+            If not None, file_paths are serialized relative to this path, by default None
 
         Returns
         -------
@@ -407,7 +405,7 @@ class BaseExtractor:
         """
         Clones an existing extractor into a new instance.
         """
-        d = self.to_dict(include_annotations=True, include_properties=True, include_features=True)
+        d = self.to_dict(include_annotations=True, include_properties=True)
         clone = BaseExtractor.from_dict(d)
         return clone
 
@@ -434,10 +432,6 @@ class BaseExtractor:
         -------
         Path
             Path object with file path to the file
-
-        Raises
-        ------
-        NotDumpableExtractorError
         """
         ext = extensions[0]
         file_path = Path(file_path)
@@ -483,7 +477,6 @@ class BaseExtractor:
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(include_annotations=True,
                                  include_properties=False,
-                                 include_features=False,
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
@@ -492,7 +485,7 @@ class BaseExtractor:
             encoding='utf8'
         )
 
-    def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True,
+    def dump_to_pickle(self, file_path=None, include_properties=True,
                        relative_to=None, folder_metadata=None):
         """
         Dump recording extractor to a pickle file.
@@ -504,15 +497,12 @@ class BaseExtractor:
             Path of the json file
         include_properties: bool
             If True, all properties are dumped
-        include_features: bool
-            If True, all features are dumped
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
         """
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(include_annotations=True,
-                                 include_properties=False,
-                                 include_features=False,
+                                 include_properties=include_properties,
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
@@ -790,7 +780,7 @@ class BaseExtractor:
         save_kwargs['zarr_path'] = zarr_path
         save_kwargs['storage_options'] = storage_options
         save_kwargs['channel_chunk_size'] = channel_chunk_size
-        cached = self._save(folder=None, verbose=verbose, **save_kwargs)
+        cached = self._save(verbose=verbose, **save_kwargs)
         cached_annotations = deepcopy(cached._annotations)
 
         # save properties

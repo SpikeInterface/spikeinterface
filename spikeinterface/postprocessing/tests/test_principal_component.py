@@ -1,5 +1,5 @@
 import unittest
-import shutil
+import pytest
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +10,11 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.postprocessing import (WaveformPrincipalComponent, compute_principal_components,
                                            get_template_channel_sparsity)
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "postprocessing"
+else:
+    cache_folder = Path("cache_folder") / "postprocessing"
 
 
 DEBUG = False
@@ -48,15 +53,30 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 
         pc_file1 = pc.extension_folder / 'all_pc1.npy'
         pc.run_for_all_spikes(
-            pc_file1, max_channels_per_template=7, chunk_size=10000, n_jobs=1)
+            pc_file1, sparsity=None, chunk_size=10000, n_jobs=1)
         all_pc1 = np.load(pc_file1)
 
         pc_file2 = pc.extension_folder / 'all_pc2.npy'
         pc.run_for_all_spikes(
-            pc_file2, max_channels_per_template=7, chunk_size=10000, n_jobs=2)
+            pc_file2, sparsity=None, chunk_size=10000, n_jobs=2)
         all_pc2 = np.load(pc_file2)
 
         assert np.array_equal(all_pc1, all_pc2)
+
+        # test with sparsity
+        sparsity = get_template_channel_sparsity(we, method="radius",
+                                                 radius_um=50)
+        we_copy = we.save(folder=cache_folder / "we_copy")
+        pc_sparse = self.extension_class.get_extension_function()(we_copy, sparsity=sparsity, load_if_exists=False)
+        pc_file_sparse = pc.extension_folder / 'all_pc_sparse.npy'
+        pc_sparse.run_for_all_spikes(pc_file_sparse, sparsity=sparsity, chunk_size=10000, n_jobs=1)
+        all_pc_sparse = np.load(pc_file_sparse)
+        all_spikes = we_copy.sorting.get_all_spike_trains(outputs='unit_id')
+        _, spike_labels = all_spikes[0]
+        for unit_id, sparse_channel_ids in sparsity.items():
+            # check dimensions
+            pc_unit = all_pc_sparse[spike_labels == unit_id]
+            assert np.allclose(pc_unit[:, :, len(sparse_channel_ids):], 0)
 
     def test_sparse(self):
         we = self.we2
@@ -170,7 +190,7 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 
 
 if __name__ == '__main__':
-    test = PrincipalComponentsExtensionTest
+    test = PrincipalComponentsExtensionTest()
     test.setUp()
     test.test_extension()
     test.test_shapes()

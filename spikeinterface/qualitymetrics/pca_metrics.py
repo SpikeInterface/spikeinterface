@@ -17,7 +17,7 @@ from copy import deepcopy
 import spikeinterface as si
 from ..core import get_random_data_chunks
 from ..core.job_tools import tqdm_joblib
-from ..postprocessing import get_template_channel_sparsity
+from ..core.template_tools import get_template_channel_sparsity
 
 from ..postprocessing import WaveformPrincipalComponent
 
@@ -646,8 +646,8 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids, neighbor_unit_ids,
                          unit_ids, max_spikes_for_nn, min_spikes_for_nn, n_neighbors, n_components,
                          radius_um, seed):
-    we = WaveformExtractor.load_from_folder(we_folder)
-    pca = WaveformPrincipalComponent.load_from_folder(we_folder)
+    we = WaveformExtractor.load(we_folder)
+    pca = WaveformPrincipalComponent.load(we_folder)
 
     labels, pcs = pca.get_all_projections(
         channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)

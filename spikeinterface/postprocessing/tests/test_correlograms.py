@@ -227,4 +227,5 @@ if __name__ == '__main__':
     test = CorrelogramsExtensionTest()
     test.setUp()
     test.test_compute_correlograms()
+    test.test_extension()
 

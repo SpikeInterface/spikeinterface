@@ -39,7 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         return "2.0"
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
         assert HAVE_HDBSCAN, 'spykingcircus2 needs hdbscan to be installed'
     
@@ -52,12 +52,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-        from spikeinterface.sortingcomponents.peak_localization import localize_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+        recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
 
@@ -82,7 +81,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             detection_params['exclude_sweep_ms'] = max(params['general']['ms_before'], params['general']['ms_after'])
 
         peaks = detect_peaks(recording_f, method='locally_exclusive', 
-            **detection_params)
+                             **detection_params)
 
         if verbose:
             print('We found %d peaks in total' %len(peaks))
@@ -95,7 +94,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         noise_levels = np.ones(num_channels, dtype=np.float32)
         selection_params.update({'noise_levels' : noise_levels})
-        selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
+        selected_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, 
+                                      **selection_params)
 
         if verbose:
             print('We kept %d peaks for clustering' %len(selected_peaks))
@@ -107,7 +107,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['general'])
         clustering_params.update(dict(shared_memory=params['shared_memory']))
         clustering_params['job_kwargs'] = params['job_kwargs']
-        clustering_params['tmp_folder'] = output_folder / "clustering"
+        clustering_params['tmp_folder'] = sorter_output_folder / "clustering"
 
         labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='random_projections',
             method_kwargs=clustering_params)
@@ -115,7 +115,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We get the labels for our peaks
         mask = peak_labels > -1
         sorting = NumpySorting.from_times_labels(selected_peaks['sample_ind'][mask], peak_labels[mask], sampling_rate)
-        clustering_folder = output_folder / "clustering"
+        clustering_folder = sorter_output_folder / "clustering"
         if clustering_folder.exists():
             shutil.rmtree(clustering_folder)
 
@@ -130,7 +130,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             waveforms_folder = None
         else:
             mode = 'folder'
-            waveforms_folder = output_folder / "waveforms"
+            waveforms_folder = sorter_output_folder / "waveforms"
 
         we = extract_waveforms(recording_f, sorting, waveforms_folder, mode=mode, **waveforms_params, return_scaled=False)
 
@@ -150,7 +150,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## And this is it! We have a spyking circus
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_rate)
-        sorting_folder = output_folder / "sorting"
+        sorting_folder = sorter_output_folder / "sorting"
 
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)

@@ -11,13 +11,14 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from .template_tools import get_template_channel_sparsity
+from spikeinterface.core.template_tools import get_template_channel_sparsity
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 
 
 dtype_localize_by_method = {
     'center_of_mass': [('x', 'float64'), ('y', 'float64')],
+    'peak_channel': [('x', 'float64'), ('y', 'float64')],
     'monopolar_triangulation': [('x', 'float64'), ('y', 'float64'), ('z', 'float64'), ('alpha', 'float64')],
 }
 

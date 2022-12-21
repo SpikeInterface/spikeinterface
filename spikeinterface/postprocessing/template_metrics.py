@@ -11,8 +11,8 @@ import scipy.stats
 from scipy.signal import resample_poly
 
 from ..core import WaveformExtractor
+from ..core.template_tools import get_template_extremum_channel, get_template_channel_sparsity
 from ..core.waveform_extractor import BaseWaveformExtractorExtension
-from .template_tools import get_template_extremum_channel, get_template_channel_sparsity
 import warnings
 
 
@@ -50,7 +50,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        new_metrics = self.template_metrics.loc[np.array(unit_ids)]
+        new_metrics = self._extension_data['metrics'].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
         
     def _run(self):

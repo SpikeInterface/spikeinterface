@@ -29,7 +29,7 @@ def setup_module():
 
 
 def test_hybrid_units_recording():
-    wvf_extractor = WaveformExtractor.load_from_folder(cache_folder / "wvf_extractor")
+    wvf_extractor = WaveformExtractor.load(cache_folder / "wvf_extractor")
     recording = wvf_extractor.recording
     templates = wvf_extractor.get_all_templates()
     templates[:, 0, :] = 0
