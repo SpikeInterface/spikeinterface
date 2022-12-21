@@ -56,6 +56,11 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'])
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
+        metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'],
+                                                                qm_params=dict(isi_violations=dict(isi_threshold_ms=2)))
+        assert we.load_extension("quality_metrics")._params["qm_params"]["isi_violations"]["isi_threshold_ms"] == 2
+        assert 'snr' in metrics.columns
+        assert 'isolation_distance' not in metrics.columns
         # print(metrics)
 
         # with PCs
@@ -95,18 +100,18 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         we_inv.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
         we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
 
-        neg_qm_params = get_default_qm_params()
-        neg_qm_params["snr"]["peak_sign"] = "neg"
-        neg_qm_params["amplitude_cutoff"]["peak_sign"] = "neg"
-        pos_qm_params = get_default_qm_params()
-        pos_qm_params["snr"]["peak_sign"] = "pos"
-        pos_qm_params["amplitude_cutoff"]["peak_sign"] = "pos"
+        # neg_qm_params = get_default_qm_params()
+        # neg_qm_params["snr"]["peak_sign"] = "neg"
+        # neg_qm_params["amplitude_cutoff"]["peak_sign"] = "neg"
+        # pos_qm_params = get_default_qm_params()
+        # pos_qm_params["snr"]["peak_sign"] = "pos"
+        # pos_qm_params["amplitude_cutoff"]["peak_sign"] = "pos"
 
         # without PC
         metrics = self.extension_class.get_extension_function()(
-            we, metric_names=['snr', 'amplitude_cutoff'], qm_params=neg_qm_params)
+            we, metric_names=['snr', 'amplitude_cutoff'], peak_sign="neg")
         metrics_inv = self.extension_class.get_extension_function()(
-            we_inv, metric_names=['snr', 'amplitude_cutoff'], qm_params=pos_qm_params)
+            we_inv, metric_names=['snr', 'amplitude_cutoff'], peak_sign="pos")
         assert np.allclose(metrics["snr"].values,
                            metrics_inv["snr"].values, atol=1e-4)
         assert np.allclose(metrics["amplitude_cutoff"].values,

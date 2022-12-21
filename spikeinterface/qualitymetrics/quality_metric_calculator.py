@@ -43,9 +43,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             self.recording = None
         self.sorting = waveform_extractor.sorting
 
-    def _set_params(self, metric_names=None, qm_params=None, 
-                    sparsity=None, seed=None,
-                    skip_pc_metrics=False):
+    def _set_params(self, metric_names=None, qm_params=None, peak_sign=None,
+                    seed=None, sparsity=None, skip_pc_metrics=False):
 
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
@@ -55,13 +54,18 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
                 pc_metrics = _possible_pc_metric_names.copy()
                 pc_metrics.remove("nearest_neighbor")
                 metric_names += pc_metrics
-        print(metric_names)
-        if qm_params is None:
-            qm_params = get_default_qm_params()
+        qm_params_ = get_default_qm_params()
+        for k in qm_params_:
+            if qm_params is not None and k in qm_params:
+                qm_params_[k].update(qm_params[k])
+            if 'peak_sign' in qm_params_[k] and peak_sign is not None:
+                qm_params_[k]['peak_sign'] = peak_sign
 
         params = dict(metric_names=[str(name) for name in metric_names],
                       sparsity=sparsity,
-                      qm_params=qm_params,
+                      peak_sign=peak_sign,
+                      seed=seed,
+                      qm_params=qm_params_,
                       skip_pc_metrics=skip_pc_metrics)
 
         return params
@@ -109,12 +113,11 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         if len(pc_metric_names) > 0 and not self._params['skip_pc_metrics']:
             if self.principal_component is None:
                 raise ValueError('waveform_principal_component must be provied')
-            pc_metrics_params = qm_params['pc']
             pc_metrics = calculate_pc_metrics(self.principal_component,
                                               metric_names=pc_metric_names, 
                                               sparsity=sparsity,
                                               progress_bar=progress_bar, 
-                                              n_jobs=n_jobs, **pc_metrics_params)
+                                              n_jobs=n_jobs, qm_params=qm_params)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 
@@ -143,7 +146,8 @@ WaveformExtractor.register_extension(QualityMetricCalculator)
 
 
 def compute_quality_metrics(waveform_extractor, load_if_exists=False,
-                            metric_names=None, qm_params=None, sparsity=None, skip_pc_metrics=False, 
+                            metric_names=None, qm_params=None, peak_sign=None, seed=None,
+                            sparsity=None, skip_pc_metrics=False, 
                             n_jobs=1, verbose=False, progress_bar=False):
     """Compute quality metrics on waveform extractor.
 
@@ -180,8 +184,8 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         qmc = waveform_extractor.load_extension(QualityMetricCalculator.extension_name)
     else:
         qmc = QualityMetricCalculator(waveform_extractor)
-        qmc.set_params(metric_names=metric_names, qm_params=qm_params, sparsity=sparsity, 
-                       skip_pc_metrics=skip_pc_metrics)
+        qmc.set_params(metric_names=metric_names, qm_params=qm_params, peak_sign=peak_sign, seed=seed,
+                       sparsity=sparsity, skip_pc_metrics=skip_pc_metrics)
         qmc.run(n_jobs=n_jobs, verbose=verbose, progress_bar=progress_bar)
 
     metrics = qmc.get_data()
@@ -205,5 +209,5 @@ def get_default_qm_params():
     """
     default_params = {}
     default_params.update(misc_metrics_params)
-    default_params.update({"pc": pca_metrics_params})
+    default_params.update(pca_metrics_params)
     return deepcopy(default_params)

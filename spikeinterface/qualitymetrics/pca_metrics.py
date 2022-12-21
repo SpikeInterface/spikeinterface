@@ -28,12 +28,25 @@ _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
 
 
 _default_params = dict(
-    max_spikes_for_nn=10000,
-    min_spikes_for_nn=10,
-    n_neighbors=4,
-    n_components=10,
-    radius_um=100,
-    seed=0
+    nearest_neighbor=dict(
+        max_spikes=10000,
+        min_spikes=10,
+        n_neighbors=4,
+    ),
+    nn_isolation=dict(
+        max_spikes=10000,
+        min_spikes=10,
+        n_neighbors=4,
+        n_components=10,
+        radius_um=100,
+    ),
+    nn_noise_overlap=dict(
+        max_spikes=10000,
+        min_spikes=10,
+        n_neighbors=4,
+        n_components=10,
+        radius_um=100,
+    )
 )
 
 
@@ -43,9 +56,8 @@ def get_quality_pca_metric_list():
     return deepcopy(_possible_pc_metric_names)
 
 
-def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_nn=10000,
-                         min_spikes_for_nn=10, n_neighbors=4, n_components=10,
-                         radius_um=100, seed=0, n_jobs=1, progress_bar=False):
+def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
+                         seed=None, n_jobs=1, progress_bar=False):
     """Calculate principal component derived metrics.
 
     Parameters
@@ -74,7 +86,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
     radius_um : float, optional, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
         This is used for the nearest neighbor noise overlap measure.
-    seed : int, optional, default: 0
+    seed : int, optional, default: None
         Random seed value.
     n_jobs : int
         Number of jobs to parallelize metric computations.
@@ -89,7 +101,8 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
 
     if metric_names is None:
         metric_names = _possible_pc_metric_names
-    # print('metric_names', metric_names)
+    if qm_params is None:
+        qm_params = _default_params
 
     assert isinstance(pca, WaveformPrincipalComponent)
     we = pca.waveform_extractor
@@ -126,7 +139,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
                                  if extremum_channels[other_unit] in neighbor_channel_ids]
         
         func_args = (we.folder, metric_names, unit_id, neighbor_channel_ids, neighbor_unit_ids, unit_ids, 
-                     max_spikes_for_nn, min_spikes_for_nn, n_neighbors,  n_components, radius_um, seed,)
+                     qm_params, seed,)
             
 
         if not run_in_parallel:
@@ -320,7 +333,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
 
 def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_unit_id: int,
                                 max_spikes_for_nn: int = 1000, min_spikes_for_nn: int = 10, n_neighbors: int = 5,
-                                n_components: int = 10, radius_um: float = 100, seed: int = 0):
+                                n_components: int = 10, radius_um: float = 100, seed=None):
     """Calculates unit isolation based on NearestNeighbors search in PCA space.
 
     Parameters
@@ -340,7 +353,7 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
         The number of PC components to use to project the snippets to.
     radius_um : float, optional, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    seed : int, optional, default: 0
+    seed : int, optional, default: None
         Seed for random subsampling of spikes.
 
     Returns
@@ -460,7 +473,7 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
 def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
                                     this_unit_id: int, max_spikes_for_nn: int = 1000,
                                     min_spikes_for_nn: int = 10, n_neighbors: int = 5,
-                                    n_components: int = 10, radius_um: float = 100, seed: int = 0):
+                                    n_components: int = 10, radius_um: float = 100, seed=None):
     """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
     Parameters
@@ -506,7 +519,6 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     ---------
     Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
     """
-
     rng = np.random.default_rng(seed=seed)
 
     sorting = waveform_extractor.sorting
@@ -654,8 +666,7 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 
 
 def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids, neighbor_unit_ids,
-                         unit_ids, max_spikes_for_nn, min_spikes_for_nn, n_neighbors, n_components,
-                         radius_um, seed):
+                         unit_ids, qm_params, seed):
     we = WaveformExtractor.load(we_folder)
     pca = WaveformPrincipalComponent.load(we_folder)
 
@@ -690,8 +701,8 @@ def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids,
 
     if 'nearest_neighbor' in metric_names:
         try:
-            nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id,
-                                                                  max_spikes_for_nn, n_neighbors)
+            nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, 
+                                                                  **qm_params['nearest_neighbor'])
         except:
             nn_hit_rate = np.nan
             nn_miss_rate = np.nan
@@ -700,18 +711,14 @@ def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids,
 
     if 'nn_isolation' in metric_names:
         try:
-            nn_isolation = nearest_neighbors_isolation(we, unit_id, max_spikes_for_nn,
-                                                       min_spikes_for_nn, n_neighbors,
-                                                       n_components, radius_um, seed)
+            nn_isolation = nearest_neighbors_isolation(we, unit_id, seed=seed, **qm_params['nn_isolation'])
         except:
             nn_isolation = np.nan
         pc_metrics['nn_isolation'] = nn_isolation
 
     if 'nn_noise_overlap' in metric_names:
         try:
-            nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, max_spikes_for_nn,
-                                                               min_spikes_for_nn, n_neighbors,
-                                                               n_components, radius_um, seed)
+            nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, seed=seed, **qm_params['nn_noise_overlap'])
         except:
             nn_noise_overlap = np.nan
         pc_metrics['nn_noise_overlap'] = nn_noise_overlap
