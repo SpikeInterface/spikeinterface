@@ -83,6 +83,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         metric_names = self._params['metric_names']
         qm_params = self._params['qm_params']
         sparsity = self._params['sparsity']
+        seed = self._params['seed']
 
         unit_ids = self.sorting.unit_ids
         metrics = pd.DataFrame(index=unit_ids)
@@ -117,7 +118,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
                                               metric_names=pc_metric_names, 
                                               sparsity=sparsity,
                                               progress_bar=progress_bar, 
-                                              n_jobs=n_jobs, qm_params=qm_params)
+                                              n_jobs=n_jobs, qm_params=qm_params,
+                                              seed=seed)
             for col, values in pc_metrics.items():
                 metrics[col] = pd.Series(values)
 

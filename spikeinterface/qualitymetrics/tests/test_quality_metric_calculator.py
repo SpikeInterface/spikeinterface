@@ -5,11 +5,11 @@ import numpy as np
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
 from spikeinterface.extractors import toy_example
+from spikeinterface.core import get_template_channel_sparsity
 
 from spikeinterface.postprocessing import WaveformPrincipalComponent
 from spikeinterface.preprocessing import scale
 from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_qm_params
-from spikeinterface.postprocessing import get_template_channel_sparsity
 
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
@@ -58,7 +58,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert 'isolation_distance' not in metrics.columns
         metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'],
                                                                 qm_params=dict(isi_violations=dict(isi_threshold_ms=2)))
-        assert we.load_extension("quality_metrics")._params["qm_params"]["isi_violations"]["isi_threshold_ms"] == 2
+        # check that parameters are correctly set
+        qm = we.load_extension("quality_metrics")
+        assert qm._params["qm_params"]["isi_violations"]["isi_threshold_ms"] == 2
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
         # print(metrics)
@@ -67,12 +69,12 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         pca = WaveformPrincipalComponent(we)
         pca.set_params(n_components=5, mode='by_channel_local')
         pca.run()
-        metrics = self.extension_class.get_extension_function()(we)
+        metrics = self.extension_class.get_extension_function()(we, seed=0)
         assert 'isolation_distance' in metrics.columns
 
         # with PC - parallel
         metrics_par = self.extension_class.get_extension_function()(
-            we, n_jobs=2, verbose=True, progress_bar=True)
+            we, n_jobs=2, verbose=True, progress_bar=True, seed=0)
         # print(metrics)
         # print(metrics_par)
         for metric_name in metrics.columns:

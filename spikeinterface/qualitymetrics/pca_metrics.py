@@ -3,7 +3,7 @@
 from cmath import nan
 import numpy as np
 from spikeinterface.core.waveform_extractor import WaveformExtractor
-from spikeinterface.postprocessing.template_tools import get_template_extremum_channel
+from spikeinterface.core.template_tools import get_template_extremum_channel
 from tqdm.auto import tqdm
 import scipy.stats
 import scipy.spatial.distance
@@ -71,21 +71,8 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
         If given, the sparse channel_ids for each unit. This is used also to identify neighbor
         units and speed up computations. If None (default) all channels and all units are used
         for each unit.
-    max_spikes_for_nn : int, optional, default: 10000
-        The maximum number of spikes to use per cluster.
-        This is used for the nearest neighbors isolation and noise overlap measures.
-    min_spikes_for_nn : int, optional, default: 10
-        The minimum number of spikes each cluster must have for metric computation.
-        If less than this value, numpy.NaN is returned as the metric.
-    n_neighbors : int, optional, default: 4
-        The number of neighbors to use.
-        This is used for the nearest neighbors isolation and noise overlap measures.
-    n_components : int, optional, default: 10
-        The number of PC components to use to project the snippets to.
-        This is used for the nearest neighbors isolation and noise overlap measures.
-    radius_um : float, optional, default: 100
-        The radius, in um, that channels need to be within the peak channel to be included.
-        This is used for the nearest neighbor noise overlap measure.
+    qm_params : dict or None
+        Dictionary with parameters for each PC metric function.
     seed : int, optional, default: None
         Random seed value.
     n_jobs : int
@@ -268,7 +255,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
     return d_prime
 
 
-def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_nn, n_neighbors):
+def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_neighbors):
     """
     Calculates unit contamination based on NearestNeighbors search in PCA space.
 
@@ -280,7 +267,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
         The cluster labels for all spikes. Must have length of number of spikes.
     this_unit_id : int
         The ID for the unit to calculate these metrics for.
-    max_spikes_for_nn : int
+    max_spikes : int
         The number of spikes to use, per cluster.
         Note that the calculation can be very slow when this number is >20000.
     n_neighbors : int
@@ -305,7 +292,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
     """
 
     total_spikes = all_pcs.shape[0]
-    ratio = max_spikes_for_nn / total_spikes
+    ratio = max_spikes / total_spikes
     this_unit = all_labels == this_unit_id
 
     X = np.concatenate(
@@ -332,7 +319,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes_for_
 
 
 def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_unit_id: int,
-                                max_spikes_for_nn: int = 1000, min_spikes_for_nn: int = 10, n_neighbors: int = 5,
+                                max_spikes: int = 1000, min_spikes: int = 10, n_neighbors: int = 5,
                                 n_components: int = 10, radius_um: float = 100, seed=None):
     """Calculates unit isolation based on NearestNeighbors search in PCA space.
 
@@ -342,11 +329,11 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
         The waveform extractor object.
     this_unit_id : int
         The ID for the unit to calculate these metrics for.
-    max_spikes_for_nn : int, optional, default: 1000
+    max_spikes : int, optional, default: 1000
         Max number of spikes to use per unit.
-    min_spikes_for_nn : int, optional, defalt: 10
+    min_spikes : int, optional, defalt: 10
         Min number of spikes a unit must have to go through with metric computation.
-        Units with spikes < min_spikes_for_nn gets numpy.NaN as the quality metric.
+        Units with spikes < min_spikes gets numpy.NaN as the quality metric.
     n_neighbors : int, optional, default: 5
         Number of neighbors to check membership of.
     n_components : int, optional, default: 10
@@ -360,7 +347,7 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     -------
     nn_isolation : float
         The calculation nearest neighbor isolation metric for `this_unit_id`.
-        If the unit has fewer than `min_spikes_for_nn`, returns numpy.NaN instead.
+        If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
 
     Notes
     -----
@@ -374,9 +361,9 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     Let A and B be two clusters from sorting.
 
     We set |A| = |B|:
-        If max_spikes_for_nn < |A| and max_spikes_for_nn < |B|:
-            Then randomly subsample max_spikes_for_nn samples from A and B.
-        If max_spikes_for_nn > min(|A|, |B|) (e.g. |A| > max_spikes_for_nn > |B|):
+        If max_spikes < |A| and max_spikes < |B|:
+            Then randomly subsample max_spikes samples from A and B.
+        If max_spikes > min(|A|, |B|) (e.g. |A| > max_spikes > |B|):
             Then randomly subsample min(|A|, |B|) samples from A and B.
     This is because the metric is affected by the size of the clusters being compared
     independently of how well-isolated they are.
@@ -396,16 +383,16 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     all_units_ids = sorting.get_unit_ids()
     n_spikes_all_units = compute_num_spikes(waveform_extractor)
 
-    # if target unit has fewer than `min_spikes_for_nn` spikes, print out a warning and return NaN
-    if n_spikes_all_units[this_unit_id] < min_spikes_for_nn:
+    # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
+    if n_spikes_all_units[this_unit_id] < min_spikes:
         print(f'Warning: unit {this_unit_id} has fewer spikes than ',
-              f'specified by `min_spikes_for_nn` ({min_spikes_for_nn}); ',
+              f'specified by `min_spikes` ({min_spikes}); ',
               'returning NaN as the quality metric...')
         return np.nan
     else:
         # first remove the units with too few spikes
         unit_ids_to_keep = np.array([unit for unit, num_spikes in n_spikes_all_units.items()
-                                     if num_spikes >= min_spikes_for_nn])
+                                     if num_spikes >= min_spikes])
         sorting = sorting.select_units(unit_ids=unit_ids_to_keep)
 
         all_units_ids = sorting.get_unit_ids()
@@ -438,7 +425,7 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
                 n_spikes_other_unit = waveforms_other_unit.shape[0]
 
                 n_snippets = np.min(
-                    [n_spikes_target_unit, n_spikes_other_unit, max_spikes_for_nn])
+                    [n_spikes_target_unit, n_spikes_other_unit, max_spikes])
 
                 # make the two clusters equal in terms of: number of spikes & channels with signal
                 waveforms_target_unit_idx = rng.choice(
@@ -471,8 +458,8 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
 
 
 def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
-                                    this_unit_id: int, max_spikes_for_nn: int = 1000,
-                                    min_spikes_for_nn: int = 10, n_neighbors: int = 5,
+                                    this_unit_id: int, max_spikes: int = 1000,
+                                    min_spikes: int = 10, n_neighbors: int = 5,
                                     n_components: int = 10, radius_um: float = 100, seed=None):
     """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
@@ -482,11 +469,11 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         The waveform extractor object.
     this_unit_id : int
         The ID of the unit to calculate this metric on.
-    max_spikes_for_nn : int, optional, default: 1000
+    max_spikes : int, optional, default: 1000
         The max number of spikes to use per cluster.
-    min_spikes_for_nn : int, optional, defalt: 10
+    min_spikes : int, optional, defalt: 10
         Min number of spikes a unit must have to go through with metric computation.
-        Units with spikes < min_spikes_for_nn gets numpy.NaN as the quality metric.
+        Units with spikes < min_spikes gets numpy.NaN as the quality metric.
     n_neighbors : int, optional, default: 5
         The number of neighbors to check membership.
     n_components : int, optional, default: 10
@@ -500,7 +487,7 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     -------
     nn_noise_overlap : float
         The computed nearest neighbor noise estimate.
-        If the unit has fewer than `min_spikes_for_nn`, returns numpy.NaN instead.
+        If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
 
     Notes
     -----
@@ -522,41 +509,40 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     rng = np.random.default_rng(seed=seed)
 
     sorting = waveform_extractor.sorting
-    all_units_ids = sorting.get_unit_ids()
     n_spikes_all_units = compute_num_spikes(waveform_extractor)
 
-    # if target unit has fewer than `min_spikes_for_nn` spikes, print out a warning and return NaN
-    if n_spikes_all_units[this_unit_id] < min_spikes_for_nn:
+    # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
+    if n_spikes_all_units[this_unit_id] < min_spikes:
         print(f'Warning: unit {this_unit_id} has fewer spikes than ',
-              f'specified by `min_spikes_for_nn` ({min_spikes_for_nn}); ',
+              f'specified by `min_spikes` ({min_spikes}); ',
               'returning NaN as the quality metric...')
         return np.nan
     else:
         # get random snippets from the recording to create a noise cluster
         recording = waveform_extractor.recording
         noise_cluster = get_random_data_chunks(recording, return_scaled=waveform_extractor.return_scaled,
-                                               num_chunks_per_segment=max_spikes_for_nn,
+                                               num_chunks_per_segment=max_spikes,
                                                chunk_size=waveform_extractor.nsamples, seed=seed)
 
         noise_cluster = np.reshape(
-            noise_cluster, (max_spikes_for_nn, waveform_extractor.nsamples, -1))
+            noise_cluster, (max_spikes, waveform_extractor.nsamples, -1))
 
         # get waveforms for target cluster
         waveforms = waveform_extractor.get_waveforms(unit_id=this_unit_id)
 
         # adjust the size of the target and noise clusters to be equal
-        if waveforms.shape[0] > max_spikes_for_nn:
+        if waveforms.shape[0] > max_spikes:
             wf_ind = rng.choice(
-                waveforms.shape[0], max_spikes_for_nn, replace=False)
+                waveforms.shape[0], max_spikes, replace=False)
             waveforms = waveforms[wf_ind]
-            n_snippets = max_spikes_for_nn
-        elif waveforms.shape[0] < max_spikes_for_nn:
+            n_snippets = max_spikes
+        elif waveforms.shape[0] < max_spikes:
             noise_ind = rng.choice(
                 noise_cluster.shape[0], waveforms.shape[0], replace=False)
             noise_cluster = noise_cluster[noise_ind]
             n_snippets = waveforms.shape[0]
         else:
-            n_snippets = max_spikes_for_nn
+            n_snippets = max_spikes
 
         # restrict to channels with significant signal
         closest_chans_idx = get_template_channel_sparsity(waveform_extractor, method='radius',
