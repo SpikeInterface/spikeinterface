@@ -197,13 +197,15 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     Returns
     -------
-    isi_violations_ratio : float
-        The isi violation ratio described in [1].
-    isi_violations_rate : float
-        Rate of contaminating spikes as a fraction of overall rate.
+    Named tuple with the following properties:
+
+    isi_violations_ratio : dict of floats
+        The isi violation ratio described in [1], for all units
+    isi_violations_rate : dict of floats
+        Rate of contaminating spikes as a fraction of overall rate, for all units
         Higher values indicate more contamination.
-    isi_violation_count : int
-        Number of violations.
+    isi_violation_count : dict of ints
+        Number of violations, for all units
 
     Notes
     -----
@@ -226,7 +228,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     fs = recording.get_sampling_frequency()
 
     seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duration = np.sum(seg_durations)
+    total_duration_s = np.sum(seg_durations)
 
     isi_threshold_s = isi_threshold_ms / 1000
     min_isi_s = min_isi_ms / 1000
@@ -238,30 +240,81 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     # all units converted to seconds
     for unit_id in unit_ids:
-        num_violations = 0
-        num_spikes = 0
+
+        spike_trains = []
+
         for segment_index in range(num_segs):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            isis = np.diff(spike_train)
-            num_spikes += len(spike_train)
-            num_violations += np.sum(isis < isi_threshold_samples)
-        violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
-        
-        if num_spikes > 0:
-            total_rate = num_spikes / total_duration
-            violation_rate = num_violations / violation_time
-            isi_violations_ratio[unit_id] = violation_rate / total_rate
-            isi_violations_rate[unit_id] = num_violations / total_duration
-            isi_violations_count[unit_id] = num_violations      
-        else:
-            isi_violations_ratio[unit_id] = np.nan
-            isi_violations_rate[unit_id] = np.nan
-            isi_violations_count[unit_id] = np.nan
+            spike_trains.append(spike_train / fs)
+
+        ratio, rate, count = isi_violations(spike_trains, min_isi_s, total_duration_s,
+                                            isi_threshold_s, min_isi_s)
+
+        isi_violations_ratio[unit_id] = ratio
+        isi_violations_rate[unit_id] = rate
+        isi_violations_count[unit_id] = count
 
     res = namedtuple('isi_violation',
                      ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
 
     return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
+
+
+def isi_violations(spike_trains, total_duration_s,
+                   isi_threshold_s=0.0015, 
+                   min_isi_s=0):
+    """Calculate Inter-Spike Interval (ISI) violations.
+
+    See compute_isi_violations for additional documentation
+
+    Parameters
+    ----------
+    spike_trains : list of np.ndarrays
+        The spike times for each recording segment for one unit, in seconds
+    total_duration_s : float
+        The total duration of the recording (in seconds)
+    isi_threshold_s : float, optional, default: 0.0015
+        Threshold for classifying adjacent spikes as an ISI violation, in seconds.
+        This is the biophysical refractory period (default=1.5).
+    min_isi_s : float, optional, default: 0
+        Minimum possible inter-spike interval, in seconds.
+        This is the artificial refractory period enforced
+        by the data acquisition system or post-processing algorithms.
+
+    Returns
+    -------
+    isi_violations_ratio : float
+        The isi violation ratio described in [1]
+    isi_violations_rate : float
+        Rate of contaminating spikes as a fraction of overall rate.
+        Higher values indicate more contamination.
+    isi_violation_count : int
+        Number of violations
+    """
+
+    num_violations = 0
+    num_spikes = 0
+
+    isi_violations_ratio = np.float64(np.nan)
+    isi_violations_rate = np.float64(np.nan)
+    isi_violations_count = np.float64(np.nan)
+
+    for spike_train in spike_trains:
+        isis = np.diff(spike_train)
+        num_spikes += len(spike_train)
+        num_violations += np.sum(isis < isi_threshold_s)
+
+    violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
+    
+    if num_spikes > 0:
+        total_rate = num_spikes / total_duration_s
+        violation_rate = num_violations / violation_time
+        isi_violations_ratio = violation_rate / total_rate
+        isi_violations_rate = num_violations / total_duration_s
+        isi_violations_count = num_violations      
+    
+    return isi_violations_ratio, isi_violations_rate, isi_violations_count
+
 
 
 def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: float = 1.0,
@@ -285,7 +338,12 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     Returns
     -------
-    TODO
+    Named tuple with the following properties:
+
+    rp_violations : dict of ints
+        Count of violations, for all units
+    contamination : dict of floats
+        Contamination metrics, for all units
 
     Reference
     ---------
@@ -297,7 +355,6 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         print("Error: numba is not installed.")
         print("compute_refrac_period_violations cannot run without numba.")
         return None
-
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -334,85 +391,6 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     return res(nb_violations, contamination)
 
-
-
-def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
-                              num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
-    """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
-
-    Parameters
-    ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    peak_sign : {'neg', 'pos', 'both'}
-        The sign of the template to compute best channels.
-    num_histogram_bins : int, optional, default: 500
-        The number of bins to use to compute the amplitude histogram.
-    histogram_smoothing_value : int, optional, default: 3
-        Controls the smoothing applied to the amplitude histogram.
-
-    Returns
-    -------
-    all_fraction_missing : dict
-        Estimated fraction of missing spikes, based on the amplitude distribution, for each unit ID.
-
-    Reference
-    ---------
-    Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
-    
-    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
-
-    Notes
-    -----
-    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift). It does not assume the amplitude histogram is Gaussian.
-
-    Important: Here the amplitudes are extracted from the waveform extractor. This means that the number of spikes used to estimate amplitude may be low.
-
-    See: WaveformExtractor.set_params(max_spikes_per_unit=500)
-
-    """
-
-    recording = waveform_extractor.recording
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
-
-    before = waveform_extractor.nbefore
-
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
-
-    all_fraction_missing = {}
-    for unit_id in unit_ids:
-        waveforms = waveform_extractor.get_waveforms(unit_id)
-        chan_id = extremum_channels_ids[unit_id]
-        chan_ind = recording.id_to_index(chan_id)
-        amplitudes = waveforms[:, before, chan_ind]
-
-        # change amplitudes signs in case peak_sign is pos
-        if peak_sign == "pos":
-            amplitudes = -amplitudes
-
-        h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
-
-        # TODO : change with something better scipy.ndimage.gaussian_filter1d
-        pdf = scipy.ndimage.gaussian_filter1d(h, histogram_smoothing_value)
-        support = b[:-1]
-        bin_size = np.mean(np.diff(support))
-        peak_index = np.argmax(pdf)
-        
-        pdf_above = np.abs(pdf[peak_index:] - pdf[0])
-
-        if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
-            warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
-                          "amplitude_cutoff computation!")
-        
-        G = np.argmin(pdf_above) + peak_index
-        fraction_missing = np.sum(pdf[G:]) * bin_size
-        fraction_missing = np.min([fraction_missing, 0.5])
-        all_fraction_missing[unit_id] = fraction_missing
-
-    return all_fraction_missing
-
-
 if HAVE_NUMBA:
     @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
     def _compute_nb_violations_numba(spike_train, t_r):
@@ -442,6 +420,114 @@ if HAVE_NUMBA:
             spike_train = spike_trains[spike_clusters == i]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
+
+
+
+def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
+                              num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
+    """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    peak_sign : {'neg', 'pos', 'both'}
+        The sign of the template to compute best channels.
+    num_histogram_bins : int, optional, default: 500
+        The number of bins to use to compute the amplitude histogram.
+    histogram_smoothing_value : int, optional, default: 3
+        Controls the smoothing applied to the amplitude histogram.
+
+    Returns
+    -------
+    all_fraction_missing : dict of floats
+        Estimated fraction of missing spikes, based on the amplitude distribution, for each unit ID.
+
+    Reference
+    ---------
+    Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
+    
+    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
+
+    Notes
+    -----
+    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift). It does not assume the amplitude histogram is Gaussian.
+
+    Important: Here the amplitudes are extracted from the waveform extractor. This means that the number of spikes used to estimate amplitude may be low.
+
+    See: WaveformExtractor.set_params(max_spikes_per_unit=500)
+
+    """
+
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    unit_ids = sorting.unit_ids
+
+    before = waveform_extractor.nbefore
+
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+
+    all_fraction_missing = {}
+
+    for unit_id in unit_ids:
+        waveforms = waveform_extractor.get_waveforms(unit_id)
+        chan_id = extremum_channels_ids[unit_id]
+        chan_ind = recording.id_to_index(chan_id)
+        amplitudes = waveforms[:, before, chan_ind]
+
+        # change amplitudes signs in case peak_sign is pos
+        if peak_sign == "pos":
+            amplitudes = -amplitudes
+
+        fraction_missing = amplitude_cutoff(amplitudes, num_histogram_bins, histogram_smoothing_value)
+        
+        all_fraction_missing[unit_id] = fraction_missing
+
+    return all_fraction_missing
+
+
+def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_value=3):
+    """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
+
+    See compute_amplitudes_cutoff for additional documentation
+
+    Parameters
+    ----------
+    amplitudes : ndarray_like
+        The amplitudes (in uV) of the spikes for one unit.
+    peak_sign : {'neg', 'pos', 'both'}
+        The sign of the template to compute best channels.
+    num_histogram_bins : int, optional, default: 500
+        The number of bins to use to compute the amplitude histogram.
+    histogram_smoothing_value : int, optional, default: 3
+        Controls the smoothing applied to the amplitude histogram.
+
+    Returns
+    -------
+    fraction_missing : float
+        Estimated fraction of missing spikes, based on the amplitude distribution.
+
+    """
+
+    h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
+
+    # TODO : use something better than scipy.ndimage.gaussian_filter1d
+    pdf = scipy.ndimage.gaussian_filter1d(h, histogram_smoothing_value)
+    support = b[:-1]
+    bin_size = np.mean(np.diff(support))
+    peak_index = np.argmax(pdf)
+    
+    pdf_above = np.abs(pdf[peak_index:] - pdf[0])
+
+    if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
+        warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
+                        "amplitude_cutoff computation!")
+    
+    G = np.argmin(pdf_above) + peak_index
+    fraction_missing = np.sum(pdf[G:]) * bin_size
+    fraction_missing = np.min([fraction_missing, 0.5])
+
+    return fraction_missing
 
 
 def compute_noise_cutoff(waveform_extractor, peak_sign='neg', quantile_length=.25, 
@@ -478,14 +564,17 @@ def compute_noise_cutoff(waveform_extractor, peak_sign='neg', quantile_length=.2
 
     Returns
     -------
-    all_noise_cutoffs : dict
+
+    Named tuple with the following properties:
+
+    all_noise_cutoffs : dict of floats
         Number of standard deviations that the lower mean is outside of the
         mean of the upper quartile, for each unit ID.
 
-    all_first_low_quantiles : dict
+    all_first_low_quantiles : dict of floats
         The value of the first low quantile, for each unit ID.
 
-    all_peak_bin_height : dict
+    all_peak_bin_height : dict of floats
         The value of the peak bin height, for each unit ID.
 
     Reference
@@ -518,27 +607,35 @@ def compute_noise_cutoff(waveform_extractor, peak_sign='neg', quantile_length=.2
         chan_ind = recording.id_to_index(chan_id)
         amps = waveforms[:, before, chan_ind]
 
+        # change amplitudes signs in case peak_sign is pos
+        if peak_sign == "pos":
+            amps = -amps
+
         cutoff, first_low_quantile, peak_bin_height = \
             noise_cutoff(amps, quantile_length, n_bins)
 
         all_noise_cutoffs[unit_id] = cutoff
         all_first_low_quantiles[unit_id] = first_low_quantile
         all_peak_bin_heights[unit_id] = peak_bin_height
- 
-    return all_noise_cutoffs, all_first_low_quantiles, all_peak_bin_heights
+
+    res = namedtuple('noise_cutoff',
+                     ['all_noise_cutoffs', 'all_first_low_quantiles', 'all_peak_bin_heights'])
+
+    return res(all_noise_cutoffs, all_first_low_quantiles, all_peak_bin_heights)
 
 
-def noise_cutoff(amps, quantile_length=.25, n_bins=100):
+
+def noise_cutoff(amplitudes, quantile_length=.25, n_bins=100):
     """
 
     Computes the noise_cutoff metric for one unit
 
-    See compute_noise_cutoff function for more information.
+    See compute_noise_cutoff function for additional documentation
 
     Parameters
     ----------
-    amps : ndarray_like
-        The amplitudes (in uV) of the spikes.
+    amplitudes : ndarray_like
+        The amplitudes (in uV) of the spikes for one unit.
     quantile_length : float
         The size of the upper quartile of the amplitude distribution.
     n_bins : int
@@ -547,14 +644,14 @@ def noise_cutoff(amps, quantile_length=.25, n_bins=100):
 
     Returns
     -------
-    noise_cutoff : dict
+    noise_cutoff : float
         Number of standard deviations that the lower mean is outside of the
         mean of the upper quartile; defaults to np.nan
 
-    first_low_quantile : dict
+    first_low_quantile : float
         The value of the first low quantile; defaults to np.nan
 
-    peak_bin_height : dict
+    peak_bin_height : float
         The value of the peak bin height; defaults to np.nan
 
     Reference
@@ -567,10 +664,10 @@ def noise_cutoff(amps, quantile_length=.25, n_bins=100):
     first_low_quantile = np.float64(np.nan)
     peak_bin_height = np.float64(np.nan)
 
-    if amps.size > 1:  # ensure there are amplitudes available to analyze
+    if amplitudes.size > 1:  # ensure there are amplitudes available to analyze
         
-        bins_list = np.linspace(0, np.max(amps), n_bins)  # list of bins to compute the amplitude histogram
-        n, bins = np.histogram(amps, bins=bins_list)  # construct amplitude histogram
+        bins_list = np.linspace(0, np.max(amplitudes), n_bins)  # list of bins to compute the amplitude histogram
+        n, bins = np.histogram(amplitudes, bins=bins_list)  # construct amplitude histogram
         idx_peak = np.argmax(n)  # peak of amplitude distribution
         # don't count zeros #len(n) - idx_peak, compute the length of the top half of the distribution -- ignoring zero bins
         length_top_half = len(np.where(n[idx_peak:-1] > 0)[0])
@@ -593,3 +690,5 @@ def noise_cutoff(amps, quantile_length=.25, n_bins=100):
                 peak_bin_height = np.max(n)
 
     return cutoff, first_low_quantile, peak_bin_height
+
+
