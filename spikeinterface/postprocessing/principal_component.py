@@ -11,7 +11,7 @@ from sklearn.exceptions import NotFittedError
 
 
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 _possible_modes = ['by_channel_local', 'by_channel_global', 'concatenated']
@@ -23,6 +23,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     """
 
     extension_name = 'principal_components'
+    handle_sparsity = True
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
@@ -49,32 +50,16 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     def _set_params(self, n_components=5, mode='by_channel_local',
                     whiten=True, dtype='float32', sparsity=None):
         assert mode in _possible_modes, "Invalid mode!"
-        if self.waveform_extractor.is_sparse():
-            sparsity = self.waveform_extractor.sparsity
-            sparsity_dict = sparsity.unit_id_to_channel_ids
-        elif self.waveform_extractor.post_sparsity is not None:
-            sparsity = self.waveform_extractor.post_sparsity
-            sparsity_dict = sparsity.unit_id_to_channel_ids 
-        elif sparsity is not None:
-            assert isinstance(sparsity, (ChannelSparsity, dict)), \
-                "The sparsity parameter should be a ChannelSparsity object or a dictionary"
-            if isinstance(sparsity, ChannelSparsity):
-                sparsity_dict = sparsity.unit_id_to_channel_ids 
-            else:
-                assert all(unit_id in self.waveform_extractor.unit_ids for unit_id in sparsity.keys()), \
-                    "Invalid unit ids in sparsity dictionary"
-                for channel_ids in sparsity.values():
-                    assert all(chan_id in self.waveform_extractor.channel_ids for chan_id in channel_ids), \
-                        "Invalid channel ids in sparsity dictionary"
-                sparsity_dict = sparsity
-        else:
-            sparsity_dict = None
         
+        if self.waveform_extractor.is_sparse():
+            assert sparsity is None, "WaveformExtractor is already sparse, sparsity must be None"
+        
+        # the sparsity in params is ONLY the injected sparsity and not the waveform_extractor one
         params = dict(n_components=int(n_components),
                       mode=str(mode),
                       whiten=bool(whiten),
                       dtype=np.dtype(dtype).str,
-                      sparsity=sparsity_dict)
+                      sparsity=sparsity)
         
         return params
     
@@ -187,6 +172,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         """
         p = self._params
         mode = p["mode"]
+        sparsity = p["sparsity"]
 
         wfs0 = self.waveform_extractor.get_waveforms(unit_id=self.waveform_extractor.sorting.unit_ids[0])
         assert wfs0.shape[1] == new_waveforms.shape[1], \
@@ -194,17 +180,16 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         num_channels = len(self.waveform_extractor.channel_ids)
 
         # check waveform shapes
-        if p['sparsity'] is not None:
+        if sparsity is not None:
             assert unit_id is not None, \
                     "The unit_id of the new_waveforms is needed to apply the waveforms transformation"
-            sparse_channel_inds = self._get_sparse_channel_inds(unit_id)
-            if new_waveforms.shape[2] != len(sparse_channel_inds):
-                new_waveforms = new_waveforms.copy()[:, :, sparse_channel_inds]
-            channel_inds = sparse_channel_inds
+            channel_inds = sparsity.unit_id_to_channel_indices[unit_id]
+            if new_waveforms.shape[2] != len(channel_inds):
+                new_waveforms = new_waveforms.copy()[:, :, channel_inds]
         else:            
             assert wfs0.shape[2] == new_waveforms.shape[2], \
                 ("Mismatch in number of channels between waveforms used to fit the pca model and 'new_waveforms")
-            channel_inds = np.arange(num_channels)
+            channel_inds = np.arange(num_channels, dtype=int)
 
         # get channel ids and pca models
         pca_model = self.get_pca_model()
@@ -227,15 +212,9 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return projections
 
-    def get_sparsity(self):
-        """
-        Returns sparsity used in PC computation
-
-        Returns
-        -------
-        dict
-            The sparsity dictionary (key: unit_id, value: list of channel_ids)
-        """
+    def _get_sparsity(self):
+        if self.waveform_extractor.is_sparse():
+            return self.waveform_extractor.sparsity
         return self._params["sparsity"]
 
     def _run(self, n_jobs=1, progress_bar=False):
@@ -293,7 +272,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
     def get_extension_function():
         return compute_principal_components
 
-    def run_for_all_spikes(self, file_path=None, sparsity=None, **job_kwargs):
+    def run_for_all_spikes(self, file_path=None, **job_kwargs):
         """
         Project all spikes from the sorting on the PCA model.
         This is a long computation because waveform need to be extracted from each spikes.
@@ -307,14 +286,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         file_path : str or Path or None
             Path to npy file that will store the PCA projections.
             If None, output is saved in principal_components/all_pcs.npy
-        sparsity : dict, optional
-            The sparsity to use for PC projection computation (by default None):
-            * If None and the principal_component extension has been computed with sparsity, the same
-            sparsity is used. 
-            * If given and sparsity has not been used to compute principal components,
-            the provided sparsity is used (dictionary with unit_id as key and list of channel_ids as values).
-            * If None and principal components are not sparse, no sparsity is applied and PC projections are 
-            computed on all channels
         {}
         """
         p = self._params
@@ -335,23 +306,13 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
         spike_times, spike_labels = all_spikes[0]
 
-        if sparsity is not None:
-            if p["sparsity"] is not None:
-                for unit_id, sparse_channels in sparsity.items():
-                    assert np.all(sparse_channels == p["sparsity"][unit_id]), \
-                        ("The provided sparsity does not match the sparsity used to estimate PC models. "
-                         "Use sparsity=None to use correct sparsity")
-        else:
-            sparsity = p["sparsity"]
-
+        sparsity = self._get_sparsity()
         if sparsity is None:
             sparse_channels_indices = {unit_id: np.arange(we.get_num_channels()) for unit_id in we.unit_ids}
             max_channels_per_template = we.get_num_channels()
         else:
-            sparse_channels_indices = {unit_id: self.waveform_extractor.channel_ids_to_indices(sparsity[unit_id])
-                                       for unit_id in sorting.unit_ids}
-            max_sparse_channels = np.max([len(best_channels) for best_channels in sparse_channels_indices.values()])
-            max_channels_per_template = max_sparse_channels
+            sparse_channels_indices = sparsity.unit_id_to_channel_indices
+            max_channels_per_template = max([chan_inds.size for chan_inds in sparse_channels_indices.values()])
 
         unit_channels = [sparse_channels_indices[unit_id] for unit_id in sorting.unit_ids]
 
@@ -409,14 +370,14 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(unit_ids))
 
         for unit_ind, unit_id in units_loop:
-            wfs, sparse_channel_inds = self._get_sparse_waveforms(unit_id)
+            wfs, channel_inds = self._get_sparse_waveforms(unit_id)
             if n_jobs in (0, 1):
-                for wf_ind, chan_ind in enumerate(sparse_channel_inds):
+                for wf_ind, chan_ind in enumerate(channel_inds):
                     pca = pca_models[chan_ind]
                     pca.partial_fit(wfs[:, :, wf_ind])
             else:
                 Parallel(n_jobs=n_jobs)(delayed(partial_fit_one_channel)(pca_model_files[chan_ind], wfs[:, :, wf_ind])
-                                                        for wf_ind, chan_ind in enumerate(sparse_channel_inds))
+                                                        for wf_ind, chan_ind in enumerate(channel_inds))
 
         # reload the models (if n_jobs > 1)
         if n_jobs not in (0, 1):
@@ -452,10 +413,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         project_on_non_fitted = False
         for unit_ind, unit_id in units_loop:
-            wfs, sparse_channel_inds = self._get_sparse_waveforms(unit_id)
+            wfs, channel_inds = self._get_sparse_waveforms(unit_id)
             if wfs.size == 0:
                 continue
-            for wf_ind, chan_ind in enumerate(sparse_channel_inds):
+            for wf_ind, chan_ind in enumerate(channel_inds):
                 pca = pca_model[chan_ind]
                 try:
                     proj = pca.transform(wfs[:, :, wf_ind])
@@ -514,23 +475,24 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # with 'by_channel_global' we can't parallelize over channels
         for unit_ind, unit_id in units_loop:
-            wfs, sparse_channel_inds = self._get_sparse_waveforms(unit_id)
+            wfs, channel_inds = self._get_sparse_waveforms(unit_id)
             if wfs.size == 0:
                 continue
-            for wf_ind, chan_ind in enumerate(sparse_channel_inds):
+            for wf_ind, chan_ind in enumerate(channel_inds):
                 proj = pca_model.transform(wfs[:, :, wf_ind])
                 projection_objects[unit_id][:, :, chan_ind] = proj
                 
     def _fit_concatenated(self, progress_bar):
         we = self.waveform_extractor
         p = self._params
-        sparsity = p["sparsity"]
-        if sparsity is not None:
-            sparsity0 = sparsity[we.unit_ids[0]]
-            assert all(len(chans) == len(sparsity0) for u, chans in sparsity.items()), ("When using sparsity in "
-                "concatenated mode, make sure each unit has the same number of sparse channels")
         unit_ids = we.unit_ids
-
+        
+        sparsity = self._get_sparsity()
+        if sparsity is not None:
+            sparsity0 = sparsity.unit_id_to_channel_indices[unit_ids[0]]
+            assert all(len(chans) == len(sparsity0) for u, chans in sparsity.unit_id_to_channel_indices.items()), \
+                "When using sparsity in concatenated mode, make sure each unit has the same number of sparse channels"
+        
         # there is one unique PCA accross channels
         pca_model = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
 
@@ -575,22 +537,22 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             projection_objects[unit_id][:, :] = proj
 
     def _get_sparse_waveforms(self, unit_id):
-        wfs = self.waveform_extractor.get_waveforms(unit_id, lazy=False)
-        sparse_channel_inds = self._get_sparse_channel_inds(unit_id)
-        # sparsify waveforms if not sparse
-        if wfs.shape[2] != len(sparse_channel_inds):
-            wfs = wfs[:, :, sparse_channel_inds]
-        return wfs, sparse_channel_inds
-
-    def _get_sparse_channel_inds(self, unit_id):
-        sparsity = self._params["sparsity"]
-        if sparsity is not None:
-            sparse_channel_ids = sparsity[unit_id]
+        # get waveforms : dense or sparse
+        we = self.waveform_extractor
+        sparsity = self._params['sparsity']
+        if we.is_sparse():
+            # natural sparsity
+            wfs = we.get_waveforms(unit_id, lazy=False)
+            channel_inds = we.sparsity.unit_id_to_channel_indices[unit_id]
+        elif sparsity is not None:
+            # injected sparsity
+            wfs = self.waveform_extractor.get_waveforms(unit_id, sparsity=sparsity, lazy=False)
+            channel_inds = sparsity.unit_id_to_channel_indices[unit_id]
         else:
-            sparse_channel_ids = self.waveform_extractor.channel_ids
-        sparse_channel_inds = self.waveform_extractor.channel_ids_to_indices(sparse_channel_ids)
-        return sparse_channel_inds
-
+            # dense
+            wfs = self.waveform_extractor.get_waveforms(unit_id, sparsity=None, lazy=False)
+            channel_inds = np.arange(we.channel_ids.size, dtype=int)
+        return wfs, channel_inds
 
 def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
@@ -686,11 +648,9 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
         - 'by_channel_local': a local PCA is fitted for each channel (projection by channel)
         - 'by_channel_global': a global PCA is fitted for all channels (projection by channel)
         - 'concatenated': channels are concatenated and a global PCA is fitted
-    sparsity: ChannelSparsity or dict, optional
-        The sparsity to apply to waveforms. It can be either a ChannelSparsity object or a 
-        dict with unit_ids as keys and lists of channel_ids as values.
+    sparsity: ChannelSparsity or None
+        The sparsity to apply to waveforms.
         If waveform_extractor is already sparse, the default sparsity will be used.
-        If waveform_extractor has a 'post_sparsity' set, the 'post_sparsity' will be used.
     whiten: bool
         If True, waveforms are pre-whitened
     dtype: dtype
