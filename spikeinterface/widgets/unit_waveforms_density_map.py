@@ -2,7 +2,8 @@ import numpy as np
 
 from .base import BaseWidget
 from .utils import get_unit_colors
-from ..postprocessing import get_template_channel_sparsity
+
+from ..core import ChannelSparsity
 
 
 class UnitWaveformDensityMapWidget(BaseWidget):
@@ -18,12 +19,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         List of unit ids.
     plot_templates: bool
         If True, templates are plotted over the waveforms
-    max_channels : None or int
-        If not None only max_channels are displayed per units.
-        Incompatible with with `radius_um`
-    radius_um: None or float
-        If not None, all channels within a circle around the peak waveform will be displayed
-        Incompatible with with `max_channels`
+    sparsity : ChannelSparsity or None
+        Optional ChannelSparsity to apply.
+        If WaveformExtractor is already sparse, the argument is ignored
     unit_colors: None or dict
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used.
@@ -39,8 +37,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
-                 max_channels=None, radius_um=None, same_axis=False,
-                 unit_colors=None, backend=None, **backend_kwargs):
+                 sparsity=None, same_axis=False, unit_colors=None, backend=None, **backend_kwargs):
         we = waveform_extractor
 
         if channel_ids is None:
@@ -52,19 +49,24 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(we.sorting)
 
-
-        # channel sparsity
-        if radius_um is not None:
-            assert max_channels is None, 'radius_um and max_channels are mutually exclusive'
-            channel_inds = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=radius_um)
-        elif max_channels is not None:
-            assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
-            channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index',
-                                                         num_channels=max_channels)
+        if same_axis:
+            assert sparsity is None and not waveform_extractor.is_sparse(), \
+                    ("The 'same_axis' option is only available for dense waveforms")
+        # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
+        if waveform_extractor.is_sparse():
+            sparsity = waveform_extractor.sparsity
         else:
-            # all channels
-            channel_inds = {unit_id: np.arange(len(channel_ids)) for unit_id in unit_ids}
-        channel_inds = {unit_id: inds for unit_id, inds in channel_inds.items() if unit_id in unit_ids}
+            if sparsity is None:
+                # in this case, we construct a dense sparsity
+                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids.items()}
+                sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
+                    unit_id_to_channel_ids=unit_id_to_channel_ids,
+                    unit_ids=we.unit_ids,
+                    channel_ids=we.channel_ids
+                )
+            else:
+                assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
+        channel_inds = sparsity.unit_id_to_channel_indices
 
         if same_axis:
             # channel union
@@ -87,7 +89,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             chan_inds = channel_inds[unit_id]
 
             wfs = we.get_waveforms(unit_id)
-            wfs = wfs[:, :, chan_inds]
+            # check waveform sparsity
+            if wfs.shape[2] != len(sparsity.unit_id_to_channel_indices[unit_id]):
+                wfs = wfs[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
 
             # make histogram density
             wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1)
@@ -121,8 +125,6 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             unit_colors=unit_colors,
             channel_ids=we.channel_ids,
             channel_inds=channel_inds,
-            radius_um=radius_um,
-            max_channels=max_channels,
             same_axis=same_axis,
             bin_min=bin_min,
             bin_max=bin_max,
