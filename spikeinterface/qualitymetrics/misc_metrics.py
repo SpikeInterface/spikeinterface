@@ -289,7 +289,8 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     Reference
     ---------
-    [1] Llobet & Wyngaard (2022) BioRxiv
+    [1] Llobet & Wyngaard (2022) bioRxiv
+
     """
 
     if not HAVE_NUMBA:
@@ -358,15 +359,15 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     Reference
     ---------
     Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
-    This code come from
-    https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
+    
+    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
     Notes
     -----
-    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift)
+    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift). It does not assume the amplitude histogram is Gaussian.
 
-    Important note: here the amplitudes are extracted from the waveform extractor.
-    It means that the number of spike to estimate amplitude is low
+    Important: Here the amplitudes are extracted from the waveform extractor. This means that the number of spikes used to estimate amplitude may be low.
+
     See: WaveformExtractor.set_params(max_spikes_per_unit=500)
 
     """
@@ -441,3 +442,154 @@ if HAVE_NUMBA:
             spike_train = spike_trains[spike_clusters == i]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
+
+
+def compute_noise_cutoff(waveform_extractor, peak_sign='neg', quantile_length=.25, 
+                         n_bins=100, **kwargs):
+    """
+    A metric developed by IBL to determine whether a unit's amplitude distribution is cut off
+    (at floor), without assuming a Gaussian distribution. This metric takes the amplitude distribution, computes the mean and std of an upper quartile of the distribution, and determines how many standard
+    deviations away from that mean a lower quartile lies.
+
+    For a unit to pass this metric, it must meet two requirements:
+
+    1. The noise_cutoff must be greater than a threshold (default = 5)
+    2. The first_low_quantile must be greater than a fraction of the peak bin height (default = 0.1)
+
+    Example:
+    ```
+    nc_threshold = 5
+    percent_threshold = 0.1
+    fail_criteria = (noise_cutoff > nc_threshold) \
+            & (first_low_quantile > percent_threshold * peak_bin_height)
+    ```
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    peak_sign : {'neg', 'pos', 'both'}
+        The sign of the template to compute best channels.
+    quantile_length : float
+        The size of the upper quartile of the amplitude distribution.
+    n_bins : int
+        The number of bins used to compute a histogram of the amplitude
+        distribution.
+
+    Returns
+    -------
+    all_noise_cutoffs : dict
+        Number of standard deviations that the lower mean is outside of the
+        mean of the upper quartile, for each unit ID.
+
+    all_first_low_quantiles : dict
+        The value of the first low quantile, for each unit ID.
+
+    all_peak_bin_height : dict
+        The value of the peak bin height, for each unit ID.
+
+    Reference
+    ---------
+    This code was adapted from https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
+
+    Notes
+    -----
+    Important: Here the amplitudes are extracted from the waveform extractor. This means that the number of spikes used to estimate amplitude may be low.
+    
+    See: WaveformExtractor.set_params(max_spikes_per_unit=500)
+
+    """
+
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    unit_ids = sorting.unit_ids
+
+    before = waveform_extractor.nbefore
+
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+
+    all_noise_cutoffs = {}
+    all_first_low_quantiles = {}
+    all_peak_bin_heights = {}
+
+    for unit_id in unit_ids:
+        waveforms = waveform_extractor.get_waveforms(unit_id)
+        chan_id = extremum_channels_ids[unit_id]
+        chan_ind = recording.id_to_index(chan_id)
+        amps = waveforms[:, before, chan_ind]
+
+        cutoff, first_low_quantile, peak_bin_height = \
+            noise_cutoff(amps, quantile_length, n_bins)
+
+        all_noise_cutoffs[unit_id] = cutoff
+        all_first_low_quantiles[unit_id] = first_low_quantile
+        all_peak_bin_heights[unit_id] = peak_bin_height
+ 
+    return all_noise_cutoffs, all_first_low_quantiles, all_peak_bin_heights
+
+
+def noise_cutoff(amps, quantile_length=.25, n_bins=100):
+    """
+
+    Computes the noise_cutoff metric for one unit
+
+    See compute_noise_cutoff function for more information.
+
+    Parameters
+    ----------
+    amps : ndarray_like
+        The amplitudes (in uV) of the spikes.
+    quantile_length : float
+        The size of the upper quartile of the amplitude distribution.
+    n_bins : int
+        The number of bins used to compute a histogram of the amplitude
+        distribution.
+
+    Returns
+    -------
+    noise_cutoff : dict
+        Number of standard deviations that the lower mean is outside of the
+        mean of the upper quartile; defaults to np.nan
+
+    first_low_quantile : dict
+        The value of the first low quantile; defaults to np.nan
+
+    peak_bin_height : dict
+        The value of the peak bin height; defaults to np.nan
+
+    Reference
+    ---------
+    This code was adapted from https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
+
+    """
+
+    cutoff = np.float64(np.nan)
+    first_low_quantile = np.float64(np.nan)
+    peak_bin_height = np.float64(np.nan)
+
+    if amps.size > 1:  # ensure there are amplitudes available to analyze
+        
+        bins_list = np.linspace(0, np.max(amps), n_bins)  # list of bins to compute the amplitude histogram
+        n, bins = np.histogram(amps, bins=bins_list)  # construct amplitude histogram
+        idx_peak = np.argmax(n)  # peak of amplitude distribution
+        # don't count zeros #len(n) - idx_peak, compute the length of the top half of the distribution -- ignoring zero bins
+        length_top_half = len(np.where(n[idx_peak:-1] > 0)[0])
+        # the remaining part of the distribution, which we will compare the low quantile to
+        high_quantile = 2 * quantile_length
+        # the first bin (index) of the high quantile part of the distribution
+        high_quantile_start_ind = int(np.ceil(high_quantile * length_top_half + idx_peak))
+        # bins to consider in the high quantile (of all non-zero bins)
+        indices_bins_high_quantile = np.arange(high_quantile_start_ind, len(n))
+        idx_use = np.where(n[indices_bins_high_quantile] >= 1)[0]
+
+        if len(n[indices_bins_high_quantile]) > 0:  # ensure there are amplitudes in these bins
+            # mean of all amp values in high quantile bins
+            mean_high_quantile = np.mean(n[indices_bins_high_quantile][idx_use])
+            std_high_quantile = np.std(n[indices_bins_high_quantile][idx_use])
+            
+            if std_high_quantile > 0:
+                first_low_quantile = n[(n != 0)][1]  # take the second bin
+                cutoff = (first_low_quantile - mean_high_quantile) / std_high_quantile
+                peak_bin_height = np.max(n)
+
+    return cutoff, first_low_quantile, peak_bin_height
