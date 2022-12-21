@@ -3,10 +3,10 @@ import shutil
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs
 
-from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from spikeinterface.core.template_tools import (get_template_extremum_channel,
+                                                get_template_extremum_channel_peak_shift)
 
-from .template_tools import (get_template_extremum_channel,
-                             get_template_extremum_channel_peak_shift)
+from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 
 class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
