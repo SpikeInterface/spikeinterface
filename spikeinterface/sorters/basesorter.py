@@ -297,8 +297,8 @@ class BaseSorter:
             sorting.register_recording(recording)
         # set sorting info to Sorting object
         rec_dict = json.load(open(output_folder /'spikeinterface_recording.json', 'r'))
-        params_dict = json.load(open(output_folder / 'spikeinterface_params.json'))
-        log_dict = json.load(open(output_folder / 'spikeinterface_log.json'))
+        params_dict = json.load(open(output_folder / 'spikeinterface_params.json', 'r'))
+        log_dict = json.load(open(output_folder / 'spikeinterface_log.json', 'r'))
         sorting.set_sorting_info(rec_dict, params_dict, log_dict)
 
         return sorting
