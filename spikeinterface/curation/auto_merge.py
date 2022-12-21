@@ -118,7 +118,7 @@ def get_potential_auto_merge(
 
     
     if steps is None:
-        steps = ['min_spike', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity', 'check_increase_score']
+        steps = ['min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity', 'check_increase_score']
     
     print(f'Running steps: {steps}')
 
