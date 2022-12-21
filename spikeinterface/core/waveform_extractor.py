@@ -804,14 +804,24 @@ class WaveformExtractor:
                                          compressor=compressor)
             if sparsity is not None:
                 zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
-
+        
+        
+        new_we = WaveformExtractor.load(folder)
+        
         # save waveform extensions
         for ext_name in self.get_available_extension_names():
             ext = self.load_extension(ext_name)
-            ext.save(folder, format=format, **kwargs)
+            if sparsity is None:
+                ext.copy(new_we)
+            else:
+                if ext.handle_sparsity:
+                    print(f"WaveformExtractor.save() : {ext.extension_name} cannot be propagated with sparsity"
+                               f"It is recommended to recompute {self.extension_name} to properly handle sparsity")
+                else:
+                    ext.save(new_we)
 
-        we = WaveformExtractor.load(folder)
-        return we
+        
+        return new_we
 
     def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True, sparsity=None):
         """
@@ -997,7 +1007,7 @@ class WaveformExtractor:
             unit_indices = self.sorting.ids_to_indices(unit_ids)
             templates = templates[unit_indices, :, :]
 
-        return templates
+        return np.array(templates)
 
     def get_template(self, unit_id, mode='average', sparsity=None):
         """
@@ -1042,7 +1052,7 @@ class WaveformExtractor:
             template = np.average(wfs, axis=0)
         elif mode == 'std':
             template = np.std(wfs, axis=0)
-        return template
+        return np.array(template)
 
     def get_template_segment(self, unit_id, segment_index, mode='average', sparsity=None):
         """
@@ -1346,7 +1356,7 @@ class BaseWaveformExtractorExtension:
     
     # must be set in inherited in subclass 
     extension_name = None
-    support_sparsity = False
+    handle_sparsity = False
     
     def __init__(self, waveform_extractor):
         self.waveform_extractor = waveform_extractor
@@ -1383,6 +1393,9 @@ class BaseWaveformExtractorExtension:
             params = cls.load_params_from_zarr(folder)
         else:
             params = cls.load_params_from_folder(folder)
+
+        if 'sparsity' in params and params['sparsity'] is not None:
+            params['sparsity'] = ChannelSparsity.from_dict(params['sparsity'])
 
         if waveform_extractor is None:
             waveform_extractor = WaveformExtractor.load(folder)
@@ -1425,7 +1438,7 @@ class BaseWaveformExtractorExtension:
         
         with open(str(params_file), 'r') as f:
             params = json.load(f)
-
+        
         return params
 
     # use load instead
@@ -1471,61 +1484,54 @@ class BaseWaveformExtractorExtension:
     def save(self, folder, **kwargs):
         self._save(folder, **kwargs)
     
-    def _save(self, folder=None, **kwargs):
-        if not self.support_sparsity and _check_waveform_folder_sparse(folder):
-            if folder is not None:
-                if self.format == "binary":
-                    import pandas as pd
-                    folder = Path(folder)
-                    for ext_data_name, ext_data in self._extension_data.items():
-                        if isinstance(ext_data, dict):
-                            with (folder / f"{ext_data_name}.json").open('w') as f:
-                                json.dump(ext_data, f)
-                        elif isinstance(ext_data, np.ndarray):
-                            np.save(folder / f"{ext_data_name}.npy", ext_data)
-                        elif isinstance(ext_data, pd.DataFrame):
-                            ext_data.to_csv(folder / f"{ext_data_name}.csv", index=True)
-                        else:
-                            try:
-                                with (folder / f"{ext_data_name}.pkl").open("wb") as f:
-                                    pickle.dump(ext_data, f)
-                            except:
-                                raise Exception(f"Could not save {ext_data_name} as extension data")
-                elif self.format == "zarr":
-                    from .zarrrecordingextractor import get_default_zarr_compressor
-                    import zarr
-                    import pandas as pd
-                    import numcodecs
+    def _save(self, **kwargs):
+        if self.format == "binary":
+            import pandas as pd
+            for ext_data_name, ext_data in self._extension_data.items():
+                if isinstance(ext_data, dict):
+                    with (self.extension_folder / f"{ext_data_name}.json").open('w') as f:
+                        json.dump(ext_data, f)
+                elif isinstance(ext_data, np.ndarray):
+                    np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
+                elif isinstance(ext_data, pd.DataFrame):
+                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
+                else:
+                    try:
+                        with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
+                            pickle.dump(ext_data, f)
+                    except:
+                        raise Exception(f"Could not save {ext_data_name} as extension data")
+        elif self.format == "zarr":
+            from .zarrrecordingextractor import get_default_zarr_compressor
+            import zarr
+            import pandas as pd
+            import numcodecs
 
-                    compressor = kwargs.get("compressor", None)
-                    if compressor is None:
-                        compressor = get_default_zarr_compressor()
-                    for ext_data_name, ext_data in self._extension_data.items():
-                        zarr_root = zarr.open(folder, mode="r+")
-                        if self.extension_name not in zarr_root.keys():
-                            extension_group = zarr_root.create_group(self.extension_name)
-                        if isinstance(ext_data, dict):
-                            extension_group.create_dataset(name=ext_data_name, data=[ext_data],
+            compressor = kwargs.get("compressor", None)
+            if compressor is None:
+                compressor = get_default_zarr_compressor()
+            for ext_data_name, ext_data in self._extension_data.items():
+                if ext_data_name in self.extension_group:
+                    del self.extension_group[ext_data_name]
+                if isinstance(ext_data, dict):
+                    self.extension_group.create_dataset(name=ext_data_name, data=[ext_data],
                                                         object_codec=numcodecs.JSON())
-                            extension_group[ext_data_name].attrs["dict"] = True
-                        elif isinstance(ext_data, np.ndarray):
-                            extension_group.create_dataset(name=ext_data_name, data=ext_data,
+                    self.extension_group[ext_data_name].attrs["dict"] = True
+                elif isinstance(ext_data, np.ndarray):
+                    self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
                                                         compressor=compressor)
-                        elif isinstance(ext_data, pd.DataFrame):
-                            ext_data.to_xarray().to_zarr(store=extension_group.store,
-                                                        group=f"{extension_group.name}/{ext_data_name}",
-                                                        mode="a")
-                            extension_group[ext_data_name].attrs["dataframe"] = True
-                        else:
-                            try:
-                                extension_group.create_dataset(name=ext_data_name, data=ext_data,
+                elif isinstance(ext_data, pd.DataFrame):
+                    ext_data.to_xarray().to_zarr(store=self.extension_group.store,
+                                                 group=f"{self.extension_group.name}/{ext_data_name}",
+                                                 mode="a")
+                    self.extension_group[ext_data_name].attrs["dataframe"] = True
+                else:
+                    try:
+                        self.extension_group.create_dataset(name=ext_data_name, data=ext_data,
                                                             object_codec=numcodecs.Pickle())
-                            except:
-                                raise Exception(f"Could not save {ext_data_name} as extension data")
-        else:
-            print(f"{self.extension_name} cannot be propagated to a sparse WaveformExtractor. "
-                  f"It is recommended to recompute {self.extension_name} to properly handle sparsity")
-        
+                    except:
+                        raise Exception(f"Could not save {ext_data_name} as extension data")
+
     def reset(self):
         """
         Reset the waveform extension.
@@ -1548,7 +1554,13 @@ class BaseWaveformExtractorExtension:
         new_extension_data = self._select_extension_data(unit_ids=unit_ids)
         new_extension._extension_data = new_extension_data
         new_extension._save()
-        
+    
+    def copy(self, new_waveform_extractor):
+        new_extension = self.__class__(new_waveform_extractor)
+        new_extension.set_params(**self._params)
+        new_extension._extension_data = self._extension_data
+        new_extension._save()
+
     def _select_extension_data(self, unit_ids):
         # must be implemented in subclass
         raise NotImplementedError
@@ -1560,12 +1572,16 @@ class BaseWaveformExtractorExtension:
         """
         params = self._set_params(**params)
         self._params = params
+
+        params_to_save = params.copy()
+        if 'sparsity' in params and params['sparsity'] is not None:
+            params_to_save['sparsity'] = params['sparsity'].to_dict()
         if self.format == "binary":
             if self.extension_folder is not None:
                 param_file = self.extension_folder / 'params.json'
-                param_file.write_text(json.dumps(check_json(self._params), indent=4), encoding='utf8')
+                param_file.write_text(json.dumps(check_json(params_to_save), indent=4), encoding='utf8')
         elif self.format == "zarr":
-            self.extension_group.attrs['params'] = check_json(self._params)
+            self.extension_group.attrs['params'] = check_json(params_to_save)
 
     def _set_params(self, **params):
         # must be implemented in subclass
@@ -1578,6 +1594,3 @@ class BaseWaveformExtractorExtension:
         # must return extension function
         raise NotImplementedError
 
-def _check_waveform_folder_sparse(folder):
-    we = WaveformExtractor.load(folder)
-    return we.is_sparse()
