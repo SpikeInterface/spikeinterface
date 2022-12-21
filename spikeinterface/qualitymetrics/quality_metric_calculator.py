@@ -55,7 +55,6 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
                 pc_metrics = _possible_pc_metric_names.copy()
                 pc_metrics.remove("nearest_neighbor")
                 metric_names += pc_metrics
-        print(metric_names)
         if qm_params is None:
             qm_params = get_default_qm_params()
 
