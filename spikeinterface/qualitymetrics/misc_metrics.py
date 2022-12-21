@@ -274,7 +274,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             spike_trains.append(spike_train / fs)
 
-        ratio, rate, count = isi_violations(spike_trains, min_isi_s, total_duration_s,
+        ratio, rate, count = isi_violations(spike_trains, total_duration_s,
                                             isi_threshold_s, min_isi_s)
 
         isi_violations_ratio[unit_id] = ratio
