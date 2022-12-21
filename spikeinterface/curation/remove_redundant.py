@@ -2,7 +2,8 @@ import numpy as np
 
 from spikeinterface import WaveformExtractor
 
-from ..postprocessing import get_template_extremum_channel_peak_shift, get_template_amplitudes, align_sorting
+from ..core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
+from ..postprocessing import align_sorting
 
 
 def remove_redundant_units(sorting_or_waveform_extractor, 

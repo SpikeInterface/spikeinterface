@@ -11,7 +11,7 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from .template_tools import get_template_channel_sparsity
+from spikeinterface.core.template_tools import get_template_channel_sparsity
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 

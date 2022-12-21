@@ -3,7 +3,8 @@ import numpy as np
 import scipy.signal
 import scipy.spatial
 
-from ..postprocessing import compute_correlograms, get_template_extremum_channel
+from ..core.template_tools import get_template_extremum_channel
+from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rate
 
 from .mergeunitssorting import MergeUnitsSorting
