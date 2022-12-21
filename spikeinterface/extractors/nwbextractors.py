@@ -3,6 +3,7 @@ from typing import Union, List
 
 import numpy as np
 
+from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -33,7 +34,7 @@ def check_nwb_install():
 
 
 def check_fsspec_install():
-    assert HAVE_FSSPEC, "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec\n\n"
+    assert HAVE_FSSPEC, "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec aiohttp requests\n\n"
 
 
 def get_electrical_series(nwbfile, electrical_series_name):
@@ -127,16 +128,17 @@ class NwbRecordingExtractor(BaseRecording):
             from fsspec.implementations.cached import CachingFileSystem
             import h5py
             
-            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else "cache"
+            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else get_global_tmp_folder()
             self.cfs = CachingFileSystem(
                 fs=fsspec.filesystem("http"),
-                cache_storage=self.stream_cache_path,
+                cache_storage=str(self.stream_cache_path),
             )
             self._file_path = self.cfs.open(str(file_path), "rb")
             f = h5py.File(self._file_path)
             self.io = NWBHDF5IO(file=f, mode='r', load_namespaces=True)
         
         elif stream_mode == "ros3":
+            assert self.stream_cache_path is None, "'stream_cache_path' is only used with 'fsspec' stream_mode"
             self._file_path = str(file_path)
             self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver="ros3")
 
@@ -271,7 +273,9 @@ class NwbRecordingExtractor(BaseRecording):
         if stream_mode not in ["fsspec", "ros3"]:
             file_path = str(Path(file_path).absolute())
         if stream_mode == "fsspec":
-            stream_cache_path = str(Path(self.stream_cache_path).absolute())
+            # only add stream_cache_path to kwargs if it was passed as an argument
+            if stream_cache_path is not None:
+                stream_cache_path = str(Path(self.stream_cache_path).absolute())
         self._kwargs = {
             'file_path': file_path,
             'electrical_series_name': self._electrical_series_name,
