@@ -94,7 +94,7 @@ def get_potential_auto_merge(
     steps: None or list of str
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done.
-        Pontential steps: 'min_spike', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity',
+        Pontential steps: 'min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity',
                           'check_increase_score'. Please check steps explanations above!
         
     Returns
