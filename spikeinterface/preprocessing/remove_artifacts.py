@@ -147,9 +147,10 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params,
                     return_scaled=False, **job_kwargs, allow_unfiltered=True)
                 artefacts = {}
+                sparsity = {}
                 for label in w.sorting.unit_ids:
                     artefacts[label] = w.get_template(label, mode=mode).astype(recording.dtype)
-                    sparsity[label] = np.ones(w.recording.get_num_channels()).astype(np.bool)
+                    sparsity[label] = np.ones(w.recording.get_num_channels()).astype(bool)
 
             if sparsity is not None:
                 labels = []
@@ -157,8 +158,6 @@ class RemoveArtifactsRecording(BasePreprocessor):
                     labels += list(np.unique(sub_list))
                 for l in np.unique(labels):
                     assert l in sparsity.keys(), f"Sparsities are provided but label {l} has no value!" 
-            else:
-
         else:
             artefacts = None
 
