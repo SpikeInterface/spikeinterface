@@ -12,7 +12,7 @@ import probeinterface
 
 from .base import load_extractor
 from .core_tools import check_json
-from .job_tools import _shared_job_kwargs_doc
+from .job_tools import _shared_job_kwargs_doc, split_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
 
 from .sparsity import ChannelSparsity
@@ -1226,7 +1226,16 @@ def extract_waveforms(recording, sorting, folder=None,
                       allow_unfiltered=False,
                       use_relative_path=False,
                       seed=None,
-                      **job_kwargs):
+                      
+
+                      # sparsity=None, # ?????
+
+                      # find a name
+                      # sparse=False/True,
+
+                      **kwargs):
+
+                    #   **job_kwargs):
     """
     Extracts waveform on paired Recording-Sorting objects.
     Waveforms are persistent on disk and cached in memory.
@@ -1280,6 +1289,8 @@ def extract_waveforms(recording, sorting, folder=None,
         The WaveformExtractor object
 
     """
+    estimate_kwargs, job_kwargs = split_job_kwargs(kwargs)
+
     if mode == "folder":
         assert folder is not None
         folder = Path(folder)
@@ -1289,6 +1300,9 @@ def extract_waveforms(recording, sorting, folder=None,
         if load_if_exists and folder.is_dir():
             we = WaveformExtractor.load_from_folder(folder)
             return we
+    
+
+
     we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path,
                                   allow_unfiltered=allow_unfiltered)
     we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
@@ -1347,13 +1361,13 @@ def estimate_sparsity(recording, sorting, num_spikes=100, unit_batch_size=50, ms
         Time in ms to cut after spike peak
     All other kwargs
 
-
-
     Returns
     -------
     sparsity : ChannelSparsity
         The estimated sparsity.
     """
+    from .template_tools import get_template_channel_sparsity
+
     sparse_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     unit_ids = sorting.unit_ids
@@ -1361,18 +1375,17 @@ def estimate_sparsity(recording, sorting, num_spikes=100, unit_batch_size=50, ms
 
     mask = np.zeros((len(unit_ids), len(channel_ids)), dtype='bool')
 
-    nloop = int(np.ceil((unit_ids.size / unit_batch_size))
+    nloop = int(np.ceil((unit_ids.size / unit_batch_size)))
     for i in range(nloop):
-        sl = slice(i*unit_batch_size, (i+1)*unit_batch_size)
+        sl = slice(i * unit_batch_size, (i + 1) * unit_batch_size)
         local_ids = unit_ids[sl]
         local_sorting = sorting.select_units(local_ids)
-        loca_we = extract_waveforms(recording, local_sorting, folder=None, mode='memory',
+        local_we = extract_waveforms(recording, local_sorting, folder=None, mode='memory',
                                     precompute_template=('average', ), ms_before=ms_before, ms_after=ms_after,
                                     max_spikes_per_unit=num_spikes, return_scaled=False, **job_kwargs)
-
-        local_sparsity = get_template_channel_sparsity(loca_we, output='object', **sparse_kwargs)
+        local_sparsity = get_template_channel_sparsity(local_we, outputs='object', **sparse_kwargs)
         mask[sl, :] = local_sparsity.mask
-    
+
     sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
     return sparsity
 
