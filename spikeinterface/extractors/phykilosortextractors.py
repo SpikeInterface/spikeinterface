@@ -111,7 +111,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 max_si_unit_id = int(np.nanmax(unit_ids))
 
             for i, (phy_id, si_id) in enumerate(zip(cluster_info["cluster_id"].values,
-                                                    cluster_info["si_unit_id"].values)):  # Slow
+                                                    cluster_info["si_unit_id"].values)):
                 if np.isnan(si_id):
                     max_si_unit_id += 1
                     new_si_id = int(max_si_unit_id)
