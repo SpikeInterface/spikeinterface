@@ -348,6 +348,10 @@ class WaveformExtractor:
     @property
     def return_scaled(self):
         return self._params['return_scaled']
+    
+    @property
+    def dtype(self):
+        return self._params['dtype']
 
     def has_recording(self):
         return self._recording is not None

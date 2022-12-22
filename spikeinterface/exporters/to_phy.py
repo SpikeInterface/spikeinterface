@@ -135,23 +135,16 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
 
     # export templates/templates_ind/similar_templates
     # shape (num_units, num_samples, max_num_channels)
-    templates = []
-    templates_ind = []
-
-    # here we pad template inds with -1 if len of sparse channels is unequal
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
-    for unit_id, chan_inds in sparse_dict.items():
+    num_samples = waveform_extractor.nbefore + waveform_extractor.nafter
+    templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype=waveform_extractor.dtype)
+    # here we pad template inds with -1 if len of sparse channels is unequal
+    templates_ind = -np.ones((len(unit_ids), max_num_channels), dtype='int64')
+    for unit_ind, unit_id in enumerate(unit_ids):
+        chan_inds = sparse_dict[unit_id]
         template = waveform_extractor.get_template(unit_id, mode=template_mode, sparsity=sparsity)
-        if template.shape[1] < max_num_channels:
-            # fill missing channels
-            template_full = np.zeros((template.shape[0], max_num_channels))
-            template_full[:, :template.shape[1]] = template
-            inds_full = np.concatenate((chan_inds, np.array([-1] * (max_num_channels - template.shape[1]))))
-        else:
-            template_full = template
-            inds_full = chan_inds
-        templates.append(template_full)
-        templates_ind.append(inds_full)
+        templates[unit_ind, :, :][:, :len(chan_inds)] = template
+        templates_ind[unit_ind, :len(chan_inds)] = chan_inds
 
     template_similarity = compute_template_similarity(waveform_extractor, method='cosine_similarity')
 
