@@ -3,7 +3,7 @@
 from cmath import nan
 import numpy as np
 from spikeinterface.core.waveform_extractor import WaveformExtractor
-from spikeinterface.postprocessing.template_tools import get_template_extremum_channel
+
 from tqdm.auto import tqdm
 import scipy.stats
 import scipy.spatial.distance
@@ -17,7 +17,7 @@ from copy import deepcopy
 import spikeinterface as si
 from ..core import get_random_data_chunks
 from ..core.job_tools import tqdm_joblib
-from ..core.template_tools import get_template_channel_sparsity
+from ..core.template_tools import get_template_channel_sparsity, get_template_extremum_channel
 
 from ..postprocessing import WaveformPrincipalComponent
 
@@ -45,8 +45,8 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
     metric_names : list of str, optional
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    sparsity: dict or None
-        If given, the sparse channel_ids for each unit. This is used also to identify neighbor
+    sparsity: ChannelSparsity or None
+        The sparsity object. This is used also to identify neighbor
         units and speed up computations. If None (default) all channels and all units are used
         for each unit.
     max_spikes_for_nn : int, optional, default: 10000
@@ -111,7 +111,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
             neighbor_channel_ids = channel_ids
             neighbor_unit_ids = unit_ids
         else:
-            neighbor_channel_ids = sparsity[unit_id]
+            neighbor_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
             neighbor_unit_ids = [other_unit for other_unit in unit_ids 
                                  if extremum_channels[other_unit] in neighbor_channel_ids]
         
