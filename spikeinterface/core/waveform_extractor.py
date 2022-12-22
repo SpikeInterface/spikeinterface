@@ -1325,6 +1325,58 @@ def load_waveforms(folder, with_recording=True, sorting=None):
 extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_doc)
 
 
+def estimate_sparsity(recording, sorting, num_spikes=100, unit_batch_size=50, ms_before=3., ms_after=4.,  **kwargs):
+    """
+    Estimate sparsity with few spikes and by unit batch. 
+    This equivalent to compute a dense waveform extractor (with all units at once) and so
+    can be less memory agressive.
+
+    Parameters
+    ----------
+    recording: Recording
+        The recording object
+    sorting: Sorting
+        The sorting object
+    num_spikes: int
+        How many spikes per unit.
+    unit_batch_size: int
+        How many are extracted at once.
+    ms_before: float
+        Time in ms to cut before spike peak
+    ms_after: float
+        Time in ms to cut after spike peak
+    All other kwargs
+
+
+
+    Returns
+    -------
+    sparsity : ChannelSparsity
+        The estimated sparsity.
+    """
+    sparse_kwargs, job_kwargs = split_job_kwargs(kwargs)
+
+    unit_ids = sorting.unit_ids
+    channel_ids = recording.channel_ids
+
+    mask = np.zeros((len(unit_ids), len(channel_ids)), dtype='bool')
+
+    nloop = int(np.ceil((unit_ids.size / unit_batch_size))
+    for i in range(nloop):
+        sl = slice(i*unit_batch_size, (i+1)*unit_batch_size)
+        local_ids = unit_ids[sl]
+        local_sorting = sorting.select_units(local_ids)
+        loca_we = extract_waveforms(recording, local_sorting, folder=None, mode='memory',
+                                    precompute_template=('average', ), ms_before=ms_before, ms_after=ms_after,
+                                    max_spikes_per_unit=num_spikes, return_scaled=False, **job_kwargs)
+
+        local_sparsity = get_template_channel_sparsity(loca_we, output='object', **sparse_kwargs)
+        mask[sl, :] = local_sparsity.mask
+    
+    sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
+    return sparsity
+
+
 
 class BaseWaveformExtractorExtension:
     """
