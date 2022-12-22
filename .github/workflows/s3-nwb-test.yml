@@ -1,8 +1,8 @@
 name: S3 NWB Test
 on:
   pull_request:
-    branches: [ master ]
-    types: [ synchronize, opened, reopened, ready_for_review ]
+    branches: [master]
+    types: [synchronize, opened, reopened, ready_for_review]
 
 jobs:
   build-and-test:
@@ -11,8 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest",]
-        python-version: ["3.9",]
+        os: ["ubuntu-latest"]
+        python-version: ["3.9"]
     steps:
       - uses: s-weigand/setup-conda@v1
         with:
@@ -33,5 +33,7 @@ jobs:
         run: pip uninstall -y h5py
       - name: Install ROS3
         run: conda install -c conda-forge h5py
+      - name: Install fsspec, aiohttp and requests
+        run: pip install fsspec aiohttp requests
       - name: run tests
         run: pytest spikeinterface/extractors/tests/test_nwb_s3_extractor.py
