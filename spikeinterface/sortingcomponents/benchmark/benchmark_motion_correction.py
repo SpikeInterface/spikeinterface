@@ -9,8 +9,9 @@ from spikeinterface.extractors import read_mearec
 from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
 from spikeinterface.sorters import run_sorter
 from spikeinterface.postprocessing import get_template_channel_sparsity
-from spikeinterface.widgets import plot_unit_waveforms
+from spikeinterface.widgets import plot_unit_waveforms, plot_gt_performances
 
+from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 
@@ -485,3 +486,33 @@ class DifferenceRecordingSegment(BasePreprocessorSegment):
         traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices)
 
         return traces_2 - traces_1
+
+
+def plot_sortings_comparisons(benchmarks, sorter):
+
+    fig, axes = plt.subplots(len(benchmarks), 3, figsize=(15, 5))
+
+    for count, bench in enumerate(benchmarks):
+        for key, sorting in bench.sortings.items():
+            if key != 'gt' and key[1] == sorter:
+                comp = GroundTruthComparison(bench.sortings['gt'], bench.sortings[key], exhaustive_gt=True)
+
+                if key[0] == 'static':
+                    idx = 0
+                elif key[0] == 'drifting':
+                    idx = 1
+                elif key[0] == 'corrected':
+                    idx = 2
+
+                if len(benchmarks) == 1:
+                    ax = axes[idx]
+                else:
+                    ax = axes[count, idx]
+
+                plot_gt_performances(comp, ax=ax)
+                if idx > 0:
+                    ax.set_yticks([])
+                    ax.set_ylabel('')
+                ax.set_title(key)
+                _simpleaxis(ax)
+                
