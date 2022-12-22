@@ -102,7 +102,6 @@ def test_export_to_phy_by_sparsity():
             shutil.rmtree(f)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-    # sparsity_radius = get_template_channel_sparsity(waveform_extractor, method="radius", radius_um=50)
     sparsity_radius = ChannelSparsity.from_radius(waveform_extractor, 50.)
     export_to_phy(waveform_extractor, output_folder_radius,
                   compute_pc_features=True,
@@ -116,8 +115,7 @@ def test_export_to_phy_by_sparsity():
     assert -1 in template_ind
     assert -1 in pc_ind
 
-    # pre-compute PC with sparsity
-    # sparsity_radius_small = get_template_channel_sparsity(waveform_extractor, method="radius", radius_um=30)
+    # pre-compute PC with another sparsity
     sparsity_radius_small = ChannelSparsity.from_radius(waveform_extractor, 30.)
     pc = compute_principal_components(waveform_extractor, sparsity=sparsity_radius_small)
     export_to_phy(waveform_extractor, output_folder_multi_sparse,
