@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
+from spikeinterface import WaveformExtractor, ChannelSparsity, load_extractor, extract_waveforms
 from spikeinterface.extractors import toy_example
 
 from spikeinterface.postprocessing import WaveformPrincipalComponent
@@ -45,8 +45,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                                     self.cache_folder / 'toy_waveforms_long',
                                     max_spikes_per_unit=None,
                                     overwrite=True)
-        self.sparsity_long = get_template_channel_sparsity(we_long, method="radius",
-                                                           radius_um=50)
+        self.sparsity_long = ChannelSparsity.from_radius(we_long, radius_um=50)
         self.we_long = we_long
 
     def test_metrics(self):

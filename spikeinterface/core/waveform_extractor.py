@@ -816,11 +816,10 @@ class WaveformExtractor:
             else:
                 if ext.handle_sparsity:
                     print(f"WaveformExtractor.save() : {ext.extension_name} cannot be propagated with sparsity"
-                               f"It is recommended to recompute {self.extension_name} to properly handle sparsity")
+                          f"It is recommended to recompute {self.extension_name} to properly handle sparsity")
                 else:
-                    ext.save(new_we)
+                    ext.copy(new_we)
 
-        
         return new_we
 
     def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True, sparsity=None):
@@ -1438,7 +1437,7 @@ class BaseWaveformExtractorExtension:
         
         with open(str(params_file), 'r') as f:
             params = json.load(f)
-        
+
         return params
 
     # use load instead
@@ -1503,7 +1502,6 @@ class BaseWaveformExtractorExtension:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
             from .zarrrecordingextractor import get_default_zarr_compressor
-            import zarr
             import pandas as pd
             import numcodecs
 
@@ -1575,6 +1573,8 @@ class BaseWaveformExtractorExtension:
 
         params_to_save = params.copy()
         if 'sparsity' in params and params['sparsity'] is not None:
+            assert isinstance(params['sparsity'], ChannelSparsity), \
+                "'sparsity' parameter must be a ChannelSparsity object!"
             params_to_save['sparsity'] = params['sparsity'].to_dict()
         if self.format == "binary":
             if self.extension_folder is not None:

@@ -45,8 +45,8 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
     metric_names : list of str, optional
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    sparsity: dict or None
-        If given, the sparse channel_ids for each unit. This is used also to identify neighbor
+    sparsity: ChannelSparsity or None
+        The sparsity object. This is used also to identify neighbor
         units and speed up computations. If None (default) all channels and all units are used
         for each unit.
     max_spikes_for_nn : int, optional, default: 10000
@@ -111,7 +111,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, max_spikes_for_n
             neighbor_channel_ids = channel_ids
             neighbor_unit_ids = unit_ids
         else:
-            neighbor_channel_ids = sparsity[unit_id]
+            neighbor_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
             neighbor_unit_ids = [other_unit for other_unit in unit_ids 
                                  if extremum_channels[other_unit] in neighbor_channel_ids]
         
