@@ -130,7 +130,6 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'neuralynx/Cheetah_v5.7.4/original_data',
     ]
 
-
 class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxSortingExtractor
     downloads = ['neuralynx']
