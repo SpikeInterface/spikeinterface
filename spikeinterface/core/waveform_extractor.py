@@ -1473,15 +1473,15 @@ class BaseWaveformExtractorExtension:
 
     def run(self, **kwargs):
         self._run(**kwargs)
-        self._save(folder=self.folder)
+        self._save(**kwargs)
 
     def _run(self, **kwargs):
         # must be implemented in subclass
         # must populate the self._extension_data dictionary
         raise NotImplementedError
     
-    def save(self, folder, **kwargs):
-        self._save(folder, **kwargs)
+    def save(self, **kwargs):
+        self._save(**kwargs)
     
     def _save(self, **kwargs):
         if self.format == "binary":
