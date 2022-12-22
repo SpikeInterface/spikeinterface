@@ -54,7 +54,7 @@ class UnitSummaryWidget(BaseWidget):
                                                   sparsity=sparsity).plot_data
         
         plot_data_waveform_density = UnitWaveformDensityMapWidget(we, unit_ids=[unit_id], unit_colors=unit_colors,
-                                                                  max_channels=1, plot_templates=True,
+                                                                  use_max_channel=True, plot_templates=True,
                                                                   same_axis=False).plot_data
         
         if we.is_extension('correlograms'):

@@ -37,7 +37,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
-                 sparsity=None, same_axis=False, unit_colors=None,
+                 sparsity=None, same_axis=False, use_max_channel=False, unit_colors=None,
                  backend=None, **backend_kwargs):
         we = waveform_extractor
 
@@ -51,13 +51,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             unit_colors = get_unit_colors(we.sorting)
 
         if same_axis:
-            if waveform_extractor.is_sparse():
-                checked_sparsity = waveform_extractor.sparsity
-            elif sparsity is not None:
-                checked_sparsity = sparsity
+            if waveform_extractor.is_sparse() or sparsity is not None:
+                raise NotImplementedError
 
-            assert len(np.unique(checked_sparsity.unit_id_to_channel_ids)) == 1, \
-                    ("The 'same_axis' option is only available if all units have the same number of sparse channels")
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if waveform_extractor.is_sparse():
             sparsity = waveform_extractor.sparsity
@@ -73,6 +69,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             else:
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
         channel_inds = sparsity.unit_id_to_channel_indices
+
+        if use_max_channel:
+            raise NotImplementedError
 
         if same_axis:
             # channel union
