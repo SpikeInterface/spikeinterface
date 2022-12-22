@@ -119,8 +119,6 @@ def test_export_to_phy_by_sparsity():
     # pre-compute PC with sparsity
     # sparsity_radius_small = get_template_channel_sparsity(waveform_extractor, method="radius", radius_um=30)
     sparsity_radius_small = ChannelSparsity.from_radius(waveform_extractor, 30.)
-    print(sparsity_radius.mask.sum(axis=1))
-    print(sparsity_radius_small.mask.sum(axis=1))
     pc = compute_principal_components(waveform_extractor, sparsity=sparsity_radius_small)
     export_to_phy(waveform_extractor, output_folder_multi_sparse,
                   compute_pc_features=True,
@@ -135,11 +133,10 @@ def test_export_to_phy_by_sparsity():
     assert -1 in template_ind
     assert -1 in pc_ind
     # PC sparsity is more stringent than teplate sparsity
-    print(pc_ind.shape, template_ind.shape)
     assert pc_ind.shape[1] < template_ind.shape[1]
 
 
 if __name__ == '__main__':
-    # test_export_to_phy()
-    # test_export_to_phy_by_property()
+    test_export_to_phy()
+    test_export_to_phy_by_property()
     test_export_to_phy_by_sparsity()
