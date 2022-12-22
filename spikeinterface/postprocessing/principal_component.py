@@ -212,7 +212,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return projections
 
-    def _get_sparsity(self):
+    def get_sparsity(self):
         if self.waveform_extractor.is_sparse():
             return self.waveform_extractor.sparsity
         return self._params["sparsity"]
@@ -306,7 +306,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
         spike_times, spike_labels = all_spikes[0]
 
-        sparsity = self._get_sparsity()
+        sparsity = self.get_sparsity()
         if sparsity is None:
             sparse_channels_indices = {unit_id: np.arange(we.get_num_channels()) for unit_id in we.unit_ids}
             max_channels_per_template = we.get_num_channels()
@@ -487,7 +487,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         p = self._params
         unit_ids = we.unit_ids
         
-        sparsity = self._get_sparsity()
+        sparsity = self.get_sparsity()
         if sparsity is not None:
             sparsity0 = sparsity.unit_id_to_channel_indices[unit_ids[0]]
             assert all(len(chans) == len(sparsity0) for u, chans in sparsity.unit_id_to_channel_indices.items()), \
