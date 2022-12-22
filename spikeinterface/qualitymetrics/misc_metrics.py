@@ -736,9 +736,9 @@ def compute_slidingRP_viol(waveform_extractor, bin_size=0.25, thresh=0.1, accept
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
     bin_size : float
-        The size of binning for the autocorrelogram.
+        The size of binning for the autocorrelogram in ms
     thresh : float
-        Spike rate used to generate poisson distribution (to compute maximum
+        Spike rate used to generate Poisson distribution (to compute maximum
               acceptable contamination, see _max_acceptable_cont)
     acceptThresh : float
         The fraction of contamination we are willing to accept (default value
@@ -771,7 +771,7 @@ def compute_slidingRP_viol(waveform_extractor, bin_size=0.25, thresh=0.1, accept
 
         for segment_index in range(num_segs):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            spike_trains.append(spike_train / fs)
+            spike_trains.append(spike_train)
 
         all_didpass[unit_id] = slidingRP_viol(np.concatenate(spike_trains), fs, bin_size, thresh,
                                             acceptThresh)
@@ -779,7 +779,7 @@ def compute_slidingRP_viol(waveform_extractor, bin_size=0.25, thresh=0.1, accept
     return all_didpass
 
 
-def slidingRP_viol(ts, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh=0.1):
+def slidingRP_viol(spike_samples, sample_rate, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh=0.1):
     """
     A binary metric developed by IBL which determines whether there is an acceptable level of
     refractory period violations by using a sliding refractory period.
@@ -788,8 +788,10 @@ def slidingRP_viol(ts, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh
 
     Parameters
     ----------
-    ts : ndarray_like
-        The timestamps (in s) of the spikes.
+    spike_samples : ndarray_like
+        The spike times in samples
+    sample_rate : float
+        The acquisition sampling rate
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
     window_size : float
@@ -813,29 +815,39 @@ def slidingRP_viol(ts, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh
     bTestIdx = [5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40]
     bTest = [b[i] for i in bTestIdx]
 
-    if len(ts) > 0 and ts[-1] > ts[0]:  # only do this for units with samples
-        recDur = (ts[-1] - ts[0])
+    if len(spike_samples) > 0 and spike_samples[-1] > spike_samples[0]:  # only do this for units with samples
+        
+        recDur = (spike_samples[-1] - spike_samples[0]) / sample_rate
+        
         # compute acg
-        c0 = correlogram_for_one_segment(ts, np.zeros(len(ts), dtype='int8'),
-                          bin_size=bin_size_ms / 1000, # convert to s
-                          window_size=window_size)
+        c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
+                          bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
+                          window_size=int(window_size*sample_rate))
+        
+        acg = c0[0,0,:]
+        half_acg = acg[acg.size//2:]
+        
         # cumulative sum of acg, i.e. number of total spikes occuring from 0
         # to end of that bin
-        cumsumc0 = np.cumsum(c0[0, 0, :])
+        cumsumc0 = np.cumsum(half_acg)
+        
         # cumulative sum at each of the testing bins
         res = cumsumc0[bTestIdx]
-        total_spike_count = len(ts)
+        total_spike_count = len(spike_samples)
 
         # divide each bin's count by the total spike count and the bin size
-        bin_count_normalized = c0[0, 0] / total_spike_count / bin_size_ms * 1000
-        num_bins_2s = len(c0[0, 0])  # number of total bins that equal 2 secs
+        bin_count_normalized = half_acg / total_spike_count / bin_size_ms * 1000
+        num_bins_2s = len(half_acg)  # number of total bins that equal 2 secs
         num_bins_1s = int(num_bins_2s / 2)  # number of bins that equal 1 sec
-        # compute fr based on the  mean of bin_count_normalized from 1 to 2 s
+        
+        # compute fr based on the mean of bin_count_normalized from 1 to 2 s
         # instead of as before (len(ts)/recDur) for a better estimate
         fr = np.sum(bin_count_normalized[num_bins_1s:num_bins_2s]) / num_bins_1s
         mfunc = np.vectorize(_max_acceptable_cont)
+        
         # compute the maximum allowed number of spikes per testing bin
         m = mfunc(fr, bTest, recDur, fr * acceptThresh, thresh)
+        
         # did the unit pass (resulting number of spikes less than maximum
         # allowed spikes) at any of the testing bins?
         didpass = int(np.any(np.less_equal(res, m)))

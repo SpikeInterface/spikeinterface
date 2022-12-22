@@ -238,8 +238,8 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     num_units = len(sorting.unit_ids)
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
-    num_half_bins = window_size // bin_size
-    num_bins = 2 * num_half_bins
+    num_half_bins = int(window_size // bin_size)
+    num_bins = int(2 * num_half_bins)
 
     correlograms = np.zeros((num_units, num_units, num_bins), dtype='int64')
 
@@ -257,10 +257,10 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
     Called by compute_correlograms_numpy
     """
 
-    num_half_bins = window_size // bin_size
-    num_bins = 2 * num_half_bins
+    num_half_bins = int(window_size // bin_size)
+    num_bins = int(2 * num_half_bins)
     num_units = len(np.unique(spike_labels))
-
+    
     correlograms = np.zeros((num_units, num_units, num_bins), dtype='int64')
 
     # At a given shift, the mask precises which spikes have matching spikes
@@ -297,6 +297,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
                                                         spike_diff_b[m] + num_half_bins),
                                                 correlograms.shape)
             else:
+                
                 indices = np.ravel_multi_index(
                                                     (spike_labels[:-shift][m],
                                                         spike_labels[+shift:][m],
