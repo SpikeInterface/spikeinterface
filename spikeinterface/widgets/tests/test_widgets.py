@@ -57,8 +57,9 @@ class TestWidgets(unittest.TestCase):
         _ = compute_template_similarity(cls.we)
 
         # make sparse waveforms
-        sparsity = ChannelSparsity.from_radius(cls.we, radius_um=30)
-        cls.we_sparse = cls.we.save(folder=cache_folder / 'mearec_test_sparse', sparsity=sparsity)
+        cls.sparsity_radius =  ChannelSparsity.from_radius(cls.we, radius_um=30)
+        cls.sparsity_best =  ChannelSparsity.from_best_channels(cls.we, num_channels=5)
+        cls.we_sparse = cls.we.save(folder=cache_folder / 'mearec_test_sparse', sparsity=cls.sparsity_radius)
 
         cls.skip_backends = ["ipywidgets"]
 
@@ -82,7 +83,7 @@ class TestWidgets(unittest.TestCase):
                 continue
             if backend not in self.skip_backends:
                 sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True,
-                                backend=backend, **self.backend_kwargs[backend])
+                                   backend=backend, **self.backend_kwargs[backend])
                 sw.plot_timeseries(self.recording, mode='map', show_channel_ids=True, 
                                    order_channel_by_depth=True, backend=backend,
                                    **self.backend_kwargs[backend])
@@ -93,31 +94,31 @@ class TestWidgets(unittest.TestCase):
                                     **self.backend_kwargs[backend])
                     # multi layer
                     sw.plot_timeseries({'rec0' : self.recording, 'rec1' : scale(self.recording, gain=0.8, offset=0)},
-                                        color='r', mode='line', show_channel_ids=True, backend=backend, 
+                                        color='r', mode='line', show_channel_ids=True, backend=backend,
                                         **self.backend_kwargs[backend])
 
     def test_plot_unit_waveforms(self):
         possible_backends = list(sw.UnitWaveformsWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                w = sw.plot_unit_waveforms(self.we, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_waveforms(self.we, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting.unit_ids[:6]
-                sw.plot_unit_waveforms(self.we, max_channels=5, unit_ids=unit_ids, backend=backend, 
+                sw.plot_unit_waveforms(self.we, sparsity=self.sparsity_radius, unit_ids=unit_ids, backend=backend,
                                        **self.backend_kwargs[backend])
-                sw.plot_unit_waveforms(self.we, radius_um=60, unit_ids=unit_ids, backend=backend, 
+                sw.plot_unit_waveforms(self.we, sparsity=self.sparsity_best, unit_ids=unit_ids, backend=backend,
                                        **self.backend_kwargs[backend])
-                sw.plot_unit_waveforms(self.we_sparse, unit_ids=unit_ids, backend=backend, 
+                sw.plot_unit_waveforms(self.we_sparse, unit_ids=unit_ids, backend=backend,
                                        **self.backend_kwargs[backend])
 
     def test_plot_unit_templates(self):
         possible_backends = list(sw.UnitWaveformsWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                w = sw.plot_unit_templates(self.we, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_templates(self.we, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting.unit_ids[:6]
-                sw.plot_unit_templates(self.we, max_channels=5, unit_ids=unit_ids, backend=backend, 
+                sw.plot_unit_templates(self.we, sparsity=self.sparsity_radius, unit_ids=unit_ids, backend=backend,
                                        **self.backend_kwargs[backend])
-                sw.plot_unit_templates(self.we_sparse, max_channels=5, unit_ids=unit_ids, backend=backend, 
+                sw.plot_unit_templates(self.we_sparse, sparsity=self.sparsity_best, unit_ids=unit_ids, backend=backend,
                                        **self.backend_kwargs[backend])
 
     def test_plot_unit_waveforms_density_map(self):
@@ -125,12 +126,12 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 unit_ids = self.sorting.unit_ids[:2]
-                sw.plot_unit_waveforms_density_map(self.we, max_channels=5, unit_ids=unit_ids, backend=backend, 
+                sw.plot_unit_waveforms_density_map(self.we, unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])
-                sw.plot_unit_waveforms_density_map(self.we, max_channels=5, same_axis=True, 
+                sw.plot_unit_waveforms_density_map(self.we, sparsity=self.sparsity_radius, same_axis=False,
                                                    unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])
-                sw.plot_unit_waveforms_density_map(self.we_sparse, max_channels=5, same_axis=False, 
+                sw.plot_unit_waveforms_density_map(self.we_sparse, sparsity=self.sparsity_best, same_axis=True,
                                                    unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])
 
@@ -140,7 +141,7 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 unit_ids = self.sorting.unit_ids[:4]
                 sw.plot_autocorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, 
-                                        backend=backend, **self.backend_kwargs[backend])
+                                         backend=backend, **self.backend_kwargs[backend])
 
     def test_crosscorrelogram(self):
         possible_backends = list(sw.CrossCorrelogramsWidget.possible_backends.keys())
@@ -148,7 +149,7 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 unit_ids = self.sorting.unit_ids[:4]
                 sw.plot_crosscorrelograms(self.sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0, 
-                                        backend=backend, **self.backend_kwargs[backend])
+                                          backend=backend, **self.backend_kwargs[backend])
         
     def test_amplitudes(self):
         possible_backends = list(sw.AmplitudesWidget.possible_backends.keys())
@@ -167,29 +168,37 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 unit_ids = self.we.unit_ids[:4]
-                sw.plot_all_amplitudes_distributions(self.we, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_all_amplitudes_distributions(self.we_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_all_amplitudes_distributions(self.we, unit_ids=unit_ids, backend=backend,
+                                                     **self.backend_kwargs[backend])
+                sw.plot_all_amplitudes_distributions(self.we_sparse, unit_ids=unit_ids, backend=backend,
+                                                     **self.backend_kwargs[backend])
 
     def test_unit_locations(self):
         possible_backends = list(sw.UnitLocationsWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_locations(self.we, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_unit_locations(self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_locations(self.we, with_channel_ids=True, backend=backend,
+                                       **self.backend_kwargs[backend])
+                sw.plot_unit_locations(self.we_sparse, with_channel_ids=True, backend=backend,
+                                       **self.backend_kwargs[backend])
 
     def test_spike_locations(self):
         possible_backends = list(sw.SpikeLocationsWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_spike_locations(self.we, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_spike_locations(self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_spike_locations(self.we, with_channel_ids=True, backend=backend,
+                                        **self.backend_kwargs[backend])
+                sw.plot_spike_locations(self.we_sparse, with_channel_ids=True, backend=backend,
+                                        **self.backend_kwargs[backend])
 
     def test_similarity(self):
         possible_backends = list(sw.TemplateSimilarityWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_template_similarity(self.we, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_template_similarity(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_template_similarity(self.we, backend=backend,
+                                            **self.backend_kwargs[backend])
+                sw.plot_template_similarity(self.we_sparse, backend=backend,
+                                            **self.backend_kwargs[backend])
 
     def test_quality_metrics(self):
         possible_backends = list(sw.QualityMetricsWidget.possible_backends.keys())
@@ -216,8 +225,10 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.UnitSummaryWidget.possible_backends.keys())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_summary(self.we, self.we.sorting.unit_ids[0],  backend=backend, **self.backend_kwargs[backend])
-                sw.plot_unit_summary(self.we_sparse, self.we.sorting.unit_ids[0], backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_summary(self.we, self.we.sorting.unit_ids[0], backend=backend,
+                                     **self.backend_kwargs[backend])
+                sw.plot_unit_summary(self.we_sparse, self.we.sorting.unit_ids[0], backend=backend,
+                                     **self.backend_kwargs[backend])
 
     def test_sorting_summary(self):
         possible_backends = list(sw.SortingSummaryWidget.possible_backends.keys())

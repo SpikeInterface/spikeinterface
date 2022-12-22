@@ -37,7 +37,8 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
-                 sparsity=None, same_axis=False, unit_colors=None, backend=None, **backend_kwargs):
+                 sparsity=None, same_axis=False, unit_colors=None,
+                 backend=None, **backend_kwargs):
         we = waveform_extractor
 
         if channel_ids is None:
@@ -50,15 +51,20 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             unit_colors = get_unit_colors(we.sorting)
 
         if same_axis:
-            assert sparsity is None and not waveform_extractor.is_sparse(), \
-                    ("The 'same_axis' option is only available for dense waveforms")
+            if waveform_extractor.is_sparse():
+                checked_sparsity = waveform_extractor.sparsity
+            elif sparsity is not None:
+                checked_sparsity = sparsity
+
+            assert len(np.unique(checked_sparsity.unit_id_to_channel_ids)) == 1, \
+                    ("The 'same_axis' option is only available if all units have the same number of sparse channels")
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if waveform_extractor.is_sparse():
             sparsity = waveform_extractor.sparsity
         else:
             if sparsity is None:
                 # in this case, we construct a dense sparsity
-                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids.items()}
+                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
                     unit_ids=we.unit_ids,

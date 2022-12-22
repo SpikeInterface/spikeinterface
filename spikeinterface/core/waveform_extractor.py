@@ -816,7 +816,7 @@ class WaveformExtractor:
             else:
                 if ext.handle_sparsity:
                     print(f"WaveformExtractor.save() : {ext.extension_name} cannot be propagated with sparsity"
-                          f"It is recommended to recompute {self.extension_name} to properly handle sparsity")
+                          f"It is recommended to recompute {ext.extension_name} to properly handle sparsity")
                 else:
                     ext.copy(new_we)
 

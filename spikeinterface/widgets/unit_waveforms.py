@@ -61,11 +61,10 @@ class UnitWaveformsWidget(BaseWidget):
 
     def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
-                 unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
-                 ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False, unit_selected_waveforms=None,
-                 max_spikes_per_unit=50, set_title=True, same_axis=False, x_offset_units=False,
-                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False, plot_legend=True,
-                 backend=None, **backend_kwargs):
+                 unit_colors=None, sparsity=None, ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False,
+                 unit_selected_waveforms=None, max_spikes_per_unit=50, set_title=True, same_axis=False,
+                 x_offset_units=False, alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False,
+                 plot_legend=True, backend=None, **backend_kwargs):
         we = waveform_extractor
         sorting: BaseSorting = we.sorting
 
@@ -78,11 +77,6 @@ class UnitWaveformsWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
-        if radius_um is not None:
-            assert max_channels is None, 'radius_um and max_channels are mutually exclusive'
-        if max_channels is not None:
-            assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
-
         channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
 
         if waveform_extractor.is_sparse():
@@ -90,7 +84,7 @@ class UnitWaveformsWidget(BaseWidget):
         else:
             if sparsity is None:
                 # in this case, we construct a dense sparsity
-                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids.items()}
+                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
                     unit_ids=we.unit_ids,
@@ -128,8 +122,6 @@ class UnitWaveformsWidget(BaseWidget):
             plot_templates=plot_templates,
             plot_channels=plot_channels,
             ncols=ncols,
-            radius_um=radius_um,
-            max_channels=max_channels,
             unit_selected_waveforms=unit_selected_waveforms,
             axis_equal=axis_equal,
             max_spikes_per_unit=max_spikes_per_unit,

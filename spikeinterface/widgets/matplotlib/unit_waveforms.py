@@ -33,7 +33,7 @@ class UnitWaveformPlotter(MplPlotter):
                 ax = self.axes.flatten()[i]
             color = dp.unit_colors[unit_id]
 
-            chan_inds = dp.sparsity.unit_idto_channel_indices[unit_id]
+            chan_inds = dp.sparsity.unit_id_to_channel_indices[unit_id]
             xvectors_flat = dp.xvectors[:, chan_inds].T.flatten()
 
             # plot waveforms
