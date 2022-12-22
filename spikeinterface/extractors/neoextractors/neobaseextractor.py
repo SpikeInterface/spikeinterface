@@ -220,12 +220,12 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         for segment_index in range(nseg):
             if self.handle_spike_frame_directly:
                 t_start = None
-            elif stream_index is not None:
+            elif stream_index is None:
+                t_start = None
+            else:
                 t_start = self.neo_reader.get_signal_t_start(block_index=self.block_index,
                                                              seg_index=segment_index,
                                                              stream_index=stream_index)
-            else:
-                t_start = 0
 
             sorting_segment = NeoSortingSegment(self.neo_reader, self.block_index, segment_index,
                                                 self.use_natural_unit_ids, t_start, 
