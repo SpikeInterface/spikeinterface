@@ -223,7 +223,7 @@ def clean_refractory_period(times, refractory_period):
 
     return times
 
-def inject_some_duplicat_units(sorting, num=4, max_shift=5, ratio=None, seed=None):
+def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=None):
     """
     Inject some duplicate units in a sorting.
     The peak shift can be control in a range.
