@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, NumpySorting, set_global_tmp_folder
-from spikeinterface.core.generate import inject_some_duplicat_units
+from spikeinterface.core.generate import inject_some_duplicate_units
 
 from spikeinterface.extractors import toy_example
 
@@ -22,9 +22,9 @@ else:
 set_global_tmp_folder(cache_folder)
 
 def test_remove_redundant_units():
-    rec, sorting = toy_example(num_segments=1, duration=[10.])
+    rec, sorting = toy_example(num_segments=1, duration=[10.], seed=0)
     
-    sorting_with_dup = inject_some_duplicat_units(sorting, ratio=0.8, num=4)
+    sorting_with_dup = inject_some_duplicate_units(sorting, ratio=0.8, num=4, seed=1)
     
     rec = rec.save()
     sorting_with_dup = sorting_with_dup.save()
@@ -33,8 +33,8 @@ def test_remove_redundant_units():
         shutil.rmtree(wf_folder)
     we = extract_waveforms(rec, sorting_with_dup, folder=wf_folder)
     print(we)
-    
-    for remove_strategy in ('minimum_shift', 'highest_amplitude'):
+
+    for remove_strategy in ('max_spikes', 'minimum_shift', 'highest_amplitude'):
         sorting_clean = remove_redundant_units(we, remove_strategy=remove_strategy)
         # print(sorting_clean)
         # print(sorting_clean.unit_ids)
