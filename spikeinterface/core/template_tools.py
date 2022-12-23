@@ -30,8 +30,9 @@ def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: st
 
     peak_values = {}
 
-    for unit_id in unit_ids:
-        template = waveform_extractor.get_template(unit_id, mode="average")
+    templates = waveform_extractor.get_all_templates(mode="average")
+    for unit_ind, unit_id in enumerate(unit_ids):
+        template = templates[unit_ind, :, :]
 
         if mode == "extremum":
             if peak_sign == "both":
@@ -189,16 +190,16 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str 
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
 
-    extremum_channels_ids = get_template_extremum_channel(
-        waveform_extractor, peak_sign=peak_sign
-    )
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
 
     shifts = {}
-    for unit_id in unit_ids:
+
+    templates = waveform_extractor.get_all_templates(mode="average")
+    for unit_ind, unit_id in enumerate(unit_ids):
+        template = templates[unit_ind, :, :]
+
         chan_id = extremum_channels_ids[unit_id]
         chan_ind = waveform_extractor.channel_ids_to_indices([chan_id])[0]
-
-        template = waveform_extractor.get_template(unit_id, mode="average")
 
         if peak_sign == "both":
             peak_pos = np.argmax(np.abs(template[:, chan_ind]))

@@ -1,6 +1,5 @@
 from .metrics import MetricsBaseWidget
 from ..core.waveform_extractor import WaveformExtractor
-from ..postprocessing import compute_template_metrics
 
 
 class TemplateMetricsWidget(MetricsBaseWidget):
