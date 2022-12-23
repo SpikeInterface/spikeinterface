@@ -57,7 +57,7 @@ class TestWidgets(unittest.TestCase):
         _ = compute_template_similarity(cls.we)
 
         # make sparse waveforms
-        cls.sparsity_radius =  ChannelSparsity.from_radius(cls.we, radius_um=30)
+        cls.sparsity_radius =  ChannelSparsity.from_radius(cls.we, radius_um=50)
         cls.sparsity_best =  ChannelSparsity.from_best_channels(cls.we, num_channels=5)
         cls.we_sparse = cls.we.save(folder=cache_folder / 'mearec_test_sparse', sparsity=cls.sparsity_radius)
 
@@ -131,7 +131,7 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_unit_waveforms_density_map(self.we, sparsity=self.sparsity_radius, same_axis=False,
                                                    unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])
-                sw.plot_unit_waveforms_density_map(self.we_sparse, sparsity=self.sparsity_best, same_axis=True,
+                sw.plot_unit_waveforms_density_map(self.we_sparse, sparsity=None, same_axis=True,
                                                    unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])
 
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     mytest.setUpClass()
 
     mytest.test_plot_unit_waveforms_density_map()
-    mytest.test_plot_unit_summary()
+    # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_timeseries()
     # mytest.test_plot_unit_waveforms()
@@ -253,5 +253,5 @@ if __name__ == '__main__':
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
-    plt.ion()
+    # plt.ion()
     plt.show()

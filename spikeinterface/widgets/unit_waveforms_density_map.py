@@ -3,7 +3,7 @@ import numpy as np
 from .base import BaseWidget
 from .utils import get_unit_colors
 
-from ..core import ChannelSparsity
+from ..core import ChannelSparsity, get_template_extremum_channel
 
 
 class UnitWaveformDensityMapWidget(BaseWidget):
@@ -22,6 +22,10 @@ class UnitWaveformDensityMapWidget(BaseWidget):
     sparsity : ChannelSparsity or None
         Optional ChannelSparsity to apply.
         If WaveformExtractor is already sparse, the argument is ignored
+    use_max_channel: bool default False
+        Use only the max channel
+    peak_sign: str "neg"
+        Used to detect max channel only when use_max_channel=True 
     unit_colors: None or dict
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used.
@@ -37,7 +41,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
     
     def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
-                 sparsity=None, same_axis=False, use_max_channel=False, unit_colors=None,
+                 sparsity=None, same_axis=False, use_max_channel=False, peak_sign="neg", unit_colors=None,
                  backend=None, **backend_kwargs):
         we = waveform_extractor
 
@@ -50,33 +54,23 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(we.sorting)
 
-        if same_axis:
-            if waveform_extractor.is_sparse() or sparsity is not None:
-                raise NotImplementedError
+        if use_max_channel:
+            assert len(unit_ids) == 1, ' UnitWaveformDensity : use_max_channel=True works only with one unit'
+            max_channels = get_template_extremum_channel(we,  mode="extremum", peak_sign=peak_sign, outputs="index")
+
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+            assert sparsity is None, 'UnitWaveformDensity WaveformExtractor is already sparse'
+            used_sparsity = waveform_extractor.sparsity
+        elif sparsity is not None:
+            assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
+            used_sparsity = sparsity
         else:
-            if sparsity is None:
-                # in this case, we construct a dense sparsity
-                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids}
-                sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
-                    unit_id_to_channel_ids=unit_id_to_channel_ids,
-                    unit_ids=we.unit_ids,
-                    channel_ids=we.channel_ids
-                )
-            else:
-                assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
-        channel_inds = sparsity.unit_id_to_channel_indices
+            # in this case, we construct a dense sparsity
+            used_sparsity = ChannelSparsity.create_dense(we)
 
-        if use_max_channel:
-            raise NotImplementedError
-
-        if same_axis:
-            # channel union
-            inds = np.unique(np.concatenate([inds.tolist() for inds in channel_inds.values()]))
-            channel_inds = {unit_id: inds for unit_id in unit_ids}
+        channel_inds = used_sparsity.unit_id_to_channel_indices
 
         # bins
         templates = we.get_all_templates(unit_ids=unit_ids)
@@ -88,15 +82,29 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         # 2d histograms
         if same_axis:
             all_hist2d = None
+            # channel union across units
+            unit_inds = we.sorting.ids_to_indices(unit_ids)
+            shared_chan_inds, = np.nonzero(np.sum(used_sparsity.mask[unit_inds, :], axis=0))
         else:
             all_hist2d = {}
+
         for unit_index, unit_id in enumerate(unit_ids):
             chan_inds = channel_inds[unit_id]
+            
+            # this have already the sparsity
+            wfs = we.get_waveforms(unit_id, sparsity=sparsity)
 
-            wfs = we.get_waveforms(unit_id)
-            # check waveform sparsity
-            if wfs.shape[2] != len(sparsity.unit_id_to_channel_indices[unit_id]):
-                wfs = wfs[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
+            if use_max_channel:
+                chan_ind = max_channels[unit_id]
+                wfs = wfs[:, :, chan_inds == chan_ind]
+            
+            if same_axis and not np.array_equal(chan_inds, shared_chan_inds):
+                # add more channels if necessary
+                wfs_ = np.zeros((wfs.shape[0], wfs.shape[1], shared_chan_inds.size), dtype=float)
+                mask = np.in1d(shared_chan_inds, chan_inds)
+                wfs_[:, :, mask] = wfs
+                wfs_[:, :, ~mask] = np.nan
+                wfs = wfs_
 
             # make histogram density
             wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1)
@@ -115,6 +123,13 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                     all_hist2d += hist2d
             else:
                 all_hist2d[unit_id] = hist2d
+
+        # update final channel_inds
+        if same_axis:
+            channel_inds = {unit_id: shared_chan_inds for unit_id in unit_ids}
+        if use_max_channel:
+            channel_inds = {unit_id: [max_channels[unit_id]] for unit_id in unit_ids}
+
 
         # plot median
         templates_flat = {}
