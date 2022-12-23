@@ -67,7 +67,7 @@ class SortingviewPlotter(BackendPlotter):
         self.url = url
 
 
-def generate_unit_table_view(sorting, unit_properties=None):
+def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=None):
     import sortingview.views as vv
     if unit_properties is None:
         ut_columns = []
@@ -109,5 +109,5 @@ def generate_unit_table_view(sorting, unit_properties=None):
                 values[prop_name] = property_values[ui]
             ut_rows.append(vv.UnitsTableRow(unit_id=unit, values=check_json(values)))
             
-    v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns)
+    v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores)
     return v_units_table

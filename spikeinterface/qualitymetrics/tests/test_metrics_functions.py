@@ -12,7 +12,7 @@ from spikeinterface.postprocessing import WaveformPrincipalComponent
 
 from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
         compute_amplitudes_cutoff, compute_presence_ratio, compute_isi_violations, compute_firing_rate, 
-        compute_num_spikes, compute_snrs)
+        compute_num_spikes, compute_snrs, compute_refrac_period_violations)
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
@@ -152,11 +152,18 @@ def test_calculate_presence_ratio(simulated_data):
 def test_calculate_isi_violations(simulated_data):
 
     we = setup_dataset(simulated_data)
-    ratio, rate, count = compute_isi_violations(we, 1, 0.0)
+    ratio, count = compute_isi_violations(we, 1, 0.0)
 
     assert ratio == {0: 0.09960119680798084, 1: 0.7873519778281683, 2: 1.922337562475971}
-    assert rate == {0: 0.02, 1: 0.04, 2: 0.1}
     assert count == {0: 2, 1: 4, 2: 10}
+
+def test_calculate_rp_violations(simulated_data):
+
+    we = setup_dataset(simulated_data)
+    rp_contamination, rp_violations = compute_refrac_period_violations(we, 1, 0.0)
+
+    assert rp_contamination == {0: 0.10512704455658162, 1: 1.0, 2: 1.0}
+    assert rp_violations == {0: 2, 1: 4, 2: 10}
 
 
 if __name__ == '__main__':

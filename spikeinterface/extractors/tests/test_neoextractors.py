@@ -130,7 +130,6 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'neuralynx/Cheetah_v5.7.4/original_data',
     ]
 
-
 class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxSortingExtractor
     downloads = ['neuralynx']
@@ -266,6 +265,17 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = ['edf/edf+C.edf']
 
 
+class CellExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = CellExplorerSortingExtractor
+    downloads = ['cellexplorer']
+    entities = [
+        'cellexplorer/dataset_1/20170311_684um_2088um_170311_134350.spikes.cellinfo.mat',
+        ('cellexplorer/dataset_2/20170504_396um_0um_merge.spikes.cellinfo.mat', 
+        {'session_info_matfile_path': 
+            local_folder / 'cellexplorer/dataset_2/20170504_396um_0um_merge.sessionInfo.mat'})
+    ]
+
+
 if __name__ == '__main__':
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
@@ -273,7 +283,7 @@ if __name__ == '__main__':
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
-    test = OpenEphysBinaryEventTest()
+    test = CellExplorerSortingTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()

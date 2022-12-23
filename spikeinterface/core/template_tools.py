@@ -100,13 +100,13 @@ def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mo
 
 def get_template_channel_sparsity(
     waveform_extractor,
-    method="best_channels",
+    method="radius",
     peak_sign="neg",
-    outputs="id",
-    num_channels=None,
-    radius_um=None,
+    num_channels=5,
+    radius_um=100.,
     threshold=5,
     by_property=None,
+    outputs="id",
 ):
     """
     Get channel sparsity (subset of channels) for each template with several methods.
@@ -115,27 +115,11 @@ def get_template_channel_sparsity(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    method: str
-        * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
-                         number of channels.
-        * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
-        * "threshold": thresholds based on template signal-to-noise ratio. Use the 'threshold' argument
-                       to specify the SNR threshold.
-        * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
-                         Use the 'by_property' argument to specify the property name.
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
+{}
     outputs: str
         * 'id': channel id
         * 'index': channel index
-    num_channels: int
-        Number of channels for 'best_channels' method
-    radius_um: float
-        Radius in um for 'radius' method
-    threshold: float
-        Threshold in SNR 'threshold' method
-    by_property: object
-        Property name for 'by_property' method
+        * 'object' : ChanneSparsity
 
     Returns
     -------
@@ -167,6 +151,30 @@ def get_template_channel_sparsity(
         return sparsity.unit_id_to_channel_indices
     elif outputs == "object":
         return sparsity
+
+_sparsity_doc = """
+    method: str
+        * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
+                         number of channels.
+        * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
+        * "threshold": thresholds based on template signal-to-noise ratio. Use the 'threshold' argument
+                       to specify the SNR threshold.
+        * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
+                         Use the 'by_property' argument to specify the property name.
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    num_channels: int
+        Number of channels for 'best_channels' method
+    radius_um: float
+        Radius in um for 'radius' method
+    threshold: float
+        Threshold in SNR 'threshold' method
+    by_property: object
+        Property name for 'by_property' method
+"""
+
+get_template_channel_sparsity.__doc__ = get_template_channel_sparsity.__doc__.format(_sparsity_doc)
+
 
 
 def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str = "neg"):
