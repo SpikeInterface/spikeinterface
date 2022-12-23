@@ -487,32 +487,62 @@ class DifferenceRecordingSegment(BasePreprocessorSegment):
 
         return traces_2 - traces_1
 
+colors = {'static' : 'C0', 'drifting' : 'C1', 'recorded' : 'C2'}
 
-def plot_sortings_comparisons(benchmarks, sorter):
+def plot_sortings_comparisons(benchmarks, sorter_name, mode='swarmplot'):
 
-    fig, axes = plt.subplots(len(benchmarks), 3, figsize=(15, 5))
+    all_comparisons = []
 
     for count, bench in enumerate(benchmarks):
+        all_comparisons.append({})
         for key, sorting in bench.sortings.items():
             if key != 'gt' and key[1] == sorter:
-                comp = GroundTruthComparison(bench.sortings['gt'], bench.sortings[key], exhaustive_gt=True)
+                all_comparisons[-1][key] = GroundTruthComparison(bench.sortings['gt'], bench.sortings[key], exhaustive_gt=True)
 
-                if key[0] == 'static':
-                    idx = 0
-                elif key[0] == 'drifting':
-                    idx = 1
-                elif key[0] == 'corrected':
-                    idx = 2
-
-                if len(benchmarks) == 1:
-                    ax = axes[idx]
-                else:
-                    ax = axes[count, idx]
-
+    if mode == 'swarmplot':
+        fig, axes = plt.subplots(len(benchmarks), 3, figsize=(15, 5), squeeze=False)
+        for count, comparisons in enumerate(all_comparisons):
+            for key, comp in comparisons.items():
+                if key[1] != sorter_name:
+                    continue
+                idx = ('static', 'drifting', 'corrected').index(key[0])
+                ax = axes[count, idx]
                 plot_gt_performances(comp, ax=ax)
                 if idx > 0:
                     ax.set_yticks([])
                     ax.set_ylabel('')
                 ax.set_title(key)
                 _simpleaxis(ax)
-                
+
+    elif mode == 'snr':
+        fig, axes = plt.subplots(len(benchmarks), 2, figsize=(15, 5), squeeze=False)
+        metrics = compute_quality_metrics(self.waveforms['static'], metric_names=['snr'], load_if_exists=True)
+        for count, comparisons in enumerate(all_comparisons):
+            for key, comp in comparisons.items():
+                if key[1] != sorter_name:
+                    continue
+                ax = axes[count, 0]
+                plot_sorting_performance(comp, metrics, performance_name='accuracy', metric_name='snr', ax=ax, color=colors[key[0]])
+                _simpleaxis(ax)
+            
+
+            ax = axes[count, 1]
+            perf_static = comparisons[('static', sorter_name)].get_performance()['accuracy']
+            perf_drifting = comparisons[('drifting', sorter_name)].get_performance()['accuracy']
+            perf_corrected = comparisons[('corrected', sorter_name)].get_performance()['accuracy']
+            ax.plot(metric['snr'], perf_static - perf_drifting, marker='o', markersize=10, ls='', color=colors['drifting'])
+            ax.plot(metric['snr'], perf_static - perf_corrected, marker='o', markersize=10, ls='', color=colors['corrected'])
+    elif mode == 'scatter':
+        fig, axes = plt.subplots(len(benchmarks), 1, figsize=(15, 5), squeeze=False)
+        metrics = compute_quality_metrics(self.waveforms['static'], metric_names=['snr'], load_if_exists=True)
+        for count, comparisons in enumerate(all_comparisons):
+            
+            ax = axes[count, 1]
+            perf_static = comparisons[('static', sorter_name)].get_performance()['accuracy']
+            perf_drifting = comparisons[('drifting', sorter_name)].get_performance()['accuracy']
+            perf_corrected = comparisons[('corrected', sorter_name)].get_performance()['accuracy']
+            ax.plot(perf_static, perf_drifting, marker='o', markersize=10, ls='', color=colors['drifting'])
+            ax.plot(perf_static, perf_corrected, marker='o', markersize=10, ls='', color=colors['corrected'])
+            ax.plot([0, 1], [0, 1], 'k')
+            ax.set_xlim(0.5, 1)
+            ax.set_ylim(0.5, 1)
