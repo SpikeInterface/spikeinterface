@@ -1306,6 +1306,10 @@ def extract_waveforms(recording, sorting, folder=None,
     >>> # Extract dense waveforms and save to disk
     >>> we = si.extract_waveforms(recording, sorting, folder="waveforms")
 
+    >>> # Extract dense waveforms with parallel processing and save to disk
+    >>> job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
+    >>> we = si.extract_waveforms(recording, sorting, folder="waveforms", **job_kwargs)
+
     >>> # Extract dense waveforms on all spikes
     >>> we = si.extract_waveforms(recording, sorting, folder="waveforms-all", max_spikes_per_unit=None)
 
