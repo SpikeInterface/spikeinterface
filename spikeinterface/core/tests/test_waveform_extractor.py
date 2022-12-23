@@ -54,14 +54,10 @@ def test_WaveformExtractor():
             else:
                 wf_folder = folder
 
-            we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode,
-                                          sparsity=sparsity)
-
-            we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
-
+            we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, sparsity=sparsity)
+            we.set_params(ms_before=1., ms_after=1.5, max_spikes_per_unit=500)
             we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
             we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
-
 
             wfs = we.get_waveforms(0)
             assert wfs.shape[0] <= 500
@@ -182,15 +178,14 @@ def test_extract_waveforms():
     folder1 = cache_folder / 'test_extract_waveforms_1job'
     if folder1.is_dir():
         shutil.rmtree(folder1)
-    we1 = extract_waveforms(recording, sorting, folder1,
-                            max_spikes_per_unit=None, return_scaled=False)
+    we1 = extract_waveforms(recording, sorting, folder1, max_spikes_per_unit=None, return_scaled=False)
 
     folder2 = cache_folder / 'test_extract_waveforms_2job'
     if folder2.is_dir():
         shutil.rmtree(folder2)
     we2 = extract_waveforms(recording, sorting, folder2, n_jobs=2, total_memory="10M", max_spikes_per_unit=None,
                             return_scaled=False)
-
+    
     wf1 = we1.get_waveforms(0)
     wf2 = we2.get_waveforms(0)
     assert np.array_equal(wf1, wf2)
@@ -227,6 +222,19 @@ def test_extract_waveforms():
     folder_unfiltered = cache_folder / "test_extract_waveforms_unfiltered"
     we1 = extract_waveforms(recording, sorting, folder_unfiltered, allow_unfiltered=True,
                             max_spikes_per_unit=None, return_scaled=False)
+    
+    # test with sparsity estimation
+    folder4 = cache_folder / 'test_extract_waveforms_estimate_sparsity'
+    if folder4.is_dir():
+        shutil.rmtree(folder4)
+    we4 = extract_waveforms(recording, sorting, folder4, max_spikes_per_unit=100,return_scaled=True,
+                            sparse=True, method="radius",
+                            n_jobs=2, chunk_duration="500ms")
+
+    wf4 = we4.get_waveforms(0)
+    print(wf4.shape)
+    
+
 
 
 def test_recordingless():
@@ -438,8 +446,8 @@ def test_estimate_sparsity():
 
 if __name__ == '__main__':
     # test_WaveformExtractor()
-    # test_extract_waveforms()
+    test_extract_waveforms()
     # test_sparsity()
     # test_portability()
     # test_recordingless()
-    test_estimate_sparsity()
+    # test_estimate_sparsity()
