@@ -50,10 +50,11 @@ class TestWidgets(unittest.TestCase):
         # at the moment only mpl will be tested on github actions
         sw.set_default_plotter_backend('matplotlib')
         
+        metric_names = ["snr", "isi_violations", "num_spikes"]
         _ = compute_spike_amplitudes(self.we)
         _ = compute_unit_locations(self.we)
         _ = compute_spike_locations(self.we)
-        _ = compute_quality_metrics(self.we)
+        _ = compute_quality_metrics(self.we, metric_names=metric_names)
         _ = compute_template_metrics(self.we)
         _ = compute_correlograms(self.we)
         _ = compute_template_similarity(self.we)
@@ -223,6 +224,8 @@ if __name__ == '__main__':
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
-    mytest.test_plot_unit_summary()
+    # mytest.test_plot_unit_summary()
+    mytest.test_quality_metrics()
+    mytest.test_sorting_summary()
 
     plt.show()
