@@ -216,7 +216,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
                                 generating the ISI violations. Described in [1]. See Notes.
-        * isi_violation_rate: number of ISI violations divided by total rate
         * isi_violation_count: number of ISI violations
 
     Parameters
