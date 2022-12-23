@@ -1236,6 +1236,9 @@ def extract_waveforms(recording, sorting, folder=None,
     Extracts waveform on paired Recording-Sorting objects.
     Waveforms are persistent on disk and cached in memory.
 
+    # TODO more example
+
+
     Parameters
     ----------
     recording: Recording
@@ -1283,7 +1286,13 @@ def extract_waveforms(recording, sorting, folder=None,
         If True and waveforms have already been extracted in the specified folder, they are loaded
         and not recomputed.
 
+    kwargs for sparsity strategy:
     {}
+    
+
+    Job kwargs:
+    {}
+
 
     Returns
     -------
@@ -1315,9 +1324,9 @@ def extract_waveforms(recording, sorting, folder=None,
         sparsity = None
 
     we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path,
-                                  allow_unfiltered=allow_unfiltered)
+                                  allow_unfiltered=allow_unfiltered, sparsity=sparsity)
     we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit, dtype=dtype,
-                  return_scaled=return_scaled, sparsity=sparsity)
+                  return_scaled=return_scaled)
     we.run_extract_waveforms(seed=seed, **job_kwargs)
 
     if precompute_template is not None:
@@ -1325,7 +1334,7 @@ def extract_waveforms(recording, sorting, folder=None,
 
     return we
 
-extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_shared_job_kwargs_doc)
+extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_sparsity_doc, _shared_job_kwargs_doc)
 
 def load_waveforms(folder, with_recording=True, sorting=None):
     """
@@ -1346,8 +1355,6 @@ def load_waveforms(folder, with_recording=True, sorting=None):
         The loaded waveform extractor
     """
     return WaveformExtractor.load(folder, with_recording, sorting)
-
-
 
 
 
@@ -1374,7 +1381,8 @@ def estimate_sparsity(recording, sorting, num_spikes_for_sparsity=100, unit_batc
     ms_after: float
         Time in ms to cut after spike peak
 
-    kwargs to sparsity strategy:
+    kwargs for sparsity strategy:
+    {}
     
 
     Job kwargs:
