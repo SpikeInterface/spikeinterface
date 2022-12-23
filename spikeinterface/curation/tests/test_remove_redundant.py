@@ -34,10 +34,7 @@ def test_remove_redundant_units():
     we = extract_waveforms(rec, sorting_with_dup, folder=wf_folder)
     print(we)
 
-    # here we can only test max_spikes, because for other strategies we don't know if the injected units:
-    # 1. have minimum shift (since shift is random in inject_some_duplicate_units)
-    # 2. have highest amplitudes
-    for remove_strategy in ('max_spikes',):
+    for remove_strategy in ('max_spikes', 'minimum_shift', 'highest_amplitude'):
         sorting_clean = remove_redundant_units(we, remove_strategy=remove_strategy)
         # print(sorting_clean)
         # print(sorting_clean.unit_ids)
