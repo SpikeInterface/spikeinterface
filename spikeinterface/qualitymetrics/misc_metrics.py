@@ -95,15 +95,16 @@ def compute_firing_rate(waveform_extractor):
 _default_params["firing_rate"] = dict()
 
 
-def compute_presence_ratio(waveform_extractor, num_bin_edges=101):
+def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
     """Calculate the presence ratio, representing the fraction of time the unit is firing.
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    num_bin_edges : int, optional, default: 101
-        The number of bins edges to use to compute the presence ratio.
+    bin_duration_s : float, optional, default: 60
+        The duration of each bin in seconds. If the duration is less than this value, 
+        presence_ratio is set to NaN
 
     Returns
     -------
@@ -123,23 +124,31 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101):
 
     seg_length = [recording.get_num_samples(i) for i in range(num_segs)]
     total_length = np.sum(seg_length)
+    bin_duration_samples = int((bin_duration_s * recording.sampling_frequency))
+    num_bin_edges = total_length // bin_duration_samples + 1
+    bins = np.arange(num_bin_edges) * bin_duration_samples
 
-    presence_ratio = {}
-    for unit_id in unit_ids:
-        spiketrain = []
-        for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            st = st + np.sum(seg_length[:segment_index])
-            spiketrain.append(st)
-        spiketrain = np.concatenate(spiketrain)
-        h, b = np.histogram(spiketrain, np.linspace(0, total_length, num_bin_edges))
-        presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
+    if total_length < bin_duration_samples:
+        warnings.warn(f"Bin duration of {bin_duration_s}s is larger than recording duration. "
+                      f"Presence ratios are set to NaN.")
+        presence_ratio = {unit_id: np.nan for unit_id in sorting.unit_ids}
+    else:
+        presence_ratio = {}
+        for unit_id in unit_ids:
+            spiketrain = []
+            for segment_index in range(num_segs):
+                st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                st = st + np.sum(seg_length[:segment_index])
+                spiketrain.append(st)
+            spiketrain = np.concatenate(spiketrain)
+            h, _ = np.histogram(spiketrain, bins=bins)
+            presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
 
     return presence_ratio
 
 
 _default_params["presence_ratio"] = dict(
-    num_bin_edges=101
+    bin_duration_s=60
 )
 
 

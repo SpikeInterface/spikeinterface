@@ -108,19 +108,39 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         we = self.we_short
         _ = compute_spike_amplitudes(we, peak_sign="neg")
 
-        # If too few spikes, should raise a warning and set cutoffs to nans
+        # If too few spikes, should raise a warning and set amplitude cutoffs to nans
         with pytest.warns(UserWarning) as w:
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['amplitude_cutoff'], peak_sign="neg")
         assert all(np.isnan(cutoff) for cutoff in metrics["amplitude_cutoff"].values)
 
-        # now we decrease the number of bins and check that cutoffs are correctly computed
+        # now we decrease the number of bins and check that amplitude cutoffs are correctly computed
         qm_params=dict(amplitude_cutoff=dict(num_histogram_bins=5))
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['amplitude_cutoff'], peak_sign="neg", qm_params=qm_params)
         assert all(not np.isnan(cutoff) for cutoff in metrics["amplitude_cutoff"].values)
+
+
+    def test_presence_ratio(self):
+        we = self.we_long
+
+        total_duration = we.recording.get_total_duration()
+        # If bin_duration_s is larger than total duration, should raise a warning and set presence ratios to nans
+        qm_params=dict(presence_ratio=dict(bin_duration_s=total_duration+1))
+        with pytest.warns(UserWarning) as w:
+            metrics = self.extension_class.get_extension_function()(
+                we, metric_names=['presence_ratio'], qm_params=qm_params)
+        assert all(np.isnan(ratio) for ratio in metrics["presence_ratio"].values)
+
+        # now we decrease the bin_duration_s and check that presenc ratios are correctly computed
+        qm_params=dict(presence_ratio=dict(bin_duration_s=total_duration // 10))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            metrics = self.extension_class.get_extension_function()(
+                we, metric_names=['presence_ratio'], qm_params=qm_params)
+        assert all(not np.isnan(ratio) for ratio in metrics["presence_ratio"].values)
 
     def test_peak_sign(self):
         we = self.we_long
@@ -159,5 +179,5 @@ if __name__ == '__main__':
     test = QualityMetricsExtensionTest()
     test.setUp()
     # test.test_extension()
-    test.test_amplitude_cutoff()
+    test.test_presence_ratio()
     # test.test_peak_sign()
