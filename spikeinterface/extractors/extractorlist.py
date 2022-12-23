@@ -20,6 +20,7 @@ from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
 from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 
 # sorting extractors in relation with a sorter
+from .cellexplorersortingextractor import CellExplorerSortingExtractor, read_cellexplorer
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .mclustextractors import MClustSortingExtractor, read_mclust
