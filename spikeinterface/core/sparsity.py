@@ -181,3 +181,11 @@ class ChannelSparsity:
             chan_inds = we.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             mask[unit_ind, chan_inds] = True
         return cls(mask, we.unit_ids, we.channel_ids)
+
+    @classmethod
+    def create_dense(cls, we):
+        """
+        Create a sparsity object with all selected channel for all units.
+        """
+        mask = np.ones((we.unit_ids.size, we.channel_ids.size), dtype='bool')
+        return cls(mask, we.unit_ids, we.channel_ids)

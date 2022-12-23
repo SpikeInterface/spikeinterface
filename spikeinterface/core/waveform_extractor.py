@@ -289,14 +289,6 @@ class WaveformExtractor:
     def is_sparse(self):
         return self.sparsity is not None
 
-    def get_unit_sparsity_mask(self, unit_id):
-        if self.sparsity is not None:
-            unit_sparsity_mask = self.sparsity.mask[self.sorting.id_to_index(unit_id)]
-        else:
-            unit_sparsity_mask = slice(None)
-        return unit_sparsity_mask
-
-
     @classmethod
     def register_extension(cls, extension_class):
         """
@@ -357,6 +349,10 @@ class WaveformExtractor:
     @property
     def return_scaled(self):
         return self._params['return_scaled']
+    
+    @property
+    def dtype(self):
+        return self._params['dtype']
 
     def has_recording(self):
         return self._recording is not None
@@ -1030,22 +1026,28 @@ class WaveformExtractor:
         assert mode in _possible_template_modes
         assert unit_id in self.sorting.unit_ids
 
-        key = mode
+        if sparsity is not None:
+            assert not self.is_sparse(), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
 
+        unit_ind = self.sorting.id_to_index(unit_id)
+        
         if mode in self._template_cache:
             # already in the global cache
             templates = self._template_cache[mode]
-            unit_ind = self.sorting.id_to_index(unit_id)
             template = templates[unit_ind, :, :]
-            unit_sparsity_mask = self.get_unit_sparsity_mask(unit_id)
-            template = template[:, unit_sparsity_mask]
+            if sparsity is not None:
+                unit_sparsity = sparsity.mask[unit_ind]
+            elif self.sparsity is not None:
+                unit_sparsity = self.sparsity.mask[unit_ind]
+            else:
+                unit_sparsity = slice(None)
+            template = template[:, unit_sparsity]
             return template
 
         # compute from waveforms
         wfs = self.get_waveforms(unit_id)
         if sparsity is not None:
-            assert not self.is_sparse(), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
-            wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
+            wfs = wfs[:, :, sparsity.mask[unit_ind]]
         if mode == 'median':
             template = np.median(wfs, axis=0)
         elif mode == 'average':
