@@ -4,7 +4,7 @@ import warnings
 from pathlib import Path
 import numpy as np
 
-from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
+from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, split_recording, select_segment_sorting
 from spikeinterface.extractors import toy_example
 from spikeinterface.core import get_template_channel_sparsity
 
@@ -33,7 +33,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     def setUp(self):
         super().setUp()
         self.cache_folder = cache_folder
-        recording, sorting = toy_example(num_segments=2, num_units=10, duration=60)
+        recording, sorting = toy_example(num_segments=2, num_units=10, duration=120)
         if (cache_folder / 'toy_rec_long').is_dir():
             recording = load_extractor(self.cache_folder / 'toy_rec_long')
         else:
@@ -47,9 +47,24 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                                     max_spikes_per_unit=500,
                                     overwrite=True,
                                     seed=0)
+        # make a short we for testing amp cutoff
+        recording_one = split_recording(recording)[0]
+        sorting_one = select_segment_sorting(sorting, [0])
+
+        nsec_short = 30
+        recording_short = recording_one.frame_slice(start_frame=0,
+                                                    end_frame=int(nsec_short * recording.sampling_frequency))
+        sorting_short = sorting_one.frame_slice(start_frame=0,
+                                                end_frame=int(nsec_short * recording.sampling_frequency))
+        we_short = extract_waveforms(recording_short, sorting_short,
+                                     self.cache_folder / 'toy_waveforms_short',
+                                     max_spikes_per_unit=500,
+                                     overwrite=True,
+                                     seed=0)
         self.sparsity_long = get_template_channel_sparsity(we_long, method="radius",
                                                            radius_um=50)
         self.we_long = we_long
+        self.we_short = we_short
 
     def test_metrics(self):
         we = self.we_long
@@ -90,20 +105,22 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # print(metrics_sparse)
 
     def test_amplitude_cutoff(self):
-        we = self.we_long
+        we = self.we_short
+        _ = compute_spike_amplitudes(we, peak_sign="neg")
 
-        # this should raise a warning because spike_amplitudes extension is not available
+        # If too few spikes, should raise a warning and set cutoffs to nans
         with pytest.warns(UserWarning) as w:
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['amplitude_cutoff'], peak_sign="neg")
-        print(metrics)
-        # after computing amplitudes, no warnings should be issued
-        _ = compute_spike_amplitudes(we)
+        assert all(np.isnan(cutoff) for cutoff in metrics["amplitude_cutoff"].values)
+
+        # now we decrease the number of bins and check that cutoffs are correctly computed
+        qm_params=dict(amplitude_cutoff=dict(num_histogram_bins=5))
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             metrics = self.extension_class.get_extension_function()(
-                we, metric_names=['amplitude_cutoff'], peak_sign="neg")
-        print(metrics)
+                we, metric_names=['amplitude_cutoff'], peak_sign="neg", qm_params=qm_params)
+        assert all(not np.isnan(cutoff) for cutoff in metrics["amplitude_cutoff"].values)
 
     def test_peak_sign(self):
         we = self.we_long
@@ -142,5 +159,5 @@ if __name__ == '__main__':
     test = QualityMetricsExtensionTest()
     test.setUp()
     # test.test_extension()
-    test.test_metrics()
+    test.test_amplitude_cutoff()
     # test.test_peak_sign()

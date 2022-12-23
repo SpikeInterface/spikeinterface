@@ -51,6 +51,8 @@ from .segmentutils import (
     AppendSegmentSorting,
     split_sorting,
     SplitSegmentSorting,
+    select_segment_sorting,
+    SelectSegmentSorting
 )
 
 # default folder

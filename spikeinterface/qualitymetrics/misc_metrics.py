@@ -372,7 +372,8 @@ _default_params["rp_violations"] = dict(
 
 
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
-                              num_histogram_bins=100, histogram_smoothing_value=3):
+                              num_histogram_bins=100, histogram_smoothing_value=3,
+                              amplitudes_bins_min_ratio=5):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Parameters
@@ -385,6 +386,10 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, optional, default: 3
         Controls the smoothing applied to the amplitude histogram.
+    amplitudes_bins_min_ratio : int, optional, default: 5
+        The minimum ratio between number of amplitudes for a unit and the number of bins.
+        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
+        to NaN
 
     Returns
     -------
@@ -424,6 +429,7 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
             invert_amplitudes = True
 
     all_fraction_missing = {}
+    nan_units = []
     for unit_id in unit_ids:
         if spike_amplitudes is None:
             waveforms = waveform_extractor.get_waveforms(unit_id)
@@ -433,9 +439,8 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         else:
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
 
-        if len(amplitudes) < num_histogram_bins:
-            warnings.warn(f"Unit {unit_id} has less spikes than {num_histogram_bins} bins. "
-                          "amplitude_cutoff will be set to NaN")
+        if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
+            nan_units.append(unit_id)
             all_fraction_missing[unit_id] = np.nan
             continue
 
@@ -460,6 +465,10 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         fraction_missing = np.sum(pdf[G:]) * bin_size
         fraction_missing = np.min([fraction_missing, 0.5])
         all_fraction_missing[unit_id] = fraction_missing
+
+    if len(nan_units) > 0:
+        warnings.warn(f"Units {nan_units} have too few spikes and "
+                       "amplitude_cutoff is set to NaN")
 
     return all_fraction_missing
 
