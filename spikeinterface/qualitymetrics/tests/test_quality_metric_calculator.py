@@ -5,11 +5,11 @@ import numpy as np
 
 from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms
 from spikeinterface.extractors import toy_example
+from spikeinterface.core import get_template_channel_sparsity
 
 from spikeinterface.postprocessing import WaveformPrincipalComponent
 from spikeinterface.preprocessing import scale
-from spikeinterface.qualitymetrics import QualityMetricCalculator
-from spikeinterface.postprocessing import get_template_channel_sparsity
+from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_qm_params
 
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
@@ -32,7 +32,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     def setUp(self):
         super().setUp()
         self.cache_folder = cache_folder
-        recording, sorting = toy_example(num_segments=2, num_units=10, duration=300)
+        recording, sorting = toy_example(num_segments=2, num_units=10, duration=60)
         if (cache_folder / 'toy_rec_long').is_dir():
             recording = load_extractor(self.cache_folder / 'toy_rec_long')
         else:
@@ -56,18 +56,25 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'])
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
+        metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'],
+                                                                qm_params=dict(isi_violations=dict(isi_threshold_ms=2)))
+        # check that parameters are correctly set
+        qm = we.load_extension("quality_metrics")
+        assert qm._params["qm_params"]["isi_violations"]["isi_threshold_ms"] == 2
+        assert 'snr' in metrics.columns
+        assert 'isolation_distance' not in metrics.columns
         # print(metrics)
 
         # with PCs
         pca = WaveformPrincipalComponent(we)
         pca.set_params(n_components=5, mode='by_channel_local')
         pca.run()
-        metrics = self.extension_class.get_extension_function()(we)
+        metrics = self.extension_class.get_extension_function()(we, seed=0)
         assert 'isolation_distance' in metrics.columns
 
         # with PC - parallel
         metrics_par = self.extension_class.get_extension_function()(
-            we, n_jobs=2, verbose=True, progress_bar=True)
+            we, n_jobs=2, verbose=True, progress_bar=True, seed=0)
         # print(metrics)
         # print(metrics_par)
         for metric_name in metrics.columns:
@@ -94,7 +101,13 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             rec_inv, sort, self.cache_folder / 'toy_waveforms_inv')
         we_inv.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=None)
         we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
-        print(we_inv)
+
+        # neg_qm_params = get_default_qm_params()
+        # neg_qm_params["snr"]["peak_sign"] = "neg"
+        # neg_qm_params["amplitude_cutoff"]["peak_sign"] = "neg"
+        # pos_qm_params = get_default_qm_params()
+        # pos_qm_params["snr"]["peak_sign"] = "pos"
+        # pos_qm_params["amplitude_cutoff"]["peak_sign"] = "pos"
 
         # without PC
         metrics = self.extension_class.get_extension_function()(
@@ -107,8 +120,8 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                            metrics_inv["amplitude_cutoff"].values, atol=1e-4)
 
 if __name__ == '__main__':
-    test = QualityMetricsExtensionTest
+    test = QualityMetricsExtensionTest()
     test.setUp()
-    test.test_extension()
+    # test.test_extension()
     test.test_metrics()
-    test.test_peak_sign()
+    # test.test_peak_sign()

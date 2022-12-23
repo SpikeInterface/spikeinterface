@@ -23,19 +23,16 @@ from .pca_metrics import _possible_pc_metric_names
 
 # list of all available metrics and mapping to function
 # this list MUST NOT contain pca metrics, which are handled separately
-_metric_name_to_func = {
+_misc_metric_name_to_func = {
     "num_spikes" : compute_num_spikes,
     "firing_rate" : compute_firing_rate,
     "presence_ratio" : compute_presence_ratio,
     "snr" : compute_snrs,
-    "isi_violation" : compute_isi_violations,
-    "amplitude_cutoff" : compute_amplitudes_cutoff,
-    # 'mahalanobis_metrics' : mahalanobis_metrics,
-    # 'd_prime' : lda_metrics,
-    # 'nearest_neighbor' : nearest_neighbors_metrics,
-    # 'nn_isolation' : nearest_neighbors_isolation,
-    # 'nn_noise_overlap' : nearest_neighbors_noise_overlap
+    "isi_violations" : compute_isi_violations,
+    "rp_violations" : compute_refrac_period_violations,
+    "amplitude_cutoff" : compute_amplitudes_cutoff
 }
+
 
 # TODO
 # @Cole @ Alessio
