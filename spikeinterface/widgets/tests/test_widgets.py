@@ -47,25 +47,15 @@ class TestWidgets(unittest.TestCase):
         cls.we = extract_waveforms(cls.recording, cls.sorting, cache_folder / 'mearec_test', load_if_exists=True)
         
         sw.set_default_plotter_backend('matplotlib')
-        
-<<<<<<< HEAD
+
         metric_names = ["snr", "isi_violations", "num_spikes"]
-        _ = compute_spike_amplitudes(self.we)
-        _ = compute_unit_locations(self.we)
-        _ = compute_spike_locations(self.we)
-        _ = compute_quality_metrics(self.we, metric_names=metric_names)
-        _ = compute_template_metrics(self.we)
-        _ = compute_correlograms(self.we)
-        _ = compute_template_similarity(self.we)
-=======
         _ = compute_spike_amplitudes(cls.we)
         _ = compute_unit_locations(cls.we)
         _ = compute_spike_locations(cls.we)
-        _ = compute_quality_metrics(cls.we)
+        _ = compute_quality_metrics(cls.we, metric_names=metric_names)
         _ = compute_template_metrics(cls.we)
         _ = compute_correlograms(cls.we)
         _ = compute_template_similarity(cls.we)
->>>>>>> a1dd8c2a361ab2bb98e192aed9dafcd0607517a1
 
         # make sparse waveforms
         cls.sparsity_radius =  ChannelSparsity.from_radius(cls.we, radius_um=50)
