@@ -11,8 +11,6 @@ from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .amplitudes import AmplitudesWidget
 
-from ..postprocessing import get_template_channel_sparsity
-
 
 class UnitSummaryWidget(BaseWidget):
     """
@@ -28,21 +26,23 @@ class UnitSummaryWidget(BaseWidget):
         The unit id to plot the summary of
     unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values
+    sparsity : ChannelSparsity or None
+        Optional ChannelSparsity to apply.
+        If WaveformExtractor is already sparse, the argument is ignored
     """
     possible_backends = {}
 
     def __init__(self, waveform_extractor, unit_id, unit_colors=None,
-                            backend=None, **backend_kwargs):
+                 sparsity=None, radius_um=100, backend=None, **backend_kwargs):
         
         we = waveform_extractor
 
         if unit_colors is None:
             unit_colors = get_unit_colors(we.sorting)
-        
-        sparsity = get_template_channel_sparsity(we, method='radius', outputs='id', radius_um=100.)
-        
+                
         if we.is_extension('unit_locations'):
-            plot_data_unit_locations = UnitLocationsWidget(we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False).plot_data
+            plot_data_unit_locations = UnitLocationsWidget(we, unit_ids=[unit_id], 
+                                                           unit_colors=unit_colors, plot_legend=False).plot_data
             unit_locations = waveform_extractor.load_extension("unit_locations").get_data(outputs="by_unit")
             unit_location = unit_locations[unit_id]
         else:
@@ -50,10 +50,12 @@ class UnitSummaryWidget(BaseWidget):
             unit_location = None
 
         plot_data_waveforms = UnitWaveformsWidget(we, unit_ids=[unit_id], unit_colors=unit_colors,
-                        plot_templates=True, same_axis=True, plot_legend=False, sparsity=sparsity).plot_data
+                                                  plot_templates=True, same_axis=True, plot_legend=False,
+                                                  sparsity=sparsity).plot_data
         
         plot_data_waveform_density = UnitWaveformDensityMapWidget(we, unit_ids=[unit_id], unit_colors=unit_colors,
-                            max_channels=1, plot_templates=True, same_axis=True).plot_data
+                                                                  use_max_channel=True, plot_templates=True,
+                                                                  same_axis=False).plot_data
         
         if we.is_extension('correlograms'):
             plot_data_acc = AutoCorrelogramsWidget(we, unit_ids=[unit_id], unit_colors=unit_colors,).plot_data
@@ -62,7 +64,8 @@ class UnitSummaryWidget(BaseWidget):
 
         # use other widget to plot data
         if we.is_extension('spike_amplitudes'):
-            plot_data_amplitudes = AmplitudesWidget(we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False, plot_histograms=True).plot_data
+            plot_data_amplitudes = AmplitudesWidget(we, unit_ids=[unit_id], unit_colors=unit_colors,
+                                                    plot_legend=False, plot_histograms=True).plot_data
         else:
             plot_data_amplitudes = None
 
@@ -70,7 +73,6 @@ class UnitSummaryWidget(BaseWidget):
         plot_data = dict(
             unit_id=unit_id,
             unit_location=unit_location,
-            
             plot_data_unit_locations=plot_data_unit_locations,
             plot_data_waveforms=plot_data_waveforms,
             plot_data_waveform_density=plot_data_waveform_density,
