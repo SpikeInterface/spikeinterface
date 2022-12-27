@@ -95,15 +95,16 @@ def compute_firing_rate(waveform_extractor):
 _default_params["firing_rate"] = dict()
 
 
-def compute_presence_ratio(waveform_extractor, num_bin_edges=101):
+def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
     """Calculate the presence ratio, representing the fraction of time the unit is firing.
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    num_bin_edges : int, optional, default: 101
-        The number of bins edges to use to compute the presence ratio.
+    bin_duration_s : float, optional, default: 60
+        The duration of each bin in seconds. If the duration is less than this value, 
+        presence_ratio is set to NaN
 
     Returns
     -------
@@ -123,23 +124,31 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101):
 
     seg_length = [recording.get_num_samples(i) for i in range(num_segs)]
     total_length = np.sum(seg_length)
+    bin_duration_samples = int((bin_duration_s * recording.sampling_frequency))
+    num_bin_edges = total_length // bin_duration_samples + 1
+    bins = np.arange(num_bin_edges) * bin_duration_samples
 
-    presence_ratio = {}
-    for unit_id in unit_ids:
-        spiketrain = []
-        for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            st = st + np.sum(seg_length[:segment_index])
-            spiketrain.append(st)
-        spiketrain = np.concatenate(spiketrain)
-        h, b = np.histogram(spiketrain, np.linspace(0, total_length, num_bin_edges))
-        presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
+    if total_length < bin_duration_samples:
+        warnings.warn(f"Bin duration of {bin_duration_s}s is larger than recording duration. "
+                      f"Presence ratios are set to NaN.")
+        presence_ratio = {unit_id: np.nan for unit_id in sorting.unit_ids}
+    else:
+        presence_ratio = {}
+        for unit_id in unit_ids:
+            spiketrain = []
+            for segment_index in range(num_segs):
+                st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                st = st + np.sum(seg_length[:segment_index])
+                spiketrain.append(st)
+            spiketrain = np.concatenate(spiketrain)
+            h, _ = np.histogram(spiketrain, bins=bins)
+            presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
 
     return presence_ratio
 
 
 _default_params["presence_ratio"] = dict(
-    num_bin_edges=101
+    bin_duration_s=60
 )
 
 
@@ -207,7 +216,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
                                 generating the ISI violations. Described in [1]. See Notes.
-        * isi_violation_rate: number of ISI violations divided by total rate
         * isi_violation_count: number of ISI violations
 
     Parameters
@@ -372,7 +380,8 @@ _default_params["rp_violations"] = dict(
 
 
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
-                              num_histogram_bins=500, histogram_smoothing_value=3):
+                              num_histogram_bins=100, histogram_smoothing_value=3,
+                              amplitudes_bins_min_ratio=5):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Parameters
@@ -381,10 +390,14 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the template to compute best channels.
-    num_histogram_bins : int, optional, default: 500
+    num_histogram_bins : int, optional, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, optional, default: 3
         Controls the smoothing applied to the amplitude histogram.
+    amplitudes_bins_min_ratio : int, optional, default: 5
+        The minimum ratio between number of amplitudes for a unit and the number of bins.
+        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
+        to NaN
 
     Returns
     -------
@@ -399,14 +412,11 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
     Notes
     -----
-    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift)
-
-    Important note: here the amplitudes are extracted from the waveform extractor.
-    It means that the number of spike to estimate amplitude is low
-    See: WaveformExtractor.set_params(max_spikes_per_unit=500)
-
+    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
+    If available, amplitudes are extracted from the "spike_amplitude" extension (recommended). 
+    If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
+    which usually has waveforms for a small subset of spikes (500 by default).
     """
-
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
@@ -415,17 +425,36 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
 
+    spike_amplitudes = None
+    invert_amplitudes = False
+    if waveform_extractor.is_extension("spike_amplitudes"):
+        amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
+        spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
+        if amp_calculator._params["peak_sign"] == "pos":
+            invert_amplitudes = True
+    else:
+        if peak_sign == "pos":
+            invert_amplitudes = True
+
     all_fraction_missing = {}
+    nan_units = []
     for unit_id in unit_ids:
-        waveforms = waveform_extractor.get_waveforms(unit_id)
-        chan_id = extremum_channels_ids[unit_id]
-        chan_ind = recording.id_to_index(chan_id)
-        amplitudes = waveforms[:, before, chan_ind]
+        if spike_amplitudes is None:
+            waveforms = waveform_extractor.get_waveforms(unit_id)
+            chan_id = extremum_channels_ids[unit_id]
+            chan_ind = recording.id_to_index(chan_id)
+            amplitudes = waveforms[:, before, chan_ind]
+        else:
+            amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
+
+        if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
+            nan_units.append(unit_id)
+            all_fraction_missing[unit_id] = np.nan
+            continue
 
         # change amplitudes signs in case peak_sign is pos
-        if peak_sign == "pos":
+        if invert_amplitudes:
             amplitudes = -amplitudes
-
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
         # TODO : change with something better scipy.ndimage.gaussian_filter1d
@@ -445,12 +474,16 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         fraction_missing = np.min([fraction_missing, 0.5])
         all_fraction_missing[unit_id] = fraction_missing
 
+    if len(nan_units) > 0:
+        warnings.warn(f"Units {nan_units} have too few spikes and "
+                       "amplitude_cutoff is set to NaN")
+
     return all_fraction_missing
 
 
 _default_params["amplitude_cutoff"] = dict(
     peak_sign='neg',
-    num_histogram_bins=500,
+    num_histogram_bins=100,
     histogram_smoothing_value=3
 )
 

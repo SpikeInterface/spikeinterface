@@ -22,7 +22,7 @@ set_global_tmp_folder(cache_folder)
 def test_get_auto_merge_list():
 
 
-    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.], firing_rate=20.)
+    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.], firing_rate=20., seed=0)
     
     num_unit_splited = 1
     num_split = 2
