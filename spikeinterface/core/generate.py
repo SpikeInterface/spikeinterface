@@ -223,7 +223,7 @@ def clean_refractory_period(times, refractory_period):
 
     return times
 
-def inject_some_duplicat_units(sorting, num=4, max_shift=5, ratio=None, seed=None):
+def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=None):
     """
     Inject some duplicate units in a sorting.
     The peak shift can be control in a range.
@@ -248,6 +248,7 @@ def inject_some_duplicat_units(sorting, num=4, max_shift=5, ratio=None, seed=Non
     """
     other_ids = np.arange(np.max(sorting.unit_ids) +1 , np.max(sorting.unit_ids) + num + 1)
     shifts = np.random.RandomState(seed).randint(low=-max_shift, high=max_shift, size=num)
+    shifts[shifts == 0] += max_shift
     unit_peak_shifts = dict(zip(other_ids, shifts))
 
     spiketrains = []

@@ -65,6 +65,9 @@ extractors = [
     "sonpy;python_version>'3.7'",
     # lxml for neuroscope
     "lxml",
+    # hdf5storage and scipy for cellexplorer
+    "hdf5storage",
+    "scipy"
 ]
 
 full = [
