@@ -165,7 +165,7 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     peak_mode: {'extremum', 'at_index'}
         How to compute the amplitude.
         Extremum takes the maxima/minima
-        At_index takes the value at t=0
+        At_index takes the value at t=waveform_extractor.nbefore
     random_chunk_kwarg_dict: dict or None
         Dictionary to control the get_random_data_chunks() function.
         If None, default values are used
@@ -389,7 +389,7 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
-        The sign of the template to compute best channels.
+        The sign of the peaks.
     num_histogram_bins : int, optional, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, optional, default: 3
@@ -485,6 +485,65 @@ _default_params["amplitude_cutoff"] = dict(
     peak_sign='neg',
     num_histogram_bins=100,
     histogram_smoothing_value=3
+)
+
+
+def compute_amplitudes_median(waveform_extractor, peak_sign='neg'):
+    """Compute absolute geometric median amplitude.
+    The median is computed in the log domain and scaled back to uthe original scale.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    peak_sign : {'neg', 'pos', 'both'}
+        The sign of the peaks.
+
+    Returns
+    -------
+    all_amplitude_medians : dict
+        Estimated amplitude median for each unit ID.
+
+    Reference
+    ---------
+    Inspired by metric described in:
+    International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022.
+    This code is ported from:
+    https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
+    """
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    unit_ids = sorting.unit_ids
+
+    before = waveform_extractor.nbefore
+
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+
+    spike_amplitudes = None
+    if waveform_extractor.is_extension("spike_amplitudes"):
+        amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
+        spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
+
+    all_amplitude_medians = {}
+    for unit_id in unit_ids:
+        if spike_amplitudes is None:
+            waveforms = waveform_extractor.get_waveforms(unit_id)
+            chan_id = extremum_channels_ids[unit_id]
+            chan_ind = recording.id_to_index(chan_id)
+            amplitudes = waveforms[:, before, chan_ind]
+        else:
+            amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
+
+        # change amplitudes signs in case peak_sign is pos
+        abs_amplitudes = np.abs(amplitudes)
+        log_amps = 20 * np.log10(abs_amplitudes)
+        all_amplitude_medians[unit_id] = 10 ** (np.median(log_amps) / 20)
+
+    return all_amplitude_medians
+
+
+_default_params["amplitude_median"] = dict(
+    peak_sign='neg'
 )
 
 

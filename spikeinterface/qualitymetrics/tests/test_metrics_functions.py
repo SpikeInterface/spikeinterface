@@ -12,7 +12,7 @@ from spikeinterface.postprocessing import WaveformPrincipalComponent
 
 from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
         compute_amplitudes_cutoff, compute_presence_ratio, compute_isi_violations, compute_firing_rate, 
-        compute_num_spikes, compute_snrs, compute_refrac_period_violations)
+        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_amplitudes_median)
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
@@ -137,6 +137,11 @@ def test_calculate_amplitude_cutoff(simulated_data):
     amp_cuts = compute_amplitudes_cutoff(we, num_histogram_bins=10)
     assert amp_cuts == {0: 0.3307144004373338, 1: 0.43482247296942045, 2: 0.43482247296942045}
 
+
+def test_calculate_amplitude_median(simulated_data):
+    we = setup_dataset(simulated_data, score_detection=0.5)
+    amp_medians = compute_amplitudes_median(we)
+    assert amp_medians == {0: 130.80027290304386, 1: 130.7461997791725, 2: 130.7461997791725}
 
 def test_calculate_snrs(simulated_data):
     we = setup_dataset(simulated_data, score_detection=0.5)

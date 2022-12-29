@@ -7,8 +7,9 @@ import pandas as pd
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
-from .quality_metric_list import (_misc_metric_name_to_func,
-                                  calculate_pc_metrics, _possible_pc_metric_names)
+from .quality_metric_list import (calculate_pc_metrics,
+                                  _misc_metric_name_to_func,
+                                  _possible_pc_metric_names)
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
