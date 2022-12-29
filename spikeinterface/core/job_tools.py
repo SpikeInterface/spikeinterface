@@ -4,6 +4,7 @@ Some utils to handle parallel jobs on top of job and/or loky
 from pathlib import Path
 import numpy as np
 import platform
+import os
 
 import joblib
 import sys
@@ -52,6 +53,10 @@ def split_job_kwargs(mixed_kwargs):
             job_kwargs[k] = v
         else:
             specific_kwargs[k] = v
+    # if n_jobs is -1, set to os.cpu_count()
+    if "n_jobs" in job_kwargs:
+        if job_kwargs["n_jobs"] == -1:
+            job_kwargs["n_jobs"] = os.cpu_count()
     return specific_kwargs, job_kwargs
 
 

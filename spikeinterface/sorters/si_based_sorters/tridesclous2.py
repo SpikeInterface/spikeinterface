@@ -32,8 +32,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-        _, job_kwargs = split_job_kwargs(job_kwargs)
         job_kwargs = params['job_kwargs'].copy()
+        _, job_kwargs = split_job_kwargs(job_kwargs)
         job_kwargs['progress_bar'] = verbose
     
         # this is importanted only on demand because numba import are too heavy
