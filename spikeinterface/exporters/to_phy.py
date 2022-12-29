@@ -7,7 +7,7 @@ import pandas as pd
 
 import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs
 from spikeinterface.postprocessing import (get_template_channel_sparsity,
                                            compute_spike_amplitudes, compute_template_similarity,
                                            compute_principal_components)
@@ -57,6 +57,8 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     channel_ids = recording.channel_ids
     num_chans = recording.get_num_channels()
     fs = recording.sampling_frequency
+
+    _, job_kwargs = split_job_kwargs(job_kwargs)
 
     # handle sparsity
     if sparsity is None:

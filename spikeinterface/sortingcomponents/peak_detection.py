@@ -79,7 +79,8 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     init_func = _init_worker_detect_peaks
     init_args = (recording_, method, method_args, extra_margin, pipeline_steps_)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       handle_returns=True, job_name='detect peaks', **job_kwargs)
+                                       handle_returns=True, job_name='detect peaks',
+                                       **job_kwargs)
     outputs = processor.run()
 
     if pipeline_steps is None:

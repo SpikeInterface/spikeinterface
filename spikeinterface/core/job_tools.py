@@ -44,7 +44,9 @@ def split_job_kwargs(mixed_kwargs):
     This can be useful for some function with generic signature
     mixing specific and job kwargs.
     """
-    specific_kwargs, job_kwargs = {}, {}
+    from .globals import get_global_job_kwargs
+    job_kwargs = get_global_job_kwargs()
+    specific_kwargs = {}
     for k, v in mixed_kwargs.items():
         if k in job_keys:
             job_kwargs[k] = v

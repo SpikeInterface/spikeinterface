@@ -56,9 +56,11 @@ from .segmentutils import (
 )
 
 # default folder
-from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
-                              is_set_global_tmp_folder, reset_global_tmp_folder,
-                              get_global_dataset_folder, set_global_dataset_folder, is_set_global_dataset_folder)
+from .globals import (set_global_tmp_folder, get_global_tmp_folder,
+                      is_set_global_tmp_folder, reset_global_tmp_folder,
+                      get_global_dataset_folder, set_global_dataset_folder,
+                      is_set_global_dataset_folder,
+                      get_global_job_kwargs, set_global_job_kwargs)
 
 # tools 
 from .core_tools import write_binary_recording, write_to_h5_dataset_format, write_binary_recording, read_python, \
