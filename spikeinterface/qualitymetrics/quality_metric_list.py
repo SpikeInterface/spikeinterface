@@ -9,6 +9,7 @@ from .misc_metrics import (
     compute_refrac_period_violations,
     compute_amplitudes_cutoff,
     compute_amplitudes_median,
+    compute_noise_cutoff,
     compute_drift_metrics
 )
 
@@ -36,9 +37,6 @@ _misc_metric_name_to_func = {
     "amplitude_cutoff" : compute_amplitudes_cutoff,
     "amplitude_median" : compute_amplitudes_median,
     "drift" : compute_drift_metrics
+    # TODO "noise_cutoff" : compute_noise_cutoff, # needs DEBUGGING
 }
 
-
-# TODO
-# @Cole @ Alessio
-# "silhouette_score"
