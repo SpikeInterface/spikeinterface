@@ -1227,6 +1227,7 @@ def extract_waveforms(recording, sorting, folder=None,
                       return_scaled=True,
                       dtype=None,
                       sparse=False,
+                      num_spikes_for_sparsity=100,
                       allow_unfiltered=False,
                       use_relative_path=False,
                       seed=None,
@@ -1271,7 +1272,9 @@ def extract_waveforms(recording, sorting, folder=None,
         When True this run `estimate_sparsity()` on a few spikes to get a rough template to create a SparsityChannel
         object. Then the waveforms will be sparse at extraction time, this operation save lot of memory.
         When True you must some provide kwargs handle `estimate_sparsity()` to control the kind of sparsity you want
-        (by radius, by best channels, ...)
+        (by radius, by best channels, ...).
+    num_spikes_for_sparsity: int (default 100)
+        The number of spikes to use to estimate sparsity (if sparse=True).
     allow_unfiltered: bool
         If true, will accept an allow_unfiltered recording.
         False by default.
@@ -1339,7 +1342,7 @@ def extract_waveforms(recording, sorting, folder=None,
     
     if sparse:
         sparsity = estimate_sparsity(recording, sorting, ms_before=ms_before, ms_after=ms_after,
-                                     **estimate_kwargs, **job_kwargs)
+                                     num_spikes_for_sparsity=num_spikes_for_sparsity, **estimate_kwargs, **job_kwargs)
     else:
         sparsity = None
 
@@ -1430,8 +1433,8 @@ def estimate_sparsity(recording, sorting, num_spikes_for_sparsity=100, unit_batc
         local_ids = unit_ids[sl]
         local_sorting = sorting.select_units(local_ids)
         local_we = extract_waveforms(recording, local_sorting, folder=None, mode='memory',
-                                    precompute_template=('average', ), ms_before=ms_before, ms_after=ms_after,
-                                    max_spikes_per_unit=num_spikes_for_sparsity, return_scaled=False, **job_kwargs)
+                                     precompute_template=('average', ), ms_before=ms_before, ms_after=ms_after,
+                                     max_spikes_per_unit=num_spikes_for_sparsity, return_scaled=False, **job_kwargs)
         local_sparsity = get_template_channel_sparsity(local_we, outputs='object', **sparse_kwargs)
         mask[sl, :] = local_sparsity.mask
 
