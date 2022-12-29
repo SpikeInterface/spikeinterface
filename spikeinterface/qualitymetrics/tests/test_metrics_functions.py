@@ -2,17 +2,18 @@ import pytest
 import shutil
 from pathlib import Path
 import numpy as np
-from spikeinterface import WaveformExtractor
+from spikeinterface import extract_waveforms, load_waveforms
 from spikeinterface.core import synthetize_spike_train_bad_isi
 from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
 from spikeinterface.qualitymetrics import calculate_pc_metrics
-from spikeinterface.postprocessing import WaveformPrincipalComponent
+from spikeinterface.postprocessing import compute_principal_components, compute_spike_locations
 
 from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
         compute_amplitudes_cutoff, compute_presence_ratio, compute_isi_violations, compute_firing_rate, 
-        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_amplitudes_median)
+        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_amplitudes_median,
+        compute_drift_metrics)
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
@@ -50,20 +51,16 @@ def setup_module():
     recording = recording.save(folder=cache_folder / 'toy_rec')
     sorting = sorting.save(folder=cache_folder / 'toy_sorting')
 
-    we = WaveformExtractor.create(
-        recording, sorting, cache_folder / 'toy_waveforms')
-    we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
-    we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
-
-    pca = WaveformPrincipalComponent(we)
-    pca.set_params(n_components=5, mode='by_channel_local')
-    pca.run()
+    we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms',
+                           ms_before=3., ms_after=4., max_spikes_per_unit=500,
+                           n_jobs=1, chunk_size=30000)
+    pca = compute_principal_components(we, n_components=5, mode='by_channel_local')
 
 
 def test_calculate_pc_metrics():
-    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
+    we = load_waveforms(cache_folder / 'toy_waveforms')
     print(we)
-    pca = WaveformPrincipalComponent.load(cache_folder / 'toy_waveforms')
+    pca = we.load_extension('principal_components')
     print(pca)
 
     res = calculate_pc_metrics(pca)
@@ -117,9 +114,10 @@ def setup_dataset(spike_data, score_detection=1):
                                      score_detection=score_detection,
                                      seed=10)
     folder = 'waveform_folder2'
-    we = WaveformExtractor.create(recording, sorting, folder, remove_if_exists=True)
-    we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=1000)
-    we.run_extract_waveforms(n_jobs=1, chunk_size=30000, progress_bar=False)
+    we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms',
+                           ms_before=3., ms_after=4., max_spikes_per_unit=1000,
+                           n_jobs=1, chunk_size=30000, overwrite=True)
+    spike_locs = compute_spike_locations(we)
     return we
 
 
@@ -143,6 +141,7 @@ def test_calculate_amplitude_median(simulated_data):
     amp_medians = compute_amplitudes_median(we)
     assert amp_medians == {0: 130.80027290304386, 1: 130.7461997791725, 2: 130.7461997791725}
 
+
 def test_calculate_snrs(simulated_data):
     we = setup_dataset(simulated_data, score_detection=0.5)
     snr = compute_snrs(we)
@@ -162,6 +161,7 @@ def test_calculate_isi_violations(simulated_data):
     assert ratio == {0: 0.09960119680798084, 1: 0.7873519778281683, 2: 1.922337562475971}
     assert count == {0: 2, 1: 4, 2: 10}
 
+
 def test_calculate_rp_violations(simulated_data):
     we = setup_dataset(simulated_data)
     rp_contamination, rp_violations = compute_refrac_period_violations(we, 1, 0.0)
@@ -170,8 +170,18 @@ def test_calculate_rp_violations(simulated_data):
     assert rp_violations == {0: 2, 1: 4, 2: 10}
 
 
+def test_calculate_drift_metrics(simulated_data):
+    we = setup_dataset(simulated_data)
+    
+    max_drifts, cum_drifts = compute_drift_metrics(we, interval_s=1)
+
+    assert max_drifts == {0: 0.0, 1: 0.0, 2: 0.0}
+    assert cum_drifts == {0: 0.0, 1: 0.0, 2: 0.0}
+
+
 if __name__ == '__main__':
     setup_module()
     sim_data = _simulated_data()
-    test_calculate_amplitude_cutoff(sim_data)
-    test_calculate_presence_ratio(sim_data)
+    test_calculate_drift_metrics(sim_data)
+    # test_calculate_amplitude_cutoff(sim_data)
+    # test_calculate_presence_ratio(sim_data)

@@ -8,7 +8,8 @@ from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms,
 from spikeinterface.extractors import toy_example
 from spikeinterface.core import get_template_channel_sparsity
 
-from spikeinterface.postprocessing import compute_principal_components, compute_spike_amplitudes
+from spikeinterface.postprocessing import (compute_principal_components, compute_spike_amplitudes,
+                                           compute_spike_locations)
 from spikeinterface.preprocessing import scale
 from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_qm_params
 
@@ -69,6 +70,10 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     def test_metrics(self):
         we = self.we_long
 
+        # avoid NaNs
+        if we.is_extension("spike_amplitudes"):
+            we.delete_extension("spike_amplitudes")
+
         # without PC
         metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'])
         assert 'snr' in metrics.columns
@@ -122,7 +127,6 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                 we, metric_names=['amplitude_cutoff'], peak_sign="neg", qm_params=qm_params)
         assert all(not np.isnan(cutoff) for cutoff in metrics["amplitude_cutoff"].values)
 
-
     def test_presence_ratio(self):
         we = self.we_long
 
@@ -134,13 +138,43 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                 we, metric_names=['presence_ratio'], qm_params=qm_params)
         assert all(np.isnan(ratio) for ratio in metrics["presence_ratio"].values)
 
-        # now we decrease the bin_duration_s and check that presenc ratios are correctly computed
+        # now we decrease the bin_duration_s and check that presence ratios are correctly computed
         qm_params=dict(presence_ratio=dict(bin_duration_s=total_duration // 10))
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['presence_ratio'], qm_params=qm_params)
         assert all(not np.isnan(ratio) for ratio in metrics["presence_ratio"].values)
+
+    def test_drift_metrics(self):
+        we = self.we_long
+
+        # if spike_locations is not an extension, raise a warning and set values to NaN
+        with pytest.warns(UserWarning) as w:
+            metrics = self.extension_class.get_extension_function()(
+                we, metric_names=['drift'])
+        assert all(np.isnan(max_drift) for max_drift in metrics["maximum_drift"].values)
+        assert all(np.isnan(cum_drift) for cum_drift in metrics["cumulative_drift"].values)
+
+        # now we compute spike amplitudes, but use an interval_s larger than half the segment durations
+        _ = compute_spike_locations(we)
+        segment_durations = [we.recording.get_num_samples(seg_index) / we.sampling_frequency
+                             for seg_index in range(we.get_num_segments())]
+        qm_params=dict(drift=dict(interval_s=max(segment_durations) // 2 + 1))
+        with pytest.warns(UserWarning) as w:
+            metrics = self.extension_class.get_extension_function()(
+                we, metric_names=['drift'], qm_params=qm_params)
+        assert all(np.isnan(max_drift) for max_drift in metrics["maximum_drift"].values)
+        assert all(np.isnan(cum_drift) for cum_drift in metrics["cumulative_drift"].values)
+
+        # finally let's use an interval compatible with segment durations
+        qm_params=dict(drift=dict(interval_s=max(segment_durations) // 10))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            metrics = self.extension_class.get_extension_function()(
+                we, metric_names=['drift'], qm_params=qm_params)
+        assert all(not np.isnan(max_drift) for max_drift in metrics["maximum_drift"].values)
+        assert all(not np.isnan(cum_drift) for cum_drift in metrics["cumulative_drift"].values)
 
     def test_peak_sign(self):
         we = self.we_long
@@ -179,5 +213,5 @@ if __name__ == '__main__':
     test = QualityMetricsExtensionTest()
     test.setUp()
     # test.test_extension()
-    test.test_presence_ratio()
+    test.test_drift_metrics()
     # test.test_peak_sign()

@@ -24,7 +24,7 @@ Example code
 	import spikeinterface.qualitymetrics as qm
 
 	# Make recording, sorting and wvf_extractor objects for your data.
-	# It is also recommended to rune `compute_spike_amplitudes(wvf_extractor)`
+	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
     # in order to use amplitude values from all spikes.
 
 	fraction_missing = qm.compute_amplitudes_cutoff(wvf_extractor, peak_sign="neg")

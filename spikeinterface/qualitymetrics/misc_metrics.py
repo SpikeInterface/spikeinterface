@@ -232,9 +232,9 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     Returns
     -------
-    isi_violations_ratio : float
+    isi_violations_ratio : dict
         The isi violation ratio described in [1].
-    isi_violation_count : int
+    isi_violation_count : dict
         Number of violations.
 
     Notes
@@ -250,6 +250,8 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
     and converted to Python by Daniel Denman.
     """
+    res = namedtuple('isi_violation',
+                     ['isi_violations_ratio', 'isi_violations_count'])
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -287,9 +289,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             isi_violations_ratio[unit_id] = np.nan
             isi_violations_count[unit_id] = np.nan
 
-    res = namedtuple('isi_violation',
-                     ['isi_violations_ratio', 'isi_violations_count'])
-
     return res(isi_violations_ratio, isi_violations_count)
 
 
@@ -320,15 +319,16 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     Returns
     -------
-    rp_contamination : float
+    rp_contamination : dict
         The refactory period contamination described in [1].
-    rp_violations : int
+    rp_violations : dict
         Number of refractory period violations.
 
     Reference
     ---------
     [1] Llobet & Wyngaard (2022) BioRxiv
     """
+    res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
 
     if not HAVE_NUMBA:
         print("Error: numba is not installed.")
@@ -367,8 +367,6 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         N = num_spikes[unit_id]
         D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
         rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
-
-    res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
 
     return res(rp_contamination, nb_violations)
 
@@ -544,6 +542,129 @@ def compute_amplitudes_median(waveform_extractor, peak_sign='neg'):
 
 _default_params["amplitude_median"] = dict(
     peak_sign='neg'
+)
+
+
+def compute_drift_metrics(waveform_extractor, interval_s=60,
+                          min_spikes_per_interval=100, direction="y"):
+    """Compute maximum and cumulative drifts in um using estimated spike locations.
+    Over the duration of the recording, the drift observed in spike positions for each unit is calculated in intervals, 
+    with respect to the median positions in the first interval.
+    The cumulative drift is the sum of drifts over intervals.
+    The maximum drift is the estimated peak-to-peak of the drift.
+
+    In case of multi-segment objects, drift metrics are computed separately for each segment and the 
+    maximum values across segments is returned.
+
+    Requires 'spike_locations' extension. If this is not present, metrics are set to NaN.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    interval_s : int, optional
+        Interval length is seconds for computing spike depth, by default 60
+    min_spikes_per_interval : int, optional
+        Minimum number of spikes for computing depth, by default 100
+    direction : str, optional
+        The direction along which drift metrics are estimated, by default 'y'
+
+    Returns
+    -------
+    maximum_drift : dict
+        The maximum drift in um
+    cumulative_drift : dict
+        The cumulative drift in um
+    """
+    res = namedtuple("drift_metrics", ['maximum_drift', 'cumulative_drift'])
+
+    if waveform_extractor.is_extension("spike_locations"):
+        locs_calculator = waveform_extractor.load_extension("spike_locations")
+        spike_locations = locs_calculator.get_data(outputs="concatenated")
+    else:
+        warnings.warn("The drift metrics require the `spike_locations` waveform extension. "
+                      "Use the `postprocessing.compute_spike_locations()` function. "
+                      "Drift metrics will be set to NaN")
+        empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
+        return res(empty_dict, empty_dict)
+
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    unit_ids = waveform_extractor.unit_ids
+    maximum_drift = {}
+    cumulative_drift = {}
+    maximum_drift_segs = {unit_id: [] for unit_id in unit_ids}
+    cumulative_drift_segs = {unit_id: [] for unit_id in unit_ids}
+    interval_samples = int(interval_s * waveform_extractor.sampling_frequency)
+    assert direction in spike_locations.dtype.names, (
+        f"Direction {direction} is invalid. Available directions: "
+        f"{spike_locations.dtype.names}"
+    )
+
+    # if a segment is shorter than 2 * interval_s, we set the drift metrics to -1
+    for segment_index in range(recording.get_num_segments()):
+        seg_length = recording.get_num_samples(segment_index)
+        if  seg_length <= 2 * interval_samples:
+            warnings.warn(f"Segment {segment_index} is too short to compute drift metrics "
+                          f"with interval_s of {interval_s}. It needs to be at least {2*interval_s}s long")
+            for unit_id in unit_ids:
+                maximum_drift_segs[unit_id].append(-1)
+                cumulative_drift_segs[unit_id].append(-1)
+        else:
+            num_bin_edges = seg_length // interval_samples + 1
+            bins = np.arange(num_bin_edges) * interval_samples
+            spike_vector = sorting.to_spike_vector()
+
+            # compute median positions and drifts (if less than min_spikes_per_interval, median position is 0)
+            # drifts are the deviations with respect to first bin
+            median_positions = np.zeros((len(unit_ids), num_bin_edges - 1))
+            position_diffs = np.zeros((len(unit_ids), num_bin_edges - 1))
+            for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
+                i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
+                i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
+                spikes_in_segment = spike_vector[i0:i1]
+                spike_locations_in_segment = spike_locations[i0:i1]
+                i0 = np.searchsorted(spike_vector['sample_ind'], start_frame)
+                i1 = np.searchsorted(spike_vector['sample_ind'], end_frame)
+                spikes_in_bin = spikes_in_segment[i0:i1]
+                spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
+
+                for unit_ind in np.arange(len(unit_ids)):
+                    mask = spikes_in_bin['unit_ind'] == unit_ind
+                    if np.sum(mask) >= min_spikes_per_interval:
+                        median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])
+                    if bin_index == 0:
+                        position_diffs[unit_ind, bin_index] = 0
+                    else:
+                        position_diffs[unit_ind, bin_index] = median_positions[unit_ind, bin_index] \
+                            - median_positions[unit_ind, 0]
+
+            max_drifts = np.ptp(position_diffs, axis=1)
+            cum_drifts = np.cumsum(position_diffs, axis=1)
+
+            for unit_ind, unit_id in enumerate(unit_ids):
+                maximum_drift_segs[unit_id].append(max_drifts[unit_ind])
+                cumulative_drift_segs[unit_id].append(cum_drifts[unit_ind])
+
+    # now take the maximum values across segments. If all are -1, set to NaN
+    for unit_id in unit_ids:
+        max_drift_unit = np.max(maximum_drift_segs[unit_id])
+        max_drift_unit = max_drift_unit if max_drift_unit != -1 else np.nan
+        cum_drift_unit = np.max(cumulative_drift_segs[unit_id])
+        cum_drift_unit = cum_drift_unit if cum_drift_unit != -1 else np.nan
+
+        maximum_drift[unit_id] = max_drift_unit
+        cumulative_drift[unit_id] = cum_drift_unit
+    
+    res = namedtuple("drift_metrics", ['maximum_drift', 'cumulative_drift'])
+
+    return res(maximum_drift, cumulative_drift)
+
+
+_default_params["drift"] = dict(
+    interval_s=60,
+    min_spikes_per_interval=100,
+    direction="y"
 )
 
 
