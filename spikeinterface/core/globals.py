@@ -125,6 +125,14 @@ def set_global_job_kwargs(**job_kwargs):
     global_job_kwargs_set = True
 
 
+def reset_global_job_kwargs():
+    """
+    Reset the global job kwargs.
+    """
+    global global_job_kwargs
+    global_job_kwargs = dict()
+
+
 def is_set_global_job_kwargs_set():
     global global_job_kwargs_set
     return global_job_kwargs_set
