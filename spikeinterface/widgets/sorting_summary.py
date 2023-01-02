@@ -39,7 +39,7 @@ class SortingSummaryWidget(BaseWidget):
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
                  sparsity=None, max_amplitudes_per_unit=None, curation=False,
-                 unit_table_properties=None, backend=None, **backend_kwargs):
+                 unit_table_properties=None, label_choices=None, backend=None, **backend_kwargs):
         self.check_extensions(waveform_extractor, ['correlograms', 'spike_amplitudes',
                                                    'unit_locations', 'similarity'])
         we = waveform_extractor
@@ -62,7 +62,7 @@ class SortingSummaryWidget(BaseWidget):
                                           hide_unit_selector=True).plot_data
         locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
         sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
-        
+
         plot_data = dict(
             waveform_extractor=waveform_extractor,
             unit_ids=unit_ids,
@@ -72,7 +72,8 @@ class SortingSummaryWidget(BaseWidget):
             similarity=sim_plot_data,
             unit_locations=locs_plot_data,
             unit_table_properties=unit_table_properties,
-            curation=curation
+            curation=curation,
+            label_choices=label_choices
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

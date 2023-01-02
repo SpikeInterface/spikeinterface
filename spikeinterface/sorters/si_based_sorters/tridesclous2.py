@@ -30,7 +30,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         return "2.0"
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
         job_kwargs = params['job_kwargs'].copy()
         job_kwargs['progress_bar'] = verbose
@@ -44,7 +44,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         
         import hdbscan
 
-        recording_raw = load_extractor(output_folder / 'spikeinterface_recording.json')
+        recording_raw = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
         
         num_chans = recording_raw.get_num_channels()
         sampling_frequency = recording_raw.get_sampling_frequency()
@@ -75,7 +75,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         selection_params['n_peaks'] = params['selection']['n_peaks_per_channel'] * num_chans
         selection_params['n_peaks'] = max(selection_params['min_n_peaks'], selection_params['n_peaks'])
         selection_params['noise_levels'] = noise_levels
-        some_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False, **selection_params)
+        some_peaks = select_peaks(peaks, method='smart_sampling_amplitudes', select_per_channel=False,
+                                  **selection_params)
 
         if verbose:
             print('We kept %d peaks for clustering' %len(some_peaks))
@@ -83,7 +84,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # localization
         localization_params = params['localization'].copy()
         localization_params['local_radius_um'] = params['general']['local_radius_um']
-        peak_locations = localize_peaks(recording, some_peaks, method='monopolar_triangulation',  **localization_params, **job_kwargs)
+        peak_locations = localize_peaks(recording, some_peaks, method='monopolar_triangulation',
+                                        **localization_params, **job_kwargs)
         
         #~ print(peak_locations.dtype)
         
@@ -102,12 +104,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         labels = np.unique(peak_labels[mask])
         
         # extract waveform for template matching
-        sorting_temp = NumpySorting.from_times_labels(some_peaks['sample_ind'][mask], peak_labels[mask], sampling_frequency)
-        sorting_temp = sorting_temp.save(folder=output_folder / 'sorting_temp')
+        sorting_temp = NumpySorting.from_times_labels(some_peaks['sample_ind'][mask], peak_labels[mask],
+                                                      sampling_frequency)
+        sorting_temp = sorting_temp.save(folder=sorter_output_folder / 'sorting_temp')
         waveforms_params = params['waveforms'].copy()
         waveforms_params['ms_before'] = params['general']['ms_before']
         waveforms_params['ms_after'] = params['general']['ms_after']
-        we = extract_waveforms(recording, sorting_temp, output_folder / "waveforms_temp", **waveforms_params, **job_kwargs)
+        we = extract_waveforms(recording, sorting_temp, sorter_output_folder / "waveforms_temp",
+                               **waveforms_params, **job_kwargs)
         
         ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
         matching_params = params['matching'].copy()
@@ -125,13 +129,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #~ 'num_peeler_loop':  2,
         #~ 'num_template_try' : 1,
         
-        spikes = find_spikes_from_templates(recording, method='tridesclous',  method_kwargs=matching_params, **job_kwargs)
+        spikes = find_spikes_from_templates(recording, method='tridesclous',  method_kwargs=matching_params,
+                                            **job_kwargs)
 
         if verbose:
             print('We found %d spikes' %len(spikes))
 
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
-        sorting = sorting.save(folder=output_folder / "sorting")
+        sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
 

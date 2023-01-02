@@ -35,7 +35,7 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 # generator of simple object for testing or examples
 from .generate import (generate_recording, generate_sorting,
   create_sorting_npz, generate_snippets,
-  synthesize_random_firings,  inject_some_duplicat_units,
+  synthesize_random_firings,  inject_some_duplicate_units,
   inject_some_split_units, synthetize_spike_train_bad_isi)
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
@@ -51,6 +51,8 @@ from .segmentutils import (
     AppendSegmentSorting,
     split_sorting,
     SplitSegmentSorting,
+    select_segment_sorting,
+    SelectSegmentSorting
 )
 
 # default folder
@@ -79,3 +81,14 @@ from .old_api_utils import (create_recording_from_old_extractor, create_sorting_
 # templates addition
 from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
+# template tools
+from .template_tools import (
+    get_template_amplitudes,
+    get_template_extremum_channel,
+    get_template_extremum_channel_peak_shift,
+    get_template_extremum_amplitude,
+    get_template_channel_sparsity,
+)
+
+# channel sparsity
+from .sparsity import ChannelSparsity

@@ -20,5 +20,4 @@ class IronclustCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     test = IronclustCommonTestSuite()
     test.setUp()
-    test.test_with_class()
     test.test_with_run()
