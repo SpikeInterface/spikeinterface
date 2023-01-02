@@ -89,7 +89,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
     name = 'remove_artifacts'
 
     def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1., list_labels=None,
-                    artefacts=None, sparsity=None, job_kwargs={'n_jobs' : -1, 'chunk_memory' : "10M"}, scale_amplitude=False, time_jitter=0):
+                    artefacts=None, sparsity=None, job_kwargs={'n_jobs' : -1, 'chunk_memory' : "10M"}, scale_amplitude=False, time_jitter=0.2):
 
         num_seg = recording.get_num_segments()
         if num_seg == 1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
@@ -130,6 +130,10 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
         fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
+
+        assert time_jitter >= 0, "time jitter should be a positive value"
+        if time_jitter > 0:
+            assert mode in ['median', 'average'], 'time jitter makes sense only for median/average artefacts'
 
         time_jitter = int(time_jitter * sf / 1000.)
 
@@ -190,6 +194,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.sparsity = sparsity
 
     def get_traces(self, start_frame, end_frame, channel_indices):
+
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 
