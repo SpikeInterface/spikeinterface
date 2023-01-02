@@ -79,7 +79,7 @@ def test_remove_artifacts():
     list_triggers = [triggers]
     list_labels = [labels]
     rec_rmart = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode="median", list_labels=list_labels)
-
+    rec_rmart = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode="median", list_labels=list_labels, time_jitter=0.2)
 
 if __name__ == '__main__':
     test_remove_artifacts()

@@ -89,7 +89,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
     name = 'remove_artifacts'
 
     def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1., list_labels=None,
-                    artefacts=None, sparsity=None, job_kwargs={'n_jobs' : -1, 'chunk_memory' : "10M"}, scale_amplitude=False, time_jitter=0.2):
+                    artefacts=None, sparsity=None, job_kwargs={'n_jobs' : -1, 'chunk_memory' : "10M"}, scale_amplitude=False, time_jitter=0):
 
         num_seg = recording.get_num_segments()
         if num_seg == 1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
@@ -148,6 +148,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
                 sorting = sorting.save()
                 waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
+                assert ('ms_before' != None) and ('ms_after' != None), "ms_before/after should not be None for such a mode"
                 w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params,
                     return_scaled=False, **job_kwargs, allow_unfiltered=True)
                 artefacts = {}
@@ -310,34 +311,57 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         elif self.mode in ['average', 'median']:
             for label, trig in zip(labels, triggers):
                 mask = self.sparsity[label]
-                if pad is None:
-                    if self.scale_amplitude:
-                        norm = np.linalg.norm(traces[trig][:, mask])*np.linalg.norm(self.artefacts[label][trig][:, mask])
-                        best_amp = np.dot(traces[trig][:, mask], self.artefacts[label][trig][:, mask])/norm
-                    else:
-                        best_amp = 1
-                    traces[trig][:, mask] -= best_amp * self.artefacts[label][trig][:, mask]  
+                artefact_duration = len(self.artefacts[label])
+
+                if self.time_jitter > 0:
+                    jitters = np.arange(-self.time_jitter, self.time_jitter)
                 else:
-                    artefact_duration = len(self.artefacts[label])
-                    if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
-                        trace_slice = slice(trig-pad[0], trig+pad[1])
+                    jitters = np.array([0])
+
+                nb_jitters = len(jitters)
+                best_amplitudes = np.zeros(nb_jitters, dtype=np.float32)
+
+                for count, padding in enumerate(jitters):
+
+                    t_trig = trig + padding
+
+                    if t_trig - pad[0] > 0 and t_trig + pad[1] < end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
                         artefact_slice = slice(0, artefact_duration)
-                    elif trig - pad[0] < 0:
-                        trace_slice = slice(0, trig+pad[1])
-                        duration = pad[1] + pad[0] - (pad[0] - trig)
+                    elif t_trig - pad[0] < 0:
+                        trace_slice = slice(0, t_trig+pad[1])
+                        duration = pad[1] + pad[0] - (pad[0] - t_trig)
                         artefact_slice = slice(artefact_duration-duration, artefact_duration)
-                    elif trig + pad[1] >= end_frame - start_frame:
-                        trace_slice = slice(trig-pad[0], artefact_duration)
-                        duration = (end_frame - start_frame) - (trig - pad[0])
+                    elif t_trig + pad[1] >= end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], artefact_duration)
+                        duration = (end_frame - start_frame) - (t_trig - pad[0])
                         artefact_slice = slice(0, duration)
 
-                    if self.scale_amplitude:
-                        norm = np.linalg.norm(traces[trace_slice][:, mask])*np.linalg.norm(self.artefacts[label][artefact_slice][:, mask])
-                        best_amp = np.dot(traces[trace_slice][:, mask].flatten(), self.artefacts[label][artefact_slice][:, mask].flatten())/norm
-                    else:
-                        best_amp = 1
+                    norm = np.linalg.norm(traces[trace_slice][:, mask])*np.linalg.norm(self.artefacts[label][artefact_slice][:, mask])
+                    best_amplitudes[count] = np.dot(traces[trace_slice][:, mask].flatten(), self.artefacts[label][artefact_slice][:, mask].flatten())/norm
 
-                    traces[trace_slice][:, mask] -= best_amp * self.artefacts[label][artefact_slice][:, mask]
+                if nb_jitters > 0:
+                    idx_best_jitter = np.argmax(best_amplitudes)
+                    t_trig = trig + jitters[idx_best_jitter]
+
+                    if t_trig - pad[0] > 0 and t_trig + pad[1] < end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
+                        artefact_slice = slice(0, artefact_duration)
+                    elif t_trig - pad[0] < 0:
+                        trace_slice = slice(0, t_trig+pad[1])
+                        duration = pad[1] + pad[0] - (pad[0] - t_trig)
+                        artefact_slice = slice(artefact_duration-duration, artefact_duration)
+                    elif t_trig + pad[1] >= end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], artefact_duration)
+                else:
+                    idx_best_jitter = 0
+                
+                if self.scale_amplitude:
+                    best_amp = best_amplitudes[idx_best_jitter]
+                else:
+                    best_amp = 1
+
+                traces[trace_slice][:, mask] -= best_amp * self.artefacts[label][artefact_slice][:, mask]
 
         return traces
 

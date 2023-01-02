@@ -350,22 +350,3 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                     wfs[pos, :, :] = wf
                 else:
                     wfs[pos, :, :] = wf[:, sparsity_mask[unit_ind]]
-
-
-# def align_waveforms(waveform_extractor, mode='average', ms_before, ms_after, **jobs_kwargs):
-
-#     params = waveform_extractor._params
-#     assert ms_before < params['ms_before'], 'ms_before too large: we can only return smaller waveform'
-#     assert ms_after < params['ms_after'], 'ms_after too large: we can only return smaller waveform'
-
-#     for unit_ind, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-#         template = waveform_extractor.get_template(unit_id, mode)
-#         waveforms = waveform_extractor.get_waveforms(unit_id)
-
-#         n_template = template / np.linalg.norm(template)
-
-#         for w in range(len(waveforms)):
-
-
-
-#     si.extract_waveforms(**params, **job_kwargs)
