@@ -135,7 +135,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         if time_jitter > 0:
             assert mode in ['median', 'average'], 'time jitter makes sense only for median/average artefacts'
 
-        time_jitter = int(time_jitter * sf / 1000.)
+        time_pad = int(time_jitter * sf / 1000.)
 
         if mode in ['median', 'average']:
             if artefacts is not None:
@@ -170,7 +170,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             triggers = list_triggers[seg_index]
             labels = list_labels[seg_index]
-            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples, artefacts, labels, scale_amplitude, time_jitter, sparsity)
+            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples, artefacts, labels, scale_amplitude, time_pad, sparsity)
             self.add_recording_segment(rec_segment)
 
         list_triggers_int = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
@@ -181,7 +181,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
 
 
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples, artefacts, labels, scale_amplitude, time_jitter, sparsity):
+    def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples, artefacts, labels, scale_amplitude, time_pad, sparsity):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.triggers = np.asarray(triggers, dtype='int64')
@@ -191,7 +191,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.labels = np.asarray(labels)
         self.fit_samples = fit_samples
         self.scale_amplitude = scale_amplitude
-        self.time_jitter = time_jitter
+        self.time_pad = time_pad
         self.sparsity = sparsity
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -312,9 +312,8 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
             for label, trig in zip(labels, triggers):
                 mask = self.sparsity[label]
                 artefact_duration = len(self.artefacts[label])
-
-                if self.time_jitter > 0:
-                    jitters = np.arange(-self.time_jitter, self.time_jitter)
+                if self.time_pad > 0:
+                    jitters = np.arange(-self.time_pad, self.time_pad, 1)
                 else:
                     jitters = np.array([0])
 
