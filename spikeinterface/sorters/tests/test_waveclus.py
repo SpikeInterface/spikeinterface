@@ -20,5 +20,4 @@ class WaveClusCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     test = WaveClusCommonTestSuite()
     test.setUp()
-    test.test_with_class()
     test.test_with_run()

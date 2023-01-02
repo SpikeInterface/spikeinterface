@@ -3,7 +3,8 @@ import numpy as np
 import scipy.signal
 import scipy.spatial
 
-from ..postprocessing import compute_correlograms, get_template_extremum_channel
+from ..core.template_tools import get_template_extremum_channel
+from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rate
 
 from .mergeunitssorting import MergeUnitsSorting
@@ -25,7 +26,8 @@ def get_potential_auto_merge(
     num_channels=5,
     num_shift=5,
     firing_contamination_balance=1.5,
-    extra_outputs=False, 
+    extra_outputs=False,
+    steps=None,
 ):
     """
     Algorithm to find and check potential merges between units.
@@ -89,6 +91,11 @@ def get_potential_auto_merge(
         by default 1.5
     extra_outputs: bool
         If True, an additional dictionary (`outs`) with processed data is returned, by default False
+    steps: None or list of str
+        which steps to run (gives flexibility to running just some steps)
+        If None all steps are done.
+        Pontential steps: 'min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity',
+                          'check_increase_score'. Please check steps explanations above!
         
     Returns
     -------
@@ -109,54 +116,69 @@ def get_potential_auto_merge(
     #    * auto correlogram is contaminated
     #    * to far away one from each other
 
-    # STEP 1 : 
+    
+    if steps is None:
+        steps = ['min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity', 'check_increase_score']
+    
+    print(f'Running steps: {steps}')
+
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype='bool')
-    num_spikes = np.array(list(sorting.get_total_num_spikes().values()))
-    to_remove = num_spikes < minimum_spikes
-    pair_mask[to_remove, :] = False
-    pair_mask[:, to_remove] = False
+
+    # STEP 1 :
+    if 'min_spikes' in steps:
+        num_spikes = np.array(list(sorting.get_total_num_spikes().values()))
+        to_remove = num_spikes < minimum_spikes
+        pair_mask[to_remove, :] = False
+        pair_mask[:, to_remove] = False
+    
 
     # STEP 2 : remove contaminated auto corr
-    nb_violations, contaminations = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
-                                    censored_period_ms=censored_period_ms)
-    nb_violations = np.array(list(nb_violations.values()))
-    contaminations = np.array(list(contaminations.values()))
-    to_remove = contaminations > contamination_threshold
-    pair_mask[to_remove, :] = False
-    pair_mask[:, to_remove] = False
+    if 'remove_contaminated' in steps:
+        contaminations, nb_violations = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
+                                        censored_period_ms=censored_period_ms)
+        nb_violations = np.array(list(nb_violations.values()))
+        contaminations = np.array(list(contaminations.values()))
+        to_remove = contaminations > contamination_threshold
+        pair_mask[to_remove, :] = False
+        pair_mask[:, to_remove] = False
 
     # STEP 3 : unit positions are estimated roughly with channel
-    chan_loc = we.recording.get_channel_locations()
-    unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
-    unit_max_chan = list(unit_max_chan.values())
-    unit_locations = chan_loc[unit_max_chan, :]
-    unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric='euclidean')
-    pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
+    if 'unit_positions' in steps:
+        chan_loc = we.recording.get_channel_locations()
+        unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
+        unit_max_chan = list(unit_max_chan.values())
+        unit_locations = chan_loc[unit_max_chan, :]
+        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric='euclidean')
+        pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
 
     # STEP 4 : potential auto merge by correlogram
-    correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method='numba')
-    correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
-    # find correlogram window for each units
-    win_sizes = np.zeros(n, dtype=int)
-    for unit_ind in range(n):
-        auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
-        thresh = np.max(auto_corr) * adaptative_window_threshold
-        win_size = get_unit_adaptive_window(auto_corr, thresh)
-        win_sizes[unit_ind] = win_size
-    correlogram_diff = compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes,
-                                    adaptative_window_threshold=adaptative_window_threshold,
-                                    pair_mask=pair_mask)
-    pair_mask = pair_mask & (correlogram_diff  < corr_diff_thresh)
+    if 'correlogram' in steps:
+        correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method='numba')
+        correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
+        # find correlogram window for each units
+        win_sizes = np.zeros(n, dtype=int)
+        for unit_ind in range(n):
+            auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
+            thresh = np.max(auto_corr) * adaptative_window_threshold
+            win_size = get_unit_adaptive_window(auto_corr, thresh)
+            win_sizes[unit_ind] = win_size
+        correlogram_diff = compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes,
+                                        adaptative_window_threshold=adaptative_window_threshold,
+                                        pair_mask=pair_mask)
+        # print(correlogram_diff)
+        pair_mask = pair_mask & (correlogram_diff  < corr_diff_thresh)
 
     # STEP 5 : check if potential merge with CC also have template similarity
-    templates = we.get_all_templates(mode='average')
-    templates_diff = compute_templates_diff(sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask)
-    pair_mask = pair_mask & (templates_diff  < template_diff_thresh)
+    if 'template_similarity' in steps:
+        templates = we.get_all_templates(mode='average')
+        templates_diff = compute_templates_diff(sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask)        
+        pair_mask = pair_mask & (templates_diff  < template_diff_thresh)
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
-    pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations, 
-        firing_contamination_balance, refractory_period_ms, censored_period_ms)
+    if 'check_increase_score' in steps:
+        pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations, 
+            firing_contamination_balance, refractory_period_ms, censored_period_ms)
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -412,7 +434,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
 
-        _, new_contaminations = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
+        new_contaminations, _ = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)
         c_new = new_contaminations[unit_id1]
         f_new = compute_firing_rate(we_new)[unit_id1]

@@ -15,7 +15,7 @@ import warnings
 import scipy.ndimage
 
 from ..core import get_noise_levels
-from ..postprocessing import (
+from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
 )
@@ -25,6 +25,9 @@ try:
     HAVE_NUMBA = True
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
+
+
+_default_params = dict()
 
 
 def compute_num_spikes(waveform_extractor, **kwargs):
@@ -56,7 +59,10 @@ def compute_num_spikes(waveform_extractor, **kwargs):
     return num_spikes
 
 
-def compute_firing_rate(waveform_extractor, **kwargs):
+_default_params["num_spikes"] = dict()
+
+
+def compute_firing_rate(waveform_extractor):
     """Compute the firing rate across segments.
 
     Parameters
@@ -80,21 +86,25 @@ def compute_firing_rate(waveform_extractor, **kwargs):
     total_duration = np.sum(seg_durations)
 
     firing_rates = {}
-    num_spikes = compute_num_spikes(waveform_extractor, **kwargs)
+    num_spikes = compute_num_spikes(waveform_extractor)
     for unit_id in unit_ids:
         firing_rates[unit_id] = num_spikes[unit_id]/total_duration
     return firing_rates
 
 
-def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
+_default_params["firing_rate"] = dict()
+
+
+def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
     """Calculate the presence ratio, representing the fraction of time the unit is firing.
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    num_bin_edges : int, optional, default: 101
-        The number of bins edges to use to compute the presence ratio.
+    bin_duration_s : float, optional, default: 60
+        The duration of each bin in seconds. If the duration is less than this value, 
+        presence_ratio is set to NaN
 
     Returns
     -------
@@ -114,22 +124,36 @@ def compute_presence_ratio(waveform_extractor, num_bin_edges=101, **kwargs):
 
     seg_length = [recording.get_num_samples(i) for i in range(num_segs)]
     total_length = np.sum(seg_length)
+    bin_duration_samples = int((bin_duration_s * recording.sampling_frequency))
+    num_bin_edges = total_length // bin_duration_samples + 1
+    bins = np.arange(num_bin_edges) * bin_duration_samples
 
-    presence_ratio = {}
-    for unit_id in unit_ids:
-        spiketrain = []
-        for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            st = st + np.sum(seg_length[:segment_index])
-            spiketrain.append(st)
-        spiketrain = np.concatenate(spiketrain)
-        h, b = np.histogram(spiketrain, np.linspace(0, total_length, num_bin_edges))
-        presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
+    if total_length < bin_duration_samples:
+        warnings.warn(f"Bin duration of {bin_duration_s}s is larger than recording duration. "
+                      f"Presence ratios are set to NaN.")
+        presence_ratio = {unit_id: np.nan for unit_id in sorting.unit_ids}
+    else:
+        presence_ratio = {}
+        for unit_id in unit_ids:
+            spiketrain = []
+            for segment_index in range(num_segs):
+                st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                st = st + np.sum(seg_length[:segment_index])
+                spiketrain.append(st)
+            spiketrain = np.concatenate(spiketrain)
+            h, _ = np.histogram(spiketrain, bins=bins)
+            presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
 
     return presence_ratio
 
 
-def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum", **kwargs):
+_default_params["presence_ratio"] = dict(
+    bin_duration_s=60
+)
+
+
+def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum",
+                 random_chunk_kwargs_dict=None):
     """Compute signal to noise ratio.
 
     Parameters
@@ -142,6 +166,9 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
         How to compute the amplitude.
         Extremum takes the maxima/minima
         At_index takes the value at t=0
+    random_chunk_kwarg_dict: dict or None
+        Dictionary to control the get_random_data_chunks() function.
+        If None, default values are used
 
     Returns
     -------
@@ -159,7 +186,9 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
     unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
     return_scaled = waveform_extractor.return_scaled
-    noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **kwargs)
+    if random_chunk_kwargs_dict is None:
+        random_chunk_kwargs_dict = {}
+    noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **random_chunk_kwargs_dict)
 
     # make a dict to access by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
@@ -174,13 +203,19 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     return snrs
 
 
-def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0, **kwargs):
+_default_params["snr"] = dict(
+    peak_sign="neg",
+    peak_mode="extremum",
+    random_chunk_kwargs_dict=None
+)
+
+
+def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0):
     """Calculate Inter-Spike Interval (ISI) violations.
 
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
                                 generating the ISI violations. Described in [1]. See Notes.
-        * isi_violation_rate: number of ISI violations divided by total rate
         * isi_violation_count: number of ISI violations
 
     Parameters
@@ -199,9 +234,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     -------
     isi_violations_ratio : float
         The isi violation ratio described in [1].
-    isi_violations_rate : float
-        Rate of contaminating spikes as a fraction of overall rate.
-        Higher values indicate more contamination.
     isi_violation_count : int
         Number of violations.
 
@@ -232,7 +264,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     min_isi_s = min_isi_ms / 1000
     isi_threshold_samples = int(isi_threshold_s * fs)
 
-    isi_violations_rate = {}
     isi_violations_count = {}
     isi_violations_ratio = {}
 
@@ -251,17 +282,21 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             total_rate = num_spikes / total_duration
             violation_rate = num_violations / violation_time
             isi_violations_ratio[unit_id] = violation_rate / total_rate
-            isi_violations_rate[unit_id] = num_violations / total_duration
             isi_violations_count[unit_id] = num_violations      
         else:
             isi_violations_ratio[unit_id] = np.nan
-            isi_violations_rate[unit_id] = np.nan
             isi_violations_count[unit_id] = np.nan
 
     res = namedtuple('isi_violation',
-                     ['isi_violations_ratio', 'isi_violations_rate', 'isi_violations_count'])
+                     ['isi_violations_ratio', 'isi_violations_count'])
 
-    return res(isi_violations_ratio, isi_violations_rate, isi_violations_count)
+    return res(isi_violations_ratio, isi_violations_count)
+
+
+_default_params["isi_violations"] = dict(
+    isi_threshold_ms=1.5, 
+    min_isi_ms=0
+)
 
 
 def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: float = 1.0,
@@ -285,7 +320,10 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     Returns
     -------
-    TODO
+    rp_contamination : float
+        The refactory period contamination described in [1].
+    rp_violations : int
+        Number of refractory period violations.
 
     Reference
     ---------
@@ -304,6 +342,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     num_units = len(sorting.unit_ids)
     num_segments = sorting.get_num_segments()
     spikes = sorting.get_all_spike_trains(outputs="unit_index")
+    num_spikes = compute_num_spikes(waveform_extractor)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
@@ -321,22 +360,28 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
             T += recording.get_num_frames(segment_idx)
 
     nb_violations = {}
-    contamination = {}
+    rp_contamination = {}
 
     for i, unit_id in enumerate(sorting.unit_ids):
         nb_violations[unit_id] = n_v = nb_rp_violations[i]
-        N = len(sorting.get_unit_spike_train(unit_id))
+        N = num_spikes[unit_id]
         D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
-        contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
+        rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
 
-    res = namedtuple("rp_violations", ['rp_violations', 'contamination'])
+    res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
 
-    return res(nb_violations, contamination)
+    return res(rp_contamination, nb_violations)
 
+
+_default_params["rp_violations"] = dict(
+    refractory_period_ms=1,
+    censored_period_ms=0.0
+)
 
 
 def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
-                              num_histogram_bins=500, histogram_smoothing_value=3, **kwargs):
+                              num_histogram_bins=100, histogram_smoothing_value=3,
+                              amplitudes_bins_min_ratio=5):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Parameters
@@ -345,10 +390,14 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the template to compute best channels.
-    num_histogram_bins : int, optional, default: 500
+    num_histogram_bins : int, optional, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, optional, default: 3
         Controls the smoothing applied to the amplitude histogram.
+    amplitudes_bins_min_ratio : int, optional, default: 5
+        The minimum ratio between number of amplitudes for a unit and the number of bins.
+        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
+        to NaN
 
     Returns
     -------
@@ -363,14 +412,11 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
     Notes
     -----
-    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift)
-
-    Important note: here the amplitudes are extracted from the waveform extractor.
-    It means that the number of spike to estimate amplitude is low
-    See: WaveformExtractor.set_params(max_spikes_per_unit=500)
-
+    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
+    If available, amplitudes are extracted from the "spike_amplitude" extension (recommended). 
+    If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
+    which usually has waveforms for a small subset of spikes (500 by default).
     """
-
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
@@ -379,17 +425,36 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
 
+    spike_amplitudes = None
+    invert_amplitudes = False
+    if waveform_extractor.is_extension("spike_amplitudes"):
+        amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
+        spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
+        if amp_calculator._params["peak_sign"] == "pos":
+            invert_amplitudes = True
+    else:
+        if peak_sign == "pos":
+            invert_amplitudes = True
+
     all_fraction_missing = {}
+    nan_units = []
     for unit_id in unit_ids:
-        waveforms = waveform_extractor.get_waveforms(unit_id)
-        chan_id = extremum_channels_ids[unit_id]
-        chan_ind = recording.id_to_index(chan_id)
-        amplitudes = waveforms[:, before, chan_ind]
+        if spike_amplitudes is None:
+            waveforms = waveform_extractor.get_waveforms(unit_id)
+            chan_id = extremum_channels_ids[unit_id]
+            chan_ind = recording.id_to_index(chan_id)
+            amplitudes = waveforms[:, before, chan_ind]
+        else:
+            amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
+
+        if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
+            nan_units.append(unit_id)
+            all_fraction_missing[unit_id] = np.nan
+            continue
 
         # change amplitudes signs in case peak_sign is pos
-        if peak_sign == "pos":
+        if invert_amplitudes:
             amplitudes = -amplitudes
-
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
         # TODO : change with something better scipy.ndimage.gaussian_filter1d
@@ -409,7 +474,18 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         fraction_missing = np.min([fraction_missing, 0.5])
         all_fraction_missing[unit_id] = fraction_missing
 
+    if len(nan_units) > 0:
+        warnings.warn(f"Units {nan_units} have too few spikes and "
+                       "amplitude_cutoff is set to NaN")
+
     return all_fraction_missing
+
+
+_default_params["amplitude_cutoff"] = dict(
+    peak_sign='neg',
+    num_histogram_bins=100,
+    histogram_smoothing_value=3
+)
 
 
 if HAVE_NUMBA:

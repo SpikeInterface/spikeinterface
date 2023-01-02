@@ -37,6 +37,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path)}
         return neo_kwargs
 
+
 class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     """
     Class for reading BlackRock spiking data.
@@ -69,4 +70,5 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         return neo_kwargs
 
 read_blackrock = define_function_from_class(source_class=BlackrockRecordingExtractor, name="read_blackrock")
-read_blackrock_sorting = define_function_from_class(source_class=BlackrockSortingExtractor, name="read_blackrock_sorting")
+read_blackrock_sorting = define_function_from_class(source_class=BlackrockSortingExtractor,
+                                                    name="read_blackrock_sorting")
