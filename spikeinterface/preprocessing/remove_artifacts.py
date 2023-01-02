@@ -23,11 +23,27 @@ class RemoveArtifactsRecording(BasePreprocessor):
     list_triggers: list of list
         One list per segment of int with the stimulation trigger frames
     ms_before: float or None
-        Time interval in ms to remove before the trigger events. 
-        If None, then also ms_after must be None and a single sample is removed
+        Time interval in ms to remove before the trigger events.
+        Either `ms_before` or `frames_before` (see below) can be given, but not both:
+            if both `ms_before` and `frames_before` are given, throws an error;
+            if both `ms_before` and `frames_before` are None, then
+                (i) `ms_after` and `frames_after` must also be None (otherwise throws an error) and
+                (ii) a single sample is removed
     ms_after: float or None
         Time interval in ms to remove after the trigger events.
-        If None, then also ms_before must be None and a single sample is removed
+        Either `ms_after` or `frames_after` (see below) can be given, but not both:
+            if both `ms_after` and `frames_after` are given, throws an error;
+            if both `ms_after` and `frames_after` are None, then
+                (i) `ms_before` and `frames_before` must also be None (otherwise throws an error) and
+                (ii) a single sample is removed
+    frames_before : int or None (default: None)
+        Time interval in frames to remove before the trigger events.
+        Use this instead of `ms_before` for discontinuous recordings (e.g. those with missing samples).
+        See comments for `ms_before` above for how it interacts with other params.
+    frames_after : int or None (default: None)
+        Time interval in frames to remove after the trigger events.
+        Use this instead of `ms_after` for discontinuous recordings (e.g. those with missing samples).
+        See comments for `ms_after` above for how it interacts with other params.
     list_labels: list of list or None
         One list per segment of labels with the stimulation labels for the given
         artefacs
@@ -72,7 +88,9 @@ class RemoveArtifactsRecording(BasePreprocessor):
     """
     name = 'remove_artifacts'
 
-    def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1., list_labels=None):
+    def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, 
+                 frames_before=None, frames_after=None,
+                 mode='zeros', fit_sample_spacing=1., list_labels=None):
 
         num_seg = recording.get_num_segments()
         if num_seg == 1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
@@ -98,22 +116,52 @@ class RemoveArtifactsRecording(BasePreprocessor):
         assert all(isinstance(list_triggers[i], list) for i in range(num_seg))
         assert mode in ('zeros', 'linear', 'cubic', 'average', 'median')
 
-        if ms_before is None:
-            assert ms_after is None, "To remove a single sample, set both ms_before and ms_after to None"
-        else:
+        if (ms_before is None) and (frames_before is None):
+            if (ms_after is not None) or (frames_after is not None):
+                raise ValueError("You must specify either `ms_before` and `frames_before`",
+                                 " (unless you want to remove single samples, in which case",
+                                 " set `ms_after` and `frames_after` to None)")
+            else:
+                print("Only processing samples in `list_trigger`")
+        elif (ms_before is not None) and (frames_before is None):
             ms_before = float(ms_before)
+        elif (ms_before is None) and (frames_before is not None):
+            frames_before = int(frames_before)
+        else:
+            raise ValueError("You cannot specify both `ms_before` and `frames_before`; choose one.")
+        
+        if (ms_after is None) and (frames_after is None):
+            if (ms_before is not None) or (frames_before is not None):
+                raise ValueError("You must specify either `ms_after` and `frames_after`",
+                                 " (unless you want to remove single samples, in which case",
+                                 " set `ms_before` and `frames_before` to None)")
+        elif (ms_after is not None) and (frames_after is None):
             ms_after = float(ms_after)
+        elif (ms_after is None) and (frames_after is not None):
+            frames_after = int(frames_after)
+        else:
+            raise ValueError("You cannot specify both `ms_after` and `frames_after`; choose one.")
         
         sf = recording.get_sampling_frequency()
         if ms_before is not None:
-            pad = [int(ms_before * sf / 1000), int(ms_after * sf / 1000)]
+            if ms_after is not None:
+                pad = [int(ms_before * sf / 1000), int(ms_after * sf / 1000)]
+            else:
+                pad = [int(ms_before * sf / 1000), frames_after]
         else:
-            pad = None
+            if ms_after is not None:
+                pad = [frames_before, int(ms_after * sf / 1000)]
+            else:
+                if (frames_before is not None) and (frames_after is not None):
+                    pad = [frames_before, frames_after]
+                else:
+                    pad = []
 
         fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
         fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
 
+        # how to pass in `frames_before`` and `frames_after` to `extract_waveforms`?
         if mode in ['median', 'average']:
             sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
             waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
@@ -133,8 +181,8 @@ class RemoveArtifactsRecording(BasePreprocessor):
 
         list_triggers_int = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
         self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers_int,
-                            ms_before=ms_before, ms_after=ms_after, mode=mode,
-                            fit_sample_spacing=fit_sample_spacing, artefacts=artefacts, list_labels=list_labels)
+                            ms_before=ms_before, ms_after=ms_after, frames_before=frames_before, frames_after=frames_after,
+                            mode=mode, fit_sample_spacing=fit_sample_spacing, artefacts=artefacts, list_labels=list_labels)
 
 
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
