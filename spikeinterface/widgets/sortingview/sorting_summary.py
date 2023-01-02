@@ -33,16 +33,23 @@ class SortingSummaryPlotter(SortingviewPlotter):
         unitlocation_plotter = UnitLocationsPlotter()
         v_unit_locations = unitlocation_plotter.do_plot(dp.unit_locations, generate_url=False, 
                                                         display=False, backend="sortingview")
-        template_sim_plotter = TemplateSimilarityPlotter()
-        v_unit_similarity = template_sim_plotter.do_plot(dp.similarity, generate_url=False, 
-                                                         display=False, backend="sortingview")
+        # similarity
+        similarity_scores = []
+        for i1, u1 in enumerate(unit_ids):
+            for i2, u2 in enumerate(unit_ids):
+                similarity_scores.append(vv.UnitSimilarityScore(
+                    unit_id1=u1,
+                    unit_id2=u2,
+                    similarity=dp.similarity['similarity'][i1, i2].astype("float32")
+                    ))
 
         # unit ids
         v_units_table = generate_unit_table_view(dp.waveform_extractor.sorting, 
-                                                 dp.unit_table_properties)
+                                                 dp.unit_table_properties,
+                                                 similarity_scores=similarity_scores)
 
         if dp.curation:
-            v_curation = vv.SortingCuration2()
+            v_curation = vv.SortingCuration2(label_choices=dp.label_choices)
             v1 = vv.Splitter(
                 direction='vertical',
                 item1=vv.LayoutItem(v_units_table),
@@ -61,13 +68,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
                                 vv.Splitter(
                                     direction='vertical',
                                     item1=vv.LayoutItem(v_spike_amplitudes),
-                                    item2=vv.LayoutItem(
-                                        vv.Splitter(
-                                            direction='horizontal',
-                                            item1=vv.LayoutItem(v_cross_correlograms, stretch=2),
-                                            item2=vv.LayoutItem(v_unit_similarity, stretch=2)
-                                                )
-                                            )
+                                    item2=vv.LayoutItem(v_cross_correlograms),
                                         )
                                     )
                                 )
