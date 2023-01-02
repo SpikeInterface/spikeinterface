@@ -155,7 +155,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 if (frames_before is not None) and (frames_after is not None):
                     pad = [frames_before, frames_after]
                 else:
-                    pad = []
+                    pad = None
 
         fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
         fit_sample_range = fit_sample_interval * 2 + 1
