@@ -97,24 +97,34 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         self.motion, self.temporal_bins, self.spatial_bins = estimate_motion(self.recording, self.selected_peaks, self.peak_locations, 
                                         **self.estimate_motion_kwargs)
 
-        ## You were right, we need to subtract the first value of the motion to have something
-        ## properly centered. Otherwise, there is a bias distorting traces
-        # self.motion -= self.motion[0]
         t4 = time.perf_counter()
 
         self.run_times = dict(
             detect_peaks=t1 -t0,
             select_peaks=t2 - t1,
             localize_peaks=t3 - t2,
-            estimate_motion=t4 - t3,
+            estimate_motion= t4 - t3,
         )
 
         self.compute_gt_motion()
+
+        # align gt motion and motion on the time bin
+        self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
 
         ## save folder
         if self.folder is not None:
             self.save_to_folder()
 
+    def run_estimate_motion(self):
+        # usefull to re run only the motion estimate with peak localization
+        t3 = time.perf_counter()
+        self.motion, self.temporal_bins, self.spatial_bins = estimate_motion(self.recording, self.selected_peaks, self.peak_locations, 
+                                        **self.estimate_motion_kwargs)
+        t4 = time.perf_counter()
+
+        # align gt motion and motion on the time bin
+        self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
+        self.run_times['estimate_motion'] = t4 - t3
 
     def compute_gt_motion(self):
         self.gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filename, time_vector=self.temporal_bins)
@@ -134,7 +144,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 f = scipy.interpolate.interp1d(unit_positions, unit_motions[t, :], fill_value="extrapolate")
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
-    def plot_drift(self, scaling_probe=1.5):
+    def plot_true_drift(self, scaling_probe=1.5):
                 
         fig = plt.figure(figsize=(15, 10))
         gs = fig.add_gridspec(1, 3)
@@ -151,37 +161,39 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             else:
                 ax.scatter([loc[1]], [loc[2]], alpha=0.7, s=100)
     
-        ymin, ymax = ax.get_ylim()
+        # ymin, ymax = ax.get_ylim()
         ax.set_ylabel('depth (um)')
-        ax.set_xlabel('depth (um)')
+        ax.set_xlabel(None)
 
-        channel_positions = self.recording.get_channel_locations()
-        probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
 
-        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
 
-        ax = fig.add_subplot(gs[1:3])
+        # ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+
+        ax = fig.add_subplot(gs[1:3], sharey=ax)
         for i in range(self.gt_unit_positions.shape[1]):
             ax.plot(self.temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls='--')
         
         for i in range(self.gt_motion.shape[1]):
             depth = self.spatial_bins[i]
-            ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='red', lw=2)
+            ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='green', lw=1.5)
 
 
-        ax.set_ylim(ymin, ymax)
+        # ax.set_ylim(ymin, ymax)
         ax.set_xlabel('time (s)')
         _simpleaxis(ax)
-        ax.set_yticks([])
+        # ax.set_yticks([])
         ax.spines['left'].set_visible(False)
+
+        channel_positions = self.recording.get_channel_locations()
+        probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
         ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
-        xmin, xmax = ax.get_xlim()
-        ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
-        ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
 
-    def plot_peaks_probe(self):
+        ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
+        ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
 
-        fig, axs = plt.subplots(ncols=2, sharey=True, figsize=(15, 10), alpha=0.05)
+    def plot_peaks_probe(self, alpha = 0.05):
+            
+        fig, axs = plt.subplots(ncols=2, sharey=True, figsize=(15, 10))
         ax = axs[0]
         plot_probe_map(self.recording, ax=ax)
         ax.scatter(self.peak_locations['x'], self.peak_locations['y'], color='k', s=1, alpha=alpha)
@@ -202,141 +214,177 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             gs = fig.add_gridspec(1, 3)
         # Create the Axes.
 
-        ax = fig.add_subplot(gs[0])
-        plot_probe_map(self.recording, ax=ax)
-        _simpleaxis(ax)
+        ax0 = fig.add_subplot(gs[0])
+        plot_probe_map(self.recording, ax=ax0)
+        _simpleaxis(ax0)
 
-        ymin, ymax = ax.get_ylim()
-        ax.set_ylabel('depth (um)')
-        ax.set_xlabel('depth (um)')
+        # ymin, ymax = ax.get_ylim()
+        ax0.set_ylabel('depth (um)')
+        ax0.set_xlabel(None)
 
-        channel_positions = self.recording.get_channel_locations()
-        probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
 
-        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
 
-        ax = fig.add_subplot(gs[1:3])
+        ax = ax1 = fig.add_subplot(gs[1:3])
         x = self.selected_peaks['sample_ind']/self.recording.get_sampling_frequency()
         y = self.peak_locations['y']
         ax.scatter(x, y, s=1, color='k', alpha=alpha)
         
-        xmin, xmax = ax.get_xlim()
-        ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
-        ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
+        # xmin, xmax = ax.get_xlim()
+        # ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
+        # ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
 
         _simpleaxis(ax)
-        ax.set_yticks([])
-        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+        # ax.set_yticks([])
+        # ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
         ax.spines['left'].set_visible(False)
         ax.set_xlabel('time (s)')
+
+
+        channel_positions = self.recording.get_channel_locations()
+        probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
+        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+
+        ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
+        ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
+
 
         if show_drift:
             if self.spatial_bins is None:
                 center = (probe_y_min + probe_y_max)//2
-                ax.plot(self.temporal_bins, self.gt_motion[:, 0] + center, color='red', lw=2)
+                ax.plot(self.temporal_bins, self.gt_motion[:, 0] + center, color='green', lw=1.5)
+                ax.plot(self.temporal_bins, self.motion[:, 0] + center, color='orange', lw=1.5)
             else:
                 for i in range(self.gt_motion.shape[1]):
                     depth = self.spatial_bins[i]
-                    ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='red', lw=2)
+                    ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='green', lw=1.5)
+                    ax.plot(self.temporal_bins, self.motion[:, i] + depth, color='orange', lw=1.5)
 
         if show_histogram:
-            ax = fig.add_subplot(gs[3])
-            ax.hist(self.peak_locations['y'], bins=1000, orientation="horizontal")
-            ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
-            xmin, xmax = ax.get_xlim()
-            ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
-            ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
-            ax.set_xlabel('density')
-            _simpleaxis(ax)
-            ax.set_ylabel('')
+            ax2 = fig.add_subplot(gs[3])
+            ax2.hist(self.peak_locations['y'], bins=1000, orientation="horizontal")
+
+            ax2.axvline(probe_y_min, color='k', ls='--', alpha=0.5)
+            ax2.axvline(probe_y_max, color='k', ls='--', alpha=0.5)
+
+
+
+            ax2.set_xlabel('density')
+            _simpleaxis(ax2)
+            # ax.set_ylabel('')
             ax.set_yticks([])
+            ax2.sharey(ax0)
+
+        ax1.sharey(ax0)
 
     def plot_motion_corrected_peaks(self, scaling_probe=1.5, alpha=0.05):
 
         fig = plt.figure(figsize=(15, 10))
-        gs = fig.add_gridspec(1, 3)
+        gs = fig.add_gridspec(1, 5)
         # Create the Axes.
 
-        ax = fig.add_subplot(gs[0])
+        ax0 = ax = fig.add_subplot(gs[0])
         plot_probe_map(self.recording, ax=ax)
         _simpleaxis(ax)
 
         ymin, ymax = ax.get_ylim()
         ax.set_ylabel('depth (um)')
-        ax.set_xlabel('depth (um)')
+        ax.set_xlabel(None)
 
         channel_positions = self.recording.get_channel_locations()
         probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
-
-        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
-
 
         times = self.recording.get_times()
 
         peak_locations_corrected = correct_motion_on_peaks(self.selected_peaks, self.peak_locations, times,
                                     self.motion, self.temporal_bins, self.spatial_bins, direction='y')
         
-        ax = fig.add_subplot(gs[1:3])
-        x = self.selected_peaks['sample_ind'] / self.recording.get_sampling_frequency()
+        ax1 = ax = fig.add_subplot(gs[1:3])
+        _simpleaxis(ax)
+
+        x = self.selected_peaks['sample_ind']/self.recording.get_sampling_frequency()
+        y = self.peak_locations['y']
+        ax.scatter(x, y, s=1, color='k', alpha=alpha)
+
+
+        ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
+        ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
+
+        
+        # ax.set_yticks([])
+        # ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+        # ax.spines['left'].set_visible(False)
+        ax.set_xlabel('time (s)')
+
+
+        ax2 = ax = fig.add_subplot(gs[3:5])
+        _simpleaxis(ax)
         y = peak_locations_corrected['y']
         ax.scatter(x, y, s=1, color='k', alpha=alpha)
-        xmin, xmax = ax.get_xlim()
-        ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
-        ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
 
-        _simpleaxis(ax)
-        ax.set_yticks([])
-        ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
-        ax.spines['left'].set_visible(False)
+        ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
+        ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
+
+
         ax.set_xlabel('time (s)')
 
-    def estimation_vs_depth(self):
-        fig, axes = plt.subplots(2, figsize=(15,10))
 
-        corrs = {}
+        ax0.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+        ax1.sharey(ax0)
+        ax2.sharey(ax0)
 
-        duration = self.recording.get_total_duration()
+    def estimation_vs_depth(self, show_only=8):
+        fig, axs = plt.subplots(ncols=2, figsize=(15,10), sharey=True)
+
+        n = self.motion.shape[1]
+        step = int(np.ceil(max(1, n / show_only)))
+        print(n, step)
+        colors = plt.cm.get_cmap('jet', n)
+        for i in range(0, n, step):
+            ax = axs[0]
+            ax.plot(self.temporal_bins, self.gt_motion[:, i], lw=1.5, ls='--', color=colors(i))
+            ax.plot(self.temporal_bins, self.motion[:, i], lw=1.5, ls='-', color=colors(i),
+                    label=f'{self.spatial_bins[i]:0.1f}')
+
+            ax = axs[1]
+            ax.plot(self.temporal_bins, self.motion[:, i] - self.gt_motion[:, i], lw=1.5, ls='-', color=colors(i))
         
-        ax = axes[0]
-        ax.plot(self.temporal_bins, self.gt_motion, lw=2, c='b')
-        ax.plot(self.temporal_bins, self.motion.mean(1), lw=2, c='r')
-        ax.fill_between(self.temporal_bins, self.motion.mean(1)-self.motion.std(1), 
-                                self.motion.mean(1) + self.motion.std(1), color='r', alpha=0.25)
-        
-        ax.set_ylabel('drift (um)')
+        ax = axs[0]
+        ax.legend()
+        ax.set_ylabel('drift estimated and GT(um)')
         ax.set_xlabel('time (s)')
         _simpleaxis(ax)
-        
-        corrs = []
-        for i in range(self.motion.shape[1]):
-            corrs += [np.corrcoef(self.motion[:, i], self.gt_motion[:, i])[0,1]]
 
-        ax = axes[1]
-        ax.scatter(self.spatial_bins, corrs)
-        ax.set_ylabel('Correlation between drift')
-        ax.set_xlabel('depth (um)')
+        ax = axs[1]
+        ax.set_ylabel('error (um)')
+        ax.set_xlabel('time (s)')
         _simpleaxis(ax)
 
     def view_errors(self):
         fig = plt.figure(figsize=(15, 10))
         gs = fig.add_gridspec(2, 2)
 
+        errors = self.gt_motion - self.motion
+
         ax = fig.add_subplot(gs[0, :])
-        im = ax.imshow(np.abs(self.gt_motion - self.motion).T, aspect='auto', interpolation='nearest', origin='lower', 
+        im = ax.imshow(np.abs(errors).T, aspect='auto', interpolation='nearest', origin='lower', 
         extent=(self.temporal_bins[0], self.temporal_bins[-1], self.spatial_bins[0], self.spatial_bins[-1]))
         plt.colorbar(im, ax=ax, label='error')
         ax.set_ylabel('depth (um)')
         ax.set_xlabel('time (s)')
 
         ax = fig.add_subplot(gs[1, 0])
-        mean_error = np.linalg.norm(self.gt_motion - self.motion, axis=1)
+        # this give the sum but the mean is more informative
+        # mean_error = np.linalg.norm(errors, axis=1)
+        mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
         ax.plot(self.temporal_bins, mean_error)
         ax.set_xlabel('time (s)')
         ax.set_ylabel('error')
         _simpleaxis(ax)
 
         ax = fig.add_subplot(gs[1, 1])
-        depth_error = np.linalg.norm(self.gt_motion - self.motion, axis=0)
+        # this give the sum but the mean is more informative
+        # depth_error = np.linalg.norm(self.gt_motion - self.motion, axis=0)
+        depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
         ax.plot(self.spatial_bins, depth_error)
         ax.set_xlabel('depth (um)')
         ax.set_ylabel('error')
@@ -347,25 +395,30 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 def plot_errors_several_benchmarks(benchmarks):
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
-    ax = axes[0]
-    for count, benchmark in enumerate(benchmarks):
-        mean_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=1)
-        ax.plot(benchmark.temporal_bins, mean_error, label=benchmark.title)
-        axes[1].violinplot(mean_error, [count], showmeans=True)
 
+    for count, benchmark in enumerate(benchmarks):
+        errors = benchmark.gt_motion - benchmark.motion
+
+        # mean_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=1)
+        mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
+        depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
+
+        axes[0].plot(benchmark.temporal_bins, mean_error, label=benchmark.title)
+        axes[1].violinplot(mean_error, [count], showmeans=True)
+        axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title)
+
+    ax = axes[0]
     ax.set_xlabel('time (s)')
     ax.set_ylabel('error')
     ax.legend()
     _simpleaxis(ax)
 
-    axes[1].set_ylabel('error')
-    axes[1].set_xticks([])
-    _simpleaxis(axes[1])
+    ax = axes[1]
+    ax.set_ylabel('error')
+    ax.set_xticks([])
+    _simpleaxis(ax)
 
     ax = axes[2]
-    for benchmark in benchmarks:
-        depth_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=0)
-        ax.plot(benchmark.spatial_bins, depth_error, label=benchmark.title)
     ax.set_xlabel('depth (um)')
     ax.set_ylabel('error')
     _simpleaxis(ax)
