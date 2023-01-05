@@ -570,7 +570,7 @@ def compute_global_displacement(
                 sparse_mask = np.ones_like(D)
             W = pairwise_displacement_weight * sparse_mask
 
-            I, J = np.where(W > 0)
+            I, J = np.nonzero(W > 0)
             Wij = W[I, J]
             Dij = D[I, J]
             W = csr_matrix((Wij, (I, J)), shape=W.shape)
@@ -608,11 +608,11 @@ def compute_global_displacement(
         from scipy.stats import zscore
 
         if sparse_mask is not None:
-            I, J = np.where(sparse_mask > 0)
+            I, J = np.nonzero(sparse_mask > 0)
         elif pairwise_displacement_weight is not None:
             I, J = pairwise_displacement_weight.nonzero()
         else:
-            I, J = np.where(np.ones_like(pairwise_displacement, dtype=bool))
+            I, J = np.nonzero(np.ones_like(pairwise_displacement, dtype=bool))
 
         nnz_ones = np.ones(I.shape[0], dtype=pairwise_displacement.dtype)
 
@@ -635,7 +635,7 @@ def compute_global_displacement(
         xrange = trange if progress_bar else range
         for i in xrange(lsqr_robust_n_iter):
             p = lsqr(A[idx].multiply(W[idx]), V[idx] * W[idx][:,0])[0]
-            idx = np.where(np.abs(zscore(A @ p - V)) <= robust_regression_sigma)
+            idx = np.nonzero(np.abs(zscore(A @ p - V)) <= robust_regression_sigma)
         displacement = p
 
     else:
