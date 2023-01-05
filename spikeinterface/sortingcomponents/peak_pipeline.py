@@ -78,7 +78,7 @@ class PeakPipelineStep:
         raise NotImplementedError
 
 
-def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeline', squeeze_output=True):
+def run_peak_pipeline(recording, peaks, steps, job_kwargs, return_waveforms=False, job_name='peak_pipeline', squeeze_output=True):
     """
     Run one or several PeakPipelineStep on already detected peaks.
     """
@@ -89,9 +89,10 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
             recording.to_dict(),
             peaks,  # TODO peaks as shared mem to avoid copy
             [(step.__class__, step.to_dict()) for step in steps],
+            return_waveforms,
         )
     else:
-        init_args = (recording, peaks, steps)
+        init_args = (recording, peaks, steps, return_waveforms)
     
     processor = ChunkRecordingExecutor(recording, 
                         _compute_peak_step_chunk, _init_worker_peak_pipeline,
@@ -105,7 +106,7 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
     for output_step in zip(*outputs):
         outs_concat += (np.concatenate(output_step, axis=0), )
 
-    if len(steps) == 1 and squeeze_output:
+    if len(outs_concat) == 1 and squeeze_output:
         # when tuple size ==1  then remove the tuple
         return outs_concat[0]
     else:
@@ -113,7 +114,7 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
         return outs_concat
 
 
-def _init_worker_peak_pipeline(recording, peaks, steps):
+def _init_worker_peak_pipeline(recording, peaks, steps, return_waveforms):
     """Initialize worker for localizing peaks."""
 
     if isinstance(recording, dict):
@@ -130,9 +131,13 @@ def _init_worker_peak_pipeline(recording, peaks, steps):
     worker_ctx['peaks'] = peaks
     worker_ctx['steps'] = steps
     worker_ctx['max_margin'] = max_margin
+    worker_ctx["return_waveforms"] = return_waveforms
 
     # check if any waveforms is needed
     worker_ctx['need_waveform'] = any(step.need_waveforms for step in steps)
+    if return_waveforms and not worker_ctx["need_waveform"]:
+        raise ValueError('return_waveforms is True but no steps that need waveforms is provided')
+    
     if worker_ctx['need_waveform']:
         worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(steps)
 
@@ -143,7 +148,7 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     margin = worker_ctx['max_margin']
     peaks = worker_ctx['peaks']
-
+    
     recording_segment = recording._recording_segments[segment_index]
     traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
                                                               None, margin, add_zeros=True)
@@ -171,8 +176,10 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     #import scipy
     #waveforms = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
-
     outs = tuple()
+    if worker_ctx['return_waveforms']:
+        outs += (waveforms, )
+        
     for step in worker_ctx['steps']:
         if step.need_waveforms:
             # give the waveforms pre extracted when needed
