@@ -87,14 +87,14 @@ class TemporalPCA(PeakPipelineStep):
         
         n_waveforms, n_samples , n_channels = waveforms.shape
         n_components = self.pca_model.n_components
+        
+        # Initializing non-valid channels with nan (sparsity is used to indicate valid channels)
         projected_waveforms = np.full(shape =(n_waveforms, n_components, n_channels), fill_value=np.nan)
 
-        # Fill the gaps with np.nan
         for waveform_index, main_channel in enumerate(peaks['channel_ind']):
             channel_indexes_sparsified,  = np.nonzero(self.neighbours_mask[main_channel])
-            for channel_index in channel_indexes_sparsified:
-                sparsified_waveform = waveforms[waveform_index, :, channel_index][np.newaxis, :]
-                projected_waveforms[waveform_index, :, channel_index] = self.pca_model.transform(sparsified_waveform)
+            sparsified_waveform = waveforms[waveform_index, :, channel_indexes_sparsified]
+            projected_waveforms[waveform_index, :, channel_indexes_sparsified] = self.pca_model.transform(sparsified_waveform)
 
         return projected_waveforms
         
