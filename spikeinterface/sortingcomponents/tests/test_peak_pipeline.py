@@ -73,6 +73,16 @@ def test_run_peak_pipeline():
     assert step_two.shape[0] == peaks.shape[0]
     assert step_two.shape[1] == recording.get_num_channels()
 
+    # two step, adding waveforms
+    ms_before = 0.5
+    ms_after = 1.0
+    steps = [MyStep(recording, param0=5.5), MyStepWithWaveforms(recording, ms_before=ms_before, ms_after=ms_after)]
+    waveforms, step_one, step_two = run_peak_pipeline(recording, peaks, steps, job_kwargs, return_waveforms=True)
+    
+    num_timestamps = int((ms_after + ms_before) * recording.get_sampling_frequency() / 1000)
+    assert waveforms.shape[0] == peaks.shape[0]
+    assert waveforms.shape[1] == num_timestamps
+    assert waveforms.shape[2] == recording.get_num_channels()
 
 
 if __name__ == '__main__':
