@@ -6,9 +6,8 @@ from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, Pe
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
-from spikeinterface.core.template_tools import get_template_channel_sparsity
-from spikeinterface import extract_waveforms
-from spikeinterface import NumpySorting
+from spikeinterface.core.sparsity import ChannelSparsity
+from spikeinterface import extract_waveforms, NumpySorting
 
 
 class WaveformStep(PeakPipelineStep):
@@ -57,9 +56,9 @@ class TemporalPCA(PeakPipelineStep):
                                mode="memory", max_spikes_per_unit=None, **job_kwargs)
 
         # compute PCA by_channel_global (with sparsity)
-        sparsity = get_template_channel_sparsity(we, method="radius", radius_um=self.local_radius_um)
+        sparsity = ChannelSparsity.from_radius(we, radius_um=self.local_radius_um)
         pc = compute_principal_components(we, n_components=n_components,  mode='by_channel_global',
-                                        sparsity=sparsity, whiten=whiten)
+                                        sparsity=sparsity.unit_id_to_channel_ids, whiten=whiten)
         pca_model  = pc.get_pca_model()
 
         # model_folder should be an input
