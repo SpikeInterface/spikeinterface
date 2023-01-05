@@ -269,8 +269,8 @@ def test_estimate_motion_non_rigid_kilosort25():
 
 if __name__ == '__main__':
     setup_module()
-    # test_motion_functions()
-    # test_estimate_motion_rigid_decentralized()
-    # test_estimate_motion_non_rigid_decentralized()
+    test_motion_functions()
+    test_estimate_motion_rigid_decentralized()
+    test_estimate_motion_non_rigid_decentralized()
     test_estimate_motion_rigid_kilosort25()
     test_estimate_motion_non_rigid_kilosort25()
