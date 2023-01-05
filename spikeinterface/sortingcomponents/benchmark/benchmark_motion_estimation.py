@@ -126,6 +126,13 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
         self.run_times['estimate_motion'] = t4 - t3
 
+        self.compute_gt_motion()
+
+        ## save folder
+        if self.folder is not None:
+            self.save_to_folder()
+
+
     def compute_gt_motion(self):
         self.gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filename, time_vector=self.temporal_bins)
         unit_motions = self.gt_unit_positions - self.gt_unit_positions[0, :]
@@ -263,8 +270,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             ax2 = fig.add_subplot(gs[3])
             ax2.hist(self.peak_locations['y'], bins=1000, orientation="horizontal")
 
-            ax2.axvline(probe_y_min, color='k', ls='--', alpha=0.5)
-            ax2.axvline(probe_y_max, color='k', ls='--', alpha=0.5)
+            ax2.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
+            ax2.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
 
 
 
@@ -309,12 +316,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
         ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
 
-        
-        # ax.set_yticks([])
-        # ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
-        # ax.spines['left'].set_visible(False)
         ax.set_xlabel('time (s)')
-
 
         ax2 = ax = fig.add_subplot(gs[3:5])
         _simpleaxis(ax)
@@ -365,6 +367,9 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         errors = self.gt_motion - self.motion
 
+        channel_positions = self.recording.get_channel_locations()
+        probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
+
         ax = fig.add_subplot(gs[0, :])
         im = ax.imshow(np.abs(errors).T, aspect='auto', interpolation='nearest', origin='lower', 
         extent=(self.temporal_bins[0], self.temporal_bins[-1], self.spatial_bins[0], self.spatial_bins[-1]))
@@ -373,8 +378,6 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_xlabel('time (s)')
 
         ax = fig.add_subplot(gs[1, 0])
-        # this give the sum but the mean is more informative
-        # mean_error = np.linalg.norm(errors, axis=1)
         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
         ax.plot(self.temporal_bins, mean_error)
         ax.set_xlabel('time (s)')
@@ -382,14 +385,13 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         _simpleaxis(ax)
 
         ax = fig.add_subplot(gs[1, 1])
-        # this give the sum but the mean is more informative
-        # depth_error = np.linalg.norm(self.gt_motion - self.motion, axis=0)
         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
         ax.plot(self.spatial_bins, depth_error)
+        ax.axvline(probe_y_min, color='k', ls='--', alpha=0.5)
+        ax.axvline(probe_y_max, color='k', ls='--', alpha=0.5)
         ax.set_xlabel('depth (um)')
         ax.set_ylabel('error')
         _simpleaxis(ax)
-
 
 
 def plot_errors_several_benchmarks(benchmarks):
@@ -398,8 +400,6 @@ def plot_errors_several_benchmarks(benchmarks):
 
     for count, benchmark in enumerate(benchmarks):
         errors = benchmark.gt_motion - benchmark.motion
-
-        # mean_error = np.linalg.norm(benchmark.gt_motion - benchmark.motion, axis=1)
         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
 
@@ -407,26 +407,34 @@ def plot_errors_several_benchmarks(benchmarks):
         axes[1].violinplot(mean_error, [count], showmeans=True)
         axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title)
 
-    ax = axes[0]
+    ax0 = ax = axes[0]
     ax.set_xlabel('time (s)')
     ax.set_ylabel('error')
     ax.legend()
     _simpleaxis(ax)
 
-    ax = axes[1]
+    ax1 = ax = axes[1]
     ax.set_ylabel('error')
     ax.set_xticks([])
     _simpleaxis(ax)
 
-    ax = axes[2]
+    ax2 = ax = axes[2]
     ax.set_xlabel('depth (um)')
     ax.set_ylabel('error')
+    channel_positions = benchmark.recording.get_channel_locations()
+    probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
+    ax.axvline(probe_y_min, color='k', ls='--', alpha=0.5)
+    ax.axvline(probe_y_max, color='k', ls='--', alpha=0.5)
+
+
     _simpleaxis(ax)
 
-def plot_motions_several_benchmarks(benchmarks):
-    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+    ax1.sharey(ax0)
+    ax2.sharey(ax0)
 
-    ax = axes[0]
+def plot_motions_several_benchmarks(benchmarks):
+    fig, ax = plt.subplots(figsize=(15, 5))
+
     ax.plot(list(benchmarks)[0].temporal_bins, list(benchmarks)[0].gt_motion[:, 0], lw=2, c='k', label='real motion')
     for count, benchmark in enumerate(benchmarks):
         ax.plot(benchmark.temporal_bins, benchmark.motion.mean(1), lw=1, c=f'C{count}', label=benchmark.title)
@@ -437,13 +445,4 @@ def plot_motions_several_benchmarks(benchmarks):
     ax.set_ylabel('depth (um)')
     ax.set_xlabel('time (s)')
     _simpleaxis(ax)
-    ax = axes[1]
-    for count, benchmark in enumerate(benchmarks):
-        corrs = []
-        for i in range(benchmark.motion.shape[1]):
-            corrs += [np.corrcoef(benchmark.motion[:, i], benchmark.gt_motion[:, i])[0,1]]
-        ax.plot(benchmark.spatial_bins, corrs, color=f'C{count}', label=benchmark.title)
-    ax.set_ylabel('Correlation between drift')
-    ax.set_xlabel('depth (um)')
-    ax.legend()
-    _simpleaxis(ax)
+
