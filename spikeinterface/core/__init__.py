@@ -35,7 +35,7 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 # generator of simple object for testing or examples
 from .generate import (generate_recording, generate_sorting,
   create_sorting_npz, generate_snippets,
-  synthesize_random_firings,  inject_some_duplicat_units,
+  synthesize_random_firings,  inject_some_duplicate_units,
   inject_some_split_units, synthetize_spike_train_bad_isi)
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
@@ -51,6 +51,8 @@ from .segmentutils import (
     AppendSegmentSorting,
     split_sorting,
     SplitSegmentSorting,
+    select_segment_sorting,
+    SelectSegmentSorting
 )
 
 # default folder

@@ -268,7 +268,8 @@ def split_recording(recording: BaseRecording):
     return recording_list
 
 
-select_segment_recording = define_function_from_class(source_class=SelectSegmentRecording, name='select_segment_recording')
+select_segment_recording = define_function_from_class(source_class=SelectSegmentRecording,
+                                                      name='select_segment_recording')
 
 
 class AppendSegmentSorting(BaseSorting):
@@ -322,6 +323,7 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
 
 append_sortings = define_function_from_class(source_class=AppendSegmentSorting, name='append_sortings')
 
+
 class SplitSegmentSorting(BaseSorting):
     """Splits a sorting with a single segment to multiple segments
     based on the given list of recordings (must be in order)
@@ -373,3 +375,39 @@ class SplitSegmentSorting(BaseSorting):
                         'recording_list': [recording.to_dict() for recording in recording_list]}
 
 split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name='split_sorting')
+
+
+class SelectSegmentSorting(BaseSorting):
+    """
+    Return a new sorting with a single segment from a multi-segment sorting.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The multi-segment sorting
+    segment_indices : list of int
+        The segment indices to select
+    """
+
+    def __init__(self, sorting: BaseSorting, segment_indices: Union[int, List[int]]):
+        BaseSorting.__init__(self, sorting.get_sampling_frequency(), 
+                             sorting.unit_ids)
+        sorting.copy_metadata(self)
+        
+        if isinstance(segment_indices, int):
+            segment_indices = [segment_indices]
+        
+        num_segments = sorting.get_num_segments()
+        assert all(0 <= s < num_segments for s in segment_indices), \
+            f"'segment_index' must be between 0 and {num_segments - 1}"
+
+        for segment_index in segment_indices:
+            sort_seg = sorting._sorting_segments[segment_index]
+            self.add_sorting_segment(sort_seg)
+
+        self._kwargs = {'sorting': sorting.to_dict(),
+                        'segment_indices': [int(s) for s in segment_indices]}
+
+
+select_segment_sorting = define_function_from_class(source_class=SelectSegmentSorting,
+                                                    name='select_segment_sorting')

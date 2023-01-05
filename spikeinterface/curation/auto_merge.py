@@ -135,7 +135,7 @@ def get_potential_auto_merge(
 
     # STEP 2 : remove contaminated auto corr
     if 'remove_contaminated' in steps:
-        nb_violations, contaminations = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
+        contaminations, nb_violations = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
                                         censored_period_ms=censored_period_ms)
         nb_violations = np.array(list(nb_violations.values()))
         contaminations = np.array(list(contaminations.values()))
@@ -434,7 +434,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
 
-        _, new_contaminations = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
+        new_contaminations, _ = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)
         c_new = new_contaminations[unit_id1]
         f_new = compute_firing_rate(we_new)[unit_id1]
