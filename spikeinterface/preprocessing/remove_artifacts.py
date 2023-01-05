@@ -188,6 +188,8 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.pad = pad
         self.mode = mode
         self.artefacts = artefacts
+        for key, value in self.artefacts.items():
+            self.artefacts[key] = np.array(value)
         self.labels = np.asarray(labels)
         self.fit_samples = fit_samples
         self.scale_amplitude = scale_amplitude
@@ -328,16 +330,19 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
                         artefact_slice = slice(0, artefact_duration)
                     elif t_trig - pad[0] < 0:
-                        trace_slice = slice(0, t_trig+pad[1])
-                        duration = pad[1] + pad[0] - (pad[0] - t_trig)
-                        artefact_slice = slice(artefact_duration-duration, artefact_duration)
+                        trace_slice = slice(0, t_trig + pad[1])
+                        duration = pad[1] - t_trig
+                        artefact_slice = slice(artefact_duration - duration, artefact_duration)
                     elif t_trig + pad[1] >= end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], artefact_duration)
                         duration = (end_frame - start_frame) - (t_trig - pad[0])
                         artefact_slice = slice(0, duration)
 
-                    norm = np.linalg.norm(traces[trace_slice][:, mask])*np.linalg.norm(self.artefacts[label][artefact_slice][:, mask])
-                    best_amplitudes[count] = np.dot(traces[trace_slice][:, mask].flatten(), self.artefacts[label][artefact_slice][:, mask].flatten())/norm
+                    trace_slice = traces[trace_slice][:, mask]
+                    artefact_slice = self.artefacts[label][artefact_slice][:, mask]
+
+                    norm = np.linalg.norm(trace_slice)*np.linalg.norm(artefact_slice)
+                    best_amplitudes[count] = np.dot(trace_slice.flatten(), artefact_slice.flatten())/norm
 
                 if nb_jitters > 0:
                     idx_best_jitter = np.argmax(best_amplitudes)
@@ -347,11 +352,13 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
                         artefact_slice = slice(0, artefact_duration)
                     elif t_trig - pad[0] < 0:
-                        trace_slice = slice(0, t_trig+pad[1])
-                        duration = pad[1] + pad[0] - (pad[0] - t_trig)
-                        artefact_slice = slice(artefact_duration-duration, artefact_duration)
+                        trace_slice = slice(0, t_trig + pad[1])
+                        duration = pad[1] - t_trig
+                        artefact_slice = slice(artefact_duration - duration, artefact_duration)
                     elif t_trig + pad[1] >= end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], artefact_duration)
+                        duration = (end_frame - start_frame) - (t_trig - pad[0])
+                        artefact_slice = slice(0, duration)
                 else:
                     idx_best_jitter = 0
                 
