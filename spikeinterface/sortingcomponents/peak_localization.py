@@ -1,6 +1,6 @@
 """Sorting components: peak localization."""
 import numpy as np
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
 from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
 from .tools import make_multi_method_doc
@@ -40,6 +40,7 @@ def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
     assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     if method == 'center_of_mass':
         step = LocalizeCenterOfMass(recording, **method_kwargs)

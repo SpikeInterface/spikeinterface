@@ -11,7 +11,7 @@ import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core.core_tools import write_binary_recording
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 
 class MdaRecordingExtractor(BaseRecording):
@@ -91,7 +91,7 @@ class MdaRecordingExtractor(BaseRecording):
                 * n_jobs
                 * progress_bar
         """
-        _, job_kwargs = split_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(job_kwargs)
         assert recording.get_num_segments() == 1, "MdaRecording.write_recording() can only write a single segment " \
                                                   "recording"
         save_path = Path(save_path)

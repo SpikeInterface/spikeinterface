@@ -39,24 +39,32 @@ job_keys = ('n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_durat
             'mp_context', 'verbose', 'max_threads_per_process')
 
 
+def fix_job_kwargs(runtime_job_kwargs):
+    from .globals import get_global_job_kwargs
+    job_kwargs = get_global_job_kwargs()
+    for k, v in runtime_job_kwargs.items():
+        if k in job_keys:
+            job_kwargs[k] = v
+    # if n_jobs is -1, set to os.cpu_count()
+    if "n_jobs" in job_kwargs:
+        if job_kwargs["n_jobs"] == -1:
+            job_kwargs["n_jobs"] = os.cpu_count()
+    return job_kwargs
+
+
 def split_job_kwargs(mixed_kwargs):
     """
     This function splits mixed kwargs into job_kwargs and specific_kwargs.
     This can be useful for some function with generic signature
     mixing specific and job kwargs.
     """
-    from .globals import get_global_job_kwargs
-    job_kwargs = get_global_job_kwargs()
+    job_kwargs = {}
     specific_kwargs = {}
     for k, v in mixed_kwargs.items():
         if k in job_keys:
             job_kwargs[k] = v
         else:
             specific_kwargs[k] = v
-    # if n_jobs is -1, set to os.cpu_count()
-    if "n_jobs" in job_kwargs:
-        if job_kwargs["n_jobs"] == -1:
-            job_kwargs["n_jobs"] = os.cpu_count()
     return specific_kwargs, job_kwargs
 
 

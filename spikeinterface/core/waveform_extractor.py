@@ -12,7 +12,7 @@ import probeinterface
 
 from .base import load_extractor
 from .core_tools import check_json
-from .job_tools import _shared_job_kwargs_doc, split_job_kwargs
+from .job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
 
 _possible_template_modes = ('average', 'std', 'median')
@@ -1047,7 +1047,7 @@ class WaveformExtractor:
         return selected_spikes
 
     def run_extract_waveforms(self, seed=None, **job_kwargs):
-        _, job_kwargs = split_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(job_kwargs)
         p = self._params
         nbefore = self.nbefore
         nafter = self.nafter

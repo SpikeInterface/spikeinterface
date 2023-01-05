@@ -7,7 +7,7 @@ It is useful when we do extractor.save(name='name').
 import tempfile
 from pathlib import Path
 from copy import deepcopy
-from .job_tools import split_job_kwargs, _shared_job_kwargs_doc
+from .job_tools import job_keys, _shared_job_kwargs_doc
 
 ########################################
 
@@ -119,7 +119,9 @@ def set_global_job_kwargs(**job_kwargs):
     {}
     """
     global global_job_kwargs
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    for k in job_kwargs:
+        assert k in job_keys, (f"{k} is not a valid job keyword argument. "
+                               f"Available keyword arguments are: {list(job_keys)}")
     global_job_kwargs = job_kwargs
     global global_job_kwargs_set
     global_job_kwargs_set = True

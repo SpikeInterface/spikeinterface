@@ -2,7 +2,8 @@
 
 import numpy as np
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, split_job_kwargs
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_kwargs_doc,
+                                           split_job_kwargs, fix_job_kwargs)
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from ..core import get_chunk_with_margin
@@ -52,6 +53,7 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     method_class = detect_peak_methods[method]
     
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     # prepare args
     method_args = method_class.check_params(recording, **method_kwargs)

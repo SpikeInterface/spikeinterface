@@ -9,7 +9,7 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
-from .job_tools import split_job_kwargs
+from .job_tools import split_job_kwargs, fix_job_kwargs
 
 from warnings import warn
 
@@ -214,6 +214,7 @@ class BaseRecording(BaseRecordingSnippets):
             t_starts = None
 
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
+        job_kwargs = fix_job_kwargs(job_kwargs)
 
         if format == 'binary':
             folder = kwargs['folder']

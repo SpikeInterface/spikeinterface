@@ -1,5 +1,5 @@
 import numpy as np
-from .job_tools import split_job_kwargs
+from .job_tools import fix_job_kwargs
 from .waveform_tools import extract_waveforms_to_buffers
 from .numpyextractors import NumpySnippets
 
@@ -26,7 +26,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20,
     snippets: NumpySnippets
         Snippets extractor created
     """
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     strains = sorting.get_all_spike_trains()
 
     peaks2 = sorting.to_spike_vector()

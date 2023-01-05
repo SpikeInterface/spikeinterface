@@ -7,7 +7,7 @@ import os
 
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
                                  get_noise_levels, extract_waveforms)
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
 try:
@@ -51,7 +51,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
         job_kwargs = params['job_kwargs'].copy()
-        _, job_kwargs = split_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs['verbose'] = verbose
         job_kwargs['progress_bar'] = verbose
 

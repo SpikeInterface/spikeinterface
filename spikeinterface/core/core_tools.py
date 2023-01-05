@@ -10,7 +10,7 @@ from tqdm import tqdm
 import inspect
 
 from .job_tools import ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, ChunkRecordingExecutor, \
-    split_job_kwargs, _shared_job_kwargs_doc
+    _shared_job_kwargs_doc
 
     
 def copy_signature(source_fct):
@@ -239,7 +239,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     {}
     '''
     assert file_paths is not None, "Provide 'file_path'"
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     if not isinstance(file_paths, list):
         file_paths = [file_paths]
@@ -297,7 +297,7 @@ def write_binary_recording_file_handle(recording, file_handle=None,
     if dtype is None:
         dtype = recording.get_dtype()
 
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
     if chunk_size is not None and time_axis == 1:
@@ -409,7 +409,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     ---------
     arrays: one arrays per segment
     """
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
     n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
 
@@ -623,7 +623,7 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options,
     else:
         cast_unsigned = False
 
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
     n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
 

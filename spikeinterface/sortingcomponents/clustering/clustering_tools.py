@@ -3,7 +3,7 @@ This gather some function usefull for some clusetring algos.
 """
 
 import numpy as np
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
 
 
@@ -503,7 +503,7 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     import string, random, shutil, os
     from pathlib import Path
 
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     templates = waveform_extractor.get_all_templates(mode='median').copy()
     nb_templates = len(templates)
     duration = waveform_extractor.nbefore + waveform_extractor.nafter

@@ -2,7 +2,7 @@
 from threadpoolctl import threadpool_limits
 import numpy as np
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, split_job_kwargs
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_chunk_with_margin
 
 
@@ -39,7 +39,7 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
     from .method_list import matching_methods
     assert method in matching_methods, "The method %s is not a valid one" %method
 
-    _, job_kwargs = split_job_kwargs(job_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     method_class = matching_methods[method]
     
