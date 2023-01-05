@@ -10,24 +10,6 @@ from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface import extract_waveforms, NumpySorting
 
 
-class WaveformStep(PeakPipelineStep):
-    need_waveforms = True
-
-    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', all_channels=True):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
-        self.all_channels = all_channels
-        self.peak_sign = peak_sign
-        self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign))
-        self._dtype = recording.get_dtype()
-
-    def get_dtype(self):
-        return self._dtype
-
-    
-    def compute_buffer(self, traces, peaks, waveforms):
-        
-        return waveforms
-
 class TemporalPCA(PeakPipelineStep):
     need_waveforms = True
 
