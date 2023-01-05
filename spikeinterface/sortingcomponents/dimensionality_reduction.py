@@ -51,6 +51,7 @@ class TemporalPCA(PeakPipelineStep):
         # Create a waveform extractor
         ms_before = self._kwargs["ms_before"]
         ms_after = self._kwargs["ms_after"]
+        # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel
         sorting = NumpySorting.from_peaks(peaks, sampling_frequency=recording.sampling_frequency) 
         we = extract_waveforms(recording, sorting, ms_before=ms_before, ms_after=ms_after, folder=None, 
                                mode="memory", max_spikes_per_unit=None, **job_kwargs)
