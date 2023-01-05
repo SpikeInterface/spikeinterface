@@ -122,11 +122,11 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                                         **self.estimate_motion_kwargs)
         t4 = time.perf_counter()
 
+        self.compute_gt_motion()
+
         # align gt motion and motion on the time bin
         self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
         self.run_times['estimate_motion'] = t4 - t3
-
-        self.compute_gt_motion()
 
         ## save folder
         if self.folder is not None:
@@ -430,7 +430,7 @@ def plot_errors_several_benchmarks(benchmarks):
     _simpleaxis(ax)
 
     ax1.sharey(ax0)
-    ax2.sharey(ax0)
+    #ax2.sharey(ax0)
 
 def plot_motions_several_benchmarks(benchmarks):
     fig, ax = plt.subplots(figsize=(15, 5))
