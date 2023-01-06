@@ -326,7 +326,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
                     t_trig = trig + padding
 
-                    if t_trig - pad[0] > 0 and t_trig + pad[1] < end_frame - start_frame:
+                    if t_trig - pad[0] >= 0 and t_trig + pad[1] < end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
                         artefact_slice = slice(0, artefact_duration)
                     elif t_trig - pad[0] < 0:
@@ -348,7 +348,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     idx_best_jitter = np.argmax(best_amplitudes)
                     t_trig = trig + jitters[idx_best_jitter]
 
-                    if t_trig - pad[0] > 0 and t_trig + pad[1] < end_frame - start_frame:
+                    if t_trig - pad[0] >= 0 and t_trig + pad[1] < end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
                         artefact_slice = slice(0, artefact_duration)
                     elif t_trig - pad[0] < 0:
