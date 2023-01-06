@@ -188,8 +188,9 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.pad = pad
         self.mode = mode
         self.artefacts = artefacts
-        for key, value in self.artefacts.items():
-            self.artefacts[key] = np.array(value)
+        if self.artefacts is not None:
+            for key, value in self.artefacts.items():
+                self.artefacts[key] = np.array(value)
         self.labels = np.asarray(labels)
         self.fit_samples = fit_samples
         self.scale_amplitude = scale_amplitude
