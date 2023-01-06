@@ -17,7 +17,7 @@ class TemporalPCA(PeakPipelineStep):
     need_waveforms = True
 
     def __init__(self, recording: BaseRecording, ms_before: float = 1., ms_after: float = 1., peak_sign: str = 'neg', 
-                all_channels: bool = True, model_path: str = None, local_radius_um: float = None):
+                 all_channels: bool = True, model_path: str = None, local_radius_um: float = None):
     
         """
         A step that performs a PCA projection on the waveforms extracted by a a peak_detection steps. Note that this 
