@@ -45,13 +45,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs, parent_benchmark=parent_benchmark)
 
         self._args.extend([str(mearec_filename)])
-        self._kwargs.update(dict(
-                detect_kwargs=detect_kwargs,
-                select_kwargs=select_kwargs,
-                localize_kwargs=localize_kwargs,
-                estimate_motion_kwargs=estimate_motion_kwargs,
-            )
-        )
+        
 
 
         self.mearec_filename = mearec_filename
@@ -59,10 +53,18 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         self.do_preprocessing = do_preprocessing
         
         self._recording = None
-        self.detect_kwargs = detect_kwargs
-        self.select_kwargs = select_kwargs
-        self.localize_kwargs = localize_kwargs
-        self.estimate_motion_kwargs = estimate_motion_kwargs
+        self.detect_kwargs = detect_kwargs.copy()
+        self.select_kwargs = select_kwargs.copy()
+        self.localize_kwargs = localize_kwargs.copy()
+        self.estimate_motion_kwargs = estimate_motion_kwargs.copy()
+
+        self._kwargs.update(dict(
+                detect_kwargs=self.detect_kwargs,
+                select_kwargs=self.select_kwargs,
+                localize_kwargs=self.localize_kwargs,
+                estimate_motion_kwargs=self.estimate_motion_kwargs,
+            )
+        )
 
 
     @property

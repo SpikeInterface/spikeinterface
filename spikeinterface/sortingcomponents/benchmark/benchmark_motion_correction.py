@@ -49,13 +49,9 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs, parent_benchmark=parent_benchmark)
 
         self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None ])
-        self._kwargs.update(dict(
-                correct_motion_kwargs=correct_motion_kwargs,
-                sorter_params=sorter_params,
-            )
-        )
+        
 
-        self.sorter_params = sorter_params
+        self.sorter_params = sorter_params.copy()
         self.mearec_filenames = {}  
         self.keys = ['static', 'drifting', 'corrected']
         self.mearec_filenames['drifting'] = mearec_filename_drifting
@@ -68,8 +64,14 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self._recordings = None
         _, self.sortings['gt'] = read_mearec(self.mearec_filenames['static'])
         
-        self.correct_motion_kwargs = correct_motion_kwargs
+        self.correct_motion_kwargs = correct_motion_kwargs.copy()
         self.comparisons = {}
+
+        self._kwargs.update(dict(
+                correct_motion_kwargs=self.correct_motion_kwargs,
+                sorter_params=self.sorter_params,
+            )
+        )
 
     @property
     def recordings(self):
