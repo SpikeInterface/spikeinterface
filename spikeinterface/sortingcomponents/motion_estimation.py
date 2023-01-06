@@ -5,6 +5,11 @@ import scipy.interpolate
 from .tools import make_multi_method_doc
 
 
+# propose renaming
+#  bin_step_um -> window_step_um
+#  non_rigid_windows > window_tapers
+#  spatial_bins_non_rigid > window_centers
+
 
 
 def estimate_motion(recording, peaks, peak_locations,
@@ -92,31 +97,22 @@ def estimate_motion(recording, peaks, peak_locations,
 
     # spatial bins
     spatial_bin_edges = get_spatial_bin_edges(recording, direction, margin_um, bin_um)
-    num_spatial_bins = len(spatial_bin_edges)
 
-    # handle non-rigid for all estimation algorithms
+    # get windows
     if non_rigid_kwargs is None:
-        # unique block for all depths
-        num_non_rigid_windows = 1
-        non_rigid_windows = [np.ones(num_spatial_bins, dtype='float64')]
-        spatial_bins_non_rigid = [spatial_bin_edges[num_spatial_bins // 2] + bin_um / 2]
+        non_rigid_windows, spatial_bins_non_rigid = get_windows(True, bin_um, contact_pos, spatial_bin_edges,
+                                                                margin_um, None, None, 'rect')
     else:
-        assert 'bin_step_um' in non_rigid_kwargs, "'non_rigid_kwargs' needs to specify the 'bin_step_um' field"
+        
         bin_step_um = non_rigid_kwargs['bin_step_um']
-
-        min_ = np.min(contact_pos) - margin_um
-        max_ = np.max(contact_pos) + margin_um
-        num_non_rigid_windows = int((max_ - min_) // bin_step_um)
-        border = ((max_ - min_)  %  bin_step_um) / 2
-        spatial_bins_non_rigid = np.arange(num_non_rigid_windows) * bin_step_um + min_ + border
-        # non rigid windows need to be pre-computed for upsample_to_histogram_bin option
         sigma_um = non_rigid_kwargs.get('sigma', 3) * bin_step_um
-        non_rigid_windows = []
-        for win_center in spatial_bins_non_rigid:
-            win = np.exp(-(spatial_bin_edges[:-1] - win_center) ** 2 / (sigma_um ** 2))
-            non_rigid_windows.append(win)
-        if output_extra_check:
-            extra_check['non_rigid_windows'] = non_rigid_windows
+        window_shape = non_rigid_kwargs.get('window_shape', 'gaussian')
+
+        non_rigid_windows, spatial_bins_non_rigid = get_windows(False, bin_um, contact_pos, spatial_bin_edges,
+                                                                margin_um, bin_step_um, sigma_um, window_shape)
+
+    if extra_check:
+        extra_check['non_rigid_windows'] = non_rigid_windows
 
 
     # run method
@@ -328,6 +324,49 @@ def get_spatial_bin_edges(recording, direction, margin_um, bin_um):
     spatial_bins = np.arange(min_, max_+bin_um, bin_um)
 
     return spatial_bins
+
+
+def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, bin_step_um, sigma_um, window_shape):
+    """
+    Generate spatial windows (taper) for non rigid motion.
+
+    For rigid motion this is equivalent to have one unique rectangular window that cover the entire probe.
+
+    Note that kilosort2.5 use overlaping rectangular windows.
+    Here by default we use gaussian window.
+
+    The windowing can be gaussian or restangular.
+
+    """
+    
+    bin_centers = spatial_bin_edges[:-1] + bin_um /2.
+    n = bin_centers.size
+
+    if rigid:
+        assert window_shape == 'rect'
+        non_rigid_windows = [np.ones(n, dtype='float64')]
+        middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.
+        spatial_bins_non_rigid = np.array([middle])
+    else:
+        min_ = np.min(contact_pos) - margin_um
+        max_ = np.max(contact_pos) + margin_um
+        num_non_rigid_windows = int((max_ - min_) // bin_step_um)
+        print('ici', num_non_rigid_windows, min_, max_, bin_step_um)
+        border = ((max_ - min_)  %  bin_step_um) / 2
+        spatial_bins_non_rigid = np.arange(num_non_rigid_windows) * bin_step_um + min_ + border
+        non_rigid_windows = []
+        
+        for win_center in spatial_bins_non_rigid:
+            if window_shape == 'gaussian':
+                win = np.exp(-(bin_centers - win_center) ** 2 / (sigma_um ** 2))
+            elif window_shape == 'rect':
+                win = np.abs(bin_centers - win_center) < (sigma_um / 2.)
+                win = win.astype('float64')
+
+            non_rigid_windows.append(win)
+    return non_rigid_windows, spatial_bins_non_rigid
+    
+
 
 
 def make_2d_motion_histogram(recording, peaks, peak_locations,
