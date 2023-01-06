@@ -331,18 +331,18 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         artefact_slice = slice(0, artefact_duration)
                     elif t_trig - pad[0] < 0:
                         trace_slice = slice(0, t_trig + pad[1])
-                        duration = pad[1] - t_trig
+                        duration = t_trig + pad[1]
                         artefact_slice = slice(artefact_duration - duration, artefact_duration)
                     elif t_trig + pad[1] >= end_frame - start_frame:
-                        trace_slice = slice(t_trig - pad[0], artefact_duration)
+                        trace_slice = slice(t_trig - pad[0], end_frame - start_frame)
                         duration = (end_frame - start_frame) - (t_trig - pad[0])
                         artefact_slice = slice(0, duration)
 
-                    trace_slice = traces[trace_slice][:, mask]
-                    artefact_slice = self.artefacts[label][artefact_slice][:, mask]
+                    trace_slice_values = traces[trace_slice][:, mask]
+                    artefact_slice_values = self.artefacts[label][artefact_slice][:, mask]
 
-                    norm = np.linalg.norm(trace_slice)*np.linalg.norm(artefact_slice)
-                    best_amplitudes[count] = np.dot(trace_slice.flatten(), artefact_slice.flatten())/norm
+                    norm = np.linalg.norm(trace_slice_values)*np.linalg.norm(artefact_slice_values)
+                    best_amplitudes[count] = np.dot(trace_slice_values.flatten(), artefact_slice_values.flatten())/norm
 
                 if nb_jitters > 0:
                     idx_best_jitter = np.argmax(best_amplitudes)
@@ -353,10 +353,10 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         artefact_slice = slice(0, artefact_duration)
                     elif t_trig - pad[0] < 0:
                         trace_slice = slice(0, t_trig + pad[1])
-                        duration = pad[1] - t_trig
+                        duration = t_trig + pad[1]
                         artefact_slice = slice(artefact_duration - duration, artefact_duration)
                     elif t_trig + pad[1] >= end_frame - start_frame:
-                        trace_slice = slice(t_trig - pad[0], artefact_duration)
+                        trace_slice = slice(t_trig - pad[0], end_frame - start_frame)
                         duration = (end_frame - start_frame) - (t_trig - pad[0])
                         artefact_slice = slice(0, duration)
                 else:
