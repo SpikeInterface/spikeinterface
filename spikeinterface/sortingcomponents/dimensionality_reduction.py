@@ -16,13 +16,18 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 class TemporalPCA(PeakPipelineStep):
     need_waveforms = True
 
-    def __init__(self, recording: BaseRecording, ms_before: float = 1., ms_after: float = 1., peak_sign: str = 'neg', 
-                 all_channels: bool = True, model_path: str = None, local_radius_um: float = None):
+    def __init__(self, recording: BaseRecording, ms_before: float = 1., ms_after: float = 1.,
+                peak_sign: str = 'neg', all_channels: bool = True, model_path: str = None, local_radius_um: float = None
+                ):
     
         """
-        A step that performs a PCA projection on the waveforms extracted by a a peak_detection steps. Note that this 
-        class should be either received the path of a previously trained model with the `model_path` argument or the 
-        model can be trained with the fit method after instantiating the class.
+        A step that performs a PCA projection on the waveforms extracted by a peak_detection function.
+        
+        This class can work in two ways:
+        1) The class can receive the path of a previously trained model with the `model_path` argument.
+        2) The class can be trained with the fit method after instantiating the class. The model will be stored in 
+        `model_path`.
+
 
         Parameters
         ----------
