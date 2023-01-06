@@ -63,36 +63,50 @@ def test_estimate_motion():
     all_cases = {
         # new york
         'rigid / decentralized / torch': dict(
+            rigid=True,
             method='decentralized_registration',
-            method_kwargs=dict(conv_engine='torch'),
-            non_rigid_kwargs=None,
+            conv_engine='torch'
+            
         ),
         'rigid / decentralized / numpy': dict(
+            rigid=False,
             method='decentralized_registration',
-            method_kwargs=dict(conv_engine='numpy'),
-            non_rigid_kwargs=None,
+            conv_engine='numpy',
+            
+            
         ),
         'non-rigid / decentralized / torch': dict(
+            rigid=False,
             method='decentralized_registration',
-            method_kwargs=dict(conv_engine='torch'),
-            non_rigid_kwargs=dict(bin_step_um=50, sigma=3),
+            conv_engine='torch',
         ),
         'non-rigid / decentralized / numpy': dict(
+            rigid=False,
             method='decentralized_registration',
-            method_kwargs=dict(conv_engine='numpy'),
-            non_rigid_kwargs=dict(bin_step_um=50, sigma=3),
+            conv_engine='numpy',
         ),
+        'non-rigid / decentralized / torch / time_horizon_s': dict(
+            rigid=False,
+            method='decentralized_registration',
+            conv_engine='torch',
+            time_horizon_s=15.,
+        ),
+        'non-rigid / decentralized / torch / gradient_descent': dict(
+            rigid=False,
+            method='decentralized_registration',
+            conv_engine='torch',
+            convergence_method='gradient_descent',
+        ),
+
 
         # kilosort 2.5
         'rigid / iterative_template': dict(
             method='iterative_template_registration',
-            method_kwargs=dict(),
-            non_rigid_kwargs=None,
+            rigid=True,
         ),
         'non-rigid / iterative_template': dict(
             method='iterative_template_registration',
-            method_kwargs=dict(),
-            non_rigid_kwargs=dict(bin_step_um=50, sigma=3),
+            rigid=False,
         ),
 
 
@@ -113,7 +127,7 @@ def test_estimate_motion():
         assert temporal_bins.shape[0] == motion.shape[0]
         assert spatial_bins.shape[0] == motion.shape[1]
 
-        if cases_kwargs['non_rigid_kwargs'] is None:
+        if cases_kwargs['rigid']:
             assert motion.shape[1] == 1
         else:
             assert motion.shape[1] > 1
@@ -150,6 +164,6 @@ def test_estimate_motion():
 
 
 if __name__ == '__main__':
-    setup_module()
+    # setup_module()
     test_estimate_motion()
 
