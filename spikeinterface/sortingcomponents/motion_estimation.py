@@ -11,7 +11,7 @@ def estimate_motion(recording, peaks, peak_locations,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
                     rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
                     post_clean=False, speed_threshold=30, sigma_smooth_s=None,
-                    method='decentralized_registration',
+                    method='decentralized',
                     output_extra_check=False, progress_bar=False,
                     upsample_to_histogram_bin=False, verbose=False, **method_kwargs):
     """
