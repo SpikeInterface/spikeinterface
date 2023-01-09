@@ -47,19 +47,19 @@ class PhaseShiftRecording(BasePreprocessor):
         
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000.)
         
-        force_dtype_back = None
         if dtype is None:
             dtype = recording.get_dtype()
-        # because of the tapper on margin we need to force the computation to float32
-        # and then go back to the original buffer unless dtype is explicitly forced
-        tmp_dtype = np.dtype('float32') if dtype.kind in ('i', 'u') else dtype
+        # the "apply_shift" function returns a float64 buffer. In case the dtype is different
+        # than float64, we need a temporary casting and to force the buffer back to the original dtype
+        if dtype.str != "<f8":
+            tmp_dtype = np.dtype('float32')
+        else:
+            tmp_dtype = None
 
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            force_dtype = dtype
-            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, tmp_dtype,
-                                                     force_dtype)
+            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, tmp_dtype)
             self.add_recording_segment(rec_segment)
         
         # for dumpability
@@ -70,12 +70,12 @@ class PhaseShiftRecording(BasePreprocessor):
 
 
 class PhaseShiftRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, sample_shifts, margin, tmp_dtype, force_dtype):
+    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
         self.margin = margin
+        self.dtype = dtype
         self.tmp_dtype = tmp_dtype
-        self.force_dtype = force_dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -93,8 +93,8 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
-        if self.force_dtype:
-            traces_shift = traces_shift.astype(self.force_dtype)
+        if self.tmp_dtype is not None:
+            traces_shift = traces_shift.astype(self.dtype)
         
         return traces_shift
 
