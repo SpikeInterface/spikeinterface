@@ -409,7 +409,7 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
         max_ = np.max(contact_pos) + margin_um
         num_non_rigid_windows = int((max_ - min_) // win_step_um)
         border = ((max_ - min_)  %  win_step_um) / 2
-        non_rigid_window_centers = np.arange(num_non_rigid_windows) * win_step_um + min_ + border
+        non_rigid_window_centers = np.arange(num_non_rigid_windows + 1) * win_step_um + min_ + border
         non_rigid_windows = []
         
         for win_center in non_rigid_window_centers:
