@@ -5,9 +5,6 @@ import scipy.interpolate
 from .tools import make_multi_method_doc
 
 
-# propose renaming
-#  non_rigid_window_centers > window_centers
-
 
 
 def estimate_motion(recording, peaks, peak_locations,
@@ -33,40 +30,40 @@ def estimate_motion(recording, peaks, peak_locations,
     
     {method_doc}
 
-        **histogram section**
+    **histogram section**
 
-        direction: 'x', 'y', 'z'
-            Dimension on which the motion is estimated
-        bin_duration_s: float
-            Bin duration in second
-        bin_um: float (default 10.)
-            Spatial bin size in micro meter
-        margin_um: float (default 0.)
-            Margin in um to exclude from histogram estimation and
-            non-rigid smoothing functions to avoid edge effects.
-            Positive margin extrapolate out of the probe the motion.
-            Negative margin crop the motion on the border.
+    direction: 'x', 'y', 'z'
+        Dimension on which the motion is estimated
+    bin_duration_s: float
+        Bin duration in second
+    bin_um: float (default 10.)
+        Spatial bin size in micro meter
+    margin_um: float (default 0.)
+        Margin in um to exclude from histogram estimation and
+        non-rigid smoothing functions to avoid edge effects.
+        Positive margin extrapolate out of the probe the motion.
+        Negative margin crop the motion on the border.
 
-        **non-rigid section**
-    
-        rigid : bool (default True)
-            Compute rigid (one motion for the entire probe) or non rigid motion
-            Rigid computation is equivalent to non-rigid with only one window with rectangular shape.
-        win_shape: 'gaussian' or 'rect'
-            The shape of the windows for non rigid.
-            When rigid this is force to 'rect'
-        win_step_um: float (default 50.)
-            Step deteween window
-        win_sigma_um: float (deafult 150.)
+    **non-rigid section**
 
-        **motion clean section**
+    rigid : bool (default True)
+        Compute rigid (one motion for the entire probe) or non rigid motion
+        Rigid computation is equivalent to non-rigid with only one window with rectangular shape.
+    win_shape: 'gaussian' or 'rect'
+        The shape of the windows for non rigid.
+        When rigid this is force to 'rect'
+    win_step_um: float (default 50.)
+        Step deteween window
+    win_sigma_um: float (deafult 150.)
 
-        post_clean: bool (default False)
-            Apply some post cleaning to motion matrix or not.
-        speed_threshold: float default 30.
-            Detect to fast motion bump and remove then with interpolation.
-        sigma_smooth_s: None or float
-            Optional smooting gaussian kernel when not None.
+    **motion clean section**
+
+    post_clean: bool (default False)
+        Apply some post cleaning to motion matrix or not.
+    speed_threshold: float default 30.
+        Detect to fast motion bump and remove then with interpolation.
+    sigma_smooth_s: None or float
+        Optional smooting gaussian kernel when not None.
 
     output_extra_check: bool
         If True then return an extra dict that contains variables
@@ -120,7 +117,7 @@ def estimate_motion(recording, peaks, peak_locations,
 
     # get windows
     non_rigid_windows, non_rigid_window_centers = get_windows(rigid, bin_um, contact_pos, spatial_bin_edges,
-                                                            margin_um, win_step_um, win_sigma_um, win_shape)
+                                                              margin_um, win_step_um, win_sigma_um, win_shape)
 
     if extra_check:
         extra_check['non_rigid_windows'] = non_rigid_windows
@@ -182,9 +179,7 @@ class DecentralizedRegistration:
     https://github.com/cwindolf/spike-psvae/tree/main/spike_psvae
     https://github.com/evarol/DREDge
     """
-    name = 'decentralized_registration'
-    # @alessio: we could also rename no ?
-    # name = 'decentralized' or 'DREDge'
+    name = 'decentralized'
     params_doc = """
     pairwise_displacement_method: 'conv' or 'phase_cross_correlation'
         How to estimate the displacement in the parwaise matrix.
@@ -224,10 +219,7 @@ class DecentralizedRegistration:
     lsqr_robust_n_iter: int 
         Number of iteration for convergence_method='lsqr_robust'.
 
-    gradient_descent_max_iter: int
-        Number of iteration for convergence_method='gradient_descent'.
-    
-    
+
     """
 
     @classmethod
@@ -236,7 +228,7 @@ class DecentralizedRegistration:
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
             error_sigma=0.2, conv_engine='numpy', torch_device=None, batch_size=1,
             corr_threshold=0, time_horizon_s=None, convergence_method='lsqr_robust',
-            robust_regression_sigma=2, lsqr_robust_n_iter=20, gradient_descent_max_iter=1000, ):
+            robust_regression_sigma=2, lsqr_robust_n_iter=20):
 
         # make 2D histogram raster
         if verbose:
@@ -270,13 +262,13 @@ class DecentralizedRegistration:
                 print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
             pairwise_displacement, pairwise_displacement_weight = \
-                    compute_pairwise_displacement( motion_hist, bin_um,
+                    compute_pairwise_displacement(motion_hist, bin_um,
                                                   method=pairwise_displacement_method, weight_scale=weight_scale,
                                                   error_sigma=error_sigma, conv_engine=conv_engine,
                                                   torch_device=torch_device, batch_size=batch_size,
                                                   max_displacement_um=max_displacement_um,
                                                   corr_threshold=corr_threshold, time_horizon_s=time_horizon_s,
-                                                   bin_duration_s=bin_duration_s, progress_bar=False)
+                                                  bin_duration_s=bin_duration_s, progress_bar=False)
             if extra_check:
                 extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
@@ -284,11 +276,10 @@ class DecentralizedRegistration:
                 print(f'Computing global displacement: {i + 1} / {len(non_rigid_windows)}')
 
             motion[:, i] = compute_global_displacement(pairwise_displacement,
-                                                     pairwise_displacement_weight=pairwise_displacement_weight,
-                                                     convergence_method=convergence_method,
-                                                     robust_regression_sigma=robust_regression_sigma,
-                                                     gradient_descent_max_iter=gradient_descent_max_iter,
-                                                     lsqr_robust_n_iter=lsqr_robust_n_iter, progress_bar=False)
+                                                       pairwise_displacement_weight=pairwise_displacement_weight,
+                                                       convergence_method=convergence_method,
+                                                       robust_regression_sigma=robust_regression_sigma,
+                                                       lsqr_robust_n_iter=lsqr_robust_n_iter, progress_bar=False)
 
         return motion, temporal_bins
 
@@ -310,25 +301,24 @@ class IterativeTemplateRegistration:
 
     Ported by Alessio Buccino in spikeinterface
     """
-    name = 'iterative_template_registration'
-    # @alessio: we could also rename no ?
-    # name = 'iterative_template'
+    name = 'iterative_template'
     params_doc = """
     num_amp_bins: int
-
+        number ob bins in the histogram on the log amplitues dimension, by default 20.
     num_shifts_global: int
-
+        Number of spatial bin shifts to consider for global alignment, by default 15
     num_iterations: int
-
+        Number of iterations for global alignment procedure, by default 10
     num_shifts_block: int
-
+        Number of spatial bin shifts to consider for non-rigid alignment, by default 5
     smoothing_sigma: float
-
+        Sigma of gaussian for covariance matrices smoothing, by default 0.5
     kriging_sigma: float
-
-    kriging_p: int?? 
-
-    kriging_d: int??
+        sigma parameter for kriging_kernel function
+    kriging_p: foat
+        p parameter for kriging_kernel function
+    kriging_d: float
+        d parameter for kriging_kernel function
     """
 
     @classmethod
@@ -368,8 +358,6 @@ class IterativeTemplateRegistration:
             extra_check['spatial_hist_bin_edges'] = spatial_hist_bin_edges
 
         return motion, temporal_bins
-
-
 
 
 _methods_list = [DecentralizedRegistration, IterativeTemplateRegistration]
@@ -511,6 +499,7 @@ def make_3d_motion_histograms(recording, peaks, peak_locations,
     Generate 3d motion histograms in depth, amplitude, and time.
     This is used by the "iterative_template_registration" (Kilosort2.5) method.
 
+
     Parameters
     ----------
     recording : BaseRecording
@@ -604,7 +593,6 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             )
         possible_displacement = np.arange(-n, n + 1) * bin_um
 
-        conv_values = np.zeros((size, size), dtype='float32')
         xrange = trange if progress_bar else range
 
         motion_hist_engine = motion_hist
@@ -708,7 +696,6 @@ def compute_global_displacement(
     sparse_mask=None,
     convergence_method='lsqr_robust',
     robust_regression_sigma=2,
-    gradient_descent_max_iter=1000,
     lsqr_robust_n_iter=20,
     progress_bar=False,
 ):
@@ -815,6 +802,7 @@ def iterative_template_registration(spikecounts_hist_images,
 
     Parameters
     ----------
+
     spikecounts_hist_images : np.ndarray
         Spike count histogram images (num_temporal_bins, num_spatial_bins, num_amps_bins)
     non_rigid_windows : list, optional
