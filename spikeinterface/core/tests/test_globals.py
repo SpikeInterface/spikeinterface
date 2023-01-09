@@ -33,7 +33,7 @@ def test_global_tmp_folder():
 def test_global_job_kwargs():
     job_kwargs = dict(n_jobs=4, chunk_duration="1s", progress_bar=True)
     global_job_kwargs = get_global_job_kwargs()
-    assert global_job_kwargs == dict()
+    assert global_job_kwargs == dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
     set_global_job_kwargs(**job_kwargs)
     assert get_global_job_kwargs() == job_kwargs
     new_job_kwargs = dict(n_jobs=10)

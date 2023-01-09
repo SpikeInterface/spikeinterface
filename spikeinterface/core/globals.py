@@ -96,7 +96,7 @@ def is_set_global_dataset_folder():
 
 ########################################
 global global_job_kwargs
-global_job_kwargs = dict()
+global_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
 global global_job_kwargs_set
 global_job_kwargs_set = False
 

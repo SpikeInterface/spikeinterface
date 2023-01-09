@@ -42,13 +42,20 @@ job_keys = ('n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_durat
 def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs
     job_kwargs = get_global_job_kwargs()
-    for k, v in runtime_job_kwargs.items():
-        if k in job_keys:
-            job_kwargs[k] = v
+    
+    for k in runtime_job_kwargs:
+        assert k in job_keys, (f"{k} is not a valid job keyword argument. "
+                               f"Available keyword arguments are: {list(job_keys)}")
+    job_kwargs.update(runtime_job_kwargs)
+
     # if n_jobs is -1, set to os.cpu_count()
     if "n_jobs" in job_kwargs:
-        if job_kwargs["n_jobs"] == -1:
-            job_kwargs["n_jobs"] = os.cpu_count()
+        assert isinstance(job_kwargs["n_jobs"], (float, np.integer, int))
+        if isinstance(job_kwargs["n_jobs"], float):
+            n_jobs = int(job_kwargs["n_jobs"] * os.cpu_count)
+            n_jobs = min(n_jobs, 1)
+        elif job_kwargs["n_jobs"] < 0:            
+            job_kwargs["n_jobs"] = os.cpu_count() + 1 + job_kwargs["n_jobs"]
     return job_kwargs
 
 
@@ -65,6 +72,7 @@ def split_job_kwargs(mixed_kwargs):
             job_kwargs[k] = v
         else:
             specific_kwargs[k] = v
+    job_kwargs = fix_job_kwargs(job_kwargs)
     return specific_kwargs, job_kwargs
 
 

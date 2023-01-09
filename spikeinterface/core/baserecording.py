@@ -214,7 +214,6 @@ class BaseRecording(BaseRecordingSnippets):
             t_starts = None
 
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
-        job_kwargs = fix_job_kwargs(job_kwargs)
 
         if format == 'binary':
             folder = kwargs['folder']

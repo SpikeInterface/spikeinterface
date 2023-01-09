@@ -40,7 +40,6 @@ def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
     assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-    job_kwargs = fix_job_kwargs(job_kwargs)
 
     if method == 'center_of_mass':
         step = LocalizeCenterOfMass(recording, **method_kwargs)

@@ -53,7 +53,6 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     method_class = detect_peak_methods[method]
     
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-    job_kwargs = fix_job_kwargs(job_kwargs)
 
     # prepare args
     method_args = method_class.check_params(recording, **method_kwargs)
