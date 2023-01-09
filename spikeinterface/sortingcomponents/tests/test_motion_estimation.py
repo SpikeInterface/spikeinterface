@@ -64,36 +64,36 @@ def test_estimate_motion():
         # new york
         'rigid / decentralized / torch': dict(
             rigid=True,
-            method='decentralized_registration',
+            method='decentralized',
             conv_engine='torch'
             
         ),
         'rigid / decentralized / numpy': dict(
             rigid=False,
-            method='decentralized_registration',
+            method='decentralized',
             conv_engine='numpy',
             
             
         ),
         'non-rigid / decentralized / torch': dict(
             rigid=False,
-            method='decentralized_registration',
+            method='decentralized',
             conv_engine='torch',
         ),
         'non-rigid / decentralized / numpy': dict(
             rigid=False,
-            method='decentralized_registration',
+            method='decentralized',
             conv_engine='numpy',
         ),
         'non-rigid / decentralized / torch / time_horizon_s': dict(
             rigid=False,
-            method='decentralized_registration',
+            method='decentralized',
             conv_engine='torch',
             time_horizon_s=15.,
         ),
         'non-rigid / decentralized / torch / gradient_descent': dict(
             rigid=False,
-            method='decentralized_registration',
+            method='decentralized',
             conv_engine='torch',
             convergence_method='gradient_descent',
         ),
@@ -101,11 +101,11 @@ def test_estimate_motion():
 
         # kilosort 2.5
         'rigid / iterative_template': dict(
-            method='iterative_template_registration',
+            method='iterative_template',
             rigid=True,
         ),
         'non-rigid / iterative_template': dict(
-            method='iterative_template_registration',
+            method='iterative_template',
             rigid=False,
         ),
 
