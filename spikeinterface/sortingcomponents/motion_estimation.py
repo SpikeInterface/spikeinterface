@@ -11,7 +11,7 @@ def estimate_motion(recording, peaks, peak_locations,
                     direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
                     rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
                     post_clean=False, speed_threshold=30, sigma_smooth_s=None,
-                    method='decentralized_registration',
+                    method='decentralized',
                     output_extra_check=False, progress_bar=False,
                     upsample_to_histogram_bin=False, verbose=False, **method_kwargs):
     """
@@ -409,7 +409,7 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
         max_ = np.max(contact_pos) + margin_um
         num_non_rigid_windows = int((max_ - min_) // win_step_um)
         border = ((max_ - min_)  %  win_step_um) / 2
-        non_rigid_window_centers = np.arange(num_non_rigid_windows) * win_step_um + min_ + border
+        non_rigid_window_centers = np.arange(num_non_rigid_windows + 1) * win_step_um + min_ + border
         non_rigid_windows = []
         
         for win_center in non_rigid_window_centers:
