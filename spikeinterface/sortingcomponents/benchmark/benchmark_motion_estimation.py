@@ -40,13 +40,13 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 do_preprocessing=True, 
                 job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
                 overwrite=False,
-                parent_benchmark=None):
+                #parent_benchmark=None
+                ):
         
-        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs, parent_benchmark=parent_benchmark)
+        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs, 
+                               parent_benchmark=None)
 
         self._args.extend([str(mearec_filename)])
-        
-
 
         self.mearec_filename = mearec_filename
         self.raw_recording, self.gt_sorting = read_mearec(self.mearec_filename)
@@ -153,9 +153,9 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 f = scipy.interpolate.interp1d(unit_positions, unit_motions[t, :], fill_value="extrapolate")
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
-    def plot_true_drift(self, scaling_probe=1.5):
+    def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10)):
                 
-        fig = plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=figsize)
         gs = fig.add_gridspec(1, 3)
 
         ax = fig.add_subplot(gs[0])
@@ -200,9 +200,9 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
         ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
 
-    def plot_peaks_probe(self, alpha = 0.05):
+    def plot_peaks_probe(self, alpha = 0.05, figsize=(15, 10)):
             
-        fig, axs = plt.subplots(ncols=2, sharey=True, figsize=(15, 10))
+        fig, axs = plt.subplots(ncols=2, sharey=True, figsize=figsize)
         ax = axs[0]
         plot_probe_map(self.recording, ax=ax)
         ax.scatter(self.peak_locations['x'], self.peak_locations['y'], color='k', s=1, alpha=alpha)
@@ -214,9 +214,9 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             ax.set_xlabel('z')
             ax.set_xlim(0, 100)
 
-    def plot_peaks(self, scaling_probe=1.5, show_drift=True, show_histogram=True, alpha=0.05):
+    def plot_peaks(self, scaling_probe=1.5, show_drift=True, show_histogram=True, alpha=0.05, figsize=(15, 10)):
 
-        fig = plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=figsize)
         if show_histogram:
             gs = fig.add_gridspec(1, 4)
         else:
@@ -238,6 +238,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         y = self.peak_locations['y']
         ax.scatter(x, y, s=1, color='k', alpha=alpha)
         
+        ax.set_title(self.title)
         # xmin, xmax = ax.get_xlim()
         # ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
         # ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
@@ -285,15 +286,16 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         ax1.sharey(ax0)
 
-    def plot_motion_corrected_peaks(self, scaling_probe=1.5, alpha=0.05):
+    def plot_motion_corrected_peaks(self, scaling_probe=1.5, alpha=0.05, figsize=(15, 10)):
 
-        fig = plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=figsize)
         gs = fig.add_gridspec(1, 5)
         # Create the Axes.
 
         ax0 = ax = fig.add_subplot(gs[0])
         plot_probe_map(self.recording, ax=ax)
         _simpleaxis(ax)
+        
 
         ymin, ymax = ax.get_ylim()
         ax.set_ylabel('depth (um)')
@@ -313,6 +315,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         x = self.selected_peaks['sample_ind']/self.recording.get_sampling_frequency()
         y = self.peak_locations['y']
         ax.scatter(x, y, s=1, color='k', alpha=alpha)
+        ax.set_title(self.title)
 
 
         ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
@@ -336,12 +339,11 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax1.sharey(ax0)
         ax2.sharey(ax0)
 
-    def estimation_vs_depth(self, show_only=8):
-        fig, axs = plt.subplots(ncols=2, figsize=(15,10), sharey=True)
+    def estimation_vs_depth(self, show_only=8, figsize=(15,10)):
+        fig, axs = plt.subplots(ncols=2, figsize=figsize, sharey=True)
 
         n = self.motion.shape[1]
         step = int(np.ceil(max(1, n / show_only)))
-        print(n, step)
         colors = plt.cm.get_cmap('jet', n)
         for i in range(0, n, step):
             ax = axs[0]
@@ -353,6 +355,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             ax.plot(self.temporal_bins, self.motion[:, i] - self.gt_motion[:, i], lw=1.5, ls='-', color=colors(i))
         
         ax = axs[0]
+        ax.set_title(self.title)
         ax.legend()
         ax.set_ylabel('drift estimated and GT(um)')
         ax.set_xlabel('time (s)')
@@ -363,8 +366,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_xlabel('time (s)')
         _simpleaxis(ax)
 
-    def view_errors(self):
-        fig = plt.figure(figsize=(15, 10))
+    def view_errors(self, figsize=(15, 10)):
+        fig = plt.figure(figsize=figsize)
         gs = fig.add_gridspec(2, 2)
 
         errors = self.gt_motion - self.motion
@@ -378,6 +381,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         plt.colorbar(im, ax=ax, label='error')
         ax.set_ylabel('depth (um)')
         ax.set_xlabel('time (s)')
+        ax.set_title(self.title)
 
         ax = fig.add_subplot(gs[1, 0])
         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
