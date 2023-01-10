@@ -113,7 +113,7 @@ class WaveformExtractor:
         else:
             # this is in case of in-memory
             self.format = "memory"
-            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
+            self._memory_objects = None
 
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -298,7 +298,7 @@ class WaveformExtractor:
                 root = zarr.open(self.folder)
                 return "waveforms" in root.keys()
         else:
-            return self._memory_objects != {"wfs_arrays": {}, "sampled_indices": {}}
+            return self._memory_objects is not None
 
     def delete_waveforms(self):
         """
@@ -313,7 +313,7 @@ class WaveformExtractor:
                 root = zarr.open(self.folder)
                 del root["waveforms"]
         else:
-            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
+            self._memory_objects = None
 
     @classmethod
     def register_extension(cls, extension_class):
@@ -545,7 +545,7 @@ class WaveformExtractor:
             waveform_folder.mkdir()
         else:
             # remove shared objects
-            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
+            self._memory_objects = None
 
     def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
         """
@@ -674,9 +674,11 @@ class WaveformExtractor:
                                           sparsity=sparsity)
             we.set_params(**self._params)
             # copy memory objects
-            for unit_id in unit_ids:
-                we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
-                we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
+            if self.has_waveforms():
+                we._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
+                for unit_id in unit_ids:
+                    we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
+                    we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
 
         # finally select extensions data
         for ext_name in self.get_available_extension_names():
@@ -758,15 +760,6 @@ class WaveformExtractor:
                                                     probegroup)
             with open(rec_attributes_file, 'r') as f:
                 rec_attributes = json.load(f)
-            # now waveforms and templates
-            waveform_folder = folder / "waveforms"
-            waveform_folder.mkdir()
-            for unit_ind, unit_id in enumerate(self.unit_ids):
-                waveforms, sampled_indices = self.get_waveforms(unit_id, with_index=True)
-                if sparsity is not None:
-                    waveforms = waveforms[:, :, sparsity.mask[unit_ind]]
-                np.save(waveform_folder / f'waveforms_{unit_id}.npy', waveforms)
-                np.save(waveform_folder / f'sampled_index_{unit_id}.npy', sampled_indices)                 
             for mode, templates in self._template_cache.items():
                 templates_save = templates.copy()
                 if sparsity is not None:
@@ -777,6 +770,16 @@ class WaveformExtractor:
             if sparsity is not None:
                 with (folder / "sparsity.json").open("w") as f:
                     json.dump(check_json(sparsity.to_dict()), f)
+            # now waveforms and templates
+            if self.has_waveforms():
+                waveform_folder = folder / "waveforms"
+                waveform_folder.mkdir()
+                for unit_ind, unit_id in enumerate(self.unit_ids):
+                    waveforms, sampled_indices = self.get_waveforms(unit_id, with_index=True)
+                    if sparsity is not None:
+                        waveforms = waveforms[:, :, sparsity.mask[unit_ind]]
+                    np.save(waveform_folder / f'waveforms_{unit_id}.npy', waveforms)
+                    np.save(waveform_folder / f'sampled_index_{unit_id}.npy', sampled_indices)
         elif format == "zarr":
             import zarr
             from .zarrrecordingextractor import get_default_zarr_compressor
@@ -809,15 +812,6 @@ class WaveformExtractor:
                 compressor = get_default_zarr_compressor()
                 print(f"Using default zarr compressor: {compressor}. To use a different compressor, use the "
                       f"'compressor' argument")
-            waveform_group = zarr_root.create_group("waveforms")
-            for unit_ind, unit_id in enumerate(self.unit_ids):
-                waveforms, sampled_indices = self.get_waveforms(unit_id, with_index=True)
-                if sparsity is not None:
-                    waveforms = waveforms[:, :, sparsity.mask[unit_ind]]
-                waveform_group.create_dataset(name=f'waveforms_{unit_id}',data=waveforms,
-                                              compressor=compressor)
-                waveform_group.create_dataset(name=f'sampled_index_{unit_id}', data=sampled_indices,
-                                              compressor=compressor)         
             for mode, templates in self._template_cache.items():
                 templates_save = templates.copy()
                 if sparsity is not None:
@@ -827,7 +821,16 @@ class WaveformExtractor:
                                          compressor=compressor)
             if sparsity is not None:
                 zarr_root.attrs["sparsity"] = check_json(sparsity.to_dict())
-        
+            if self.has_waveforms():
+                waveform_group = zarr_root.create_group("waveforms")
+                for unit_ind, unit_id in enumerate(self.unit_ids):
+                    waveforms, sampled_indices = self.get_waveforms(unit_id, with_index=True)
+                    if sparsity is not None:
+                        waveforms = waveforms[:, :, sparsity.mask[unit_ind]]
+                    waveform_group.create_dataset(name=f'waveforms_{unit_id}',data=waveforms,
+                                                  compressor=compressor)
+                    waveform_group.create_dataset(name=f'sampled_index_{unit_id}', data=sampled_indices,
+                                                  compressor=compressor)
         
         new_we = WaveformExtractor.load(folder)
         
@@ -872,10 +875,10 @@ class WaveformExtractor:
             If 'with_index' is True, the spike indices corresponding to the waveforms extracted
         """
         assert unit_id in self.sorting.unit_ids, "'unit_id' is invalid"
+        assert self.has_waveforms(), "Waveforms have been deleted!"
 
         wfs = self._waveforms.get(unit_id, None)
         if wfs is None:
-            assert self.has_waveforms(), "Waveforms have been deleted!"
             if self.folder is not None:
                 if self.format == "binary":
                     waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
@@ -1149,6 +1152,9 @@ class WaveformExtractor:
         nafter = self.nafter
         return_scaled = self.return_scaled
         unit_ids = self.sorting.unit_ids
+
+        if self.folder is None:
+            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
 
         selected_spikes = self.sample_spikes(seed=seed)
 
