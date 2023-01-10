@@ -7,7 +7,7 @@ import zarr
 
 
 from spikeinterface.core import generate_recording, generate_sorting, NumpySorting, ChannelSparsity
-from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms, estimate_sparsity
+from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms, load_waveforms, estimate_sparsity
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -156,6 +156,32 @@ def test_WaveformExtractor():
             assert isinstance(wfs, zarr.Array)
             wfs_array = we_saved_zarr.get_waveforms(0, lazy=False)
             assert isinstance(wfs_array, np.ndarray)
+
+            # test delete_waveforms
+            assert we.has_waveforms()
+            assert we_saved.has_waveforms()
+            assert we_saved_zarr.has_waveforms()
+
+            we.delete_waveforms()
+            we_saved.delete_waveforms()
+            we_saved_zarr.delete_waveforms()
+            assert not we.has_waveforms()
+            assert not we_saved.has_waveforms()
+            assert not we_saved_zarr.has_waveforms()
+
+            # after reloading, get_waveforms/sampled_indices should result in an AssertionError
+            we_loaded = load_waveforms(cache_folder / f"we_saved_{mode}")
+            we_loaded_zarr = load_waveforms(cache_folder / f"we_saved_{mode}.zarr")
+            assert not we_loaded.has_waveforms()
+            assert not we_loaded_zarr.has_waveforms()
+            with pytest.raises(AssertionError):
+                we_loaded.get_waveforms(we_loaded.unit_ids[0])
+            with pytest.raises(AssertionError):
+                we_loaded_zarr.get_waveforms(we_loaded.unit_ids[0])
+            with pytest.raises(AssertionError):
+                we_loaded.get_sampled_indices(we_loaded.unit_ids[0])
+            with pytest.raises(AssertionError):
+                we_loaded_zarr.get_sampled_indices(we_loaded.unit_ids[0])
 
 
 def test_extract_waveforms():

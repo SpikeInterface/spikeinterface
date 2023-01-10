@@ -289,6 +289,32 @@ class WaveformExtractor:
     def is_sparse(self):
         return self.sparsity is not None
 
+    def has_waveforms(self):
+        if self.folder is not None:
+            if self.format == "binary":
+                return (self.folder / "waveforms").is_dir()
+            elif self.format == "zarr":
+                import zarr
+                root = zarr.open(self.folder)
+                return "waveforms" in root.keys()
+        else:
+            return self._memory_objects != {"wfs_arrays": {}, "sampled_indices": {}}
+
+    def delete_waveforms(self):
+        """
+        Deletes waveforms folder.
+        """
+        assert self.has_waveforms(), "WaveformExtractor object doesn't have waveforms already!"
+        if self.folder is not None:
+            if self.format == "binary":
+                shutil.rmtree(self.folder / "waveforms")
+            elif self.format == "zarr":
+                import zarr
+                root = zarr.open(self.folder)
+                del root["waveforms"]
+        else:
+            self._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
+
     @classmethod
     def register_extension(cls, extension_class):
         """
@@ -849,6 +875,7 @@ class WaveformExtractor:
 
         wfs = self._waveforms.get(unit_id, None)
         if wfs is None:
+            assert self.has_waveforms(), "Waveforms have been deleted!"
             if self.folder is not None:
                 if self.format == "binary":
                     waveform_file = self.folder / 'waveforms' / f'waveforms_{unit_id}.npy'
@@ -897,6 +924,7 @@ class WaveformExtractor:
         sampled_indices: np.array
             The sampled indices
         """
+        assert self.has_waveforms(), "Sample indices and waveforms have been deleted!"
         if self.folder is not None:
             if self.format == "binary":
                 sampled_index_file = self.folder / 'waveforms' / f'sampled_index_{unit_id}.npy'
