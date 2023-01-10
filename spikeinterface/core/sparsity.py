@@ -5,6 +5,27 @@ from.recording_tools import get_channel_distances, get_noise_levels
 from .template_tools import get_template_amplitudes, get_template_extremum_channel
 
 
+_sparsity_doc = """
+    method: str
+        * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
+                         number of channels.
+        * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
+        * "threshold": thresholds based on template signal-to-noise ratio. Use the 'threshold' argument
+                       to specify the SNR threshold.
+        * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
+                         Use the 'by_property' argument to specify the property name.
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    num_channels: int
+        Number of channels for 'best_channels' method
+    radius_um: float
+        Radius in um for 'radius' method
+    threshold: float
+        Threshold in SNR 'threshold' method
+    by_property: object
+        Property name for 'by_property' method
+"""
+
 
 class ChannelSparsity:
     """
@@ -189,3 +210,47 @@ class ChannelSparsity:
         """
         mask = np.ones((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         return cls(mask, we.unit_ids, we.channel_ids)
+
+
+def estimate_sparsity(
+    waveform_extractor,
+    method="radius",
+    peak_sign="neg",
+    num_channels=5,
+    radius_um=100.,
+    threshold=5,
+    by_property=None,
+):
+    """
+    Get channel sparsity (subset of channels) for each template with several methods.
+
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
+{}
+
+    Returns
+    -------
+    sparsity: ChannelSparsity
+        The estimated sparsity
+    """
+    if method == "best_channels":
+        assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
+        sparsity = ChannelSparsity.from_best_channels(waveform_extractor, num_channels, peak_sign=peak_sign)
+    elif method == "radius":
+        assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
+        sparsity = ChannelSparsity.from_radius(waveform_extractor, radius_um, peak_sign=peak_sign)
+    elif method == "threshold":
+        assert threshold is not None, "For the 'threshold' method, 'threshold' needs to be given"
+        sparsity = ChannelSparsity.from_threshold(waveform_extractor, threshold, peak_sign=peak_sign)
+    elif method == "by_property":
+        assert by_property is not None, "For the 'by_property' method, 'by_property' needs to be given"
+        sparsity = ChannelSparsity.from_property(waveform_extractor, by_property)
+    else:
+        raise ValueError(f"estimate_sparsity() method={method} do not exists")
+
+    return sparsity
+
+
+estimate_sparsity.__doc__ = estimate_sparsity.__doc__.format(_sparsity_doc)

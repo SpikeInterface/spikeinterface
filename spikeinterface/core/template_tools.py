@@ -1,5 +1,7 @@
 import numpy as np
+import warnings
 
+from .sparsity import estimate_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
 
 
@@ -119,7 +121,6 @@ def get_template_channel_sparsity(
     outputs: str
         * 'id': channel id
         * 'index': channel index
-        * 'object' : ChanneSparsity
 
     Returns
     -------
@@ -127,54 +128,25 @@ def get_template_channel_sparsity(
         Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
         as values
     """
-    from spikeinterface.core.sparsity import ChannelSparsity
-    
-    if method == "best_channels":
-        assert num_channels is not None
-        sparsity = ChannelSparsity.from_best_channels(waveform_extractor, num_channels, peak_sign=peak_sign)
-    elif method == "radius":
-        assert radius_um is not None
-        sparsity = ChannelSparsity.from_radius(waveform_extractor, radius_um, peak_sign=peak_sign)
-    elif method == "threshold":
-        assert threshold is not None
-        sparsity = ChannelSparsity.from_threshold(waveform_extractor, threshold, peak_sign=peak_sign)
-    elif method == "by_property":
-        sparsity = ChannelSparsity.from_property(waveform_extractor, by_property)
-    else:
-        raise ValueError(f"get_template_channel_sparsity() method={method} do not exists")
+    from spikeinterface.core.sparsity import estimate_sparsity
 
+    warnings.warn("The 'get_template_channel_sparsity()' function is deprecated. "
+                  "Use 'estimate_sparsity()' instead",
+                  DeprecationWarning, stacklevel=2)
+
+    assert outputs in ('id', 'index'), "'outputs' can either be 'id' or 'index'"
+    sparsity = estimate_sparsity(waveform_extractor, method=method, peak_sign=peak_sign,
+                                 num_channels=num_channels, radius_um=radius_um, threshold=threshold,
+                                 by_property=by_property)
 
     # handle output ids or indexes
     if outputs == "id":
         return sparsity.unit_id_to_channel_ids
     elif outputs == "index":
         return sparsity.unit_id_to_channel_indices
-    elif outputs == "object":
-        return sparsity
 
-_sparsity_doc = """
-    method: str
-        * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
-                         number of channels.
-        * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
-        * "threshold": thresholds based on template signal-to-noise ratio. Use the 'threshold' argument
-                       to specify the SNR threshold.
-        * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
-                         Use the 'by_property' argument to specify the property name.
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
-    num_channels: int
-        Number of channels for 'best_channels' method
-    radius_um: float
-        Radius in um for 'radius' method
-    threshold: float
-        Threshold in SNR 'threshold' method
-    by_property: object
-        Property name for 'by_property' method
-"""
 
 get_template_channel_sparsity.__doc__ = get_template_channel_sparsity.__doc__.format(_sparsity_doc)
-
 
 
 def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str = "neg"):
