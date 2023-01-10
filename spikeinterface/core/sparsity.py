@@ -1,8 +1,6 @@
 import numpy as np
 
-from.recording_tools import get_channel_distances, get_noise_levels
-
-from .template_tools import get_template_amplitudes, get_template_extremum_channel
+from .recording_tools import get_channel_distances, get_noise_levels
 
 
 _sparsity_doc = """
@@ -145,6 +143,8 @@ class ChannelSparsity:
         Construct sparsity from N best channels with the largest amplitude.
         Use the 'num_channels' argument to specify the number of channels.
         """
+        from .template_tools import get_template_amplitudes
+
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         peak_values = get_template_amplitudes(we, peak_sign=peak_sign)
         for unit_ind, unit_id in enumerate(we.unit_ids):
@@ -159,6 +159,8 @@ class ChannelSparsity:
         Construct sparsity from a radius around the best channel.
         Use the 'radius_um' argument to specify the radius in um
         """
+        from .template_tools import get_template_extremum_channel
+
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         distances = get_channel_distances(we.recording)
         best_chan = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
@@ -174,6 +176,8 @@ class ChannelSparsity:
         Construct sparsity from a thresholds based on template signal-to-noise ratio.
         Use the 'threshold' argument to specify the SNR threshold.
         """
+        from .template_tools import get_template_amplitudes
+
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
 
         peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="extremum")
