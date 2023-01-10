@@ -25,16 +25,16 @@ def test_localize_peaks():
 
     list_locations = []
 
-    peak_locations = localize_peaks(recording, peaks, method='center_of_mass', **job_kwargs)
+    peak_locations = localize_peaks(recording, peaks, method='center_of_mass', feature='v_origin',**job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('com', peak_locations))
 
-    peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation',
+    peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', feature='ptp',
                                     optimizer='least_square', **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('least_square', peak_locations))
 
-    peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', 
+    peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', feature='mean',
                                     optimizer='minimize_with_log_penality', **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('minimize_with_log_penality', peak_locations))
@@ -46,6 +46,11 @@ def test_localize_peaks():
     list_locations.append(('minimize_with_log_penality', peak_locations))
     
     peak_locations = localize_peaks(recording, peaks, method='peak_channel', 
+                                    **job_kwargs)
+    assert peaks.size == peak_locations.shape[0]
+    list_locations.append(('peak_channel', peak_locations))
+
+    peak_locations = localize_peaks(recording, peaks, method='peak_channel',
                                     **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('peak_channel', peak_locations))
