@@ -153,10 +153,10 @@ Sparse Waveform Extractor
 # sparsity (which channels each unit is defined on) and then save to a new
 # folder in sparse mode:
 
-from spikeinterface import estimate_sparsity
+from spikeinterface import compute_sparsity
 
 # define sparsity within a radius of 40um
-sparsity = estimate_sparsity(we, method="radius", radius_um=40)
+sparsity = compute_sparsity(we, method="radius", radius_um=40)
 print(sparsity)
 
 # save sparse waveforms

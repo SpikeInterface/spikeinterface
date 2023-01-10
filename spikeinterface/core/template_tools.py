@@ -1,7 +1,7 @@
 import numpy as np
 import warnings
 
-from .sparsity import estimate_sparsity, _sparsity_doc
+from .sparsity import compute_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
 
 
@@ -128,14 +128,14 @@ def get_template_channel_sparsity(
         Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
         as values
     """
-    from spikeinterface.core.sparsity import estimate_sparsity
+    from spikeinterface.core.sparsity import compute_sparsity
 
     warnings.warn("The 'get_template_channel_sparsity()' function is deprecated. "
-                  "Use 'estimate_sparsity()' instead",
+                  "Use 'compute_sparsity()' instead",
                   DeprecationWarning, stacklevel=2)
 
     assert outputs in ('id', 'index'), "'outputs' can either be 'id' or 'index'"
-    sparsity = estimate_sparsity(waveform_extractor, method=method, peak_sign=peak_sign,
+    sparsity = compute_sparsity(waveform_extractor, method=method, peak_sign=peak_sign,
                                  num_channels=num_channels, radius_um=radius_um, threshold=threshold,
                                  by_property=by_property)
 

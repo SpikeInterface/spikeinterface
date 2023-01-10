@@ -160,7 +160,7 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
     sparsity: dict or None
         Default is sparsity=None and template metric is computed on extremum channel only.
         If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
-        For more generating a sparsity dict, see the postprocessing.estimate_sparsity() function.
+        For more generating a sparsity dict, see the postprocessing.compute_sparsity() function.
     window_slope_ms: float
         Window in ms after the positiv peak to compute slope, by default 0.7
 

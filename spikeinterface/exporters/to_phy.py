@@ -62,7 +62,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         print(
             "WARNING: export to Phy with many channels and without sparsity might result in a heavy and less "
             "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
-            "argument to enforce sparsity (see estimate_sparsity())"
+            "argument to enforce sparsity (see compute_sparsity())"
             )
     
     if waveform_extractor.is_sparse():

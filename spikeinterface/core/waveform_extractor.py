@@ -14,7 +14,7 @@ from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
 from .waveform_tools import extract_waveforms_to_buffers
-from .sparsity import ChannelSparsity, estimate_sparsity, _sparsity_doc
+from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 
 _possible_template_modes = ('average', 'std', 'median')
 
@@ -1301,10 +1301,10 @@ def extract_waveforms(recording, sorting, folder=None,
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
     sparse: bool (default False)
-        If True, before extracting all waveforms the `estimate_waveforms_sparsity()` functio is run using 
+        If True, before extracting all waveforms the `precompute_sparsity()` functio is run using 
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object. 
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
-        When True, you must some provide kwargs handle `estimate_waveforms_sparsity()` to control the kind of 
+        When True, you must some provide kwargs handle `precompute_sparsity()` to control the kind of 
         sparsity you want to apply (by radius, by best channels, ...).
     num_spikes_for_sparsity: int (default 100)
         The number of spikes to use to estimate sparsity (if sparse=True).
@@ -1374,7 +1374,7 @@ def extract_waveforms(recording, sorting, folder=None,
             return we
     
     if sparse:
-        sparsity = estimate_waveforms_sparsity(recording, sorting, ms_before=ms_before, ms_after=ms_after,
+        sparsity = precompute_sparsity(recording, sorting, ms_before=ms_before, ms_after=ms_after,
                                                num_spikes_for_sparsity=num_spikes_for_sparsity,
                                                **estimate_kwargs, **job_kwargs)
     else:
@@ -1415,10 +1415,10 @@ def load_waveforms(folder, with_recording=True, sorting=None):
     return WaveformExtractor.load(folder, with_recording, sorting)
 
 
-def estimate_waveforms_sparsity(recording, sorting, num_spikes_for_sparsity=100, unit_batch_size=200,
-                                ms_before=2., ms_after=3., **kwargs):
+def precompute_sparsity(recording, sorting, num_spikes_for_sparsity=100, unit_batch_size=200,
+                         ms_before=2., ms_after=3., **kwargs):
     """
-    Estimate sparsity with few spikes and by unit batch. 
+    Pre-estimate sparsity with few spikes and by unit batch. 
     This equivalent to compute a dense waveform extractor (with all units at once) and so
     can be less memory agressive.
 
@@ -1469,14 +1469,14 @@ def estimate_waveforms_sparsity(recording, sorting, num_spikes_for_sparsity=100,
         local_we = extract_waveforms(recording, local_sorting, folder=None, mode='memory',
                                      precompute_template=('average', ), ms_before=ms_before, ms_after=ms_after,
                                      max_spikes_per_unit=num_spikes_for_sparsity, return_scaled=False, **job_kwargs)
-        local_sparsity = estimate_sparsity(local_we, **sparse_kwargs)
+        local_sparsity = compute_sparsity(local_we, **sparse_kwargs)
         mask[sl, :] = local_sparsity.mask
 
     sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
     return sparsity
 
 
-estimate_waveforms_sparsity.__doc__ = estimate_waveforms_sparsity.__doc__.format(_sparsity_doc, _shared_job_kwargs_doc)
+precompute_sparsity.__doc__ = precompute_sparsity.__doc__.format(_sparsity_doc, _shared_job_kwargs_doc)
 
 
 class BaseWaveformExtractorExtension:

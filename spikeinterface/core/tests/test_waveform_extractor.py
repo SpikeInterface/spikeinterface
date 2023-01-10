@@ -8,7 +8,7 @@ import zarr
 
 from spikeinterface.core import generate_recording, generate_sorting, NumpySorting, ChannelSparsity
 from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms, load_waveforms
-from spikeinterface.core.waveform_extractor import estimate_waveforms_sparsity
+from spikeinterface.core.waveform_extractor import precompute_sparsity
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -261,7 +261,7 @@ def test_extract_waveforms():
 
 
     # test with sparsity estimation
-    folder4 = cache_folder / 'test_extract_waveforms_estimate_sparsity'
+    folder4 = cache_folder / 'test_extract_waveforms_compute_sparsity'
     if folder4.is_dir():
         shutil.rmtree(folder4)
     we4 = extract_waveforms(recording, sorting, folder4, max_spikes_per_unit=100,return_scaled=True,
@@ -452,7 +452,7 @@ def test_empty_sorting():
     assert wvf_extractor.get_all_templates().shape == (0, wvf_extractor.nsamples, num_channels)
 
 
-def test_estimate_sparsity():
+def test_compute_sparsity():
     durations = [30, 40]
     sampling_frequency = 30000.
 
@@ -471,7 +471,7 @@ def test_estimate_sparsity():
     job_kwargs = dict(n_jobs=4, chunk_size=30000, progress_bar=False)
 
     for kwargs in [dict(method='radius', radius_um=50.), dict(method='best_channels', num_channels=2)]:
-        sparsity = estimate_waveforms_sparsity(recording, sorting, num_spikes_for_sparsity=100,
+        sparsity = precompute_sparsity(recording, sorting, num_spikes_for_sparsity=100,
                                                unit_batch_size=2, ms_before=1., ms_after=1.5,
                                                **kwargs, **job_kwargs)
         print(sparsity)
@@ -483,4 +483,4 @@ if __name__ == '__main__':
     # test_sparsity()
     # test_portability()
     # test_recordingless()
-    # test_estimate_sparsity()
+    # test_compute_sparsity()

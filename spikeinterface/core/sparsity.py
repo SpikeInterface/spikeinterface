@@ -216,7 +216,7 @@ class ChannelSparsity:
         return cls(mask, we.unit_ids, we.channel_ids)
 
 
-def estimate_sparsity(
+def compute_sparsity(
     waveform_extractor,
     method="radius",
     peak_sign="neg",
@@ -252,9 +252,9 @@ def estimate_sparsity(
         assert by_property is not None, "For the 'by_property' method, 'by_property' needs to be given"
         sparsity = ChannelSparsity.from_property(waveform_extractor, by_property)
     else:
-        raise ValueError(f"estimate_sparsity() method={method} do not exists")
+        raise ValueError(f"compute_sparsity() method={method} do not exists")
 
     return sparsity
 
 
-estimate_sparsity.__doc__ = estimate_sparsity.__doc__.format(_sparsity_doc)
+compute_sparsity.__doc__ = compute_sparsity.__doc__.format(_sparsity_doc)
