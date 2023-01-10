@@ -91,4 +91,4 @@ from .template_tools import (
 )
 
 # channel sparsity
-from .sparsity import ChannelSparsity
+from .sparsity import ChannelSparsity, estimate_sparsity
