@@ -60,8 +60,8 @@ extractors = [
     "pynwb>=2.1.0",
     "pyedflib>=0.1.30",
     # "nixio>=1.5.0",
-    # "shybrid>=0.4.2",
-    # "pyyaml>=5.4.1  for shybrid",
+    # "shybrid>=0.4.2",
+    # "pyyaml>=5.4.1 for shybrid",
     "sonpy;python_version>'3.7'",
     # lxml for neuroscope
     "lxml",

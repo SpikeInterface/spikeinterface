@@ -1,6 +1,7 @@
 import numpy as np
 from pathlib import Path
 import json
+import pickle
 
 from spikeinterface.core import load_extractor, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
@@ -172,7 +173,8 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
         filename = str(save_folder / 'multicomparison.gpickle')
-        nx.write_gpickle(self.graph, filename)
+        with open(filename, 'wb') as f:
+            pickle.dump(self.graph, f, pickle.HIGHEST_PROTOCOL)
         kwargs = {'delta_time': float(self.delta_time),
                   'match_score': float(self.match_score), 'chance_score': float(self.chance_score)}
         with (save_folder / 'kwargs.json').open('w') as f:
@@ -194,8 +196,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         sorting_list = [load_extractor(v) for v in dict_sortings.values()]
         mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(
             name_list), do_matching=False, **kwargs)
-        mcmp.graph = nx.read_gpickle(
-            str(folder_path / 'multicomparison.gpickle'))
+        filename = str(folder_path / 'multicomparison.gpickle')
+        with open(filename, 'rb') as f:
+            mcmp.graph = pickle.load(f)
         # do step 3 and 4
         mcmp._clean_graph()
         mcmp._do_agreement()
