@@ -2,38 +2,22 @@ import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
 
+from .tools import make_multi_method_doc
 
-possible_motion_estimation_methods = ['decentralized_registration', 'iterative_template_registration']
 
-
-def init_kwargs_dict(method, method_kwargs):
-    # handle kwargs by method
-    if method == 'decentralized_registration':
-        method_kwargs_ = dict(pairwise_displacement_method='conv',
-                              convergence_method='gradient_descent',
-                              max_displacement_um=1500)
-    elif method == 'iterative_template_registration':
-        method_kwargs_ = dict(num_amp_bins=20,
-                              num_shifts_global=15,
-                              num_iterations=10,
-                              num_shifts_block=5,
-                              non_rigid_window_overlap=0.5,
-                              smoothing_sigma=0.5,
-                              kriging_sigma=1,
-                              kriging_p=2,
-                              kriging_d=2)
-    method_kwargs_.update(method_kwargs)
-    return method_kwargs_
 
 
 def estimate_motion(recording, peaks, peak_locations,
-                    direction='y', bin_duration_s=10., bin_um=10., margin_um=50,
-                    method='decentralized_registration', method_kwargs={},
-                    non_rigid_kwargs=None, clean_motion_kwargs=None, 
+                    direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
+                    rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
+                    post_clean=False, speed_threshold=30, sigma_smooth_s=None,
+                    method='decentralized',
                     output_extra_check=False, progress_bar=False,
-                    upsample_to_histogram_bin=None, verbose=False):
+                    upsample_to_histogram_bin=False, verbose=False, **method_kwargs):
     """
-    Estimate motion given peaks and their localization.
+    Estimate motion for given peaks and after their localization.
+
+    Note that the way you detect peak locations (center of mass/monopolar triangulation) have an impact on the result.
 
     Parameters
     ----------
@@ -43,42 +27,58 @@ def estimate_motion(recording, peaks, peak_locations,
         Peak vector (complex dtype)
     peak_locations: numpy array
         Complex dtype with 'x', 'y', 'z' fields
+    
+    {method_doc}
+
+    **histogram section**
+
     direction: 'x', 'y', 'z'
         Dimension on which the motion is estimated
     bin_duration_s: float
         Bin duration in second
-    bin_um: float
+    bin_um: float (default 10.)
         Spatial bin size in micro meter
-    margin_um: float
+    margin_um: float (default 0.)
         Margin in um to exclude from histogram estimation and
-        non-rigid smoothing functions to avoid edge effects
-    method: str
-        The method to be used ('decentralized_registration', 'iterative_template_registration')
-    method_kwargs: dict
-        Specific options for the chosen method. You can use `init_kwargs_dict(method)` to retrieve default params.
-        * 'decentralized_registration' (see https://proceedings.neurips.cc/paper/2021/hash/b950ea26ca12daae142bd74dba4427c8-Abstract.html)
-        * 'iterative_template_registration' (see https://www.science.org/doi/abs/10.1126/science.abf4588 - Kilosort2.5 method)
-    non_rigid_kwargs: None or dict.
-        If None then the motion is consider as rigid.
-        If dict then the motion is estimated in non rigid manner with fields:
-        * bin_step_um: step in um to construct overlapping gaussian smoothing functions
-    clean_motion_kwargs: None or dict
-        If None then the clean_motion_vector() is apply on the vector to
-        remove the spurious fast bump in the motion vector.
-        Can also apply optional a smoothing.
+        non-rigid smoothing functions to avoid edge effects.
+        Positive margin extrapolate out of the probe the motion.
+        Negative margin crop the motion on the border.
+
+    **non-rigid section**
+
+    rigid : bool (default True)
+        Compute rigid (one motion for the entire probe) or non rigid motion
+        Rigid computation is equivalent to non-rigid with only one window with rectangular shape.
+    win_shape: 'gaussian' or 'rect'
+        The shape of the windows for non rigid.
+        When rigid this is force to 'rect'
+    win_step_um: float (default 50.)
+        Step deteween window
+    win_sigma_um: float (deafult 150.)
+
+    **motion cleaning section**
+
+    post_clean: bool (default False)
+        Apply some post cleaning to motion matrix or not.
+    speed_threshold: float default 30.
+        Detect to fast motion bump and remove then with interpolation.
+    sigma_smooth_s: None or float
+        Optional smooting gaussian kernel when not None.
+
     output_extra_check: bool
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
     upsample_to_histogram_bin: bool or None
-        If True then upsample the returned motion array to the number of depth bins specified
-        by bin_um.
+        If True then upsample the returned motion array to the number of depth bins specified by bin_um.
         When None:
           * for non rigid case: then automatically True
           * for rigid (non_rigid_kwargs=None): automatically False
+        This feature is in fact a bad idea and the interpolation should be done outside using better methods.
     progress_bar: bool
         Display progress bar or not.
     verbose: bool
         If True, output is verbose
+    
 
     Returns
     -------
@@ -100,11 +100,12 @@ def estimate_motion(recording, peaks, peak_locations,
     """
     # TODO handle multi segment one day
     assert recording.get_num_segments() == 1
-    assert method in possible_motion_estimation_methods
-    method_kwargs = init_kwargs_dict(method, method_kwargs)
+
 
     if output_extra_check:
         extra_check = {}
+    else:
+        extra_check = None
 
     # contact positions
     probe = recording.get_probe()
@@ -113,33 +114,107 @@ def estimate_motion(recording, peaks, peak_locations,
 
     # spatial bins
     spatial_bin_edges = get_spatial_bin_edges(recording, direction, margin_um, bin_um)
-    num_spatial_bins = len(spatial_bin_edges)
 
-    # handle non-rigid for all estimation algorithms
-    if non_rigid_kwargs is None:
-        # unique block for all depths
-        num_non_rigid_windows = 1
-        non_rigid_windows = [np.ones(num_spatial_bins, dtype='float64')]
-        spatial_bins_non_rigid = [spatial_bin_edges[num_spatial_bins // 2] + bin_um / 2]
+    # get windows
+    non_rigid_windows, non_rigid_window_centers = get_windows(rigid, bin_um, contact_pos, spatial_bin_edges,
+                                                              margin_um, win_step_um, win_sigma_um, win_shape)
+
+    if extra_check:
+        extra_check['non_rigid_windows'] = non_rigid_windows
+
+    # run method
+    method_class = estimate_motion_methods[method]
+    motion, temporal_bins = method_class.run(recording, peaks, peak_locations, direction, bin_duration_s, bin_um,
+                                             spatial_bin_edges, non_rigid_windows, verbose, progress_bar, extra_check,
+                                             **method_kwargs)
+
+    # replace nan by zeros
+    motion[np.isnan(motion)] = 0
+
+    if post_clean:
+        motion = clean_motion_vector(motion, temporal_bins, bin_duration_s,
+                                     speed_threshold=speed_threshold, sigma_smooth_s=sigma_smooth_s)
+
+    
+    if upsample_to_histogram_bin is None:
+        upsample_to_histogram_bin = not rigid
+    
+    if upsample_to_histogram_bin:
+        # @Charlie this is in fact a quite bad idea because this you do not interpolate between neihbor (which 
+        # would be intuitive) but with windows very far away when the sigma is high. And so the gradient of motion
+        # is hard to catch. I leave this but I will remove it it soon. For me interpolation would be better.
+        non_rigid_windows = np.array(non_rigid_windows)
+        non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
+        non_rigid_window_centers = spatial_bin_edges[:-1] + bin_um / 2
+        motion = motion @ non_rigid_windows
+
+    if output_extra_check:
+        return motion, temporal_bins, non_rigid_window_centers, extra_check
     else:
-        assert 'bin_step_um' in non_rigid_kwargs, "'non_rigid_kwargs' needs to specify the 'bin_step_um' field"
-        bin_step_um = non_rigid_kwargs['bin_step_um']
+        return motion, temporal_bins, non_rigid_window_centers
 
-        min_ = np.min(contact_pos) - margin_um
-        max_ = np.max(contact_pos) + margin_um
-        num_non_rigid_windows = int((max_ - min_) // bin_step_um)
-        border = ((max_ - min_)  %  bin_step_um) / 2
-        spatial_bins_non_rigid = np.arange(num_non_rigid_windows) * bin_step_um + min_ + border
-        # non rigid windows need to be pre-computed for upsample_to_histogram_bin option
-        sigma_um = non_rigid_kwargs.get('sigma', 3) * bin_step_um
-        non_rigid_windows = []
-        for win_center in spatial_bins_non_rigid:
-            win = np.exp(-(spatial_bin_edges[:-1] - win_center) ** 2 / (sigma_um ** 2))
-            non_rigid_windows.append(win)
-        if output_extra_check:
-            extra_check['non_rigid_windows'] = non_rigid_windows
 
-    if method == 'decentralized_registration':
+
+class DecentralizedRegistration:
+    """
+    Method developed by the Paninski's group from Columbia university:
+    Charlie Windolf, Julien Boussard, Erdem Varol, Hyun Dong Lee
+
+    This method is also known as DREDGe, but this implemenation does not use LFP signals.
+
+    Original reference:
+    DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
+    https://ieeexplore.ieee.org/document/9414145
+    https://proceedings.neurips.cc/paper/2021/hash/b950ea26ca12daae142bd74dba4427c8-Abstract.html
+
+    This code was improved during Spike Sorting NY Hackathon 2022 by Erdem Varol and Charlie Windolf.
+    An additional major improvement can be found in this paper:
+    https://www.biorxiv.org/content/biorxiv/early/2022/12/05/2022.12.04.519043.full.pdf
+
+
+    Here are some various implementations by the original team:
+    https://github.com/int-brain-lab/spikes_localization_registration/blob/main/registration_pipeline/image_based_motion_estimate.py#L211
+    https://github.com/cwindolf/spike-psvae/tree/main/spike_psvae
+    https://github.com/evarol/DREDge
+    """
+    name = 'decentralized'
+    params_doc = """
+    pairwise_displacement_method: 'conv' or 'phase_cross_correlation'
+        How to estimate the displacement in the parwaise matrix.
+    max_displacement_um: float
+        Maximum possible discplacement in  micrometer.
+    weight_scale: 'linear' or 'exp'
+        For parwaise discplacemtn how to to rescale the associated weight matrix.
+    error_sigma: float 0.2
+        In case weight_scale='exp' this control the sigma of the exponential.
+    conv_engine: 'numpy' or 'torch'
+        In case of pairwise_displacement_method='conv' what library to use to compute the underlying correlation.
+    torch_device=None
+        In case of conv_engine='torch', you can control which device (cpu or gpu)
+    batch_size: int
+        Size of batch for the convolution.
+    corr_threshold: float
+        minimum correlation to estimate a motion shift for pairwise displacement bellow the value not used.
+    time_horizon_s: None or float
+        When not None the parwise discplament matrix is computed in a small time horizon.
+        In short only pair of bins close in time.
+        So the pariwaise matrix is super sparse and have values only the diagonal.
+    convergence_method='lsqr_robust' or 'gradient_descent'
+        Which method to use to compute the global displacement vector from the pairwise matrix.
+    robust_regression_sigma: float
+        Use for convergence_method='lsqr_robust' for iterative selection of the regression.
+    lsqr_robust_n_iter: int 
+        Number of iteration for convergence_method='lsqr_robust'.
+    """
+
+    @classmethod
+    def run(cls, recording, peaks, peak_locations, direction, bin_duration_s, bin_um, spatial_bin_edges,
+            non_rigid_windows, verbose, progress_bar, extra_check, 
+            pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
+            error_sigma=0.2, conv_engine='numpy', torch_device=None, batch_size=1,
+            corr_threshold=0, time_horizon_s=None, convergence_method='lsqr_robust',
+            robust_regression_sigma=2, lsqr_robust_n_iter=20):
+
         # make 2D histogram raster
         if verbose:
             print('Computing motion histogram')
@@ -149,14 +224,18 @@ def estimate_motion(recording, peaks, peak_locations,
                                      direction=direction,
                                      bin_duration_s=bin_duration_s,
                                      spatial_bin_edges=spatial_bin_edges)
-        if output_extra_check:
+        if extra_check:
             extra_check['motion_histogram'] = motion_histogram
             extra_check['pairwise_displacement_list'] = []
+            extra_check['temporal_hist_bin_edges'] = temporal_hist_bin_edges
+            extra_check['spatial_hist_bin_edges'] = spatial_hist_bin_edges
+
+
 
         # temporal bins are bin center
         temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.
 
-        motion = []
+        motion = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype='float64')
         windows_iter = non_rigid_windows
         if progress_bar:
             windows_iter = tqdm(windows_iter, desc="windows")
@@ -167,45 +246,76 @@ def estimate_motion(recording, peaks, peak_locations,
             if verbose:
                 print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
-            pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
-                motion_hist, bin_um,
-                method=method_kwargs['pairwise_displacement_method'],
-                weight_scale=method_kwargs.get("weight_scale", 'linear'),
-                error_sigma=method_kwargs.get("error_sigma", 0.2),
-                conv_engine=method_kwargs.get("conv_engine", 'numpy'),
-                torch_device=method_kwargs.get("torch_device", None),
-                batch_size=method_kwargs.get("batch_size", 1),
-                max_displacement_um=method_kwargs.get("max_displacement_um", 1500), # TODO: unify arg with KS
-                corr_threshold=method_kwargs.get("corr_threshold", 0),
-                time_horizon_s=method_kwargs.get("time_horizon_s", None),
-                bin_duration_s=bin_duration_s,
-                progress_bar=False
-            )
-            if output_extra_check:
+            pairwise_displacement, pairwise_displacement_weight = \
+                    compute_pairwise_displacement(motion_hist, bin_um,
+                                                  method=pairwise_displacement_method, weight_scale=weight_scale,
+                                                  error_sigma=error_sigma, conv_engine=conv_engine,
+                                                  torch_device=torch_device, batch_size=batch_size,
+                                                  max_displacement_um=max_displacement_um,
+                                                  corr_threshold=corr_threshold, time_horizon_s=time_horizon_s,
+                                                  bin_duration_s=bin_duration_s, progress_bar=False)
+            if extra_check:
                 extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
             if verbose:
                 print(f'Computing global displacement: {i + 1} / {len(non_rigid_windows)}')
 
-            one_motion = compute_global_displacement(
-                pairwise_displacement,
-                pairwise_displacement_weight=pairwise_displacement_weight,
-                convergence_method=method_kwargs['convergence_method'],
-                robust_regression_sigma=method_kwargs.get("robust_regression_sigma", 2),
-                gradient_descent_max_iter=method_kwargs.get("gradient_descent_max_iter", 1000),
-                lsqr_robust_n_iter=method_kwargs.get("lsqr_robust_n_iter", 20),
-                progress_bar=False,
-            )
-            motion.append(one_motion[:, np.newaxis])
-        motion = np.concatenate(motion, axis=1)
+            motion[:, i] = compute_global_displacement(pairwise_displacement,
+                                                       pairwise_displacement_weight=pairwise_displacement_weight,
+                                                       convergence_method=convergence_method,
+                                                       robust_regression_sigma=robust_regression_sigma,
+                                                       lsqr_robust_n_iter=lsqr_robust_n_iter, progress_bar=False)
 
-    elif method == "iterative_template_registration":
+        return motion, temporal_bins
+
+
+
+class IterativeTemplateRegistration:
+    """
+    Alignment function implemented by Kilosort2.5 and ported from pykilosort:
+    https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L166
+
+    The main difference with respect to the original implementation are:
+     * scipy is used for gaussian smoothing
+     * windowing is implemented as gaussian tapering (instead of rectangular blocks)
+     * the 3d histogram is constructed in less cryptic way
+     * peak_locations are computed outside and so can either center fo mass or monopolar trianglation
+       contrary to kilosort2.5 use exclusively center of mass
+
+    See https://www.science.org/doi/abs/10.1126/science.abf4588?cookieSet=1
+
+    Ported by Alessio Buccino in SpikeInterface
+    """
+    name = 'iterative_template'
+    params_doc = """
+    num_amp_bins: int
+        number ob bins in the histogram on the log amplitues dimension, by default 20.
+    num_shifts_global: int
+        Number of spatial bin shifts to consider for global alignment, by default 15
+    num_iterations: int
+        Number of iterations for global alignment procedure, by default 10
+    num_shifts_block: int
+        Number of spatial bin shifts to consider for non-rigid alignment, by default 5
+    smoothing_sigma: float
+        Sigma of gaussian for covariance matrices smoothing, by default 0.5
+    kriging_sigma: float
+        sigma parameter for kriging_kernel function
+    kriging_p: foat
+        p parameter for kriging_kernel function
+    kriging_d: float
+        d parameter for kriging_kernel function
+    """
+
+    @classmethod
+    def run(cls, recording, peaks, peak_locations, direction, bin_duration_s, bin_um, spatial_bin_edges,
+            non_rigid_windows, verbose, progress_bar, extra_check, 
+            num_amp_bins=20, num_shifts_global=15, num_iterations=10, num_shifts_block=5, 
+            smoothing_sigma=0.5, kriging_sigma=1, kriging_p=2, kriging_d=2):
+
+        # make a 3D histogram 
         motion_histograms, temporal_hist_bin_edges, spatial_hist_bin_edges = \
-            make_3d_motion_histograms(recording, peaks,
-                                      peak_locations,
-                                      direction=direction,
-                                      num_amp_bins=method_kwargs['num_amp_bins'],
-                                      bin_duration_s=bin_duration_s,
+            make_3d_motion_histograms(recording, peaks, peak_locations,
+                                      direction=direction, num_amp_bins=num_amp_bins, bin_duration_s=bin_duration_s,
                                       spatial_bin_edges=spatial_bin_edges)
         # temporal bins are bin center
         temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.
@@ -214,46 +324,32 @@ def estimate_motion(recording, peaks, peak_locations,
         shift_indices, target_histogram, shift_covs_block = \
             iterative_template_registration(motion_histograms,
                                             non_rigid_windows=non_rigid_windows,
-                                            num_shifts_global=method_kwargs['num_shifts_global'],
-                                            num_iterations=method_kwargs['num_iterations'],
-                                            num_shifts_block=method_kwargs['num_shifts_block'],
-                                            smoothing_sigma=method_kwargs['smoothing_sigma'],
-                                            kriging_p=method_kwargs['kriging_p'],
-                                            kriging_d=method_kwargs['kriging_d'])
+                                            num_shifts_global=num_shifts_global,
+                                            num_iterations=num_iterations,
+                                            num_shifts_block=num_shifts_block,
+                                            smoothing_sigma=smoothing_sigma,
+                                            kriging_sigma=kriging_sigma,
+                                            kriging_p=kriging_p,
+                                            kriging_d=kriging_d)
 
         # convert to um
         motion = -(shift_indices * bin_um)
 
-        if output_extra_check:
+        if extra_check:
             extra_check['motion_histograms'] = motion_histograms
             extra_check['target_histogram'] = target_histogram
             extra_check['shift_covs_block'] = shift_covs_block
+            extra_check['temporal_hist_bin_edges'] = temporal_hist_bin_edges
+            extra_check['spatial_hist_bin_edges'] = spatial_hist_bin_edges
 
-    if output_extra_check:
-        extra_check['temporal_hist_bin_edges'] = temporal_hist_bin_edges
-        extra_check['spatial_hist_bin_edges'] = spatial_hist_bin_edges
+        return motion, temporal_bins
 
-    # replace nan by zeros
-    motion[np.isnan(motion)] = 0
 
-    if clean_motion_kwargs is not None:
-        motion = clean_motion_vector(motion, temporal_bins, bin_duration_s, **clean_motion_kwargs)
+_methods_list = [DecentralizedRegistration, IterativeTemplateRegistration]
+estimate_motion_methods = {m.name: m for m in _methods_list}
+method_doc = make_multi_method_doc(_methods_list)
+estimate_motion.__doc__ = estimate_motion.__doc__.format(method_doc=method_doc)
 
-    
-    if upsample_to_histogram_bin is None:
-        upsample_to_histogram_bin = non_rigid_kwargs is not None
-    
-    if upsample_to_histogram_bin:
-        # do upsample
-        non_rigid_windows = np.array(non_rigid_windows)
-        non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
-        spatial_bins_non_rigid = spatial_bin_edges[:-1] + bin_um / 2
-        motion = motion @ non_rigid_windows
-
-    if output_extra_check:
-        return motion, temporal_bins, spatial_bins_non_rigid, extra_check
-    else:
-        return motion, temporal_bins, spatial_bins_non_rigid
 
 
 def get_spatial_bin_edges(recording, direction, margin_um, bin_um):
@@ -267,6 +363,76 @@ def get_spatial_bin_edges(recording, direction, margin_um, bin_um):
     spatial_bins = np.arange(min_, max_+bin_um, bin_um)
 
     return spatial_bins
+
+
+
+def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape):
+    """
+    Generate spatial windows (taper) for non-rigid motion.
+    For rigid motion, this is equivalent to have one unique rectangular window that covers the entire probe.
+    The windowing can be gaussian or rectangular.
+
+    Parameters
+    ----------
+    rigid : bool
+        If True, returns a single rectangular window
+    bin_um : float
+        Spatial bin size in um
+    contact_pos : np.ndarray
+        Position of electrodes (num_channels, 2)
+    spatial_bin_edges : np.array
+        The pre-computed spatial bin edges
+    margin_um : float
+        The margin to extend (if positive) or shrink (if negative) the probe dimension to compute windows.=
+    win_step_um : float
+        The steps at which windows are defined
+    win_sigma_um : float
+        Sigma of gaussian window (if win_shape is gaussian)
+    win_shape : float
+        "gaussian" | "rect"
+
+    Returns
+    -------
+    non_rigid_windows : list of 1D arrays
+        The scaling for each window. Each element has num_spatial_bins values
+    non_rigid_window_centers: 1D np.array
+        The center of each window
+
+    Notes
+    -----
+    Note that kilosort2.5 uses overlaping rectangular windows.
+    Here by default we use gaussian window.
+
+    """
+    bin_centers = spatial_bin_edges[:-1] + bin_um /2.
+    n = bin_centers.size
+
+    if rigid:
+        # win_shape = 'rect' is forced
+        non_rigid_windows = [np.ones(n, dtype='float64')]
+        middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.
+        non_rigid_window_centers = np.array([middle])
+    else:
+        assert win_sigma_um > win_step_um, f'win_sigma_um too low {win_sigma_um} compared to win_step_um {win_step_um}'
+
+        min_ = np.min(contact_pos) - margin_um
+        max_ = np.max(contact_pos) + margin_um
+        num_non_rigid_windows = int((max_ - min_) // win_step_um)
+        border = ((max_ - min_)  %  win_step_um) / 2
+        non_rigid_window_centers = np.arange(num_non_rigid_windows + 1) * win_step_um + min_ + border
+        non_rigid_windows = []
+        
+        for win_center in non_rigid_window_centers:
+            if win_shape == 'gaussian':
+                win = np.exp(-(bin_centers - win_center) ** 2 / (win_sigma_um ** 2))
+            elif win_shape == 'rect':
+                win = np.abs(bin_centers - win_center) < (win_sigma_um / 2.)
+                win = win.astype('float64')
+
+            non_rigid_windows.append(win)
+    return non_rigid_windows, non_rigid_window_centers
+    
+
 
 
 def make_2d_motion_histogram(recording, peaks, peak_locations,
@@ -342,6 +508,7 @@ def make_3d_motion_histograms(recording, peaks, peak_locations,
     """
     Generate 3d motion histograms in depth, amplitude, and time.
     This is used by the "iterative_template_registration" (Kilosort2.5) method.
+
 
     Parameters
     ----------
@@ -436,7 +603,6 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             )
         possible_displacement = np.arange(-n, n + 1) * bin_um
 
-        conv_values = np.zeros((size, size), dtype='float32')
         xrange = trange if progress_bar else range
 
         motion_hist_engine = motion_hist
@@ -503,6 +669,8 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                 correlation *= which
 
     elif method == 'phase_cross_correlation':
+        # this 'phase_cross_correlation' is an old idea from Julien/Charlie/Erden that is kept for testing
+        # but this is not very releveant
         try:
             import skimage.registration
         except ImportError:
@@ -536,23 +704,14 @@ def compute_global_displacement(
     pairwise_displacement,
     pairwise_displacement_weight=None,
     sparse_mask=None,
-    convergence_method='gradient_descent',
+    convergence_method='lsqr_robust',
     robust_regression_sigma=2,
-    gradient_descent_max_iter=1000,
     lsqr_robust_n_iter=20,
     progress_bar=False,
 ):
     """
     Compute global displacement
 
-    Reference:
-    DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
-    Erdem Varol1, Julien Boussard, Hyun Dong Lee
-
-    Improved during Spike Sorting Hackathon 2022 by Erdem Varol and Charlie Windolf.
-    
-    This come from
-    https://github.com/int-brain-lab/spikes_localization_registration/blob/main/registration_pipeline/image_based_motion_estimate.py#L211
     
     """
     size = pairwise_displacement.shape[0]
@@ -647,21 +806,13 @@ def compute_global_displacement(
 def iterative_template_registration(spikecounts_hist_images,
                                     non_rigid_windows=None,
                                     num_shifts_global=15, num_iterations=10,
-                                    non_rigid_window_overlap=0.5,
                                     num_shifts_block=5, smoothing_sigma=0.5,
                                     kriging_sigma=1, kriging_p=2, kriging_d=2):
     """
-    Alignment function implemented by Kilosort2.5 and ported from pykilosort:
-    https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L166
-
-    The main difference with respect to the original implementation are:
-    * scipy is used for gaussian smoothing
-    * windowing is implemented as tapering (instead of rectangular blocks)
-
-    Modified by Alessio Buccino
 
     Parameters
     ----------
+
     spikecounts_hist_images : np.ndarray
         Spike count histogram images (num_temporal_bins, num_spatial_bins, num_amps_bins)
     non_rigid_windows : list, optional
@@ -671,8 +822,6 @@ def iterative_template_registration(spikecounts_hist_images,
         Number of spatial bin shifts to consider for global alignment, by default 15
     num_iterations : int, optional
         Number of iterations for global alignment procedure, by default 10
-    non_rigid_window_overlap : float, optional
-        Amount of overlap (between 0 and 1) between non-rigid windows, by default 0.5
     num_shifts_block : int, optional
         Number of spatial bin shifts to consider for non-rigid alignment, by default 5
     smoothing_sigma : float, optional
@@ -693,7 +842,6 @@ def iterative_template_registration(spikecounts_hist_images,
     """
     from scipy.ndimage import gaussian_filter, gaussian_filter1d
 
-    assert 0 <= non_rigid_window_overlap <= 1, "'non_rigid_window_overlap' can be between 0 and 1!"
     # F is y bins by amp bins by batches
     # ysamp are the coordinates of the y bins in um
     spikecounts_hist_images = spikecounts_hist_images.swapaxes(0, 1).swapaxes(1, 2)
