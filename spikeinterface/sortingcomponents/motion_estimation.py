@@ -17,7 +17,7 @@ def estimate_motion(recording, peaks, peak_locations,
     """
     Estimate motion for given peaks and after their localization.
 
-    Note that way you detect location (center of mass/monopolar triangulation) have an impact on the result.
+    Note that the way you detect peak locations (center of mass/monopolar triangulation) have an impact on the result.
 
     Parameters
     ----------
@@ -56,7 +56,7 @@ def estimate_motion(recording, peaks, peak_locations,
         Step deteween window
     win_sigma_um: float (deafult 150.)
 
-    **motion clean section**
+    **motion cleaning section**
 
     post_clean: bool (default False)
         Apply some post cleaning to motion matrix or not.
@@ -157,24 +157,22 @@ def estimate_motion(recording, peaks, peak_locations,
 
 class DecentralizedRegistration:
     """
-    Method by Paninski's group from Columbia university:
+    Method developed by the Paninski's group from Columbia university:
     Charlie Windolf, Julien Boussard, Erdem Varol, Hyun Dong Lee
 
-    This method is also known as DREDGe but without using LFP.
+    This method is also known as DREDGe, but this implemenation does not use LFP signals.
 
     Original reference:
     DECENTRALIZED MOTION INFERENCE AND REGISTRATION OF NEUROPIXEL DATA
     https://ieeexplore.ieee.org/document/9414145
-
     https://proceedings.neurips.cc/paper/2021/hash/b950ea26ca12daae142bd74dba4427c8-Abstract.html
 
     This code was improved during Spike Sorting NY Hackathon 2022 by Erdem Varol and Charlie Windolf.
-
-    And final and mojor improvement is in this apper
+    An additional major improvement can be found in this paper:
     https://www.biorxiv.org/content/biorxiv/early/2022/12/05/2022.12.04.519043.full.pdf
 
 
-    Here some various original implementation by the original team (hard to follow!!)
+    Here are some various implementations by the original team:
     https://github.com/int-brain-lab/spikes_localization_registration/blob/main/registration_pipeline/image_based_motion_estimate.py#L211
     https://github.com/cwindolf/spike-psvae/tree/main/spike_psvae
     https://github.com/evarol/DREDge
@@ -183,43 +181,30 @@ class DecentralizedRegistration:
     params_doc = """
     pairwise_displacement_method: 'conv' or 'phase_cross_correlation'
         How to estimate the displacement in the parwaise matrix.
-
     max_displacement_um: float
         Maximum possible discplacement in  micrometer.
-    
     weight_scale: 'linear' or 'exp'
         For parwaise discplacemtn how to to rescale the associated weight matrix.
-    
     error_sigma: float 0.2
         In case weight_scale='exp' this control the sigma of the exponential.
-    
     conv_engine: 'numpy' or 'torch'
         In case of pairwise_displacement_method='conv' what library to use to compute the underlying correlation.
-
     torch_device=None
         In case of conv_engine='torch', you can control which device (cpu or gpu)
-
     batch_size: int
-    Size of batch for the convolution.
-
+        Size of batch for the convolution.
     corr_threshold: float
         minimum correlation to estimate a motion shift for pairwise displacement bellow the value not used.
-    
     time_horizon_s: None or float
         When not None the parwise discplament matrix is computed in a small time horizon.
         In short only pair of bins close in time.
         So the pariwaise matrix is super sparse and have values only the diagonal.
-
     convergence_method='lsqr_robust' or 'gradient_descent'
         Which method to use to compute the global displacement vector from the pairwise matrix.
-
     robust_regression_sigma: float
         Use for convergence_method='lsqr_robust' for iterative selection of the regression.
-
     lsqr_robust_n_iter: int 
         Number of iteration for convergence_method='lsqr_robust'.
-
-
     """
 
     @classmethod
@@ -299,7 +284,7 @@ class IterativeTemplateRegistration:
 
     See https://www.science.org/doi/abs/10.1126/science.abf4588?cookieSet=1
 
-    Ported by Alessio Buccino in spikeinterface
+    Ported by Alessio Buccino in SpikeInterface
     """
     name = 'iterative_template'
     params_doc = """
@@ -383,17 +368,42 @@ def get_spatial_bin_edges(recording, direction, margin_um, bin_um):
 
 def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_step_um, win_sigma_um, win_shape):
     """
-    Generate spatial windows (taper) for non rigid motion.
+    Generate spatial windows (taper) for non-rigid motion.
+    For rigid motion, this is equivalent to have one unique rectangular window that covers the entire probe.
+    The windowing can be gaussian or rectangular.
 
-    For rigid motion this is equivalent to have one unique rectangular window that cover the entire probe.
+    Parameters
+    ----------
+    rigid : bool
+        If True, returns a single rectangular window
+    bin_um : float
+        Spatial bin size in um
+    contact_pos : np.ndarray
+        Position of electrodes (num_channels, 2)
+    spatial_bin_edges : np.array
+        The pre-computed spatial bin edges
+    margin_um : float
+        The margin to extend (if positive) or shrink (if negative) the probe dimension to compute windows.=
+    win_step_um : float
+        The steps at which windows are defined
+    win_sigma_um : float
+        Sigma of gaussian window (if win_shape is gaussian)
+    win_shape : float
+        "gaussian" | "rect"
 
-    Note that kilosort2.5 use overlaping rectangular windows.
+    Returns
+    -------
+    non_rigid_windows : list of 1D arrays
+        The scaling for each window. Each element has num_spatial_bins values
+    non_rigid_window_centers: 1D np.array
+        The center of each window
+
+    Notes
+    -----
+    Note that kilosort2.5 uses overlaping rectangular windows.
     Here by default we use gaussian window.
 
-    The windowing can be gaussian or restangular.
-
     """
-    
     bin_centers = spatial_bin_edges[:-1] + bin_um /2.
     n = bin_centers.size
 
