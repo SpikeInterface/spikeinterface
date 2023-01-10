@@ -51,8 +51,8 @@ class PhaseShiftRecording(BasePreprocessor):
             dtype = recording.get_dtype()
         # the "apply_shift" function returns a float64 buffer. In case the dtype is different
         # than float64, we need a temporary casting and to force the buffer back to the original dtype
-        if dtype.str != "<f8":
-            tmp_dtype = np.dtype('float32')
+        if str(dtype) != "float64":
+            tmp_dtype = np.dtype('float64')
         else:
             tmp_dtype = None
 
